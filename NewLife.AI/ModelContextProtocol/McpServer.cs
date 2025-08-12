@@ -1,11 +1,12 @@
-﻿using NewLife.Remoting;
+﻿using NewLife.Log;
+using NewLife.Remoting;
 using NewLife.Security;
 using NewLife.Serialization;
 
 namespace NewLife.AI.ModelContextProtocol;
 
 /// <summary>模型上下文协议服务器</summary>
-public class McpServer : IServiceProvider
+public class McpServer : IServiceProvider, ILogFeature, ITracerFeature
 {
     #region 属性
     /// <summary>接口动作管理器</summary>
@@ -175,5 +176,18 @@ public class McpServer : IServiceProvider
 
         return ServiceProvider.GetService(serviceType)!;
     }
+    #endregion
+
+    #region 日志
+    /// <summary>日志提供者</summary>
+    public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>APM性能追踪器</summary>
+    public ITracer? Tracer { get; set; }
+
+    /// <summary>写日志</summary>
+    /// <param name="format"></param>
+    /// <param name="args"></param>
+    public virtual void WriteLog(String format, params Object?[] args) => Log?.Info(format, args);
     #endregion
 }
