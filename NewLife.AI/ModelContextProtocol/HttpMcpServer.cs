@@ -21,20 +21,27 @@ public class HttpMcpServer : McpServer
     /// <summary>启动MCP服务器</summary>
     public void Start()
     {
-        Server ??= new HttpServer()
+        var server = Server;
+        server ??= new HttpServer()
         {
             Port = Port,
-            ServiceProvider = this,
 
             Log = Log,
             Tracer = Tracer,
         };
-        Server.Map("/", Process);
-        Server.Start();
+
+        server.ServiceProvider = this;
+        server.Log ??= Log;
+        server.Tracer ??= Tracer;
+
+        server.Map("/", ProcessRequest);
+        server.Start();
+
+        Server = server;
     }
 
     /// <summary>处理MCP请求</summary>
-    public void Process(IHttpContext context)
+    public void ProcessRequest(IHttpContext context)
     {
         var request = context.Request.Body?.ToStr().ToJsonEntity<JsonRpcRequest>();
         if (request == null)

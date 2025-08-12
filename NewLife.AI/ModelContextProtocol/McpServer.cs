@@ -174,7 +174,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature
     {
         if (serviceType == typeof(McpServer)) return this;
 
-        return ServiceProvider.GetService(serviceType)!;
+        return ServiceProvider?.GetService(serviceType)!;
     }
     #endregion
 
