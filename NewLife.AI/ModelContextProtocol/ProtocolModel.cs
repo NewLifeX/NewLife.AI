@@ -28,16 +28,16 @@ public record ToolCallParams(String Name, Dictionary<String, Object?> Arguments,
 public record ToolCallMeta(String ProgressToken);
 
 /// <summary>工具调用结果</summary>
-public record ToolCallResult(List<ContentItem> Content, Boolean IsError = false);
+public record ToolCallResult(IList<ContentItem> Content, Boolean IsError = false);
 
 /// <summary>内容项</summary>
 public record ContentItem(String Type, String Text);
 
 /// <summary>工具列表结果</summary>
-public record ToolListResult(List<ToolDefinition> Tools);
+public record ToolListResult(IList<ToolDefinition> Tools);
 
 /// <summary>工具定义</summary>
-public record ToolDefinition(String Name, String Description, Object InputSchema);
+public record ToolDefinition(String Name, String? Description, Object InputSchema);
 
 /// <summary>进度通知</summary>
 public record ProgressNotification(String JsonRpc, String Method, ProgressParams Params);
