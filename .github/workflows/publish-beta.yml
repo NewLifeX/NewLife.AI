@@ -1,0 +1,26 @@
+name: publish-beta
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+        - 'NewLife.AI/**'
+  workflow_dispatch:
+
+jobs:
+  build-publish:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup dotNET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.x
+    - name: Build
+      run: |
+        dotnet pack --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.AI/NewLife.AI.csproj
+    - name: Publish
+      run: |
+        dotnet nuget push ./out/*.nupkg --skip-duplicate --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.nugetKey }}

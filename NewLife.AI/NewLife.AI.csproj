@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net45;net461;netstandard2.0;netstandard2.1</TargetFrameworks>
+    <AssemblyTitle>AI库</AssemblyTitle>
+    <Description>AI基础设施</Description>
+    <Company>新生命开发团队</Company>
+    <Copyright>©2002-2025 新生命开发团队</Copyright>
+    <VersionPrefix>1.0</VersionPrefix>
+    <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
+    <Version>$(VersionPrefix).$(VersionSuffix)</Version>
+    <FileVersion>$(Version)</FileVersion>
+    <AssemblyVersion>$(VersionPrefix).*</AssemblyVersion>
+    <Deterministic>false</Deterministic>
+    <OutputPath>..\Bin</OutputPath>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\Doc\newlife.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <Authors>$(Company)</Authors>
+    <PackageProjectUrl>https://newlifex.com/core</PackageProjectUrl>
+    <PackageIcon>leaf.png</PackageIcon>
+    <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>新生命团队;X组件;NewLife;$(AssemblyName)</PackageTags>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NewLife.Core" Version="11.6.2025.801" />
+    <PackageReference Include="NewLife.Stardust" Version="3.4.2025.801" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
+</Project>
