@@ -78,6 +78,38 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [BindColumn("Attachments", "附件列表。JSON格式，存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
     public String Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
 
+    private String _ToolCalls;
+    /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+    [DisplayName("工具调用")]
+    [Description("工具调用。JSON格式，存储tool_call链路记录")]
+    [DataObjectField(false, false, true, -1)]
+    [BindColumn("ToolCalls", "工具调用。JSON格式，存储tool_call链路记录", "", ShowIn = "Auto,-List,-Search")]
+    public String ToolCalls { get => _ToolCalls; set { if (OnPropertyChanging("ToolCalls", value)) { _ToolCalls = value; OnPropertyChanged("ToolCalls"); } } }
+
+    private Int32 _PromptTokens;
+    /// <summary>提示Token数</summary>
+    [DisplayName("提示Token数")]
+    [Description("提示Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("PromptTokens", "提示Token数", "")]
+    public Int32 PromptTokens { get => _PromptTokens; set { if (OnPropertyChanging("PromptTokens", value)) { _PromptTokens = value; OnPropertyChanged("PromptTokens"); } } }
+
+    private Int32 _CompletionTokens;
+    /// <summary>回复Token数</summary>
+    [DisplayName("回复Token数")]
+    [Description("回复Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("CompletionTokens", "回复Token数", "")]
+    public Int32 CompletionTokens { get => _CompletionTokens; set { if (OnPropertyChanging("CompletionTokens", value)) { _CompletionTokens = value; OnPropertyChanged("CompletionTokens"); } } }
+
+    private Int32 _TotalTokens;
+    /// <summary>总Token数</summary>
+    [DisplayName("总Token数")]
+    [Description("总Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("TotalTokens", "总Token数", "")]
+    public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -145,6 +177,10 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         ThinkingContent = model.ThinkingContent;
         ThinkingMode = model.ThinkingMode;
         Attachments = model.Attachments;
+        ToolCalls = model.ToolCalls;
+        PromptTokens = model.PromptTokens;
+        CompletionTokens = model.CompletionTokens;
+        TotalTokens = model.TotalTokens;
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
         CreateTime = model.CreateTime;
@@ -169,6 +205,10 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
             "ThinkingContent" => _ThinkingContent,
             "ThinkingMode" => _ThinkingMode,
             "Attachments" => _Attachments,
+            "ToolCalls" => _ToolCalls,
+            "PromptTokens" => _PromptTokens,
+            "CompletionTokens" => _CompletionTokens,
+            "TotalTokens" => _TotalTokens,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -188,6 +228,10 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
                 case "ThinkingContent": _ThinkingContent = Convert.ToString(value); break;
                 case "ThinkingMode": _ThinkingMode = value.ToInt(); break;
                 case "Attachments": _Attachments = Convert.ToString(value); break;
+                case "ToolCalls": _ToolCalls = Convert.ToString(value); break;
+                case "PromptTokens": _PromptTokens = value.ToInt(); break;
+                case "CompletionTokens": _CompletionTokens = value.ToInt(); break;
+                case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -266,6 +310,18 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
         public static readonly Field Attachments = FindByName("Attachments");
 
+        /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+        public static readonly Field ToolCalls = FindByName("ToolCalls");
+
+        /// <summary>提示Token数</summary>
+        public static readonly Field PromptTokens = FindByName("PromptTokens");
+
+        /// <summary>回复Token数</summary>
+        public static readonly Field CompletionTokens = FindByName("CompletionTokens");
+
+        /// <summary>总Token数</summary>
+        public static readonly Field TotalTokens = FindByName("TotalTokens");
+
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -310,6 +366,18 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
 
         /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
         public const String Attachments = "Attachments";
+
+        /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+        public const String ToolCalls = "ToolCalls";
+
+        /// <summary>提示Token数</summary>
+        public const String PromptTokens = "PromptTokens";
+
+        /// <summary>回复Token数</summary>
+        public const String CompletionTokens = "CompletionTokens";
+
+        /// <summary>总Token数</summary>
+        public const String TotalTokens = "TotalTokens";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

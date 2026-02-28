@@ -95,6 +95,30 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [BindColumn("SupportVision", "支持视觉。是否支持图片输入", "")]
     public Boolean SupportVision { get => _SupportVision; set { if (OnPropertyChanging("SupportVision", value)) { _SupportVision = value; OnPropertyChanged("SupportVision"); } } }
 
+    private Boolean _SupportImageGeneration;
+    /// <summary>支持图像生成。是否支持文生图</summary>
+    [DisplayName("支持图像生成")]
+    [Description("支持图像生成。是否支持文生图")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SupportImageGeneration", "支持图像生成。是否支持文生图", "")]
+    public Boolean SupportImageGeneration { get => _SupportImageGeneration; set { if (OnPropertyChanging("SupportImageGeneration", value)) { _SupportImageGeneration = value; OnPropertyChanged("SupportImageGeneration"); } } }
+
+    private Boolean _SupportFunctionCalling;
+    /// <summary>支持函数调用。是否支持Function Calling</summary>
+    [DisplayName("支持函数调用")]
+    [Description("支持函数调用。是否支持Function Calling")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SupportFunctionCalling", "支持函数调用。是否支持Function Calling", "")]
+    public Boolean SupportFunctionCalling { get => _SupportFunctionCalling; set { if (OnPropertyChanging("SupportFunctionCalling", value)) { _SupportFunctionCalling = value; OnPropertyChanged("SupportFunctionCalling"); } } }
+
+    private String _ApiProtocol;
+    /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
+    [DisplayName("API协议")]
+    [Description("API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("ApiProtocol", "API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini", "")]
+    public String ApiProtocol { get => _ApiProtocol; set { if (OnPropertyChanging("ApiProtocol", value)) { _ApiProtocol = value; OnPropertyChanged("ApiProtocol"); } } }
+
     private Boolean _Enable;
     /// <summary>启用</summary>
     [DisplayName("启用")]
@@ -189,6 +213,9 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         MaxTokens = model.MaxTokens;
         SupportThinking = model.SupportThinking;
         SupportVision = model.SupportVision;
+        SupportImageGeneration = model.SupportImageGeneration;
+        SupportFunctionCalling = model.SupportFunctionCalling;
+        ApiProtocol = model.ApiProtocol;
         Enable = model.Enable;
         Sort = model.Sort;
         CreateUserID = model.CreateUserID;
@@ -218,6 +245,9 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
             "MaxTokens" => _MaxTokens,
             "SupportThinking" => _SupportThinking,
             "SupportVision" => _SupportVision,
+            "SupportImageGeneration" => _SupportImageGeneration,
+            "SupportFunctionCalling" => _SupportFunctionCalling,
+            "ApiProtocol" => _ApiProtocol,
             "Enable" => _Enable,
             "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
@@ -242,6 +272,9 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
                 case "MaxTokens": _MaxTokens = value.ToInt(); break;
                 case "SupportThinking": _SupportThinking = value.ToBoolean(); break;
                 case "SupportVision": _SupportVision = value.ToBoolean(); break;
+                case "SupportImageGeneration": _SupportImageGeneration = value.ToBoolean(); break;
+                case "SupportFunctionCalling": _SupportFunctionCalling = value.ToBoolean(); break;
+                case "ApiProtocol": _ApiProtocol = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -310,13 +343,15 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     /// <param name="provider">提供商。OpenAI、Alibaba、DeepSeek等</param>
     /// <param name="supportThinking">支持思考。是否支持思考模式</param>
     /// <param name="supportVision">支持视觉。是否支持图片输入</param>
+    /// <param name="supportImageGeneration">支持图像生成。是否支持文生图</param>
+    /// <param name="supportFunctionCalling">支持函数调用。是否支持Function Calling</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(String code, String provider, Boolean? supportThinking, Boolean? supportVision, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ModelConfig> Search(String code, String provider, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -324,6 +359,8 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
         if (supportThinking != null) exp &= _.SupportThinking == supportThinking;
         if (supportVision != null) exp &= _.SupportVision == supportVision;
+        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration;
+        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling;
         if (enable != null) exp &= _.Enable == enable;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -362,6 +399,15 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>支持视觉。是否支持图片输入</summary>
         public static readonly Field SupportVision = FindByName("SupportVision");
+
+        /// <summary>支持图像生成。是否支持文生图</summary>
+        public static readonly Field SupportImageGeneration = FindByName("SupportImageGeneration");
+
+        /// <summary>支持函数调用。是否支持Function Calling</summary>
+        public static readonly Field SupportFunctionCalling = FindByName("SupportFunctionCalling");
+
+        /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
+        public static readonly Field ApiProtocol = FindByName("ApiProtocol");
 
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
@@ -422,6 +468,15 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>支持视觉。是否支持图片输入</summary>
         public const String SupportVision = "SupportVision";
+
+        /// <summary>支持图像生成。是否支持文生图</summary>
+        public const String SupportImageGeneration = "SupportImageGeneration";
+
+        /// <summary>支持函数调用。是否支持Function Calling</summary>
+        public const String SupportFunctionCalling = "SupportFunctionCalling";
+
+        /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
+        public const String ApiProtocol = "ApiProtocol";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -73,6 +73,10 @@
         <Column Name="ThinkingContent" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。思考模式下的推理过程" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" />
         <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="附件列表。JSON格式，存储魔方附件ID数组" />
+        <Column Name="ToolCalls" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="工具调用。JSON格式，存储tool_call链路记录" />
+        <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
+        <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />
+        <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -137,6 +141,9 @@
         <Column Name="MaxTokens" DataType="Int32" Description="最大令牌数" />
         <Column Name="SupportThinking" DataType="Boolean" Description="支持思考。是否支持思考模式" />
         <Column Name="SupportVision" DataType="Boolean" Description="支持视觉。是否支持图片输入" />
+        <Column Name="SupportImageGeneration" DataType="Boolean" Description="支持图像生成。是否支持文生图" />
+        <Column Name="SupportFunctionCalling" DataType="Boolean" Description="支持函数调用。是否支持Function Calling" />
+        <Column Name="ApiProtocol" DataType="String" Description="API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
@@ -174,6 +181,76 @@
       </Columns>
       <Indexes>
         <Index Columns="UserId" Unique="True" />
+      </Indexes>
+    </Table>
+    <Table Name="AppKey" Description="应用密钥。API网关访问凭证，用于外部系统调用模型服务">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户。密钥所属用户" />
+        <Column Name="Name" DataType="String" Master="True" Length="200" Description="名称。用户自定义标识，如业务系统A" />
+        <Column Name="Secret" DataType="String" ShowIn="Auto,-List,-Search" Length="200" Description="密钥。sk-前缀的随机字符串，创建时仅展示一次" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
+        <Column Name="LastCallTime" DataType="DateTime" Description="最后调用时间" />
+        <Column Name="Calls" DataType="Int64" Description="调用次数。累计API请求数" />
+        <Column Name="TotalTokens" DataType="Int64" Description="总Token数。累计消耗Token" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="Secret" Unique="True" />
+        <Index Columns="UserId" />
+      </Indexes>
+    </Table>
+    <Table Name="UsageRecord" Description="用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计" InsertOnly="True">
+      <Columns>
+        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
+        <Column Name="ConversationId" DataType="Int64" Description="会话" />
+        <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
+        <Column Name="ModelCode" DataType="String" Description="模型编码" />
+        <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
+        <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />
+        <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
+        <Column Name="Source" DataType="String" Description="请求来源。Chat=对话/Gateway=网关" />
+        <Column Name="TraceId" DataType="String" Description="链路追踪。方便问题排查" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,CreateTime" />
+        <Index Columns="AppKeyId,CreateTime" />
+        <Index Columns="ModelCode,CreateTime" />
+        <Index Columns="ConversationId" />
+      </Indexes>
+    </Table>
+    <Table Name="McpServerConfig" Description="MCP服务配置。MCP Server列表及工具发现信息">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Name" DataType="String" Master="True" Description="名称。服务名称" />
+        <Column Name="Endpoint" DataType="String" Length="500" Description="接口地址。MCP Server地址" />
+        <Column Name="TransportType" DataType="String" Description="传输类型。Http/Sse/Stdio" />
+        <Column Name="AuthType" DataType="String" Description="认证类型。None/Bearer/ApiKey" />
+        <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
+        <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="Name" Unique="True" />
       </Indexes>
     </Table>
   </Tables>

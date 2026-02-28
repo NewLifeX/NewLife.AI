@@ -7,45 +7,30 @@ using System.Xml.Serialization;
 
 namespace NewLife.ChatAI.Entity;
 
-/// <summary>模型配置。后端接入的大语言模型</summary>
-public partial class ModelConfigModel
+/// <summary>MCP服务配置。MCP Server列表及工具发现信息</summary>
+public partial class McpServerConfigModel
 {
     #region 属性
     /// <summary>编号</summary>
     public Int32 Id { get; set; }
 
-    /// <summary>编码。模型唯一标识</summary>
-    public String Code { get; set; }
-
-    /// <summary>名称。显示名称</summary>
+    /// <summary>名称。服务名称</summary>
     public String Name { get; set; }
 
-    /// <summary>提供商。OpenAI、Alibaba、DeepSeek等</summary>
-    public String Provider { get; set; }
-
-    /// <summary>接口地址。API地址</summary>
+    /// <summary>接口地址。MCP Server地址</summary>
     public String Endpoint { get; set; }
 
-    /// <summary>密钥。API访问密钥</summary>
-    public String ApiKey { get; set; }
+    /// <summary>传输类型。Http/Sse/Stdio</summary>
+    public String TransportType { get; set; }
 
-    /// <summary>最大令牌数</summary>
-    public Int32 MaxTokens { get; set; }
+    /// <summary>认证类型。None/Bearer/ApiKey</summary>
+    public String AuthType { get; set; }
 
-    /// <summary>支持思考。是否支持思考模式</summary>
-    public Boolean SupportThinking { get; set; }
+    /// <summary>认证令牌</summary>
+    public String AuthToken { get; set; }
 
-    /// <summary>支持视觉。是否支持图片输入</summary>
-    public Boolean SupportVision { get; set; }
-
-    /// <summary>支持图像生成。是否支持文生图</summary>
-    public Boolean SupportImageGeneration { get; set; }
-
-    /// <summary>支持函数调用。是否支持Function Calling</summary>
-    public Boolean SupportFunctionCalling { get; set; }
-
-    /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
-    public String ApiProtocol { get; set; }
+    /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
+    public String AvailableTools { get; set; }
 
     /// <summary>启用</summary>
     public Boolean Enable { get; set; }
@@ -78,20 +63,15 @@ public partial class ModelConfigModel
     #region 拷贝
     /// <summary>拷贝模型对象</summary>
     /// <param name="model">模型</param>
-    public void Copy(ModelConfigModel model)
+    public void Copy(McpServerConfigModel model)
     {
         Id = model.Id;
-        Code = model.Code;
         Name = model.Name;
-        Provider = model.Provider;
         Endpoint = model.Endpoint;
-        ApiKey = model.ApiKey;
-        MaxTokens = model.MaxTokens;
-        SupportThinking = model.SupportThinking;
-        SupportVision = model.SupportVision;
-        SupportImageGeneration = model.SupportImageGeneration;
-        SupportFunctionCalling = model.SupportFunctionCalling;
-        ApiProtocol = model.ApiProtocol;
+        TransportType = model.TransportType;
+        AuthType = model.AuthType;
+        AuthToken = model.AuthToken;
+        AvailableTools = model.AvailableTools;
         Enable = model.Enable;
         Sort = model.Sort;
         CreateUserID = model.CreateUserID;

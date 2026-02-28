@@ -32,6 +32,18 @@ public partial class ChatMessageModel
     /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
     public String Attachments { get; set; }
 
+    /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+    public String ToolCalls { get; set; }
+
+    /// <summary>提示Token数</summary>
+    public Int32 PromptTokens { get; set; }
+
+    /// <summary>回复Token数</summary>
+    public Int32 CompletionTokens { get; set; }
+
+    /// <summary>总Token数</summary>
+    public Int32 TotalTokens { get; set; }
+
     /// <summary>创建用户</summary>
     public Int32 CreateUserID { get; set; }
 
@@ -63,6 +75,10 @@ public partial class ChatMessageModel
         ThinkingContent = model.ThinkingContent;
         ThinkingMode = model.ThinkingMode;
         Attachments = model.Attachments;
+        ToolCalls = model.ToolCalls;
+        PromptTokens = model.PromptTokens;
+        CompletionTokens = model.CompletionTokens;
+        TotalTokens = model.TotalTokens;
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
         CreateTime = model.CreateTime;
