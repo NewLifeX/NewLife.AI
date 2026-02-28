@@ -39,8 +39,8 @@ export default {
   },
   chat: {
     placeholder: '发消息或输入 "/" 选择技能',
-    thinkingDeep: 'Deep Thinking...',
-    analyzingLogs: 'Analyzing logs...',
+    thinkingDeep: '深度思考中...',
+    analyzingLogs: '分析日志中...',
     voiceInput: '语音输入',
     stopGen: '停止生成',
   },

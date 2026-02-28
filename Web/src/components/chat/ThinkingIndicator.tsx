@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 
@@ -7,9 +8,11 @@ interface ThinkingIndicatorProps {
 }
 
 export function ThinkingIndicator({
-  label = 'Deep Thinking...',
+  label,
   className,
 }: ThinkingIndicatorProps) {
+  const { t } = useTranslation()
+  const resolvedLabel = label ?? t('chat.thinkingDeep')
   return (
     <div
       className={cn(
@@ -21,7 +24,7 @@ export function ThinkingIndicator({
       )}
     >
       <Icon name="cyclone" variant="symbols" size="sm" className="animate-spin" />
-      <span className="animate-pulse">{label}</span>
+      <span className="animate-pulse">{resolvedLabel}</span>
     </div>
   )
 }
