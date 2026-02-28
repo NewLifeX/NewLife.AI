@@ -27,6 +27,6 @@ app.MapDefaultControllerRoute();
 
 app.UseAuthorization();
 
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("chat.html");
 
 app.Run();
