@@ -67,7 +67,7 @@ export function SkillPopover({
             <button
               key={opt.id}
               onClick={() => onSelect(opt.id)}
-              className="w-full flex items-center p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors text-left"
+              className="w-full flex items-center p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center mr-3 flex-shrink-0', opt.iconBg)}>
                 <Icon name={opt.icon} className={opt.iconColor} />

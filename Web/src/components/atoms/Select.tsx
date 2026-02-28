@@ -96,6 +96,7 @@ export function Select({
           'flex items-center justify-between w-full rounded-lg border',
           'bg-gray-50 dark:bg-gray-800 text-sm',
           'px-3 py-2 min-h-[36px] text-left transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           open
             ? 'border-primary ring-1 ring-primary'
             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',

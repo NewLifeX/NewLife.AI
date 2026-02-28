@@ -22,7 +22,7 @@ export function SkillBar({ skills, onSkillClick, className }: SkillBarProps) {
           key={skill.id}
           onClick={() => onSkillClick?.(skill.id)}
           className={cn(
-            'flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors flex-shrink-0',
+            'flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
             skill.active
               ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800'
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',

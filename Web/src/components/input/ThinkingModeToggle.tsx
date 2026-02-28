@@ -53,6 +53,7 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
           'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
           'rounded-full px-3 py-1.5 shadow-sm',
           'hover:border-blue-400 dark:hover:border-blue-500 transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           className,
         )}
       >

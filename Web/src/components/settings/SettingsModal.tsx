@@ -51,7 +51,7 @@ export function SettingsModal({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg w-full text-left transition-colors',
+                'flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg w-full text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 activeTab === tab.id
                   ? 'bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
