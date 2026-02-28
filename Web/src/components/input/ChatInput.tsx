@@ -169,7 +169,7 @@ export function ChatInput({
                 title={isGenerating ? t('chat.stopGen') : undefined}
                 aria-label={isGenerating ? t('chat.stopGen') : undefined}
               >
-                <Icon name={isGenerating ? 'stop' : 'arrow_upward'} variant="filled" size="sm" />
+                <Icon name={isGenerating ? 'stop' : 'arrow_upward'} variant="filled" size="base" />
               </button>
             </div>
           </div>
