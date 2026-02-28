@@ -9,11 +9,11 @@ using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.ModelConfig;
 
-namespace NewLife.ChatAI.Areas.Cube.Controllers;
+namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>模型配置。后端接入的大语言模型</summary>
 [Menu(30, true, Icon = "fa-table")]
-[CubeArea]
+[ChatAIArea]
 public class ModelConfigController : EntityController<ModelConfig>
 {
     static ModelConfigController()

@@ -9,11 +9,11 @@ using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.UserSetting;
 
-namespace NewLife.ChatAI.Areas.Cube.Controllers;
+namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>用户设置。用户的个性化配置</summary>
 [Menu(10, true, Icon = "fa-table")]
-[CubeArea]
+[ChatAIArea]
 public class UserSettingController : EntityController<UserSetting>
 {
     static UserSettingController()

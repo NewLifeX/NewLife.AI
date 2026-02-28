@@ -9,11 +9,11 @@ using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.ChatMessage;
 
-namespace NewLife.ChatAI.Areas.Cube.Controllers;
+namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>对话消息。会话中的单条发言，包括用户消息和AI回复</summary>
 [Menu(60, true, Icon = "fa-table")]
-[CubeArea]
+[ChatAIArea]
 public class ChatMessageController : EntityController<ChatMessage>
 {
     static ChatMessageController()

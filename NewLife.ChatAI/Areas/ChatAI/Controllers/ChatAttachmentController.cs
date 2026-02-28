@@ -9,11 +9,11 @@ using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.ChatAttachment;
 
-namespace NewLife.ChatAI.Areas.Cube.Controllers;
+namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>对话附件。上传的文件，关联到消息</summary>
 [Menu(20, true, Icon = "fa-table")]
-[CubeArea]
+[ChatAIArea]
 public class ChatAttachmentController : EntityController<ChatAttachment>
 {
     static ChatAttachmentController()

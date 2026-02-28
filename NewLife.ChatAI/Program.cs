@@ -17,15 +17,16 @@ services.AddCube();
 
 var app = builder.Build();
 
-app.UseDefaultFiles();
+//app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseCube(app.Environment);
-app.UseCubeHome();
+//app.UseCubeHome();
+app.MapDefaultControllerRoute();
+//app.MapControllers();
 
 app.UseAuthorization();
 
-app.MapControllers();
 app.MapFallbackToFile("index.html");
 
 app.Run();
