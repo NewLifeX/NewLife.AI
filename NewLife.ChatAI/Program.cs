@@ -10,7 +10,7 @@ var services = builder.Services;
 
 services.AddStardust();
 
-services.AddSingleton<IChatApplicationService, InMemoryChatApplicationService>();
+services.AddSingleton<IChatApplicationService, DbChatApplicationService>();
 
 services.AddControllersWithViews();
 services.AddCube();
