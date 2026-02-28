@@ -46,7 +46,7 @@ export function ConversationList({
               <button
                 onClick={() => onSelect(conv.id)}
                 className={cn(
-                  'group flex items-center space-x-2 px-3 py-2 rounded-lg text-sm w-full text-left relative transition-colors',
+                  'group flex items-center space-x-2 px-3 py-2 rounded-lg text-sm w-full text-left relative transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   isActive
                     ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50',

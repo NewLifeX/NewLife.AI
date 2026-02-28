@@ -49,7 +49,7 @@ export function MessageBubble({
             <div className="absolute -left-12 top-2 hidden group-hover:flex space-x-1">
               <button
                 onClick={onEdit}
-                className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <Icon name="edit" variant="filled" size="xs" />
               </button>

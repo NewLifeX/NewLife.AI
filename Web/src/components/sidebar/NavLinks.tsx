@@ -41,7 +41,7 @@ export function NavLinks({
         <button
           key={item.id}
           onClick={() => onItemClick?.(item.id)}
-          className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+          className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Icon name={item.icon} className="text-gray-500 dark:text-gray-400" size="base" />
           <span>{item.label}</span>

@@ -36,6 +36,7 @@ export function IconButton({
     <button
       className={cn(
         'inline-flex items-center justify-center transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         sizeStyles[size],
         variantStyles[variant],

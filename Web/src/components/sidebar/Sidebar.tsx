@@ -55,7 +55,7 @@ export function Sidebar({
       <div className="px-3 py-2">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-start space-x-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary rounded-lg px-3 py-2.5 transition-colors group"
+          className="w-full flex items-center justify-start space-x-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary rounded-lg px-3 py-2.5 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Icon name="add_circle_outline" size="lg" />
           <span className="text-sm font-medium">{t('sidebar.newChat')}</span>

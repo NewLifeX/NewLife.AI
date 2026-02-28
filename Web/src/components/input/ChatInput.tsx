@@ -173,7 +173,7 @@ export function ChatInput({
                   onClick={handleSend}
                   disabled={!value.trim()}
                   className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm',
+                    'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     value.trim()
                       ? 'bg-primary hover:bg-blue-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed',
