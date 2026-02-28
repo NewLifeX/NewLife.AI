@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NewLife.ChatAI</title>
+    <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar" id="sidebar">
+        <button class="primary" id="newConversation">新建对话</button>
+        <div class="conversation-list" id="conversationList"></div>
+        <button class="profile">个人</button>
+    </aside>
+    <main class="main">
+        <header class="topbar">
+            <select id="modelSelect"></select>
+        </header>
+        <section class="messages" id="messages"></section>
+        <footer class="composer">
+            <button id="uploadButton">+</button>
+            <textarea id="promptInput" rows="1" placeholder="输入你的问题..."></textarea>
+            <select id="modeSelect">
+                <option value="Auto">自动</option>
+                <option value="Think">思考</option>
+                <option value="Fast">快速</option>
+            </select>
+            <button id="sendButton">发送</button>
+        </footer>
+    </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

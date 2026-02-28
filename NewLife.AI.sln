@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.32112.339
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11520.95 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{582E00A2-4FA4-41DC-84AD-EE264A9FF4D8}"
 EndProject
@@ -20,6 +20,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NewLife.AI", "NewLife.AI\NewLife.AI.csproj", "{9C7D96F5-136F-4FBD-8D58-18105263D041}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewLife.AI.Extensions", "NewLife.AI.Extensions\NewLife.AI.Extensions.csproj", "{D8ED9756-0982-9947-E69F-D8C9D9B8FA03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewLife.ChatAI", "NewLife.ChatAI\NewLife.ChatAI.csproj", "{F538883F-4536-56ED-DC69-242B5FA72558}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +45,10 @@ Global
 		{D8ED9756-0982-9947-E69F-D8C9D9B8FA03}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D8ED9756-0982-9947-E69F-D8C9D9B8FA03}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D8ED9756-0982-9947-E69F-D8C9D9B8FA03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F538883F-4536-56ED-DC69-242B5FA72558}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F538883F-4536-56ED-DC69-242B5FA72558}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F538883F-4536-56ED-DC69-242B5FA72558}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F538883F-4536-56ED-DC69-242B5FA72558}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
