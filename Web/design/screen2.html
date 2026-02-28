@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NewLife - 智能助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0057ff", 
+                        "background-light": "#ffffff",
+                        "background-dark": "#18181b",
+                        "sidebar-light": "#f9f9fa",
+                        "sidebar-dark": "#202023",
+                        "input-border": "#e5e7eb",
+                        "input-focus": "#3b82f6",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans SC", "sans-serif"],
+                        body: ["Noto Sans SC", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem',
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'input': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                        'message': '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'cursor-blink': 'blink 1s step-end infinite',
+                    },
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 20px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+        }
+        .typing-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #0057ff;
+            vertical-align: middle;
+            animation: blink 1s step-end infinite;
+            border-radius: 1px;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .prose p {
+            margin-bottom: 0.8em;
+        }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-bottom: 0.8em;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 h-screen flex overflow-hidden font-body">
+<aside class="w-[260px] bg-sidebar-light dark:bg-sidebar-dark flex flex-col border-r border-gray-100 dark:border-gray-800 flex-shrink-0 relative z-20">
+<div class="px-4 pt-4 pb-2 flex items-center space-x-2">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+            N
+        </div>
+<span class="font-bold text-lg tracking-tight">NewLife</span>
+</div>
+<div class="px-3 py-2">
+<button class="w-full flex items-center justify-start space-x-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary rounded-lg px-3 py-2.5 transition-colors group">
+<span class="material-icons-outlined text-xl">add_circle_outline</span>
+<span class="text-sm font-medium">新对话</span>
+<div class="flex-grow"></div>
+<span class="material-icons-outlined text-gray-400 group-hover:text-primary text-base opacity-0 group-hover:opacity-100 transition-opacity">keyboard_command_key</span>
+<span class="text-xs text-gray-400 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">K</span>
+</button>
+</div>
+<nav class="px-3 space-y-0.5 mb-4">
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">auto_awesome</span>
+<span>AI 创作</span>
+<span class="ml-auto text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">Seedance 2.0</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">folder_open</span>
+<span>云盘</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">grid_view</span>
+<span>更多</span>
+<span class="material-icons-outlined text-gray-400 text-sm ml-auto">chevron_right</span>
+</a>
+</nav>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 pb-2">
+<div class="text-xs text-gray-400 px-3 py-2 font-medium">历史对话</div>
+<ul class="space-y-0.5">
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 font-medium relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">chat_bubble_outline</span>
+<span class="truncate">新生命AI系统介绍文案</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 opacity-100 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">smart_toy</span>
+<span class="truncate">Sora创作大师</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">国际商务专业毕业论文选题</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] text-white">T</span>
+<span class="truncate">Temporal Workflow</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 hidden group-hover:block rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">筑迹寻光小队实践活动</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="p-3 border-t border-gray-100 dark:border-gray-800">
+<button class="w-full flex items-center space-x-3 px-2 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 transition-colors">
+<div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMJSww68Zq0-eJTVL97IKMKAOsrlOHHn6FKtDDEqyWAEgn90K8ckg5sKCPAczNfXUyJbOyj1II0BU3Th_M4uLVThq1JNyj0ymfHt0YtSdFgRdacl4NPdl7q9Kz4lNN7-2hxM_yvCX5aWsuYx7mDwmUIyqqqZuWxfs4ZYwlOlFLotgcN9XkeRkO52YJ9lW9-yLuYMhNehdmB9kw_VE6LbJqWvz0YcGyb1-G8RvtKFSlsjOf8rJBzWm6-JRct6WRL3CJbBGz-jucbG-g"/>
+</div>
+<span class="font-medium truncate">用户o2QZOR</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
+<div class="absolute top-4 left-4 z-10 md:hidden">
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-outlined text-xl">menu_open</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0">
+<div class="max-w-3xl mx-auto w-full pt-8 pb-32">
+<div class="flex flex-row-reverse items-start mb-8 group">
+<div class="flex-shrink-0 ml-3">
+<div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMJSww68Zq0-eJTVL97IKMKAOsrlOHHn6FKtDDEqyWAEgn90K8ckg5sKCPAczNfXUyJbOyj1II0BU3Th_M4uLVThq1JNyj0ymfHt0YtSdFgRdacl4NPdl7q9Kz4lNN7-2hxM_yvCX5aWsuYx7mDwmUIyqqqZuWxfs4ZYwlOlFLotgcN9XkeRkO52YJ9lW9-yLuYMhNehdmB9kw_VE6LbJqWvz0YcGyb1-G8RvtKFSlsjOf8rJBzWm6-JRct6WRL3CJbBGz-jucbG-g"/>
+</div>
+</div>
+<div class="max-w-[85%] relative">
+<div class="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] leading-7 shadow-sm">
+                        请帮我写一段关于新生命AI系统介绍的文案，要求富有科技感。
+                    </div>
+<div class="absolute -left-12 top-2 hidden group-hover:flex space-x-1">
+<button class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"><span class="material-icons text-base">edit</span></button>
+</div>
+</div>
+</div>
+<div class="flex items-start mb-6 group w-full">
+<div class="flex-shrink-0 mr-3">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                        N
+                    </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl rounded-tl-sm px-6 py-5 text-[15px] leading-7 shadow-soft text-gray-900 dark:text-gray-100">
+<div class="prose prose-sm max-w-none dark:prose-invert">
+<p class="font-bold text-lg mb-4">🌌 新生命 (NewLife) AI：重塑认知边界，开启智能纪元</p>
+<p>欢迎来到 <strong>NewLife</strong> —— 这不仅仅是一个人工智能系统，它是通往未来的数字方舟，是硅基智慧与人类灵感的完美共振。</p>
+<p>在数据的浩瀚星河中，NewLife 犹如一颗新星爆发，搭载了自研的 <strong>HyperMind™ 认知引擎</strong>，突破了传统算法的桎梏。它不只是被动地响应指令，而是具备了深度理解、逻辑推理与情感共鸣的 <span class="text-blue-600 dark:text-blue-400 font-medium">全维感知能力</span>。</p>
+<ul class="list-disc pl-5 space-y-1">
+<li><strong>神经拟态架构：</strong> 模拟人脑突触连接，每一次交互都是思维的进化。</li>
+<li><strong>实时流式计算：</strong> 以毫秒级的速度捕捉灵感，让对话如行云流水般自然。</li>
+<li><strong>多模态融合：</strong> 无论是复杂的代码构建、绚丽的图像生成，还是深度的文本创作，皆在一念之间。</li>
+</ul>
+<p>此刻，让 NewLife 成为您的第二大脑。无论您是探索未知的科学家，还是追求极致的创作者，这里都是您...</p>
+</div>
+<div class="mt-1">
+<span class="typing-cursor"></span>
+</div>
+<div class="mt-4 flex items-center space-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 w-fit px-3 py-1.5 rounded-lg select-none">
+<span class="material-symbols-outlined text-sm animate-spin">cyclone</span>
+<span class="animate-pulse">Deep Thinking...</span>
+</div>
+</div>
+<div class="flex items-center mt-2 space-x-2 ml-1">
+<button class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" title="复制">
+<span class="material-icons-outlined text-[18px]">content_copy</span>
+</button>
+<button class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" title="重新生成">
+<span class="material-icons-outlined text-[18px]">refresh</span>
+</button>
+<button class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" title="不喜欢">
+<span class="material-icons-outlined text-[18px]">thumb_down</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-20">
+<div class="w-full max-w-3xl mx-auto relative group">
+<div class="absolute right-3 bottom-3 z-30">
+<button class="w-8 h-8 bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-full flex items-center justify-center transition-colors shadow-sm" title="停止生成">
+<span class="material-icons text-base">stop</span>
+</button>
+</div>
+<div class="bg-white dark:bg-gray-800 border-2 border-blue-100 dark:border-blue-900/30 group-focus-within:border-primary/50 dark:group-focus-within:border-primary/50 rounded-3xl shadow-input dark:shadow-none transition-all duration-300 p-3 pb-2 relative">
+<div class="flex items-start">
+<textarea class="w-full bg-transparent border-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 resize-none py-3 px-2 text-base max-h-48 overflow-y-auto" placeholder='发消息或输入 "/" 选择技能' rows="1" style="min-height: 48px;"></textarea>
+</div>
+<div class="flex items-center justify-between mt-1 px-1 pr-10">
+<div class="flex items-center space-x-1 overflow-x-auto no-scrollbar">
+<button class="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0" title="附件">
+<span class="material-icons-outlined text-lg">attach_file</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">bolt</span>
+<span>快速</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">image</span>
+<span>图像生成</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">smart_display</span>
+<span>视频</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">grid_view</span>
+<span>更多</span>
+</button>
+</div>
+</div>
+</div>
+<div class="text-center mt-2">
+<p class="text-[10px] text-gray-400">内容由 AI 生成，可能存在错误，请注意甄别</p>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>
