@@ -71,7 +71,7 @@ export function SettingsModal({
           <div className="flex items-center space-x-2 text-xs text-gray-400">
             <span>{t('common.version')}</span>
             <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <button className="hover:underline hover:text-primary">{t('common.checkUpdate')}</button>
+            <button className="hover:underline hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded">{t('common.checkUpdate')}</button>
           </div>
         </div>
       </div>
