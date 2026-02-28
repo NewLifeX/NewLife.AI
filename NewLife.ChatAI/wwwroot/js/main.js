@@ -18,9 +18,31 @@ import { initLightbox } from './components/lightbox.js';
 import { showToast } from './components/toast.js';
 
 /**
+ * 检测登录状态，未登录时跳转登录页
+ * @returns {boolean} 是否已登录（或为分享页无需登录）
+ */
+async function checkLogin() {
+    // 分享页不需要登录
+    if (window.location.pathname.match(/^\/share\//)) return true;
+
+    try {
+        const resp = await fetch('/api/user/profile');
+        if (resp.status === 401) {
+            const returnUrl = encodeURIComponent(window.location.href);
+            window.location.href = '/admin/user/login?r=' + returnUrl;
+            return false;
+        }
+    } catch { /* 网络异常时不阻断，后续流程会再处理 */ }
+    return true;
+}
+
+/**
  * 应用初始化
  */
 async function init() {
+    // 0. 登录状态检测（分享页除外）
+    if (!await checkLogin()) return;
+
     // 1. 初始化渲染相关服务（mermaid 在 initMarkdown 中初始化）
     initMarkdown();
 

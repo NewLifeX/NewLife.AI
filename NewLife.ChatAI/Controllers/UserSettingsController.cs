@@ -13,7 +13,8 @@ public class UserSettingsController(IChatApplicationService chatService) : Contr
     [HttpGet("profile")]
     public ActionResult<UserProfileDto> GetProfile(CancellationToken cancellationToken)
     {
-        var user = ManageProvider2.User ?? new User { Name = "Guest", DisplayName = "游客" };
+        var user = ManageProvider2.User;
+        if (user == null) return Unauthorized();
 
         var result = new UserProfileDto(user.DisplayName ?? "用户", user.Name, null);
         return Ok(result);
