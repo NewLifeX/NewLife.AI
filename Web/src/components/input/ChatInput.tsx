@@ -155,28 +155,22 @@ export function ChatInput({
               {!isGenerating && (
                 <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} />
               )}
-              {isGenerating ? (
-                <IconButton
-                  icon="stop"
-                  variant="filled"
-                  size="md"
-                  label={t('chat.stopGen')}
-                  onClick={onStop}
-                />
-              ) : (
-                <button
-                  onClick={handleSend}
-                  disabled={!value.trim()}
-                  className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    value.trim()
+              <button
+                onClick={isGenerating ? onStop : handleSend}
+                disabled={!isGenerating && !value.trim()}
+                className={cn(
+                  'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  isGenerating
+                    ? 'bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900'
+                    : value.trim()
                       ? 'bg-primary hover:bg-blue-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed',
-                  )}
-                >
-                  <Icon name="arrow_upward" variant="filled" size="sm" />
-                </button>
-              )}
+                )}
+                title={isGenerating ? t('chat.stopGen') : undefined}
+                aria-label={isGenerating ? t('chat.stopGen') : undefined}
+              >
+                <Icon name={isGenerating ? 'stop' : 'arrow_upward'} variant="filled" size="sm" />
+              </button>
             </div>
           </div>
         </div>
