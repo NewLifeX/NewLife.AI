@@ -231,6 +231,30 @@ public class DbChatApplicationService : IChatApplicationService
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>异步生成会话标题。根据用户首条消息内容生成简短标题</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="userMessage">用户首条消息内容</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    public Task<String?> GenerateTitleAsync(Int64 conversationId, String userMessage, CancellationToken cancellationToken)
+    {
+        var conversation = Conversation.FindById(conversationId);
+        if (conversation == null) return Task.FromResult<String?>(null);
+
+        // 简单标题生成：截取前10个字符
+        // 后续可接入真实模型推理，使用 ChatSetting.Current.TitlePrompt 作为提示词
+        var title = userMessage.Length > 10 ? userMessage.Substring(0, 10) : userMessage;
+        title = title.Replace("\n", " ").Replace("\r", "").Trim();
+
+        if (!String.IsNullOrWhiteSpace(title) && title != conversation.Title)
+        {
+            conversation.Title = title;
+            conversation.Update();
+        }
+
+        return Task.FromResult<String?>(title);
+    }
     #endregion
 
     #region 反馈

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.ChatAI.Contracts;
@@ -135,6 +135,16 @@ public class InMemoryChatApplicationService : IChatApplicationService
     }
 
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<String?> GenerateTitleAsync(Int64 conversationId, String userMessage, CancellationToken cancellationToken)
+    {
+        // 内存版模拟标题生成：截取前10个字符作为标题
+        var title = userMessage.Length > 10 ? userMessage.Substring(0, 10) : userMessage;
+        if (_conversations.TryGetValue(conversationId, out var conversation))
+            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, title, conversation.ModelCode, conversation.LastMessageTime, conversation.IsPinned);
+
+        return Task.FromResult<String?>(title);
+    }
 
     public Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
 

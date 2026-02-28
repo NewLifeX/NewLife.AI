@@ -11,7 +11,10 @@ var services = builder.Services;
 services.AddStardust();
 
 services.AddSingleton<IChatApplicationService, DbChatApplicationService>();
+services.AddSingleton<UsageService>();
 services.AddSingleton<GatewayService>();
+services.AddSingleton<McpClientService>();
+services.AddHttpClient("McpClient");
 
 services.AddControllersWithViews();
 services.AddCube();
