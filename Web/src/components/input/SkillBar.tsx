@@ -28,7 +28,7 @@ export function SkillBar({ skills, onSkillClick, className }: SkillBarProps) {
               : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
           )}
         >
-          <Icon name={skill.icon} size="base" />
+          <Icon name={skill.icon} size="sm" />
           <span>{skill.label}</span>
         </button>
       ))}

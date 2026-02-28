@@ -18,9 +18,9 @@ export function MessageActions({
   const { t } = useTranslation()
   return (
     <div className={cn('flex items-center space-x-1', className)}>
-      <IconButton icon="content_copy" size="lg" label={t('common.copy')} onClick={onCopy} />
-      <IconButton icon="refresh" size="lg" label={t('common.regenerate')} onClick={onRegenerate} />
-      <IconButton icon="thumb_down" size="lg" label={t('common.dislike')} onClick={onDislike} />
+      <IconButton icon="content_copy" size="md" label={t('common.copy')} onClick={onCopy} />
+      <IconButton icon="refresh" size="md" label={t('common.regenerate')} onClick={onRegenerate} />
+      <IconButton icon="thumb_down" size="md" label={t('common.dislike')} onClick={onDislike} />
     </div>
   )
 }

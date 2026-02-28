@@ -10,11 +10,11 @@ interface IconProps {
 }
 
 const sizeValue: Record<string, number> = {
-  xs: 11,
-  sm: 12,
-  base: 14,
-  lg: 16,
-  xl: 18,
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
 }
 
 const variantClass: Record<IconVariant, string> = {
