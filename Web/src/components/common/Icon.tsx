@@ -10,11 +10,11 @@ interface IconProps {
 }
 
 const sizeMap: Record<string, string> = {
-  xs: 'text-xs',
-  sm: 'text-sm',
-  base: 'text-base',
-  lg: 'text-lg',
-  xl: 'text-xl',
+  xs: 'text-[11px]',
+  sm: 'text-xs',
+  base: 'text-sm',
+  lg: 'text-base',
+  xl: 'text-lg',
 }
 
 const variantClass: Record<IconVariant, string> = {

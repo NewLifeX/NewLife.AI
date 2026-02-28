@@ -179,7 +179,7 @@ export function ChatInput({
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed',
                   )}
                 >
-                  <Icon name="arrow_upward" variant="filled" size="sm" />
+                  <Icon name="arrow_upward" variant="filled" size="base" />
                 </button>
               </div>
             )}

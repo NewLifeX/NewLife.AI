@@ -113,7 +113,7 @@ export function Select({
         </span>
         <Icon
           name="unfold_more"
-          size="sm"
+          size="base"
           className={cn(
             'ml-2 flex-shrink-0 text-gray-400 transition-transform',
             open && 'text-primary',
@@ -153,7 +153,7 @@ export function Select({
                 )}
               >
                 {opt.icon && (
-                  <Icon name={opt.icon} size="sm" className="mr-2 text-gray-400" />
+                  <Icon name={opt.icon} size="base" className="mr-2 text-gray-400" />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="truncate">{opt.label}</div>
@@ -162,7 +162,7 @@ export function Select({
                   )}
                 </div>
                 {isSelected && (
-                  <Icon name="check" size="sm" className="ml-2 text-primary flex-shrink-0" />
+                  <Icon name="check" size="base" className="ml-2 text-primary flex-shrink-0" />
                 )}
               </button>
             )
