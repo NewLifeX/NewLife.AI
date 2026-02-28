@@ -1,4 +1,4 @@
-namespace NewLife.AI.ChatAI.Contracts;
+﻿namespace NewLife.AI.ChatAI.Contracts;
 
 /// <summary>思考模式</summary>
 public enum ThinkingMode
@@ -16,13 +16,16 @@ public enum FeedbackType
 }
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision);
+public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision, Boolean SupportImageGeneration, Boolean SupportFunctionCalling);
 
 /// <summary>会话摘要</summary>
 public record ConversationSummaryDto(Int64 Id, String Title, String ModelCode, DateTime LastMessageTime, Boolean IsPinned);
 
 /// <summary>消息数据</summary>
-public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Content, ThinkingMode ThinkingMode, DateTime CreateTime);
+public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Content, String? ThinkingContent, ThinkingMode ThinkingMode, String? Attachments, DateTime CreateTime);
+
+/// <summary>附件信息</summary>
+public record AttachmentInfoDto(Int64 Id, String FileName, Int64 Size, String Url, Boolean IsImage);
 
 /// <summary>分页结果</summary>
 public record PagedResultDto<T>(IReadOnlyList<T> Items, Int32 Total, Int32 Page, Int32 PageSize);

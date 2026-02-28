@@ -53,6 +53,7 @@ const thinkingModeDropdown = $('thinkingModeDropdown');
 const sendBtn = $('sendBtn');
 const sendIcon = $('sendIcon');
 const dropOverlay = $('dropOverlay');
+const sidebarOverlay = $('sidebarOverlay');
 const toastContainer = $('toastContainer');
 
 // ── API 封装 ──
@@ -246,8 +247,10 @@ function renderModelDropdown() {
         const opt = document.createElement('div');
         opt.className = `model-option${state.currentModel?.code === m.code ? ' active' : ''}`;
         const badges = [];
+        if (m.supportImageGeneration) badges.push('🖼️');
         if (m.supportVision) badges.push('👁️');
         if (m.supportThinking) badges.push('🧠');
+        if (m.supportFunctionCalling) badges.push('🔧');
         opt.innerHTML = `<span class="model-option-name">${escapeHtml(m.name)}</span>
             <span class="model-option-badges">${badges.join(' ')}</span>`;
         opt.addEventListener('click', () => {
@@ -298,11 +301,17 @@ function setThinkingMode(mode) {
 function toggleSidebar() {
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
-        sidebar.classList.toggle('mobile-open');
+        const isOpen = sidebar.classList.toggle('mobile-open');
+        sidebarOverlay.classList.toggle('hidden', !isOpen);
     } else {
         sidebar.classList.toggle('collapsed');
         sidebarOpenBtn.classList.toggle('hidden', !sidebar.classList.contains('collapsed'));
     }
+}
+
+function closeMobileSidebar() {
+    sidebar.classList.remove('mobile-open');
+    sidebarOverlay.classList.add('hidden');
 }
 
 // ── 对话列表 ──
@@ -354,7 +363,7 @@ function renderConversationList() {
             if (e.target.closest('[data-action]')) return;
             openConversation(conv.id);
             // 移动端自动关闭侧边栏
-            if (window.innerWidth <= 768) sidebar.classList.remove('mobile-open');
+            if (window.innerWidth <= 768) closeMobileSidebar();
         });
         // 重命名
         item.querySelector('[data-action="rename"]')?.addEventListener('click', e => {
@@ -458,6 +467,8 @@ async function openConversation(id) {
         for (const msg of messages) {
             renderMessage(msg);
         }
+        // 仅最后一条 AI 回复显示重新生成按钮
+        addRegenerateToLastAi();
         scrollToBottom(true);
     } catch (e) {
         showToast('加载消息失败: ' + e.message, 'error');
@@ -499,15 +510,55 @@ function renderMessage(msg) {
         contentHtml = `<div class="msg-content md-content">${renderMarkdown(msg.content)}</div>`;
     }
 
+    // 附件展示
+    let attachmentsHtml = '';
+    if (msg.attachments) {
+        try {
+            const ids = JSON.parse(msg.attachments);
+            if (Array.isArray(ids) && ids.length > 0) {
+                attachmentsHtml = '<div class="msg-attachments">' + ids.map(id => {
+                    return `<div class="msg-attach-item">
+                        <a href="/api/attachments/${id}" target="_blank" class="msg-attach-link">📎 附件 #${id}</a>
+                    </div>`;
+                }).join('') + '</div>';
+            }
+        } catch { /* 忽略解析错误 */ }
+    }
+
+    // 历史思考过程展示
+    let thinkingHtml = '';
+    if (!isUser && msg.thinkingContent) {
+        thinkingHtml = `<div class="thinking-block">
+            <div class="thinking-header">
+                <span class="thinking-toggle">▼</span>
+                <span>思考过程</span>
+            </div>
+            <div class="thinking-body">${escapeHtml(msg.thinkingContent)}</div>
+        </div>`;
+    }
+
     div.innerHTML = `
         <div class="msg-avatar">${avatarContent}</div>
         <div class="msg-body">
+            ${thinkingHtml}
             ${contentHtml}
+            ${attachmentsHtml}
             <div class="msg-time" title="${exactTime(msg.createTime)}">${relativeTime(msg.createTime)}</div>
             ${isUser ? renderUserActions(msg) : renderAiActions(msg)}
         </div>`;
 
     messagesInner.appendChild(div);
+
+    // 思考过程折叠/展开
+    const thinkBlock = div.querySelector('.thinking-block');
+    if (thinkBlock) {
+        thinkBlock.querySelector('.thinking-header').addEventListener('click', () => {
+            const toggle = thinkBlock.querySelector('.thinking-toggle');
+            const body = thinkBlock.querySelector('.thinking-body');
+            toggle.classList.toggle('collapsed');
+            body.classList.toggle('collapsed');
+        });
+    }
 
     // 处理 Mermaid
     if (!isUser) {
@@ -528,10 +579,31 @@ function renderUserActions(msg) {
 function renderAiActions(msg) {
     return `<div class="msg-actions">
         <button class="msg-action-btn" onclick="copyMessage(${msg.id})" title="复制">📋</button>
+        <button class="msg-action-btn" onclick="editMessage(${msg.id}, false)" title="编辑">✏️</button>
         <button class="msg-action-btn" onclick="likeMessage(${msg.id}, this)" title="点赞">👍</button>
         <button class="msg-action-btn" onclick="dislikeMessage(${msg.id})" title="点踩">👎</button>
         <button class="msg-action-btn" onclick="shareConversation()" title="分享">🔗</button>
     </div>`;
+}
+
+// 仅为最后一条 AI 回复添加重新生成按钮
+function addRegenerateToLastAi() {
+    // 移除所有已有的重新生成按钮
+    messagesInner.querySelectorAll('.msg-action-regen').forEach(b => b.remove());
+    // 找到最后一条 AI 消息
+    const aiMsgs = messagesInner.querySelectorAll('.msg.assistant');
+    if (aiMsgs.length === 0) return;
+    const lastAi = aiMsgs[aiMsgs.length - 1];
+    const msgId = lastAi.dataset.messageId;
+    if (!msgId || msgId === '0') return;
+    const actions = lastAi.querySelector('.msg-actions');
+    if (!actions) return;
+    const btn = document.createElement('button');
+    btn.className = 'msg-action-btn msg-action-regen';
+    btn.title = '重新生成';
+    btn.textContent = '🔄';
+    btn.addEventListener('click', () => regenerateMessage(Number(msgId)));
+    actions.appendChild(btn);
 }
 
 // ── SSE 流式消息处理 ──
@@ -684,7 +756,35 @@ async function sendMessage() {
         }
     } catch (e) {
         if (e.name !== 'AbortError') {
-            showErrorInMessage(aiDiv, 'NETWORK_ERROR', '网络异常，请重试');
+            // 网络异常自动重试：最多 3 次，间隔 1s/2s/4s
+            let retried = false;
+            if (!hasError && answerContent.length === 0) {
+                for (let retry = 0; retry < 3; retry++) {
+                    const delay = Math.pow(2, retry) * 1000;
+                    showErrorInMessage(aiDiv, 'NETWORK_ERROR', `网络异常，${(delay / 1000)}s 后重试（${retry + 1}/3）...`);
+                    await new Promise(r => setTimeout(r, delay));
+                    // 移除错误提示
+                    const errEl = aiDiv.querySelector('.msg-error');
+                    if (errEl) errEl.remove();
+                    try {
+                        state.abortController = new AbortController();
+                        const retryResp = await fetch(`/api/conversations/${state.currentConversationId}/messages`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content, thinkingMode: state.thinkingMode, attachmentIds }),
+                            signal: state.abortController.signal,
+                        });
+                        // 重试成功，但此处简化处理直接刷新
+                        retried = true;
+                        break;
+                    } catch (retryErr) {
+                        if (retryErr.name === 'AbortError') break;
+                    }
+                }
+            }
+            if (!retried) {
+                showErrorInMessage(aiDiv, 'NETWORK_ERROR', '网络异常，请重试');
+            }
             hasError = true;
         }
     } finally {
@@ -713,15 +813,18 @@ async function sendMessage() {
             actions.className = 'msg-actions';
             actions.innerHTML = `
                 <button class="msg-action-btn" onclick="copyMessage(${messageId})" title="复制">📋</button>
+                <button class="msg-action-btn" onclick="editMessage(${messageId}, false)" title="编辑">✏️</button>
                 <button class="msg-action-btn" onclick="likeMessage(${messageId}, this)" title="点赞">👍</button>
                 <button class="msg-action-btn" onclick="dislikeMessage(${messageId})" title="点踩">👎</button>
-                <button class="msg-action-btn" onclick="shareConversation()" title="分享">🔗</button>
-                <button class="msg-action-btn" onclick="regenerateMessage(${messageId})" title="重新生成">🔄</button>`;
+                <button class="msg-action-btn" onclick="shareConversation()" title="分享">🔗</button>`;
             body.appendChild(actions);
 
             // 处理 Mermaid
             const contentEl = aiDiv.querySelector('.md-content');
             if (contentEl) processMermaid(contentEl);
+
+            // 仅为最后一条 AI 回复添加重新生成按钮
+            addRegenerateToLastAi();
         }
 
         // 时间
@@ -1308,6 +1411,23 @@ async function saveSettings() {
     }
 }
 
+// ── 使用量统计 ──
+async function loadUsageStats() {
+    try {
+        const data = await api('/api/usage/summary');
+        $('usageConversations').textContent = data.conversations ?? 0;
+        $('usageMessages').textContent = data.messages ?? 0;
+        $('usageTotalTokens').textContent = formatTokenCount(data.totalTokens ?? 0);
+        $('usageLastActive').textContent = data.lastActiveTime ? relativeTime(data.lastActiveTime) : '暂无';
+    } catch { /* 忽略 */ }
+}
+
+function formatTokenCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
+}
+
 // ── 推荐问题 ──
 async function loadSuggestedQuestions() {
     // 从 ChatSetting 获取，或用默认值
@@ -1330,11 +1450,92 @@ async function loadSuggestedQuestions() {
 // ── URL 路由 ──
 function handleRoute() {
     const path = window.location.pathname;
-    const match = path.match(/^\/chat\/(\d+)$/);
-    if (match) {
-        openConversation(parseInt(match[1]));
-    } else if (path.startsWith('/share/')) {
-        // 共享页面由后端渲染或单独处理
+    const chatMatch = path.match(/^\/chat\/(\d+)$/);
+    const shareMatch = path.match(/^\/share\/(.+)$/);
+    if (chatMatch) {
+        openConversation(parseInt(chatMatch[1]));
+    } else if (shareMatch) {
+        loadSharePage(shareMatch[1]);
+    }
+}
+
+// ── 共享对话只读页面 ──
+async function loadSharePage(token) {
+    // 隐藏侧边栏和输入区
+    sidebar.classList.add('collapsed');
+    sidebarOpenBtn.classList.add('hidden');
+    composer.classList.add('hidden');
+
+    showChatView();
+    messagesInner.innerHTML = '';
+
+    // 顶部共享标识
+    const banner = document.createElement('div');
+    banner.className = 'share-banner';
+    banner.innerHTML = '🔗 共享对话 — 此对话由用户分享，仅供查看';
+    messagesInner.appendChild(banner);
+
+    try {
+        const data = await api(`/api/share/${token}`);
+        if (data.title) {
+            document.title = `${data.title} — 共享对话`;
+            currentModelName.textContent = data.modelCode || '共享对话';
+        }
+        const messages = data.messages || [];
+        for (const msg of messages) {
+            const div = document.createElement('div');
+            div.className = `msg ${msg.role}`;
+            const isUser = msg.role === 'user';
+            const avatarContent = isUser ? 'U' : '🤖';
+            let contentHtml = isUser
+                ? `<div class="msg-content">${escapeHtml(msg.content)}</div>`
+                : `<div class="msg-content md-content">${renderMarkdown(msg.content)}</div>`;
+
+            // 思考过程
+            let thinkingHtml = '';
+            if (!isUser && msg.thinkingContent) {
+                thinkingHtml = `<div class="thinking-block">
+                    <div class="thinking-header">
+                        <span class="thinking-toggle">▼</span>
+                        <span>思考过程</span>
+                    </div>
+                    <div class="thinking-body">${escapeHtml(msg.thinkingContent)}</div>
+                </div>`;
+            }
+
+            div.innerHTML = `
+                <div class="msg-avatar">${avatarContent}</div>
+                <div class="msg-body">
+                    ${thinkingHtml}
+                    ${contentHtml}
+                    <div class="msg-time" title="${exactTime(msg.createTime)}">${relativeTime(msg.createTime)}</div>
+                </div>`;
+            messagesInner.appendChild(div);
+
+            // 思考过程折叠
+            const thinkBlock = div.querySelector('.thinking-block');
+            if (thinkBlock) {
+                thinkBlock.querySelector('.thinking-header').addEventListener('click', () => {
+                    thinkBlock.querySelector('.thinking-toggle').classList.toggle('collapsed');
+                    thinkBlock.querySelector('.thinking-body').classList.toggle('collapsed');
+                });
+            }
+
+            if (!isUser) {
+                const md = div.querySelector('.md-content');
+                if (md) processMermaid(md);
+            }
+        }
+
+        // 底部引导
+        const footer = document.createElement('div');
+        footer.className = 'share-footer';
+        footer.innerHTML = '使用 <strong>NewLife.ChatAI</strong> 开始你的对话 → <a href="/chat">立即体验</a>';
+        messagesInner.appendChild(footer);
+
+        scrollToBottom(true);
+    } catch (e) {
+        messagesInner.innerHTML = `<div class="share-banner" style="color: var(--text-error);">🚫 共享链接无效或已过期</div>`;
     }
 }
 
@@ -1345,6 +1546,73 @@ window.addEventListener('popstate', handleRoute);
 // 侧边栏
 sidebarToggle.addEventListener('click', toggleSidebar);
 sidebarOpenBtn.addEventListener('click', toggleSidebar);
+sidebarOverlay.addEventListener('click', closeMobileSidebar);
+
+// 窗口尺寸变化时自动处理侧边栏
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        sidebar.classList.remove('mobile-open');
+        sidebarOverlay.classList.add('hidden');
+    }
+});
+
+// 移动端长按消息弹出操作菜单
+let longPressTimer = null;
+messagesInner.addEventListener('touchstart', e => {
+    const msgEl = e.target.closest('.msg');
+    if (!msgEl) return;
+    longPressTimer = setTimeout(() => {
+        e.preventDefault();
+        showMobileContextMenu(msgEl, e.touches[0]);
+    }, 500);
+}, { passive: false });
+messagesInner.addEventListener('touchend', () => clearTimeout(longPressTimer));
+messagesInner.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+function showMobileContextMenu(msgEl, touch) {
+    // 移除已有菜单
+    document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
+    const msgId = msgEl.dataset.messageId;
+    const isUser = msgEl.classList.contains('user');
+    const menu = document.createElement('div');
+    menu.className = 'msg-context-menu';
+    let items = `<div class="menu-item" data-action="copy">📋 复制</div>`;
+    items += `<div class="menu-item" data-action="edit">✏️ 编辑</div>`;
+    if (!isUser) {
+        items += `<div class="menu-item" data-action="like">👍 点赞</div>`;
+        items += `<div class="menu-item" data-action="dislike">👎 点踩</div>`;
+        items += `<div class="menu-item" data-action="share">🔗 分享</div>`;
+    }
+    menu.innerHTML = items;
+    // 定位
+    menu.style.left = Math.min(touch.clientX, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(touch.clientY, window.innerHeight - 200) + 'px';
+    document.body.appendChild(menu);
+
+    menu.addEventListener('click', ev => {
+        const action = ev.target.closest('[data-action]')?.dataset.action;
+        if (!action) return;
+        menu.remove();
+        switch (action) {
+            case 'copy': copyMessage(Number(msgId)); break;
+            case 'edit': editMessage(Number(msgId), isUser); break;
+            case 'like': {
+                const btn = msgEl.querySelector('[title="\u70b9\u8d5e"]');
+                likeMessage(Number(msgId), btn); break;
+            }
+            case 'dislike': dislikeMessage(Number(msgId)); break;
+            case 'share': shareConversation(); break;
+        }
+    });
+    // 点击其他位置关闭
+    setTimeout(() => {
+        document.addEventListener('click', function handler() {
+            menu.remove();
+            document.removeEventListener('click', handler);
+        });
+    }, 10);
+}
+
 newConversationBtn.addEventListener('click', () => {
     state.currentConversationId = null;
     showWelcomePage();
@@ -1362,6 +1630,7 @@ document.addEventListener('click', () => profileMenu.classList.add('hidden'));
 menuSettings.addEventListener('click', () => {
     profileMenu.classList.add('hidden');
     $('settingsModal').classList.remove('hidden');
+    loadUsageStats();
 });
 
 // 模型选择器

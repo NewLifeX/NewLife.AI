@@ -5,9 +5,9 @@
 /* ── CSS 变量（浅色主题） ── */
 :root {
     --bg-primary: #f5f5f5;
-    --bg-sidebar: #1e1e2e;
-    --bg-sidebar-hover: rgba(255,255,255,.08);
-    --bg-sidebar-active: rgba(255,255,255,.14);
+    --bg-sidebar: #ffffff;
+    --bg-sidebar-hover: rgba(0,0,0,.04);
+    --bg-sidebar-active: rgba(0,0,0,.08);
     --bg-content: #f5f5f5;
     --bg-message-user: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --bg-message-ai: transparent;
@@ -27,13 +27,14 @@
 
     --border-color: rgba(0,0,0,.08);
     --border-light: rgba(0,0,0,.04);
+    --border-sidebar: rgba(0,0,0,.06);
 
     --text-primary: #1a1a1a;
     --text-secondary: #666666;
     --text-tertiary: #999999;
     --text-inverse: #ffffff;
-    --text-sidebar: rgba(255,255,255,.85);
-    --text-sidebar-dim: rgba(255,255,255,.5);
+    --text-sidebar: #1a1a1a;
+    --text-sidebar-dim: #999999;
     --text-link: #5b6abf;
     --text-thinking: #a0845e;
     --text-error: #e53e3e;
@@ -77,7 +78,7 @@
 /* ── 暗色主题 ── */
 [data-theme="dark"] {
     --bg-primary: #0f0f1a;
-    --bg-sidebar: #0a0a14;
+    --bg-sidebar: #141420;
     --bg-sidebar-hover: rgba(255,255,255,.06);
     --bg-sidebar-active: rgba(255,255,255,.10);
     --bg-content: #0f0f1a;
@@ -96,10 +97,13 @@
 
     --border-color: rgba(255,255,255,.08);
     --border-light: rgba(255,255,255,.04);
+    --border-sidebar: rgba(255,255,255,.06);
 
     --text-primary: #e8e8ed;
     --text-secondary: #a0a0ab;
     --text-tertiary: #666673;
+    --text-sidebar: #e8e8ed;
+    --text-sidebar-dim: #666673;
     --text-thinking: #c4a87d;
     --text-error: #fc8181;
 
@@ -146,7 +150,7 @@ a:hover { text-decoration: underline; }
 .app { height: 100vh; display: flex; overflow: hidden; }
 
 /* ═══════════════════════════════════════
-   侧边栏 — 深色风格
+   侧边栏 — 跟随主题
    ═══════════════════════════════════════ */
 .sidebar {
     width: var(--sidebar-width);
@@ -158,6 +162,7 @@ a:hover { text-decoration: underline; }
     overflow: hidden;
     z-index: 20;
     color: var(--text-sidebar);
+    border-right: 1px solid var(--border-sidebar);
 }
 .sidebar.collapsed { width: 0; }
 
@@ -182,7 +187,7 @@ a:hover { text-decoration: underline; }
     display: flex; align-items: center; gap: 8px;
     padding: 9px 14px;
     border-radius: var(--radius-sm);
-    border: 1px solid rgba(255,255,255,.15);
+    border: 1px solid var(--border-color);
     color: var(--text-sidebar);
     font-weight: 500;
     font-size: 14px;
@@ -190,7 +195,7 @@ a:hover { text-decoration: underline; }
     white-space: nowrap;
     overflow: hidden;
 }
-.btn-new-chat:hover { background: var(--bg-sidebar-hover); border-color: rgba(255,255,255,.25); }
+.btn-new-chat:hover { background: var(--bg-sidebar-hover); border-color: var(--accent); }
 
 /* ── 对话列表 ── */
 .conversation-list {
@@ -247,7 +252,7 @@ a:hover { text-decoration: underline; }
     padding: 4px 8px;
     border: 1px solid var(--accent);
     border-radius: var(--radius-xs);
-    background: rgba(255,255,255,.08);
+    background: var(--bg-input);
     color: var(--text-sidebar);
     font-size: 13.5px;
     outline: none;
@@ -256,7 +261,7 @@ a:hover { text-decoration: underline; }
 /* ── 侧边栏底部 ── */
 .sidebar-footer {
     padding: 12px;
-    border-top: 1px solid rgba(255,255,255,.06);
+    border-top: 1px solid var(--border-sidebar);
     position: relative;
 }
 .profile-btn {
@@ -1300,6 +1305,41 @@ a:hover { text-decoration: underline; }
     margin-top: 10px;
 }
 
+/* ── 消息附件 ── */
+.msg-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.msg-attach-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-hover);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    transition: background var(--transition);
+}
+.msg-attach-item:hover { background: var(--bg-active); }
+.msg-attach-link {
+    color: var(--text-link);
+    text-decoration: none;
+    font-size: 13px;
+}
+.msg-attach-link:hover { text-decoration: underline; }
+.msg-attach-thumb {
+    width: 120px;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform var(--transition);
+}
+.msg-attach-thumb:hover { transform: scale(1.02); }
+
 /* ── 共享页 ── */
 .share-page {
     max-width: 800px;
@@ -1323,6 +1363,64 @@ a:hover { text-decoration: underline; }
     color: var(--text-tertiary);
     font-size: 14px;
 }
+
+/* ── 移动端侧边栏遮罩 ── */
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 25;
+    transition: opacity var(--transition);
+    backdrop-filter: blur(2px);
+}
+.sidebar-overlay.hidden { display: none; }
+
+/* ── 使用统计卡片 ── */
+.usage-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.usage-stat-card {
+    text-align: center;
+    padding: 16px 12px;
+    background: var(--accent-light);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(99,102,241,.1);
+}
+.usage-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: var(--font-mono);
+}
+.usage-stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* ── 移动端长按菜单 ── */
+.msg-context-menu {
+    position: fixed;
+    background: var(--bg-dropdown);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    overflow: hidden;
+    min-width: 140px;
+}
+.msg-context-menu .menu-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.msg-context-menu .menu-item:hover { background: var(--bg-hover); }
+.msg-context-menu .menu-item:active { background: var(--bg-active); }
 
 /* ═══════════════════════════════════════
    移动端响应式

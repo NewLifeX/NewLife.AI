@@ -123,6 +123,9 @@
     </main>
 </div>
 
+<!-- 移动端侧边栏遮罩 -->
+<div class="sidebar-overlay hidden" id="sidebarOverlay"></div>
+
 <!-- 拖拽上传遮罩 -->
 <div class="drop-overlay hidden" id="dropOverlay">
     <div class="drop-hint">释放以上传文件</div>
@@ -211,6 +214,49 @@
                         <input type="checkbox" id="settingAllowTraining" />
                         <span class="slider"></span>
                     </label>
+                </div>
+            </div>
+            <!-- 使用统计 -->
+            <div class="settings-group">
+                <h3>使用统计</h3>
+                <div class="usage-stats" id="usageStats">
+                    <div class="usage-stat-card">
+                        <div class="usage-stat-value" id="usageConversations">-</div>
+                        <div class="usage-stat-label">会话数</div>
+                    </div>
+                    <div class="usage-stat-card">
+                        <div class="usage-stat-value" id="usageMessages">-</div>
+                        <div class="usage-stat-label">消息数</div>
+                    </div>
+                    <div class="usage-stat-card">
+                        <div class="usage-stat-value" id="usageTotalTokens">-</div>
+                        <div class="usage-stat-label">Token 总量</div>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <label>最近活跃</label>
+                    <span class="setting-value" id="usageLastActive">-</span>
+                </div>
+            </div>
+            <!-- API 密钥 -->
+            <div class="settings-group">
+                <h3>API 密钥</h3>
+                <p class="settings-desc">通过 API 密钥，外部系统可调用模型服务</p>
+                <div class="appkey-list" id="appkeyList"></div>
+                <div class="setting-row">
+                    <label>创建新密钥</label>
+                    <div class="appkey-create-row">
+                        <input type="text" id="appkeyName" placeholder="密钥名称" class="appkey-name-input" />
+                        <button class="btn-primary" id="appkeyCreateBtn">创建</button>
+                    </div>
+                </div>
+                <!-- 密钥展示弹窗（仅一次） -->
+                <div class="appkey-secret-reveal hidden" id="appkeySecretReveal">
+                    <p>⚠️ 请妥善保存密钥，此密钥仅显示一次：</p>
+                    <div class="share-link-row">
+                        <input type="text" id="appkeySecretInput" readonly />
+                        <button class="btn-outline" id="appkeySecretCopy">复制</button>
+                    </div>
                 </div>
             </div>
             <!-- 关于 -->

@@ -587,13 +587,15 @@ public class ChatAITests
     public void MessageDtoHasAllFields()
     {
         var now = DateTime.Now;
-        var dto = new MessageDto(1, 100, "user", "你好", ThinkingMode.Auto, now);
+        var dto = new MessageDto(1, 100, "user", "你好", null, ThinkingMode.Auto, null, now);
 
         Assert.Equal(1, dto.Id);
         Assert.Equal(100, dto.ConversationId);
         Assert.Equal("user", dto.Role);
         Assert.Equal("你好", dto.Content);
+        Assert.Null(dto.ThinkingContent);
         Assert.Equal(ThinkingMode.Auto, dto.ThinkingMode);
+        Assert.Null(dto.Attachments);
         Assert.Equal(now, dto.CreateTime);
     }
 

@@ -747,13 +747,13 @@ public class DbChatApplicationService : IChatApplicationService
         {
             return Task.FromResult(new[]
             {
-                new ModelInfoDto("qwen-max", "Qwen-Max", true, true),
-                new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false),
-                new ModelInfoDto("gpt-4o", "GPT-4o", true, true),
+                new ModelInfoDto("qwen-max", "Qwen-Max", true, true, false, true),
+                new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false, false, true),
+                new ModelInfoDto("gpt-4o", "GPT-4o", true, true, false, true),
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision)).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling)).ToArray();
         return Task.FromResult(models);
     }
     #endregion
@@ -897,7 +897,7 @@ public class DbChatApplicationService : IChatApplicationService
     /// <param name="entity">消息实体</param>
     /// <returns></returns>
     private static MessageDto ToMessageDto(ChatMessage entity) =>
-        new(entity.Id, entity.ConversationId, entity.Role, entity.Content, (ThinkingMode)entity.ThinkingMode, entity.CreateTime);
+        new(entity.Id, entity.ConversationId, entity.Role, entity.Content, entity.ThinkingContent, (ThinkingMode)entity.ThinkingMode, entity.Attachments, entity.CreateTime);
 
     /// <summary>转换用户设置实体为DTO</summary>
     /// <param name="entity">用户设置实体</param>

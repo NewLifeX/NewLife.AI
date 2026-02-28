@@ -80,7 +80,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             if (index < 0) continue;
 
             var source = item.Value[index];
-            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, request.Content, source.ThinkingMode, DateTime.Now);
+            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, request.Content, source.ThinkingContent, source.ThinkingMode, source.Attachments, DateTime.Now);
             item.Value[index] = updated;
             return Task.FromResult<MessageDto?>(updated);
         }
@@ -96,7 +96,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             if (index < 0) continue;
 
             var source = item.Value[index];
-            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, "这是重新生成的示例回复。", source.ThinkingMode, DateTime.Now);
+            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, "这是重新生成的示例回复。", null, source.ThinkingMode, source.Attachments, DateTime.Now);
             item.Value[index] = updated;
             return Task.FromResult<MessageDto?>(updated);
         }
@@ -112,7 +112,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             _messages.TryAdd(conversationId, list);
         }
 
-        var userMessage = new MessageDto(Interlocked.Increment(ref _messageSeed), conversationId, "user", request.Content, request.ThinkingMode, DateTime.Now);
+        var userMessage = new MessageDto(Interlocked.Increment(ref _messageSeed), conversationId, "user", request.Content, null, request.ThinkingMode, null, DateTime.Now);
         list.Add(userMessage);
 
         var assistantMessageId = Interlocked.Increment(ref _messageSeed);
@@ -133,7 +133,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             await Task.Delay(120, cancellationToken).ConfigureAwait(false);
         }
 
-        list.Add(new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), request.ThinkingMode, DateTime.Now));
+        list.Add(new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), null, request.ThinkingMode, null, DateTime.Now));
 
         if (_conversations.TryGetValue(conversationId, out var conversation))
             _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, conversation.Title, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
@@ -201,9 +201,9 @@ public class InMemoryChatApplicationService : IChatApplicationService
     {
         var models = new[]
         {
-            new ModelInfoDto("qwen-max", "Qwen-Max", true, true),
-            new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false),
-            new ModelInfoDto("gpt-4o", "GPT-4o", true, true)
+            new ModelInfoDto("qwen-max", "Qwen-Max", true, true, false, true),
+            new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false, false, true),
+            new ModelInfoDto("gpt-4o", "GPT-4o", true, true, false, true)
         };
         return Task.FromResult(models);
     }
