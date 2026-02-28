@@ -58,11 +58,13 @@ public class ModelConfigController : EntityController<ModelConfig>
         var provider = p["provider"];
         var supportThinking = p["supportThinking"]?.ToBoolean();
         var supportVision = p["supportVision"]?.ToBoolean();
+        var supportImageGeneration = p["supportImageGeneration"]?.ToBoolean();
+        var supportFunctionCalling = p["supportFunctionCalling"]?.ToBoolean();
         var enable = p["enable"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ModelConfig.Search(code, provider, supportThinking, supportVision, enable, start, end, p["Q"], p);
+        return ModelConfig.Search(code, provider, supportThinking, supportVision, supportImageGeneration, supportFunctionCalling, enable, start, end, p["Q"], p);
     }
 }
