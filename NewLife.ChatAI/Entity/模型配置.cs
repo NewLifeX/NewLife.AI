@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("模型配置。后端接入的大语言模型")]
 [BindIndex("IU_ModelConfig_Code", true, "Code")]
 [BindIndex("IX_ModelConfig_Provider", false, "Provider")]
-[BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型", ConnName = "Cube", DbType = DatabaseType.None)]
+[BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class ModelConfig : IEntity<ModelConfigModel>
 {
     #region 属性
@@ -269,7 +269,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -285,7 +285,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         if (code.IsNullOrEmpty()) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Code.EqualIgnoreCase(code));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Code.EqualIgnoreCase(code));
 
         return Find(_.Code == code);
     }
@@ -298,7 +298,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         if (provider.IsNullOrEmpty()) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.Provider.EqualIgnoreCase(provider));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.Provider.EqualIgnoreCase(provider));
 
         return FindAll(_.Provider == provider);
     }

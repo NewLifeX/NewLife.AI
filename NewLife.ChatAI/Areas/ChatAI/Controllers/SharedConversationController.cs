@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.SharedConversation;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>共享会话。通过链接分享的对话快照</summary>
-[Menu(40, true, Icon = "fa-table")]
+[Menu(30, true, Icon = "fa-table")]
 [ChatAIArea]
 public class SharedConversationController : EntityController<SharedConversation>
 {

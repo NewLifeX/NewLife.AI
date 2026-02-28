@@ -23,13 +23,13 @@ public partial class ChatMessageModel
     /// <summary>内容。Markdown格式文本</summary>
     public String Content { get; set; }
 
+    /// <summary>思考内容。思考模式下的推理过程</summary>
+    public String ThinkingContent { get; set; }
+
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     public Int32 ThinkingMode { get; set; }
 
-    /// <summary>父消息。编辑或重新生成时的分支引用</summary>
-    public Int64 ParentMessageId { get; set; }
-
-    /// <summary>附件列表。JSON格式</summary>
+    /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
     public String Attachments { get; set; }
 
     /// <summary>创建用户</summary>
@@ -60,8 +60,8 @@ public partial class ChatMessageModel
         ConversationId = model.ConversationId;
         Role = model.Role;
         Content = model.Content;
+        ThinkingContent = model.ThinkingContent;
         ThinkingMode = model.ThinkingMode;
-        ParentMessageId = model.ParentMessageId;
         Attachments = model.Attachments;
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;

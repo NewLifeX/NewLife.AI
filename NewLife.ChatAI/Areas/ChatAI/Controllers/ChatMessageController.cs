@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.ChatMessage;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>对话消息。会话中的单条发言，包括用户消息和AI回复</summary>
-[Menu(60, true, Icon = "fa-table")]
+[Menu(50, true, Icon = "fa-table")]
 [ChatAIArea]
 public class ChatMessageController : EntityController<ChatMessage>
 {
@@ -55,11 +55,10 @@ public class ChatMessageController : EntityController<ChatMessage>
     protected override IEnumerable<ChatMessage> Search(Pager p)
     {
         var conversationId = p["conversationId"].ToLong(-1);
-        var parentMessageId = p["parentMessageId"].ToLong(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ChatMessage.Search(conversationId, parentMessageId, start, end, p["Q"], p);
+        return ChatMessage.Search(conversationId, start, end, p["Q"], p);
     }
 }

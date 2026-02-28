@@ -70,9 +70,9 @@
         <Column Name="ConversationId" DataType="Int64" Description="会话。所属会话" />
         <Column Name="Role" DataType="String" Description="角色。User=用户, Assistant=AI助手" />
         <Column Name="Content" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。Markdown格式文本" />
+        <Column Name="ThinkingContent" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。思考模式下的推理过程" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" />
-        <Column Name="ParentMessageId" DataType="Int64" Description="父消息。编辑或重新生成时的分支引用" />
-        <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="附件列表。JSON格式" />
+        <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="附件列表。JSON格式，存储魔方附件ID数组" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -82,7 +82,6 @@
       </Columns>
       <Indexes>
         <Index Columns="ConversationId,CreateTime" />
-        <Index Columns="ParentMessageId" />
       </Indexes>
     </Table>
     <Table Name="MessageFeedback" Description="消息反馈。用户对AI回复的点赞或点踩">
@@ -151,27 +150,6 @@
       <Indexes>
         <Index Columns="Code" Unique="True" />
         <Index Columns="Provider" />
-      </Indexes>
-    </Table>
-    <Table Name="ChatAttachment" Description="对话附件。上传的文件，关联到消息">
-      <Columns>
-        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="MessageId" DataType="Int64" Description="消息。所属消息，发送前为0" />
-        <Column Name="UserId" DataType="Int32" Description="用户。上传用户" />
-        <Column Name="FileName" DataType="String" Length="200" Description="文件名" />
-        <Column Name="FilePath" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="文件路径。服务端存储路径" />
-        <Column Name="ContentType" DataType="String" Length="100" Description="内容类型。MIME类型，如image/png" />
-        <Column Name="FileSize" DataType="Int64" Description="文件大小。字节数" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
-      </Columns>
-      <Indexes>
-        <Index Columns="MessageId" />
-        <Index Columns="UserId" />
       </Indexes>
     </Table>
     <Table Name="UserSetting" Description="用户设置。用户的个性化配置">

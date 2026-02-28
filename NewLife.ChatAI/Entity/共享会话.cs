@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_SharedConversation_ShareToken", true, "ShareToken")]
 [BindIndex("IX_SharedConversation_ConversationId", false, "ConversationId")]
 [BindIndex("IX_SharedConversation_CreatorUserId", false, "CreatorUserId")]
-[BindTable("SharedConversation", Description = "共享会话。通过链接分享的对话快照", ConnName = "Cube", DbType = DatabaseType.None)]
+[BindTable("SharedConversation", Description = "共享会话。通过链接分享的对话快照", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class SharedConversation : IEntity<SharedConversationModel>
 {
     #region 属性
@@ -203,7 +203,7 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -219,7 +219,7 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         if (shareToken.IsNullOrEmpty()) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.ShareToken.EqualIgnoreCase(shareToken));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.ShareToken.EqualIgnoreCase(shareToken));
 
         return Find(_.ShareToken == shareToken);
     }
@@ -232,7 +232,7 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         if (conversationId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.ConversationId == conversationId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ConversationId == conversationId);
 
         return FindAll(_.ConversationId == conversationId);
     }
@@ -245,7 +245,7 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         if (creatorUserId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.CreatorUserId == creatorUserId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.CreatorUserId == creatorUserId);
 
         return FindAll(_.CreatorUserId == creatorUserId);
     }

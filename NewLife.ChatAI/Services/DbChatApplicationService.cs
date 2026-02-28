@@ -2,6 +2,7 @@
 using System.Text;
 using NewLife.AI.ChatAI.Contracts;
 using NewLife.ChatAI.Entity;
+using NewLife.Cube.Entity;
 using NewLife.Data;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -136,7 +137,7 @@ public class DbChatApplicationService : IChatApplicationService
     public Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Int64 conversationId, CancellationToken cancellationToken)
     {
         var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
-        var list = ChatMessage.Search(conversationId, -1, DateTime.MinValue, DateTime.MinValue, null, p);
+        var list = ChatMessage.Search(conversationId, DateTime.MinValue, DateTime.MinValue, null, p);
 
         var items = list.Select(ToMessageDto).ToList();
         return Task.FromResult<IReadOnlyList<MessageDto>>(items);
@@ -392,16 +393,16 @@ public class DbChatApplicationService : IChatApplicationService
         };
 
         // 保存附件记录
-        var entity = new ChatAttachment
+        var entity = new Attachment
         {
             FileName = fileName,
             FilePath = Path.Combine(datePath, storedName),
             ContentType = contentType,
-            FileSize = size,
+            Size = size,
         };
         entity.Insert();
 
-        return new UploadAttachmentResult(entity.Id.ToString(), entity.FileName, $"/api/attachments/{entity.Id}", entity.FileSize);
+        return new UploadAttachmentResult(entity.Id.ToString(), entity.FileName, $"/api/attachments/{entity.Id}", entity.Size);
     }
     #endregion
 

@@ -18,7 +18,7 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("用户设置。用户的个性化配置")]
 [BindIndex("IU_UserSetting_UserId", true, "UserId")]
-[BindTable("UserSetting", Description = "用户设置。用户的个性化配置", ConnName = "Cube", DbType = DatabaseType.None)]
+[BindTable("UserSetting", Description = "用户设置。用户的个性化配置", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class UserSetting : IEntity<UserSettingModel>
 {
     #region 属性
@@ -256,7 +256,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -272,7 +272,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
         if (userId < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.UserId == userId);
 
         return Find(_.UserId == userId);
     }

@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.ModelConfig;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>模型配置。后端接入的大语言模型</summary>
-[Menu(30, true, Icon = "fa-table")]
+[Menu(20, true, Icon = "fa-table")]
 [ChatAIArea]
 public class ModelConfigController : EntityController<ModelConfig>
 {

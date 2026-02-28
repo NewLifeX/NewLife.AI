@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_MessageFeedback_MessageId_UserId", true, "MessageId,UserId")]
 [BindIndex("IX_MessageFeedback_MessageId", false, "MessageId")]
 [BindIndex("IX_MessageFeedback_UserId", false, "UserId")]
-[BindTable("MessageFeedback", Description = "消息反馈。用户对AI回复的点赞或点踩", ConnName = "Cube", DbType = DatabaseType.None)]
+[BindTable("MessageFeedback", Description = "消息反馈。用户对AI回复的点赞或点踩", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class MessageFeedback : IEntity<MessageFeedbackModel>
 {
     #region 属性
@@ -203,7 +203,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -221,7 +221,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
         if (userId < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.MessageId == messageId && e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.MessageId == messageId && e.UserId == userId);
 
         return Find(_.MessageId == messageId & _.UserId == userId);
     }
@@ -234,7 +234,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
         if (messageId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.MessageId == messageId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.MessageId == messageId);
 
         return FindAll(_.MessageId == messageId);
     }
@@ -247,7 +247,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
         if (userId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
 
         return FindAll(_.UserId == userId);
     }

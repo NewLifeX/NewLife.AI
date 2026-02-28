@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.Conversation;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>会话。一次完整的多轮对话上下文</summary>
-[Menu(70, true, Icon = "fa-table")]
+[Menu(60, true, Icon = "fa-table")]
 [ChatAIArea]
 public class ConversationController : EntityController<Conversation>
 {

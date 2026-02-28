@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("会话。一次完整的多轮对话上下文")]
 [BindIndex("IX_Conversation_UserId_LastMessageTime", false, "UserId,LastMessageTime")]
 [BindIndex("IX_Conversation_UserId_IsPinned", false, "UserId,IsPinned")]
-[BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "Cube", DbType = DatabaseType.None)]
+[BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class Conversation : IEntity<ConversationModel>
 {
     #region 属性
@@ -236,7 +236,7 @@ public partial class Conversation : IEntity<ConversationModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -252,7 +252,7 @@ public partial class Conversation : IEntity<ConversationModel>
         if (userId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
 
         return FindAll(_.UserId == userId);
     }

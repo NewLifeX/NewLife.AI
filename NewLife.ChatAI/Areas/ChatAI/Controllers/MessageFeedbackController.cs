@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.MessageFeedback;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>消息反馈。用户对AI回复的点赞或点踩</summary>
-[Menu(50, true, Icon = "fa-table")]
+[Menu(40, true, Icon = "fa-table")]
 [ChatAIArea]
 public class MessageFeedbackController : EntityController<MessageFeedback>
 {

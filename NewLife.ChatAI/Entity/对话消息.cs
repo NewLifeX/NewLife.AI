@@ -18,8 +18,7 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("对话消息。会话中的单条发言，包括用户消息和AI回复")]
 [BindIndex("IX_ChatMessage_ConversationId_CreateTime", false, "ConversationId,CreateTime")]
-[BindIndex("IX_ChatMessage_ParentMessageId", false, "ParentMessageId")]
-[BindTable("ChatMessage", Description = "对话消息。会话中的单条发言，包括用户消息和AI回复", ConnName = "Cube", DbType = DatabaseType.None)]
+[BindTable("ChatMessage", Description = "对话消息。会话中的单条发言，包括用户消息和AI回复", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class ChatMessage : IEntity<ChatMessageModel>
 {
     #region 属性
@@ -55,6 +54,14 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [BindColumn("Content", "内容。Markdown格式文本", "", ShowIn = "Auto,-List,-Search")]
     public String Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
 
+    private String _ThinkingContent;
+    /// <summary>思考内容。思考模式下的推理过程</summary>
+    [DisplayName("思考内容")]
+    [Description("思考内容。思考模式下的推理过程")]
+    [DataObjectField(false, false, true, -1)]
+    [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ShowIn = "Auto,-List,-Search")]
+    public String ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
+
     private Int32 _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     [DisplayName("思考模式")]
@@ -63,20 +70,12 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
     public Int32 ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
-    private Int64 _ParentMessageId;
-    /// <summary>父消息。编辑或重新生成时的分支引用</summary>
-    [DisplayName("父消息")]
-    [Description("父消息。编辑或重新生成时的分支引用")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ParentMessageId", "父消息。编辑或重新生成时的分支引用", "")]
-    public Int64 ParentMessageId { get => _ParentMessageId; set { if (OnPropertyChanging("ParentMessageId", value)) { _ParentMessageId = value; OnPropertyChanged("ParentMessageId"); } } }
-
     private String _Attachments;
-    /// <summary>附件列表。JSON格式</summary>
+    /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
     [DisplayName("附件列表")]
-    [Description("附件列表。JSON格式")]
+    [Description("附件列表。JSON格式，存储魔方附件ID数组")]
     [DataObjectField(false, false, true, 2000)]
-    [BindColumn("Attachments", "附件列表。JSON格式", "", ShowIn = "Auto,-List,-Search")]
+    [BindColumn("Attachments", "附件列表。JSON格式，存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
     public String Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
 
     private Int32 _CreateUserID;
@@ -143,8 +142,8 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         ConversationId = model.ConversationId;
         Role = model.Role;
         Content = model.Content;
+        ThinkingContent = model.ThinkingContent;
         ThinkingMode = model.ThinkingMode;
-        ParentMessageId = model.ParentMessageId;
         Attachments = model.Attachments;
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
@@ -167,8 +166,8 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
             "ConversationId" => _ConversationId,
             "Role" => _Role,
             "Content" => _Content,
+            "ThinkingContent" => _ThinkingContent,
             "ThinkingMode" => _ThinkingMode,
-            "ParentMessageId" => _ParentMessageId,
             "Attachments" => _Attachments,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -186,8 +185,8 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "Role": _Role = Convert.ToString(value); break;
                 case "Content": _Content = Convert.ToString(value); break;
+                case "ThinkingContent": _ThinkingContent = Convert.ToString(value); break;
                 case "ThinkingMode": _ThinkingMode = value.ToInt(); break;
-                case "ParentMessageId": _ParentMessageId = value.ToLong(); break;
                 case "Attachments": _Attachments = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -213,43 +212,28 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
 
         //return Find(_.Id == id);
     }
-
-    /// <summary>根据父消息查找</summary>
-    /// <param name="parentMessageId">父消息</param>
-    /// <returns>实体列表</returns>
-    public static IList<ChatMessage> FindAllByParentMessageId(Int64 parentMessageId)
-    {
-        if (parentMessageId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.ParentMessageId == parentMessageId);
-
-        return FindAll(_.ParentMessageId == parentMessageId);
-    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="conversationId">会话。所属会话</param>
-    /// <param name="parentMessageId">父消息。编辑或重新生成时的分支引用</param>
     /// <param name="start">创建时间开始</param>
     /// <param name="end">创建时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatMessage> Search(Int64 conversationId, Int64 parentMessageId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatMessage> Search(Int64 conversationId, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
-        if (parentMessageId >= 0) exp &= _.ParentMessageId == parentMessageId;
         exp &= _.CreateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -273,13 +257,13 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         /// <summary>内容。Markdown格式文本</summary>
         public static readonly Field Content = FindByName("Content");
 
+        /// <summary>思考内容。思考模式下的推理过程</summary>
+        public static readonly Field ThinkingContent = FindByName("ThinkingContent");
+
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
 
-        /// <summary>父消息。编辑或重新生成时的分支引用</summary>
-        public static readonly Field ParentMessageId = FindByName("ParentMessageId");
-
-        /// <summary>附件列表。JSON格式</summary>
+        /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
         public static readonly Field Attachments = FindByName("Attachments");
 
         /// <summary>创建用户</summary>
@@ -318,13 +302,13 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         /// <summary>内容。Markdown格式文本</summary>
         public const String Content = "Content";
 
+        /// <summary>思考内容。思考模式下的推理过程</summary>
+        public const String ThinkingContent = "ThinkingContent";
+
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";
 
-        /// <summary>父消息。编辑或重新生成时的分支引用</summary>
-        public const String ParentMessageId = "ParentMessageId";
-
-        /// <summary>附件列表。JSON格式</summary>
+        /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
         public const String Attachments = "Attachments";
 
         /// <summary>创建用户</summary>
