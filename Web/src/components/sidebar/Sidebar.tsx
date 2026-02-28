@@ -61,12 +61,11 @@ export function Sidebar({
           <span className="text-sm font-medium">{t('sidebar.newChat')}</span>
           <div className="flex-grow" />
           <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-0.5">
-            <kbd className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 text-[10px] text-gray-400 group-hover:text-primary font-mono shadow-[0_1px_0_rgba(0,0,0,0.06)]">
-              <Icon name="keyboard_command_key" size="xs" />
-            </kbd>
-            <kbd className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 text-[10px] text-gray-400 group-hover:text-primary font-mono shadow-[0_1px_0_rgba(0,0,0,0.06)]">
-              K
-            </kbd>
+            {(['keyboard_command_key', 'K'] as const).map((key) => (
+              <kbd key={key} className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 text-[10px] text-gray-400 group-hover:text-primary font-mono shadow-[0_1px_0_rgba(0,0,0,0.06)]">
+                {key === 'keyboard_command_key' ? <Icon name={key} size="xs" /> : key}
+              </kbd>
+            ))}
           </span>
         </button>
       </div>

@@ -56,7 +56,7 @@ export function AttachmentChip({ attachment, onRemove, className }: AttachmentCh
           }}
           className="opacity-0 group-hover/chip:opacity-100 p-1 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-all"
         >
-          <Icon name="close" variant="filled" size="base" />
+          <Icon name="close" variant="filled" size="sm" />
         </button>
       )}
     </div>
