@@ -27,7 +27,7 @@ export function Icon({ name, variant = 'outlined', className, size = 'base' }: I
   return (
     <span
       className={cn(variantClass[variant], className)}
-      style={{ fontSize: sizeValue[size] }}
+      style={{ fontSize: sizeValue[size], width: sizeValue[size], height: sizeValue[size], lineHeight: 1 }}
     >
       {name}
     </span>
