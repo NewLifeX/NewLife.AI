@@ -18,18 +18,20 @@ export function ToolCallBadge({ name, status, className }: ToolCallBadgeProps) {
         className,
       )}
     >
-      {status === 'calling' && (
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-        </span>
-      )}
-      {status === 'done' && (
-        <Icon name="check_circle" variant="filled" size="sm" className="text-green-500" />
-      )}
-      {status === 'error' && (
-        <Icon name="error" variant="filled" size="sm" className="text-red-500" />
-      )}
+      <span className="inline-flex items-center justify-center w-[14px] h-[14px]">
+        {status === 'calling' && (
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+        )}
+        {status === 'done' && (
+          <Icon name="check_circle" variant="filled" size="sm" className="text-green-500" />
+        )}
+        {status === 'error' && (
+          <Icon name="error" variant="filled" size="sm" className="text-red-500" />
+        )}
+      </span>
       <span>{name}</span>
     </div>
   )

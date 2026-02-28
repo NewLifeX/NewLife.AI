@@ -108,18 +108,6 @@ export function ChatInput({
           onClose={() => setShowSkillPopover(false)}
         />
 
-        {isGenerating && (
-          <div className="absolute right-3 bottom-3 z-30">
-            <IconButton
-              icon="stop"
-              variant="filled"
-              size="md"
-              label={t('chat.stopGen')}
-              onClick={onStop}
-            />
-          </div>
-        )}
-
         <div
           className={cn(
             'bg-white dark:bg-gray-800',
@@ -156,19 +144,26 @@ export function ChatInput({
             />
           </div>
 
-          <div className={cn(
-            'flex items-center justify-between mt-1 px-1',
-            isGenerating && 'pr-10',
-          )}>
+          <div className="flex items-center justify-between mt-1 px-1">
             <SkillBar
               skills={resolvedSkills}
               onSkillClick={(id) => {
                 if (id === 'attach') onAttachmentAdd?.()
               }}
             />
-            {!isGenerating && (
-              <div className="flex items-center space-x-2 flex-shrink-0">
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              {!isGenerating && (
                 <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} />
+              )}
+              {isGenerating ? (
+                <IconButton
+                  icon="stop"
+                  variant="filled"
+                  size="md"
+                  label={t('chat.stopGen')}
+                  onClick={onStop}
+                />
+              ) : (
                 <button
                   onClick={handleSend}
                   disabled={!value.trim()}
@@ -181,8 +176,8 @@ export function ChatInput({
                 >
                   <Icon name="arrow_upward" variant="filled" size="sm" />
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
