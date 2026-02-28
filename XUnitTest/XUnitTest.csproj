@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
+    <ProjectReference Include="..\NewLife.ChatAI\NewLife.ChatAI.csproj" />
   </ItemGroup>
 
 </Project>

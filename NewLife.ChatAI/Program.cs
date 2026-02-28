@@ -11,6 +11,7 @@ var services = builder.Services;
 services.AddStardust();
 
 services.AddSingleton<IChatApplicationService, DbChatApplicationService>();
+services.AddSingleton<GatewayService>();
 
 services.AddControllersWithViews();
 services.AddCube();
