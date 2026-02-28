@@ -32,9 +32,19 @@
                 <span class="btn-text username" id="userName">用户</span>
             </button>
             <div class="profile-menu hidden" id="profileMenu">
+                <div class="menu-item menu-username" id="menuAccount">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span id="menuAccountText">guest@local</span>
+                </div>
+                <div class="menu-divider"></div>
                 <div class="menu-item" id="menuSettings">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
                     设置
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-item menu-logout" id="menuLogout">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    退出登录
                 </div>
             </div>
         </div>
@@ -146,129 +156,160 @@
 <!-- ═══════ 设置弹窗 ═══════ -->
 <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal settings-modal">
-        <div class="modal-header">
-            <button class="btn-back" id="settingsBack" title="保存并关闭">←</button>
-            <h2>设置</h2>
-        </div>
-        <div class="modal-body">
-            <!-- 通用设置 -->
-            <div class="settings-group">
-                <h3>通用设置</h3>
-                <div class="setting-row">
-                    <label>语言</label>
-                    <select id="settingLanguage">
-                        <option value="zh-CN">中文（简体）</option>
-                        <option value="zh-TW">中文（繁体）</option>
-                        <option value="en">English</option>
-                    </select>
+        <div class="settings-layout">
+            <!-- 左侧导航 -->
+            <nav class="settings-nav">
+                <div class="settings-nav-header">
+                    <h2>设置</h2>
                 </div>
-                <div class="setting-row">
-                    <label>主题</label>
-                    <select id="settingTheme">
-                        <option value="light">浅色</option>
-                        <option value="dark">深色</option>
-                        <option value="system">跟随系统</option>
-                    </select>
+                <div class="settings-nav-list">
+                    <button class="settings-tab active" data-tab="general">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                        通用设置
+                    </button>
+                    <button class="settings-tab" data-tab="chat">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        对话设置
+                    </button>
+                    <button class="settings-tab" data-tab="privacy">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        数据与隐私
+                    </button>
+                    <button class="settings-tab" data-tab="usage">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                        使用统计
+                    </button>
+                    <button class="settings-tab" data-tab="appkey">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                        API 密钥
+                    </button>
+                    <button class="settings-tab" data-tab="about">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                        关于
+                    </button>
                 </div>
-                <div class="setting-row">
-                    <label>字体大小</label>
-                    <div class="range-wrapper">
-                        <input type="range" id="settingFontSize" min="14" max="20" value="16" />
-                        <span id="fontSizeValue">16px</span>
+            </nav>
+            <!-- 右侧内容区 -->
+            <div class="settings-content">
+                <div class="settings-content-header">
+                    <h3 id="settingsPanelTitle">通用设置</h3>
+                    <button class="btn-close" id="settingsBack" title="保存并关闭">✕</button>
+                </div>
+                <div class="settings-content-body">
+                    <!-- 通用设置 -->
+                    <div class="settings-panel active" data-panel="general">
+                        <div class="setting-row">
+                            <label>语言</label>
+                            <select id="settingLanguage">
+                                <option value="zh-CN">中文（简体）</option>
+                                <option value="zh-TW">中文（繁体）</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>主题</label>
+                            <select id="settingTheme">
+                                <option value="light">浅色</option>
+                                <option value="dark">深色</option>
+                                <option value="system">跟随系统</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>字体大小</label>
+                            <div class="range-wrapper">
+                                <input type="range" id="settingFontSize" min="14" max="20" value="16" />
+                                <span id="fontSizeValue">16px</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>发送快捷键</label>
+                            <select id="settingSendKey">
+                                <option value="enter">Enter 发送</option>
+                                <option value="ctrl+enter">Ctrl+Enter 发送</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="setting-row">
-                    <label>发送快捷键</label>
-                    <select id="settingSendKey">
-                        <option value="enter">Enter 发送</option>
-                        <option value="ctrl+enter">Ctrl+Enter 发送</option>
-                    </select>
-                </div>
-            </div>
-            <!-- 对话设置 -->
-            <div class="settings-group">
-                <h3>对话设置</h3>
-                <div class="setting-row">
-                    <label>默认模型</label>
-                    <select id="settingDefaultModel"></select>
-                </div>
-                <div class="setting-row">
-                    <label>默认思考模式</label>
-                    <select id="settingDefaultThinking">
-                        <option value="0">自动</option>
-                        <option value="1">思考</option>
-                        <option value="2">快速</option>
-                    </select>
-                </div>
-                <div class="setting-row">
-                    <label>上下文轮数</label>
-                    <input type="number" id="settingContextRounds" min="1" max="50" value="10" />
-                </div>
-                <div class="setting-row setting-row-col">
-                    <label>系统提示词</label>
-                    <textarea id="settingSystemPrompt" rows="3" placeholder="全局 System Prompt，可为空"></textarea>
-                </div>
-            </div>
-            <!-- 数据与隐私 -->
-            <div class="settings-group">
-                <h3>数据与隐私</h3>
-                <div class="setting-row">
-                    <label>导出所有对话</label>
-                    <button class="btn-outline" id="settingExport">导出</button>
-                </div>
-                <div class="setting-row">
-                    <label>清除所有对话</label>
-                    <button class="btn-danger" id="settingClear">清除</button>
-                </div>
-                <div class="setting-row">
-                    <label>允许用于模型改进</label>
-                    <label class="switch">
-                        <input type="checkbox" id="settingAllowTraining" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-            <!-- 使用统计 -->
-            <div class="settings-group">
-                <h3>使用统计</h3>
-                <div class="usage-stats" id="usageStats">
-                    <div class="usage-stat-card">
-                        <div class="usage-stat-value" id="usageConversations">-</div>
-                        <div class="usage-stat-label">会话数</div>
+                    <!-- 对话设置 -->
+                    <div class="settings-panel" data-panel="chat">
+                        <div class="setting-row">
+                            <label>默认模型</label>
+                            <select id="settingDefaultModel"></select>
+                        </div>
+                        <div class="setting-row">
+                            <label>默认思考模式</label>
+                            <select id="settingDefaultThinking">
+                                <option value="0">自动</option>
+                                <option value="1">思考</option>
+                                <option value="2">快速</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>上下文轮数</label>
+                            <input type="number" id="settingContextRounds" min="1" max="50" value="10" />
+                        </div>
+                        <div class="setting-row setting-row-col">
+                            <label>系统提示词</label>
+                            <textarea id="settingSystemPrompt" rows="3" placeholder="全局 System Prompt，可为空"></textarea>
+                        </div>
                     </div>
-                    <div class="usage-stat-card">
-                        <div class="usage-stat-value" id="usageMessages">-</div>
-                        <div class="usage-stat-label">消息数</div>
+                    <!-- 数据与隐私 -->
+                    <div class="settings-panel" data-panel="privacy">
+                        <div class="setting-row">
+                            <label>导出所有对话</label>
+                            <button class="btn-outline" id="settingExport">导出</button>
+                        </div>
+                        <div class="setting-row">
+                            <label>清除所有对话</label>
+                            <button class="btn-danger" id="settingClear">清除</button>
+                        </div>
+                        <div class="setting-row">
+                            <label>允许用于模型改进</label>
+                            <label class="switch">
+                                <input type="checkbox" id="settingAllowTraining" />
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="usage-stat-card">
-                        <div class="usage-stat-value" id="usageTotalTokens">-</div>
-                        <div class="usage-stat-label">Token 总量</div>
+                    <!-- 使用统计 -->
+                    <div class="settings-panel" data-panel="usage">
+                        <div class="usage-stats" id="usageStats">
+                            <div class="usage-stat-card">
+                                <div class="usage-stat-value" id="usageConversations">-</div>
+                                <div class="usage-stat-label">会话数</div>
+                            </div>
+                            <div class="usage-stat-card">
+                                <div class="usage-stat-value" id="usageMessages">-</div>
+                                <div class="usage-stat-label">消息数</div>
+                            </div>
+                            <div class="usage-stat-card">
+                                <div class="usage-stat-value" id="usageTotalTokens">-</div>
+                                <div class="usage-stat-label">Token 总量</div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>最近活跃</label>
+                            <span class="setting-value" id="usageLastActive">-</span>
+                        </div>
                     </div>
-                </div>
-                <div class="setting-row">
-                    <label>最近活跃</label>
-                    <span class="setting-value" id="usageLastActive">-</span>
-                </div>
-            </div>
-            <!-- API 密钥管理 -->
-            <div class="settings-group">
-                <h3>API 密钥</h3>
-                <p class="settings-desc">通过 API 密钥，外部系统可调用模型服务</p>
-                <div class="appkey-list" id="appKeyList"></div>
-                <div class="setting-row">
-                    <label>创建新密钥</label>
-                    <div class="appkey-create-row">
-                        <input type="text" id="appKeyName" placeholder="密钥名称" class="appkey-name-input" />
-                        <button class="btn-primary" id="appKeyAddBtn">创建</button>
+                    <!-- API 密钥管理 -->
+                    <div class="settings-panel" data-panel="appkey">
+                        <p class="settings-desc">通过 API 密钥，外部系统可调用模型服务</p>
+                        <div class="appkey-list" id="appKeyList"></div>
+                        <div class="setting-row">
+                            <label>创建新密钥</label>
+                            <div class="appkey-create-row">
+                                <input type="text" id="appKeyName" placeholder="密钥名称" class="appkey-name-input" />
+                                <button class="btn-primary" id="appKeyAddBtn">创建</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <!-- 关于 -->
-            <div class="settings-group">
-                <h3>关于</h3>
-                <div class="setting-row">
-                    <label>版本号</label>
-                    <span class="setting-value">v1.0.0</span>
+                    <!-- 关于 -->
+                    <div class="settings-panel" data-panel="about">
+                        <div class="setting-row">
+                            <label>版本号</label>
+                            <span class="setting-value">v1.0.0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

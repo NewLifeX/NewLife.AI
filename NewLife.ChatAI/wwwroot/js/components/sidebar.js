@@ -10,7 +10,8 @@ import { showToast, showConfirm } from './toast.js';
 
 // DOM 引用
 let sidebar, sidebarToggle, sidebarOpenBtn, conversationList,
-    newConversationBtn, profileBtn, profileMenu, sidebarOverlay;
+    newConversationBtn, profileBtn, profileMenu, sidebarOverlay,
+    userAvatar, userName, menuAccount;
 
 /**
  * 初始化侧边栏
@@ -24,6 +25,9 @@ export function initSidebar() {
     profileBtn = $('profileBtn');
     profileMenu = $('profileMenu');
     sidebarOverlay = $('sidebarOverlay');
+    userAvatar = $('userAvatar');
+    userName = $('userName');
+    menuAccount = $('menuAccount');
 
     // 侧边栏收起/展开
     sidebarToggle?.addEventListener('click', toggleSidebar);
@@ -53,6 +57,13 @@ export function initSidebar() {
         window.dispatchEvent(new CustomEvent('chatai:openSettings'));
     });
 
+    // 退出登录
+    $('menuLogout')?.addEventListener('click', () => {
+        profileMenu?.classList.add('hidden');
+        // 本期暂未启用登录鉴权，仅提示
+        window.dispatchEvent(new CustomEvent('chatai:logout'));
+    });
+
     // 对话列表滚动加载
     conversationList?.addEventListener('scroll', () => {
         const { scrollTop, scrollHeight, clientHeight } = conversationList;
@@ -62,12 +73,25 @@ export function initSidebar() {
     });
 
     // 响应窗口尺寸变化
-    window.addEventListener('resize', () => {
-        if (window.innerWidth > 768) {
-            sidebar?.classList.remove('mobile-open');
-            sidebarOverlay?.classList.add('hidden');
-        }
-    });
+    window.addEventListener('resize', _handleResize);
+
+    // 初始化时处理小屏状态
+    _handleResize();
+}
+
+/** 根据屏幕宽度更新侧边栏状态 */
+function _handleResize() {
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        // 小屏：关闭浮层，侧边栏收起但保留汉堡按钮可用
+        sidebar?.classList.remove('mobile-open');
+        sidebarOverlay?.classList.add('hidden');
+    } else {
+        // 大屏：移除移动端状态，恢复展开/折叠按钮
+        sidebar?.classList.remove('mobile-open');
+        sidebarOverlay?.classList.add('hidden');
+        sidebarOpenBtn?.classList.toggle('hidden', !sidebar?.classList.contains('collapsed'));
+    }
 }
 
 /**
@@ -79,9 +103,10 @@ export function toggleSidebar() {
         const isOpen = sidebar.classList.toggle('mobile-open');
         sidebarOverlay?.classList.toggle('hidden', !isOpen);
     } else {
+        const willCollapse = !sidebar.classList.contains('collapsed');
         sidebar.classList.toggle('collapsed');
-        sidebarOpenBtn?.classList.toggle('hidden', !sidebar.classList.contains('collapsed'));
-        setState({ sidebarOpen: !sidebar.classList.contains('collapsed') });
+        sidebarOpenBtn?.classList.toggle('hidden', !willCollapse);
+        setState({ sidebarOpen: !willCollapse });
     }
 }
 
@@ -91,6 +116,27 @@ export function toggleSidebar() {
 export function closeMobileSidebar() {
     sidebar?.classList.remove('mobile-open');
     sidebarOverlay?.classList.add('hidden');
+}
+
+/**
+ * 加载用户资料（头像/昵称/帐号）
+ */
+export async function loadUserProfile() {
+    try {
+        const profile = await api('/api/user/profile');
+        if (profile) {
+            // 更新头像（取昵称首字）
+            if (userAvatar) {
+                const initial = (profile.nickname || profile.account || 'U').charAt(0).toUpperCase();
+                userAvatar.textContent = initial;
+            }
+            // 更新昵称
+            if (userName) userName.textContent = profile.nickname || '用户';
+            // 更新菜单顶部帐号
+            const accountTextEl = $('menuAccountText');
+            if (accountTextEl) accountTextEl.textContent = profile.account || '';
+        }
+    } catch { /* 使用默认值 */ }
 }
 
 /**

@@ -35,3 +35,6 @@ public record ShareLinkDto(String Url, DateTime CreateTime, DateTime? ExpireTime
 
 /// <summary>用户设置</summary>
 public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, String DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String SystemPrompt, Boolean AllowTraining);
+
+/// <summary>用户资料</summary>
+public record UserProfileDto(String Nickname, String Account, String? Avatar);

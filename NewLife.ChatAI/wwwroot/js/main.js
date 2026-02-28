@@ -6,7 +6,7 @@
 import { setState } from './store.js';
 import { initMarkdown } from './services/markdown.js';
 import { initTheme } from './components/theme.js';
-import { initSidebar, loadConversations } from './components/sidebar.js';
+import { initSidebar, loadConversations, loadUserProfile } from './components/sidebar.js';
 import { initModelSelector, loadModels } from './components/models.js';
 import { initWelcome, showWelcomePage } from './components/welcome.js';
 import { initChat, loadMessages, sendMessage, stopGeneration, initMessageActions, loadSharePage } from './components/chat.js';
@@ -45,6 +45,7 @@ async function init() {
         loadModels(),
         loadSettings(),
         loadConversations(),
+        loadUserProfile(),
     ]);
 
     // 5. URL 路由

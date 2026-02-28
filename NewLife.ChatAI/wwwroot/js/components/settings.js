@@ -14,6 +14,16 @@ import { showWelcomePage } from './welcome.js';
 
 let settingsModal;
 
+/** Tab 名称映射 */
+const _tabLabels = {
+    general: '通用设置',
+    chat: '对话设置',
+    privacy: '数据与隐私',
+    usage: '使用统计',
+    appkey: 'API 密钥',
+    about: '关于',
+};
+
 /**
  * 初始化设置组件
  */
@@ -35,6 +45,11 @@ export function initSettings() {
     // 点击遮罩关闭
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) closeSettings();
+    });
+
+    // Tab 切换
+    settingsModal.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => _switchTab(tab.dataset.tab));
     });
 
     // 主题实时预览
@@ -71,8 +86,7 @@ export function openSettings() {
     _loadAppKeys();
 
     // 默认选中第一个 Tab
-    const firstTab = settingsModal.querySelector('.settings-tab');
-    firstTab?.click();
+    _switchTab('general');
 }
 
 /**
@@ -266,6 +280,22 @@ async function _deleteAppKey(id) {
 }
 
 // ── 辅助 ──
+
+/** 切换 Tab 面板 */
+function _switchTab(tabName) {
+    if (!settingsModal) return;
+    // 更新 tab 高亮
+    settingsModal.querySelectorAll('.settings-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tabName);
+    });
+    // 切换面板
+    settingsModal.querySelectorAll('.settings-panel').forEach(p => {
+        p.classList.toggle('active', p.dataset.panel === tabName);
+    });
+    // 更新右侧标题
+    const titleEl = $('settingsPanelTitle');
+    if (titleEl) titleEl.textContent = _tabLabels[tabName] || tabName;
+}
 
 function _setVal(id, val) { const el = $(id); if (el) el.value = val; }
 function _getVal(id) { return $(id)?.value || ''; }
