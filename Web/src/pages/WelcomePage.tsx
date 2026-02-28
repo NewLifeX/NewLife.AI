@@ -37,8 +37,8 @@ export function WelcomePage({ onSend }: WelcomePageProps) {
             {suggestions.map((s) => (
               <button
                 key={s.label}
-                onClick={() => onSend(`使用${s.label}功能`)}
-                className="flex items-center space-x-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors text-sm text-gray-700 dark:text-gray-300"
+                onClick={() => onSend(t('welcome.useFeature', { feature: s.label }))}
+                className="flex items-center space-x-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 text-sm text-gray-700 dark:text-gray-300"
               >
                 <Icon name={s.icon} className={s.color} />
                 <span>{s.label}</span>

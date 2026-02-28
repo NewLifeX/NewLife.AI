@@ -17,10 +17,10 @@ export function MessageActions({
 }: MessageActionsProps) {
   const { t } = useTranslation()
   return (
-    <div className={cn('flex items-center space-x-2 ml-1', className)}>
-      <IconButton icon="content_copy" size="sm" label={t('common.copy')} onClick={onCopy} />
-      <IconButton icon="refresh" size="sm" label={t('common.regenerate')} onClick={onRegenerate} />
-      <IconButton icon="thumb_down" size="sm" label={t('common.dislike')} onClick={onDislike} />
+    <div className={cn('flex items-center space-x-1', className)}>
+      <IconButton icon="content_copy" size="xs" label={t('common.copy')} onClick={onCopy} />
+      <IconButton icon="refresh" size="xs" label={t('common.regenerate')} onClick={onRegenerate} />
+      <IconButton icon="thumb_down" size="xs" label={t('common.dislike')} onClick={onDislike} />
     </div>
   )
 }

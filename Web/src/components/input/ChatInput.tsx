@@ -1,6 +1,7 @@
 import { useState, useCallback, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { Icon } from '@/components/common/Icon'
 import { Textarea } from '@/components/atoms/Textarea'
 import { IconButton } from '@/components/atoms/IconButton'
 import { SkillBar, type SkillItem } from './SkillBar'
@@ -113,7 +114,7 @@ export function ChatInput({
               icon="stop"
               variant="filled"
               size="md"
-              label="停止生成"
+              label={t('chat.stopGen')}
               onClick={onStop}
             />
           </div>
@@ -122,10 +123,10 @@ export function ChatInput({
         <div
           className={cn(
             'bg-white dark:bg-gray-800',
-            'border-2 border-blue-100 dark:border-blue-900/30',
-            'group-focus-within:border-primary/50 dark:group-focus-within:border-primary/50',
-            'rounded-3xl shadow-input dark:shadow-none',
-            'transition-all duration-300 p-3 pb-2 relative',
+            'border border-gray-200 dark:border-gray-700',
+            'group-focus-within:border-primary/40 dark:group-focus-within:border-primary/40',
+            'rounded-2xl shadow-input dark:shadow-none',
+            'transition-all duration-200 p-3 pb-2 relative',
           )}
         >
           {attachments.length > 0 && (
@@ -167,7 +168,7 @@ export function ChatInput({
             />
             {!isGenerating && (
               <div className="flex items-center space-x-2 flex-shrink-0">
-                <IconButton icon="mic" size="md" variant="ghost" label={t('chat.voiceInput')} className="rounded-full" />
+                <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} className="rounded-full" />
                 <button
                   onClick={handleSend}
                   disabled={!value.trim()}
@@ -178,7 +179,7 @@ export function ChatInput({
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed',
                   )}
                 >
-                  <span className="material-icons text-sm">arrow_upward</span>
+                  <Icon name="arrow_upward" variant="filled" size="sm" />
                 </button>
               </div>
             )}

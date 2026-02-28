@@ -53,7 +53,7 @@ export function Slider({
           '[&::-moz-range-thumb]:cursor-pointer',
         )}
         style={{
-          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percent}%, var(--color-gray-200, #e5e7eb) ${percent}%, var(--color-gray-200, #e5e7eb) 100%)`,
+          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percent}%, var(--slider-track) ${percent}%, var(--slider-track) 100%)`,
         }}
         {...props}
       />

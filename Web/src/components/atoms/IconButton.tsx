@@ -5,15 +5,16 @@ import { Icon, type IconVariant } from '@/components/common/Icon'
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon: string
   iconVariant?: IconVariant
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
   variant?: 'ghost' | 'filled' | 'circle'
   label?: string
 }
 
 const sizeStyles = {
-  sm: 'p-1 text-sm',
-  md: 'p-1.5 text-base',
-  lg: 'p-2 text-lg',
+  xs: 'p-0.5',
+  sm: 'p-1',
+  md: 'p-1.5',
+  lg: 'p-2',
 }
 
 const variantStyles = {
@@ -44,7 +45,7 @@ export function IconButton({
       aria-label={label}
       {...props}
     >
-      <Icon name={icon} variant={iconVariant} size={size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : 'base'} />
+      <Icon name={icon} variant={iconVariant} size={size === 'lg' ? 'lg' : size === 'md' ? 'base' : size === 'sm' ? 'sm' : 'xs'} />
     </button>
   )
 }

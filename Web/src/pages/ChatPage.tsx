@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ScrollArea } from '@/components/common/ScrollArea'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/input/ChatInput'
@@ -23,6 +24,7 @@ export function ChatPage({
   onRegenerate,
   onEdit,
 }: ChatPageProps) {
+  const { t } = useTranslation()
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function ChatPage({
               content={msg.content}
               isStreaming={msg.status === 'streaming'}
               toolCalls={msg.toolCalls}
-              thinkingLabel={msg.thinkingContent ? 'Deep Thinking...' : undefined}
+              thinkingLabel={msg.thinkingContent ? t('chat.thinkingDeep') : undefined}
               onCopy={() => onCopy?.(msg.id)}
               onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(msg.id) : undefined}
               onEdit={msg.role === 'user' ? () => onEdit?.(msg.id) : undefined}

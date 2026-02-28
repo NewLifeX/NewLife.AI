@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { Icon } from '@/components/common/Icon'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import type { Conversation } from '@/types'
 
@@ -50,7 +51,7 @@ export function ChatLayout({
               onClick={onSidebarToggle}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <span className="material-icons-outlined text-lg">menu_open</span>
+              <Icon name="menu_open" size="lg" />
             </button>
           </div>
         )}

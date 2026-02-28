@@ -27,7 +27,7 @@ export function Sidebar({
   onNewChat,
   navItems,
   onNavItemClick,
-  userName = '用户',
+  userName,
   userAvatar,
   onUserClick,
   collapsed = false,
@@ -78,7 +78,7 @@ export function Sidebar({
         onSelect={onConversationSelect}
       />
 
-      <UserProfile name={userName} avatarUrl={userAvatar} onClick={onUserClick} />
+      <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} onClick={onUserClick} />
     </aside>
   )
 }

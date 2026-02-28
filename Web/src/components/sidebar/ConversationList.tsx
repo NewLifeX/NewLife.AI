@@ -55,8 +55,8 @@ export function ConversationList({
                 <ConversationIcon conv={conv} />
                 <span className="truncate">{conv.title}</span>
                 {conv.isPinned && (
-                  <span className="material-icons text-gray-400 text-[14px] absolute right-3 rotate-45 transform">
-                    push_pin
+                  <span className="absolute right-3 rotate-45 transform">
+                    <Icon name="push_pin" variant="filled" size="xs" className="text-gray-400" />
                   </span>
                 )}
               </button>

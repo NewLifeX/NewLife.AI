@@ -16,6 +16,7 @@ export default {
     loading: 'Loading...',
     version: 'NewLife v2.4.0',
     checkUpdate: 'Check for updates',
+    user: 'User',
   },
   sidebar: {
     newChat: 'New Chat',
@@ -34,12 +35,14 @@ export default {
     writing: 'Writing',
     research: 'Research',
     videoGen: 'Video Gen',
+    useFeature: 'Use {{feature}}',
   },
   chat: {
     placeholder: 'Send a message or type "/" for skills',
     thinkingDeep: 'Deep Thinking...',
     analyzingLogs: 'Analyzing logs...',
     voiceInput: 'Voice input',
+    stopGen: 'Stop generating',
   },
   thinking: {
     fast: 'Fast',

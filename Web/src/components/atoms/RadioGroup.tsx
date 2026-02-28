@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { Icon } from '@/components/common/Icon'
 
 interface RadioOption<T extends string> {
   value: T
@@ -48,7 +49,7 @@ export function RadioGroup<T extends string>({
               )}
             >
               <div className="absolute right-2 bottom-2 text-primary opacity-0 peer-checked:opacity-100">
-                <span className="material-icons text-lg">check_circle</span>
+                <Icon name="check_circle" variant="filled" size="lg" />
               </div>
             </div>
           )}

@@ -16,6 +16,7 @@ export default {
     loading: '加载中...',
     version: 'NewLife v2.4.0',
     checkUpdate: '检查更新',
+    user: '用户',
   },
   sidebar: {
     newChat: '新对话',
@@ -34,12 +35,14 @@ export default {
     writing: '帮我写作',
     research: '深入研究',
     videoGen: '视频生成',
+    useFeature: '使用{{feature}}功能',
   },
   chat: {
     placeholder: '发消息或输入 "/" 选择技能',
     thinkingDeep: 'Deep Thinking...',
     analyzingLogs: 'Analyzing logs...',
     voiceInput: '语音输入',
+    stopGen: '停止生成',
   },
   thinking: {
     fast: '快速',

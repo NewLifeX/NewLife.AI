@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { Icon } from '@/components/common/Icon'
 
 interface ToolCallBadgeProps {
   name: string
@@ -24,10 +25,10 @@ export function ToolCallBadge({ name, status, className }: ToolCallBadgeProps) {
         </span>
       )}
       {status === 'done' && (
-        <span className="material-icons text-green-500 text-sm">check_circle</span>
+        <Icon name="check_circle" variant="filled" size="sm" className="text-green-500" />
       )}
       {status === 'error' && (
-        <span className="material-icons text-red-500 text-sm">error</span>
+        <Icon name="error" variant="filled" size="sm" className="text-red-500" />
       )}
       <span>{name}</span>
     </div>

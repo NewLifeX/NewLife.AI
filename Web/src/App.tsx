@@ -30,7 +30,7 @@ function App() {
         onConversationSelect={setActiveConversation}
         onNewChat={newChat}
         onSettingsOpen={openSettings}
-        userName="用户"
+        userName={undefined}
       >
         {isWelcome ? (
           <WelcomePage onSend={sendMessage} />
