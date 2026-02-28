@@ -66,7 +66,7 @@ export function McpSettings({
       <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700/50">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('settings.installedPlugins')}</h4>
-          <button className="text-xs text-primary hover:underline">{t('settings.managePlugins')}</button>
+          <button className="text-xs text-primary hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded">{t('settings.managePlugins')}</button>
         </div>
         <div className="space-y-3">
           {plugins.map((plugin) => (
