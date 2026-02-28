@@ -1,0 +1,25 @@
+﻿################################################################################
+# 此 .gitignore 文件已由 Microsoft(R) Visual Studio 自动创建。
+################################################################################
+
+/.vs
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+[Cc]onfig/
+[Ll]og/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+*.user
+*.pubxml
+/.vscode
+/Bin3
+/BinSSO
+/BinTest/net7.0
+/packages
+*.log
