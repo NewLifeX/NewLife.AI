@@ -57,9 +57,9 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
           className,
         )}
       >
-        <Icon name={icon} variant="symbols" size="sm" className="text-blue-500 text-[18px]" />
+        <Icon name={icon} variant="symbols" size="xl" className="text-blue-500" />
         <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{config.label}</span>
-        <Icon name="keyboard_arrow_down" size="sm" className="text-gray-400 text-[16px]" />
+        <Icon name="keyboard_arrow_down" size="lg" className="text-gray-400" />
       </button>
     </Tooltip>
   )
