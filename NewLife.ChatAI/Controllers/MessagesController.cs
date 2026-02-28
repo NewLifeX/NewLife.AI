@@ -25,16 +25,10 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
 
         try
         {
-            await foreach (var chunk in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
+            await foreach (var ev in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
             {
-                // 服务层返回的是原始文本块，封装为 SSE content_delta 事件
-                var ev = ChatStreamEvent.ContentDelta(chunk);
                 await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
             }
-
-            // 流式输出完成
-            var done = ChatStreamEvent.MessageDone();
-            await WriteSseEventAsync(done, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

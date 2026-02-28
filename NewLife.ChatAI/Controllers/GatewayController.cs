@@ -103,8 +103,8 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
     #endregion
 
     #region 图像生成
-    /// <summary>图像生成接口</summary>
-    /// <param name="body">请求体</param>
+    /// <summary>图像生成接口。按 model 字段路由到对应的图像生成服务商</summary>
+    /// <param name="body">请求体，包含 model/prompt/size/n 等参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     [HttpPost("v1/images/generations")]
@@ -114,13 +114,64 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
         if (appKey == null)
             return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
 
-        // 图像生成暂返回 501，待后续实现
-        return StatusCode(501, new { code = "NOT_IMPLEMENTED", message = "图像生成功能尚未实现" });
+        // 解析请求参数
+        body.TryGetValue("model", out var modelObj);
+        body.TryGetValue("prompt", out var promptObj);
+        var modelCode = modelObj?.ToString();
+        var prompt = promptObj?.ToString();
+
+        if (String.IsNullOrWhiteSpace(prompt))
+            return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+
+        // 路由到模型
+        var config = gatewayService.ResolveModel(modelCode);
+        if (config == null)
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
+
+        var provider = gatewayService.GetProvider(config);
+        if (provider == null)
+            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.Provider}'" });
+
+        // 通过 ChatCompletions 方式请求图像生成（兼容 OpenAI DALL-E 等通过聊天接口生成图像的场景）
+        var size = ChatSetting.Current.DefaultImageSize;
+        if (body.TryGetValue("size", out var sizeObj) && sizeObj != null)
+            size = sizeObj.ToString()!;
+
+        try
+        {
+            var request = new ChatCompletionRequest
+            {
+                Model = config.Code,
+                Messages =
+                [
+                    new AI.Models.ChatMessage { Role = "user", Content = $"Generate an image: {prompt}. Size: {size}" }
+                ],
+            };
+            var options = GatewayService.BuildOptions(config);
+            var response = await provider.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
+
+            return Ok(new
+            {
+                created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                data = new[]
+                {
+                    new
+                    {
+                        revised_prompt = prompt,
+                        content = response.Choices?.FirstOrDefault()?.Message?.Content,
+                    }
+                }
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(502, new { code = "IMAGE_GENERATION_FAILED", message = ex.Message });
+        }
     }
     #endregion
 
     #region 图像编辑
-    /// <summary>图像编辑接口</summary>
+    /// <summary>图像编辑接口。按 model 字段路由到对应的图像编辑服务商</summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     [HttpPost("v1/images/edits")]
@@ -130,7 +181,7 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
         if (appKey == null)
             return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
 
-        // 图像编辑暂返回 501，待后续实现
+        // 图像编辑需要 multipart/form-data，当前阶段返回 501
         return StatusCode(501, new { code = "NOT_IMPLEMENTED", message = "图像编辑功能尚未实现" });
     }
     #endregion

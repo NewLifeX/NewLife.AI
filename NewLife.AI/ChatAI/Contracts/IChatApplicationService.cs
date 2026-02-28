@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.ChatAI.Contracts;
+﻿using NewLife.AI.Models;
+
+namespace NewLife.AI.ChatAI.Contracts;
 
 /// <summary>对话应用服务</summary>
 public interface IChatApplicationService
@@ -13,7 +15,12 @@ public interface IChatApplicationService
     Task<MessageDto?> EditMessageAsync(Int64 messageId, EditMessageRequest request, CancellationToken cancellationToken);
     Task<MessageDto?> RegenerateMessageAsync(Int64 messageId, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<String> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, CancellationToken cancellationToken);
+    /// <summary>流式发送消息。返回完整的 SSE 事件流，包含 thinking/content/tool_call 等事件</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="request">发送消息请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>ChatStreamEvent 事件流</returns>
+    IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, CancellationToken cancellationToken);
     Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken);
 
     /// <summary>异步生成会话标题。首条消息发送后调用，不阻塞主流程</summary>

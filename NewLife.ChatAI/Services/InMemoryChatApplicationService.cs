@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.Models;
 
 namespace NewLife.ChatAI.Services;
 
@@ -103,7 +104,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
         return Task.FromResult<MessageDto?>(null);
     }
 
-    public async IAsyncEnumerable<String> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (!_messages.TryGetValue(conversationId, out var list))
         {
@@ -115,6 +116,10 @@ public class InMemoryChatApplicationService : IChatApplicationService
         list.Add(userMessage);
 
         var assistantMessageId = Interlocked.Increment(ref _messageSeed);
+
+        // 发送 message_start
+        yield return ChatStreamEvent.MessageStart(assistantMessageId, "qwen-max", (Int32)request.ThinkingMode);
+
         var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
         var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -124,7 +129,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             cancellationToken.ThrowIfCancellationRequested();
             var line = chunk + "。";
             content.Append(line);
-            yield return line;
+            yield return ChatStreamEvent.ContentDelta(line);
             await Task.Delay(120, cancellationToken).ConfigureAwait(false);
         }
 
@@ -132,6 +137,9 @@ public class InMemoryChatApplicationService : IChatApplicationService
 
         if (_conversations.TryGetValue(conversationId, out var conversation))
             _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, conversation.Title, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
+
+        // 发送 message_done
+        yield return ChatStreamEvent.MessageDone();
     }
 
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;

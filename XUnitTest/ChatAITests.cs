@@ -264,12 +264,16 @@ public class ChatAITests
         Assert.Equal("qwen-max", conv.ModelCode);
 
         // 发送消息
-        var chunks = new List<String>();
+        var chunks = new List<ChatStreamEvent>();
         await foreach (var chunk in service.StreamMessageAsync(conv.Id, new SendMessageRequest("你好", ThinkingMode.Auto, null), CancellationToken.None))
         {
             chunks.Add(chunk);
         }
         Assert.NotEmpty(chunks);
+        // 验证事件流包含 message_start 和 message_done
+        Assert.Contains(chunks, e => e.Type == "message_start");
+        Assert.Contains(chunks, e => e.Type == "message_done");
+        Assert.Contains(chunks, e => e.Type == "content_delta");
 
         // 获取消息列表
         var messages = await service.GetMessagesAsync(conv.Id, CancellationToken.None);

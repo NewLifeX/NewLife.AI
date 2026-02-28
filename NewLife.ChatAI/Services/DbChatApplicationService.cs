@@ -7,6 +7,10 @@ using NewLife.Data;
 using NewLife.Log;
 using NewLife.Serialization;
 using XCode;
+using AiChatMessage = NewLife.AI.Models.ChatMessage;
+using ChatCompletionRequest = NewLife.AI.Models.ChatCompletionRequest;
+using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
+using ChatUsage = NewLife.AI.Models.ChatUsage;
 
 namespace NewLife.ChatAI.Services;
 
@@ -14,6 +18,9 @@ namespace NewLife.ChatAI.Services;
 public class DbChatApplicationService : IChatApplicationService
 {
     #region 属性
+    private readonly ToolCallService? _toolCallService;
+    private readonly GatewayService _gatewayService;
+    private readonly UsageService? _usageService;
     private readonly ILog _log;
 
     /// <summary>附件存储根目录</summary>
@@ -22,9 +29,15 @@ public class DbChatApplicationService : IChatApplicationService
 
     #region 构造
     /// <summary>实例化数据库版对话应用服务</summary>
+    /// <param name="gatewayService">网关服务</param>
+    /// <param name="toolCallService">工具调用编排服务</param>
+    /// <param name="usageService">用量统计服务</param>
     /// <param name="log">日志</param>
-    public DbChatApplicationService(ILog log)
+    public DbChatApplicationService(GatewayService gatewayService, ToolCallService? toolCallService, UsageService? usageService, ILog log)
     {
+        _gatewayService = gatewayService;
+        _toolCallService = toolCallService;
+        _usageService = usageService;
         _log = log;
         _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
     }
@@ -176,12 +189,12 @@ public class DbChatApplicationService : IChatApplicationService
         return Task.FromResult<MessageDto?>(ToMessageDto(entity));
     }
 
-    /// <summary>流式发送消息并获取AI回复</summary>
+    /// <summary>流式发送消息并获取AI回复。接入真实模型，支持 thinking/content/tool_call 事件</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">发送消息请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public async IAsyncEnumerable<String> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <returns>ChatStreamEvent 事件流</returns>
+    public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var conversation = Conversation.FindById(conversationId);
         if (conversation == null) yield break;
@@ -196,34 +209,134 @@ public class DbChatApplicationService : IChatApplicationService
         };
         userMsg.Insert();
 
-        // 占位流式回复，后续接入真实模型推理与上下文管理
-        var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
-        var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        var content = new StringBuilder();
-        foreach (var chunk in chunks)
+        // 查找模型配置
+        var modelConfig = _gatewayService.ResolveModel(conversation.ModelCode);
+        if (modelConfig == null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var line = chunk + "。";
-            content.Append(line);
-            yield return line;
-            await Task.Delay(120, cancellationToken).ConfigureAwait(false);
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelCode}' 不可用");
+            yield break;
         }
 
-        // 保存AI回复消息
+        // 创建 AI 回复消息占位
         var assistantMsg = new ChatMessage
         {
             ConversationId = conversationId,
             Role = "assistant",
-            Content = content.ToString(),
             ThinkingMode = (Int32)request.ThinkingMode,
         };
         assistantMsg.Insert();
 
-        // 更新会话的最后消息时间和消息数
+        // 发送 message_start
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code, (Int32)request.ThinkingMode);
+
+        // 构建上下文消息列表
+        var contextMessages = BuildContextMessages(conversationId, request.Content);
+
+        // 收集完整回复内容
+        var contentBuilder = new StringBuilder();
+        var thinkingBuilder = new StringBuilder();
+        ChatUsage? lastUsage = null;
+
+        // 通过 ToolCallService 进行带工具调用的流式编排
+        if (_toolCallService != null && ChatSetting.Current.EnableFunctionCalling)
+        {
+            await foreach (var ev in _toolCallService.StreamWithToolsAsync(contextMessages, modelConfig, cancellationToken).ConfigureAwait(false))
+            {
+                // 收集内容用于持久化
+                if (ev.Type == "content_delta" && ev.Content != null)
+                    contentBuilder.Append(ev.Content);
+                else if (ev.Type == "thinking_delta" && ev.Content != null)
+                    thinkingBuilder.Append(ev.Content);
+                else if (ev.Type == "message_done")
+                    lastUsage = ev.Usage;
+
+                yield return ev;
+            }
+        }
+        else
+        {
+            // 无工具调用，直接流式调用模型
+            var provider = _gatewayService.GetProvider(modelConfig);
+            if (provider == null)
+            {
+                yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.Provider}'");
+                yield break;
+            }
+
+            var aiRequest = new ChatCompletionRequest
+            {
+                Model = modelConfig.Code,
+                Messages = contextMessages,
+                Stream = true,
+            };
+            var options = GatewayService.BuildOptions(modelConfig);
+
+            await foreach (var chunk in provider.ChatStreamAsync(aiRequest, options, cancellationToken).ConfigureAwait(false))
+            {
+                if (chunk.Usage != null) lastUsage = chunk.Usage;
+
+                var choice = chunk.Choices?.FirstOrDefault();
+                if (choice == null) continue;
+
+                var delta = choice.Delta;
+                if (delta == null) continue;
+
+                // 思考内容
+                if (!String.IsNullOrEmpty(delta.ReasoningContent))
+                {
+                    thinkingBuilder.Append(delta.ReasoningContent);
+                    yield return ChatStreamEvent.ThinkingDelta(delta.ReasoningContent);
+                }
+
+                // 正文内容
+                var text = delta.Content as String;
+                if (!String.IsNullOrEmpty(text))
+                {
+                    contentBuilder.Append(text);
+                    yield return ChatStreamEvent.ContentDelta(text);
+                }
+            }
+
+            // 思考完成
+            if (thinkingBuilder.Length > 0)
+                yield return ChatStreamEvent.ThinkingDone(0);
+
+            yield return ChatStreamEvent.MessageDone(lastUsage);
+        }
+
+        // 持久化 AI 回复
+        assistantMsg.Content = contentBuilder.ToString();
+        if (thinkingBuilder.Length > 0)
+            assistantMsg.ThinkingContent = thinkingBuilder.ToString();
+        assistantMsg.Update();
+
+        // 更新会话信息
         conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
+        conversation.MessageCount = (Int32)Entity.ChatMessage.FindCount(Entity.ChatMessage._.ConversationId == conversationId);
         conversation.Update();
+
+        // 写入用量记录
+        if (lastUsage != null)
+        {
+            _usageService?.Record(0, 0, conversationId, assistantMsg.Id,
+                modelConfig.Code, lastUsage.PromptTokens, lastUsage.CompletionTokens, lastUsage.TotalTokens, "Chat");
+        }
+
+        // 异步生成标题（首条消息）
+        if (conversation.MessageCount <= 2 && ChatSetting.Current.AutoGenerateTitle)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await GenerateTitleAsync(conversationId, request.Content, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error("异步生成标题失败: {0}", ex.Message);
+                }
+            });
+        }
     }
 
     /// <summary>中断生成</summary>
@@ -554,6 +667,35 @@ public class DbChatApplicationService : IChatApplicationService
     #endregion
 
     #region 辅助
+    /// <summary>构建上下文消息列表。按配置的轮数截取历史消息</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="currentContent">当前用户消息内容</param>
+    /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
+    private IList<AiChatMessage> BuildContextMessages(Int64 conversationId, String currentContent)
+    {
+        var setting = ChatSetting.Current;
+        var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
+
+        // 查询历史消息，按时间倒序取最近 N 轮（每轮 = 1条user + 1条assistant = 2条）
+        var p = new PageParameter { PageSize = maxRounds * 2, Sort = Entity.ChatMessage._.CreateTime.Desc() };
+        var history = Entity.ChatMessage.Search(conversationId, DateTime.MinValue, DateTime.MinValue, null, p);
+        history.Reverse();
+
+        var messages = new List<AiChatMessage>();
+
+        // 添加历史消息
+        foreach (var msg in history)
+        {
+            messages.Add(new AiChatMessage
+            {
+                Role = msg.Role,
+                Content = msg.Content,
+            });
+        }
+
+        return messages;
+    }
+
     /// <summary>转换会话实体为摘要DTO</summary>
     /// <param name="entity">会话实体</param>
     /// <returns></returns>
