@@ -49,7 +49,7 @@ export function ChatLayout({
           <div className="absolute top-4 left-4 z-10">
             <button
               onClick={onSidebarToggle}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <Icon name="menu_open" size="lg" />
             </button>

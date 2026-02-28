@@ -168,7 +168,7 @@ export function ChatInput({
             />
             {!isGenerating && (
               <div className="flex items-center space-x-2 flex-shrink-0">
-                <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} className="rounded-full" />
+                <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} />
                 <button
                   onClick={handleSend}
                   disabled={!value.trim()}
