@@ -4,21 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>NewLife.ChatAI</title>
-    <link rel="stylesheet" href="/app.css" />
-    <!-- Markdown 渲染 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css" id="hlThemeLight" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css" id="hlThemeDark" disabled />
+    <link rel="stylesheet" href="/css/app.css" />
+    <!-- 代码高亮主题 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github.min.css" id="hlThemeLight" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css" id="hlThemeDark" disabled />
+    <!-- KaTeX 数学公式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
 </head>
 <body>
 <div class="app" id="app">
-    <!-- 侧边栏 -->
+    <!-- ═══════ 侧边栏 ═══════ -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <button class="sidebar-toggle" id="sidebarToggle" title="收起侧边栏">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-            <button class="btn-new-chat" id="newConversation" title="新建对话">
+            <button class="btn-new-chat" id="newConversationBtn" title="新建对话">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                 <span class="btn-text">新建对话</span>
             </button>
@@ -29,10 +31,7 @@
                 <span class="avatar" id="userAvatar">U</span>
                 <span class="btn-text username" id="userName">用户</span>
             </button>
-            <!-- 个人菜单 -->
             <div class="profile-menu hidden" id="profileMenu">
-                <div class="menu-item menu-username" id="menuUserName">用户</div>
-                <div class="menu-divider"></div>
                 <div class="menu-item" id="menuSettings">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
                     设置
@@ -41,7 +40,7 @@
         </div>
     </aside>
 
-    <!-- 主内容区 -->
+    <!-- ═══════ 主内容区 ═══════ -->
     <main class="main" id="mainContent">
         <!-- 顶部栏 -->
         <header class="topbar">
@@ -58,12 +57,24 @@
             </div>
         </header>
 
-        <!-- 欢迎页（空状态） -->
+        <!-- 欢迎页 -->
         <section class="welcome-page" id="welcomePage">
             <div class="welcome-content">
                 <div class="welcome-logo">
                     <div class="logo-glow"></div>
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#logoGrad)" stroke-width="1.5"><defs><linearGradient id="logoGrad" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><path d="M12 2a7 7 0 0 1 7 7v1a7 7 0 0 1-14 0V9a7 7 0 0 1 7-7z"/><path d="M9 12h2m2 0h2"/><circle cx="9" cy="9" r="1" fill="url(#logoGrad)" stroke="none"/><circle cx="15" cy="9" r="1" fill="url(#logoGrad)" stroke="none"/><path d="M8 22h8M12 18v4"/></svg>
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#logoGrad)" stroke-width="1.5">
+                        <defs>
+                            <linearGradient id="logoGrad" x1="0" y1="0" x2="24" y2="24">
+                                <stop offset="0%" stop-color="#6366f1"/>
+                                <stop offset="100%" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M12 2a7 7 0 0 1 7 7v1a7 7 0 0 1-14 0V9a7 7 0 0 1 7-7z"/>
+                        <path d="M9 12h2m2 0h2"/>
+                        <circle cx="9" cy="9" r="1" fill="url(#logoGrad)" stroke="none"/>
+                        <circle cx="15" cy="9" r="1" fill="url(#logoGrad)" stroke="none"/>
+                        <path d="M8 22h8M12 18v4"/>
+                    </svg>
                 </div>
                 <h1 class="welcome-title">你好，有什么可以帮你？</h1>
                 <p class="welcome-subtitle">我是 NewLife.ChatAI，支持多模型对话的智能助手</p>
@@ -71,25 +82,26 @@
             </div>
         </section>
 
-        <!-- 对话内容区 -->
+        <!-- 对话消息区 -->
         <section class="messages hidden" id="messages">
             <div class="messages-inner" id="messagesInner"></div>
         </section>
 
-        <!-- 回到底部按钮 -->
-        <button class="scroll-bottom-btn hidden" id="scrollBottomBtn" title="回到最新消息">↓</button>
+        <!-- 回到底部 -->
+        <button class="scroll-bottom-btn hidden" id="scrollBottomBtn" title="回到最新消息">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
 
-        <!-- 输入区 -->
+        <!-- ═══════ 输入区 ═══════ -->
         <footer class="composer" id="composer">
-            <!-- 附件预览条 -->
             <div class="attachment-preview hidden" id="attachmentPreview"></div>
             <div class="composer-card">
                 <textarea id="promptInput" rows="1" placeholder="输入你的问题..." maxlength="6000"></textarea>
-                <span class="char-count hidden" id="charCount">0/6000</span>
-                <input type="file" id="fileInput" multiple hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.txt,.md,.csv" />
+                <span class="char-count" id="charCount"></span>
+                <input type="file" id="fileInput" multiple hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.txt,.md,.csv,.json" />
                 <div class="composer-toolbar">
                     <div class="composer-toolbar-left">
-                        <button class="toolbar-btn" id="uploadBtn" title="上传附件">
+                        <button class="toolbar-btn" id="attachBtn" title="上传附件">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
                         <div class="thinking-mode-selector" id="thinkingModeSelector">
@@ -114,9 +126,14 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn-send" id="sendBtn" disabled title="发送">
-                        <svg class="send-icon" id="sendIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    </button>
+                    <div class="composer-toolbar-right">
+                        <button class="btn-send" id="sendBtn" title="发送 (Enter)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        </button>
+                        <button class="btn-stop hidden" id="stopBtn" title="停止生成">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </footer>
@@ -126,16 +143,11 @@
 <!-- 移动端侧边栏遮罩 -->
 <div class="sidebar-overlay hidden" id="sidebarOverlay"></div>
 
-<!-- 拖拽上传遮罩 -->
-<div class="drop-overlay hidden" id="dropOverlay">
-    <div class="drop-hint">释放以上传文件</div>
-</div>
-
-<!-- 设置弹窗 -->
+<!-- ═══════ 设置弹窗 ═══════ -->
 <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal settings-modal">
         <div class="modal-header">
-            <button class="btn-back" id="settingsBack">←</button>
+            <button class="btn-back" id="settingsBack" title="保存并关闭">←</button>
             <h2>设置</h2>
         </div>
         <div class="modal-body">
@@ -168,8 +180,8 @@
                 <div class="setting-row">
                     <label>发送快捷键</label>
                     <select id="settingSendKey">
-                        <option value="Enter">Enter 发送</option>
-                        <option value="Ctrl+Enter">Ctrl+Enter 发送</option>
+                        <option value="enter">Enter 发送</option>
+                        <option value="ctrl+enter">Ctrl+Enter 发送</option>
                     </select>
                 </div>
             </div>
@@ -238,24 +250,16 @@
                     <span class="setting-value" id="usageLastActive">-</span>
                 </div>
             </div>
-            <!-- API 密钥 -->
+            <!-- API 密钥管理 -->
             <div class="settings-group">
                 <h3>API 密钥</h3>
                 <p class="settings-desc">通过 API 密钥，外部系统可调用模型服务</p>
-                <div class="appkey-list" id="appkeyList"></div>
+                <div class="appkey-list" id="appKeyList"></div>
                 <div class="setting-row">
                     <label>创建新密钥</label>
                     <div class="appkey-create-row">
-                        <input type="text" id="appkeyName" placeholder="密钥名称" class="appkey-name-input" />
-                        <button class="btn-primary" id="appkeyCreateBtn">创建</button>
-                    </div>
-                </div>
-                <!-- 密钥展示弹窗（仅一次） -->
-                <div class="appkey-secret-reveal hidden" id="appkeySecretReveal">
-                    <p>⚠️ 请妥善保存密钥，此密钥仅显示一次：</p>
-                    <div class="share-link-row">
-                        <input type="text" id="appkeySecretInput" readonly />
-                        <button class="btn-outline" id="appkeySecretCopy">复制</button>
+                        <input type="text" id="appKeyName" placeholder="密钥名称" class="appkey-name-input" />
+                        <button class="btn-primary" id="appKeyAddBtn">创建</button>
                     </div>
                 </div>
             </div>
@@ -271,7 +275,7 @@
     </div>
 </div>
 
-<!-- 分享弹窗 -->
+<!-- ═══════ 分享弹窗 ═══════ -->
 <div class="modal-overlay hidden" id="shareModal">
     <div class="modal share-modal">
         <div class="modal-header">
@@ -280,15 +284,17 @@
         </div>
         <div class="modal-body">
             <p>分享此对话的链接（任何人可通过链接查看）：</p>
+            <p class="share-status hidden" id="shareStatus"></p>
             <div class="share-link-row">
-                <input type="text" id="shareLinkInput" readonly />
-                <button class="btn-outline" id="shareCopyBtn">复制</button>
+                <input type="text" id="shareLinkInput" readonly placeholder="点击下方按钮生成链接" />
+                <button class="btn-outline hidden" id="shareCopyBtn">复制</button>
             </div>
+            <button class="btn-primary" id="shareCreateBtn">生成链接</button>
         </div>
     </div>
 </div>
 
-<!-- 反馈弹窗（点踩原因） -->
+<!-- ═══════ 反馈弹窗 ═══════ -->
 <div class="modal-overlay hidden" id="feedbackModal">
     <div class="modal feedback-modal">
         <div class="modal-header">
@@ -301,14 +307,16 @@
                 <label class="tag-checkbox"><input type="checkbox" value="回答不完整" /> 回答不完整</label>
                 <label class="tag-checkbox"><input type="checkbox" value="格式混乱" /> 格式混乱</label>
                 <label class="tag-checkbox"><input type="checkbox" value="内容有害" /> 内容有害</label>
+                <label class="tag-checkbox"><input type="checkbox" value="反应太慢" /> 反应太慢</label>
+                <label class="tag-checkbox"><input type="checkbox" value="其他" /> 其他</label>
             </div>
             <textarea id="feedbackText" rows="3" placeholder="其他原因（选填）"></textarea>
-            <button class="btn-primary" id="feedbackSubmitBtn">提交</button>
+            <button class="btn-primary" id="feedbackSubmitBtn">提交反馈</button>
         </div>
     </div>
 </div>
 
-<!-- 全屏图片预览 -->
+<!-- ═══════ 图片灯箱 ═══════ -->
 <div class="lightbox hidden" id="lightbox">
     <div class="lightbox-backdrop"></div>
     <button class="lightbox-close" id="lightboxClose">✕</button>
@@ -317,10 +325,10 @@
     <div class="lightbox-content">
         <img id="lightboxImg" src="" alt="" />
     </div>
-    <div class="lightbox-thumbnails" id="lightboxThumbnails"></div>
+    <div class="lightbox-thumbnails" id="lightboxThumbs"></div>
 </div>
 
-<!-- 确认弹窗 -->
+<!-- ═══════ 确认弹窗 ═══════ -->
 <div class="modal-overlay hidden" id="confirmModal">
     <div class="modal confirm-modal">
         <div class="modal-header">
@@ -339,10 +347,13 @@
 <!-- Toast 通知 -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- CDN 依赖（非模块，需全局可用） -->
 <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/highlight.js@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script src="/app.js"></script>
+
+<!-- 应用入口（ES Module） -->
+<script type="module" src="/js/main.js"></script>
 </body>
 </html>
