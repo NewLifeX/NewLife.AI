@@ -92,3 +92,10 @@ export const useSettingsStore = create<SettingsState>()(
     },
   ),
 )
+
+// 监听系统主题变化，当用户选择 system 模式时自动切换
+if (typeof window !== 'undefined') {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (useSettingsStore.getState().theme === 'system') applyTheme('system')
+  })
+}

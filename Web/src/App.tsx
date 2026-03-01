@@ -51,6 +51,16 @@ function ChatApp() {
     fetchUserProfile()
       .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
       .catch(() => {})
+
+    // Cmd+K / Ctrl+K 全局快捷键 → 新建对话
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        handleNewChat()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   useEffect(() => {
