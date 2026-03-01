@@ -471,7 +471,7 @@ public class DbChatApplicationService : IChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision)).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.Provider)).ToArray();
         return Task.FromResult(models);
     }
     #endregion

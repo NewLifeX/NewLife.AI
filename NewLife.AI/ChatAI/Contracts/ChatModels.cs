@@ -38,7 +38,7 @@ public enum ToolCallStatus
 }
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision);
+public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision, String? Provider = null);
 
 /// <summary>Token 用量统计</summary>
 public record TokenUsageDto(Int32 PromptTokens, Int32 CompletionTokens, Int32 TotalTokens);
