@@ -171,7 +171,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 如果没有当前会话，先创建
     if (convId == null) {
       try {
-        const conv = await createConversation(content.slice(0, 30))
+        const defaultModel = (await import('@/stores')).useSettingsStore.getState().defaultModel
+        const conv = await createConversation(content.slice(0, 30), defaultModel || undefined)
         convId = conv.id
         set((s) => ({
           conversations: [conv, ...s.conversations],
