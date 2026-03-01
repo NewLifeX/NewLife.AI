@@ -304,12 +304,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }
             break
 
-          case 'error':
+          case 'error': {
+            const errorMsg = event.message || event.error || '发生错误'
             if (assistantMsgId != null) {
               set((s) => ({
                 messages: s.messages.map((m) =>
                   m.id === assistantMsgId
-                    ? { ...m, content: event.error ?? '发生错误', status: 'error' }
+                    ? { ...m, content: errorMsg, status: 'error' }
                     : m,
                 ),
                 isGenerating: false,
@@ -319,6 +320,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               set({ isGenerating: false, _abortController: null })
             }
             break
+          }
         }
       }, abortController.signal, attachmentIds.length ? attachmentIds : undefined)
     } catch {
