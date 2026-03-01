@@ -41,6 +41,8 @@ export interface ModelInfo {
   provider: string
   supportThinking?: boolean
   supportVision?: boolean
+  supportImageGeneration?: boolean
+  supportFunctionCalling?: boolean
 }
 
 export interface Attachment {

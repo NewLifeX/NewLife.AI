@@ -235,24 +235,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break
 
           case 'thinking_delta':
-            if (assistantMsgId != null && event.thinkingContent) {
+            if (assistantMsgId != null && event.content) {
               set((s) => ({
                 messages: s.messages.map((m) =>
                   m.id === assistantMsgId
-                    ? { ...m, thinkingContent: (m.thinkingContent ?? '') + event.thinkingContent }
+                    ? { ...m, thinkingContent: (m.thinkingContent ?? '') + event.content }
                     : m,
                 ),
               }))
             }
             break
 
+          case 'thinking_done':
+            // 思考完成，thinkingTime 可用于前端展示思考耗时
+            break
+
           case 'tool_call_start':
-            if (assistantMsgId != null && event.toolCall) {
-              const tc = event.toolCall
+            if (assistantMsgId != null && event.toolCallId) {
               set((s) => ({
                 messages: s.messages.map((m) =>
                   m.id === assistantMsgId
-                    ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: tc.id, name: tc.name, status: 'calling' as const, arguments: tc.arguments }] }
+                    ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
                     : m,
                 ),
               }))
@@ -260,12 +263,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break
 
           case 'tool_call_done':
-            if (assistantMsgId != null && event.toolCall) {
-              const tc = event.toolCall
+            if (assistantMsgId != null && event.toolCallId) {
               set((s) => ({
                 messages: s.messages.map((m) =>
                   m.id === assistantMsgId
-                    ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === tc.id ? { ...t, status: 'done' as const, result: tc.result } : t) }
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === event.toolCallId ? { ...t, status: 'done' as const, result: event.result } : t) }
+                    : m,
+                ),
+              }))
+            }
+            break
+
+          case 'tool_call_error':
+            if (assistantMsgId != null && event.toolCallId) {
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === event.toolCallId ? { ...t, status: 'error' as const, result: event.error } : t) }
                     : m,
                 ),
               }))
@@ -280,9 +294,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 ),
                 isGenerating: false,
                 _abortController: null,
+                // 如果后端返回了自动生成的标题，直接更新会话列表
+                conversations: event.title
+                  ? s.conversations.map((c) => c.id === finalConvId ? { ...c, title: event.title! } : c)
+                  : s.conversations,
               }))
               // 刷新会话列表以获取后端自动生成的标题
-              get().loadConversations()
+              if (!event.title) get().loadConversations()
             }
             break
 

@@ -146,23 +146,26 @@ export async function fetchMessages(conversationId: number): Promise<Message[]> 
 // ── SSE Streaming ──
 
 export interface ChatStreamEvent {
-  type: 'message_start' | 'thinking_delta' | 'content_delta' | 'tool_call_start' | 'tool_call_done' | 'message_done' | 'error'
+  type: 'message_start' | 'thinking_delta' | 'thinking_done' | 'content_delta' | 'tool_call_start' | 'tool_call_done' | 'tool_call_error' | 'message_done' | 'error'
   messageId?: number
+  model?: string
+  thinkingMode?: number
   content?: string
-  thinkingContent?: string
-  toolCall?: {
-    id: string
-    name: string
-    status: number
-    arguments?: string
-    result?: string
-  }
+  thinkingTime?: number
+  toolCallId?: string
+  name?: string
+  arguments?: string
+  result?: string
+  success?: boolean
   error?: string
+  code?: string
+  message?: string
   usage?: {
     promptTokens?: number
     completionTokens?: number
     totalTokens?: number
   }
+  title?: string
 }
 
 export async function streamMessage(
@@ -255,6 +258,8 @@ interface ModelInfoDto {
   name: string
   supportThinking: boolean
   supportVision: boolean
+  supportImageGeneration: boolean
+  supportFunctionCalling: boolean
   provider?: string
 }
 
@@ -266,6 +271,8 @@ export async function fetchModels(): Promise<ModelInfo[]> {
     provider: d.provider ?? '',
     supportThinking: d.supportThinking,
     supportVision: d.supportVision,
+    supportImageGeneration: d.supportImageGeneration,
+    supportFunctionCalling: d.supportFunctionCalling,
   }))
 }
 
