@@ -38,6 +38,8 @@ export default {
     rename: 'Rename',
     delete: 'Delete',
     searchPlaceholder: 'Search chats...',
+    noResults: 'No matching chats found',
+    empty: 'No chats yet, start a new one',
   },
   welcome: {
     greeting: 'How can I help you?',

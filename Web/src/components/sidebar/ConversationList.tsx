@@ -140,6 +140,12 @@ export function ConversationList({
           )}
         </div>
       )}
+      {grouped.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+          <Icon name={searchQuery ? 'search_off' : 'chat_bubble_outline'} size="xl" className="mb-2 opacity-50" />
+          <span className="text-xs">{searchQuery ? t('sidebar.noResults') : t('sidebar.empty')}</span>
+        </div>
+      )}
       {grouped.map(({ group, items }) => (
         <div key={group}>
           <div className="text-xs text-gray-400 px-3 py-2 font-medium">{t(groupLabelKey[group])}</div>
