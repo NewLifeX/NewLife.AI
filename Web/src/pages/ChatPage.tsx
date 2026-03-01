@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Icon } from '@/components/common/Icon'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/input/ChatInput'
 import type { Message, Attachment } from '@/types'
@@ -141,7 +142,7 @@ export function ChatPage({
           className="absolute bottom-32 right-6 z-30 w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
           title={t('chat.backToBottom')}
         >
-          <span className="material-icons-outlined text-xl">keyboard_arrow_down</span>
+          <Icon name="keyboard_arrow_down" variant="outlined" size="xl" />
         </button>
       )}
 
