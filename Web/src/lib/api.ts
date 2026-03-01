@@ -384,8 +384,9 @@ export async function fetchMcpServers(): Promise<McpServer[]> {
 }
 
 export async function toggleMcpServer(id: number, enabled: boolean): Promise<void> {
-  await request<void>(`/api/mcp/servers/${id}/enable?enabled=${enabled}`, {
-    method: 'PATCH',
+  await request<void>(`/api/mcp/servers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ enable: enabled }),
   })
 }
 
