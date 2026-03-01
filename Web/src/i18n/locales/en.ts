@@ -36,6 +36,7 @@ export default {
     unpin: 'Unpin',
     rename: 'Rename',
     delete: 'Delete',
+    searchPlaceholder: 'Search chats...',
   },
   welcome: {
     greeting: 'How can I help you?',

@@ -108,7 +108,7 @@ export function MessageBubble({
             </div>
           ) : (
             <>
-              <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] leading-7 shadow-sm">
+              <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 leading-7 shadow-sm" style={{ fontSize: 'var(--chat-font-size, 16px)' }}>
                 {content}
               </div>
               {onEdit && (
@@ -141,12 +141,15 @@ export function MessageBubble({
         <Avatar type="ai" size="md" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className={cn(
-          'rounded-2xl rounded-tl-sm px-6 py-5 text-[15px] leading-7 shadow-soft',
-          isError
-            ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400'
-            : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 text-gray-900 dark:text-gray-100',
-        )}>
+        <div
+          className={cn(
+            'rounded-2xl rounded-tl-sm px-6 py-5 leading-7 shadow-soft',
+            isError
+              ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400'
+              : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 text-gray-900 dark:text-gray-100',
+          )}
+          style={{ fontSize: 'var(--chat-font-size, 16px)' }}
+        >
           {toolCalls && toolCalls.length > 0 && (
             <div className="flex items-center flex-wrap gap-2 mb-4">
               {toolCalls.map((tc) => (

@@ -105,12 +105,22 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
+/* Chat font size (controlled by settings) */
+:root {
+  --chat-font-size: 16px;
+}
+
 /* Prose overrides */
 .prose p {
   margin-bottom: 0.8em;
 }
 .prose ul {
   list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.8em;
+}
+.prose ol {
+  list-style-type: decimal;
   padding-left: 1.5em;
   margin-bottom: 0.8em;
 }

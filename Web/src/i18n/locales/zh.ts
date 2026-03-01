@@ -36,6 +36,7 @@ export default {
     unpin: '取消置顶',
     rename: '重命名',
     delete: '删除',
+    searchPlaceholder: '搜索对话...',
   },
   welcome: {
     greeting: '有什么我能帮你的吗？',

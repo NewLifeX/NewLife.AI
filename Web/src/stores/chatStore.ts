@@ -11,10 +11,12 @@ import {
   regenerateMessage,
   editMessage,
   submitFeedback,
+  deleteFeedback,
   uploadAttachment,
   fetchModels,
   type ChatStreamEvent,
 } from '@/lib/api'
+import { useSettingsStore } from '@/stores/settingsStore'
 import type { Attachment, ModelInfo } from '@/types'
 
 type ThinkingModeKey = 'fast' | 'balanced' | 'deep'
@@ -171,7 +173,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 如果没有当前会话，先创建
     if (convId == null) {
       try {
-        const defaultModel = (await import('@/stores')).useSettingsStore.getState().defaultModel
+        const defaultModel = useSettingsStore.getState().defaultModel
         const conv = await createConversation(content.slice(0, 30), defaultModel || undefined)
         convId = conv.id
         set((s) => ({
@@ -374,7 +376,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const isAlreadyLiked = msg?.feedbackType === 1
     try {
       if (isAlreadyLiked) {
-        await (await import('@/lib/api')).deleteFeedback(id)
+        await deleteFeedback(id)
         set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 0 } : m) }))
       } else {
         await submitFeedback(id, 'like')
@@ -388,7 +390,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const isAlreadyDisliked = msg?.feedbackType === 2
     try {
       if (isAlreadyDisliked) {
-        await (await import('@/lib/api')).deleteFeedback(id)
+        await deleteFeedback(id)
         set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 0 } : m) }))
       } else {
         await submitFeedback(id, 'dislike')

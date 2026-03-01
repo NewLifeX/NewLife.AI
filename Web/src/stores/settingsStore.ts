@@ -11,6 +11,10 @@ interface SettingsState extends UserSettings {
   reset: () => void
 }
 
+function applyFontSize(size: number) {
+  document.documentElement.style.setProperty('--chat-font-size', `${size}px`)
+}
+
 function applyTheme(theme: UserSettings['theme']) {
   const root = document.documentElement
   if (theme === 'dark') {
@@ -50,9 +54,11 @@ export const useSettingsStore = create<SettingsState>()(
           const remote = await fetchUserSettings()
           if (remote.language) i18n.changeLanguage(remote.language)
           applyTheme(remote.theme)
+          applyFontSize(remote.fontSize)
           set({ ...remote, _loaded: true })
         } catch {
           applyTheme(get().theme)
+          applyFontSize(get().fontSize)
           set({ _loaded: true })
         }
       },
@@ -64,6 +70,9 @@ export const useSettingsStore = create<SettingsState>()(
         if (partial.theme) {
           applyTheme(partial.theme)
         }
+        if (partial.fontSize != null) {
+          applyFontSize(partial.fontSize)
+        }
         set((s) => ({ ...s, ...partial }))
         // 异步保存到后端
         const merged = { ...get(), ...partial }
@@ -73,6 +82,7 @@ export const useSettingsStore = create<SettingsState>()(
       reset: () => {
         i18n.changeLanguage(defaults.language)
         applyTheme(defaults.theme)
+        applyFontSize(defaults.fontSize)
         set(defaults)
         saveUserSettings(defaults).catch(() => {})
       },
@@ -88,6 +98,7 @@ export const useSettingsStore = create<SettingsState>()(
           i18n.changeLanguage(state.language)
         }
         applyTheme(state?.theme ?? defaults.theme)
+        applyFontSize(state?.fontSize ?? defaults.fontSize)
       },
     },
   ),

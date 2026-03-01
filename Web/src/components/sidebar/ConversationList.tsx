@@ -65,8 +65,10 @@ export function ConversationList({
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setConfirmDeleteId(null) }, [activeId])
+  useEffect(() => { setConfirmDeleteId(null); setSearchQuery('') }, [activeId])
 
   const handleRenameStart = (conv: Conversation) => {
     setEditingId(conv.id)
@@ -99,18 +101,44 @@ export function ConversationList({
     }
   }, [onLoadMore])
 
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return conversations
+    const q = searchQuery.trim().toLowerCase()
+    return conversations.filter((c) => c.title.toLowerCase().includes(q))
+  }, [conversations, searchQuery])
+
   const grouped = useMemo(() => {
     const map = new Map<TimeGroup, Conversation[]>()
     for (const g of groupOrder) map.set(g, [])
-    for (const conv of conversations) {
+    for (const conv of filtered) {
       const g = getTimeGroup(conv.updatedAt)
       map.get(g)!.push(conv)
     }
     return groupOrder.filter((g) => map.get(g)!.length > 0).map((g) => ({ group: g, items: map.get(g)! }))
-  }, [conversations])
+  }, [filtered])
 
   return (
     <div ref={listRef} onScroll={handleListScroll} className={cn('flex-1 overflow-y-auto custom-scrollbar px-3 pb-2', className)}>
+      {conversations.length > 5 && (
+        <div className="relative px-1 mb-2">
+          <Icon name="search" size="sm" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            ref={searchRef}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('sidebar.searchPlaceholder')}
+            className="w-full pl-8 pr-7 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-primary/30 rounded-lg outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); searchRef.current?.focus() }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <Icon name="close" size="xs" />
+            </button>
+          )}
+        </div>
+      )}
       {grouped.map(({ group, items }) => (
         <div key={group}>
           <div className="text-xs text-gray-400 px-3 py-2 font-medium">{t(groupLabelKey[group])}</div>

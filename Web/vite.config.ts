@@ -11,6 +11,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-markdown': ['react-markdown', 'remark-gfm', 'rehype-highlight', 'highlight.js'],
+          'vendor-state': ['zustand', 'i18next', 'react-i18next'],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:5000',
