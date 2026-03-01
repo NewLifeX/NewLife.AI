@@ -143,7 +143,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
         var promptTokens = request.Content.Length;
         var completionTokens = content.Length;
 
-        var assistantDto = new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), request.ThinkingMode, DateTime.Now)
+        var assistantDto = new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), null, request.ThinkingMode, null, DateTime.Now)
         {
             PromptTokens = promptTokens,
             CompletionTokens = completionTokens,
@@ -168,7 +168,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
         {
             Type = "message_done",
             MessageId = assistantMessageId,
-            Usage = new TokenUsageDto(promptTokens, completionTokens, promptTokens + completionTokens),
+            Usage = new ChatUsage { PromptTokens = promptTokens, CompletionTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
         };
     }
 

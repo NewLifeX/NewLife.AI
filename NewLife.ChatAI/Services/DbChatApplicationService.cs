@@ -359,7 +359,7 @@ public class DbChatApplicationService : IChatApplicationService
             {
                 Type = "message_done",
                 MessageId = assistantMsg.Id,
-                Usage = new TokenUsageDto(promptTokens, completionTokens, promptTokens + completionTokens),
+                Usage = new ChatUsage { PromptTokens = promptTokens, CompletionTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
             };
         }
     }
@@ -730,7 +730,7 @@ public class DbChatApplicationService : IChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.Provider)).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling, e.Provider)).ToArray();
         return Task.FromResult(models);
     }
     #endregion
@@ -890,9 +890,8 @@ public class DbChatApplicationService : IChatApplicationService
             catch { }
         }
 
-        return new MessageDto(entity.Id, entity.ConversationId, entity.Role, entity.Content, (ThinkingMode)entity.ThinkingMode, entity.CreateTime)
+        return new MessageDto(entity.Id, entity.ConversationId, entity.Role, entity.Content, entity.ThinkingContent, (ThinkingMode)entity.ThinkingMode, entity.Attachments, entity.CreateTime)
         {
-            ThinkingContent = entity.ThinkingContent,
             ToolCalls = toolCalls,
             PromptTokens = entity.PromptTokens,
             CompletionTokens = entity.CompletionTokens,

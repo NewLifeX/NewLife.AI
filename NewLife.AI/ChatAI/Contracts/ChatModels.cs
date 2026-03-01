@@ -38,10 +38,7 @@ public enum ToolCallStatus
 }
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision, String? Provider = null);
-
-/// <summary>Token 用量统计</summary>
-public record TokenUsageDto(Int32 PromptTokens, Int32 CompletionTokens, Int32 TotalTokens);
+public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision, Boolean SupportImageGeneration, Boolean SupportFunctionCalling, String? Provider = null);
 
 /// <summary>工具调用信息</summary>
 public record ToolCallDto(String Id, String Name, ToolCallStatus Status, String? Arguments = null, String? Result = null);
@@ -57,13 +54,10 @@ public record ConversationSummaryDto(Int64 Id, String Title, String ModelCode, D
 };
 
 /// <summary>消息数据</summary>
-public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Content, ThinkingMode ThinkingMode, DateTime CreateTime)
+public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Content, String? ThinkingContent, ThinkingMode ThinkingMode, String? Attachments, DateTime CreateTime)
 {
     /// <summary>消息状态</summary>
     public MessageStatus Status { get; set; } = MessageStatus.Done;
-
-    /// <summary>思考内容</summary>
-    public String? ThinkingContent { get; set; }
 
     /// <summary>工具调用列表</summary>
     public IReadOnlyList<ToolCallDto>? ToolCalls { get; set; }
@@ -81,33 +75,8 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
     public Int32 FeedbackType { get; set; }
 };
 
-/// <summary>SSE 流式事件。对话流式输出的结构化事件</summary>
-/// <remarks>
-/// 事件类型流程：message_start → thinking_delta* → content_delta* → tool_call_start → tool_call_done → message_done / error
-/// </remarks>
-public record ChatStreamEvent
-{
-    /// <summary>事件类型。message_start/thinking_delta/content_delta/tool_call_start/tool_call_done/message_done/error</summary>
-    public String Type { get; set; } = "content_delta";
-
-    /// <summary>消息编号。message_start 时返回</summary>
-    public Int64? MessageId { get; set; }
-
-    /// <summary>正文内容片段。content_delta 时返回</summary>
-    public String? Content { get; set; }
-
-    /// <summary>思考内容片段。thinking_delta 时返回</summary>
-    public String? ThinkingContent { get; set; }
-
-    /// <summary>工具调用信息。tool_call_start/tool_call_done 时返回</summary>
-    public ToolCallDto? ToolCall { get; set; }
-
-    /// <summary>错误信息。error 时返回</summary>
-    public String? Error { get; set; }
-
-    /// <summary>Token 用量。message_done 时返回</summary>
-    public TokenUsageDto? Usage { get; set; }
-}
+/// <summary>附件信息</summary>
+public record AttachmentInfoDto(Int64 Id, String FileName, Int64 Size, String Url, Boolean IsImage);
 
 /// <summary>分页结果</summary>
 public record PagedResultDto<T>(IReadOnlyList<T> Items, Int32 Total, Int32 Page, Int32 PageSize);
@@ -127,3 +96,6 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     /// <summary>流式输出速度</summary>
     public Int32 StreamingSpeed { get; set; } = 3;
 };
+
+/// <summary>用户资料</summary>
+public record UserProfileDto(String Nickname, String Account, String? Avatar);
