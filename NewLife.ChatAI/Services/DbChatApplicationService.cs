@@ -310,8 +310,8 @@ public class DbChatApplicationService : IChatApplicationService
             yield break;
         }
 
-        // 构建上下文（在插入空 assistant 消息之前，避免空消息被包含在上下文中）
-        var contextMessages = BuildContextMessages(conversationId, request.Content);
+        // 构建上下文（在插入空 assistant 消息之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
+        var contextMessages = BuildContextMessages(conversationId, request.Content, modelConfig);
 
         // 预分配AI回复消息编号
         var assistantMsg = new ChatMessage
@@ -913,11 +913,12 @@ public class DbChatApplicationService : IChatApplicationService
     #endregion
 
     #region 辅助
-    /// <summary>构建上下文消息列表。按配置的轮数截取历史消息</summary>
+    /// <summary>构建上下文消息列表。按配置的轮数截取历史消息，并注入系统提示词</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="currentContent">当前用户消息内容</param>
+    /// <param name="modelConfig">模型配置（可选，用于注入模型级系统提示词）</param>
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
-    private IList<AiChatMessage> BuildContextMessages(Int64 conversationId, String currentContent)
+    private IList<AiChatMessage> BuildContextMessages(Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
     {
         var setting = ChatSetting.Current;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
@@ -928,6 +929,22 @@ public class DbChatApplicationService : IChatApplicationService
         history.Reverse();
 
         var messages = new List<AiChatMessage>();
+
+        // 注入系统提示词：用户全局级 + 模型级，合并为一条 system 消息
+        var systemParts = new List<String>();
+        var userSetting = UserSetting.FindByUserId(0);
+        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
+            systemParts.Add(userSetting.SystemPrompt.Trim());
+        if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
+            systemParts.Add(modelConfig.SystemPrompt.Trim());
+        if (systemParts.Count > 0)
+        {
+            messages.Add(new AiChatMessage
+            {
+                Role = "system",
+                Content = String.Join("\n\n", systemParts),
+            });
+        }
 
         // 添加历史消息
         foreach (var msg in history)
