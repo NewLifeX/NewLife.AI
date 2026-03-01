@@ -8,6 +8,7 @@ import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 import { fetchUserProfile } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
+import { ToastContainer } from '@/components/common/Toast'
 
 function ChatApp() {
   const { conversationId } = useParams<{ conversationId: string }>()
@@ -183,11 +184,14 @@ function ChatApp() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/chat/:conversationId" element={<ChatApp />} />
-      <Route path="/chat" element={<ChatApp />} />
-      <Route path="*" element={<Navigate to="/chat" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/chat/:conversationId" element={<ChatApp />} />
+        <Route path="/chat" element={<ChatApp />} />
+        <Route path="*" element={<Navigate to="/chat" replace />} />
+      </Routes>
+      <ToastContainer />
+    </>
   )
 }
 

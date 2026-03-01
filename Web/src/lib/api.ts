@@ -1,4 +1,5 @@
 import type { Conversation, Message, UserSettings, ModelInfo } from '@/types'
+import { showToast } from '@/stores/toastStore'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -47,20 +48,46 @@ async function fetchSSE(
       // 流已开始读取后中断不再重试，避免非幂等操作产生重复数据
       if (streamStarted) throw err instanceof Error ? err : new Error(String(err))
       lastError = err instanceof Error ? err : new Error(String(err))
-      if (attempt === SSE_MAX_RETRIES) throw lastError
+      if (attempt === SSE_MAX_RETRIES) {
+        // 最终重试仍失败，弹出友好提示
+        if (lastError.message.includes('Failed to fetch') || lastError.message === 'Network error: server unreachable') {
+          showToast('error', '无法连接到服务器，请检查网络连接或稍后重试')
+        } else {
+          showToast('error', `请求失败：${lastError.message}`)
+        }
+        throw lastError
+      }
     }
   }
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    })
+  } catch {
+    // 网络不通 / DNS 解析失败 / 后端未启动
+    showToast('error', '无法连接到服务器，请检查网络连接或稍后重试')
+    throw new Error('Network error: server unreachable')
+  }
   if (!res.ok) {
+    if (res.status === 404) {
+      showToast('error', `请求的资源不存在 (${path})`)
+    } else if (res.status === 401 || res.status === 403) {
+      showToast('warning', '登录已过期或无权限，请重新登录')
+    } else if (res.status === 429) {
+      showToast('warning', '请求过于频繁，请稍后再试')
+    } else if (res.status >= 500) {
+      showToast('error', `服务器内部错误 (${res.status})，请稍后重试`)
+    } else {
+      showToast('error', `请求失败 (${res.status}: ${res.statusText})`)
+    }
     throw new Error(`API ${res.status}: ${res.statusText}`)
   }
   return res.json() as Promise<T>
