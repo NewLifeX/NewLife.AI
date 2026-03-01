@@ -285,7 +285,7 @@ public class DbChatApplicationService : IChatApplicationService
         var conversation = Conversation.FindById(conversationId);
         if (conversation == null)
         {
-            yield return new ChatStreamEvent { Type = "error", Error = "会话不存在" };
+            yield return ChatStreamEvent.ErrorEvent("CONVERSATION_NOT_FOUND", "会话不存在");
             yield break;
         }
 
@@ -297,7 +297,21 @@ public class DbChatApplicationService : IChatApplicationService
             Content = request.Content,
             ThinkingMode = (Int32)request.ThinkingMode,
         };
+        if (request.AttachmentIds is { Count: > 0 })
+            userMsg.Attachments = request.AttachmentIds.ToJson();
         userMsg.Insert();
+
+        // 解析模型配置（在插入 assistant 消息之前，避免模型不可用时留下空消息残留）
+        var modelCode = conversation.ModelCode ?? "qwen-max";
+        var modelConfig = _gatewayService.ResolveModel(modelCode);
+        if (modelConfig == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelCode}' 不可用");
+            yield break;
+        }
+
+        // 构建上下文（在插入空 assistant 消息之前，避免空消息被包含在上下文中）
+        var contextMessages = BuildContextMessages(conversationId, request.Content);
 
         // 预分配AI回复消息编号
         var assistantMsg = new ChatMessage
@@ -308,58 +322,119 @@ public class DbChatApplicationService : IChatApplicationService
         };
         assistantMsg.Insert();
 
-        // message_start
-        yield return new ChatStreamEvent { Type = "message_start", MessageId = assistantMsg.Id };
+        // message_start（含完整字段）
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, (Int32)request.ThinkingMode);
 
-        // 占位流式回复，后续接入真实模型推理与上下文管理
-        var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
-        var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        // 流式调用模型，收集内容用于持久化
+        // 注意：C# 不允许在含 catch 的 try 块中 yield return，因此使用 IAsyncEnumerator + try-finally 模式
+        var contentBuilder = new StringBuilder();
+        var thinkingBuilder = new StringBuilder();
+        ChatUsage? finalUsage = null;
+        var hasError = false;
+        ChatStreamEvent? deferredErrorEvent = null;
 
-        var content = new StringBuilder();
-        foreach (var chunk in chunks)
+        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        try
         {
-            if (cancellationToken.IsCancellationRequested) break;
-            var line = chunk + "。";
-            content.Append(line);
-            yield return new ChatStreamEvent { Type = "content_delta", Content = line };
-            try { await Task.Delay(120, cancellationToken).ConfigureAwait(false); }
-            catch (OperationCanceledException) { break; }
+            while (true)
+            {
+                Boolean moved;
+                try
+                {
+                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
+                {
+                    _log?.Error("流式生成失败: {0}", ex.Message);
+                    hasError = true;
+                    deferredErrorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+                    break;
+                }
+
+                if (!moved) break;
+
+                var ev = enumerator.Current;
+                switch (ev.Type)
+                {
+                    case "thinking_delta":
+                        thinkingBuilder.Append(ev.Content);
+                        yield return ev;
+                        break;
+                    case "content_delta":
+                        contentBuilder.Append(ev.Content);
+                        yield return ev;
+                        break;
+                    case "message_done":
+                        finalUsage = ev.Usage;
+                        // 不直接转发，后续统一发送含 MessageId/Title 的 message_done
+                        break;
+                    case "error":
+                        hasError = true;
+                        deferredErrorEvent = ev;
+                        break;
+                    default:
+                        // thinking_done 等事件直接转发
+                        yield return ev;
+                        break;
+                }
+
+                if (hasError) break;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
         }
 
-        // 无论是否被取消，都保存已输出的内容，避免空消息残留
-        assistantMsg.Content = content.Length > 0 ? content.ToString() : "[已中断]";
+        // 延迟发送错误事件（不能在 try-catch 中 yield）
+        if (deferredErrorEvent != null)
+            yield return deferredErrorEvent;
 
-        // 占位 Token 用量（后续接入真实模型后从模型返回值获取）
-        var promptTokens = request.Content.Length;
-        var completionTokens = content.Length;
-        assistantMsg.PromptTokens = promptTokens;
-        assistantMsg.CompletionTokens = completionTokens;
-        assistantMsg.TotalTokens = promptTokens + completionTokens;
+        // 持久化结果（无论成功或中断都保存已输出内容，避免空消息残留）
+        assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
+        if (thinkingBuilder.Length > 0)
+            assistantMsg.ThinkingContent = thinkingBuilder.ToString();
+        if (finalUsage != null)
+        {
+            assistantMsg.PromptTokens = finalUsage.PromptTokens;
+            assistantMsg.CompletionTokens = finalUsage.CompletionTokens;
+            assistantMsg.TotalTokens = finalUsage.TotalTokens;
+        }
         assistantMsg.Update();
 
-        // 更新会话的最后消息时间和消息数
+        // 更新会话
         conversation.LastMessageTime = DateTime.Now;
         conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
-
-        // 首条消息后自动生成标题（标题仍为默认值时触发）
-        if (conversation.Title == "新建对话" && !String.IsNullOrWhiteSpace(request.Content))
-        {
-            var title = request.Content.Trim();
-            // 截取前10个字符作为标题，超出部分加省略号
-            if (title.Length > 10) title = title[..10] + "...";
-            conversation.Title = title;
-        }
-
         conversation.Update();
 
-        if (!cancellationToken.IsCancellationRequested)
+        // 记录用量
+        if (finalUsage != null)
+            _usageService?.Record(0, 0, conversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+
+        // 异步生成标题（首条消息时）
+        String? title = null;
+        if (!hasError && conversation.MessageCount <= 2 && ChatSetting.Current.AutoGenerateTitle)
         {
-            // message_done，包含 Token 用量
+            try
+            {
+                title = await GenerateTitleAsync(conversationId, request.Content, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _log?.Error("异步生成标题失败: {0}", ex.Message);
+            }
+        }
+
+        // message_done（含 MessageId、Usage、Title）
+        if (!hasError && !cancellationToken.IsCancellationRequested)
+        {
             yield return new ChatStreamEvent
             {
                 Type = "message_done",
                 MessageId = assistantMsg.Id,
-                Usage = new ChatUsage { PromptTokens = promptTokens, CompletionTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
+                Usage = finalUsage,
+                Title = title,
             };
         }
     }
