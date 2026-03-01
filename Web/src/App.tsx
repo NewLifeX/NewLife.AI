@@ -151,6 +151,7 @@ function ChatApp() {
             attachments={pendingAttachments}
             onAttachmentAdd={addAttachment}
             onAttachmentRemove={removeAttachment}
+            sendShortcut={settings.sendShortcut}
           />
         )}
       </ChatLayout>

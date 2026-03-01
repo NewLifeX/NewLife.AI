@@ -24,6 +24,7 @@ interface ChatPageProps {
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
   onAttachmentRemove?: (id: string) => void
+  sendShortcut?: 'Enter' | 'Ctrl+Enter'
 }
 
 function isNearBottom(el: HTMLElement, threshold = 80): boolean {
@@ -45,6 +46,7 @@ export function ChatPage({
   attachments = [],
   onAttachmentAdd,
   onAttachmentRemove,
+  sendShortcut = 'Enter',
 }: ChatPageProps) {
   const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -164,6 +166,7 @@ export function ChatPage({
           attachments={attachments}
           onAttachmentRemove={onAttachmentRemove}
           onAttachmentAdd={handleAttachClick}
+          sendShortcut={sendShortcut}
         />
       </div>
     </>

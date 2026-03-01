@@ -21,6 +21,7 @@ interface ChatInputProps {
   thinkingMode?: ThinkingMode
   onThinkingModeChange?: (mode: ThinkingMode) => void
   showThinkingToggle?: boolean
+  sendShortcut?: 'Enter' | 'Ctrl+Enter'
   className?: string
 }
 
@@ -49,6 +50,7 @@ export function ChatInput({
   thinkingMode = 'balanced',
   onThinkingModeChange,
   showThinkingToggle = false,
+  sendShortcut = 'Enter',
   className,
 }: ChatInputProps) {
   const { t } = useTranslation()
@@ -65,7 +67,12 @@ export function ChatInput({
   }, [value, isGenerating, onSend])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (sendShortcut === 'Ctrl+Enter') {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        handleSend()
+      }
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
