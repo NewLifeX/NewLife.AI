@@ -81,6 +81,7 @@ export function ChatLayout({
       )}
 
       <div className={cn(
+        'h-full',
         isMobile && 'fixed inset-y-0 left-0 z-50 transition-transform duration-200',
         isMobile && !showSidebar && '-translate-x-full',
         isMobile && showSidebar && 'translate-x-0',
