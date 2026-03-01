@@ -229,17 +229,39 @@ public class DbChatApplicationService : IChatApplicationService
 
         // 无论是否被取消，都保存已输出的内容，避免空消息残留
         assistantMsg.Content = content.Length > 0 ? content.ToString() : "[已中断]";
+
+        // 占位 Token 用量（后续接入真实模型后从模型返回值获取）
+        var promptTokens = request.Content.Length;
+        var completionTokens = content.Length;
+        assistantMsg.PromptTokens = promptTokens;
+        assistantMsg.CompletionTokens = completionTokens;
+        assistantMsg.TotalTokens = promptTokens + completionTokens;
         assistantMsg.Update();
 
         // 更新会话的最后消息时间和消息数
         conversation.LastMessageTime = DateTime.Now;
         conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
+
+        // 首条消息后自动生成标题（标题仍为默认值时触发）
+        if (conversation.Title == "新建对话" && !String.IsNullOrWhiteSpace(request.Content))
+        {
+            var title = request.Content.Trim();
+            // 截取前10个字符作为标题，超出部分加省略号
+            if (title.Length > 10) title = title[..10] + "...";
+            conversation.Title = title;
+        }
+
         conversation.Update();
 
         if (!cancellationToken.IsCancellationRequested)
         {
-            // message_done
-            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id };
+            // message_done，包含 Token 用量
+            yield return new ChatStreamEvent
+            {
+                Type = "message_done",
+                MessageId = assistantMsg.Id,
+                Usage = new TokenUsageDto(promptTokens, completionTokens, promptTokens + completionTokens),
+            };
         }
     }
 
@@ -576,6 +598,9 @@ public class DbChatApplicationService : IChatApplicationService
         {
             ThinkingContent = entity.ThinkingContent,
             ToolCalls = toolCalls,
+            PromptTokens = entity.PromptTokens,
+            CompletionTokens = entity.CompletionTokens,
+            TotalTokens = entity.TotalTokens,
         };
     }
 

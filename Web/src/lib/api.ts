@@ -101,6 +101,9 @@ interface MessageDto {
     arguments?: string
     result?: string
   }>
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
 }
 
 function toMessage(dto: MessageDto): Message {
@@ -125,6 +128,11 @@ function toMessage(dto: MessageDto): Message {
       arguments: tc.arguments,
       result: tc.result,
     })),
+    usage: dto.totalTokens ? {
+      promptTokens: dto.promptTokens,
+      completionTokens: dto.completionTokens,
+      totalTokens: dto.totalTokens,
+    } : undefined,
   }
 }
 

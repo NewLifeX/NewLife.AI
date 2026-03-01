@@ -138,13 +138,37 @@ public class InMemoryChatApplicationService : IChatApplicationService
             await Task.Delay(120, cancellationToken).ConfigureAwait(false);
         }
 
-        list.Add(new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), request.ThinkingMode, DateTime.Now));
+        // 占位 Token 用量
+        var promptTokens = request.Content.Length;
+        var completionTokens = content.Length;
+
+        var assistantDto = new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), request.ThinkingMode, DateTime.Now)
+        {
+            PromptTokens = promptTokens,
+            CompletionTokens = completionTokens,
+            TotalTokens = promptTokens + completionTokens,
+        };
+        list.Add(assistantDto);
 
         if (_conversations.TryGetValue(conversationId, out var conversation))
-            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, conversation.Title, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
+        {
+            var newTitle = conversation.Title;
+            // 首条消息后自动生成标题
+            if (newTitle == "新建对话" && !String.IsNullOrWhiteSpace(request.Content))
+            {
+                newTitle = request.Content.Trim();
+                if (newTitle.Length > 10) newTitle = newTitle[..10] + "...";
+            }
+            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, newTitle, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
+        }
 
-        // message_done
-        yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMessageId };
+        // message_done，包含 Token 用量
+        yield return new ChatStreamEvent
+        {
+            Type = "message_done",
+            MessageId = assistantMessageId,
+            Usage = new TokenUsageDto(promptTokens, completionTokens, promptTokens + completionTokens),
+        };
     }
 
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;

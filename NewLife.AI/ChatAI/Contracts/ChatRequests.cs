@@ -19,4 +19,4 @@ public record FeedbackRequest(FeedbackType Type, String? Reason, Boolean? AllowT
 public record CreateShareRequest(Int32? ExpireHours);
 
 /// <summary>上传附件结果</summary>
-public record UploadAttachmentResult(String AttachmentId, String FileName, String Url, Int64 Size);
+public record UploadAttachmentResult(String Id, String FileName, String Url, Int64 Size);

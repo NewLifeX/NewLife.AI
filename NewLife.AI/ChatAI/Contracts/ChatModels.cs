@@ -40,6 +40,9 @@ public enum ToolCallStatus
 /// <summary>模型信息</summary>
 public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision);
 
+/// <summary>Token 用量统计</summary>
+public record TokenUsageDto(Int32 PromptTokens, Int32 CompletionTokens, Int32 TotalTokens);
+
 /// <summary>工具调用信息</summary>
 public record ToolCallDto(String Id, String Name, ToolCallStatus Status, String? Arguments = null, String? Result = null);
 
@@ -64,6 +67,15 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
 
     /// <summary>工具调用列表</summary>
     public IReadOnlyList<ToolCallDto>? ToolCalls { get; set; }
+
+    /// <summary>提示Token数</summary>
+    public Int32 PromptTokens { get; set; }
+
+    /// <summary>回复Token数</summary>
+    public Int32 CompletionTokens { get; set; }
+
+    /// <summary>总Token数</summary>
+    public Int32 TotalTokens { get; set; }
 };
 
 /// <summary>SSE 流式事件。对话流式输出的结构化事件</summary>
@@ -89,6 +101,9 @@ public record ChatStreamEvent
 
     /// <summary>错误信息。error 时返回</summary>
     public String? Error { get; set; }
+
+    /// <summary>Token 用量。message_done 时返回</summary>
+    public TokenUsageDto? Usage { get; set; }
 }
 
 /// <summary>分页结果</summary>
