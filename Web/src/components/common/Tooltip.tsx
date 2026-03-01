@@ -16,10 +16,10 @@ const positionStyles = {
 }
 
 const arrowStyles = {
-  top: 'top-full left-1/2 -translate-x-1/2 border-t-gray-800 border-x-transparent border-b-transparent',
-  bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-800 border-x-transparent border-t-transparent',
-  left: 'left-full top-1/2 -translate-y-1/2 border-l-gray-800 border-y-transparent border-r-transparent',
-  right: 'right-full top-1/2 -translate-y-1/2 border-r-gray-800 border-y-transparent border-l-transparent',
+  top: 'top-full left-1/2 -translate-x-1/2 border-t-gray-800 dark:border-t-gray-200 border-x-transparent border-b-transparent',
+  bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-800 dark:border-b-gray-200 border-x-transparent border-t-transparent',
+  left: 'left-full top-1/2 -translate-y-1/2 border-l-gray-800 dark:border-l-gray-200 border-y-transparent border-r-transparent',
+  right: 'right-full top-1/2 -translate-y-1/2 border-r-gray-800 dark:border-r-gray-200 border-y-transparent border-l-transparent',
 }
 
 export function Tooltip({
@@ -47,7 +47,7 @@ export function Tooltip({
       {visible && (
         <div
           className={cn(
-            'absolute z-50 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-tooltip',
+            'absolute z-50 px-3 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 text-xs rounded-lg shadow-tooltip',
             'whitespace-nowrap animate-fade-in pointer-events-none',
             positionStyles[position],
             className,
