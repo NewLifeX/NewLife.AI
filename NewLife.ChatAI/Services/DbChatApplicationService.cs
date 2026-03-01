@@ -234,20 +234,8 @@ public class DbChatApplicationService : IChatApplicationService
         var contextMessages = new List<AiChatMessage>();
 
         // 注入系统提示词（用户全局级 + 模型级）
-        var systemParts = new List<String>();
-        var userSetting = UserSetting.FindByUserId(0);
-        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
-            systemParts.Add(userSetting.SystemPrompt.Trim());
-        if (!String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
-            systemParts.Add(modelConfig.SystemPrompt.Trim());
-        if (systemParts.Count > 0)
-        {
-            contextMessages.Add(new AiChatMessage
-            {
-                Role = "system",
-                Content = String.Join("\n\n", systemParts),
-            });
-        }
+        var systemMsg = BuildSystemMessage(modelConfig);
+        if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
         {
@@ -947,21 +935,9 @@ public class DbChatApplicationService : IChatApplicationService
 
         var messages = new List<AiChatMessage>();
 
-        // 注入系统提示词：用户全局级 + 模型级，合并为一条 system 消息
-        var systemParts = new List<String>();
-        var userSetting = UserSetting.FindByUserId(0);
-        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
-            systemParts.Add(userSetting.SystemPrompt.Trim());
-        if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
-            systemParts.Add(modelConfig.SystemPrompt.Trim());
-        if (systemParts.Count > 0)
-        {
-            messages.Add(new AiChatMessage
-            {
-                Role = "system",
-                Content = String.Join("\n\n", systemParts),
-            });
-        }
+        // 注入系统提示词（用户全局级 + 模型级）
+        var systemMsg = BuildSystemMessage(modelConfig);
+        if (systemMsg != null) messages.Add(systemMsg);
 
         // 添加历史消息
         foreach (var msg in history)
@@ -974,6 +950,26 @@ public class DbChatApplicationService : IChatApplicationService
         }
 
         return messages;
+    }
+
+    /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词</summary>
+    /// <param name="modelConfig">模型配置（可选）</param>
+    /// <returns>系统消息，无提示词时返回 null</returns>
+    private static AiChatMessage? BuildSystemMessage(ModelConfig? modelConfig)
+    {
+        var parts = new List<String>();
+        var userSetting = UserSetting.FindByUserId(0);
+        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
+            parts.Add(userSetting.SystemPrompt.Trim());
+        if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
+            parts.Add(modelConfig.SystemPrompt.Trim());
+        if (parts.Count == 0) return null;
+
+        return new AiChatMessage
+        {
+            Role = "system",
+            Content = String.Join("\n\n", parts),
+        };
     }
 
     /// <summary>转换会话实体为摘要DTO</summary>
