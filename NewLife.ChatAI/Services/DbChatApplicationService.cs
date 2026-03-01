@@ -220,7 +220,7 @@ public class DbChatApplicationService : IChatApplicationService
         var provider = _gatewayService.GetProvider(modelConfig);
         if (provider == null) return null;
 
-        // 构建上下文：取该消息之前的所有消息
+        // 构建上下文：取该消息之前的所有消息（注入系统提示词）
         var beforeMessages = ChatMessage.FindAll(
             ChatMessage._.ConversationId == entity.ConversationId & ChatMessage._.Id < entity.Id,
             ChatMessage._.CreateTime.Asc(), null, 0, 0);
@@ -232,6 +232,23 @@ public class DbChatApplicationService : IChatApplicationService
             beforeMessages = beforeMessages.Skip(beforeMessages.Count - maxCount).ToList();
 
         var contextMessages = new List<AiChatMessage>();
+
+        // 注入系统提示词（用户全局级 + 模型级）
+        var systemParts = new List<String>();
+        var userSetting = UserSetting.FindByUserId(0);
+        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
+            systemParts.Add(userSetting.SystemPrompt.Trim());
+        if (!String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
+            systemParts.Add(modelConfig.SystemPrompt.Trim());
+        if (systemParts.Count > 0)
+        {
+            contextMessages.Add(new AiChatMessage
+            {
+                Role = "system",
+                Content = String.Join("\n\n", systemParts),
+            });
+        }
+
         foreach (var msg in beforeMessages)
         {
             contextMessages.Add(new AiChatMessage
