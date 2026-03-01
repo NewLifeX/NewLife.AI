@@ -55,9 +55,9 @@ export function Modal({
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors p-1.5 rounded-full bg-gray-100 dark:bg-gray-700/60 hover:bg-gray-200 dark:hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          className="absolute top-4 right-4 z-20 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors rounded-full bg-gray-100 dark:bg-gray-700/60 hover:bg-gray-200 dark:hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
-          <Icon name="close" size="base" />
+          <Icon name="close" size="sm" />
         </button>
         {children}
       </div>

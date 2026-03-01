@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { Sidebar } from '@/components/sidebar/Sidebar'
+import { useUIStore } from '@/stores'
 import type { Conversation } from '@/types'
 
 const MOBILE_BREAKPOINT = 768
@@ -45,7 +46,9 @@ export function ChatLayout({
   userAvatar,
   className,
 }: ChatLayoutProps) {
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT,
+  )
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
@@ -56,10 +59,9 @@ export function ChatLayout({
 
   // 移动端初始化时自动收起侧边栏
   useEffect(() => {
-    if (isMobile && !sidebarCollapsed) {
-      onSidebarToggle?.()
+    if (isMobile) {
+      useUIStore.getState().setSidebarCollapsed(true)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile])
 
   // 移动端选择会话后自动收起侧边栏
@@ -82,12 +84,16 @@ export function ChatLayout({
         />
       )}
 
-      <div className={cn(
-        'h-full',
-        isMobile && 'fixed inset-y-0 left-0 z-50 transition-transform duration-200',
-        isMobile && !showSidebar && '-translate-x-full',
-        isMobile && showSidebar && 'translate-x-0',
-      )}>
+      <div
+        className={cn(
+          'h-full',
+          isMobile && 'fixed inset-y-0 left-0 z-50',
+        )}
+        style={isMobile ? {
+          transform: `translateX(${showSidebar ? 0 : -100}%)`,
+          transition: 'transform 0.2s ease-in-out',
+        } : undefined}
+      >
         <Sidebar
           conversations={conversations}
           activeConversationId={activeConversationId}
