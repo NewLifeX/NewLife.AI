@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
 using NewLife.AI.Models;
-using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -17,6 +16,11 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>发送消息并以 SSE 流式返回。支持 message_start/thinking_delta/thinking_done/content_delta/tool_call_start/tool_call_done/tool_call_error/message_done/error 事件</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="request">发送消息请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
     [HttpPost("conversations/{conversationId:long}/messages")]
     public async Task StreamSendAsync([FromRoute] Int64 conversationId, [FromBody] SendMessageRequest request, CancellationToken cancellationToken)
     {
@@ -24,11 +28,21 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         Response.Headers.Append("Cache-Control", "no-cache");
         Response.Headers.Append("Connection", "keep-alive");
 
-        await foreach (var evt in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
+        try
         {
-            var payload = JsonSerializer.Serialize(evt, _jsonOptions);
-            await Response.WriteAsync($"data: {payload}\n\n", cancellationToken).ConfigureAwait(false);
-            await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await foreach (var ev in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
+            {
+                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户取消，不需要额外处理
+        }
+        catch (Exception ex)
+        {
+            var error = ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", ex.Message);
+            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
         }
     }
 
@@ -86,7 +100,7 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
     /// <returns></returns>
     private async Task WriteSseEventAsync(ChatStreamEvent ev, CancellationToken cancellationToken)
     {
-        var json = ev.ToJson();
+        var json = JsonSerializer.Serialize(ev, _jsonOptions);
         await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
         await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }

@@ -10,7 +10,7 @@ var services = builder.Services;
 
 services.AddStardust();
 
-services.AddSingleton<IChatApplicationService, DbChatApplicationService>();
+services.AddScoped<IChatApplicationService, DbChatApplicationService>();
 services.AddSingleton<UsageService>();
 services.AddSingleton<GatewayService>();
 services.AddSingleton<McpClientService>();
