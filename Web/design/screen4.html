@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NewLife - 系统设置</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0057ff",
+                        "primary-hover": "#004ad9",
+                        "background-light": "#ffffff",
+                        "background-dark": "#18181b",
+                        "sidebar-light": "#f9f9fa",
+                        "sidebar-dark": "#202023",
+                        "modal-bg": "#ffffff",
+                        "modal-sidebar": "#f5f6f7",
+                        "input-border": "#e5e7eb",
+                        "input-focus": "#3b82f6",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans SC", "sans-serif"],
+                        body: ["Noto Sans SC", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem',
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'modal': '0 20px 50px -12px rgba(0, 0, 0, 0.15)',
+                        'input': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body { font-family: 'Noto Sans SC', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 20px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #d1d5db; }.toggle-checkbox:checked {
+            right: 0;
+            border-color: #0057ff;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #0057ff;
+        }input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+        }
+        input[type=range]:focus {
+            outline: none; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-black text-gray-900 dark:text-gray-100 h-screen overflow-hidden font-body flex items-center justify-center">
+<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div class="bg-white dark:bg-[#1e1e20] w-full max-w-4xl h-[680px] rounded-2xl shadow-modal flex overflow-hidden relative animate-fade-in-up">
+<div class="absolute top-0 right-0 p-4 z-20">
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+<span class="material-icons text-xl">close</span>
+</button>
+</div>
+<div class="w-64 bg-sidebar-light dark:bg-[#252528] border-r border-gray-100 dark:border-gray-800 flex flex-col pt-6 pb-4">
+<div class="px-6 mb-6">
+<h2 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">设置</h2>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<a class="flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400" href="#">
+<span class="material-icons-outlined text-[20px]">tune</span>
+<span>通用设置</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-icons-outlined text-[20px]">account_circle</span>
+<span>账号与安全</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-icons-outlined text-[20px]">chat</span>
+<span>对话偏好</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-icons-outlined text-[20px]">extension</span>
+<span>高级 / MCP</span>
+<span class="ml-auto bg-blue-100 dark:bg-blue-900 text-[10px] text-blue-600 dark:text-blue-300 font-bold px-1.5 py-0.5 rounded-full">New</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-icons-outlined text-[20px]">storage</span>
+<span>数据管理</span>
+</a>
+</nav>
+<div class="px-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+<div class="flex items-center space-x-2 text-xs text-gray-400">
+<span>NewLife v2.4.0</span>
+<span class="w-1 h-1 rounded-full bg-gray-300"></span>
+<a class="hover:underline hover:text-primary" href="#">检查更新</a>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-[#1e1e20] p-8">
+<div class="mb-10">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+<span class="bg-blue-100 dark:bg-blue-900/40 text-primary p-1 rounded mr-3">
+<span class="material-icons text-lg">tune</span>
+</span>
+                    通用设置
+                </h3>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<div>
+<div class="text-sm font-medium text-gray-700 dark:text-gray-200">系统语言</div>
+<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">选择应用显示的语言</div>
+</div>
+<select class="form-select block w-40 rounded-lg border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:border-primary focus:ring-primary shadow-sm">
+<option>简体中文</option>
+<option>English</option>
+<option>日本語</option>
+</select>
+</div>
+<div class="border-b border-gray-100 dark:border-gray-800"></div>
+<div>
+<div class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">外观主题</div>
+<div class="grid grid-cols-3 gap-4">
+<label class="cursor-pointer group relative">
+<input checked="" class="sr-only peer" name="theme" type="radio"/>
+<div class="h-24 rounded-xl border-2 border-transparent peer-checked:border-primary bg-gray-100 dark:bg-gray-800 overflow-hidden relative hover:shadow-md transition-all">
+<div class="absolute inset-x-2 top-2 bottom-0 bg-white rounded-t-lg shadow-sm">
+<div class="p-2 space-y-1">
+<div class="w-8 h-2 bg-gray-100 rounded"></div>
+<div class="w-12 h-2 bg-gray-100 rounded"></div>
+</div>
+</div>
+<div class="absolute right-2 bottom-2 text-primary opacity-0 peer-checked:opacity-100">
+<span class="material-icons text-xl">check_circle</span>
+</div>
+</div>
+<span class="block text-center text-xs mt-2 text-gray-500 peer-checked:text-primary font-medium">浅色模式</span>
+</label>
+<label class="cursor-pointer group relative">
+<input class="sr-only peer" name="theme" type="radio"/>
+<div class="h-24 rounded-xl border-2 border-transparent peer-checked:border-primary bg-gray-100 dark:bg-gray-800 overflow-hidden relative hover:shadow-md transition-all">
+<div class="absolute inset-x-2 top-2 bottom-0 bg-[#2b2b2e] rounded-t-lg shadow-sm">
+<div class="p-2 space-y-1">
+<div class="w-8 h-2 bg-gray-600 rounded"></div>
+<div class="w-12 h-2 bg-gray-600 rounded"></div>
+</div>
+</div>
+<div class="absolute right-2 bottom-2 text-primary opacity-0 peer-checked:opacity-100">
+<span class="material-icons text-xl">check_circle</span>
+</div>
+</div>
+<span class="block text-center text-xs mt-2 text-gray-500 peer-checked:text-primary font-medium">深色模式</span>
+</label>
+<label class="cursor-pointer group relative">
+<input class="sr-only peer" name="theme" type="radio"/>
+<div class="h-24 rounded-xl border-2 border-transparent peer-checked:border-primary bg-gray-100 dark:bg-gray-800 overflow-hidden relative hover:shadow-md transition-all">
+<div class="absolute inset-0 bg-gradient-to-br from-white via-gray-100 to-gray-800 opacity-50"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-icons text-gray-400 text-3xl">brightness_auto</span>
+</div>
+<div class="absolute right-2 bottom-2 text-primary opacity-0 peer-checked:opacity-100">
+<span class="material-icons text-xl">check_circle</span>
+</div>
+</div>
+<span class="block text-center text-xs mt-2 text-gray-500 peer-checked:text-primary font-medium">跟随系统</span>
+</label>
+</div>
+</div>
+<div class="border-b border-gray-100 dark:border-gray-800"></div>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="text-sm font-medium text-gray-700 dark:text-gray-200">字体大小</div>
+<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">标准 (16px)</span>
+</div>
+<div class="flex items-center space-x-4">
+<span class="text-xs text-gray-400">A</span>
+<input class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary" max="24" min="12" type="range" value="16"/>
+<span class="text-lg text-gray-400">A</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-10">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+<span class="bg-purple-100 dark:bg-purple-900/40 text-purple-600 p-1 rounded mr-3">
+<span class="material-icons text-lg">chat</span>
+</span>
+                    对话设置
+                </h3>
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<div class="flex-1 mr-4">
+<div class="text-sm font-medium text-gray-700 dark:text-gray-200">启用 MCP 工具集</div>
+<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">允许 AI 助手调用本地工具、访问文件及执行复杂任务。</div>
+</div>
+<div class="relative inline-block w-11 h-6 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-all duration-300 ease-in-out top-0.5 left-0.5" id="mcp-toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-300 ease-in-out" for="mcp-toggle"></label>
+</div>
+</div>
+<div class="border-b border-gray-100 dark:border-gray-800"></div>
+<div class="flex items-center justify-between">
+<div>
+<div class="text-sm font-medium text-gray-700 dark:text-gray-200">默认技能</div>
+<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">新建对话时的默认助手模型</div>
+</div>
+<select class="form-select block w-48 rounded-lg border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:border-primary focus:ring-primary shadow-sm">
+<option>通用助手 (NewLife 2.0)</option>
+<option>代码专家 (CodeMaster)</option>
+<option>创意写作 (Muse)</option>
+</select>
+</div>
+<div class="border-b border-gray-100 dark:border-gray-800"></div>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="text-sm font-medium text-gray-700 dark:text-gray-200">流式输出速度</div>
+<span class="text-xs text-blue-600 dark:text-blue-400 font-medium">平衡模式</span>
+</div>
+<div class="relative pt-1">
+<input class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary" max="5" min="1" type="range" value="3"/>
+<div class="flex justify-between text-[10px] text-gray-400 mt-1">
+<span>慢速</span>
+<span>极速</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-6">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+<span class="bg-orange-100 dark:bg-orange-900/40 text-orange-600 p-1 rounded mr-3">
+<span class="material-icons text-lg">extension</span>
+</span>
+                    高级 / MCP 插件
+                </h3>
+<div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700/50">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">已安装插件</h4>
+<button class="text-xs text-primary hover:underline">管理插件库</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between bg-white dark:bg-[#252528] p-3 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+<span class="material-icons text-lg">code</span>
+</div>
+<div>
+<div class="text-sm font-medium text-gray-900 dark:text-gray-100">GitHub Copilot Bridge</div>
+<div class="text-[10px] text-gray-500">v1.2.4 • 读取代码库权限</div>
+</div>
+</div>
+<div class="relative inline-block w-9 h-5 align-middle select-none">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-all duration-300 top-0.5 left-0.5" id="plugin-1" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-blue-500 cursor-pointer" for="plugin-1"></label>
+</div>
+</div>
+<div class="flex items-center justify-between bg-white dark:bg-[#252528] p-3 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded bg-green-100 dark:bg-green-900/50 flex items-center justify-center text-green-600 dark:text-green-400">
+<span class="material-icons text-lg">folder</span>
+</div>
+<div>
+<div class="text-sm font-medium text-gray-900 dark:text-gray-100">Local File Access</div>
+<div class="text-[10px] text-gray-500">v0.9.0 • 读写本地文档</div>
+</div>
+</div>
+<div class="relative inline-block w-9 h-5 align-middle select-none">
+<input class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-all duration-300 top-0.5 left-0.5" id="plugin-2" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer" for="plugin-2"></label>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+<h4 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">权限控制</h4>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-sm text-gray-700 dark:text-gray-300">自动批准读取操作</span>
+<div class="relative inline-block w-9 h-5">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer top-0.5 left-0.5" id="perm-1" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-blue-500 cursor-pointer" for="perm-1"></label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm text-gray-700 dark:text-gray-300">执行危险命令需二次确认</span>
+<div class="relative inline-block w-9 h-5">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer top-0.5 left-0.5" id="perm-2" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-blue-500 cursor-pointer" for="perm-2"></label>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>

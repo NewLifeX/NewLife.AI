@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@import "highlight.js/styles/github-dark.min.css";
+
+@theme {
+  --color-primary: #0057ff;
+  --color-primary-hover: #004ad9;
+  --color-primary-light: #e6f0ff;
+  --color-background-light: #ffffff;
+  --color-background-dark: #18181b;
+  --color-sidebar-light: #f9f9fa;
+  --color-sidebar-dark: #202023;
+  --color-modal-sidebar: #f5f6f7;
+  --color-input-border: #e5e7eb;
+  --color-input-focus: #3b82f6;
+
+  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Consolas", "Monaco", "Courier New", monospace;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-input: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+  --shadow-menu: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+  --shadow-message: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-tooltip: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.3);
+
+  --animate-cursor-blink: blink 1s step-end infinite;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-slide-up: slideUpFade 0.2s ease-out forwards;
+  --animate-fade-in: fadeIn 0.15s ease-out;
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --slider-track: #e5e7eb;
+}
+
+html.dark body {
+  --slider-track: #374151;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 20px;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+}
+html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
+/* No scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Typing cursor */
+.typing-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background-color: var(--color-primary);
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+  border-radius: 1px;
+}
+
+/* Terminal window font */
+.terminal-window {
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+/* Prose overrides */
+.prose p {
+  margin-bottom: 0.8em;
+}
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.8em;
+}

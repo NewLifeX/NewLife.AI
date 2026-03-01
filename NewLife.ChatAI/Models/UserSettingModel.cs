@@ -44,6 +44,15 @@ public partial class UserSettingModel
     /// <summary>允许训练。是否允许反馈数据用于模型改进</summary>
     public Boolean AllowTraining { get; set; }
 
+    /// <summary>启用MCP。是否启用MCP工具调用</summary>
+    public Boolean McpEnabled { get; set; }
+
+    /// <summary>默认技能。新会话的默认技能编码</summary>
+    public String DefaultSkill { get; set; }
+
+    /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
+    public Int32 StreamingSpeed { get; set; }
+
     /// <summary>创建用户</summary>
     public Int32 CreateUserID { get; set; }
 
@@ -79,6 +88,9 @@ public partial class UserSettingModel
         ContextRounds = model.ContextRounds;
         SystemPrompt = model.SystemPrompt;
         AllowTraining = model.AllowTraining;
+        McpEnabled = model.McpEnabled;
+        DefaultSkill = model.DefaultSkill;
+        StreamingSpeed = model.StreamingSpeed;
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
         CreateTime = model.CreateTime;

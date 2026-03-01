@@ -1,0 +1,57 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
+import { Icon } from '@/components/common/Icon'
+
+interface ThinkingBlockProps {
+  content: string
+  isStreaming?: boolean
+  className?: string
+}
+
+export function ThinkingBlock({
+  content,
+  isStreaming = false,
+  className,
+}: ThinkingBlockProps) {
+  const { t } = useTranslation()
+  const [collapsed, setCollapsed] = useState(false)
+
+  return (
+    <div className={cn('mb-4', className)}>
+      <button
+        onClick={() => setCollapsed((v) => !v)}
+        className="flex items-center space-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg select-none hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors w-fit"
+      >
+        {isStreaming ? (
+          <>
+            <Icon name="cyclone" variant="symbols" size="sm" className="animate-spin" />
+            <span className="animate-pulse">{t('chat.thinkingInProgress')}</span>
+          </>
+        ) : (
+          <>
+            <Icon name="psychology" variant="outlined" size="sm" />
+            <span>{t('chat.thinkingProcess')}</span>
+            <Icon
+              name={collapsed ? 'expand_more' : 'expand_less'}
+              variant="outlined"
+              size="sm"
+              className="text-blue-400"
+            />
+          </>
+        )}
+      </button>
+
+      {!collapsed && (
+        <div className="mt-2 pl-3 border-l-2 border-blue-200 dark:border-blue-800">
+          <div className="text-sm text-gray-500 dark:text-gray-400 italic leading-relaxed whitespace-pre-wrap">
+            {content}
+            {isStreaming && (
+              <span className="inline-block w-1.5 h-4 bg-blue-400 ml-0.5 animate-pulse rounded-sm align-text-bottom" />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

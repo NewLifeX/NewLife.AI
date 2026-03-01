@@ -106,6 +106,12 @@ public class InMemoryChatApplicationService : IChatApplicationService
 
     public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (!_conversations.ContainsKey(conversationId))
+        {
+            yield return new ChatStreamEvent { Type = "error", Error = "会话不存在" };
+            yield break;
+        }
+
         if (!_messages.TryGetValue(conversationId, out var list))
         {
             list = [];
@@ -117,8 +123,8 @@ public class InMemoryChatApplicationService : IChatApplicationService
 
         var assistantMessageId = Interlocked.Increment(ref _messageSeed);
 
-        // 发送 message_start
-        yield return ChatStreamEvent.MessageStart(assistantMessageId, "qwen-max", (Int32)request.ThinkingMode);
+        // message_start
+        yield return new ChatStreamEvent { Type = "message_start", MessageId = assistantMessageId };
 
         var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
         var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -129,17 +135,41 @@ public class InMemoryChatApplicationService : IChatApplicationService
             cancellationToken.ThrowIfCancellationRequested();
             var line = chunk + "。";
             content.Append(line);
-            yield return ChatStreamEvent.ContentDelta(line);
+            yield return new ChatStreamEvent { Type = "content_delta", Content = line };
             await Task.Delay(120, cancellationToken).ConfigureAwait(false);
         }
 
-        list.Add(new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), null, request.ThinkingMode, null, DateTime.Now));
+        // 占位 Token 用量
+        var promptTokens = request.Content.Length;
+        var completionTokens = content.Length;
+
+        var assistantDto = new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), null, request.ThinkingMode, null, DateTime.Now)
+        {
+            PromptTokens = promptTokens,
+            CompletionTokens = completionTokens,
+            TotalTokens = promptTokens + completionTokens,
+        };
+        list.Add(assistantDto);
 
         if (_conversations.TryGetValue(conversationId, out var conversation))
-            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, conversation.Title, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
+        {
+            var newTitle = conversation.Title;
+            // 首条消息后自动生成标题
+            if (newTitle == "新建对话" && !String.IsNullOrWhiteSpace(request.Content))
+            {
+                newTitle = request.Content.Trim();
+                if (newTitle.Length > 10) newTitle = newTitle[..10] + "...";
+            }
+            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, newTitle, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
+        }
 
-        // 发送 message_done
-        yield return ChatStreamEvent.MessageDone();
+        // message_done，包含 Token 用量
+        yield return new ChatStreamEvent
+        {
+            Type = "message_done",
+            MessageId = assistantMessageId,
+            Usage = new ChatUsage { PromptTokens = promptTokens, CompletionTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
+        };
     }
 
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;

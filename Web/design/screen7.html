@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NewLife - 智能助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0057ff", 
+                        "background-light": "#ffffff",
+                        "background-dark": "#18181b",
+                        "sidebar-light": "#f9f9fa",
+                        "sidebar-dark": "#202023",
+                        "input-border": "#e5e7eb",
+                        "input-focus": "#3b82f6",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans SC", "sans-serif"],
+                        body: ["Noto Sans SC", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem',
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'input': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                        'message': '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        'tooltip': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'cursor-blink': 'blink 1s step-end infinite',
+                    },
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 20px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+        }
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: #0057ff;
+            vertical-align: sub;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .prose p {
+            margin-bottom: 0.8em;
+        }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-bottom: 0.8em;
+        }.chart-bar {
+            transition: height 0.5s ease-out;
+        }
+        .terminal-window {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }.tooltip-arrow::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1f2937 transparent transparent transparent;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 h-screen flex overflow-hidden font-body">
+<aside class="w-[260px] bg-sidebar-light dark:bg-sidebar-dark flex flex-col border-r border-gray-100 dark:border-gray-800 flex-shrink-0 relative z-20">
+<div class="px-4 pt-4 pb-2 flex items-center space-x-2">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+            N
+        </div>
+<span class="font-bold text-lg tracking-tight">NewLife</span>
+</div>
+<div class="px-3 py-2">
+<button class="w-full flex items-center justify-start space-x-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary rounded-lg px-3 py-2.5 transition-colors group">
+<span class="material-icons-outlined text-xl">add_circle_outline</span>
+<span class="text-sm font-medium">新对话</span>
+<div class="flex-grow"></div>
+<span class="material-icons-outlined text-gray-400 group-hover:text-primary text-base opacity-0 group-hover:opacity-100 transition-opacity">keyboard_command_key</span>
+<span class="text-xs text-gray-400 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">K</span>
+</button>
+</div>
+<nav class="px-3 space-y-0.5 mb-4">
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">auto_awesome</span>
+<span>AI 创作</span>
+<span class="ml-auto text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">Seedance 2.0</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">terminal</span>
+<span>开发者工具</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">grid_view</span>
+<span>更多</span>
+<span class="material-icons-outlined text-gray-400 text-sm ml-auto">chevron_right</span>
+</a>
+</nav>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 pb-2">
+<div class="text-xs text-gray-400 px-3 py-2 font-medium">历史对话</div>
+<ul class="space-y-0.5">
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 font-medium relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">analytics</span>
+<span class="truncate">系统性能与数据可视化</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 opacity-100 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">smart_toy</span>
+<span class="truncate">MCP 协议调试</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">服务器日志分析</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="p-3 border-t border-gray-100 dark:border-gray-800">
+<button class="w-full flex items-center space-x-3 px-2 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 transition-colors">
+<div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMJSww68Zq0-eJTVL97IKMKAOsrlOHHn6FKtDDEqyWAEgn90K8ckg5sKCPAczNfXUyJbOyj1II0BU3Th_M4uLVThq1JNyj0ymfHt0YtSdFgRdacl4NPdl7q9Kz4lNN7-2hxM_yvCX5aWsuYx7mDwmUIyqqqZuWxfs4ZYwlOlFLotgcN9XkeRkO52YJ9lW9-yLuYMhNehdmB9kw_VE6LbJqWvz0YcGyb1-G8RvtKFSlsjOf8rJBzWm6-JRct6WRL3CJbBGz-jucbG-g"/>
+</div>
+<span class="font-medium truncate">用户o2QZOR</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
+<div class="absolute top-4 left-4 z-10 md:hidden">
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-outlined text-xl">menu_open</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0">
+<div class="max-w-3xl mx-auto w-full pt-8 pb-48">
+<div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm mb-12 opacity-50 select-none">
+<div class="mb-4 text-center">
+<p>此处省略上文对话内容...</p>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 w-full px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-20 pb-8 pt-10">
+<div class="w-full max-w-3xl mx-auto relative group">
+<div class="absolute left-0 -top-12 z-30">
+<div class="relative group/toggle">
+<button class="flex items-center space-x-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1.5 shadow-sm hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
+<span class="material-symbols-outlined text-blue-500 text-[18px]">psychology</span>
+<span class="text-xs font-medium text-gray-700 dark:text-gray-200">深度思考 (Deep)</span>
+<span class="material-icons-outlined text-gray-400 text-[16px]">keyboard_arrow_down</span>
+</button>
+<div class="absolute bottom-full left-0 mb-2 w-64 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-tooltip tooltip-arrow z-40 animate-fade-in opacity-100">
+<div class="font-semibold mb-1 text-blue-300">深度思考模式已开启</div>
+<p class="text-gray-300 leading-relaxed">模型将进行多步推理，适用于复杂代码分析、逻辑推导及长文本生成任务。响应时间可能会稍长。</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 border-2 border-primary/20 dark:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 rounded-3xl shadow-input dark:shadow-none transition-all duration-200 relative flex flex-col">
+<div class="px-4 py-3 pb-0">
+<textarea class="w-full bg-transparent border-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 resize-none py-1 text-base leading-relaxed custom-scrollbar" placeholder="发消息..." rows="4" style="min-height: 108px;">分析当前系统性能日志，特别是 /var/log/syslog 中的异常报错。
+请调用 Bash 工具 grep 过滤出 error 级别的日志，并结合 MCP 工具查询知识库中的已知问题解决方案。最后，请将统计结果生成一份可视化的柱状图。</textarea>
+</div>
+<div class="flex items-end justify-between px-3 pb-3 pt-2">
+<div class="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1">
+<button class="flex items-center space-x-1.5 px-2.5 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">hub</span>
+<span>MCP</span>
+</button>
+<button class="flex items-center space-x-1.5 px-2.5 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">terminal</span>
+<span>Bash</span>
+</button>
+<div class="h-4 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
+<button class="flex items-center space-x-1.5 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">handyman</span>
+<span>Toolbox</span>
+</button>
+<button class="flex items-center space-x-1.5 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">insert_chart</span>
+<span>Data Chart</span>
+</button>
+<button class="flex items-center space-x-1.5 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex-shrink-0">
+<span class="material-icons-outlined text-sm">code</span>
+<span>Code</span>
+</button>
+</div>
+<div class="flex items-center justify-end flex-shrink-0 pl-2 pb-0.5">
+<button class="w-9 h-9 bg-primary hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-md transform hover:scale-105 active:scale-95 group/send" title="发送">
+<span class="material-icons text-[20px] group-hover/send:translate-x-0.5 transition-transform">arrow_upward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="text-center mt-2">
+<p class="text-[10px] text-gray-400">内容由 AI 生成，可能存在错误，请注意甄别</p>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

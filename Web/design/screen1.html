@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NewLife - 智能助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0057ff", // Doubao-ish blue
+                        "background-light": "#ffffff",
+                        "background-dark": "#18181b",
+                        "sidebar-light": "#f9f9fa",
+                        "sidebar-dark": "#202023",
+                        "input-border": "#e5e7eb",
+                        "input-focus": "#3b82f6",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans SC", "sans-serif"],
+                        body: ["Noto Sans SC", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem',
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'input': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }.custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 20px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 h-screen flex overflow-hidden font-body">
+<aside class="w-[260px] bg-sidebar-light dark:bg-sidebar-dark flex flex-col border-r border-gray-100 dark:border-gray-800 flex-shrink-0 relative z-20">
+<div class="px-4 pt-4 pb-2 flex items-center space-x-2">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                N
+            </div>
+<span class="font-bold text-lg tracking-tight">NewLife</span>
+</div>
+<div class="px-3 py-2">
+<button class="w-full flex items-center justify-start space-x-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary rounded-lg px-3 py-2.5 transition-colors group">
+<span class="material-icons-outlined text-xl">add_circle_outline</span>
+<span class="text-sm font-medium">新对话</span>
+<div class="flex-grow"></div>
+<span class="material-icons-outlined text-gray-400 group-hover:text-primary text-base opacity-0 group-hover:opacity-100 transition-opacity">keyboard_command_key</span>
+<span class="text-xs text-gray-400 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">K</span>
+</button>
+</div>
+<nav class="px-3 space-y-0.5 mb-4">
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">auto_awesome</span>
+<span>AI 创作</span>
+<span class="ml-auto text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">Seedance 2.0</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">folder_open</span>
+<span>云盘</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">grid_view</span>
+<span>更多</span>
+<span class="material-icons-outlined text-gray-400 text-sm ml-auto">chevron_right</span>
+</a>
+</nav>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 pb-2">
+<div class="text-xs text-gray-400 px-3 py-2 font-medium">历史对话</div>
+<ul class="space-y-0.5">
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">smart_toy</span>
+<span class="truncate">Sora创作大师</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">根据您的要求，对话的主题...</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 hidden group-hover:block rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">国际商务专业毕业论文选题</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-[8px] text-white">T</span>
+<span class="truncate">Temporal Workflow</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 hidden group-hover:block rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">《林海雪原》读本思维导图大...</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">制作‘林海雪原’思维导图</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">制作思维导图</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">筑迹寻光小队实践活动</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">AI底层新工具朋友圈宣传方案</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">毕业设计承接</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">KvStore键值引擎性能测试报告</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">生成特定比例图片</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">生成无水印图片</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">ECONNREFUSED错误解析</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="p-3 border-t border-gray-100 dark:border-gray-800">
+<button class="w-full flex items-center space-x-3 px-2 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 transition-colors">
+<div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMJSww68Zq0-eJTVL97IKMKAOsrlOHHn6FKtDDEqyWAEgn90K8ckg5sKCPAczNfXUyJbOyj1II0BU3Th_M4uLVThq1JNyj0ymfHt0YtSdFgRdacl4NPdl7q9Kz4lNN7-2hxM_yvCX5aWsuYx7mDwmUIyqqqZuWxfs4ZYwlOlFLotgcN9XkeRkO52YJ9lW9-yLuYMhNehdmB9kw_VE6LbJqWvz0YcGyb1-G8RvtKFSlsjOf8rJBzWm6-JRct6WRL3CJbBGz-jucbG-g"/>
+</div>
+<span class="font-medium truncate">用户o2QZOR</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
+<div class="absolute top-4 left-4 z-10">
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-outlined text-xl">menu_open</span>
+</button>
+</div>
+<div class="flex-1 flex flex-col items-center justify-center px-4 md:px-0 max-w-4xl mx-auto w-full">
+<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-10 tracking-tight">
+                有什么我能帮你的吗？
+            </h1>
+<div class="w-full max-w-3xl flex flex-wrap justify-center gap-3 mb-12">
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    冰箱冷藏层有灯，冷冻层为什么没有？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    坐飞机过安检时擦的小纸片是什么？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    为什么吸管大多是圆形而非方形？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    生成国风桌面壁纸
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    为什么红绿灯要用红色表示停止？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    5亿秒有多少少年？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    古人如何描写遗憾？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    为什么现在很多酒店退房都不查房了？
+                </button>
+<button class="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-4 py-3 rounded-xl transition-colors">
+                    枕头要垫多高才合适？
+                </button>
+</div>
+</div>
+<div class="w-full pb-8 px-4 flex justify-center bg-transparent">
+<div class="w-full max-w-3xl relative group">
+<div class="bg-white dark:bg-gray-800 border-2 border-blue-100 dark:border-blue-900/30 group-focus-within:border-primary/50 dark:group-focus-within:border-primary/50 rounded-3xl shadow-input dark:shadow-none transition-all duration-300 p-3 pb-2">
+<div class="flex items-start">
+<textarea class="w-full bg-transparent border-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 resize-none py-3 px-2 text-base max-h-48 overflow-y-auto" placeholder='发消息或输入 "/" 选择技能' rows="1" style="min-height: 48px;"></textarea>
+</div>
+<div class="flex items-center justify-between mt-1 px-1">
+<div class="flex items-center space-x-1">
+<button class="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="附件">
+<span class="material-icons-outlined text-lg">attach_file</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">bolt</span>
+<span>快速</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">image</span>
+<span>图像生成</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">code</span>
+<span>编程</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">edit_note</span>
+<span>帮我写作</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">travel_explore</span>
+<span>深入研究</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">smart_display</span>
+<span>视频生成</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors">
+<span class="material-icons-outlined text-sm">grid_view</span>
+<span>更多</span>
+</button>
+</div>
+<div>
+<button class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors" title="语音输入">
+<span class="material-icons text-lg">mic</span>
+</button>
+</div>
+</div>
+</div>
+<div class="text-center mt-2">
+<p class="text-[10px] text-gray-400">内容由 AI 生成，可能存在错误，请注意甄别</p>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

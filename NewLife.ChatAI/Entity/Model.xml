@@ -176,6 +176,9 @@
         <Column Name="ContextRounds" DataType="Int32" Description="上下文轮数。每次请求携带的历史对话轮数，默认10" />
         <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。全局System Prompt" />
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许反馈数据用于模型改进" />
+        <Column Name="McpEnabled" DataType="Boolean" Description="启用MCP。是否启用MCP工具调用" />
+        <Column Name="DefaultSkill" DataType="String" Description="默认技能。新会话的默认技能编码" />
+        <Column Name="StreamingSpeed" DataType="Int32" Description="流式速度。流式输出速度等级，1~5，默认3" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />

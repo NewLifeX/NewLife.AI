@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NewLife - 智能助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0057ff", 
+                        "primary-light": "#e6f0ff",
+                        "background-light": "#ffffff",
+                        "background-dark": "#18181b",
+                        "sidebar-light": "#f9f9fa",
+                        "sidebar-dark": "#202023",
+                        "input-border": "#e5e7eb",
+                        "input-focus": "#3b82f6",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans SC", "sans-serif"],
+                        body: ["Noto Sans SC", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                        '3xl': '2rem',
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'input': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                        'menu': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                        'message': '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'cursor-blink': 'blink 1s step-end infinite',
+                    },
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 20px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+        }
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 20px;
+            background-color: #0057ff;
+            vertical-align: sub;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .prose p {
+            margin-bottom: 0.8em;
+        }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-bottom: 0.8em;
+        }.chart-bar {
+            transition: height 0.5s ease-out;
+        }
+        .terminal-window {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .popover-menu {
+            animation: slideUpFade 0.2s ease-out forwards;
+        }
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 h-screen flex overflow-hidden font-body">
+<aside class="w-[260px] bg-sidebar-light dark:bg-sidebar-dark flex flex-col border-r border-gray-100 dark:border-gray-800 flex-shrink-0 relative z-20">
+<div class="px-4 pt-4 pb-2 flex items-center space-x-2">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+            N
+        </div>
+<span class="font-bold text-lg tracking-tight">NewLife</span>
+</div>
+<div class="px-3 py-2">
+<button class="w-full flex items-center justify-start space-x-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-primary rounded-lg px-3 py-2.5 transition-colors group">
+<span class="material-icons-outlined text-xl">add_circle_outline</span>
+<span class="text-sm font-medium">新对话</span>
+<div class="flex-grow"></div>
+<span class="material-icons-outlined text-gray-400 group-hover:text-primary text-base opacity-0 group-hover:opacity-100 transition-opacity">keyboard_command_key</span>
+<span class="text-xs text-gray-400 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">K</span>
+</button>
+</div>
+<nav class="px-3 space-y-0.5 mb-4">
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">auto_awesome</span>
+<span>AI 创作</span>
+<span class="ml-auto text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">Seedance 2.0</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">terminal</span>
+<span>开发者工具</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors" href="#">
+<span class="material-icons-outlined text-gray-500 dark:text-gray-400 text-lg">grid_view</span>
+<span>更多</span>
+<span class="material-icons-outlined text-gray-400 text-sm ml-auto">chevron_right</span>
+</a>
+</nav>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-3 pb-2">
+<div class="text-xs text-gray-400 px-3 py-2 font-medium">历史对话</div>
+<ul class="space-y-0.5">
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 font-medium relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">analytics</span>
+<span class="truncate">系统性能与数据可视化</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 opacity-100 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 relative" href="#">
+<span class="material-icons-outlined text-gray-500 text-lg">smart_toy</span>
+<span class="truncate">MCP 协议调试</span>
+<span class="material-icons text-gray-400 text-[14px] absolute right-3 rotate-45 transform">push_pin</span>
+</a>
+</li>
+<li>
+<a class="group flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300" href="#">
+<span class="material-icons-outlined text-gray-400 text-lg">chat_bubble_outline</span>
+<span class="truncate">服务器日志分析</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="p-3 border-t border-gray-100 dark:border-gray-800">
+<button class="w-full flex items-center space-x-3 px-2 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 transition-colors">
+<div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMJSww68Zq0-eJTVL97IKMKAOsrlOHHn6FKtDDEqyWAEgn90K8ckg5sKCPAczNfXUyJbOyj1II0BU3Th_M4uLVThq1JNyj0ymfHt0YtSdFgRdacl4NPdl7q9Kz4lNN7-2hxM_yvCX5aWsuYx7mDwmUIyqqqZuWxfs4ZYwlOlFLotgcN9XkeRkO52YJ9lW9-yLuYMhNehdmB9kw_VE6LbJqWvz0YcGyb1-G8RvtKFSlsjOf8rJBzWm6-JRct6WRL3CJbBGz-jucbG-g"/>
+</div>
+<span class="font-medium truncate">用户o2QZOR</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
+<div class="absolute top-4 left-4 z-10 md:hidden">
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-outlined text-xl">menu_open</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0">
+<div class="max-w-3xl mx-auto w-full pt-8 pb-32">
+<div class="flex flex-row-reverse items-start mb-8 group">
+<div class="flex-shrink-0 ml-3">
+<div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMJSww68Zq0-eJTVL97IKMKAOsrlOHHn6FKtDDEqyWAEgn90K8ckg5sKCPAczNfXUyJbOyj1II0BU3Th_M4uLVThq1JNyj0ymfHt0YtSdFgRdacl4NPdl7q9Kz4lNN7-2hxM_yvCX5aWsuYx7mDwmUIyqqqZuWxfs4ZYwlOlFLotgcN9XkeRkO52YJ9lW9-yLuYMhNehdmB9kw_VE6LbJqWvz0YcGyb1-G8RvtKFSlsjOf8rJBzWm6-JRct6WRL3CJbBGz-jucbG-g"/>
+</div>
+</div>
+<div class="max-w-[85%] relative">
+<div class="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] leading-7 shadow-sm">
+                        请分析当前系统性能，特别是 CPU 和内存使用率，并提供过去 24 小时的可视化数据图表。
+                    </div>
+<div class="absolute -left-12 top-2 hidden group-hover:flex space-x-1">
+<button class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"><span class="material-icons text-base">edit</span></button>
+</div>
+</div>
+</div>
+<div class="flex items-start mb-6 group w-full">
+<div class="flex-shrink-0 mr-3">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                        N
+                    </div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl rounded-tl-sm px-6 py-5 text-[15px] leading-7 shadow-soft text-gray-900 dark:text-gray-100">
+<div class="flex items-center space-x-2 mb-4">
+<div class="flex items-center space-x-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-full text-xs font-medium border border-green-100 dark:border-green-800/50">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+</span>
+<span>MCP Tool: Internal_Metrics_DB (Querying...)</span>
+</div>
+</div>
+<div class="prose prose-sm max-w-none dark:prose-invert">
+<p class="mb-3">收到，正在连接至内部监控数据库 <code>production-cluster-01</code> 获取实时遥测数据。</p>
+<p class="mb-4">我已经通过 <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500">Bash</span> 执行了系统快照分析脚本，以下是终端执行结果：</p>
+</div>
+<div class="mb-6 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+<div class="bg-gray-100 dark:bg-gray-900 px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+<div class="flex items-center space-x-1.5">
+<div class="w-3 h-3 rounded-full bg-red-400"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+<div class="w-3 h-3 rounded-full bg-green-400"></div>
+</div>
+<span class="text-xs text-gray-500 font-mono">root@server:~</span>
+</div>
+<div class="bg-[#1e1e1e] p-4 text-xs font-mono text-gray-300 terminal-window overflow-x-auto">
+<div class="mb-2">
+<span class="text-green-400">➜</span> <span class="text-blue-400">~</span> ./analyze_metrics.sh --target=cpu,mem --duration=24h
+                                    </div>
+<div class="mb-2 text-gray-400">
+                                        [INFO] Connecting to MetricStream... OK<br/>
+                                        [INFO] Fetching timeseries data... Done<br/>
+                                        [INFO] Processing aggregations...<br/>
+</div>
+<div>
+<span class="text-yellow-400">Result:</span><br/>
+                                        CPU_AVG: 42.8% (Peak: 89% @ 14:30)<br/>
+                                        MEM_AVG: 6.2GB / 16GB (38%)<br/>
+                                        STATUS: <span class="text-green-400">HEALTHY</span>
+</div>
+</div>
+</div>
+<div class="prose prose-sm max-w-none dark:prose-invert mb-4">
+<p>基于获取的数据，我为您生成了过去 24 小时的系统负载趋势图。数据显示，在下午 14:00 左右出现了短暂的 CPU 峰值，随后恢复正常。</p>
+</div>
+<div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-6 mb-2 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h4 class="text-sm font-bold text-gray-700 dark:text-gray-200">系统负载趋势 (System Load)</h4>
+<p class="text-xs text-gray-400 mt-1">2023-10-27 | 24 Hours Interval</p>
+</div>
+<div class="flex space-x-4 text-xs">
+<div class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>CPU</div>
+<div class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-purple-400 mr-2"></span>Memory</div>
+</div>
+</div>
+<div class="h-40 flex items-end justify-between space-x-2 relative z-10 px-2">
+<div class="absolute inset-0 border-b border-gray-100 dark:border-gray-700 z-0"></div>
+<div class="absolute inset-0 top-[25%] border-b border-dashed border-gray-100 dark:border-gray-700 z-0"></div>
+<div class="absolute inset-0 top-[50%] border-b border-dashed border-gray-100 dark:border-gray-700 z-0"></div>
+<div class="absolute inset-0 top-[75%] border-b border-dashed border-gray-100 dark:border-gray-700 z-0"></div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[30%] bg-blue-500 rounded-full mx-0.5"></div>
+<div class="w-1.5 h-[20%] bg-purple-400 rounded-full mx-0.5"></div>
+</div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[45%] bg-blue-500 rounded-full mx-0.5"></div>
+<div class="w-1.5 h-[25%] bg-purple-400 rounded-full mx-0.5"></div>
+</div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[35%] bg-blue-500 rounded-full mx-0.5"></div>
+<div class="w-1.5 h-[28%] bg-purple-400 rounded-full mx-0.5"></div>
+</div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[85%] bg-blue-500 rounded-full mx-0.5 animate-pulse"></div>
+<div class="w-1.5 h-[40%] bg-purple-400 rounded-full mx-0.5"></div>
+<div class="absolute -top-10 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-100 shadow-lg whitespace-nowrap z-20">
+                                            Peak: 89% CPU
+                                        </div>
+</div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[50%] bg-blue-500 rounded-full mx-0.5"></div>
+<div class="w-1.5 h-[35%] bg-purple-400 rounded-full mx-0.5"></div>
+</div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[40%] bg-blue-500 rounded-full mx-0.5"></div>
+<div class="w-1.5 h-[32%] bg-purple-400 rounded-full mx-0.5"></div>
+</div>
+<div class="w-full bg-blue-50 dark:bg-blue-900/20 rounded-t-sm relative group h-full flex items-end justify-center">
+<div class="w-1.5 h-[30%] bg-blue-500 rounded-full mx-0.5"></div>
+<div class="w-1.5 h-[30%] bg-purple-400 rounded-full mx-0.5"></div>
+</div>
+</div>
+<div class="flex justify-between mt-2 px-1 text-[10px] text-gray-400 font-mono">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>24:00</span>
+</div>
+</div>
+<div class="mt-4 flex items-center space-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 w-fit px-3 py-1.5 rounded-lg select-none">
+<span class="material-symbols-outlined text-sm animate-spin">cyclone</span>
+<span class="animate-pulse">Analyzing logs...</span>
+</div>
+</div>
+<div class="flex items-center mt-2 space-x-2 ml-1">
+<button class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" title="复制">
+<span class="material-icons-outlined text-[18px]">content_copy</span>
+</button>
+<button class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" title="重新生成">
+<span class="material-icons-outlined text-[18px]">refresh</span>
+</button>
+<button class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors" title="不喜欢">
+<span class="material-icons-outlined text-[18px]">thumb_down</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-20">
+<div class="w-full max-w-3xl mx-auto relative group">
+<div class="popover-menu absolute bottom-full mb-3 left-0 w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-menu dark:shadow-black/40 border border-gray-100 dark:border-gray-700 overflow-hidden z-50">
+<div class="px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
+<span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">选择技能 (Skills)</span>
+<span class="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 px-1.5 py-0.5 rounded">ESC 关闭</span>
+</div>
+<div class="p-1.5">
+<button class="w-full flex items-center p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors text-left">
+<div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-primary dark:text-blue-400 mr-3 flex-shrink-0">
+<span class="material-icons-outlined">hub</span>
+</div>
+<div>
+<div class="text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors">MCP Tool</div>
+<div class="text-xs text-gray-500 dark:text-gray-400">调用外部模型上下文协议工具</div>
+</div>
+</button>
+<button class="w-full flex items-center p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors text-left">
+<div class="w-9 h-9 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600 dark:text-purple-400 mr-3 flex-shrink-0">
+<span class="material-icons-outlined">travel_explore</span>
+</div>
+<div>
+<div class="text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors">Search</div>
+<div class="text-xs text-gray-500 dark:text-gray-400">联网搜索最新信息与资讯</div>
+</div>
+</button>
+<button class="w-full flex items-center p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors text-left">
+<div class="w-9 h-9 rounded-lg bg-pink-100 dark:bg-pink-900/40 flex items-center justify-center text-pink-600 dark:text-pink-400 mr-3 flex-shrink-0">
+<span class="material-icons-outlined">palette</span>
+</div>
+<div>
+<div class="text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors">Image Gen</div>
+<div class="text-xs text-gray-500 dark:text-gray-400">使用 DALL-E 或 SD 生成图像</div>
+</div>
+</button>
+<button class="w-full flex items-center p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 group transition-colors text-left">
+<div class="w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-400 mr-3 flex-shrink-0">
+<span class="material-icons-outlined">analytics</span>
+</div>
+<div>
+<div class="text-sm font-medium text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors">Data Analysis</div>
+<div class="text-xs text-gray-500 dark:text-gray-400">处理数据文件并生成可视化图表</div>
+</div>
+</button>
+</div>
+</div>
+<div class="bg-white dark:bg-gray-800 border-2 border-primary/20 dark:border-primary/40 group-focus-within:border-primary dark:group-focus-within:border-primary rounded-3xl shadow-input dark:shadow-none transition-all duration-300 p-3 pb-2 relative z-30">
+<div class="flex items-start pl-1">
+<div class="py-3 px-1 text-base text-primary font-bold">/</div>
+<div class="w-full relative">
+<textarea class="w-full bg-transparent border-none text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 resize-none py-3 px-0 text-base max-h-48 overflow-y-auto" placeholder="" rows="1" style="min-height: 48px;"></textarea>
+<div class="absolute top-3 left-0 pointer-events-none">
+<span class="typing-cursor"></span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1 px-1 pr-1">
+<div class="flex items-center space-x-1 overflow-x-auto no-scrollbar opacity-50 pointer-events-none grayscale">
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-xs font-medium flex-shrink-0">
+<span class="material-icons-outlined text-sm">hub</span>
+<span>MCP</span>
+</button>
+<button class="flex items-center space-x-1 px-2 py-1.5 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-xs font-medium flex-shrink-0">
+<span class="material-icons-outlined text-sm">handyman</span>
+<span>Toolbox</span>
+</button>
+</div>
+<div class="flex items-center space-x-2">
+<button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+<span class="material-icons-outlined text-xl">mic</span>
+</button>
+<button class="w-8 h-8 bg-primary hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+<span class="material-icons text-sm">arrow_upward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="text-center mt-2">
+<p class="text-[10px] text-gray-400">内容由 AI 生成，可能存在错误，请注意甄别</p>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

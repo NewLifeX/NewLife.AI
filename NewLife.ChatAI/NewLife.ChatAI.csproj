@@ -56,6 +56,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <PackageReference Include="NewLife.Cube.Core" Version="6.9.2026.201" />
     <PackageReference Include="NewLife.XCode" Version="11.24.2026.201" />
   </ItemGroup>

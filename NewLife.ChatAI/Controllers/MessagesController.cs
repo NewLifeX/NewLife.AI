@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
 using NewLife.AI.Models;
-using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -11,6 +10,12 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api")]
 public class MessagesController(IChatApplicationService chatService) : ControllerBase
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     /// <summary>发送消息并以 SSE 流式返回。支持 message_start/thinking_delta/thinking_done/content_delta/tool_call_start/tool_call_done/tool_call_error/message_done/error 事件</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">发送消息请求</param>
@@ -37,7 +42,7 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         catch (Exception ex)
         {
             var error = ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", ex.Message);
-            await WriteSseEventAsync(error, cancellationToken).ConfigureAwait(false);
+            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
         }
     }
 
@@ -95,7 +100,7 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
     /// <returns></returns>
     private async Task WriteSseEventAsync(ChatStreamEvent ev, CancellationToken cancellationToken)
     {
-        var json = ev.ToJson();
+        var json = JsonSerializer.Serialize(ev, _jsonOptions);
         await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
         await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
