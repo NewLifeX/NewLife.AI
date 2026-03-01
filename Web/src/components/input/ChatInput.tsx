@@ -107,7 +107,7 @@ export function ChatInput({
     <div className={cn('w-full', className)}>
       <div className="w-full max-w-3xl mx-auto relative group">
         {showThinkingToggle && onThinkingModeChange && (
-          <div className="absolute left-0 -top-12 z-30">
+          <div className="mb-2 z-30">
             <ThinkingModeToggle mode={thinkingMode} onChange={onThinkingModeChange} />
           </div>
         )}

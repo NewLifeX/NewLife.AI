@@ -45,7 +45,7 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
   }, [open])
 
   return (
-    <div ref={containerRef} className="relative inline-flex">
+    <div ref={containerRef} className="relative flex flex-col items-start">
       <button
         onClick={() => setOpen(!open)}
         className={cn(
@@ -63,7 +63,7 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 z-50 w-56 py-1 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 animate-fade-in">
+        <div className="mt-2 w-56 py-1 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 animate-fade-in">
           {modes.map((m) => {
             const c = modeConfig[m]
             const active = m === mode
