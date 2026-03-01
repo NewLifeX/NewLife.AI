@@ -17,6 +17,8 @@ function applyFontSize(size: number) {
 
 function applyTheme(theme: UserSettings['theme']) {
   const root = document.documentElement
+  // 添加过渡动效类，切换完成后移除（避免页面初始化时也有过渡）
+  root.classList.add('theme-transitioning')
   if (theme === 'dark') {
     root.classList.add('dark')
   } else if (theme === 'light') {
@@ -26,6 +28,8 @@ function applyTheme(theme: UserSettings['theme']) {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     root.classList.toggle('dark', prefersDark)
   }
+  // 过渡结束后移除，防止影响正常交互性能
+  setTimeout(() => root.classList.remove('theme-transitioning'), 400)
 }
 
 const defaults: UserSettings = {
