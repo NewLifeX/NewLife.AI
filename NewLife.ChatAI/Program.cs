@@ -11,7 +11,12 @@ var services = builder.Services;
 services.AddStardust();
 
 services.AddSingleton<IChatApplicationService, DbChatApplicationService>();
+services.AddSingleton<UsageService>();
 services.AddSingleton<GatewayService>();
+services.AddSingleton<McpClientService>();
+services.AddSingleton<ToolCallService>();
+services.AddSingleton<BackgroundGenerationService>();
+services.AddHttpClient("McpClient");
 
 services.AddControllersWithViews()
     .AddJsonOptions(options =>

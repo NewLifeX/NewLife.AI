@@ -1,7 +1,8 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.Models;
 
 namespace NewLife.ChatAI.Services;
 
@@ -79,7 +80,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             if (index < 0) continue;
 
             var source = item.Value[index];
-            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, request.Content, source.ThinkingMode, DateTime.Now);
+            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, request.Content, source.ThinkingContent, source.ThinkingMode, source.Attachments, DateTime.Now);
             item.Value[index] = updated;
             return Task.FromResult<MessageDto?>(updated);
         }
@@ -95,7 +96,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             if (index < 0) continue;
 
             var source = item.Value[index];
-            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, "这是重新生成的示例回复。", source.ThinkingMode, DateTime.Now);
+            var updated = new MessageDto(source.Id, source.ConversationId, source.Role, "这是重新生成的示例回复。", null, source.ThinkingMode, source.Attachments, DateTime.Now);
             item.Value[index] = updated;
             return Task.FromResult<MessageDto?>(updated);
         }
@@ -117,7 +118,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
             _messages.TryAdd(conversationId, list);
         }
 
-        var userMessage = new MessageDto(Interlocked.Increment(ref _messageSeed), conversationId, "user", request.Content, request.ThinkingMode, DateTime.Now);
+        var userMessage = new MessageDto(Interlocked.Increment(ref _messageSeed), conversationId, "user", request.Content, null, request.ThinkingMode, null, DateTime.Now);
         list.Add(userMessage);
 
         var assistantMessageId = Interlocked.Increment(ref _messageSeed);
@@ -173,6 +174,16 @@ public class InMemoryChatApplicationService : IChatApplicationService
 
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;
 
+    public Task<String?> GenerateTitleAsync(Int64 conversationId, String userMessage, CancellationToken cancellationToken)
+    {
+        // 内存版模拟标题生成：截取前10个字符作为标题
+        var title = userMessage.Length > 10 ? userMessage.Substring(0, 10) : userMessage;
+        if (_conversations.TryGetValue(conversationId, out var conversation))
+            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, title, conversation.ModelCode, conversation.LastMessageTime, conversation.IsPinned);
+
+        return Task.FromResult<String?>(title);
+    }
+
     public Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task DeleteFeedbackAsync(Int64 messageId, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -220,9 +231,9 @@ public class InMemoryChatApplicationService : IChatApplicationService
     {
         var models = new[]
         {
-            new ModelInfoDto("qwen-max", "Qwen-Max", true, true),
-            new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false),
-            new ModelInfoDto("gpt-4o", "GPT-4o", true, true)
+            new ModelInfoDto("qwen-max", "Qwen-Max", true, true, false, true),
+            new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false, false, true),
+            new ModelInfoDto("gpt-4o", "GPT-4o", true, true, false, true)
         };
         return Task.FromResult(models);
     }

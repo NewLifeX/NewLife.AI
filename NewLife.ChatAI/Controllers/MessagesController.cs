@@ -1,6 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.Models;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -30,6 +32,10 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         }
     }
 
+    /// <summary>获取会话消息列表</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
     [HttpGet("conversations/{conversationId:long}/messages")]
     public async Task<ActionResult<IReadOnlyList<MessageDto>>> QueryAsync([FromRoute] Int64 conversationId, CancellationToken cancellationToken)
     {
@@ -37,6 +43,11 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         return Ok(result);
     }
 
+    /// <summary>编辑消息内容</summary>
+    /// <param name="id">消息编号</param>
+    /// <param name="request">编辑请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
     [HttpPut("messages/{id:long}")]
     public async Task<ActionResult<MessageDto>> EditAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
     {
@@ -45,6 +56,10 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         return Ok(result);
     }
 
+    /// <summary>重新生成回复</summary>
+    /// <param name="id">消息编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
     [HttpPost("messages/{id:long}/regenerate")]
     public async Task<ActionResult<MessageDto>> RegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
@@ -53,10 +68,27 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         return Ok(result);
     }
 
+    /// <summary>停止生成</summary>
+    /// <param name="id">消息编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
     [HttpPost("messages/{id:long}/stop")]
     public async Task<IActionResult> StopAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
         await chatService.StopGenerateAsync(id, cancellationToken).ConfigureAwait(false);
         return Accepted();
     }
+
+    #region 辅助
+    /// <summary>写入 SSE 事件</summary>
+    /// <param name="ev">事件对象</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    private async Task WriteSseEventAsync(ChatStreamEvent ev, CancellationToken cancellationToken)
+    {
+        var json = ev.ToJson();
+        await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
+        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+    #endregion
 }

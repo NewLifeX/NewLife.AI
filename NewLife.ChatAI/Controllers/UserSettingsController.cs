@@ -1,5 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.Cube;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -8,6 +10,16 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api/user")]
 public class UserSettingsController(IChatApplicationService chatService) : ControllerBase
 {
+    [HttpGet("profile")]
+    public ActionResult<UserProfileDto> GetProfile(CancellationToken cancellationToken)
+    {
+        var user = ManageProvider2.User;
+        if (user == null) return Unauthorized();
+
+        var result = new UserProfileDto(user.DisplayName ?? "用户", user.Name, null);
+        return Ok(result);
+    }
+
     [HttpGet("settings")]
     public async Task<ActionResult<UserSettingsDto>> GetSettingsAsync(CancellationToken cancellationToken)
     {

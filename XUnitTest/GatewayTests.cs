@@ -271,7 +271,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyReturnsNullForEmptyHeader()
     {
-        var service = new GatewayService(null);
+        var service = new GatewayService(null, null);
 
         Assert.Null(service.ValidateAppKey(null));
         Assert.Null(service.ValidateAppKey(""));
@@ -281,7 +281,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyParsesBearer()
     {
-        var service = new GatewayService(null);
+        var service = new GatewayService(null, null);
 
         // 由于数据库中没有数据，FindBySecret 会返回 null
         var result = service.ValidateAppKey("Bearer sk-test-nonexistent");
@@ -291,7 +291,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyHandlesNoBearerPrefix()
     {
-        var service = new GatewayService(null);
+        var service = new GatewayService(null, null);
 
         // 直接传密钥（无 Bearer 前缀）也应尝试查找
         var result = service.ValidateAppKey("sk-direct-key");
@@ -303,7 +303,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForEmpty()
     {
-        var service = new GatewayService(null);
+        var service = new GatewayService(null, null);
 
         Assert.Null(service.ResolveModel(null));
         Assert.Null(service.ResolveModel(""));
@@ -313,7 +313,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForNonExistent()
     {
-        var service = new GatewayService(null);
+        var service = new GatewayService(null, null);
 
         // 数据库无数据时返回 null
         Assert.Null(service.ResolveModel("nonexistent-model"));

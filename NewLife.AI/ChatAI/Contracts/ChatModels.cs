@@ -1,4 +1,4 @@
-namespace NewLife.AI.ChatAI.Contracts;
+﻿namespace NewLife.AI.ChatAI.Contracts;
 
 /// <summary>思考模式</summary>
 public enum ThinkingMode
