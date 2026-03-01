@@ -9,6 +9,7 @@ interface WelcomePageProps {
 
 export function WelcomePage({ onSend }: WelcomePageProps) {
   const { t } = useTranslation()
+  const sendShortcut = useSettingsStore((s) => s.sendShortcut)
 
   const suggestions = [
     { icon: 'bolt', label: t('welcome.quick'), color: 'text-yellow-500' },
@@ -50,7 +51,7 @@ export function WelcomePage({ onSend }: WelcomePageProps) {
       </div>
 
       <div className="pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark">
-        <ChatInput onSend={onSend} sendShortcut={useSettingsStore.getState().sendShortcut} />
+        <ChatInput onSend={onSend} sendShortcut={sendShortcut} />
       </div>
     </>
   )

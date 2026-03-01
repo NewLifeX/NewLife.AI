@@ -9,6 +9,7 @@ const MOBILE_BREAKPOINT = 768
 interface ChatLayoutProps {
   children: ReactNode
   modelSelector?: ReactNode
+  conversationTitle?: string
   conversations: Conversation[]
   activeConversationId?: number
   onConversationSelect: (id: number) => void
@@ -28,6 +29,7 @@ interface ChatLayoutProps {
 export function ChatLayout({
   children,
   modelSelector,
+  conversationTitle,
   conversations,
   activeConversationId,
   onConversationSelect,
@@ -114,6 +116,11 @@ export function ChatLayout({
             </button>
           )}
           {modelSelector}
+          {conversationTitle && (
+            <h1 className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs">
+              {conversationTitle}
+            </h1>
+          )}
         </div>
         {children}
       </main>

@@ -17,6 +17,7 @@ function ChatApp() {
     activeConversationId,
     messages,
     isGenerating,
+    isLoadingMessages,
     thinkingMode,
     loadConversations,
     setActiveConversation,
@@ -117,6 +118,7 @@ function ChatApp() {
         sidebarCollapsed={sidebarCollapsed}
         onSidebarToggle={toggleSidebar}
         onLoadMore={() => useChatStore.getState().loadMoreConversations()}
+        conversationTitle={activeConv?.title}
         userName={userName}
         userAvatar={userAvatar}
         modelSelector={
@@ -139,6 +141,7 @@ function ChatApp() {
           <ChatPage
             messages={messages}
             isGenerating={isGenerating}
+            isLoadingMessages={isLoadingMessages}
             onSend={sendMessage}
             onStop={stopGenerating}
             onCopy={copyMessage}

@@ -12,6 +12,7 @@ type ThinkingMode = 'fast' | 'balanced' | 'deep'
 interface ChatPageProps {
   messages: Message[]
   isGenerating: boolean
+  isLoadingMessages?: boolean
   onSend: (message: string) => void
   onStop?: () => void
   onCopy?: (id: number) => void
@@ -34,6 +35,7 @@ function isNearBottom(el: HTMLElement, threshold = 80): boolean {
 export function ChatPage({
   messages,
   isGenerating,
+  isLoadingMessages = false,
   onSend,
   onStop,
   onCopy,
@@ -96,6 +98,12 @@ export function ChatPage({
         className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0"
       >
         <div className="max-w-3xl mx-auto w-full pt-8 pb-32">
+          {isLoadingMessages && messages.length === 0 && (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <span className="ml-3 text-sm text-gray-400">{t('common.loading')}</span>
+            </div>
+          )}
           {messages.map((msg) => (
             <MessageBubble
               key={msg.id}

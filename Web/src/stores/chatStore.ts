@@ -32,6 +32,7 @@ interface ChatState {
   activeConversationId: number | undefined
   messages: Message[]
   isGenerating: boolean
+  isLoadingMessages: boolean
   thinkingMode: ThinkingModeKey
   pendingAttachments: Attachment[]
   models: ModelInfo[]
@@ -68,6 +69,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: undefined,
   messages: [],
   isGenerating: false,
+  isLoadingMessages: false,
   thinkingMode: 'balanced' as ThinkingModeKey,
   pendingAttachments: [],
   models: [],
@@ -127,22 +129,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setActiveConversation: (id) => {
-    set({ activeConversationId: id, messages: [] })
+    set({ activeConversationId: id, messages: [], isLoadingMessages: id != null })
     if (id != null) {
       fetchMessages(id)
         .then((msgs) => {
           if (get().activeConversationId === id) {
-            set({ messages: msgs })
+            set({ messages: msgs, isLoadingMessages: false })
           }
         })
-        .catch(() => {})
+        .catch(() => { set({ isLoadingMessages: false }) })
     }
   },
 
   newChat: () => {
     const ac = get()._abortController
     if (ac) ac.abort()
-    set({ activeConversationId: undefined, messages: [], isGenerating: false, pendingAttachments: [], _abortController: null })
+    set({ activeConversationId: undefined, messages: [], isGenerating: false, isLoadingMessages: false, pendingAttachments: [], _abortController: null })
   },
 
   addAttachment: async (file) => {
