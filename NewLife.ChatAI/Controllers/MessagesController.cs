@@ -9,21 +9,25 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api")]
 public class MessagesController(IChatApplicationService chatService) : ControllerBase
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     [HttpPost("conversations/{conversationId:long}/messages")]
     public async Task StreamSendAsync([FromRoute] Int64 conversationId, [FromBody] SendMessageRequest request, CancellationToken cancellationToken)
     {
         Response.Headers.Append("Content-Type", "text/event-stream");
         Response.Headers.Append("Cache-Control", "no-cache");
+        Response.Headers.Append("Connection", "keep-alive");
 
-        await foreach (var chunk in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
+        await foreach (var evt in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
         {
-            var payload = JsonSerializer.Serialize(new { type = "delta", content = chunk });
+            var payload = JsonSerializer.Serialize(evt, _jsonOptions);
             await Response.WriteAsync($"data: {payload}\n\n", cancellationToken).ConfigureAwait(false);
             await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
-
-        await Response.WriteAsync("data: {\"type\":\"done\"}\n\n", cancellationToken).ConfigureAwait(false);
-        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     [HttpGet("conversations/{conversationId:long}/messages")]

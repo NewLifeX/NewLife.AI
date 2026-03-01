@@ -110,6 +110,30 @@ public partial class UserSetting : IEntity<UserSettingModel>
     [BindColumn("AllowTraining", "允许训练。是否允许反馈数据用于模型改进", "")]
     public Boolean AllowTraining { get => _AllowTraining; set { if (OnPropertyChanging("AllowTraining", value)) { _AllowTraining = value; OnPropertyChanged("AllowTraining"); } } }
 
+    private Boolean _McpEnabled;
+    /// <summary>启用MCP。是否启用MCP工具调用</summary>
+    [DisplayName("启用MCP")]
+    [Description("启用MCP。是否启用MCP工具调用")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("McpEnabled", "启用MCP。是否启用MCP工具调用", "")]
+    public Boolean McpEnabled { get => _McpEnabled; set { if (OnPropertyChanging("McpEnabled", value)) { _McpEnabled = value; OnPropertyChanged("McpEnabled"); } } }
+
+    private String _DefaultSkill;
+    /// <summary>默认技能。新会话的默认技能编码</summary>
+    [DisplayName("默认技能")]
+    [Description("默认技能。新会话的默认技能编码")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("DefaultSkill", "默认技能。新会话的默认技能编码", "")]
+    public String DefaultSkill { get => _DefaultSkill; set { if (OnPropertyChanging("DefaultSkill", value)) { _DefaultSkill = value; OnPropertyChanged("DefaultSkill"); } } }
+
+    private Int32 _StreamingSpeed;
+    /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
+    [DisplayName("流式速度")]
+    [Description("流式速度。流式输出速度等级，1~5，默认3")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("StreamingSpeed", "流式速度。流式输出速度等级，1~5，默认3", "")]
+    public Int32 StreamingSpeed { get => _StreamingSpeed; set { if (OnPropertyChanging("StreamingSpeed", value)) { _StreamingSpeed = value; OnPropertyChanged("StreamingSpeed"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -181,6 +205,9 @@ public partial class UserSetting : IEntity<UserSettingModel>
         ContextRounds = model.ContextRounds;
         SystemPrompt = model.SystemPrompt;
         AllowTraining = model.AllowTraining;
+        McpEnabled = model.McpEnabled;
+        DefaultSkill = model.DefaultSkill;
+        StreamingSpeed = model.StreamingSpeed;
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
         CreateTime = model.CreateTime;
@@ -209,6 +236,9 @@ public partial class UserSetting : IEntity<UserSettingModel>
             "ContextRounds" => _ContextRounds,
             "SystemPrompt" => _SystemPrompt,
             "AllowTraining" => _AllowTraining,
+            "McpEnabled" => _McpEnabled,
+            "DefaultSkill" => _DefaultSkill,
+            "StreamingSpeed" => _StreamingSpeed,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -232,6 +262,9 @@ public partial class UserSetting : IEntity<UserSettingModel>
                 case "ContextRounds": _ContextRounds = value.ToInt(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
+                case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
+                case "DefaultSkill": _DefaultSkill = Convert.ToString(value); break;
+                case "StreamingSpeed": _StreamingSpeed = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;

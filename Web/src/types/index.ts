@@ -1,6 +1,7 @@
 export interface Conversation {
   id: number
   title: string
+  modelCode?: string
   isPinned: boolean
   icon?: string
   iconColor?: string
@@ -30,6 +31,8 @@ export interface ModelInfo {
   id: string
   name: string
   provider: string
+  supportThinking?: boolean
+  supportVision?: boolean
 }
 
 export interface Attachment {
@@ -44,6 +47,11 @@ export interface UserSettings {
   theme: 'light' | 'dark' | 'system'
   language: string
   fontSize: number
+  sendShortcut: 'Enter' | 'Ctrl+Enter'
+  defaultModel: string
+  defaultThinkingMode: number
+  contextRounds: number
+  systemPrompt: string
   mcpEnabled: boolean
   defaultSkill: string
   streamingSpeed: number

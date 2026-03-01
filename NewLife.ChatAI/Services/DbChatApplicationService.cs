@@ -181,10 +181,14 @@ public class DbChatApplicationService : IChatApplicationService
     /// <param name="request">发送消息请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<String> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var conversation = Conversation.FindById(conversationId);
-        if (conversation == null) yield break;
+        if (conversation == null)
+        {
+            yield return new ChatStreamEvent { Type = "error", Error = "会话不存在" };
+            yield break;
+        }
 
         // 保存用户消息
         var userMsg = new ChatMessage
@@ -196,6 +200,18 @@ public class DbChatApplicationService : IChatApplicationService
         };
         userMsg.Insert();
 
+        // 预分配AI回复消息编号
+        var assistantMsg = new ChatMessage
+        {
+            ConversationId = conversationId,
+            Role = "assistant",
+            ThinkingMode = (Int32)request.ThinkingMode,
+        };
+        assistantMsg.Insert();
+
+        // message_start
+        yield return new ChatStreamEvent { Type = "message_start", MessageId = assistantMsg.Id };
+
         // 占位流式回复，后续接入真实模型推理与上下文管理
         var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
         var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -203,27 +219,28 @@ public class DbChatApplicationService : IChatApplicationService
         var content = new StringBuilder();
         foreach (var chunk in chunks)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (cancellationToken.IsCancellationRequested) break;
             var line = chunk + "。";
             content.Append(line);
-            yield return line;
-            await Task.Delay(120, cancellationToken).ConfigureAwait(false);
+            yield return new ChatStreamEvent { Type = "content_delta", Content = line };
+            try { await Task.Delay(120, cancellationToken).ConfigureAwait(false); }
+            catch (OperationCanceledException) { break; }
         }
 
-        // 保存AI回复消息
-        var assistantMsg = new ChatMessage
-        {
-            ConversationId = conversationId,
-            Role = "assistant",
-            Content = content.ToString(),
-            ThinkingMode = (Int32)request.ThinkingMode,
-        };
-        assistantMsg.Insert();
+        // 无论是否被取消，都保存已输出的内容，避免空消息残留
+        assistantMsg.Content = content.Length > 0 ? content.ToString() : "[已中断]";
+        assistantMsg.Update();
 
         // 更新会话的最后消息时间和消息数
         conversation.LastMessageTime = DateTime.Now;
         conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
         conversation.Update();
+
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            // message_done
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id };
+        }
     }
 
     /// <summary>中断生成</summary>
@@ -468,6 +485,9 @@ public class DbChatApplicationService : IChatApplicationService
         entity.ContextRounds = settings.ContextRounds;
         entity.SystemPrompt = settings.SystemPrompt;
         entity.AllowTraining = settings.AllowTraining;
+        entity.McpEnabled = settings.McpEnabled;
+        entity.DefaultSkill = settings.DefaultSkill;
+        entity.StreamingSpeed = settings.StreamingSpeed;
         entity.Save();
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -539,8 +559,25 @@ public class DbChatApplicationService : IChatApplicationService
     /// <summary>转换消息实体为DTO</summary>
     /// <param name="entity">消息实体</param>
     /// <returns></returns>
-    private static MessageDto ToMessageDto(ChatMessage entity) =>
-        new(entity.Id, entity.ConversationId, entity.Role, entity.Content, (ThinkingMode)entity.ThinkingMode, entity.CreateTime);
+    private static MessageDto ToMessageDto(ChatMessage entity)
+    {
+        // 反序列化 ToolCalls JSON
+        IReadOnlyList<ToolCallDto>? toolCalls = null;
+        if (!String.IsNullOrEmpty(entity.ToolCalls))
+        {
+            try
+            {
+                toolCalls = entity.ToolCalls.ToJsonEntity<List<ToolCallDto>>();
+            }
+            catch { }
+        }
+
+        return new MessageDto(entity.Id, entity.ConversationId, entity.Role, entity.Content, (ThinkingMode)entity.ThinkingMode, entity.CreateTime)
+        {
+            ThinkingContent = entity.ThinkingContent,
+            ToolCalls = toolCalls,
+        };
+    }
 
     /// <summary>转换用户设置实体为DTO</summary>
     /// <param name="entity">用户设置实体</param>
@@ -554,6 +591,11 @@ public class DbChatApplicationService : IChatApplicationService
             (ThinkingMode)entity.DefaultThinkingMode,
             entity.ContextRounds > 0 ? entity.ContextRounds : 10,
             entity.SystemPrompt ?? String.Empty,
-            entity.AllowTraining);
+            entity.AllowTraining)
+        {
+            McpEnabled = entity.McpEnabled,
+            DefaultSkill = entity.DefaultSkill ?? "general",
+            StreamingSpeed = entity.StreamingSpeed > 0 ? entity.StreamingSpeed : 3,
+        };
     #endregion
 }

@@ -10,7 +10,11 @@ interface SidebarProps {
   conversations: Conversation[]
   activeConversationId?: number
   onConversationSelect: (id: number) => void
+  onConversationDelete?: (id: number) => void
+  onConversationPin?: (id: number, isPinned: boolean) => void
+  onConversationRename?: (id: number, title: string) => void
   onNewChat: () => void
+  onToggle?: () => void
   navItems?: NavItem[]
   onNavItemClick?: (id: string) => void
   userName?: string
@@ -24,7 +28,11 @@ export function Sidebar({
   conversations,
   activeConversationId,
   onConversationSelect,
+  onConversationDelete,
+  onConversationPin,
+  onConversationRename,
   onNewChat,
+  onToggle,
   navItems,
   onNavItemClick,
   userName,
@@ -34,6 +42,7 @@ export function Sidebar({
   className,
 }: SidebarProps) {
   const { t } = useTranslation()
+
   if (collapsed) return null
 
   return (
@@ -45,11 +54,22 @@ export function Sidebar({
         className,
       )}
     >
-      <div className="px-4 pt-4 pb-2 flex items-center space-x-2">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-          N
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+            N
+          </div>
+          <span className="font-bold text-lg tracking-tight">{t('common.appName')}</span>
         </div>
-        <span className="font-bold text-lg tracking-tight">{t('common.appName')}</span>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded-md transition-colors"
+            title={t('sidebar.collapse')}
+          >
+            <Icon name="menu_open" variant="outlined" size="lg" />
+          </button>
+        )}
       </div>
 
       <div className="px-3 py-2">
@@ -76,6 +96,9 @@ export function Sidebar({
         conversations={conversations}
         activeId={activeConversationId}
         onSelect={onConversationSelect}
+        onDelete={onConversationDelete}
+        onPin={onConversationPin}
+        onRename={onConversationRename}
       />
 
       <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} onClick={onUserClick} />

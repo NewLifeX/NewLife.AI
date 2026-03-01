@@ -8,7 +8,7 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api/attachments")]
 public class AttachmentsController(IChatApplicationService chatService) : ControllerBase
 {
-    [HttpPost("upload")]
+    [HttpPost]
     [RequestSizeLimit(20 * 1024 * 1024)]
     public async Task<ActionResult<UploadAttachmentResult>> UploadAsync(IFormFile file, CancellationToken cancellationToken)
     {

@@ -1,36 +1,119 @@
+import { useEffect, useCallback } from 'react'
+import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatLayout } from '@/layouts/ChatLayout'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { ChatPage } from '@/pages/ChatPage'
+import { ModelSelector } from '@/components/chat/ModelSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 
-function App() {
+function ChatApp() {
+  const { conversationId } = useParams<{ conversationId: string }>()
+  const navigate = useNavigate()
+
   const {
     conversations,
     activeConversationId,
     messages,
     isGenerating,
+    thinkingMode,
+    loadConversations,
     setActiveConversation,
     newChat,
     sendMessage,
     stopGenerating,
+    setThinkingMode,
     copyMessage,
+    regenerateMsg,
+    likeMsg,
+    dislikeMsg,
+    pendingAttachments,
+    addAttachment,
+    removeAttachment,
+    models,
+    loadModels,
+    switchModel,
+    deleteConversation: deleteConv,
+    pinConversation: pinConv,
+    renameConversation: renameConv,
   } = useChatStore()
 
   const settings = useSettingsStore()
-  const { settingsOpen, openSettings, closeSettings } = useUIStore()
+  const { settingsOpen, openSettings, closeSettings, sidebarCollapsed, toggleSidebar } = useUIStore()
+
+  useEffect(() => {
+    loadConversations()
+    loadModels()
+    settings.loadFromServer()
+  }, [])
+
+  useEffect(() => {
+    const urlId = conversationId ? Number(conversationId) : undefined
+    if (urlId !== activeConversationId) {
+      if (urlId != null && !isNaN(urlId)) {
+        setActiveConversation(urlId)
+      } else if (!conversationId) {
+        setActiveConversation(undefined)
+      }
+    }
+  }, [conversationId])
+
+  useEffect(() => {
+    const expectedPath = activeConversationId != null
+      ? `/chat/${activeConversationId}`
+      : '/chat'
+    if (window.location.pathname !== expectedPath) {
+      navigate(expectedPath, { replace: true })
+    }
+  }, [activeConversationId, navigate])
+
+  const handleConversationSelect = useCallback((id: number) => {
+    navigate(`/chat/${id}`)
+  }, [navigate])
+
+  const handleNewChat = useCallback(() => {
+    newChat()
+    navigate('/chat')
+  }, [newChat, navigate])
+
+  const handleDeleteConv = useCallback(async (id: number) => {
+    await deleteConv(id)
+    if (activeConversationId === id) {
+      navigate('/chat')
+    }
+  }, [deleteConv, activeConversationId, navigate])
 
   const isWelcome = messages.length === 0
+  const activeConv = conversations.find((c) => c.id === activeConversationId)
+  const currentModel = activeConv?.modelCode ?? settings.defaultModel ?? 'qwen-max'
 
   return (
     <>
       <ChatLayout
         conversations={conversations}
         activeConversationId={activeConversationId}
-        onConversationSelect={setActiveConversation}
-        onNewChat={newChat}
+        onConversationSelect={handleConversationSelect}
+        onConversationDelete={handleDeleteConv}
+        onConversationPin={pinConv}
+        onConversationRename={renameConv}
+        onNewChat={handleNewChat}
         onSettingsOpen={openSettings}
+        sidebarCollapsed={sidebarCollapsed}
+        onSidebarToggle={toggleSidebar}
         userName={undefined}
+        modelSelector={
+          <ModelSelector
+            models={models}
+            currentModel={currentModel}
+            onModelChange={(modelId) => {
+              if (activeConversationId != null) {
+                switchModel(modelId)
+              } else {
+                settings.update({ defaultModel: modelId })
+              }
+            }}
+          />
+        }
       >
         {isWelcome ? (
           <WelcomePage onSend={sendMessage} />
@@ -41,6 +124,14 @@ function App() {
             onSend={sendMessage}
             onStop={stopGenerating}
             onCopy={copyMessage}
+            onRegenerate={regenerateMsg}
+            onLike={likeMsg}
+            onDislike={dislikeMsg}
+            thinkingMode={thinkingMode}
+            onThinkingModeChange={setThinkingMode}
+            attachments={pendingAttachments}
+            onAttachmentAdd={addAttachment}
+            onAttachmentRemove={removeAttachment}
           />
         )}
       </ChatLayout>
@@ -50,8 +141,23 @@ function App() {
         onClose={closeSettings}
         settings={settings}
         onSettingsChange={settings.update}
+        models={models}
+        onDataCleared={() => {
+          loadConversations()
+          handleNewChat()
+        }}
       />
     </>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/chat/:conversationId" element={<ChatApp />} />
+      <Route path="/chat" element={<ChatApp />} />
+      <Route path="*" element={<Navigate to="/chat" replace />} />
+    </Routes>
   )
 }
 

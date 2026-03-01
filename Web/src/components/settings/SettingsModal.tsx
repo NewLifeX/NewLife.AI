@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/common/Modal'
@@ -7,7 +7,9 @@ import { ScrollArea } from '@/components/common/ScrollArea'
 import { GeneralSettings } from './GeneralSettings'
 import { ChatSettings } from './ChatSettings'
 import { McpSettings } from './McpSettings'
-import type { UserSettings } from '@/types'
+import { DataSettings } from './DataSettings'
+import type { UserSettings, ModelInfo } from '@/types'
+import { fetchMcpServers, toggleMcpServer, type McpServer } from '@/lib/api'
 
 type SettingsTab = 'general' | 'account' | 'chat' | 'mcp' | 'data'
 
@@ -16,6 +18,8 @@ interface SettingsModalProps {
   onClose: () => void
   settings: UserSettings
   onSettingsChange: (partial: Partial<UserSettings>) => void
+  onDataCleared?: () => void
+  models?: ModelInfo[]
 }
 
 export function SettingsModal({
@@ -23,9 +27,18 @@ export function SettingsModal({
   onClose,
   settings,
   onSettingsChange,
+  onDataCleared,
+  models = [],
 }: SettingsModalProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [mcpServers, setMcpServers] = useState<McpServer[]>([])
+
+  useEffect(() => {
+    if (open) {
+      fetchMcpServers().then(setMcpServers).catch(() => {})
+    }
+  }, [open])
 
   const tabs: { id: SettingsTab; icon: string; label: string; badge?: string }[] = [
     { id: 'general', icon: 'tune', label: t('settings.general') },
@@ -89,18 +102,44 @@ export function SettingsModal({
         )}
         {activeTab === 'chat' && (
           <ChatSettings
+            sendShortcut={settings.sendShortcut}
+            onSendShortcutChange={(v) => update({ sendShortcut: v })}
+            defaultModel={settings.defaultModel}
+            onDefaultModelChange={(v) => update({ defaultModel: v })}
+            defaultThinkingMode={settings.defaultThinkingMode}
+            onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
+            contextRounds={settings.contextRounds}
+            onContextRoundsChange={(v) => update({ contextRounds: v })}
+            systemPrompt={settings.systemPrompt}
+            onSystemPromptChange={(v) => update({ systemPrompt: v })}
             mcpEnabled={settings.mcpEnabled}
             onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
             defaultSkill={settings.defaultSkill}
             onDefaultSkillChange={(v) => update({ defaultSkill: v })}
             streamingSpeed={settings.streamingSpeed}
             onStreamingSpeedChange={(v) => update({ streamingSpeed: v })}
+            models={models}
           />
         )}
         {activeTab === 'mcp' && (
           <McpSettings
-            plugins={[]}
-            onPluginToggle={() => {}}
+            plugins={mcpServers.map((s) => ({
+              id: String(s.id),
+              name: s.name,
+              version: '',
+              description: s.endpoint,
+              icon: 'extension',
+              iconBg: 'bg-indigo-100 dark:bg-indigo-900/50',
+              iconColor: 'text-indigo-600 dark:text-indigo-400',
+              enabled: s.enable,
+            }))}
+            onPluginToggle={(id, enabled) => {
+              const numId = Number(id)
+              toggleMcpServer(numId, enabled).catch(() => {})
+              setMcpServers((prev) =>
+                prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
+              )
+            }}
             autoApproveRead={true}
             onAutoApproveReadChange={() => {}}
             confirmDangerous={true}
@@ -111,7 +150,7 @@ export function SettingsModal({
           <div className="text-gray-400 text-sm">{t('settings.accountNote')}</div>
         )}
         {activeTab === 'data' && (
-          <div className="text-gray-400 text-sm">{t('settings.dataNote')}</div>
+          <DataSettings onDataCleared={onDataCleared} />
         )}
       </ScrollArea>
     </Modal>

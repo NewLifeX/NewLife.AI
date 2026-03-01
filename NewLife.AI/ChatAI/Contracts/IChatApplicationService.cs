@@ -13,7 +13,7 @@ public interface IChatApplicationService
     Task<MessageDto?> EditMessageAsync(Int64 messageId, EditMessageRequest request, CancellationToken cancellationToken);
     Task<MessageDto?> RegenerateMessageAsync(Int64 messageId, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<String> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, CancellationToken cancellationToken);
+    IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, CancellationToken cancellationToken);
     Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken);
 
     Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, CancellationToken cancellationToken);
