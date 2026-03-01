@@ -19,7 +19,7 @@ export function Toggle({
 }: ToggleProps) {
   const trackSize = size === 'sm' ? 'w-9 h-5' : 'w-11 h-6'
   const thumbSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
-  const thumbTranslate = size === 'sm' ? 'translate-x-4' : 'translate-x-5'
+  const thumbOffset = size === 'sm' ? 16 : 20
 
   return (
     <button
@@ -40,11 +40,14 @@ export function Toggle({
     >
       <span
         className={cn(
-          'pointer-events-none inline-block rounded-full bg-white shadow-sm transform transition-transform duration-300 ease-in-out',
+          'pointer-events-none inline-block rounded-full bg-white shadow-sm',
           thumbSize,
           'mt-0.5 ml-0.5',
-          checked && thumbTranslate,
         )}
+        style={{
+          transform: `translateX(${checked ? thumbOffset : 0}px)`,
+          transition: 'transform 0.3s ease-in-out',
+        }}
       />
     </button>
   )

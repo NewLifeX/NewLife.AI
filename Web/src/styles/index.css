@@ -58,6 +58,12 @@
   }
 }
 
+/* Tailwind v4 兼容：初始化 translate/scale/rotate CSS 变量默认值 */
+*, *::before, *::after {
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
