@@ -24,6 +24,7 @@ export interface Message {
   thinkingContent?: string
   toolCalls?: ToolCall[]
   usage?: TokenUsage
+  feedbackType?: number
 }
 
 export interface ToolCall {

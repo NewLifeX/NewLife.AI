@@ -104,6 +104,7 @@ interface MessageDto {
   promptTokens?: number
   completionTokens?: number
   totalTokens?: number
+  feedbackType?: number
 }
 
 function toMessage(dto: MessageDto): Message {
@@ -133,6 +134,7 @@ function toMessage(dto: MessageDto): Message {
       completionTokens: dto.completionTokens,
       totalTokens: dto.totalTokens,
     } : undefined,
+    feedbackType: dto.feedbackType,
   }
 }
 

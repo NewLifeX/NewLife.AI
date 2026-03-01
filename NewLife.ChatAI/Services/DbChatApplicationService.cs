@@ -139,7 +139,14 @@ public class DbChatApplicationService : IChatApplicationService
         var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
         var list = ChatMessage.Search(conversationId, DateTime.MinValue, DateTime.MinValue, null, p);
 
-        var items = list.Select(ToMessageDto).ToList();
+        // 批量查询反馈，避免 N+1
+        var messageIds = list.Select(e => e.Id).ToList();
+        var feedbacks = messageIds.Count > 0
+            ? MessageFeedback.FindAll(MessageFeedback._.MessageId.In(messageIds) & MessageFeedback._.UserId == 0)
+                .ToDictionary(e => e.MessageId, e => e.FeedbackType)
+            : new Dictionary<Int64, Int32>();
+
+        var items = list.Select(e => ToMessageDto(e, feedbacks.TryGetValue(e.Id, out var ft) ? ft : 0)).ToList();
         return Task.FromResult<IReadOnlyList<MessageDto>>(items);
     }
 
@@ -580,8 +587,9 @@ public class DbChatApplicationService : IChatApplicationService
 
     /// <summary>转换消息实体为DTO</summary>
     /// <param name="entity">消息实体</param>
+    /// <param name="feedbackType">反馈类型。0=无反馈, 1=点赞, 2=点踩</param>
     /// <returns></returns>
-    private static MessageDto ToMessageDto(ChatMessage entity)
+    private static MessageDto ToMessageDto(ChatMessage entity, Int32 feedbackType = 0)
     {
         // 反序列化 ToolCalls JSON
         IReadOnlyList<ToolCallDto>? toolCalls = null;
@@ -601,6 +609,7 @@ public class DbChatApplicationService : IChatApplicationService
             PromptTokens = entity.PromptTokens,
             CompletionTokens = entity.CompletionTokens,
             TotalTokens = entity.TotalTokens,
+            FeedbackType = feedbackType,
         };
     }
 

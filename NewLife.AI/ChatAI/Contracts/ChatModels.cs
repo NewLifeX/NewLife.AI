@@ -76,6 +76,9 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
 
     /// <summary>总Token数</summary>
     public Int32 TotalTokens { get; set; }
+
+    /// <summary>反馈类型。Like=1, Dislike=2, 0=无反馈</summary>
+    public Int32 FeedbackType { get; set; }
 };
 
 /// <summary>SSE 流式事件。对话流式输出的结构化事件</summary>

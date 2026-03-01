@@ -246,6 +246,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }
             break
 
+          case 'tool_call_start':
+            if (assistantMsgId != null && event.toolCall) {
+              const tc = event.toolCall
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: tc.id, name: tc.name, status: 'calling' as const, arguments: tc.arguments }] }
+                    : m,
+                ),
+              }))
+            }
+            break
+
+          case 'tool_call_done':
+            if (assistantMsgId != null && event.toolCall) {
+              const tc = event.toolCall
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === tc.id ? { ...t, status: 'done' as const, result: tc.result } : t) }
+                    : m,
+                ),
+              }))
+            }
+            break
+
           case 'message_done':
             if (assistantMsgId != null) {
               set((s) => ({
