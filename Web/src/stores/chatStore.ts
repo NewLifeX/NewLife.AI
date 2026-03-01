@@ -425,6 +425,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set((s) => ({
         messages: s.messages.map((m) => (m.id === id ? updated : m)),
       }))
+
+      // 编辑 user 消息后，自动重新生成紧随其后的 assistant 消息
+      if (updated.role === 'user') {
+        const msgs = get().messages
+        const idx = msgs.findIndex((m) => m.id === id)
+        if (idx >= 0 && idx + 1 < msgs.length) {
+          const nextMsg = msgs[idx + 1]
+          if (nextMsg.role === 'assistant') {
+            await get().regenerateMsg(nextMsg.id)
+          }
+        }
+      }
     } catch { /* 静默 */ }
   },
 
