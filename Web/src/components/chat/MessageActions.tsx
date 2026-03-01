@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { Icon } from '@/components/common/Icon'
 
 interface MessageActionsProps {
   onCopy?: () => void
@@ -40,18 +41,18 @@ export function MessageActions({
   return (
     <div className={cn('flex items-center mt-2 space-x-2 ml-1', className)}>
       <button className={cn(btnBase, copied && 'text-green-500')} onClick={handleCopy} title={t('common.copy')}>
-        <span className="material-icons-outlined text-[18px]">{copied ? 'check' : 'content_copy'}</span>
+        <Icon name={copied ? 'check' : 'content_copy'} variant="outlined" size="lg" />
       </button>
       <button className={btnBase} onClick={onRegenerate} title={t('common.regenerate')}>
-        <span className="material-icons-outlined text-[18px]">refresh</span>
+        <Icon name="refresh" variant="outlined" size="lg" />
       </button>
       {onLike && (
         <button className={cn(btnBase, liked && 'text-primary')} onClick={onLike} title={t('common.like')}>
-          <span className="material-icons-outlined text-[18px]">thumb_up</span>
+          <Icon name="thumb_up" variant={liked ? 'filled' : 'outlined'} size="lg" />
         </button>
       )}
       <button className={cn(btnBase, disliked && 'text-red-500')} onClick={onDislike} title={t('common.dislike')}>
-        <span className="material-icons-outlined text-[18px]">thumb_down</span>
+        <Icon name="thumb_down" variant={disliked ? 'filled' : 'outlined'} size="lg" />
       </button>
     </div>
   )

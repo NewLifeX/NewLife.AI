@@ -19,6 +19,8 @@ interface MessageBubbleProps {
   onRegenerate?: () => void
   onLike?: () => void
   onDislike?: () => void
+  liked?: boolean
+  disliked?: boolean
   onEdit?: () => void
   onEditSubmit?: (content: string) => void
   onEditCancel?: () => void
@@ -41,6 +43,8 @@ export function MessageBubble({
   onRegenerate,
   onLike,
   onDislike,
+  liked = false,
+  disliked = false,
   onEdit,
   onEditSubmit,
   onEditCancel,
@@ -170,6 +174,8 @@ export function MessageBubble({
             onLike={onLike}
             onRegenerate={onRegenerate}
             onDislike={onDislike}
+            liked={liked}
+            disliked={disliked}
             className="mt-0"
           />
           <div className="ml-auto flex items-center space-x-2 mr-1">

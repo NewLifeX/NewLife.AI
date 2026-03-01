@@ -369,14 +369,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   likeMsg: async (id) => {
+    const msg = get().messages.find((m) => m.id === id)
+    const isAlreadyLiked = msg?.feedbackType === 1
     try {
-      await submitFeedback(id, 'like')
+      if (isAlreadyLiked) {
+        await (await import('@/lib/api')).deleteFeedback(id)
+        set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 0 } : m) }))
+      } else {
+        await submitFeedback(id, 'like')
+        set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 1 } : m) }))
+      }
     } catch { /* 静默 */ }
   },
 
   dislikeMsg: async (id) => {
+    const msg = get().messages.find((m) => m.id === id)
+    const isAlreadyDisliked = msg?.feedbackType === 2
     try {
-      await submitFeedback(id, 'dislike')
+      if (isAlreadyDisliked) {
+        await (await import('@/lib/api')).deleteFeedback(id)
+        set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 0 } : m) }))
+      } else {
+        await submitFeedback(id, 'dislike')
+        set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 2 } : m) }))
+      }
     } catch { /* 静默 */ }
   },
 

@@ -116,6 +116,8 @@ export function ChatPage({
               onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(msg.id) : undefined}
               onLike={msg.role === 'assistant' ? () => onLike?.(msg.id) : undefined}
               onDislike={msg.role === 'assistant' ? () => onDislike?.(msg.id) : undefined}
+              liked={msg.feedbackType === 1}
+              disliked={msg.feedbackType === 2}
               onEdit={msg.role === 'user' ? () => setEditingMessageId(msg.id) : undefined}
               isEditing={editingMessageId === msg.id}
               rawContent={typeof msg.content === 'string' ? msg.content : undefined}
