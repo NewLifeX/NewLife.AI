@@ -280,6 +280,148 @@ public class DbChatApplicationService : IChatApplicationService
         }
     }
 
+    /// <summary>流式重新生成回复。替换当前 AI 回复，以 SSE 事件流返回</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    public async IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var entity = ChatMessage.FindById(messageId);
+        if (entity == null || !entity.Role.EqualIgnoreCase("assistant"))
+        {
+            yield return ChatStreamEvent.ErrorEvent("MESSAGE_NOT_FOUND", "消息不存在或非AI回复");
+            yield break;
+        }
+
+        var conversation = Conversation.FindById(entity.ConversationId);
+        if (conversation == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("CONVERSATION_NOT_FOUND", "会话不存在");
+            yield break;
+        }
+
+        var modelCode = conversation.ModelCode ?? "qwen-max";
+        var modelConfig = _gatewayService.ResolveModel(modelCode);
+        if (modelConfig == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelCode}' 不可用");
+            yield break;
+        }
+
+        // 构建上下文：取该消息之前的所有消息
+        var beforeMessages = ChatMessage.FindAll(
+            ChatMessage._.ConversationId == entity.ConversationId & ChatMessage._.Id < entity.Id,
+            ChatMessage._.CreateTime.Asc(), null, 0, 0);
+
+        var setting = ChatSetting.Current;
+        var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
+        if (beforeMessages.Count > maxCount)
+            beforeMessages = beforeMessages.Skip(beforeMessages.Count - maxCount).ToList();
+
+        var contextMessages = new List<AiChatMessage>();
+
+        // 注入系统提示词
+        var systemMsg = BuildSystemMessage(modelConfig);
+        if (systemMsg != null) contextMessages.Add(systemMsg);
+
+        foreach (var msg in beforeMessages)
+        {
+            contextMessages.Add(new AiChatMessage { Role = msg.Role, Content = msg.Content });
+        }
+
+        // message_start
+        yield return ChatStreamEvent.MessageStart(entity.Id, modelCode, entity.ThinkingMode);
+
+        // 流式调用模型
+        var contentBuilder = new StringBuilder();
+        var thinkingBuilder = new StringBuilder();
+        ChatUsage? finalUsage = null;
+        var hasError = false;
+        ChatStreamEvent? deferredErrorEvent = null;
+
+        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (true)
+            {
+                Boolean moved;
+                try
+                {
+                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
+                {
+                    _log?.Error("流式重新生成失败: {0}", ex.Message);
+                    hasError = true;
+                    deferredErrorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+                    break;
+                }
+
+                if (!moved) break;
+
+                var ev = enumerator.Current;
+                switch (ev.Type)
+                {
+                    case "thinking_delta":
+                        thinkingBuilder.Append(ev.Content);
+                        yield return ev;
+                        break;
+                    case "content_delta":
+                        contentBuilder.Append(ev.Content);
+                        yield return ev;
+                        break;
+                    case "message_done":
+                        finalUsage = ev.Usage;
+                        break;
+                    case "error":
+                        hasError = true;
+                        deferredErrorEvent = ev;
+                        break;
+                    default:
+                        yield return ev;
+                        break;
+                }
+
+                if (hasError) break;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+        }
+
+        if (deferredErrorEvent != null)
+            yield return deferredErrorEvent;
+
+        // 持久化：覆盖原消息内容
+        entity.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
+        if (thinkingBuilder.Length > 0)
+            entity.ThinkingContent = thinkingBuilder.ToString();
+        if (finalUsage != null)
+        {
+            entity.PromptTokens = finalUsage.PromptTokens;
+            entity.CompletionTokens = finalUsage.CompletionTokens;
+            entity.TotalTokens = finalUsage.TotalTokens;
+        }
+        entity.Update();
+
+        // 记录用量
+        if (finalUsage != null)
+            _usageService?.Record(0, 0, entity.ConversationId, entity.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+
+        // message_done
+        if (!hasError && !cancellationToken.IsCancellationRequested)
+        {
+            yield return new ChatStreamEvent
+            {
+                Type = "message_done",
+                MessageId = entity.Id,
+                Usage = finalUsage,
+            };
+        }
+    }
+
     /// <summary>流式发送消息并获取AI回复。接入真实模型，支持 thinking/content/tool_call 事件和后台继续生成</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">发送消息请求</param>

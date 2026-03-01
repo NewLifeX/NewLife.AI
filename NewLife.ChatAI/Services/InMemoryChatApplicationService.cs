@@ -104,6 +104,53 @@ public class InMemoryChatApplicationService : IChatApplicationService
         return Task.FromResult<MessageDto?>(null);
     }
 
+    public async IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // 查找消息
+        MessageDto? source = null;
+        List<MessageDto>? list = null;
+        var msgIndex = -1;
+        foreach (var item in _messages)
+        {
+            var idx = item.Value.FindIndex(e => e.Id == messageId && e.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0)
+            {
+                source = item.Value[idx];
+                list = item.Value;
+                msgIndex = idx;
+                break;
+            }
+        }
+        if (source == null || list == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("MESSAGE_NOT_FOUND", "消息不存在或非AI回复");
+            yield break;
+        }
+
+        var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelCode : "qwen-max";
+        yield return ChatStreamEvent.MessageStart(source.Id, modelCode, (Int32)source.ThinkingMode);
+
+        var answer = "这是重新生成的流式回复。";
+        var content = new StringBuilder();
+        foreach (var ch in answer)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            content.Append(ch);
+            yield return ChatStreamEvent.ContentDelta(ch.ToString());
+            await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+        }
+
+        var updated = new MessageDto(source.Id, source.ConversationId, source.Role, content.ToString(), null, source.ThinkingMode, source.Attachments, DateTime.Now);
+        list[msgIndex] = updated;
+
+        yield return new ChatStreamEvent
+        {
+            Type = "message_done",
+            MessageId = source.Id,
+            Usage = new ChatUsage { PromptTokens = 10, CompletionTokens = content.Length, TotalTokens = 10 + content.Length },
+        };
+    }
+
     public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (!_conversations.ContainsKey(conversationId))

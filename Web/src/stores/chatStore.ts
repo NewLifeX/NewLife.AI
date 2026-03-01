@@ -8,7 +8,7 @@ import {
   updateConversation,
   fetchMessages,
   streamMessage,
-  regenerateMessage,
+  streamRegenerate,
   editMessage,
   submitFeedback,
   deleteFeedback,
@@ -356,12 +356,67 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   regenerateMsg: async (id) => {
+    // 标记该消息为 streaming 并清空旧内容
+    set((s) => ({
+      isGenerating: true,
+      messages: s.messages.map((m) =>
+        m.id === id ? { ...m, content: '', thinkingContent: undefined, status: 'streaming' as const, usage: undefined } : m,
+      ),
+    }))
+
+    const ac = new AbortController()
+    set({ _abortController: ac })
+
     try {
-      const updated = await regenerateMessage(id)
+      await streamRegenerate(id, (event) => {
+        switch (event.type) {
+          case 'content_delta':
+            set((s) => ({
+              messages: s.messages.map((m) =>
+                m.id === id ? { ...m, content: (m.content ?? '') + (event.content ?? '') } : m,
+              ),
+            }))
+            break
+          case 'thinking_delta':
+            set((s) => ({
+              messages: s.messages.map((m) =>
+                m.id === id ? { ...m, thinkingContent: (m.thinkingContent ?? '') + (event.content ?? '') } : m,
+              ),
+            }))
+            break
+          case 'message_done':
+            set((s) => ({
+              isGenerating: false,
+              _abortController: null,
+              messages: s.messages.map((m) =>
+                m.id === id
+                  ? { ...m, status: 'done' as const, usage: event.usage ? { promptTokens: event.usage.promptTokens, completionTokens: event.usage.completionTokens, totalTokens: event.usage.totalTokens } : m.usage }
+                  : m,
+              ),
+            }))
+            break
+          case 'error':
+            set((s) => ({
+              isGenerating: false,
+              _abortController: null,
+              messages: s.messages.map((m) =>
+                m.id === id ? { ...m, content: event.error ?? event.message ?? '[error]', status: 'error' as const } : m,
+              ),
+            }))
+            break
+          default:
+            break
+        }
+      }, ac.signal)
+    } catch {
+      // 网络中断或取消
+      set({ isGenerating: false, _abortController: null })
       set((s) => ({
-        messages: s.messages.map((m) => (m.id === id ? updated : m)),
+        messages: s.messages.map((m) =>
+          m.id === id && m.status === 'streaming' ? { ...m, status: 'done' as const } : m,
+        ),
       }))
-    } catch { /* 静默 */ }
+    }
   },
 
   editMsg: async (id, content) => {

@@ -230,6 +230,46 @@ export async function regenerateMessage(id: number): Promise<Message> {
   return toMessage(dto)
 }
 
+export async function streamRegenerate(
+  messageId: number,
+  onEvent: (event: ChatStreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/messages/${messageId}/regenerate/stream`, {
+    method: 'POST',
+    signal,
+  })
+
+  if (!res.ok) {
+    throw new Error(`SSE ${res.status}: ${res.statusText}`)
+  }
+
+  const reader = res.body?.getReader()
+  if (!reader) throw new Error('No response body')
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const json = line.slice(6).trim()
+      if (!json) continue
+      try {
+        const event = JSON.parse(json) as ChatStreamEvent
+        onEvent(event)
+      } catch { /* skip malformed lines */ }
+    }
+  }
+}
+
 export async function stopGeneration(id: number): Promise<void> {
   await request<void>(`/api/messages/${id}/stop`, { method: 'POST' })
 }

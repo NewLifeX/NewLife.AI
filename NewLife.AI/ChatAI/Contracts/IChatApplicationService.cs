@@ -67,6 +67,12 @@ public interface IChatApplicationService
     /// <returns>ChatStreamEvent 事件流</returns>
     IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, CancellationToken cancellationToken);
 
+    /// <summary>流式重新生成回复。替换当前 AI 回复，以 SSE 事件流返回</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>ChatStreamEvent 事件流</returns>
+    IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, CancellationToken cancellationToken);
+
     /// <summary>停止生成</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>

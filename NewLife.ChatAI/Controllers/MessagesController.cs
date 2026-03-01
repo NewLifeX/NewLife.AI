@@ -82,6 +82,35 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         return Ok(result);
     }
 
+    /// <summary>流式重新生成回复，以 SSE 事件流返回</summary>
+    /// <param name="id">消息编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    [HttpPost("messages/{id:long}/regenerate/stream")]
+    public async Task StreamRegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
+    {
+        Response.Headers.Append("Content-Type", "text/event-stream");
+        Response.Headers.Append("Cache-Control", "no-cache");
+        Response.Headers.Append("Connection", "keep-alive");
+
+        try
+        {
+            await foreach (var ev in chatService.RegenerateStreamAsync(id, cancellationToken).ConfigureAwait(false))
+            {
+                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户取消，不需要额外处理
+        }
+        catch (Exception ex)
+        {
+            var error = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>停止生成</summary>
     /// <param name="id">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>
