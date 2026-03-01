@@ -25,6 +25,9 @@ public class OpenAiProvider : IAiProvider
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://api.openai.com";
 
+    /// <summary>默认能力信息。OpenAI 支持思考/视觉/图像生成/函数调用</summary>
+    public virtual AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
+
     /// <summary>对话完成路径</summary>
     protected virtual String ChatPath => "/v1/chat/completions";
 

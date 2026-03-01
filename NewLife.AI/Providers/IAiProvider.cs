@@ -22,6 +22,9 @@ public interface IAiProvider
     /// <summary>默认 API 地址</summary>
     String DefaultEndpoint { get; }
 
+    /// <summary>默认能力信息。表示该服务商主力模型的典型能力，用户可在模型配置中按实际模型覆盖</summary>
+    AiProviderCapabilities DefaultCapabilities { get; }
+
     /// <summary>非流式对话。发送请求并一次性返回完整响应</summary>
     /// <param name="request">对话请求</param>
     /// <param name="options">服务商连接选项（Endpoint、ApiKey 等）</param>
@@ -36,6 +39,18 @@ public interface IAiProvider
     /// <returns>流式响应块的异步枚举</returns>
     IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
 }
+
+/// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
+/// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
+/// <param name="SupportThinking">是否支持思考模式。如 DeepSeek-R1、Claude 的 extended thinking</param>
+/// <param name="SupportVision">是否支持图片输入（视觉）。如 GPT-4V、Claude Vision、Qwen-VL</param>
+/// <param name="SupportImageGeneration">是否支持文生图。如 DALL·E、Qwen 的图像生成</param>
+/// <param name="SupportFunctionCalling">是否支持 Function Calling / Tool Use</param>
+public record AiProviderCapabilities(
+    Boolean SupportThinking = false,
+    Boolean SupportVision = false,
+    Boolean SupportImageGeneration = false,
+    Boolean SupportFunctionCalling = false);
 
 /// <summary>AI 服务商连接选项</summary>
 public class AiProviderOptions

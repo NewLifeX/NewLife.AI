@@ -63,16 +63,16 @@ export function renderModelDropdown() {
         const opt = document.createElement('div');
         opt.className = `model-option${currentModel?.code === m.code ? ' active' : ''}`;
 
-        // 能力标识
+        // 能力标识（带悬浮提示）
         const badges = [];
-        if (m.supportImageGeneration) badges.push('🖼️');
-        if (m.supportVision) badges.push('👁️');
-        if (m.supportThinking) badges.push('🧠');
-        if (m.supportFunctionCalling) badges.push('🔧');
+        if (m.supportImageGeneration) badges.push('<span class="capability-badge" title="图像生成：支持文生图">🖼️</span>');
+        if (m.supportVision) badges.push('<span class="capability-badge" title="视觉理解：支持图片输入">👁️</span>');
+        if (m.supportThinking) badges.push('<span class="capability-badge" title="深度思考：支持推理思考模式">🧠</span>');
+        if (m.supportFunctionCalling) badges.push('<span class="capability-badge" title="工具调用：支持 Function Calling">🔧</span>');
 
         opt.innerHTML = `
             <span class="model-option-name">${escapeHtml(m.name)}</span>
-            <span class="model-option-badges">${badges.join(' ')}</span>`;
+            <span class="model-option-badges">${badges.join('')}</span>`;
 
         opt.addEventListener('click', () => {
             selectModel(m);
