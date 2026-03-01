@@ -24,3 +24,7 @@ bld/
 /BinTest
 /BinUnitTest
 /MapApi/Locations/Config
+
+# Frontend
+node_modules/
+Web/dist/
