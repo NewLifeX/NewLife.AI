@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/components/common/Icon'
+import { Toggle } from '@/components/atoms/Toggle'
 import { exportUserData, clearUserData } from '@/lib/api'
 
 interface DataSettingsProps {
   onDataCleared?: () => void
+  allowTraining?: boolean
+  onAllowTrainingChange?: (v: boolean) => void
 }
 
-export function DataSettings({ onDataCleared }: DataSettingsProps) {
+export function DataSettings({ onDataCleared, allowTraining = false, onAllowTrainingChange }: DataSettingsProps) {
   const { t } = useTranslation()
   const [exporting, setExporting] = useState(false)
   const [clearing, setClearing] = useState(false)
@@ -55,6 +58,20 @@ export function DataSettings({ onDataCleared }: DataSettingsProps) {
       </h3>
 
       <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 mr-4">
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              {t('settings.allowTraining')}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {t('settings.allowTrainingDesc')}
+            </div>
+          </div>
+          <Toggle checked={allowTraining} onChange={(v) => onAllowTrainingChange?.(v)} />
+        </div>
+
+        <div className="border-b border-gray-100 dark:border-gray-800" />
+
         <div className="flex items-center justify-between">
           <div className="flex-1 mr-4">
             <div className="text-sm font-medium text-gray-700 dark:text-gray-200">

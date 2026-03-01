@@ -59,9 +59,12 @@ export function ChatInput({
   const [value, setValue] = useState('')
   const [showSkillPopover, setShowSkillPopover] = useState(false)
 
+  const MAX_LENGTH = 6000
+  const isOverLimit = value.length > MAX_LENGTH
+
   const handleSend = useCallback(() => {
     const trimmed = value.trim()
-    if (!trimmed || isGenerating) return
+    if (!trimmed || isGenerating || trimmed.length > MAX_LENGTH) return
     onSend(trimmed)
     setValue('')
   }, [value, isGenerating, onSend])
@@ -164,12 +167,12 @@ export function ChatInput({
               )}
               <button
                 onClick={isGenerating ? onStop : handleSend}
-                disabled={!isGenerating && !value.trim()}
+                disabled={!isGenerating && (!value.trim() || isOverLimit)}
                 className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   isGenerating
                     ? 'bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900'
-                    : value.trim()
+                    : value.trim() && !isOverLimit
                       ? 'bg-primary hover:bg-blue-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed',
                 )}
@@ -181,6 +184,12 @@ export function ChatInput({
             </div>
           </div>
         </div>
+
+        {isOverLimit && (
+          <div className="text-xs text-red-500 text-right mt-1 mr-2">
+            {t('chat.charLimit', { current: value.length, max: MAX_LENGTH })}
+          </div>
+        )}
 
         <div className="text-center mt-2">
           <p className="text-[10px] text-gray-400">{t('common.aiDisclaimer')}</p>

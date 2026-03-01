@@ -9,6 +9,7 @@ import {
   fetchMessages,
   streamMessage,
   streamRegenerate,
+  streamEditAndResend,
   editMessage,
   submitFeedback,
   deleteFeedback,
@@ -55,7 +56,7 @@ interface ChatState {
   regenerateMsg: (id: number) => Promise<void>
   editMsg: (id: number, content: string) => Promise<void>
   likeMsg: (id: number) => Promise<void>
-  dislikeMsg: (id: number) => Promise<void>
+  dislikeMsg: (id: number, reasons?: string[]) => Promise<void>
   deleteConversation: (id: number) => Promise<void>
   pinConversation: (id: number, isPinned: boolean) => Promise<void>
   renameConversation: (id: number, title: string) => Promise<void>
@@ -129,6 +130,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setActiveConversation: (id) => {
+    // 空会话自动清理：切走时若当前会话无消息则删除
+    const prevId = get().activeConversationId
+    if (prevId != null && prevId !== id) {
+      const prevConv = get().conversations.find((c) => c.id === prevId)
+      if (prevConv && (prevConv.messageCount ?? 0) === 0) {
+        deleteConversation(prevId).catch(() => {})
+        set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
+      }
+    }
+
     set({ activeConversationId: id, messages: [], isLoadingMessages: id != null })
     if (id != null) {
       fetchMessages(id)
@@ -144,6 +155,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   newChat: () => {
     const ac = get()._abortController
     if (ac) ac.abort()
+
+    // 空会话自动清理
+    const prevId = get().activeConversationId
+    if (prevId != null) {
+      const prevConv = get().conversations.find((c) => c.id === prevId)
+      if (prevConv && (prevConv.messageCount ?? 0) === 0) {
+        deleteConversation(prevId).catch(() => {})
+        set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
+      }
+    }
+
     set({ activeConversationId: undefined, messages: [], isGenerating: false, isLoadingMessages: false, pendingAttachments: [], _abortController: null })
   },
 
@@ -421,21 +443,99 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   editMsg: async (id, content) => {
     try {
-      const updated = await editMessage(id, content)
-      set((s) => ({
-        messages: s.messages.map((m) => (m.id === id ? updated : m)),
-      }))
+      const msg = get().messages.find((m) => m.id === id)
+      if (!msg) return
 
-      // 编辑 user 消息后，自动重新生成紧随其后的 assistant 消息
-      if (updated.role === 'user') {
-        const msgs = get().messages
-        const idx = msgs.findIndex((m) => m.id === id)
-        if (idx >= 0 && idx + 1 < msgs.length) {
-          const nextMsg = msgs[idx + 1]
-          if (nextMsg.role === 'assistant') {
-            await get().regenerateMsg(nextMsg.id)
+      if (msg.role === 'user') {
+        // 编辑用户消息：删除后续所有消息 + 流式生成新 AI 回复（原子操作）
+        // 先在前端截断消息列表，保留到编辑的消息为止，并更新内容
+        const idx = get().messages.findIndex((m) => m.id === id)
+        set((s) => ({
+          messages: s.messages.slice(0, idx + 1).map((m) => m.id === id ? { ...m, content } : m),
+          isGenerating: true,
+        }))
+
+        const abortController = new AbortController()
+        set({ _abortController: abortController })
+
+        let assistantMsgId: number | null = null
+
+        await streamEditAndResend(id, content, (event) => {
+          switch (event.type) {
+            case 'message_start':
+              assistantMsgId = event.messageId ?? null
+              if (assistantMsgId != null) {
+                set((s) => ({
+                  messages: [...s.messages, {
+                    id: assistantMsgId!,
+                    conversationId: s.activeConversationId!,
+                    role: 'assistant' as const,
+                    content: '',
+                    thinkingContent: undefined,
+                    status: 'streaming' as const,
+                    createdAt: new Date().toISOString(),
+                  }],
+                }))
+              }
+              break
+            case 'thinking_delta':
+              if (assistantMsgId != null) {
+                set((s) => ({
+                  messages: s.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, thinkingContent: (m.thinkingContent ?? '') + (event.content ?? '') } : m,
+                  ),
+                }))
+              }
+              break
+            case 'content_delta':
+              if (assistantMsgId != null) {
+                set((s) => ({
+                  messages: s.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: (typeof m.content === 'string' ? m.content : '') + (event.content ?? '') } : m,
+                  ),
+                }))
+              }
+              break
+            case 'message_done':
+              if (assistantMsgId != null) {
+                set((s) => ({
+                  messages: s.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, status: 'done' as const, usage: event.usage ? { promptTokens: event.usage.promptTokens, completionTokens: event.usage.completionTokens, totalTokens: event.usage.totalTokens } : m.usage } : m,
+                  ),
+                  isGenerating: false,
+                  _abortController: null,
+                }))
+              }
+              break
+            case 'error':
+              if (assistantMsgId != null) {
+                set((s) => ({
+                  messages: s.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: event.error ?? '生成失败', status: 'error' as const } : m,
+                  ),
+                  isGenerating: false,
+                  _abortController: null,
+                }))
+              } else {
+                set({ isGenerating: false, _abortController: null })
+              }
+              break
           }
-        }
+        }, abortController.signal).catch(() => {
+          set((s) => ({
+            isGenerating: false,
+            _abortController: null,
+            messages: assistantMsgId != null
+              ? s.messages.map((m) => m.id === assistantMsgId ? { ...m, status: 'done' as const } : m)
+              : s.messages,
+          }))
+        })
+      } else {
+        // 编辑 assistant 消息：仅更新内容，不触发重新生成
+        const updated = await editMessage(id, content)
+        set((s) => ({
+          messages: s.messages.map((m) => (m.id === id ? updated : m)),
+        }))
       }
     } catch { /* 静默 */ }
   },
@@ -454,7 +554,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch { /* 静默 */ }
   },
 
-  dislikeMsg: async (id) => {
+  dislikeMsg: async (id, reasons) => {
     const msg = get().messages.find((m) => m.id === id)
     const isAlreadyDisliked = msg?.feedbackType === 2
     try {
@@ -462,7 +562,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         await deleteFeedback(id)
         set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 0 } : m) }))
       } else {
-        await submitFeedback(id, 'dislike')
+        const reason = reasons?.length ? reasons.join(',') : undefined
+        await submitFeedback(id, 'dislike', reason)
         set((s) => ({ messages: s.messages.map((m) => m.id === id ? { ...m, feedbackType: 2 } : m) }))
       }
     } catch { /* 静默 */ }

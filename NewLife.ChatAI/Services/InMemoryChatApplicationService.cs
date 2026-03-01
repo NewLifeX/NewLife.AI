@@ -104,6 +104,61 @@ public class InMemoryChatApplicationService : IChatApplicationService
         return Task.FromResult<MessageDto?>(null);
     }
 
+    public async IAsyncEnumerable<ChatStreamEvent> EditAndResendStreamAsync(Int64 messageId, String newContent, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // 查找用户消息
+        MessageDto? source = null;
+        List<MessageDto>? list = null;
+        var msgIndex = -1;
+        foreach (var item in _messages)
+        {
+            var idx = item.Value.FindIndex(e => e.Id == messageId && e.Role.Equals("user", StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0)
+            {
+                source = item.Value[idx];
+                list = item.Value;
+                msgIndex = idx;
+                break;
+            }
+        }
+        if (source == null || list == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("MESSAGE_NOT_FOUND", "消息不存在或非用户消息");
+            yield break;
+        }
+
+        // 更新用户消息内容
+        list[msgIndex] = new MessageDto(source.Id, source.ConversationId, source.Role, newContent, null, source.ThinkingMode, source.Attachments, DateTime.Now);
+
+        // 删除后续消息
+        if (msgIndex + 1 < list.Count)
+            list.RemoveRange(msgIndex + 1, list.Count - msgIndex - 1);
+
+        var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelCode : "qwen-max";
+        var assistantId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        yield return ChatStreamEvent.MessageStart(assistantId, modelCode, (Int32)source.ThinkingMode);
+
+        var answer = "这是编辑后重新生成的流式回复。";
+        var content = new StringBuilder();
+        foreach (var ch in answer)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            content.Append(ch);
+            yield return ChatStreamEvent.ContentDelta(ch.ToString());
+            await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+        }
+
+        var assistantMsg = new MessageDto(assistantId, source.ConversationId, "assistant", content.ToString(), null, source.ThinkingMode, null, DateTime.Now);
+        list.Add(assistantMsg);
+
+        yield return new ChatStreamEvent
+        {
+            Type = "message_done",
+            MessageId = assistantId,
+            Usage = new ChatUsage { PromptTokens = 10, CompletionTokens = content.Length, TotalTokens = 10 + content.Length },
+        };
+    }
+
     public async IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // 查找消息

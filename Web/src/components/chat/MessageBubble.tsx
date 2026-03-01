@@ -19,6 +19,7 @@ interface MessageBubbleProps {
   onRegenerate?: () => void
   onLike?: () => void
   onDislike?: () => void
+  onShare?: () => void
   liked?: boolean
   disliked?: boolean
   onEdit?: () => void
@@ -43,6 +44,7 @@ export function MessageBubble({
   onRegenerate,
   onLike,
   onDislike,
+  onShare,
   liked = false,
   disliked = false,
   onEdit,
@@ -177,6 +179,7 @@ export function MessageBubble({
             onLike={onLike}
             onRegenerate={onRegenerate}
             onDislike={onDislike}
+            onShare={onShare}
             liked={liked}
             disliked={disliked}
             className="mt-0"
@@ -184,7 +187,9 @@ export function MessageBubble({
           <div className="ml-auto flex items-center space-x-2 mr-1">
             {usage && usage.totalTokens != null && (
               <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default" title={`${t('chat.promptTokens')}: ${usage.promptTokens ?? 0} | ${t('chat.completionTokens')}: ${usage.completionTokens ?? 0}`}>
-                {usage.totalTokens} tokens
+                {usage.promptTokens != null && usage.completionTokens != null
+                  ? `${usage.promptTokens} + ${usage.completionTokens} = ${usage.totalTokens} tokens`
+                  : `${usage.totalTokens} tokens`}
               </span>
             )}
             {createdAt && (

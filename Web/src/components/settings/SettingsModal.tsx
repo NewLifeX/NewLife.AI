@@ -147,10 +147,40 @@ export function SettingsModal({
           />
         )}
         {activeTab === 'account' && (
-          <div className="text-gray-400 text-sm">{t('settings.accountNote')}</div>
+          <div className="mb-10">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+              <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-600 p-1 rounded mr-3">
+                <Icon name="account_circle" variant="filled" size="lg" />
+              </span>
+              {t('settings.account')}
+            </h3>
+            <div className="space-y-5">
+              <div className="text-sm text-gray-500 dark:text-gray-400">{t('settings.accountNote')}</div>
+              <div className="border-b border-gray-100 dark:border-gray-800" />
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('about.version')}</div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{t('common.version')}</span>
+              </div>
+              <div className="border-b border-gray-100 dark:border-gray-800" />
+              <div className="flex flex-col gap-3">
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2">
+                  <Icon name="description" size="base" />
+                  {t('about.terms')}
+                </a>
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2">
+                  <Icon name="shield" size="base" />
+                  {t('about.privacy')}
+                </a>
+              </div>
+            </div>
+          </div>
         )}
         {activeTab === 'data' && (
-          <DataSettings onDataCleared={onDataCleared} />
+          <DataSettings
+            onDataCleared={onDataCleared}
+            allowTraining={settings.allowTraining}
+            onAllowTrainingChange={(v) => update({ allowTraining: v })}
+          />
         )}
       </ScrollArea>
     </Modal>

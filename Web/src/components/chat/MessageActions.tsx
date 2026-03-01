@@ -8,6 +8,7 @@ interface MessageActionsProps {
   onRegenerate?: () => void
   onLike?: () => void
   onDislike?: () => void
+  onShare?: () => void
   liked?: boolean
   disliked?: boolean
   className?: string
@@ -21,6 +22,7 @@ export function MessageActions({
   onRegenerate,
   onLike,
   onDislike,
+  onShare,
   liked = false,
   disliked = false,
   className,
@@ -54,6 +56,11 @@ export function MessageActions({
       <button className={cn(btnBase, disliked && 'text-red-500')} onClick={onDislike} title={t('common.dislike')}>
         <Icon name="thumb_down" variant={disliked ? 'filled' : 'outlined'} size="lg" />
       </button>
+      {onShare && (
+        <button className={btnBase} onClick={onShare} title={t('common.share')}>
+          <Icon name="share" variant="outlined" size="lg" />
+        </button>
+      )}
     </div>
   )
 }

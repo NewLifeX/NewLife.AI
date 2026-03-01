@@ -280,6 +280,156 @@ public class DbChatApplicationService : IChatApplicationService
         }
     }
 
+    /// <summary>编辑用户消息并重新发送。更新消息内容、删除后续所有消息、流式生成新 AI 回复</summary>
+    /// <param name="messageId">用户消息编号</param>
+    /// <param name="newContent">编辑后的内容</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    public async IAsyncEnumerable<ChatStreamEvent> EditAndResendStreamAsync(Int64 messageId, String newContent, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var entity = ChatMessage.FindById(messageId);
+        if (entity == null || !entity.Role.EqualIgnoreCase("user"))
+        {
+            yield return ChatStreamEvent.ErrorEvent("MESSAGE_NOT_FOUND", "消息不存在或非用户消息");
+            yield break;
+        }
+
+        var conversation = Conversation.FindById(entity.ConversationId);
+        if (conversation == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("CONVERSATION_NOT_FOUND", "会话不存在");
+            yield break;
+        }
+
+        // 1. 更新消息内容
+        entity.Content = newContent;
+        entity.Update();
+
+        // 2. 删除该消息之后的所有消息（包括 AI 回复及后续对话）
+        var deleted = ChatMessage.FindAll(
+            ChatMessage._.ConversationId == entity.ConversationId & ChatMessage._.Id > entity.Id,
+            null, null, 0, 0);
+        foreach (var msg in deleted)
+        {
+            msg.Delete();
+        }
+
+        // 3. 解析模型
+        var modelCode = conversation.ModelCode ?? "qwen-max";
+        var modelConfig = _gatewayService.ResolveModel(modelCode);
+        if (modelConfig == null)
+        {
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelCode}' 不可用");
+            yield break;
+        }
+
+        // 4. 构建上下文（包含编辑后的用户消息）
+        var contextMessages = BuildContextMessages(entity.ConversationId, newContent, modelConfig);
+
+        // 5. 创建新的 AI 回复消息
+        var assistantMsg = new ChatMessage
+        {
+            ConversationId = entity.ConversationId,
+            Role = "assistant",
+            ThinkingMode = entity.ThinkingMode,
+        };
+        assistantMsg.Insert();
+
+        // message_start
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, entity.ThinkingMode);
+
+        // 6. 流式调用模型
+        var contentBuilder = new StringBuilder();
+        var thinkingBuilder = new StringBuilder();
+        ChatUsage? finalUsage = null;
+        var hasError = false;
+        ChatStreamEvent? deferredErrorEvent = null;
+
+        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (true)
+            {
+                Boolean moved;
+                try
+                {
+                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
+                {
+                    _log?.Error("编辑重发流式生成失败: {0}", ex.Message);
+                    hasError = true;
+                    deferredErrorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+                    break;
+                }
+
+                if (!moved) break;
+
+                var ev = enumerator.Current;
+                switch (ev.Type)
+                {
+                    case "thinking_delta":
+                        thinkingBuilder.Append(ev.Content);
+                        yield return ev;
+                        break;
+                    case "content_delta":
+                        contentBuilder.Append(ev.Content);
+                        yield return ev;
+                        break;
+                    case "message_done":
+                        finalUsage = ev.Usage;
+                        break;
+                    case "error":
+                        hasError = true;
+                        deferredErrorEvent = ev;
+                        break;
+                    default:
+                        yield return ev;
+                        break;
+                }
+
+                if (hasError) break;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+        }
+
+        if (deferredErrorEvent != null)
+            yield return deferredErrorEvent;
+
+        // 7. 持久化
+        assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
+        if (thinkingBuilder.Length > 0)
+            assistantMsg.ThinkingContent = thinkingBuilder.ToString();
+        if (finalUsage != null)
+        {
+            assistantMsg.PromptTokens = finalUsage.PromptTokens;
+            assistantMsg.CompletionTokens = finalUsage.CompletionTokens;
+            assistantMsg.TotalTokens = finalUsage.TotalTokens;
+        }
+        assistantMsg.Update();
+
+        conversation.LastMessageTime = DateTime.Now;
+        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == entity.ConversationId);
+        conversation.Update();
+
+        if (finalUsage != null)
+            _usageService?.Record(0, 0, entity.ConversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+
+        if (!hasError && !cancellationToken.IsCancellationRequested)
+        {
+            yield return new ChatStreamEvent
+            {
+                Type = "message_done",
+                MessageId = assistantMsg.Id,
+                Usage = finalUsage,
+            };
+        }
+    }
+
     /// <summary>流式重新生成回复。替换当前 AI 回复，以 SSE 事件流返回</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>

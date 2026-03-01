@@ -2,6 +2,56 @@ import type { Conversation, Message, UserSettings, ModelInfo } from '@/types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
+const SSE_MAX_RETRIES = 3
+
+async function fetchSSE(
+  url: string,
+  init: RequestInit,
+  onEvent: (event: ChatStreamEvent) => void,
+): Promise<void> {
+  let lastError: Error | undefined
+  for (let attempt = 0; attempt <= SSE_MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 4000) + Math.random() * 500
+      await new Promise((r) => setTimeout(r, delay))
+      if (init.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    }
+    let streamStarted = false
+    try {
+      const res = await fetch(url, init)
+      if (!res.ok) throw new Error(`SSE ${res.status}: ${res.statusText}`)
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No response body')
+      streamStarted = true
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const json = line.slice(6).trim()
+          if (!json) continue
+          try {
+            const event = JSON.parse(json) as ChatStreamEvent
+            onEvent(event)
+          } catch { /* skip malformed lines */ }
+        }
+      }
+      return
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') throw err
+      // 流已开始读取后中断不再重试，避免非幂等操作产生重复数据
+      if (streamStarted) throw err instanceof Error ? err : new Error(String(err))
+      lastError = err instanceof Error ? err : new Error(String(err))
+      if (attempt === SSE_MAX_RETRIES) throw lastError
+    }
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -176,41 +226,16 @@ export async function streamMessage(
   signal?: AbortSignal,
   attachmentIds?: string[],
 ): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/conversations/${conversationId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, thinkingMode, attachmentIds: attachmentIds?.length ? attachmentIds : undefined }),
-    signal,
-  })
-
-  if (!res.ok) {
-    throw new Error(`SSE ${res.status}: ${res.statusText}`)
-  }
-
-  const reader = res.body?.getReader()
-  if (!reader) throw new Error('No response body')
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const json = line.slice(6).trim()
-      if (!json) continue
-      try {
-        const event = JSON.parse(json) as ChatStreamEvent
-        onEvent(event)
-      } catch { /* skip malformed lines */ }
-    }
-  }
+  await fetchSSE(
+    `${BASE_URL}/api/conversations/${conversationId}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, thinkingMode, attachmentIds: attachmentIds?.length ? attachmentIds : undefined }),
+      signal,
+    },
+    onEvent,
+  )
 }
 
 // ── Messages Actions ──
@@ -235,39 +260,29 @@ export async function streamRegenerate(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/messages/${messageId}/regenerate/stream`, {
-    method: 'POST',
-    signal,
-  })
+  await fetchSSE(
+    `${BASE_URL}/api/messages/${messageId}/regenerate/stream`,
+    { method: 'POST', signal },
+    onEvent,
+  )
+}
 
-  if (!res.ok) {
-    throw new Error(`SSE ${res.status}: ${res.statusText}`)
-  }
-
-  const reader = res.body?.getReader()
-  if (!reader) throw new Error('No response body')
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const json = line.slice(6).trim()
-      if (!json) continue
-      try {
-        const event = JSON.parse(json) as ChatStreamEvent
-        onEvent(event)
-      } catch { /* skip malformed lines */ }
-    }
-  }
+export async function streamEditAndResend(
+  messageId: number,
+  content: string,
+  onEvent: (event: ChatStreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  await fetchSSE(
+    `${BASE_URL}/api/messages/${messageId}/edit-and-resend`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+      signal,
+    },
+    onEvent,
+  )
 }
 
 export async function stopGeneration(id: number): Promise<void> {
@@ -346,6 +361,7 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     mcpEnabled: dto.mcpEnabled,
     defaultSkill: dto.defaultSkill,
     streamingSpeed: dto.streamingSpeed,
+    allowTraining: dto.allowTraining,
   }
 }
 
@@ -366,7 +382,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       defaultThinkingMode: settings.defaultThinkingMode ?? 0,
       contextRounds: settings.contextRounds ?? 10,
       systemPrompt: settings.systemPrompt ?? '',
-      allowTraining: false,
+      allowTraining: settings.allowTraining ?? false,
       mcpEnabled: settings.mcpEnabled,
       defaultSkill: settings.defaultSkill,
       streamingSpeed: settings.streamingSpeed,

@@ -82,6 +82,36 @@ public class MessagesController(IChatApplicationService chatService) : Controlle
         return Ok(result);
     }
 
+    /// <summary>编辑用户消息并重新发送，以 SSE 事件流返回。删除后续所有消息，流式生成新 AI 回复</summary>
+    /// <param name="id">用户消息编号</param>
+    /// <param name="request">编辑请求（包含新内容）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    [HttpPost("messages/{id:long}/edit-and-resend")]
+    public async Task EditAndResendStreamAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
+    {
+        Response.Headers.Append("Content-Type", "text/event-stream");
+        Response.Headers.Append("Cache-Control", "no-cache");
+        Response.Headers.Append("Connection", "keep-alive");
+
+        try
+        {
+            await foreach (var ev in chatService.EditAndResendStreamAsync(id, request.Content, cancellationToken).ConfigureAwait(false))
+            {
+                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户取消，不需要额外处理
+        }
+        catch (Exception ex)
+        {
+            var error = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>流式重新生成回复，以 SSE 事件流返回</summary>
     /// <param name="id">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>

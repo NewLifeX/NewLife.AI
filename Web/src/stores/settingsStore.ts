@@ -40,6 +40,7 @@ const defaults: UserSettings = {
   mcpEnabled: true,
   defaultSkill: 'general',
   streamingSpeed: 3,
+  allowTraining: false,
 }
 
 export const useSettingsStore = create<SettingsState>()(

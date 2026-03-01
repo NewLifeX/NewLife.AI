@@ -6,6 +6,8 @@ import { ChatInput } from '@/components/input/ChatInput'
 import type { Message, Attachment } from '@/types'
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer'
 import { ThinkingBlock } from '@/components/chat/ThinkingBlock'
+import { ShareDialog } from '@/components/chat/ShareDialog'
+import { DislikeReasonDialog } from '@/components/chat/DislikeReasonDialog'
 
 type ThinkingMode = 'fast' | 'balanced' | 'deep'
 
@@ -19,7 +21,8 @@ interface ChatPageProps {
   onRegenerate?: (id: number) => void
   onEditSubmit?: (id: number, content: string) => void
   onLike?: (id: number) => void
-  onDislike?: (id: number) => void
+  onDislike?: (id: number, reasons?: string[]) => void
+  conversationId?: number | null
   thinkingMode?: ThinkingMode
   onThinkingModeChange?: (mode: ThinkingMode) => void
   attachments?: Attachment[]
@@ -43,6 +46,7 @@ export function ChatPage({
   onEditSubmit,
   onLike,
   onDislike,
+  conversationId,
   thinkingMode = 'balanced',
   onThinkingModeChange,
   attachments = [],
@@ -57,6 +61,10 @@ export function ChatPage({
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
+  const [dislikeTargetId, setDislikeTargetId] = useState<number | null>(null)
+  const dragCounterRef = useRef(0)
 
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -90,8 +98,48 @@ export function ChatPage({
     }
   }, [messages, scrollToBottom])
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current++
+    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) setIsDragOver(false)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current = 0
+    setIsDragOver(false)
+    const files = e.dataTransfer.files
+    if (files) {
+      Array.from(files).forEach((f) => onAttachmentAdd?.(f))
+    }
+  }, [onAttachmentAdd])
+
   return (
-    <>
+    <div
+      className="relative flex flex-col flex-1 min-h-0"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 bg-primary/10 dark:bg-primary/20 border-2 border-dashed border-primary rounded-xl flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-primary">
+            <Icon name="upload_file" size="xl" />
+            <span className="text-sm font-medium">{t('chat.dropToUpload')}</span>
+          </div>
+        </div>
+      )}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -126,7 +174,14 @@ export function ChatPage({
               onCopy={() => onCopy?.(msg.id)}
               onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(msg.id) : undefined}
               onLike={msg.role === 'assistant' ? () => onLike?.(msg.id) : undefined}
-              onDislike={msg.role === 'assistant' ? () => onDislike?.(msg.id) : undefined}
+              onDislike={msg.role === 'assistant' ? () => {
+                const isAlreadyDisliked = msg.feedbackType === 2
+                if (isAlreadyDisliked) {
+                  onDislike?.(msg.id)
+                } else {
+                  setDislikeTargetId(msg.id)
+                }
+              } : undefined}
               liked={msg.feedbackType === 1}
               disliked={msg.feedbackType === 2}
               onEdit={msg.role === 'user' ? () => setEditingMessageId(msg.id) : undefined}
@@ -137,6 +192,7 @@ export function ChatPage({
                 setEditingMessageId(null)
               }}
               onEditCancel={() => setEditingMessageId(null)}
+              onShare={msg.role === 'assistant' ? () => setShowShareDialog(true) : undefined}
               createdAt={msg.createdAt}
               isError={msg.status === 'error'}
               usage={msg.usage}
@@ -177,6 +233,25 @@ export function ChatPage({
           sendShortcut={sendShortcut}
         />
       </div>
-    </>
+
+      <DislikeReasonDialog
+        open={dislikeTargetId !== null}
+        onClose={() => setDislikeTargetId(null)}
+        onSubmit={(reasons) => {
+          if (dislikeTargetId !== null) {
+            onDislike?.(dislikeTargetId, reasons)
+            setDislikeTargetId(null)
+          }
+        }}
+      />
+
+      {conversationId && (
+        <ShareDialog
+          open={showShareDialog}
+          onClose={() => setShowShareDialog(false)}
+          conversationId={conversationId}
+        />
+      )}
+    </div>
   )
 }

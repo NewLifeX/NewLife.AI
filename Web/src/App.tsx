@@ -7,6 +7,7 @@ import { ModelSelector } from '@/components/chat/ModelSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 import { fetchUserProfile } from '@/lib/api'
+import { AppSkeleton } from '@/components/common/AppSkeleton'
 
 function ChatApp() {
   const { conversationId } = useParams<{ conversationId: string }>()
@@ -44,14 +45,17 @@ function ChatApp() {
   const { settingsOpen, openSettings, closeSettings, sidebarCollapsed, toggleSidebar } = useUIStore()
   const [userName, setUserName] = useState<string | undefined>(undefined)
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
+  const [appReady, setAppReady] = useState(false)
 
   useEffect(() => {
-    loadConversations()
-    loadModels()
-    settings.loadFromServer()
-    fetchUserProfile()
-      .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
-      .catch(() => {})
+    Promise.all([
+      loadConversations(),
+      loadModels(),
+      settings.loadFromServer(),
+      fetchUserProfile()
+        .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
+        .catch(() => {}),
+    ]).finally(() => setAppReady(true))
 
     // Cmd+K / Ctrl+K 全局快捷键 → 新建对话
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -104,6 +108,8 @@ function ChatApp() {
   const activeConv = conversations.find((c) => c.id === activeConversationId)
   const currentModel = activeConv?.modelCode ?? settings.defaultModel ?? 'qwen-max'
 
+  if (!appReady) return <AppSkeleton />
+
   return (
     <>
       <ChatLayout
@@ -148,7 +154,8 @@ function ChatApp() {
             onRegenerate={regenerateMsg}
             onEditSubmit={(id, content) => useChatStore.getState().editMsg(id, content)}
             onLike={likeMsg}
-            onDislike={dislikeMsg}
+            onDislike={(id, reasons) => dislikeMsg(id, reasons)}
+            conversationId={activeConversationId}
             thinkingMode={thinkingMode}
             onThinkingModeChange={setThinkingMode}
             attachments={pendingAttachments}

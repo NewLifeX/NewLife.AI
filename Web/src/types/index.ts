@@ -3,6 +3,7 @@ export interface Conversation {
   title: string
   modelCode?: string
   isPinned: boolean
+  messageCount?: number
   icon?: string
   iconColor?: string
   updatedAt?: string
@@ -65,4 +66,5 @@ export interface UserSettings {
   mcpEnabled: boolean
   defaultSkill: string
   streamingSpeed: number
+  allowTraining: boolean
 }

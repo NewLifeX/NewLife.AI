@@ -1,9 +1,34 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
+import mermaid from 'mermaid'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
+
+mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
+
+let mermaidCounter = 0
+
+function MermaidBlock({ code }: { code: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const id = `mermaid-${++mermaidCounter}`
+    containerRef.current.innerHTML = ''
+    mermaid.render(id, code).then(({ svg }) => {
+      if (containerRef.current) containerRef.current.innerHTML = svg
+    }).catch(() => {
+      if (containerRef.current) containerRef.current.textContent = code
+    })
+  }, [code])
+
+  return <div ref={containerRef} className="my-4 flex justify-center overflow-x-auto" />
+}
 
 interface MarkdownRendererProps {
   content: string
@@ -30,8 +55,8 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div className={cn('prose prose-sm dark:prose-invert max-w-none break-words', className)}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={{
           pre({ children, ...props }) {
             const codeEl = Array.isArray(children)
@@ -64,6 +89,11 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
                   {children}
                 </code>
               )
+            }
+            // Mermaid code blocks
+            if (codeClassName === 'language-mermaid') {
+              const codeStr = String(children).replace(/\n$/, '')
+              return <MermaidBlock code={codeStr} />
             }
             return (
               <code className={codeClassName} {...props}>
