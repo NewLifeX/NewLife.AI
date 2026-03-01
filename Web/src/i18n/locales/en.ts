@@ -54,6 +54,8 @@ export default {
     thinkingInProgress: 'Thinking...',
     thinkingProcess: 'Thinking Process',
     backToBottom: 'Back to bottom',
+    promptTokens: 'Prompt Tokens',
+    completionTokens: 'Completion Tokens',
     analyzingLogs: 'Analyzing logs...',
     voiceInput: 'Voice input',
     stopGen: 'Stop generating',

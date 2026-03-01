@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
-import { ScrollArea } from '@/components/common/ScrollArea'
 import type { Conversation } from '@/types'
 
 type TimeGroup = 'today' | 'yesterday' | 'past7days' | 'past30days' | 'earlier'
@@ -31,6 +30,7 @@ interface ConversationListProps {
   onDelete?: (id: number) => void
   onPin?: (id: number, isPinned: boolean) => void
   onRename?: (id: number, title: string) => void
+  onLoadMore?: () => void
   className?: string
 }
 
@@ -58,6 +58,7 @@ export function ConversationList({
   onDelete,
   onPin,
   onRename,
+  onLoadMore,
   className,
 }: ConversationListProps) {
   const { t } = useTranslation()
@@ -88,6 +89,16 @@ export function ConversationList({
     earlier: 'sidebar.earlier',
   }
 
+  const listRef = useRef<HTMLDivElement>(null)
+
+  const handleListScroll = useCallback(() => {
+    const el = listRef.current
+    if (!el || !onLoadMore) return
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 100) {
+      onLoadMore()
+    }
+  }, [onLoadMore])
+
   const grouped = useMemo(() => {
     const map = new Map<TimeGroup, Conversation[]>()
     for (const g of groupOrder) map.set(g, [])
@@ -99,7 +110,7 @@ export function ConversationList({
   }, [conversations])
 
   return (
-    <ScrollArea className={cn('flex-1 px-3 pb-2', className)}>
+    <div ref={listRef} onScroll={handleListScroll} className={cn('flex-1 overflow-y-auto custom-scrollbar px-3 pb-2', className)}>
       {grouped.map(({ group, items }) => (
         <div key={group}>
           <div className="text-xs text-gray-400 px-3 py-2 font-medium">{t(groupLabelKey[group])}</div>
@@ -201,6 +212,6 @@ export function ConversationList({
           </ul>
         </div>
       ))}
-    </ScrollArea>
+    </div>
   )
 }

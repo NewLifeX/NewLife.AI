@@ -54,6 +54,8 @@ export default {
     thinkingInProgress: '思考中...',
     thinkingProcess: '思考过程',
     backToBottom: '回到底部',
+    promptTokens: '输入 Token',
+    completionTokens: '输出 Token',
     analyzingLogs: '分析日志中...',
     voiceInput: '语音输入',
     stopGen: '停止生成',

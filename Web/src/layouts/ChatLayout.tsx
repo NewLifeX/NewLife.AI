@@ -17,6 +17,7 @@ interface ChatLayoutProps {
   onSettingsOpen?: () => void
   sidebarCollapsed?: boolean
   onSidebarToggle?: () => void
+  onLoadMore?: () => void
   userName?: string
   userAvatar?: string
   className?: string
@@ -35,6 +36,7 @@ export function ChatLayout({
   onSettingsOpen,
   sidebarCollapsed = false,
   onSidebarToggle,
+  onLoadMore,
   userName,
   userAvatar,
   className,
@@ -50,6 +52,7 @@ export function ChatLayout({
         onConversationRename={onConversationRename}
         onNewChat={onNewChat}
         onToggle={onSidebarToggle}
+        onLoadMore={onLoadMore}
         onUserClick={onSettingsOpen}
         collapsed={sidebarCollapsed}
         userName={userName}

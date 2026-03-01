@@ -34,8 +34,12 @@ interface ChatState {
   pendingAttachments: Attachment[]
   models: ModelInfo[]
   _abortController: AbortController | null
+  _convPage: number
+  _convHasMore: boolean
+  _convLoading: boolean
 
   loadConversations: () => Promise<void>
+  loadMoreConversations: () => Promise<void>
   loadModels: () => Promise<void>
   switchModel: (modelId: string) => Promise<void>
   setActiveConversation: (id: number | undefined) => void
@@ -66,13 +70,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
   pendingAttachments: [],
   models: [],
   _abortController: null,
+  _convPage: 1,
+  _convHasMore: true,
+  _convLoading: false,
 
   loadConversations: async () => {
     try {
-      const list = await fetchConversations()
-      set({ conversations: list })
+      const currentPage = get()._convPage
+      const totalSize = currentPage * 50
+      const list = await fetchConversations(1, totalSize)
+      set({ conversations: list, _convHasMore: list.length >= totalSize })
     } catch {
       /* 静默失败，保留当前列表 */
+    }
+  },
+
+  loadMoreConversations: async () => {
+    const { _convHasMore, _convPage, _convLoading } = get()
+    if (!_convHasMore || _convLoading) return
+    set({ _convLoading: true })
+    try {
+      const nextPage = _convPage + 1
+      const list = await fetchConversations(nextPage, 50)
+      set((s) => ({
+        conversations: [...s.conversations, ...list],
+        _convPage: nextPage,
+        _convHasMore: list.length >= 50,
+        _convLoading: false,
+      }))
+    } catch {
+      set({ _convLoading: false })
     }
   },
 
@@ -223,11 +250,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (assistantMsgId != null) {
               set((s) => ({
                 messages: s.messages.map((m) =>
-                  m.id === assistantMsgId ? { ...m, status: 'done' } : m,
+                  m.id === assistantMsgId ? { ...m, status: 'done', usage: event.usage } : m,
                 ),
                 isGenerating: false,
                 _abortController: null,
               }))
+              // 刷新会话列表以获取后端自动生成的标题
+              get().loadConversations()
             }
             break
 

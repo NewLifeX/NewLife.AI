@@ -15,6 +15,7 @@ interface SidebarProps {
   onConversationRename?: (id: number, title: string) => void
   onNewChat: () => void
   onToggle?: () => void
+  onLoadMore?: () => void
   navItems?: NavItem[]
   onNavItemClick?: (id: string) => void
   userName?: string
@@ -33,6 +34,7 @@ export function Sidebar({
   onConversationRename,
   onNewChat,
   onToggle,
+  onLoadMore,
   navItems,
   onNavItemClick,
   userName,
@@ -99,6 +101,7 @@ export function Sidebar({
         onDelete={onConversationDelete}
         onPin={onConversationPin}
         onRename={onConversationRename}
+        onLoadMore={onLoadMore}
       />
 
       <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} onClick={onUserClick} />

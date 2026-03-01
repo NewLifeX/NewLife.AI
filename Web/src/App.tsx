@@ -100,6 +100,7 @@ function ChatApp() {
         onSettingsOpen={openSettings}
         sidebarCollapsed={sidebarCollapsed}
         onSidebarToggle={toggleSidebar}
+        onLoadMore={() => useChatStore.getState().loadMoreConversations()}
         userName={undefined}
         modelSelector={
           <ModelSelector
@@ -125,6 +126,7 @@ function ChatApp() {
             onStop={stopGenerating}
             onCopy={copyMessage}
             onRegenerate={regenerateMsg}
+            onEditSubmit={(id, content) => useChatStore.getState().editMsg(id, content)}
             onLike={likeMsg}
             onDislike={dislikeMsg}
             thinkingMode={thinkingMode}

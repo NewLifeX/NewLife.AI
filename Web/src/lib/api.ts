@@ -148,6 +148,11 @@ export interface ChatStreamEvent {
     result?: string
   }
   error?: string
+  usage?: {
+    promptTokens?: number
+    completionTokens?: number
+    totalTokens?: number
+  }
 }
 
 export async function streamMessage(

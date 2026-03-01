@@ -8,6 +8,12 @@ export interface Conversation {
   updatedAt?: string
 }
 
+export interface TokenUsage {
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
+}
+
 export interface Message {
   id: number
   conversationId: number
@@ -17,6 +23,7 @@ export interface Message {
   status?: 'streaming' | 'done' | 'error'
   thinkingContent?: string
   toolCalls?: ToolCall[]
+  usage?: TokenUsage
 }
 
 export interface ToolCall {

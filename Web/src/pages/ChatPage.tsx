@@ -15,7 +15,7 @@ interface ChatPageProps {
   onStop?: () => void
   onCopy?: (id: number) => void
   onRegenerate?: (id: number) => void
-  onEdit?: (id: number) => void
+  onEditSubmit?: (id: number, content: string) => void
   onLike?: (id: number) => void
   onDislike?: (id: number) => void
   thinkingMode?: ThinkingMode
@@ -36,7 +36,7 @@ export function ChatPage({
   onStop,
   onCopy,
   onRegenerate,
-  onEdit,
+  onEditSubmit,
   onLike,
   onDislike,
   thinkingMode = 'balanced',
@@ -51,6 +51,7 @@ export function ChatPage({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null)
 
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -115,9 +116,17 @@ export function ChatPage({
               onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(msg.id) : undefined}
               onLike={msg.role === 'assistant' ? () => onLike?.(msg.id) : undefined}
               onDislike={msg.role === 'assistant' ? () => onDislike?.(msg.id) : undefined}
-              onEdit={msg.role === 'user' ? () => onEdit?.(msg.id) : undefined}
+              onEdit={msg.role === 'user' ? () => setEditingMessageId(msg.id) : undefined}
+              isEditing={editingMessageId === msg.id}
+              rawContent={typeof msg.content === 'string' ? msg.content : undefined}
+              onEditSubmit={(newContent) => {
+                onEditSubmit?.(msg.id, newContent)
+                setEditingMessageId(null)
+              }}
+              onEditCancel={() => setEditingMessageId(null)}
               createdAt={msg.createdAt}
               isError={msg.status === 'error'}
+              usage={msg.usage}
             />
           ))}
           <div ref={bottomRef} />
