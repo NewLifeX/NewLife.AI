@@ -39,8 +39,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:5000',
-      '/v1': 'http://localhost:5000',
+      '/api': 'http://localhost:5080',
+      '/v1': 'http://localhost:5080',
     },
   },
 })
