@@ -108,7 +108,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
     {
         if (!_conversations.ContainsKey(conversationId))
         {
-            yield return new ChatStreamEvent { Type = "error", Error = "会话不存在" };
+            yield return ChatStreamEvent.ErrorEvent("CONVERSATION_NOT_FOUND", "会话不存在");
             yield break;
         }
 
@@ -123,8 +123,9 @@ public class InMemoryChatApplicationService : IChatApplicationService
 
         var assistantMessageId = Interlocked.Increment(ref _messageSeed);
 
-        // message_start
-        yield return new ChatStreamEvent { Type = "message_start", MessageId = assistantMessageId };
+        // message_start（含模型和思考模式）
+        var modelCode = _conversations.TryGetValue(conversationId, out var conv) ? conv.ModelCode : "qwen-max";
+        yield return ChatStreamEvent.MessageStart(assistantMessageId, modelCode, (Int32)request.ThinkingMode);
 
         var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
         var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -151,6 +152,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
         };
         list.Add(assistantDto);
 
+        String? title = null;
         if (_conversations.TryGetValue(conversationId, out var conversation))
         {
             var newTitle = conversation.Title;
@@ -159,16 +161,18 @@ public class InMemoryChatApplicationService : IChatApplicationService
             {
                 newTitle = request.Content.Trim();
                 if (newTitle.Length > 10) newTitle = newTitle[..10] + "...";
+                title = newTitle;
             }
             _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, newTitle, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
         }
 
-        // message_done，包含 Token 用量
+        // message_done，包含 Token 用量和标题
         yield return new ChatStreamEvent
         {
             Type = "message_done",
             MessageId = assistantMessageId,
             Usage = new ChatUsage { PromptTokens = promptTokens, CompletionTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
+            Title = title,
         };
     }
 
