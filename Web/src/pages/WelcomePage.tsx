@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/components/common/Icon'
 import { ChatInput } from '@/components/input/ChatInput'
+import { useSettingsStore } from '@/stores'
 
 interface WelcomePageProps {
   onSend: (message: string) => void
@@ -49,7 +50,7 @@ export function WelcomePage({ onSend }: WelcomePageProps) {
       </div>
 
       <div className="pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark">
-        <ChatInput onSend={onSend} />
+        <ChatInput onSend={onSend} sendShortcut={useSettingsStore.getState().sendShortcut} />
       </div>
     </>
   )
