@@ -11,6 +11,19 @@ interface SettingsState extends UserSettings {
   reset: () => void
 }
 
+function applyTheme(theme: UserSettings['theme']) {
+  const root = document.documentElement
+  if (theme === 'dark') {
+    root.classList.add('dark')
+  } else if (theme === 'light') {
+    root.classList.remove('dark')
+  } else {
+    // system
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    root.classList.toggle('dark', prefersDark)
+  }
+}
+
 const defaults: UserSettings = {
   theme: 'system',
   language: 'zh',
@@ -36,8 +49,10 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           const remote = await fetchUserSettings()
           if (remote.language) i18n.changeLanguage(remote.language)
+          applyTheme(remote.theme)
           set({ ...remote, _loaded: true })
         } catch {
+          applyTheme(get().theme)
           set({ _loaded: true })
         }
       },
@@ -45,6 +60,9 @@ export const useSettingsStore = create<SettingsState>()(
       update: (partial) => {
         if (partial.language) {
           i18n.changeLanguage(partial.language)
+        }
+        if (partial.theme) {
+          applyTheme(partial.theme)
         }
         set((s) => ({ ...s, ...partial }))
         // 异步保存到后端
@@ -54,6 +72,7 @@ export const useSettingsStore = create<SettingsState>()(
 
       reset: () => {
         i18n.changeLanguage(defaults.language)
+        applyTheme(defaults.theme)
         set(defaults)
         saveUserSettings(defaults).catch(() => {})
       },
@@ -68,6 +87,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (state?.language) {
           i18n.changeLanguage(state.language)
         }
+        applyTheme(state?.theme ?? defaults.theme)
       },
     },
   ),

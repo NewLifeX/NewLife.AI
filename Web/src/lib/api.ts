@@ -390,6 +390,18 @@ export async function toggleMcpServer(id: number, enabled: boolean): Promise<voi
   })
 }
 
+// ── User Profile ──
+
+export interface UserProfile {
+  nickname: string
+  account: string
+  avatar?: string
+}
+
+export async function fetchUserProfile(): Promise<UserProfile> {
+  return request<UserProfile>('/api/user/profile')
+}
+
 // ── Data Management ──
 
 export async function exportUserData(): Promise<Blob> {

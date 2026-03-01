@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatLayout } from '@/layouts/ChatLayout'
 import { WelcomePage } from '@/pages/WelcomePage'
@@ -6,6 +6,7 @@ import { ChatPage } from '@/pages/ChatPage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
+import { fetchUserProfile } from '@/lib/api'
 
 function ChatApp() {
   const { conversationId } = useParams<{ conversationId: string }>()
@@ -40,11 +41,16 @@ function ChatApp() {
 
   const settings = useSettingsStore()
   const { settingsOpen, openSettings, closeSettings, sidebarCollapsed, toggleSidebar } = useUIStore()
+  const [userName, setUserName] = useState<string | undefined>(undefined)
+  const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     loadConversations()
     loadModels()
     settings.loadFromServer()
+    fetchUserProfile()
+      .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -101,7 +107,8 @@ function ChatApp() {
         sidebarCollapsed={sidebarCollapsed}
         onSidebarToggle={toggleSidebar}
         onLoadMore={() => useChatStore.getState().loadMoreConversations()}
-        userName={undefined}
+        userName={userName}
+        userAvatar={userAvatar}
         modelSelector={
           <ModelSelector
             models={models}
