@@ -33,6 +33,7 @@ export default {
     past30days: '过去 30 天',
     earlier: '更早',
     pin: '置顶',
+    pinned: '已置顶',
     unpin: '取消置顶',
     rename: '重命名',
     delete: '删除',

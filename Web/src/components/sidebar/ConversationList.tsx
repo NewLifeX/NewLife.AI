@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import type { Conversation } from '@/types'
 
-type TimeGroup = 'today' | 'yesterday' | 'past7days' | 'past30days' | 'earlier'
+type TimeGroup = 'pinned' | 'today' | 'yesterday' | 'past7days' | 'past30days' | 'earlier'
 
 function getTimeGroup(dateStr?: string): TimeGroup {
   if (!dateStr) return 'earlier'
@@ -21,7 +21,7 @@ function getTimeGroup(dateStr?: string): TimeGroup {
   return 'earlier'
 }
 
-const groupOrder: TimeGroup[] = ['today', 'yesterday', 'past7days', 'past30days', 'earlier']
+const groupOrder: TimeGroup[] = ['pinned', 'today', 'yesterday', 'past7days', 'past30days', 'earlier']
 
 interface ConversationListProps {
   conversations: Conversation[]
@@ -84,6 +84,7 @@ export function ConversationList({
   }
 
   const groupLabelKey: Record<TimeGroup, string> = {
+    pinned: 'sidebar.pinned',
     today: 'sidebar.today',
     yesterday: 'sidebar.yesterday',
     past7days: 'sidebar.past7days',
@@ -111,7 +112,7 @@ export function ConversationList({
     const map = new Map<TimeGroup, Conversation[]>()
     for (const g of groupOrder) map.set(g, [])
     for (const conv of filtered) {
-      const g = getTimeGroup(conv.updatedAt)
+      const g = conv.isPinned ? 'pinned' : getTimeGroup(conv.updatedAt)
       map.get(g)!.push(conv)
     }
     return groupOrder.filter((g) => map.get(g)!.length > 0).map((g) => ({ group: g, items: map.get(g)! }))

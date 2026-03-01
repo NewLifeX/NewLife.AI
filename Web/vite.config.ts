@@ -1,17 +1,32 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import fs from 'fs'
+
+function renameHtml(from: string, to: string): Plugin {
+  return {
+    name: 'rename-html',
+    closeBundle() {
+      const outDir = path.resolve(__dirname, '../NewLife.ChatAI/wwwroot')
+      const src = path.join(outDir, from)
+      const dst = path.join(outDir, to)
+      if (fs.existsSync(src)) fs.renameSync(src, dst)
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), renameHtml('index.html', 'chat.html')],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
   build: {
+    outDir: path.resolve(__dirname, '../NewLife.ChatAI/wwwroot'),
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {

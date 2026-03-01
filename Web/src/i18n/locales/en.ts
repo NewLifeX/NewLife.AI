@@ -33,6 +33,7 @@ export default {
     past30days: 'Past 30 Days',
     earlier: 'Earlier',
     pin: 'Pin',
+    pinned: 'Pinned',
     unpin: 'Unpin',
     rename: 'Rename',
     delete: 'Delete',
