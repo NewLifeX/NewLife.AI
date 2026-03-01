@@ -623,7 +623,16 @@ input, textarea, select {
 .model-option-badges {
     font-size: var(--font-size-xs);
     display: flex;
-    gap: 4px;
+    gap: 2px;
+}
+.capability-badge {
+    cursor: default;
+    padding: 2px;
+    border-radius: var(--radius-sm);
+    transition: transform var(--transition);
+}
+.capability-badge:hover {
+    transform: scale(1.3);
 }
 
 /* ═══════════════════════════════════════

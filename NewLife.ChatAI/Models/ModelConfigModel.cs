@@ -7,12 +7,15 @@ using System.Xml.Serialization;
 
 namespace NewLife.ChatAI.Entity;
 
-/// <summary>模型配置。后端接入的大语言模型</summary>
+/// <summary>模型配置。后端接入的大语言模型，可以继承新增大语言模型</summary>
 public partial class ModelConfigModel
 {
     #region 属性
     /// <summary>编号</summary>
     public Int32 Id { get; set; }
+
+    /// <summary>父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型</summary>
+    public Int32 ParentId { get; set; }
 
     /// <summary>编码。模型唯一标识</summary>
     public String Code { get; set; }
@@ -20,32 +23,38 @@ public partial class ModelConfigModel
     /// <summary>名称。显示名称</summary>
     public String Name { get; set; }
 
+    /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
+    public String ModelName { get; set; }
+
     /// <summary>提供商。OpenAI、Alibaba、DeepSeek等</summary>
     public String Provider { get; set; }
 
-    /// <summary>接口地址。API地址</summary>
+    /// <summary>接口地址。API地址，为空时从父级继承</summary>
     public String Endpoint { get; set; }
 
-    /// <summary>密钥。API访问密钥</summary>
+    /// <summary>密钥。API访问密钥，为空时从父级继承</summary>
     public String ApiKey { get; set; }
 
     /// <summary>最大令牌数</summary>
     public Int32 MaxTokens { get; set; }
 
-    /// <summary>支持思考。是否支持思考模式</summary>
+    /// <summary>思考。是否支持思考模式</summary>
     public Boolean SupportThinking { get; set; }
 
-    /// <summary>支持视觉。是否支持图片输入</summary>
+    /// <summary>视觉。是否支持图片输入</summary>
     public Boolean SupportVision { get; set; }
 
-    /// <summary>支持图像生成。是否支持文生图</summary>
+    /// <summary>图像。是否支持文生图</summary>
     public Boolean SupportImageGeneration { get; set; }
 
-    /// <summary>支持函数调用。是否支持Function Calling</summary>
+    /// <summary>函数调用。是否支持Function Calling</summary>
     public Boolean SupportFunctionCalling { get; set; }
 
     /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
     public String ApiProtocol { get; set; }
+
+    /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
+    public String SystemPrompt { get; set; }
 
     /// <summary>启用</summary>
     public Boolean Enable { get; set; }
@@ -81,8 +90,10 @@ public partial class ModelConfigModel
     public void Copy(ModelConfigModel model)
     {
         Id = model.Id;
+        ParentId = model.ParentId;
         Code = model.Code;
         Name = model.Name;
+        ModelName = model.ModelName;
         Provider = model.Provider;
         Endpoint = model.Endpoint;
         ApiKey = model.ApiKey;
@@ -92,6 +103,7 @@ public partial class ModelConfigModel
         SupportImageGeneration = model.SupportImageGeneration;
         SupportFunctionCalling = model.SupportFunctionCalling;
         ApiProtocol = model.ApiProtocol;
+        SystemPrompt = model.SystemPrompt;
         Enable = model.Enable;
         Sort = model.Sort;
         CreateUserID = model.CreateUserID;

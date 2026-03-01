@@ -86,15 +86,15 @@ public class GatewayService
         return _providerFactory.GetProvider(config.Provider);
     }
 
-    /// <summary>构建服务商连接选项</summary>
+    /// <summary>构建服务商连接选项。支持从父级继承 Endpoint/ApiKey</summary>
     /// <param name="config">模型配置</param>
     /// <returns></returns>
     public static AiProviderOptions BuildOptions(ModelConfig config)
     {
         return new AiProviderOptions
         {
-            Endpoint = config.Endpoint,
-            ApiKey = config.ApiKey,
+            Endpoint = config.GetEffectiveEndpoint(),
+            ApiKey = config.GetEffectiveApiKey(),
         };
     }
     #endregion

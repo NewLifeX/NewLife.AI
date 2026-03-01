@@ -29,6 +29,9 @@ public class GeminiProvider : IAiProvider
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://generativelanguage.googleapis.com";
 
+    /// <summary>默认能力信息。Gemini 支持思考/视觉/图像生成/函数调用</summary>
+    public virtual AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
+
     private static readonly HttpClient _httpClient = new(new HttpClientHandler
     {
         AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,

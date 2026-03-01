@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Net.Http.Headers;
 
 namespace NewLife.AI.Providers;
@@ -23,6 +23,9 @@ public class AzureAiProvider : OpenAiProvider
 
     /// <summary>默认 API 地址。Azure AI Foundry 推理入口</summary>
     public override String DefaultEndpoint => "https://models.inference.ai.azure.com";
+
+    /// <summary>默认能力信息。Azure AI 支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>阿里百炼（DashScope）服务商。支持 Qwen/通义千问系列模型</summary>
@@ -40,9 +43,10 @@ public class DashScopeProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://dashscope.aliyuncs.com/compatible-mode";
-}
 
-/// <summary>DeepSeek 服务商。支持 DeepSeek-V3、DeepSeek-R1 等推理模型</summary>
+    /// <summary>默认能力信息。百炼支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
+}
 /// <remarks>
 /// DeepSeek 原生支持 reasoning_content 字段返回推理思考过程。
 /// 官方文档：https://platform.deepseek.com/api-docs
@@ -57,6 +61,9 @@ public class DeepSeekProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.deepseek.com";
+
+    /// <summary>默认能力信息。DeepSeek 支持思考和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, false, false, true);
 }
 
 /// <summary>火山方舟服务商。字节跳动旗下 AI 服务平台，支持豆包系列模型</summary>
@@ -75,6 +82,9 @@ public class VolcEngineProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://ark.cn-beijing.volces.com/api/v3";
+
+    /// <summary>默认能力信息。火山方舟支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
 
     /// <summary>对话完成路径</summary>
     protected override String ChatPath => "/chat/completions";
@@ -96,6 +106,9 @@ public class ZhipuProvider : OpenAiProvider
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://open.bigmodel.cn/api/paas/v4";
 
+    /// <summary>默认能力信息。智谱支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
+
     /// <summary>对话完成路径</summary>
     protected override String ChatPath => "/chat/completions";
 }
@@ -116,6 +129,9 @@ public class MoonshotProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.moonshot.cn";
+
+    /// <summary>默认能力信息。Moonshot 支持思考和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, false, false, true);
 }
 
 /// <summary>腾讯混元服务商。支持混元大模型系列</summary>
@@ -133,6 +149,9 @@ public class HunyuanProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.hunyuan.cloud.tencent.com";
+
+    /// <summary>默认能力信息。混元支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
 }
 
 /// <summary>百度千帆服务商。支持文心一言等大模型系列</summary>
@@ -150,6 +169,9 @@ public class QianfanProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://qianfan.baidubce.com/v2";
+
+    /// <summary>默认能力信息。千帆支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
 
     /// <summary>对话完成路径</summary>
     protected override String ChatPath => "/chat/completions";
@@ -170,6 +192,9 @@ public class SparkProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://spark-api-open.xf-yun.com";
+
+    /// <summary>默认能力信息。星火支持思考和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, false, false, true);
 }
 
 /// <summary>零一万物服务商。支持 Yi 系列大模型</summary>
@@ -186,6 +211,9 @@ public class YiProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.lingyiwanwu.com";
+
+    /// <summary>默认能力信息。Yi 支持视觉和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(false, true, false, true);
 }
 
 /// <summary>MiniMax 服务商。支持 MiniMax 系列模型</summary>
@@ -203,6 +231,9 @@ public class MiniMaxProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.minimax.chat";
+
+    /// <summary>默认能力信息。MiniMax 支持视觉和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(false, true, false, true);
 }
 
 /// <summary>硅基流动服务商。AI 推理加速平台，聚合多种开源模型</summary>
@@ -220,6 +251,9 @@ public class SiliconFlowProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.siliconflow.cn";
+
+    /// <summary>默认能力信息。硅基流动支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>x.AI 服务商。支持 Grok 系列模型</summary>
@@ -236,6 +270,9 @@ public class XAiProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.x.ai";
+
+    /// <summary>默认能力信息。Grok 支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>GitHub Models 服务商。GitHub 托管的 AI 模型市场</summary>
@@ -253,6 +290,9 @@ public class GitHubModelsProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://models.github.ai/inference";
+
+    /// <summary>默认能力信息。GitHub Models 支持多种模型能力</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>OpenRouter 服务商。AI 模型聚合代理平台，支持数百种模型统一调用</summary>
@@ -269,6 +309,9 @@ public class OpenRouterProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://openrouter.ai/api";
+
+    /// <summary>默认能力信息。OpenRouter 支持多种模型能力</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>Ollama 服务商。本地部署和运行开源大模型</summary>
@@ -286,6 +329,9 @@ public class OllamaProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "http://localhost:11434";
+
+    /// <summary>默认能力信息。本地部署，能力取决于实际加载的模型</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new();
 
     /// <summary>设置请求头。Ollama 默认不需要认证</summary>
     /// <param name="request">HTTP 请求</param>
@@ -312,6 +358,9 @@ public class MiMoProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.xiaomimimo.com";
+
+    /// <summary>默认能力信息。MiMo 支持思考和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, false, false, true);
 }
 
 /// <summary>Together AI 服务商。开源模型云端推理平台</summary>
@@ -329,6 +378,9 @@ public class TogetherAiProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.together.xyz";
+
+    /// <summary>默认能力信息。Together AI 支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>Groq 服务商。LPU 高速推理加速平台</summary>
@@ -346,6 +398,9 @@ public class GroqProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.groq.com/openai";
+
+    /// <summary>默认能力信息。Groq 支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
 }
 
 /// <summary>Mistral AI 服务商。支持 Mistral/Mixtral/Codestral 系列模型</summary>
@@ -363,6 +418,9 @@ public class MistralProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.mistral.ai";
+
+    /// <summary>默认能力信息。Mistral 支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>Cohere 服务商。支持 Command R 系列企业级模型</summary>
@@ -380,6 +438,9 @@ public class CohereProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.cohere.com/compatibility";
+
+    /// <summary>默认能力信息。Cohere 支持函数调用，擅长 RAG</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(false, false, false, true);
 }
 
 /// <summary>Perplexity 服务商。支持联网搜索增强的 AI 模型</summary>
@@ -397,6 +458,9 @@ public class PerplexityProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.perplexity.ai";
+
+    /// <summary>默认能力信息。Perplexity 专注联网搜索增强</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, false, false, false);
 }
 
 /// <summary>无问芯穹（Infini-AI）服务商。国产 AI 推理云平台</summary>
@@ -414,6 +478,9 @@ public class InfiniProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://cloud.infini-ai.com/maas";
+
+    /// <summary>默认能力信息。无问芯穹支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
 }
 
 /// <summary>Cerebras 服务商。基于晶圆级芯片的超高速推理平台</summary>
@@ -431,6 +498,9 @@ public class CerebrasProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.cerebras.ai";
+
+    /// <summary>默认能力信息。Cerebras 支持函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(false, false, false, true);
 }
 
 /// <summary>Fireworks AI 服务商。高速模型推理平台</summary>
@@ -448,6 +518,9 @@ public class FireworksProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.fireworks.ai/inference";
+
+    /// <summary>默认能力信息。Fireworks 支持思考/视觉/图像生成/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
 }
 
 /// <summary>SambaNova 服务商。基于 RDU 架构的 AI 推理平台</summary>
@@ -465,6 +538,9 @@ public class SambaNovaProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.sambanova.ai";
+
+    /// <summary>默认能力信息。SambaNova 支持思考/视觉/函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
 }
 
 /// <summary>LM Studio 服务商。桌面端本地模型运行工具</summary>
@@ -482,6 +558,9 @@ public class LMStudioProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "http://localhost:1234";
+
+    /// <summary>默认能力信息。本地部署，能力取决于实际加载的模型</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new();
 
     /// <summary>设置请求头。LM Studio 默认不需要认证</summary>
     /// <param name="request">HTTP 请求</param>
@@ -509,6 +588,9 @@ public class VllmProvider : OpenAiProvider
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "http://localhost:8000";
 
+    /// <summary>默认能力信息。自部署引擎，能力取决于实际加载的模型</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new();
+
     /// <summary>设置请求头。vLLM 默认不需要认证</summary>
     /// <param name="request">HTTP 请求</param>
     /// <param name="options">选项</param>
@@ -534,6 +616,9 @@ public class OneApiProvider : OpenAiProvider
 
     /// <summary>默认 API 地址。需要用户配置为自己的 OneAPI 部署地址</summary>
     public override String DefaultEndpoint => "http://localhost:3000";
+
+    /// <summary>默认能力信息。分发系统，能力取决于上游渠道配置</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new();
 }
 
 /// <summary>小马算力服务商。GPU 算力租赁平台，提供 AI 推理服务</summary>
@@ -547,4 +632,7 @@ public class XiaomaPowerProvider : OpenAiProvider
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://openapi.xmpower.cn";
+
+    /// <summary>默认能力信息。小马算力支持思考和函数调用</summary>
+    public override AiProviderCapabilities DefaultCapabilities { get; } = new(true, false, false, true);
 }

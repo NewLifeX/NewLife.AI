@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -130,20 +130,23 @@
         <Index Columns="CreatorUserId" />
       </Indexes>
     </Table>
-    <Table Name="ModelConfig" Description="模型配置。后端接入的大语言模型">
+    <Table Name="ModelConfig" Description="模型配置。后端接入的大语言模型，可以继承新增大语言模型">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="ParentId" DataType="Int32" Description="父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型" />
         <Column Name="Code" DataType="String" Description="编码。模型唯一标识" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。显示名称" />
+        <Column Name="ModelName" DataType="String" Length="100" Description="模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1" />
         <Column Name="Provider" DataType="String" Description="提供商。OpenAI、Alibaba、DeepSeek等" />
-        <Column Name="Endpoint" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="接口地址。API地址" />
-        <Column Name="ApiKey" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="密钥。API访问密钥" />
+        <Column Name="Endpoint" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="接口地址。API地址，为空时从父级继承" />
+        <Column Name="ApiKey" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="密钥。API访问密钥，为空时从父级继承" />
         <Column Name="MaxTokens" DataType="Int32" Description="最大令牌数" />
-        <Column Name="SupportThinking" DataType="Boolean" Description="支持思考。是否支持思考模式" />
-        <Column Name="SupportVision" DataType="Boolean" Description="支持视觉。是否支持图片输入" />
-        <Column Name="SupportImageGeneration" DataType="Boolean" Description="支持图像生成。是否支持文生图" />
-        <Column Name="SupportFunctionCalling" DataType="Boolean" Description="支持函数调用。是否支持Function Calling" />
+        <Column Name="SupportThinking" DataType="Boolean" Description="思考。是否支持思考模式" />
+        <Column Name="SupportVision" DataType="Boolean" Description="视觉。是否支持图片输入" />
+        <Column Name="SupportImageGeneration" DataType="Boolean" Description="图像。是否支持文生图" />
+        <Column Name="SupportFunctionCalling" DataType="Boolean" Description="函数调用。是否支持Function Calling" />
         <Column Name="ApiProtocol" DataType="String" Description="API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini" />
+        <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
@@ -157,6 +160,7 @@
       <Indexes>
         <Index Columns="Code" Unique="True" />
         <Index Columns="Provider" />
+        <Index Columns="ParentId" />
       </Indexes>
     </Table>
     <Table Name="UserSetting" Description="用户设置。用户的个性化配置">

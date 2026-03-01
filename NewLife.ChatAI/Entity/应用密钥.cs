@@ -247,7 +247,7 @@ public partial class AppKey : IEntity<AppKeyModel>
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -263,7 +263,7 @@ public partial class AppKey : IEntity<AppKeyModel>
         if (secret.IsNullOrEmpty()) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Secret.EqualIgnoreCase(secret));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Secret.EqualIgnoreCase(secret));
 
         return Find(_.Secret == secret);
     }
@@ -276,7 +276,7 @@ public partial class AppKey : IEntity<AppKeyModel>
         if (userId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
 
         return FindAll(_.UserId == userId);
     }

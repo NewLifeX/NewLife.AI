@@ -1,28 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Script.Serialization;
-using System.Xml.Serialization;
-using NewLife;
-using NewLife.Data;
+﻿using System.ComponentModel;
+using NewLife.AI.Providers;
+using NewLife.Common;
 using NewLife.Log;
-using NewLife.Model;
 using NewLife.Reflection;
-using NewLife.Threading;
-using NewLife.Web;
 using XCode;
 using XCode.Cache;
-using XCode.Configuration;
-using XCode.DataAccessLayer;
-using XCode.Membership;
-using XCode.Shards;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -61,48 +43,64 @@ public partial class ModelConfig : Entity<ModelConfig>
 
         // 在新插入数据或者修改了指定字段时进行修正
 
-        // 处理当前已登录用户信息，可以由UserInterceptor拦截器代劳
-        /*var user = ManageProvider.User;
-        if (user != null)
-        {
-            if (method == DataMethod.Insert && !Dirtys[nameof(CreateUserID)]) CreateUserID = user.ID;
-            if (!Dirtys[nameof(UpdateUserID)]) UpdateUserID = user.ID;
-        }*/
-        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateTime)]) CreateTime = DateTime.Now;
-        //if (!Dirtys[nameof(UpdateTime)]) UpdateTime = DateTime.Now;
-        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateIP)]) CreateIP = ManageProvider.UserHost;
-        //if (!Dirtys[nameof(UpdateIP)]) UpdateIP = ManageProvider.UserHost;
-
-        // 检查唯一索引
-        // CheckExist(method == DataMethod.Insert, nameof(Code));
+        if (Code.IsNullOrEmpty() && !Name.IsNullOrEmpty()) Code = PinYin.Get(Name);
 
         return true;
     }
 
-    ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
+    /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected override void InitData()
+    {
+        // 从 AiProviderFactory 检测所有已注册的服务商，写入尚未存在的模型配置
+        var factory = AiProviderFactory.Default;
+        var providers = factory.Providers;
+        if (providers == null || providers.Count == 0) return;
 
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化ModelConfig[模型配置]数据……");
+        // 获取已有编码集合，用于跳过已存在的配置
+        var list = FindAll();
+        var exists = list.ToDictionary(e => e.Code, StringComparer.OrdinalIgnoreCase);
 
-    //    var entity = new ModelConfig();
-    //    entity.Code = "abc";
-    //    entity.Name = "abc";
-    //    entity.Provider = "abc";
-    //    entity.Endpoint = "abc";
-    //    entity.ApiKey = "abc";
-    //    entity.MaxTokens = 0;
-    //    entity.SupportThinking = true;
-    //    entity.SupportVision = true;
-    //    entity.Enable = true;
-    //    entity.Sort = 0;
-    //    entity.Insert();
+        var count = 0;
+        var sort = list.Count > 0 ? list.Max(e => e.Sort) + 1 : 1;
+        foreach (var item in providers)
+        {
+            var provider = item.Value;
+            var code = provider.GetType().Name.TrimEnd("Provider");
+            if (!exists.TryGetValue(code, out var entity))
+            {
+                entity = new ModelConfig
+                {
+                    Name = provider.Name,
+                    Enable = false,
+                    Sort = sort++,
+                };
 
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化ModelConfig[模型配置]数据！");
-    //}
+                if (XTrace.Debug) XTrace.WriteLine("发现新模型配置：{0}（{1}）", provider.Name, provider.DefaultEndpoint);
+            }
+
+            entity.Code = code;
+            entity.ModelName = code;
+            entity.Provider = provider.Name;
+            entity.Endpoint = provider.DefaultEndpoint;
+            entity.ApiProtocol = provider.ApiProtocol;
+
+            // 同步服务商默认能力
+            var caps = provider.DefaultCapabilities;
+            if (caps != null)
+            {
+                entity.SupportThinking = caps.SupportThinking;
+                entity.SupportVision = caps.SupportVision;
+                entity.SupportImageGeneration = caps.SupportImageGeneration;
+                entity.SupportFunctionCalling = caps.SupportFunctionCalling;
+            }
+
+            count += entity.Save();
+        }
+
+        if (count > 0 && XTrace.Debug)
+            XTrace.WriteLine("完成初始化ModelConfig[模型配置]数据，修改 {0} 个服务商配置！", count);
+    }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
     ///// <returns></returns>
@@ -136,6 +134,8 @@ public partial class ModelConfig : Entity<ModelConfig>
     #endregion
 
     #region 业务操作
+    /// <summary>转为模型类</summary>
+    /// <returns></returns>
     public ModelConfigModel ToModel()
     {
         var model = new ModelConfigModel();
@@ -144,5 +144,44 @@ public partial class ModelConfig : Entity<ModelConfig>
         return model;
     }
 
+    /// <summary>获取有效接口地址。为空时递归从父级继承</summary>
+    /// <returns></returns>
+    public String GetEffectiveEndpoint()
+    {
+        if (!Endpoint.IsNullOrEmpty()) return Endpoint;
+        if (ParentId <= 0) return Endpoint;
+
+        // 递归查找父级，最多向上查找10层防止循环引用
+        var parent = FindById(ParentId);
+        for (var i = 0; i < 10 && parent != null; i++)
+        {
+            if (!parent.Endpoint.IsNullOrEmpty()) return parent.Endpoint;
+            if (parent.ParentId <= 0) break;
+
+            parent = FindById(parent.ParentId);
+        }
+
+        return Endpoint;
+    }
+
+    /// <summary>获取有效密钥。为空时递归从父级继承</summary>
+    /// <returns></returns>
+    public String GetEffectiveApiKey()
+    {
+        if (!ApiKey.IsNullOrEmpty()) return ApiKey;
+        if (ParentId <= 0) return ApiKey;
+
+        // 递归查找父级，最多向上查找10层防止循环引用
+        var parent = FindById(ParentId);
+        for (var i = 0; i < 10 && parent != null; i++)
+        {
+            if (!parent.ApiKey.IsNullOrEmpty()) return parent.ApiKey;
+            if (parent.ParentId <= 0) break;
+
+            parent = FindById(parent.ParentId);
+        }
+
+        return ApiKey;
+    }
     #endregion
 }
