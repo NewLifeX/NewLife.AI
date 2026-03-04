@@ -183,5 +183,44 @@ public partial class ModelConfig : Entity<ModelConfig>
 
         return ApiKey;
     }
+
+    /// <summary>检查用户是否有权限使用此模型</summary>
+    /// <param name="roleIds">用户角色组</param>
+    /// <param name="departmentId">用户部门编号</param>
+    /// <returns>true表示有权限，false表示无权限</returns>
+    public Boolean CheckPermission(Int32[] roleIds, Int32 departmentId)
+    {
+        // 未设置角色组和部门组，不限制
+        if (RoleIds.IsNullOrEmpty() && DepartmentIds.IsNullOrEmpty()) return true;
+
+        // 检查角色权限
+        if (!RoleIds.IsNullOrEmpty() && roleIds != null && roleIds.Length > 0)
+        {
+            var roleArray = RoleIds.Split(',').Select(x => x.ToInt()).ToArray();
+            if (roleArray.Intersect(roleIds).Any()) return true;
+        }
+
+        // 检查部门权限
+        if (!DepartmentIds.IsNullOrEmpty())
+        {
+            var deptArray = DepartmentIds.Split(',').Select(x => x.ToInt()).ToArray();
+            if (deptArray.Contains(departmentId)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>获取用户可用的模型列表</summary>
+    /// <param name="roleIds">用户角色组</param>
+    /// <param name="departmentId">用户部门编号</param>
+    /// <returns></returns>
+    public static IList<ModelConfig> FindAllByPermission(Int32[] roleIds, Int32 departmentId)
+    {
+        var list = FindAll(_.Enable == true, _.Sort.Asc(), null, 0, 0);
+        if (list == null || list.Count == 0) return list;
+
+        // 过滤有权限的模型
+        return list.Where(e => e.CheckPermission(roleIds, departmentId)).ToList();
+    }
     #endregion
 }

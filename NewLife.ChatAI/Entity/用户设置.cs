@@ -315,17 +315,19 @@ public partial class UserSetting : IEntity<UserSettingModel>
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。设置所属用户</param>
     /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
+    /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, Boolean? allowTraining, Boolean? mcpEnabled, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
+        if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -369,6 +371,15 @@ public partial class UserSetting : IEntity<UserSettingModel>
 
         /// <summary>允许训练。是否允许反馈数据用于模型改进</summary>
         public static readonly Field AllowTraining = FindByName("AllowTraining");
+
+        /// <summary>启用MCP。是否启用MCP工具调用</summary>
+        public static readonly Field McpEnabled = FindByName("McpEnabled");
+
+        /// <summary>默认技能。新会话的默认技能编码</summary>
+        public static readonly Field DefaultSkill = FindByName("DefaultSkill");
+
+        /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
+        public static readonly Field StreamingSpeed = FindByName("StreamingSpeed");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -426,6 +437,15 @@ public partial class UserSetting : IEntity<UserSettingModel>
 
         /// <summary>允许训练。是否允许反馈数据用于模型改进</summary>
         public const String AllowTraining = "AllowTraining";
+
+        /// <summary>启用MCP。是否启用MCP工具调用</summary>
+        public const String McpEnabled = "McpEnabled";
+
+        /// <summary>默认技能。新会话的默认技能编码</summary>
+        public const String DefaultSkill = "DefaultSkill";
+
+        /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
+        public const String StreamingSpeed = "StreamingSpeed";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

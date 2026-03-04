@@ -147,6 +147,8 @@
         <Column Name="SupportFunctionCalling" DataType="Boolean" Description="函数调用。是否支持Function Calling" />
         <Column Name="ApiProtocol" DataType="String" Description="API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini" />
         <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
+        <Column Name="RoleIds" DataType="String" Length="200" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
+        <Column Name="DepartmentIds" DataType="String" Length="200" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />

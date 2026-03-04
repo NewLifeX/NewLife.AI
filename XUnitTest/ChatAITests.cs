@@ -403,7 +403,7 @@ public class ChatAITests
     public async Task GetModelsReturnsNonEmpty()
     {
         var service = new InMemoryChatApplicationService();
-        var models = await service.GetModelsAsync(CancellationToken.None);
+        var models = await service.GetModelsAsync([], 0, CancellationToken.None);
 
         Assert.NotEmpty(models);
         Assert.Contains(models, m => m.Code == "qwen-max");

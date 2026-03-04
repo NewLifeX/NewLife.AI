@@ -607,7 +607,7 @@ public class DbChatApplicationService : IChatApplicationService
             yield break;
         }
 
-        // 构建上下文（在插入空 assistant 消息之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
+        // 构建上下文（在插入空 assistant 消 messagesId 之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
         var contextMessages = BuildContextMessages(conversationId, request.Content, modelConfig);
 
         // 预分配AI回复消息编号
@@ -1140,11 +1140,13 @@ public class DbChatApplicationService : IChatApplicationService
 
     #region 模型
     /// <summary>获取可用模型列表</summary>
+    /// <param name="roleIds">角色组</param>
+    /// <param name="departmentId">部门编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<ModelInfoDto[]> GetModelsAsync(CancellationToken cancellationToken)
+    public Task<ModelInfoDto[]> GetModelsAsync(Int32[] roleIds, Int32 departmentId, CancellationToken cancellationToken)
     {
-        var list = ModelConfig.FindAll(ModelConfig._.Enable == true, ModelConfig._.Sort.Asc(), null, 0, 0);
+        var list = ModelConfig.FindAllByPermission(roleIds, departmentId);
 
         // 若数据库无模型配置，返回默认列表
         if (list.Count == 0)

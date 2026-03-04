@@ -140,9 +140,11 @@ public interface IChatApplicationService
     Task<UploadAttachmentResult> UploadAttachmentAsync(String fileName, Int64 size, Stream stream, CancellationToken cancellationToken);
 
     /// <summary>获取可用模型列表</summary>
+    /// <param name="roleIds">角色组</param>
+    /// <param name="departmentId">部门编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型信息数组</returns>
-    Task<ModelInfoDto[]> GetModelsAsync(CancellationToken cancellationToken);
+    Task<ModelInfoDto[]> GetModelsAsync(Int32[] roleIds, Int32 departmentId, CancellationToken cancellationToken);
 
     /// <summary>获取用户设置</summary>
     /// <param name="cancellationToken">取消令牌</param>

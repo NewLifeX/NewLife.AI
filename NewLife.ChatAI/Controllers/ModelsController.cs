@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.Cube;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -11,7 +12,13 @@ public class ModelsController(IChatApplicationService chatService) : ControllerB
     [HttpGet]
     public async Task<ActionResult<ModelInfoDto[]>> QueryAsync(CancellationToken cancellationToken)
     {
-        var result = await chatService.GetModelsAsync(cancellationToken).ConfigureAwait(false);
+        var user = ManageProvider2.User;
+        if (user == null) return Unauthorized();
+
+        var roleIds = user.Roles?.Select(e => e.ID).ToArray() ?? [];
+        var departmentId = user.DepartmentID;
+
+        var result = await chatService.GetModelsAsync(roleIds, departmentId, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 }

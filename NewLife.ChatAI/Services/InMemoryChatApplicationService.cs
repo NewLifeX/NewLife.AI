@@ -333,7 +333,7 @@ public class InMemoryChatApplicationService : IChatApplicationService
         return new UploadAttachmentResult(id, fileName, $"/api/attachments/{id}", size);
     }
 
-    public Task<ModelInfoDto[]> GetModelsAsync(CancellationToken cancellationToken)
+    public Task<ModelInfoDto[]> GetModelsAsync(Int32[] roleIds, Int32 departmentId, CancellationToken cancellationToken)
     {
         var models = new[]
         {

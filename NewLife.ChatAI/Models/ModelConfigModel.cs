@@ -56,6 +56,12 @@ public partial class ModelConfigModel
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     public String SystemPrompt { get; set; }
 
+    /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+    public String RoleIds { get; set; }
+
+    /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+    public String DepartmentIds { get; set; }
+
     /// <summary>启用</summary>
     public Boolean Enable { get; set; }
 
@@ -104,6 +110,8 @@ public partial class ModelConfigModel
         SupportFunctionCalling = model.SupportFunctionCalling;
         ApiProtocol = model.ApiProtocol;
         SystemPrompt = model.SystemPrompt;
+        RoleIds = model.RoleIds;
+        DepartmentIds = model.DepartmentIds;
         Enable = model.Enable;
         Sort = model.Sort;
         CreateUserID = model.CreateUserID;

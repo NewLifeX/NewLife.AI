@@ -144,6 +144,22 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [BindColumn("SystemPrompt", "系统提示词。模型级System Prompt，发送给上游的系统消息", "", ShowIn = "Auto,-List,-Search")]
     public String SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
 
+    private String _RoleIds;
+    /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+    [DisplayName("角色组")]
+    [Description("角色组。逗号分隔的角色ID列表，为空时不限制")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("RoleIds", "角色组。逗号分隔的角色ID列表，为空时不限制", "")]
+    public String RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
+
+    private String _DepartmentIds;
+    /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+    [DisplayName("部门组")]
+    [Description("部门组。逗号分隔的部门ID列表，为空时不限制")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("DepartmentIds", "部门组。逗号分隔的部门ID列表，为空时不限制", "")]
+    public String DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
+
     private Boolean _Enable;
     /// <summary>启用</summary>
     [DisplayName("启用")]
@@ -244,6 +260,8 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         SupportFunctionCalling = model.SupportFunctionCalling;
         ApiProtocol = model.ApiProtocol;
         SystemPrompt = model.SystemPrompt;
+        RoleIds = model.RoleIds;
+        DepartmentIds = model.DepartmentIds;
         Enable = model.Enable;
         Sort = model.Sort;
         CreateUserID = model.CreateUserID;
@@ -279,6 +297,8 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
             "SupportFunctionCalling" => _SupportFunctionCalling,
             "ApiProtocol" => _ApiProtocol,
             "SystemPrompt" => _SystemPrompt,
+            "RoleIds" => _RoleIds,
+            "DepartmentIds" => _DepartmentIds,
             "Enable" => _Enable,
             "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
@@ -309,6 +329,8 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
                 case "SupportFunctionCalling": _SupportFunctionCalling = value.ToBoolean(); break;
                 case "ApiProtocol": _ApiProtocol = Convert.ToString(value); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
+                case "RoleIds": _RoleIds = Convert.ToString(value); break;
+                case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -467,6 +489,12 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
 
+        /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+        public static readonly Field RoleIds = FindByName("RoleIds");
+
+        /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+        public static readonly Field DepartmentIds = FindByName("DepartmentIds");
+
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -544,6 +572,12 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";
+
+        /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+        public const String RoleIds = "RoleIds";
+
+        /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+        public const String DepartmentIds = "DepartmentIds";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

@@ -56,10 +56,11 @@ public class UserSettingController : EntityController<UserSetting>
     {
         var userId = p["userId"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
+        var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, allowTraining, start, end, p["Q"], p);
+        return UserSetting.Search(userId, allowTraining, mcpEnabled, start, end, p["Q"], p);
     }
 }
