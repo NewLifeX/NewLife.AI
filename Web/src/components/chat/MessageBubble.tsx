@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useEffect } from 'react'
+import { type ReactNode, useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn, formatRelativeTime, formatExactTime } from '@/lib/utils'
 import { Avatar } from '@/components/common/Avatar'
@@ -6,6 +6,8 @@ import { Icon } from '@/components/common/Icon'
 import { MessageActions } from './MessageActions'
 import { TypingCursor } from './TypingCursor'
 import { ToolCallBadge } from './ToolCallBadge'
+import { ActionSheet, type ActionSheetItem } from '@/components/common/ActionSheet'
+import { useLongPress } from '@/hooks/useLongPress'
 import type { ToolCall, TokenUsage } from '@/types'
 
 interface MessageBubbleProps {
@@ -69,9 +71,30 @@ export function MessageBubble({
     }
   }, [isEditing, rawContent])
 
+  // 移动端长按操作
+  const [actionSheetOpen, setActionSheetOpen] = useState(false)
+  const [actionSheetPos, setActionSheetPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+
+  const handleLongPress = useCallback(
+    (e: TouchEvent | MouseEvent) => {
+      const pos = 'touches' in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
+      setActionSheetPos(pos)
+      setActionSheetOpen(true)
+    },
+    [],
+  )
+
+  const longPressHandlers = useLongPress({ onLongPress: handleLongPress })
+
+  const mobileActions: ActionSheetItem[] = []
+  if (onCopy) mobileActions.push({ icon: 'content_copy', label: t('common.copy'), onClick: onCopy })
+  if (role === 'user' && onEdit) mobileActions.push({ icon: 'edit', label: t('common.edit'), onClick: onEdit })
+  if (role === 'assistant' && onRegenerate) mobileActions.push({ icon: 'refresh', label: t('common.regenerate'), onClick: onRegenerate })
+  if (onShare) mobileActions.push({ icon: 'share', label: t('common.share'), onClick: onShare })
+
   if (role === 'user') {
     return (
-      <div className={cn('flex flex-row-reverse items-start mb-8 group', className)}>
+      <div className={cn('flex flex-row-reverse items-start mb-8 group', className)} {...longPressHandlers}>
         <div className="flex-shrink-0 ml-3">
           <Avatar type="user" src={userAvatar} size="md" />
         </div>
@@ -133,12 +156,13 @@ export function MessageBubble({
             </div>
           )}
         </div>
+        <ActionSheet open={actionSheetOpen} onClose={() => setActionSheetOpen(false)} items={mobileActions} position={actionSheetPos} />
       </div>
     )
   }
 
   return (
-    <div className={cn('flex items-start mb-6 group w-full', className)}>
+    <div className={cn('flex items-start mb-6 group w-full', className)} {...longPressHandlers}>
       <div className="flex-shrink-0 mr-3">
         <Avatar type="ai" size="md" />
       </div>
@@ -200,6 +224,7 @@ export function MessageBubble({
           </div>
         </div>
       </div>
+      <ActionSheet open={actionSheetOpen} onClose={() => setActionSheetOpen(false)} items={mobileActions} position={actionSheetPos} />
     </div>
   )
 }

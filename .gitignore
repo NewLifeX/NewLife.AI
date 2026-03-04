@@ -28,3 +28,4 @@ bld/
 # Frontend
 node_modules/
 Web/dist/
+/NewLife.ChatAI/wwwroot/assets

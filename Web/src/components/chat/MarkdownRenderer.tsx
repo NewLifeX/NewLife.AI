@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css'
 import mermaid from 'mermaid'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
+import { Lightbox } from '@/components/common/Lightbox'
 
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
 
@@ -52,6 +53,29 @@ function CopyCodeButton({ code }: { code: string }) {
 }
 
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+
+  // 从 Markdown 内容中提取所有图片 URL
+  const images = useMemo(() => {
+    const urls: string[] = []
+    const imgRegex = /!\[.*?\]\((.*?)\)/g
+    let match: RegExpExecArray | null
+    while ((match = imgRegex.exec(content)) !== null) {
+      urls.push(match[1])
+    }
+    return urls
+  }, [content])
+
+  const handleImageClick = useCallback(
+    (src: string) => {
+      const idx = images.indexOf(src)
+      setLightboxIndex(idx >= 0 ? idx : 0)
+      setLightboxOpen(true)
+    },
+    [images],
+  )
+
   return (
     <div className={cn('prose prose-sm dark:prose-invert max-w-none break-words', className)}>
       <ReactMarkdown
@@ -140,10 +164,27 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               </td>
             )
           },
+          img({ src, alt, ...props }) {
+            return (
+              <img
+                src={src}
+                alt={alt ?? ''}
+                className="rounded-lg max-h-80 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => src && handleImageClick(src)}
+                {...props}
+              />
+            )
+          },
         }}
       >
         {content}
       </ReactMarkdown>
+      <Lightbox
+        images={images}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   )
 }

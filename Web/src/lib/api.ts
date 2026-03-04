@@ -434,6 +434,30 @@ export async function revokeShareLink(token: string): Promise<void> {
   await request<boolean>(`/api/share/${token}`, { method: 'DELETE' })
 }
 
+export interface SharedConversationContent {
+  conversationId: number
+  messages: Array<{
+    id: number
+    conversationId: number
+    role: 'user' | 'assistant'
+    content: string
+    createdAt: string
+    thinkingContent?: string
+    toolCalls?: Array<{ id: string; name: string; status: string; arguments?: string; result?: string }>
+    usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }
+  }>
+  createTime: string
+  expireTime?: string
+}
+
+export async function fetchSharedConversation(token: string): Promise<SharedConversationContent | null> {
+  try {
+    return await request<SharedConversationContent>(`/api/share/${token}`)
+  } catch {
+    return null
+  }
+}
+
 // ── Attachments ──
 
 export async function uploadAttachment(
@@ -495,4 +519,45 @@ export async function exportUserData(): Promise<Blob> {
 
 export async function clearUserData(): Promise<void> {
   await request<void>('/api/user/data/clear', { method: 'DELETE' })
+}
+
+// ── Usage Statistics ──
+
+export interface UsageSummary {
+  conversations: number
+  messages: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  lastActiveTime?: string
+}
+
+export interface DailyUsage {
+  date: string
+  calls: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+export interface ModelUsage {
+  modelCode: string
+  calls: number
+  totalTokens: number
+}
+
+export async function fetchUsageSummary(): Promise<UsageSummary> {
+  return request<UsageSummary>('/api/usage/summary')
+}
+
+export async function fetchDailyUsage(start?: string, end?: string): Promise<DailyUsage[]> {
+  const params = new URLSearchParams()
+  if (start) params.set('start', start)
+  if (end) params.set('end', end)
+  const qs = params.toString()
+  return request<DailyUsage[]>(`/api/usage/daily${qs ? '?' + qs : ''}`)
+}
+
+export async function fetchModelUsage(): Promise<ModelUsage[]> {
+  return request<ModelUsage[]>('/api/usage/models')
 }

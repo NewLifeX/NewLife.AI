@@ -3,6 +3,7 @@ import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-do
 import { ChatLayout } from '@/layouts/ChatLayout'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { ChatPage } from '@/pages/ChatPage'
+import { SharePage } from '@/pages/SharePage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
@@ -186,6 +187,7 @@ function App() {
   return (
     <>
       <Routes>
+        <Route path="/share/:token" element={<SharePage />} />
         <Route path="/chat/:conversationId" element={<ChatApp />} />
         <Route path="/chat" element={<ChatApp />} />
         <Route path="*" element={<Navigate to="/chat" replace />} />
