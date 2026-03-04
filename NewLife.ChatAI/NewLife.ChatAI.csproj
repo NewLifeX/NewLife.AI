@@ -21,7 +21,8 @@
     <LangVersion>latest</LangVersion>
     <SignAssembly>True</SignAssembly>
     <AssemblyOriginatorKeyFile>..\Doc\newlife.snk</AssemblyOriginatorKeyFile>
-    <NoWarn>1701;1702;NU5104;NETSDK1138;CS7035</NoWarn>
+    <NoWarn>1701;1702;NU5104;NETSDK1138;CS7035;NETSDK1022</NoWarn>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
   </PropertyGroup>
   <PropertyGroup>
     <IsPackable>true</IsPackable>
@@ -48,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- wwwroot 文件将作为嵌入资源包含在 DLL 中 -->
     <EmbeddedResource Include="wwwroot\**\*" />
   </ItemGroup>
 
@@ -56,8 +58,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Cube.Core" Version="6.9.2026.201" />
-    <PackageReference Include="NewLife.XCode" Version="11.24.2026.201" />
+    <PackageReference Include="NewLife.Cube.Core" Version="6.9.2026.303" />
+    <PackageReference Include="NewLife.XCode" Version="11.25.2026.302" />
   </ItemGroup>
 
   <ItemGroup>
