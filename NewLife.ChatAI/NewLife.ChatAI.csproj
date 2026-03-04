@@ -3,8 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
-    <AssemblyTitle>AI对话</AssemblyTitle>
-    <Description>对话交互式AI Web应用</Description>
+    <AssemblyTitle>多模型对话交互式 AI 系统</AssemblyTitle>
+    <Description>集对话前端、统一 AI 网关、Agent 平台于一身的完整 AI 应用。支持多轮对话、流式输出、函数调用、图像生成、会话管理与使用量统计</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 NewLife</Copyright>
     <VersionPrefix>1.0</VersionPrefix>

@@ -45,7 +45,6 @@ services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors("DevCors");
-app.UseCube(app.Environment);
 
 // 设置嵌入的静态文件提供程序
 // MapFallbackToFile 需要使用 env.WebRootFileProvider，所以必须设置它
@@ -69,6 +68,7 @@ else
 // 使用默认静态文件中间件（会自动使用 env.WebRootFileProvider）
 app.UseStaticFiles();
 
+app.UseCube(app.Environment);
 //app.UseCubeHome();
 app.MapDefaultControllerRoute();
 app.MapControllers();
