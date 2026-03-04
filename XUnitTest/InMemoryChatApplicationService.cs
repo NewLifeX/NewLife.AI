@@ -1,13 +1,24 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Int32 = System.Int32;
+using Int64 = System.Int64;
+using String = System.String;
+using Boolean = System.Boolean;
+using CancellationToken = System.Threading.CancellationToken;
 using NewLife.AI.ChatAI.Contracts;
 using NewLife.AI.Models;
 
 namespace NewLife.ChatAI.Services;
 
-/// <summary>内存版对话应用服务</summary>
-public class InMemoryChatApplicationService : IChatApplicationService
+/// <summary>内存版对话应用服务（仅用于测试）</summary>
+public class InMemoryChatApplicationService
 {
     private readonly ConcurrentDictionary<Int64, ConversationSummaryDto> _conversations = new();
     private readonly ConcurrentDictionary<Int64, List<MessageDto>> _messages = new();

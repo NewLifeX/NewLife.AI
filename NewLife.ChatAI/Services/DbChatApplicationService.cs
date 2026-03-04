@@ -15,7 +15,7 @@ using ChatUsage = NewLife.AI.Models.ChatUsage;
 namespace NewLife.ChatAI.Services;
 
 /// <summary>数据库版对话应用服务。基于 XCode 实体类持久化数据</summary>
-public class DbChatApplicationService : IChatApplicationService
+public class ChatApplicationService
 {
     #region 属性
     private readonly ToolCallService? _toolCallService;
@@ -35,7 +35,7 @@ public class DbChatApplicationService : IChatApplicationService
     /// <param name="backgroundService">后台生成服务</param>
     /// <param name="usageService">用量统计服务</param>
     /// <param name="log">日志</param>
-    public DbChatApplicationService(GatewayService gatewayService, ToolCallService? toolCallService, BackgroundGenerationService? backgroundService, UsageService? usageService, ILog log)
+    public ChatApplicationService(GatewayService gatewayService, ToolCallService? toolCallService, BackgroundGenerationService? backgroundService, UsageService? usageService, ILog log)
     {
         _gatewayService = gatewayService;
         _toolCallService = toolCallService;

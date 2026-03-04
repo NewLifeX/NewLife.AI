@@ -1,14 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.ChatAI.Services;
 using NewLife.Cube;
-using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>用户设置控制器</summary>
 [ApiController]
-[Route("api/user")]
-public class UserSettingsController(IChatApplicationService chatService) : ControllerBase
+[Route("api/user/settings")]
+public class UserSettingsController(ChatApplicationService chatService) : ControllerBase
 {
     [HttpGet("profile")]
     public ActionResult<UserProfileDto> GetProfile(CancellationToken cancellationToken)

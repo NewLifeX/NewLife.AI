@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.ChatAI.Services;
 using NewLife.Cube;
 
 namespace NewLife.ChatAI.Controllers;
@@ -7,7 +8,7 @@ namespace NewLife.ChatAI.Controllers;
 /// <summary>模型控制器</summary>
 [ApiController]
 [Route("api/models")]
-public class ModelsController(IChatApplicationService chatService) : ControllerBase
+public class ModelsController(ChatApplicationService chatService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<ModelInfoDto[]>> QueryAsync(CancellationToken cancellationToken)

@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>会话控制器</summary>
 [ApiController]
 [Route("api/conversations")]
-public class ConversationsController(IChatApplicationService chatService) : ControllerBase
+public class ConversationsController(ChatApplicationService chatService) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<ConversationSummaryDto>> CreateAsync([FromBody] CreateConversationRequest request, CancellationToken cancellationToken)

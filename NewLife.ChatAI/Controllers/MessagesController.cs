@@ -2,13 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
 using NewLife.AI.Models;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>消息控制器</summary>
 [ApiController]
 [Route("api")]
-public class MessagesController(IChatApplicationService chatService) : ControllerBase
+public class MessagesController(ChatApplicationService chatService) : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {

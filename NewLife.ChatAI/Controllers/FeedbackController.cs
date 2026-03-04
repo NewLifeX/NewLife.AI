@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>反馈控制器</summary>
 [ApiController]
-[Route("api/messages/{messageId:long}/feedback")]
-public class FeedbackController(IChatApplicationService chatService) : ControllerBase
+[Route("api/feedback")]
+public class FeedbackController(ChatApplicationService chatService) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> SubmitAsync([FromRoute] Int64 messageId, [FromBody] FeedbackRequest request, CancellationToken cancellationToken)

@@ -1,13 +1,14 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
 using NewLife.Cube.Entity;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>附件控制器</summary>
 [ApiController]
 [Route("api/attachments")]
-public class AttachmentsController(IChatApplicationService chatService) : ControllerBase
+public class AttachmentsController(ChatApplicationService chatService) : ControllerBase
 {
     /// <summary>附件存储根目录</summary>
     private static readonly String _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");

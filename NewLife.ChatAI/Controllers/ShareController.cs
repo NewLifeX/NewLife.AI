@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ChatAI.Contracts;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>分享控制器</summary>
 [ApiController]
-[Route("api")]
-public class ShareController(IChatApplicationService chatService) : ControllerBase
+[Route("api/share")]
+public class ShareController(ChatApplicationService chatService) : ControllerBase
 {
     [HttpPost("conversations/{conversationId:long}/share")]
     public async Task<ActionResult<ShareLinkDto>> CreateAsync([FromRoute] Int64 conversationId, [FromBody] CreateShareRequest request, CancellationToken cancellationToken)

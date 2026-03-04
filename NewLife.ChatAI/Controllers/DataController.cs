@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI.Contracts;
+﻿using Microsoft.AspNetCore.Mvc;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
-/// <summary>数据管理控制器</summary>
+/// <summary>数据控制器</summary>
 [ApiController]
-[Route("api/user/data")]
-public class DataController(IChatApplicationService chatService) : ControllerBase
+[Route("api/data")]
+public class DataController(ChatApplicationService chatService) : ControllerBase
 {
     /// <summary>导出用户全部对话数据（JSON格式）</summary>
     /// <param name="cancellationToken">取消令牌</param>
