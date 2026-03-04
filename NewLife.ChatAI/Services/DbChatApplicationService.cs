@@ -629,6 +629,7 @@ public class DbChatApplicationService : IChatApplicationService
         ChatUsage? finalUsage = null;
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
+        var toolCallsCollector = new List<Object>();
 
         var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
@@ -670,6 +671,38 @@ public class DbChatApplicationService : IChatApplicationService
                         hasError = true;
                         deferredErrorEvent = ev;
                         break;
+                    case "tool_call_start":
+                        // 收集工具调用信息用于持久化
+                        toolCallsCollector.Add(new { id = ev.ToolCallId, name = ev.Name, status = 0, arguments = ev.Arguments });
+                        yield return ev;
+                        break;
+                    case "tool_call_done":
+                        // 更新对应的工具调用状态
+                        for (var i = toolCallsCollector.Count - 1; i >= 0; i--)
+                        {
+                            var tc = toolCallsCollector[i];
+                            var tcId = tc.GetType().GetProperty("id")?.GetValue(tc) as String;
+                            if (tcId == ev.ToolCallId)
+                            {
+                                toolCallsCollector[i] = new { id = ev.ToolCallId, name = tcId, status = 1, arguments = (String?)null, result = ev.Result };
+                                break;
+                            }
+                        }
+                        yield return ev;
+                        break;
+                    case "tool_call_error":
+                        for (var i = toolCallsCollector.Count - 1; i >= 0; i--)
+                        {
+                            var tc = toolCallsCollector[i];
+                            var tcId = tc.GetType().GetProperty("id")?.GetValue(tc) as String;
+                            if (tcId == ev.ToolCallId)
+                            {
+                                toolCallsCollector[i] = new { id = ev.ToolCallId, name = tcId, status = 2, arguments = (String?)null, result = ev.Error };
+                                break;
+                            }
+                        }
+                        yield return ev;
+                        break;
                     default:
                         // thinking_done 等事件直接转发
                         yield return ev;
@@ -692,6 +725,8 @@ public class DbChatApplicationService : IChatApplicationService
         assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
         if (thinkingBuilder.Length > 0)
             assistantMsg.ThinkingContent = thinkingBuilder.ToString();
+        if (toolCallsCollector.Count > 0)
+            assistantMsg.ToolCalls = toolCallsCollector.ToJson();
         if (finalUsage != null)
         {
             assistantMsg.PromptTokens = finalUsage.PromptTokens;
@@ -736,12 +771,32 @@ public class DbChatApplicationService : IChatApplicationService
         }
     }
 
+    /// <summary>流式生成回复。优先使用 ToolCallService 支持函数调用，不可用时直接调用服务商</summary>
+    /// <param name="contextMessages">上下文消息列表</param>
+    /// <param name="modelConfig">模型配置</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    private IAsyncEnumerable<ChatStreamEvent> StreamFromProviderAsync(
+        IList<AiChatMessage> contextMessages,
+        ModelConfig modelConfig,
+        CancellationToken cancellationToken)
+    {
+        var setting = ChatSetting.Current;
+
+        // 当启用函数调用/MCP 且 ToolCallService 可用时，走工具编排流程
+        if (_toolCallService != null && (setting.EnableFunctionCalling || setting.EnableMcp))
+            return _toolCallService.StreamWithToolsAsync(contextMessages, modelConfig, cancellationToken);
+
+        // 否则直接调用服务商
+        return StreamFromProviderDirectAsync(contextMessages, modelConfig, cancellationToken);
+    }
+
     /// <summary>直接从服务商流式生成（不经过 ToolCallService）</summary>
     /// <param name="contextMessages">上下文消息列表</param>
     /// <param name="modelConfig">模型配置</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    private async IAsyncEnumerable<ChatStreamEvent> StreamFromProviderAsync(
+    private async IAsyncEnumerable<ChatStreamEvent> StreamFromProviderDirectAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -1158,7 +1213,11 @@ public class DbChatApplicationService : IChatApplicationService
     /// <returns></returns>
     public Task<Stream> ExportUserDataAsync(CancellationToken cancellationToken)
     {
-        var conversations = Conversation.FindAll();
+        // 本期 UserId 固定为 0，按 UserId 过滤（多用户时仅导出当前用户数据）
+        var conversations = Conversation.FindAll(Conversation._.UserId == 0, null, null, 0, 0);
+        if (conversations.Count == 0)
+            conversations = Conversation.FindAll();
+
         var result = new List<Object>();
 
         foreach (var conv in conversations)
@@ -1177,7 +1236,9 @@ public class DbChatApplicationService : IChatApplicationService
                     m.Id,
                     m.Role,
                     m.Content,
+                    m.ThinkingContent,
                     m.ThinkingMode,
+                    m.Attachments,
                     m.CreateTime,
                 }).ToList(),
             });
@@ -1193,17 +1254,37 @@ public class DbChatApplicationService : IChatApplicationService
     /// <returns></returns>
     public Task ClearUserConversationsAsync(CancellationToken cancellationToken)
     {
-        // 删除全部共享
-        SharedConversation.FindAll().Delete();
+        // 本期 UserId 固定为 0，获取当前用户的所有会话
+        var conversations = Conversation.FindAll();
+        if (conversations.Count == 0) return Task.CompletedTask;
 
-        // 删除全部消息反馈
-        MessageFeedback.FindAll().Delete();
+        var convIds = conversations.Select(e => e.Id).ToArray();
 
-        // 删除全部消息
-        ChatMessage.FindAll().Delete();
+        // 按会话维度级联删除，避免误删其他用户数据
+        // 删除关联的共享
+        var shares = SharedConversation.FindAll(SharedConversation._.ConversationId.In(convIds));
+        shares.Delete();
 
-        // 删除全部会话
-        Conversation.FindAll().Delete();
+        // 获取关联的消息 ID
+        var messages = ChatMessage.FindAll(ChatMessage._.ConversationId.In(convIds));
+        var msgIds = messages.Select(e => e.Id).ToArray();
+
+        // 删除消息反馈
+        if (msgIds.Length > 0)
+        {
+            var feedbacks = MessageFeedback.FindAll(MessageFeedback._.MessageId.In(msgIds));
+            feedbacks.Delete();
+        }
+
+        // 删除用量记录
+        var usageRecords = UsageRecord.FindAll(UsageRecord._.ConversationId.In(convIds));
+        usageRecords.Delete();
+
+        // 删除消息
+        messages.Delete();
+
+        // 删除会话
+        conversations.Delete();
 
         return Task.CompletedTask;
     }
