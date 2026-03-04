@@ -12,17 +12,7 @@ interface LightboxProps {
 export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [scale, setScale] = useState(1)
-  const [isAnimating, setIsAnimating] = useState(false)
   const backdropRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (open) {
-      setCurrentIndex(initialIndex)
-      setScale(1)
-      setIsAnimating(true)
-      requestAnimationFrame(() => setIsAnimating(false))
-    }
-  }, [open, initialIndex])
 
   const handlePrev = useCallback(() => {
     setCurrentIndex((i) => (i > 0 ? i - 1 : images.length - 1))
@@ -73,10 +63,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxPr
   return createPortal(
     <div
       ref={backdropRef}
-      className={cn(
-        'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 transition-opacity duration-200',
-        isAnimating ? 'opacity-0' : 'opacity-100',
-      )}
+      className={cn('fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 transition-opacity duration-200 opacity-100')}
       onClick={(e) => {
         if (e.target === backdropRef.current) onClose()
       }}

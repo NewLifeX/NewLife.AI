@@ -94,10 +94,9 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'newlife-settings',
-      partialize: (state) => {
-        const { _loaded, loadFromServer, update, reset, ...rest } = state
-        return rest
-      },
+      partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => !['_loaded', 'loadFromServer', 'update', 'reset'].includes(key)),
+      ) as UserSettings,
       onRehydrateStorage: () => (state) => {
         if (state?.language) {
           i18n.changeLanguage(state.language)

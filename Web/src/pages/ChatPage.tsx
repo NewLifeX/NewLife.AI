@@ -81,8 +81,12 @@ export function ChatPage({
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     bottomRef.current?.scrollIntoView({ behavior })
     userScrolledRef.current = false
-    setShowBackToBottom(false)
   }, [])
+
+  const handleBackToBottom = useCallback(() => {
+    scrollToBottom('smooth')
+    setShowBackToBottom(false)
+  }, [scrollToBottom])
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
@@ -204,7 +208,7 @@ export function ChatPage({
 
       {showBackToBottom && (
         <button
-          onClick={() => scrollToBottom('smooth')}
+          onClick={handleBackToBottom}
           className="absolute bottom-32 right-6 z-30 w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
           title={t('chat.backToBottom')}
         >

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
@@ -68,7 +68,11 @@ export function ConversationList({
   const [searchQuery, setSearchQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setConfirmDeleteId(null); setSearchQuery('') }, [activeId])
+  const handleSelect = useCallback((id: number) => {
+    setConfirmDeleteId(null)
+    setSearchQuery('')
+    onSelect(id)
+  }, [onSelect])
 
   const handleRenameStart = (conv: Conversation) => {
     setEditingId(conv.id)
@@ -164,7 +168,7 @@ export function ConversationList({
                     )}
                   >
                     <button
-                      onClick={() => onSelect(conv.id)}
+                      onClick={() => handleSelect(conv.id)}
                       className="flex items-center space-x-2 flex-1 min-w-0 text-left focus-visible:outline-none"
                     >
                       <ConversationIcon conv={conv} />

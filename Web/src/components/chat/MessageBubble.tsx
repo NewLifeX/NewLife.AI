@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useEffect, useCallback } from 'react'
+import { type ReactNode, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn, formatRelativeTime, formatExactTime } from '@/lib/utils'
 import { Avatar } from '@/components/common/Avatar'
@@ -61,15 +61,8 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
-  const [editValue, setEditValue] = useState('')
+  const [editValue, setEditValue] = useState(rawContent ?? '')
   const editRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (isEditing && rawContent) {
-      setEditValue(rawContent)
-      setTimeout(() => editRef.current?.focus(), 0)
-    }
-  }, [isEditing, rawContent])
 
   // 移动端长按操作
   const [actionSheetOpen, setActionSheetOpen] = useState(false)
@@ -107,6 +100,7 @@ export function MessageBubble({
                 onChange={(e) => setEditValue(e.target.value)}
                 className="w-full bg-transparent text-gray-900 dark:text-gray-100 text-[15px] leading-7 resize-none outline-none min-h-[60px]"
                 rows={Math.max(2, editValue.split('\n').length)}
+                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()

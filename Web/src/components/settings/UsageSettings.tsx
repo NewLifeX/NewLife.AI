@@ -11,7 +11,6 @@ export function UsageSettings() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true)
     Promise.all([fetchUsageSummary(), fetchDailyUsage(), fetchModelUsage()])
       .then(([s, d, m]) => {
         setSummary(s)

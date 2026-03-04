@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo, type ReactNode, type ReactElement } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -13,6 +13,15 @@ import { Lightbox } from '@/components/common/Lightbox'
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
 
 let mermaidCounter = 0
+
+type CodeLikeElement = ReactElement<{ className?: string; children?: ReactNode }> & { type?: unknown }
+
+function isCodeLikeElement(value: unknown): value is CodeLikeElement {
+  if (!value || typeof value !== 'object' || !('props' in value)) return false
+  const element = value as CodeLikeElement
+  const className = element.props?.className
+  return element.type === 'code' || typeof className === 'string'
+}
 
 function MermaidBlock({ code }: { code: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -84,11 +93,11 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         components={{
           pre({ children, ...props }) {
             const codeEl = Array.isArray(children)
-              ? children.find((c: any) => c?.type === 'code' || c?.props?.className)
+              ? children.find((c) => isCodeLikeElement(c))
               : children
             const codeStr =
-              typeof codeEl === 'object' && codeEl !== null && 'props' in (codeEl as any)
-                ? String((codeEl as any).props.children ?? '')
+              typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
+                ? String((codeEl as { props?: { children?: ReactNode } }).props?.children ?? '')
                 : ''
             return (
               <div className="relative group/code">
@@ -180,6 +189,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         {content}
       </ReactMarkdown>
       <Lightbox
+        key={`${lightboxOpen}-${lightboxIndex}`}
         images={images}
         initialIndex={lightboxIndex}
         open={lightboxOpen}

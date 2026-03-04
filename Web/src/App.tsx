@@ -49,6 +49,11 @@ function ChatApp() {
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
   const [appReady, setAppReady] = useState(false)
 
+  const handleNewChat = useCallback(() => {
+    newChat()
+    navigate('/chat')
+  }, [newChat, navigate])
+
   useEffect(() => {
     Promise.all([
       loadConversations(),
@@ -68,7 +73,7 @@ function ChatApp() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [handleNewChat, loadConversations, loadModels, settings])
 
   useEffect(() => {
     const urlId = conversationId ? Number(conversationId) : undefined
@@ -79,7 +84,7 @@ function ChatApp() {
         setActiveConversation(undefined)
       }
     }
-  }, [conversationId])
+  }, [activeConversationId, conversationId, setActiveConversation])
 
   useEffect(() => {
     const expectedPath = activeConversationId != null
@@ -93,11 +98,6 @@ function ChatApp() {
   const handleConversationSelect = useCallback((id: number) => {
     navigate(`/chat/${id}`)
   }, [navigate])
-
-  const handleNewChat = useCallback(() => {
-    newChat()
-    navigate('/chat')
-  }, [newChat, navigate])
 
   const handleDeleteConv = useCallback(async (id: number) => {
     await deleteConv(id)

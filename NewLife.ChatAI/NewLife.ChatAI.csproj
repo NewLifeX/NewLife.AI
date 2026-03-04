@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <AssemblyTitle>AI对话</AssemblyTitle>
     <Description>对话交互式AI Web应用</Description>
     <Company>新生命开发团队</Company>
@@ -13,7 +13,7 @@
     <FileVersion>$(Version)</FileVersion>
     <AssemblyVersion>$(VersionPrefix).*</AssemblyVersion>
     <Deterministic>false</Deterministic>
-    <OutputPath>..\Bin</OutputPath>
+    <OutputPath>..\Bin\Web</OutputPath>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -24,7 +24,7 @@
     <NoWarn>1701;1702;NU5104;NETSDK1138;CS7035</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
     <PackageId>NewLife.ChatAI</PackageId>
     <Authors>$(Company)</Authors>
     <ProjectUrl>https://github.com/NewLifeX/NewLife.AI</ProjectUrl>
@@ -56,7 +56,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <PackageReference Include="NewLife.Cube.Core" Version="6.9.2026.201" />
     <PackageReference Include="NewLife.XCode" Version="11.24.2026.201" />
   </ItemGroup>

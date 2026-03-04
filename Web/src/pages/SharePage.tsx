@@ -15,7 +15,6 @@ export function SharePage() {
 
   useEffect(() => {
     if (!token) return
-    setLoading(true)
     fetchSharedConversation(token)
       .then((result) => {
         if (result) {
