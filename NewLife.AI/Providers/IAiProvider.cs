@@ -13,8 +13,14 @@ namespace NewLife.AI.Providers;
 /// </remarks>
 public interface IAiProvider
 {
-    /// <summary>服务商名称。唯一标识，如 OpenAI、DashScope、DeepSeek 等</summary>
+    /// <summary>服务商编码。唯一标识，如 OpenAI、DashScope、DeepSeek 等</summary>
+    String Code { get; }
+
+    /// <summary>服务商名称。用于界面显示的友好名称，如"OpenAI"、"阿里百炼"、"深度求索"等</summary>
     String Name { get; }
+
+    /// <summary>服务商描述。详细说明服务商特点、支持的模型系列等</summary>
+    String? Description { get; }
 
     /// <summary>API 协议类型。ChatCompletions / AnthropicMessages / Gemini</summary>
     String ApiProtocol { get; }

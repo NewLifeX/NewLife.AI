@@ -80,10 +80,12 @@ public partial class ModelConfig : Entity<ModelConfig>
             }
 
             entity.Code = code;
+            entity.Name = provider.Name;
             entity.ModelName = code;
-            entity.Provider = provider.Name;
+            entity.Provider = provider.Code;
             entity.Endpoint = provider.DefaultEndpoint;
             entity.ApiProtocol = provider.ApiProtocol;
+            entity.Remark = provider.Description;
 
             // 同步服务商默认能力
             var caps = provider.DefaultCapabilities;

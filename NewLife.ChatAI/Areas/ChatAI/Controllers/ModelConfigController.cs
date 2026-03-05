@@ -22,6 +22,7 @@ public class ModelConfigController : EntityController<ModelConfig>
 
         //ListFields.RemoveField("Id", "Creator");
         ListFields.RemoveCreateField().RemoveRemarkField();
+        ListFields.AddListField("Remark", "UpdateUserId");
 
         //{
         //    var df = ListFields.GetField("Code") as ListField;

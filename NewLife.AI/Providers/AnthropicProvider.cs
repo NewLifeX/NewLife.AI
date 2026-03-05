@@ -21,8 +21,14 @@ namespace NewLife.AI.Providers;
 public class AnthropicProvider : IAiProvider
 {
     #region 属性
+    /// <summary>服务商编码</summary>
+    public virtual String Code => "Anthropic";
+
     /// <summary>服务商名称</summary>
     public virtual String Name => "Anthropic";
+
+    /// <summary>服务商描述</summary>
+    public virtual String? Description => "Anthropic Claude 系列模型，擅长安全对齐和长文本理解";
 
     /// <summary>API 协议类型</summary>
     public virtual String ApiProtocol => "AnthropicMessages";

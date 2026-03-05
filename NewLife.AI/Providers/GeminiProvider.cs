@@ -1,5 +1,4 @@
-﻿using System.Net.Http;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.Serialization;
@@ -20,8 +19,14 @@ namespace NewLife.AI.Providers;
 public class GeminiProvider : IAiProvider
 {
     #region 属性
+    /// <summary>服务商编码</summary>
+    public virtual String Code => "Gemini";
+
     /// <summary>服务商名称</summary>
-    public virtual String Name => "Gemini";
+    public virtual String Name => "谷歌Gemini";
+
+    /// <summary>服务商描述</summary>
+    public virtual String? Description => "谷歌 Gemini 系列多模态大模型，支持超长上下文";
 
     /// <summary>API 协议类型</summary>
     public virtual String ApiProtocol => "Gemini";

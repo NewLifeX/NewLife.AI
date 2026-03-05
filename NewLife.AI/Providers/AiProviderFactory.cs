@@ -21,7 +21,7 @@ public class AiProviderFactory
     {
         if (provider == null) throw new ArgumentNullException(nameof(provider));
 
-        _providers[provider.Name] = provider;
+        _providers[provider.Code] = provider;
         return this;
     }
 

@@ -1,5 +1,4 @@
-﻿using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
@@ -16,8 +15,14 @@ namespace NewLife.AI.Providers;
 public class OpenAiProvider : IAiProvider
 {
     #region 属性
+    /// <summary>服务商编码</summary>
+    public virtual String Code => "OpenAI";
+
     /// <summary>服务商名称</summary>
     public virtual String Name => "OpenAI";
+
+    /// <summary>服务商描述</summary>
+    public virtual String? Description => "OpenAI 官方 API，支持 GPT 系列模型";
 
     /// <summary>API 协议类型</summary>
     public virtual String ApiProtocol => "ChatCompletions";

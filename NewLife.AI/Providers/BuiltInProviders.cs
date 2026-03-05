@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Net.Http.Headers;
 
 namespace NewLife.AI.Providers;
@@ -15,11 +15,14 @@ namespace NewLife.AI.Providers;
 /// </remarks>
 public class AzureAiProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "AzureAI";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "AzureAI";
+    public override String Name => "微软Azure AI";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "微软 Azure AI 平台，支持 OpenAI 模型及多种开源模型";
+    public override String? Description => "微软 Azure AI 平台，支持 OpenAI 模型及多种开源模型";
 
     /// <summary>默认 API 地址。Azure AI Foundry 推理入口</summary>
     public override String DefaultEndpoint => "https://models.inference.ai.azure.com";
@@ -35,11 +38,14 @@ public class AzureAiProvider : OpenAiProvider
 /// </remarks>
 public class DashScopeProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "DashScope";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "DashScope";
+    public override String Name => "阿里百炼";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "阿里云百炼大模型平台，支持 Qwen/通义千问全系列模型";
+    public override String? Description => "阿里云百炼大模型平台，支持 Qwen/通义千问全系列模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://dashscope.aliyuncs.com/compatible-mode";
@@ -53,11 +59,14 @@ public class DashScopeProvider : OpenAiProvider
 /// </remarks>
 public class DeepSeekProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "DeepSeek";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "DeepSeek";
+    public override String Name => "深度求索";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "深度求索，DeepSeek-V3/R1 推理模型，支持思考过程输出";
+    public override String? Description => "深度求索，DeepSeek-V3/R1 推理模型，支持思考过程输出";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.deepseek.com";
@@ -74,11 +83,14 @@ public class DeepSeekProvider : OpenAiProvider
 /// </remarks>
 public class VolcEngineProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "VolcEngine";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "VolcEngine";
+    public override String Name => "字节豆包";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "字节跳动火山方舟平台，支持豆包等大模型";
+    public override String? Description => "字节跳动火山方舟平台，支持豆包等大模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://ark.cn-beijing.volces.com/api/v3";
@@ -97,11 +109,14 @@ public class VolcEngineProvider : OpenAiProvider
 /// </remarks>
 public class ZhipuProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Zhipu";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Zhipu";
+    public override String Name => "智谱AI";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "智谱 AI，支持 GLM-4/CogView 系列模型";
+    public override String? Description => "智谱 AI，支持 GLM-4/CogView 系列模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://open.bigmodel.cn/api/paas/v4";
@@ -121,11 +136,14 @@ public class ZhipuProvider : OpenAiProvider
 /// </remarks>
 public class MoonshotProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Moonshot";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Moonshot";
+    public override String Name => "月之暗面Kimi";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "月之暗面 Kimi 系列，支持超长上下文和推理思考";
+    public override String? Description => "月之暗面 Kimi 系列，支持超长上下文和推理思考";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.moonshot.cn";
@@ -141,11 +159,14 @@ public class MoonshotProvider : OpenAiProvider
 /// </remarks>
 public class HunyuanProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Hunyuan";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Hunyuan";
+    public override String Name => "腾讯混元";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "腾讯混元大模型";
+    public override String? Description => "腾讯混元大模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.hunyuan.cloud.tencent.com";
@@ -161,11 +182,14 @@ public class HunyuanProvider : OpenAiProvider
 /// </remarks>
 public class QianfanProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Qianfan";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Qianfan";
+    public override String Name => "百度文心";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "百度千帆大模型平台，支持文心一言系列";
+    public override String? Description => "百度千帆大模型平台，支持文心一言系列";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://qianfan.baidubce.com/v2";
@@ -184,11 +208,14 @@ public class QianfanProvider : OpenAiProvider
 /// </remarks>
 public class SparkProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Spark";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Spark";
+    public override String Name => "讯飞星火";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "讯飞星火认知大模型";
+    public override String? Description => "讯飞星火认知大模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://spark-api-open.xf-yun.com";
@@ -203,11 +230,14 @@ public class SparkProvider : OpenAiProvider
 /// </remarks>
 public class YiProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Yi";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Yi";
+    public override String Name => "零一万物";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "零一万物 Yi 系列大模型";
+    public override String? Description => "零一万物 Yi 系列大模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.lingyiwanwu.com";
@@ -223,11 +253,14 @@ public class YiProvider : OpenAiProvider
 /// </remarks>
 public class MiniMaxProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "MiniMax";
+
     /// <summary>服务商名称</summary>
     public override String Name => "MiniMax";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "MiniMax 多模态大模型";
+    public override String? Description => "MiniMax 多模态大模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.minimax.chat";
@@ -243,11 +276,14 @@ public class MiniMaxProvider : OpenAiProvider
 /// </remarks>
 public class SiliconFlowProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "SiliconFlow";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "SiliconFlow";
+    public override String Name => "硅基流动";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "硅基流动推理加速平台，聚合多种主流开源模型";
+    public override String? Description => "硅基流动推理加速平台，聚合多种主流开源模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.siliconflow.cn";
@@ -262,11 +298,14 @@ public class SiliconFlowProvider : OpenAiProvider
 /// </remarks>
 public class XAiProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "XAI";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "XAI";
+    public override String Name => "xAI Grok";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Elon Musk 旗下 x.AI，支持 Grok 系列模型";
+    public override String? Description => "Elon Musk 旗下 x.AI，支持 Grok 系列模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.x.ai";
@@ -282,11 +321,14 @@ public class XAiProvider : OpenAiProvider
 /// </remarks>
 public class GitHubModelsProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "GitHubModels";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "GitHubModels";
+    public override String Name => "GitHub Models";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "GitHub 模型市场，通过 GitHub Token 调用多种模型";
+    public override String? Description => "GitHub 模型市场，通过 GitHub Token 调用多种模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://models.github.ai/inference";
@@ -301,11 +343,14 @@ public class GitHubModelsProvider : OpenAiProvider
 /// </remarks>
 public class OpenRouterProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "OpenRouter";
+
     /// <summary>服务商名称</summary>
     public override String Name => "OpenRouter";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "OpenRouter 模型聚合平台，统一调用数百种模型";
+    public override String? Description => "OpenRouter 模型聚合平台，统一调用数百种模型";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://openrouter.ai/api";
@@ -321,11 +366,14 @@ public class OpenRouterProvider : OpenAiProvider
 /// </remarks>
 public class OllamaProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Ollama";
+
     /// <summary>服务商名称</summary>
     public override String Name => "Ollama";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "本地运行开源大模型，支持 Llama/Qwen/Gemma 等";
+    public override String? Description => "本地运行开源大模型，支持 Llama/Qwen/Gemma 等";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "http://localhost:11434";
@@ -350,11 +398,14 @@ public class OllamaProvider : OpenAiProvider
 /// </remarks>
 public class MiMoProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "MiMo";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "MiMo";
+    public override String Name => "小米MiMo";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "小米 MiMo 推理模型，支持思考过程输出";
+    public override String? Description => "小米 MiMo 推理模型，支持思考过程输出";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.xiaomimimo.com";
@@ -370,11 +421,14 @@ public class MiMoProvider : OpenAiProvider
 /// </remarks>
 public class TogetherAiProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "TogetherAI";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "TogetherAI";
+    public override String Name => "Together AI";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Together AI 开源模型云端推理平台";
+    public override String? Description => "Together AI 开源模型云端推理平台";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.together.xyz";
@@ -390,11 +444,14 @@ public class TogetherAiProvider : OpenAiProvider
 /// </remarks>
 public class GroqProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Groq";
+
     /// <summary>服务商名称</summary>
     public override String Name => "Groq";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Groq LPU 高速推理平台，毫秒级延迟";
+    public override String? Description => "Groq LPU 高速推理平台，毫秒级延迟";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.groq.com/openai";
@@ -410,11 +467,14 @@ public class GroqProvider : OpenAiProvider
 /// </remarks>
 public class MistralProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Mistral";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Mistral";
+    public override String Name => "Mistral AI";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Mistral AI，高效的欧洲 AI 模型提供商";
+    public override String? Description => "Mistral AI，高效的欧洲 AI 模型提供商";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.mistral.ai";
@@ -430,11 +490,14 @@ public class MistralProvider : OpenAiProvider
 /// </remarks>
 public class CohereProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Cohere";
+
     /// <summary>服务商名称</summary>
     public override String Name => "Cohere";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Cohere 企业级 AI 模型，擅长 RAG 和搜索增强";
+    public override String? Description => "Cohere 企业级 AI 模型，擅长 RAG 和搜索增强";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.cohere.com/compatibility";
@@ -450,11 +513,14 @@ public class CohereProvider : OpenAiProvider
 /// </remarks>
 public class PerplexityProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Perplexity";
+
     /// <summary>服务商名称</summary>
     public override String Name => "Perplexity";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Perplexity 联网搜索 AI，回答附带引用来源";
+    public override String? Description => "Perplexity 联网搜索 AI，回答附带引用来源";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.perplexity.ai";
@@ -470,11 +536,14 @@ public class PerplexityProvider : OpenAiProvider
 /// </remarks>
 public class InfiniProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Infini";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Infini";
+    public override String Name => "无问芯穹";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "无问芯穹推理云平台，支持多种主流模型高效推理";
+    public override String? Description => "无问芯穹推理云平台，支持多种主流模型高效推理";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://cloud.infini-ai.com/maas";
@@ -490,11 +559,14 @@ public class InfiniProvider : OpenAiProvider
 /// </remarks>
 public class CerebrasProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Cerebras";
+
     /// <summary>服务商名称</summary>
     public override String Name => "Cerebras";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Cerebras 晶圆级芯片超高速推理";
+    public override String? Description => "Cerebras 晶圆级芯片超高速推理";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.cerebras.ai";
@@ -510,11 +582,14 @@ public class CerebrasProvider : OpenAiProvider
 /// </remarks>
 public class FireworksProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "Fireworks";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "Fireworks";
+    public override String Name => "Fireworks AI";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "Fireworks AI 高速推理平台";
+    public override String? Description => "Fireworks AI 高速推理平台";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.fireworks.ai/inference";
@@ -530,11 +605,14 @@ public class FireworksProvider : OpenAiProvider
 /// </remarks>
 public class SambaNovaProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "SambaNova";
+
     /// <summary>服务商名称</summary>
     public override String Name => "SambaNova";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "SambaNova RDU 架构 AI 推理平台";
+    public override String? Description => "SambaNova RDU 架构 AI 推理平台";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://api.sambanova.ai";
@@ -550,11 +628,14 @@ public class SambaNovaProvider : OpenAiProvider
 /// </remarks>
 public class LMStudioProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "LMStudio";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "LMStudio";
+    public override String Name => "LM Studio";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "LM Studio 桌面端本地模型运行工具";
+    public override String? Description => "LM Studio 桌面端本地模型运行工具";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "http://localhost:1234";
@@ -579,11 +660,14 @@ public class LMStudioProvider : OpenAiProvider
 /// </remarks>
 public class VllmProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "vLLM";
+
     /// <summary>服务商名称</summary>
     public override String Name => "vLLM";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "vLLM 高吞吐量推理引擎，支持自部署";
+    public override String? Description => "vLLM 高吞吐量推理引擎，支持自部署";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "http://localhost:8000";
@@ -608,11 +692,14 @@ public class VllmProvider : OpenAiProvider
 /// </remarks>
 public class OneApiProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "OneAPI";
+
     /// <summary>服务商名称</summary>
     public override String Name => "OneAPI";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "OneAPI 开源 LLM API 管理和分发系统";
+    public override String? Description => "OneAPI 开源 LLM API 管理和分发系统";
 
     /// <summary>默认 API 地址。需要用户配置为自己的 OneAPI 部署地址</summary>
     public override String DefaultEndpoint => "http://localhost:3000";
@@ -624,11 +711,14 @@ public class OneApiProvider : OpenAiProvider
 /// <summary>小马算力服务商。GPU 算力租赁平台，提供 AI 推理服务</summary>
 public class XiaomaPowerProvider : OpenAiProvider
 {
+    /// <summary>服务商编码</summary>
+    public override String Code => "XiaomaPower";
+
     /// <summary>服务商名称</summary>
-    public override String Name => "XiaomaPower";
+    public override String Name => "小马算力";
 
     /// <summary>服务商描述</summary>
-    public virtual String Description => "小马算力 GPU 算力平台";
+    public override String? Description => "小马算力 GPU 算力平台";
 
     /// <summary>默认 API 地址</summary>
     public override String DefaultEndpoint => "https://openapi.xmpower.cn";
