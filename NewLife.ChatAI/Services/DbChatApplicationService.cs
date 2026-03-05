@@ -607,7 +607,7 @@ public class ChatApplicationService
             yield break;
         }
 
-        // 构建上下文（在插入空 assistant 消 messagesId 之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
+        // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
         var contextMessages = BuildContextMessages(conversationId, request.Content, modelConfig);
 
         // 预分配AI回复消息编号
@@ -804,7 +804,7 @@ public class ChatApplicationService
         var provider = _gatewayService.GetProvider(modelConfig);
         if (provider == null)
         {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.Provider}'");
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.GetEffectiveProvider()}'");
             yield break;
         }
 
@@ -1159,7 +1159,7 @@ public class ChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling, e.Provider)).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling, e.GetEffectiveProvider())).ToArray();
         return Task.FromResult(models);
     }
     #endregion

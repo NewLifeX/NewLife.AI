@@ -83,10 +83,11 @@ public class GatewayService
     {
         if (config == null) return null;
 
-        return _providerFactory.GetProvider(config.Provider);
+        var providerCode = config.GetEffectiveProvider();
+        return _providerFactory.GetProvider(providerCode);
     }
 
-    /// <summary>构建服务商连接选项。支持从父级继承 Endpoint/ApiKey</summary>
+    /// <summary>构建服务商连接选项。从关联的 ProviderConfig 获取 Endpoint/ApiKey</summary>
     /// <param name="config">模型配置</param>
     /// <returns></returns>
     public static AiProviderOptions BuildOptions(ModelConfig config)
@@ -110,7 +111,7 @@ public class GatewayService
     {
         var provider = GetProvider(config);
         if (provider == null)
-            throw new InvalidOperationException($"未找到服务商 '{config.Provider}'");
+            throw new InvalidOperationException($"未找到服务商 '{config.GetEffectiveProvider()}'");
 
         var options = BuildOptions(config);
 
@@ -152,7 +153,7 @@ public class GatewayService
     {
         var provider = GetProvider(config);
         if (provider == null)
-            throw new InvalidOperationException($"未找到服务商 '{config.Provider}'");
+            throw new InvalidOperationException($"未找到服务商 '{config.GetEffectiveProvider()}'");
 
         var options = BuildOptions(config);
 

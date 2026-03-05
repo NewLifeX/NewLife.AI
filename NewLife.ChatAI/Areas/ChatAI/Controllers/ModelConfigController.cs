@@ -55,9 +55,8 @@ public class ModelConfigController : EntityController<ModelConfig>
     /// <returns></returns>
     protected override IEnumerable<ModelConfig> Search(Pager p)
     {
-        var parentId = p["parentId"].ToInt(-1);
+        var providerId = p["providerId"].ToInt(-1);
         var code = p["code"];
-        var provider = p["provider"];
         var supportThinking = p["supportThinking"]?.ToBoolean();
         var supportVision = p["supportVision"]?.ToBoolean();
         var supportImageGeneration = p["supportImageGeneration"]?.ToBoolean();
@@ -67,6 +66,6 @@ public class ModelConfigController : EntityController<ModelConfig>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ModelConfig.Search(parentId, code, provider, supportThinking, supportVision, supportImageGeneration, supportFunctionCalling, enable, start, end, p["Q"], p);
+        return ModelConfig.Search(providerId, code, supportThinking, supportVision, supportImageGeneration, supportFunctionCalling, enable, start, end, p["Q"], p);
     }
 }

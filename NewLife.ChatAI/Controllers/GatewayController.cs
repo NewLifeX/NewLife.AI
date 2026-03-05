@@ -130,7 +130,7 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
 
         var provider = gatewayService.GetProvider(config);
         if (provider == null)
-            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.Provider}'" });
+            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         // 通过 ChatCompletions 方式请求图像生成（兼容 OpenAI DALL-E 等通过聊天接口生成图像的场景）
         var size = ChatSetting.Current.DefaultImageSize;
@@ -202,7 +202,7 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
 
         var provider = gatewayService.GetProvider(config);
         if (provider == null)
-            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.Provider}'" });
+            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         try
         {

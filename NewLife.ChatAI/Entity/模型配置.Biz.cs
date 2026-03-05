@@ -1,10 +1,16 @@
 ﻿using System.ComponentModel;
+using System.Runtime.Serialization;
+using System.Web.Script.Serialization;
+using System.Xml.Serialization;
 using NewLife.AI.Providers;
 using NewLife.Common;
+using NewLife.Data;
 using NewLife.Log;
 using NewLife.Reflection;
+using NewLife.Web;
 using XCode;
 using XCode.Cache;
+using XCode.Configuration;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -52,10 +58,13 @@ public partial class ModelConfig : Entity<ModelConfig>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
     {
-        // 从 AiProviderFactory 检测所有已注册的服务商，写入尚未存在的模型配置
-        var factory = AiProviderFactory.Default;
-        var providers = factory.Providers;
-        if (providers == null || providers.Count == 0) return;
+        // 新逻辑：从 ProviderConfig 表读取已配置的提供商，为每个提供商创建默认模型配置
+        var providers = ProviderConfig.FindAllEnabled();
+        if (providers == null || providers.Count == 0)
+        {
+            if (XTrace.Debug) XTrace.WriteLine("未找到启用的提供商配置，跳过ModelConfig初始化");
+            return;
+        }
 
         // 获取已有编码集合，用于跳过已存在的配置
         var list = FindAll();
@@ -63,45 +72,30 @@ public partial class ModelConfig : Entity<ModelConfig>
 
         var count = 0;
         var sort = list.Count > 0 ? list.Max(e => e.Sort) + 1 : 1;
-        foreach (var item in providers)
+        
+        foreach (var provider in providers)
         {
-            var provider = item.Value;
-            var code = provider.GetType().Name.TrimEnd("Provider");
+            // 为每个提供商创建一个默认模型配置
+            var code = $"{provider.Code}-default";
             if (!exists.TryGetValue(code, out var entity))
             {
                 entity = new ModelConfig
                 {
-                    Name = provider.Name,
-                    Enable = false,
+                    Code = code,
+                    Name = $"{provider.Name} 默认模型",
+                    ProviderId = provider.Id,
+                    Enable = provider.Enable,
                     Sort = sort++,
                 };
 
-                if (XTrace.Debug) XTrace.WriteLine("发现新模型配置：{0}（{1}）", provider.Name, provider.DefaultEndpoint);
-            }
-
-            entity.Code = code;
-            entity.Name = provider.Name;
-            entity.ModelName = code;
-            entity.Provider = provider.Code;
-            entity.Endpoint = provider.DefaultEndpoint;
-            entity.ApiProtocol = provider.ApiProtocol;
-            entity.Remark = provider.Description;
-
-            // 同步服务商默认能力
-            var caps = provider.DefaultCapabilities;
-            if (caps != null)
-            {
-                entity.SupportThinking = caps.SupportThinking;
-                entity.SupportVision = caps.SupportVision;
-                entity.SupportImageGeneration = caps.SupportImageGeneration;
-                entity.SupportFunctionCalling = caps.SupportFunctionCalling;
+                if (XTrace.Debug) XTrace.WriteLine("为提供商 {0} 创建默认模型配置", provider.Name);
             }
 
             count += entity.Save();
         }
 
         if (count > 0 && XTrace.Debug)
-            XTrace.WriteLine("完成初始化ModelConfig[模型配置]数据，修改 {0} 个服务商配置！", count);
+            XTrace.WriteLine("完成初始化ModelConfig[模型配置]数据，修改 {0} 个模型配置！", count);
     }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
@@ -120,12 +114,15 @@ public partial class ModelConfig : Entity<ModelConfig>
     #endregion
 
     #region 扩展属性
+    /// <summary>关联的提供商配置</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public ProviderConfig ProviderInfo => Extends.Get(nameof(ProviderInfo), k => ProviderConfig.FindById(ProviderId));
     #endregion
 
     #region 高级查询
 
-    // Select Count(Id) as Id,Provider From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By Provider Order By Id Desc limit 20
-    static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(Provider))
+    // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
+    static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))
     {
         //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
     };
@@ -146,44 +143,36 @@ public partial class ModelConfig : Entity<ModelConfig>
         return model;
     }
 
-    /// <summary>获取有效接口地址。为空时递归从父级继承</summary>
+    /// <summary>获取有效接口地址。从关联的提供商配置中获取</summary>
     /// <returns></returns>
     public String GetEffectiveEndpoint()
     {
-        if (!Endpoint.IsNullOrEmpty()) return Endpoint;
-        if (ParentId <= 0) return Endpoint;
-
-        // 递归查找父级，最多向上查找10层防止循环引用
-        var parent = FindById(ParentId);
-        for (var i = 0; i < 10 && parent != null; i++)
-        {
-            if (!parent.Endpoint.IsNullOrEmpty()) return parent.Endpoint;
-            if (parent.ParentId <= 0) break;
-
-            parent = FindById(parent.ParentId);
-        }
-
-        return Endpoint;
+        var provider = ProviderInfo;
+        return provider?.Endpoint ?? "";
     }
 
-    /// <summary>获取有效密钥。为空时递归从父级继承</summary>
+    /// <summary>获取有效密钥。从关联的提供商配置中获取</summary>
     /// <returns></returns>
     public String GetEffectiveApiKey()
     {
-        if (!ApiKey.IsNullOrEmpty()) return ApiKey;
-        if (ParentId <= 0) return ApiKey;
+        var provider = ProviderInfo;
+        return provider?.ApiKey ?? "";
+    }
 
-        // 递归查找父级，最多向上查找10层防止循环引用
-        var parent = FindById(ParentId);
-        for (var i = 0; i < 10 && parent != null; i++)
-        {
-            if (!parent.ApiKey.IsNullOrEmpty()) return parent.ApiKey;
-            if (parent.ParentId <= 0) break;
+    /// <summary>获取有效的提供商代码。从关联的提供商配置中获取</summary>
+    /// <returns></returns>
+    public String GetEffectiveProvider()
+    {
+        var provider = ProviderInfo;
+        return provider?.Provider ?? "";
+    }
 
-            parent = FindById(parent.ParentId);
-        }
-
-        return ApiKey;
+    /// <summary>获取有效的API协议。从关联的提供商配置中获取</summary>
+    /// <returns></returns>
+    public String GetEffectiveApiProtocol()
+    {
+        var provider = ProviderInfo;
+        return provider?.ApiProtocol ?? "";
     }
 
     /// <summary>检查用户是否有权限使用此模型</summary>
@@ -223,6 +212,38 @@ public partial class ModelConfig : Entity<ModelConfig>
 
         // 过滤有权限的模型
         return list.Where(e => e.CheckPermission(roleIds, departmentId)).ToList();
+    }
+
+    /// <summary>高级搜索。用于魔方前台列表页</summary>
+    /// <param name="providerId">提供商编号</param>
+    /// <param name="code">编码</param>
+    /// <param name="supportThinking">支持思考</param>
+    /// <param name="supportVision">支持视觉</param>
+    /// <param name="supportImageGeneration">支持图像生成</param>
+    /// <param name="supportFunctionCalling">支持函数调用</param>
+    /// <param name="enable">启用</param>
+    /// <param name="start">创建时间开始</param>
+    /// <param name="end">创建时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数</param>
+    /// <returns></returns>
+    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
+    {
+        var exp = new WhereExpression();
+
+        if (providerId >= 0) exp &= _.ProviderId == providerId;
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+        if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
+        if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
+        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
+        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
+        if (enable != null) exp &= _.Enable == enable.Value;
+
+        exp &= _.CreateTime.Between(start, end);
+
+        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+
+        return FindAll(exp, page);
     }
     #endregion
 }

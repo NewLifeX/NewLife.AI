@@ -7,15 +7,15 @@ using System.Xml.Serialization;
 
 namespace NewLife.ChatAI.Entity;
 
-/// <summary>模型配置。后端接入的大语言模型，可以继承新增大语言模型</summary>
+/// <summary>模型配置。后端接入的大语言模型，关联到具体的提供商实例</summary>
 public partial class ModelConfigModel
 {
     #region 属性
     /// <summary>编号</summary>
     public Int32 Id { get; set; }
 
-    /// <summary>父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型</summary>
-    public Int32 ParentId { get; set; }
+    /// <summary>提供商。关联的提供商实例ID</summary>
+    public Int32 ProviderId { get; set; }
 
     /// <summary>编码。模型唯一标识</summary>
     public String Code { get; set; }
@@ -25,15 +25,6 @@ public partial class ModelConfigModel
 
     /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
     public String ModelName { get; set; }
-
-    /// <summary>提供商。OpenAI、Alibaba、DeepSeek等</summary>
-    public String Provider { get; set; }
-
-    /// <summary>接口地址。API地址，为空时从父级继承</summary>
-    public String Endpoint { get; set; }
-
-    /// <summary>密钥。API访问密钥，为空时从父级继承</summary>
-    public String ApiKey { get; set; }
 
     /// <summary>最大令牌数</summary>
     public Int32 MaxTokens { get; set; }
@@ -49,9 +40,6 @@ public partial class ModelConfigModel
 
     /// <summary>函数调用。是否支持Function Calling</summary>
     public Boolean SupportFunctionCalling { get; set; }
-
-    /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
-    public String ApiProtocol { get; set; }
 
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     public String SystemPrompt { get; set; }
@@ -96,19 +84,15 @@ public partial class ModelConfigModel
     public void Copy(ModelConfigModel model)
     {
         Id = model.Id;
-        ParentId = model.ParentId;
+        ProviderId = model.ProviderId;
         Code = model.Code;
         Name = model.Name;
         ModelName = model.ModelName;
-        Provider = model.Provider;
-        Endpoint = model.Endpoint;
-        ApiKey = model.ApiKey;
         MaxTokens = model.MaxTokens;
         SupportThinking = model.SupportThinking;
         SupportVision = model.SupportVision;
         SupportImageGeneration = model.SupportImageGeneration;
         SupportFunctionCalling = model.SupportFunctionCalling;
-        ApiProtocol = model.ApiProtocol;
         SystemPrompt = model.SystemPrompt;
         RoleIds = model.RoleIds;
         DepartmentIds = model.DepartmentIds;

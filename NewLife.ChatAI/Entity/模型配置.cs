@@ -13,14 +13,13 @@ using XCode.DataAccessLayer;
 
 namespace NewLife.ChatAI.Entity;
 
-/// <summary>模型配置。后端接入的大语言模型，可以继承新增大语言模型</summary>
+/// <summary>模型配置。后端接入的大语言模型，关联到具体的提供商实例</summary>
 [Serializable]
 [DataObject]
-[Description("模型配置。后端接入的大语言模型，可以继承新增大语言模型")]
+[Description("模型配置。后端接入的大语言模型，关联到具体的提供商实例")]
 [BindIndex("IU_ModelConfig_Code", true, "Code")]
-[BindIndex("IX_ModelConfig_Provider", false, "Provider")]
-[BindIndex("IX_ModelConfig_ParentId", false, "ParentId")]
-[BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型，可以继承新增大语言模型", ConnName = "ChatAI", DbType = DatabaseType.None)]
+[BindIndex("IX_ModelConfig_ProviderId", false, "ProviderId")]
+[BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型，关联到具体的提供商实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class ModelConfig : IEntity<ModelConfigModel>
 {
     #region 属性
@@ -32,13 +31,13 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
-    private Int32 _ParentId;
-    /// <summary>父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型</summary>
-    [DisplayName("父级")]
-    [Description("父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型")]
+    private Int32 _ProviderId;
+    /// <summary>提供商。关联的提供商实例ID</summary>
+    [DisplayName("提供商")]
+    [Description("提供商。关联的提供商实例ID")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ParentId", "父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型", "")]
-    public Int32 ParentId { get => _ParentId; set { if (OnPropertyChanging("ParentId", value)) { _ParentId = value; OnPropertyChanged("ParentId"); } } }
+    [BindColumn("ProviderId", "提供商。关联的提供商实例ID", "")]
+    public Int32 ProviderId { get => _ProviderId; set { if (OnPropertyChanging("ProviderId", value)) { _ProviderId = value; OnPropertyChanged("ProviderId"); } } }
 
     private String _Code;
     /// <summary>编码。模型唯一标识</summary>
@@ -63,30 +62,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [DataObjectField(false, false, true, 100)]
     [BindColumn("ModelName", "模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1", "")]
     public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
-
-    private String _Provider;
-    /// <summary>提供商。OpenAI、Alibaba、DeepSeek等</summary>
-    [DisplayName("提供商")]
-    [Description("提供商。OpenAI、Alibaba、DeepSeek等")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("Provider", "提供商。OpenAI、Alibaba、DeepSeek等", "")]
-    public String Provider { get => _Provider; set { if (OnPropertyChanging("Provider", value)) { _Provider = value; OnPropertyChanged("Provider"); } } }
-
-    private String _Endpoint;
-    /// <summary>接口地址。API地址，为空时从父级继承</summary>
-    [DisplayName("接口地址")]
-    [Description("接口地址。API地址，为空时从父级继承")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("Endpoint", "接口地址。API地址，为空时从父级继承", "", ShowIn = "Auto,-List,-Search")]
-    public String Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
-
-    private String _ApiKey;
-    /// <summary>密钥。API访问密钥，为空时从父级继承</summary>
-    [DisplayName("密钥")]
-    [Description("密钥。API访问密钥，为空时从父级继承")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("ApiKey", "密钥。API访问密钥，为空时从父级继承", "", ShowIn = "Auto,-List,-Search")]
-    public String ApiKey { get => _ApiKey; set { if (OnPropertyChanging("ApiKey", value)) { _ApiKey = value; OnPropertyChanged("ApiKey"); } } }
 
     private Int32 _MaxTokens;
     /// <summary>最大令牌数</summary>
@@ -127,14 +102,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("SupportFunctionCalling", "函数调用。是否支持Function Calling", "")]
     public Boolean SupportFunctionCalling { get => _SupportFunctionCalling; set { if (OnPropertyChanging("SupportFunctionCalling", value)) { _SupportFunctionCalling = value; OnPropertyChanged("SupportFunctionCalling"); } } }
-
-    private String _ApiProtocol;
-    /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
-    [DisplayName("API协议")]
-    [Description("API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("ApiProtocol", "API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini", "")]
-    public String ApiProtocol { get => _ApiProtocol; set { if (OnPropertyChanging("ApiProtocol", value)) { _ApiProtocol = value; OnPropertyChanged("ApiProtocol"); } } }
 
     private String _SystemPrompt;
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
@@ -246,19 +213,15 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     public void Copy(ModelConfigModel model)
     {
         Id = model.Id;
-        ParentId = model.ParentId;
+        ProviderId = model.ProviderId;
         Code = model.Code;
         Name = model.Name;
         ModelName = model.ModelName;
-        Provider = model.Provider;
-        Endpoint = model.Endpoint;
-        ApiKey = model.ApiKey;
         MaxTokens = model.MaxTokens;
         SupportThinking = model.SupportThinking;
         SupportVision = model.SupportVision;
         SupportImageGeneration = model.SupportImageGeneration;
         SupportFunctionCalling = model.SupportFunctionCalling;
-        ApiProtocol = model.ApiProtocol;
         SystemPrompt = model.SystemPrompt;
         RoleIds = model.RoleIds;
         DepartmentIds = model.DepartmentIds;
@@ -283,19 +246,15 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         get => name switch
         {
             "Id" => _Id,
-            "ParentId" => _ParentId,
+            "ProviderId" => _ProviderId,
             "Code" => _Code,
             "Name" => _Name,
             "ModelName" => _ModelName,
-            "Provider" => _Provider,
-            "Endpoint" => _Endpoint,
-            "ApiKey" => _ApiKey,
             "MaxTokens" => _MaxTokens,
             "SupportThinking" => _SupportThinking,
             "SupportVision" => _SupportVision,
             "SupportImageGeneration" => _SupportImageGeneration,
             "SupportFunctionCalling" => _SupportFunctionCalling,
-            "ApiProtocol" => _ApiProtocol,
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
@@ -315,19 +274,15 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
-                case "ParentId": _ParentId = value.ToInt(); break;
+                case "ProviderId": _ProviderId = value.ToInt(); break;
                 case "Code": _Code = Convert.ToString(value); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "ModelName": _ModelName = Convert.ToString(value); break;
-                case "Provider": _Provider = Convert.ToString(value); break;
-                case "Endpoint": _Endpoint = Convert.ToString(value); break;
-                case "ApiKey": _ApiKey = Convert.ToString(value); break;
                 case "MaxTokens": _MaxTokens = value.ToInt(); break;
                 case "SupportThinking": _SupportThinking = value.ToBoolean(); break;
                 case "SupportVision": _SupportVision = value.ToBoolean(); break;
                 case "SupportImageGeneration": _SupportImageGeneration = value.ToBoolean(); break;
                 case "SupportFunctionCalling": _SupportFunctionCalling = value.ToBoolean(); break;
-                case "ApiProtocol": _ApiProtocol = Convert.ToString(value); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
@@ -380,63 +335,16 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     }
 
     /// <summary>根据提供商查找</summary>
-    /// <param name="provider">提供商</param>
+    /// <param name="providerId">提供商</param>
     /// <returns>实体列表</returns>
-    public static IList<ModelConfig> FindAllByProvider(String provider)
+    public static IList<ModelConfig> FindAllByProviderId(Int32 providerId)
     {
-        if (provider.IsNullOrEmpty()) return [];
+        if (providerId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.Provider.EqualIgnoreCase(provider));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ProviderId == providerId);
 
-        return FindAll(_.Provider == provider);
-    }
-
-    /// <summary>根据父级查找</summary>
-    /// <param name="parentId">父级</param>
-    /// <returns>实体列表</returns>
-    public static IList<ModelConfig> FindAllByParentId(Int32 parentId)
-    {
-        if (parentId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ParentId == parentId);
-
-        return FindAll(_.ParentId == parentId);
-    }
-    #endregion
-
-    #region 高级查询
-    /// <summary>高级查询</summary>
-    /// <param name="parentId">父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型</param>
-    /// <param name="code">编码。模型唯一标识</param>
-    /// <param name="provider">提供商。OpenAI、Alibaba、DeepSeek等</param>
-    /// <param name="supportThinking">思考。是否支持思考模式</param>
-    /// <param name="supportVision">视觉。是否支持图片输入</param>
-    /// <param name="supportImageGeneration">图像。是否支持文生图</param>
-    /// <param name="supportFunctionCalling">函数调用。是否支持Function Calling</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">更新时间开始</param>
-    /// <param name="end">更新时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
-    /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 parentId, String code, String provider, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
-    {
-        var exp = new WhereExpression();
-
-        if (parentId >= 0) exp &= _.ParentId == parentId;
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
-        if (supportThinking != null) exp &= _.SupportThinking == supportThinking;
-        if (supportVision != null) exp &= _.SupportVision == supportVision;
-        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration;
-        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling;
-        if (enable != null) exp &= _.Enable == enable;
-        exp &= _.UpdateTime.Between(start, end);
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
-
-        return FindAll(exp, page);
+        return FindAll(_.ProviderId == providerId);
     }
     #endregion
 
@@ -447,8 +355,8 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
 
-        /// <summary>父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型</summary>
-        public static readonly Field ParentId = FindByName("ParentId");
+        /// <summary>提供商。关联的提供商实例ID</summary>
+        public static readonly Field ProviderId = FindByName("ProviderId");
 
         /// <summary>编码。模型唯一标识</summary>
         public static readonly Field Code = FindByName("Code");
@@ -458,15 +366,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
         public static readonly Field ModelName = FindByName("ModelName");
-
-        /// <summary>提供商。OpenAI、Alibaba、DeepSeek等</summary>
-        public static readonly Field Provider = FindByName("Provider");
-
-        /// <summary>接口地址。API地址，为空时从父级继承</summary>
-        public static readonly Field Endpoint = FindByName("Endpoint");
-
-        /// <summary>密钥。API访问密钥，为空时从父级继承</summary>
-        public static readonly Field ApiKey = FindByName("ApiKey");
 
         /// <summary>最大令牌数</summary>
         public static readonly Field MaxTokens = FindByName("MaxTokens");
@@ -482,9 +381,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>函数调用。是否支持Function Calling</summary>
         public static readonly Field SupportFunctionCalling = FindByName("SupportFunctionCalling");
-
-        /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
-        public static readonly Field ApiProtocol = FindByName("ApiProtocol");
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
@@ -531,8 +427,8 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         /// <summary>编号</summary>
         public const String Id = "Id";
 
-        /// <summary>父级。继承上级模型的Provider/Endpoint/ApiKey等配置，为0时表示顶级模型</summary>
-        public const String ParentId = "ParentId";
+        /// <summary>提供商。关联的提供商实例ID</summary>
+        public const String ProviderId = "ProviderId";
 
         /// <summary>编码。模型唯一标识</summary>
         public const String Code = "Code";
@@ -542,15 +438,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
         public const String ModelName = "ModelName";
-
-        /// <summary>提供商。OpenAI、Alibaba、DeepSeek等</summary>
-        public const String Provider = "Provider";
-
-        /// <summary>接口地址。API地址，为空时从父级继承</summary>
-        public const String Endpoint = "Endpoint";
-
-        /// <summary>密钥。API访问密钥，为空时从父级继承</summary>
-        public const String ApiKey = "ApiKey";
 
         /// <summary>最大令牌数</summary>
         public const String MaxTokens = "MaxTokens";
@@ -566,9 +453,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>函数调用。是否支持Function Calling</summary>
         public const String SupportFunctionCalling = "SupportFunctionCalling";
-
-        /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
-        public const String ApiProtocol = "ApiProtocol";
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";

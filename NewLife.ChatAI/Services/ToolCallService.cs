@@ -86,7 +86,7 @@ public class ToolCallService
             var provider = _gateway.GetProvider(modelConfig);
             if (provider == null)
             {
-                yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.Provider}'");
+                yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.GetEffectiveProvider()}'");
                 yield break;
             }
 

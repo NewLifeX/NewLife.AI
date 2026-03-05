@@ -66,8 +66,4 @@
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Areas\ChatAI\Controllers\" />
-  </ItemGroup>
-
 </Project>
