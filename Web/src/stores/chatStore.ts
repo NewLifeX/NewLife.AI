@@ -30,7 +30,7 @@ const thinkingModeMap: Record<ThinkingModeKey, number> = {
 
 interface ChatState {
   conversations: Conversation[]
-  activeConversationId: number | undefined
+  activeConversationId: string | undefined
   messages: Message[]
   isGenerating: boolean
   isLoadingMessages: boolean
@@ -46,23 +46,23 @@ interface ChatState {
   loadMoreConversations: () => Promise<void>
   loadModels: () => Promise<void>
   switchModel: (modelId: string) => Promise<void>
-  setActiveConversation: (id: number | undefined) => void
+  setActiveConversation: (id: string | undefined) => void
   newChat: () => void
   sendMessage: (content: string) => void
   stopGenerating: () => void
   setThinkingMode: (mode: ThinkingModeKey) => void
   addAttachment: (file: File) => Promise<void>
   removeAttachment: (id: string) => void
-  regenerateMsg: (id: number) => Promise<void>
-  editMsg: (id: number, content: string) => Promise<void>
-  likeMsg: (id: number) => Promise<void>
-  dislikeMsg: (id: number, reasons?: string[]) => Promise<void>
-  deleteConversation: (id: number) => Promise<void>
-  pinConversation: (id: number, isPinned: boolean) => Promise<void>
-  renameConversation: (id: number, title: string) => Promise<void>
+  regenerateMsg: (id: string) => Promise<void>
+  editMsg: (id: string, content: string) => Promise<void>
+  likeMsg: (id: string) => Promise<void>
+  dislikeMsg: (id: string, reasons?: string[]) => Promise<void>
+  deleteConversation: (id: string) => Promise<void>
+  pinConversation: (id: string, isPinned: boolean) => Promise<void>
+  renameConversation: (id: string, title: string) => Promise<void>
   appendMessage: (msg: Message) => void
-  updateMessage: (id: number, partial: Partial<Message>) => void
-  copyMessage: (id: number) => void
+  updateMessage: (id: string, partial: Partial<Message>) => void
+  copyMessage: (id: string) => void
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -211,7 +211,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // 乐观添加用户消息
     const userMsg: Message = {
-      id: Date.now(),
+      id: Date.now().toString(),
       conversationId: convId,
       role: 'user',
       content,
@@ -228,7 +228,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }))
 
     // SSE 流式接收
-    let assistantMsgId: number | undefined
+    let assistantMsgId: string | undefined
     const finalConvId = convId
 
     try {
@@ -458,7 +458,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const abortController = new AbortController()
         set({ _abortController: abortController })
 
-        let assistantMsgId: number | null = null
+        let assistantMsgId: string | null = null
 
         await streamEditAndResend(id, content, (event) => {
           switch (event.type) {

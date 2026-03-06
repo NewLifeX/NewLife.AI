@@ -76,9 +76,9 @@ function ChatApp() {
   }, [handleNewChat, loadConversations, loadModels, settings])
 
   useEffect(() => {
-    const urlId = conversationId ? Number(conversationId) : undefined
+    const urlId = conversationId || undefined
     if (urlId !== activeConversationId) {
-      if (urlId != null && !isNaN(urlId)) {
+      if (urlId != null) {
         setActiveConversation(urlId)
       } else if (!conversationId) {
         setActiveConversation(undefined)
@@ -95,11 +95,11 @@ function ChatApp() {
     }
   }, [activeConversationId, navigate])
 
-  const handleConversationSelect = useCallback((id: number) => {
+  const handleConversationSelect = useCallback((id: string) => {
     navigate(`/chat/${id}`)
   }, [navigate])
 
-  const handleDeleteConv = useCallback(async (id: number) => {
+  const handleDeleteConv = useCallback(async (id: string) => {
     await deleteConv(id)
     if (activeConversationId === id) {
       navigate('/chat')

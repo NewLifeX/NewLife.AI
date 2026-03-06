@@ -12,11 +12,11 @@ interface ChatLayoutProps {
   modelSelector?: ReactNode
   conversationTitle?: string
   conversations: Conversation[]
-  activeConversationId?: number
-  onConversationSelect: (id: number) => void
-  onConversationDelete?: (id: number) => void
-  onConversationPin?: (id: number, isPinned: boolean) => void
-  onConversationRename?: (id: number, title: string) => void
+  activeConversationId?: string
+  onConversationSelect: (id: string) => void
+  onConversationDelete?: (id: string) => void
+  onConversationPin?: (id: string, isPinned: boolean) => void
+  onConversationRename?: (id: string, title: string) => void
   onNewChat: () => void
   onSettingsOpen?: () => void
   sidebarCollapsed?: boolean
@@ -65,7 +65,7 @@ export function ChatLayout({
   }, [isMobile])
 
   // 移动端选择会话后自动收起侧边栏
-  const handleMobileSelect = useCallback((id: number) => {
+  const handleMobileSelect = useCallback((id: string) => {
     onConversationSelect(id)
     if (isMobile && !sidebarCollapsed) {
       onSidebarToggle?.()

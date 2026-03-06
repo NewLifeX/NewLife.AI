@@ -8,11 +8,11 @@ import type { Conversation } from '@/types'
 
 interface SidebarProps {
   conversations: Conversation[]
-  activeConversationId?: number
-  onConversationSelect: (id: number) => void
-  onConversationDelete?: (id: number) => void
-  onConversationPin?: (id: number, isPinned: boolean) => void
-  onConversationRename?: (id: number, title: string) => void
+  activeConversationId?: string
+  onConversationSelect: (id: string) => void
+  onConversationDelete?: (id: string) => void
+  onConversationPin?: (id: string, isPinned: boolean) => void
+  onConversationRename?: (id: string, title: string) => void
   onNewChat: () => void
   onToggle?: () => void
   onLoadMore?: () => void

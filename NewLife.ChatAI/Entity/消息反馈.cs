@@ -24,13 +24,13 @@ namespace NewLife.ChatAI.Entity;
 public partial class MessageFeedback : IEntity<MessageFeedbackModel>
 {
     #region 属性
-    private Int64 _Id;
+    private Int32 _Id;
     /// <summary>编号</summary>
     [DisplayName("编号")]
     [Description("编号")]
     [DataObjectField(true, true, false, 0)]
     [BindColumn("Id", "编号", "")]
-    public Int64 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
+    public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
     private Int64 _MessageId;
     /// <summary>消息。被反馈的消息</summary>
@@ -173,7 +173,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
         {
             switch (name)
             {
-                case "Id": _Id = value.ToLong(); break;
+                case "Id": _Id = value.ToInt(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
                 case "FeedbackType": _FeedbackType = value.ToInt(); break;
@@ -198,7 +198,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static MessageFeedback FindById(Int64 id)
+    public static MessageFeedback FindById(Int32 id)
     {
         if (id < 0) return null;
 

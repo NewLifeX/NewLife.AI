@@ -43,7 +43,7 @@
   <Tables>
     <Table Name="Conversation" Description="会话。一次完整的多轮对话上下文">
       <Columns>
-        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户。会话所属用户" />
         <Column Name="Title" DataType="String" Master="True" Length="200" Description="标题。会话标题，显示在侧边栏" />
         <Column Name="ModelCode" DataType="String" Description="模型编码。当前使用的模型" />
@@ -60,13 +60,13 @@
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
-        <Index Columns="UserId,LastMessageTime" />
-        <Index Columns="UserId,IsPinned" />
+        <Index Columns="UserId,Id" />
+        <Index Columns="UserId,IsPinned,Id" />
       </Indexes>
     </Table>
     <Table Name="ChatMessage" Description="对话消息。会话中的单条发言，包括用户消息和AI回复">
       <Columns>
-        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="ConversationId" DataType="Int64" Description="会话。所属会话" />
         <Column Name="Role" DataType="String" Description="角色。User=用户, Assistant=AI助手" />
         <Column Name="Content" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。Markdown格式文本" />
@@ -85,12 +85,12 @@
         <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
       </Columns>
       <Indexes>
-        <Index Columns="ConversationId,CreateTime" />
+        <Index Columns="ConversationId,Id" />
       </Indexes>
     </Table>
     <Table Name="MessageFeedback" Description="消息反馈。用户对AI回复的点赞或点踩">
       <Columns>
-        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="MessageId" DataType="Int64" Description="消息。被反馈的消息" />
         <Column Name="UserId" DataType="Int32" Description="用户。反馈用户" />
         <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" />
@@ -111,7 +111,7 @@
     </Table>
     <Table Name="SharedConversation" Description="共享会话。通过链接分享的对话快照">
       <Columns>
-        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="ConversationId" DataType="Int64" Description="会话。被分享的会话" />
         <Column Name="ShareToken" DataType="String" Description="分享令牌。唯一标识，用于生成分享URL" />
         <Column Name="SnapshotMessageId" DataType="Int64" Description="快照消息。截止到的最后一条消息编号" />
@@ -126,8 +126,8 @@
       </Columns>
       <Indexes>
         <Index Columns="ShareToken" Unique="True" />
-        <Index Columns="ConversationId" />
-        <Index Columns="CreatorUserId" />
+        <Index Columns="ConversationId,Id" />
+        <Index Columns="CreatorUserId,Id" />
       </Indexes>
     </Table>
     <Table Name="ProviderConfig" Description="提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例">
@@ -237,7 +237,7 @@
     </Table>
     <Table Name="UsageRecord" Description="用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计" InsertOnly="True">
       <Columns>
-        <Column Name="Id" DataType="Int64" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户" />
         <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
         <Column Name="ConversationId" DataType="Int64" Description="会话" />
@@ -252,9 +252,9 @@
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
       </Columns>
       <Indexes>
-        <Index Columns="UserId,CreateTime" />
-        <Index Columns="AppKeyId,CreateTime" />
-        <Index Columns="ModelCode,CreateTime" />
+        <Index Columns="UserId,Id" />
+        <Index Columns="AppKeyId,Id" />
+        <Index Columns="ModelCode,Id" />
         <Index Columns="ConversationId" />
       </Indexes>
     </Table>

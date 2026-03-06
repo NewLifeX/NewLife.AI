@@ -103,7 +103,7 @@ interface PagedResult<T> {
 }
 
 interface ConversationDto {
-  id: number
+  id: string
   title: string
   modelCode: string
   lastMessageTime: string
@@ -140,7 +140,7 @@ export async function createConversation(title?: string, modelCode?: string): Pr
 }
 
 export async function updateConversation(
-  id: number,
+  id: string,
   data: { title?: string; modelCode?: string },
 ): Promise<Conversation> {
   const dto = await request<ConversationDto>(`/api/conversations/${id}`, {
@@ -150,11 +150,11 @@ export async function updateConversation(
   return toConversation(dto)
 }
 
-export async function deleteConversation(id: number): Promise<void> {
+export async function deleteConversation(id: string): Promise<void> {
   await request<boolean>(`/api/conversations/${id}`, { method: 'DELETE' })
 }
 
-export async function pinConversation(id: number, isPinned: boolean): Promise<void> {
+export async function pinConversation(id: string, isPinned: boolean): Promise<void> {
   await request<boolean>(`/api/conversations/${id}/pin?isPinned=${isPinned}`, {
     method: 'PATCH',
   })
@@ -163,8 +163,8 @@ export async function pinConversation(id: number, isPinned: boolean): Promise<vo
 // ── Messages ──
 
 interface MessageDto {
-  id: number
-  conversationId: number
+  id: string
+  conversationId: string
   role: string
   content: string
   thinkingMode: number
@@ -215,7 +215,7 @@ function toMessage(dto: MessageDto): Message {
   }
 }
 
-export async function fetchMessages(conversationId: number): Promise<Message[]> {
+export async function fetchMessages(conversationId: string): Promise<Message[]> {
   const dtos = await request<MessageDto[]>(`/api/conversations/${conversationId}/messages`)
   return dtos.map(toMessage)
 }
@@ -224,7 +224,7 @@ export async function fetchMessages(conversationId: number): Promise<Message[]> 
 
 export interface ChatStreamEvent {
   type: 'message_start' | 'thinking_delta' | 'thinking_done' | 'content_delta' | 'tool_call_start' | 'tool_call_done' | 'tool_call_error' | 'message_done' | 'error'
-  messageId?: number
+  messageId?: string
   model?: string
   thinkingMode?: number
   content?: string
@@ -246,7 +246,7 @@ export interface ChatStreamEvent {
 }
 
 export async function streamMessage(
-  conversationId: number,
+  conversationId: string,
   content: string,
   thinkingMode: number,
   onEvent: (event: ChatStreamEvent) => void,
@@ -267,7 +267,7 @@ export async function streamMessage(
 
 // ── Messages Actions ──
 
-export async function editMessage(id: number, content: string): Promise<Message> {
+export async function editMessage(id: string, content: string): Promise<Message> {
   const dto = await request<MessageDto>(`/api/messages/${id}`, {
     method: 'PUT',
     body: JSON.stringify({ content }),
@@ -275,7 +275,7 @@ export async function editMessage(id: number, content: string): Promise<Message>
   return toMessage(dto)
 }
 
-export async function regenerateMessage(id: number): Promise<Message> {
+export async function regenerateMessage(id: string): Promise<Message> {
   const dto = await request<MessageDto>(`/api/messages/${id}/regenerate`, {
     method: 'POST',
   })
@@ -283,7 +283,7 @@ export async function regenerateMessage(id: number): Promise<Message> {
 }
 
 export async function streamRegenerate(
-  messageId: number,
+  messageId: string,
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -295,7 +295,7 @@ export async function streamRegenerate(
 }
 
 export async function streamEditAndResend(
-  messageId: number,
+  messageId: string,
   content: string,
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
@@ -312,14 +312,14 @@ export async function streamEditAndResend(
   )
 }
 
-export async function stopGeneration(id: number): Promise<void> {
+export async function stopGeneration(id: string): Promise<void> {
   await request<void>(`/api/messages/${id}/stop`, { method: 'POST' })
 }
 
 // ── Feedback ──
 
 export async function submitFeedback(
-  messageId: number,
+  messageId: string,
   type: 'like' | 'dislike',
   reason?: string,
 ): Promise<void> {
@@ -329,7 +329,7 @@ export async function submitFeedback(
   })
 }
 
-export async function deleteFeedback(messageId: number): Promise<void> {
+export async function deleteFeedback(messageId: string): Promise<void> {
   await request<void>(`/api/messages/${messageId}/feedback`, { method: 'DELETE' })
 }
 
@@ -421,7 +421,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
 // ── Share ──
 
 export async function createShareLink(
-  conversationId: number,
+  conversationId: string,
   expireHours?: number,
 ): Promise<{ url: string; createTime: string; expireTime?: string }> {
   return request(`/api/conversations/${conversationId}/share`, {
@@ -435,10 +435,10 @@ export async function revokeShareLink(token: string): Promise<void> {
 }
 
 export interface SharedConversationContent {
-  conversationId: number
+  conversationId: string
   messages: Array<{
-    id: number
-    conversationId: number
+    id: string
+    conversationId: string
     role: 'user' | 'assistant'
     content: string
     createdAt: string

@@ -12,7 +12,7 @@ public partial class MessageFeedbackModel
 {
     #region 属性
     /// <summary>编号</summary>
-    public Int64 Id { get; set; }
+    public Int32 Id { get; set; }
 
     /// <summary>消息。被反馈的消息</summary>
     public Int64 MessageId { get; set; }

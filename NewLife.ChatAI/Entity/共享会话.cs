@@ -18,8 +18,8 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("共享会话。通过链接分享的对话快照")]
 [BindIndex("IU_SharedConversation_ShareToken", true, "ShareToken")]
-[BindIndex("IX_SharedConversation_ConversationId", false, "ConversationId")]
-[BindIndex("IX_SharedConversation_CreatorUserId", false, "CreatorUserId")]
+[BindIndex("IX_SharedConversation_ConversationId_Id", false, "ConversationId,Id")]
+[BindIndex("IX_SharedConversation_CreatorUserId_Id", false, "CreatorUserId,Id")]
 [BindTable("SharedConversation", Description = "共享会话。通过链接分享的对话快照", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class SharedConversation : IEntity<SharedConversationModel>
 {
@@ -28,8 +28,8 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     /// <summary>编号</summary>
     [DisplayName("编号")]
     [Description("编号")]
-    [DataObjectField(true, true, false, 0)]
-    [BindColumn("Id", "编号", "")]
+    [DataObjectField(true, false, false, 0)]
+    [BindColumn("Id", "编号", "", DataScale = "time")]
     public Int64 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
     private Int64 _ConversationId;
@@ -202,13 +202,7 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     {
         if (id < 0) return null;
 
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
-
-        // 单对象缓存
-        return Meta.SingleCache[id];
-
-        //return Find(_.Id == id);
+        return Find(_.Id == id);
     }
 
     /// <summary>根据分享令牌查找</summary>
@@ -217,9 +211,6 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     public static SharedConversation FindByShareToken(String shareToken)
     {
         if (shareToken.IsNullOrEmpty()) return null;
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.ShareToken.EqualIgnoreCase(shareToken));
 
         return Find(_.ShareToken == shareToken);
     }
@@ -231,9 +222,6 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     {
         if (conversationId < 0) return [];
 
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ConversationId == conversationId);
-
         return FindAll(_.ConversationId == conversationId);
     }
 
@@ -244,9 +232,6 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     {
         if (creatorUserId < 0) return [];
 
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.CreatorUserId == creatorUserId);
-
         return FindAll(_.CreatorUserId == creatorUserId);
     }
     #endregion
@@ -256,8 +241,8 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     /// <param name="conversationId">会话。被分享的会话</param>
     /// <param name="shareToken">分享令牌。唯一标识，用于生成分享URL</param>
     /// <param name="creatorUserId">创建者。分享发起用户</param>
-    /// <param name="start">更新时间开始</param>
-    /// <param name="end">更新时间结束</param>
+    /// <param name="start">编号开始</param>
+    /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
@@ -268,10 +253,22 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (!shareToken.IsNullOrEmpty()) exp &= _.ShareToken == shareToken;
         if (creatorUserId >= 0) exp &= _.CreatorUserId == creatorUserId;
-        exp &= _.UpdateTime.Between(start, end);
+        exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
         return FindAll(exp, page);
+    }
+    #endregion
+
+    #region 数据清理
+    /// <summary>清理指定时间段内的数据</summary>
+    /// <param name="start">开始时间。未指定时清理小于指定时间的所有数据</param>
+    /// <param name="end">结束时间</param>
+    /// <param name="maximumRows">最大删除行数。清理历史数据时，避免一次性删除过多导致数据库IO跟不上，0表示所有</param>
+    /// <returns>清理行数</returns>
+    public static Int32 DeleteWith(DateTime start, DateTime end, Int32 maximumRows = 0)
+    {
+        return Delete(_.Id.Between(start, end, Meta.Factory.Snow), maximumRows);
     }
     #endregion
 

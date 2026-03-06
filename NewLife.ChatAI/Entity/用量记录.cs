@@ -17,9 +17,9 @@ namespace NewLife.ChatAI.Entity;
 [Serializable]
 [DataObject]
 [Description("用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计")]
-[BindIndex("IX_UsageRecord_UserId_CreateTime", false, "UserId,CreateTime")]
-[BindIndex("IX_UsageRecord_AppKeyId_CreateTime", false, "AppKeyId,CreateTime")]
-[BindIndex("IX_UsageRecord_ModelCode_CreateTime", false, "ModelCode,CreateTime")]
+[BindIndex("IX_UsageRecord_UserId_Id", false, "UserId,Id")]
+[BindIndex("IX_UsageRecord_AppKeyId_Id", false, "AppKeyId,Id")]
+[BindIndex("IX_UsageRecord_ModelCode_Id", false, "ModelCode,Id")]
 [BindIndex("IX_UsageRecord_ConversationId", false, "ConversationId")]
 [BindTable("UsageRecord", Description = "用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class UsageRecord : IEntity<UsageRecordModel>
@@ -29,8 +29,8 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
     /// <summary>编号</summary>
     [DisplayName("编号")]
     [Description("编号")]
-    [DataObjectField(true, true, false, 0)]
-    [BindColumn("Id", "编号", "")]
+    [DataObjectField(true, false, false, 0)]
+    [BindColumn("Id", "编号", "", DataScale = "time")]
     public Int64 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
     private Int32 _UserId;
@@ -210,13 +210,37 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
     {
         if (id < 0) return null;
 
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
+        return Find(_.Id == id);
+    }
 
-        // 单对象缓存
-        return Meta.SingleCache[id];
+    /// <summary>根据用户查找</summary>
+    /// <param name="userId">用户</param>
+    /// <returns>实体列表</returns>
+    public static IList<UsageRecord> FindAllByUserId(Int32 userId)
+    {
+        if (userId < 0) return [];
 
-        //return Find(_.Id == id);
+        return FindAll(_.UserId == userId);
+    }
+
+    /// <summary>根据应用密钥查找</summary>
+    /// <param name="appKeyId">应用密钥</param>
+    /// <returns>实体列表</returns>
+    public static IList<UsageRecord> FindAllByAppKeyId(Int32 appKeyId)
+    {
+        if (appKeyId < 0) return [];
+
+        return FindAll(_.AppKeyId == appKeyId);
+    }
+
+    /// <summary>根据模型编码查找</summary>
+    /// <param name="modelCode">模型编码</param>
+    /// <returns>实体列表</returns>
+    public static IList<UsageRecord> FindAllByModelCode(String modelCode)
+    {
+        if (modelCode.IsNullOrEmpty()) return [];
+
+        return FindAll(_.ModelCode == modelCode);
     }
 
     /// <summary>根据会话查找</summary>
@@ -225,9 +249,6 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
     public static IList<UsageRecord> FindAllByConversationId(Int64 conversationId)
     {
         if (conversationId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ConversationId == conversationId);
 
         return FindAll(_.ConversationId == conversationId);
     }
@@ -239,8 +260,8 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
     /// <param name="appKeyId">应用密钥。通过API网关调用时关联的AppKey</param>
     /// <param name="conversationId">会话</param>
     /// <param name="modelCode">模型编码</param>
-    /// <param name="start">创建时间开始</param>
-    /// <param name="end">创建时间结束</param>
+    /// <param name="start">编号开始</param>
+    /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
@@ -252,10 +273,22 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
         if (appKeyId >= 0) exp &= _.AppKeyId == appKeyId;
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (!modelCode.IsNullOrEmpty()) exp &= _.ModelCode == modelCode;
-        exp &= _.CreateTime.Between(start, end);
+        exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
         return FindAll(exp, page);
+    }
+    #endregion
+
+    #region 数据清理
+    /// <summary>清理指定时间段内的数据</summary>
+    /// <param name="start">开始时间。未指定时清理小于指定时间的所有数据</param>
+    /// <param name="end">结束时间</param>
+    /// <param name="maximumRows">最大删除行数。清理历史数据时，避免一次性删除过多导致数据库IO跟不上，0表示所有</param>
+    /// <returns>清理行数</returns>
+    public static Int32 DeleteWith(DateTime start, DateTime end, Int32 maximumRows = 0)
+    {
+        return Delete(_.Id.Between(start, end, Meta.Factory.Snow), maximumRows);
     }
     #endregion
 

@@ -25,11 +25,11 @@ const groupOrder: TimeGroup[] = ['pinned', 'today', 'yesterday', 'past7days', 'p
 
 interface ConversationListProps {
   conversations: Conversation[]
-  activeId?: number
-  onSelect: (id: number) => void
-  onDelete?: (id: number) => void
-  onPin?: (id: number, isPinned: boolean) => void
-  onRename?: (id: number, title: string) => void
+  activeId?: string
+  onSelect: (id: string) => void
+  onDelete?: (id: string) => void
+  onPin?: (id: string, isPinned: boolean) => void
+  onRename?: (id: string, title: string) => void
   onLoadMore?: () => void
   className?: string
 }
@@ -62,13 +62,13 @@ export function ConversationList({
   className,
 }: ConversationListProps) {
   const { t } = useTranslation()
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const handleSelect = useCallback((id: number) => {
+  const handleSelect = useCallback((id: string) => {
     setConfirmDeleteId(null)
     setSearchQuery('')
     onSelect(id)
@@ -79,7 +79,7 @@ export function ConversationList({
     setEditTitle(conv.title)
   }
 
-  const handleRenameSubmit = (id: number) => {
+  const handleRenameSubmit = (id: string) => {
     const trimmed = editTitle.trim()
     if (trimmed && onRename) {
       onRename(id, trimmed)

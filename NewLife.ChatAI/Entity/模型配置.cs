@@ -348,6 +348,38 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     }
     #endregion
 
+    #region 高级查询
+    /// <summary>高级查询</summary>
+    /// <param name="providerId">提供商。关联的提供商实例ID</param>
+    /// <param name="code">编码。模型唯一标识</param>
+    /// <param name="supportThinking">思考。是否支持思考模式</param>
+    /// <param name="supportVision">视觉。是否支持图片输入</param>
+    /// <param name="supportImageGeneration">图像。是否支持文生图</param>
+    /// <param name="supportFunctionCalling">函数调用。是否支持Function Calling</param>
+    /// <param name="enable">启用</param>
+    /// <param name="start">更新时间开始</param>
+    /// <param name="end">更新时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
+    /// <returns>实体列表</returns>
+    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    {
+        var exp = new WhereExpression();
+
+        if (providerId >= 0) exp &= _.ProviderId == providerId;
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+        if (supportThinking != null) exp &= _.SupportThinking == supportThinking;
+        if (supportVision != null) exp &= _.SupportVision == supportVision;
+        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration;
+        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling;
+        if (enable != null) exp &= _.Enable == enable;
+        exp &= _.UpdateTime.Between(start, end);
+        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+
+        return FindAll(exp, page);
+    }
+    #endregion
+
     #region 字段名
     /// <summary>取得模型配置字段信息的快捷方式</summary>
     public partial class _

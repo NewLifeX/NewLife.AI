@@ -1,5 +1,5 @@
 export interface Conversation {
-  id: number
+  id: string
   title: string
   modelCode?: string
   isPinned: boolean
@@ -16,8 +16,8 @@ export interface TokenUsage {
 }
 
 export interface Message {
-  id: number
-  conversationId: number
+  id: string
+  conversationId: string
   role: 'user' | 'assistant'
   content: string
   createdAt: string

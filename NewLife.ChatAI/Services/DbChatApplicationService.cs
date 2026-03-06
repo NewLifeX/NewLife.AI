@@ -1060,7 +1060,7 @@ public class ChatApplicationService
 
         var result = new
         {
-            share.ConversationId,
+            ConversationId = share.ConversationId.ToString(),
             Messages = items,
             share.CreateTime,
             ExpireTime = share.ExpireTime > DateTime.MinValue ? (DateTime?)share.ExpireTime : null,

@@ -269,6 +269,30 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     }
     #endregion
 
+    #region 高级查询
+    /// <summary>高级查询</summary>
+    /// <param name="code">编码。提供商实例唯一标识，如my-openai</param>
+    /// <param name="provider">协议。提供商协议代码，如OpenAI、Gemini、Anthropic</param>
+    /// <param name="enable">启用</param>
+    /// <param name="start">更新时间开始</param>
+    /// <param name="end">更新时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
+    /// <returns>实体列表</returns>
+    public static IList<ProviderConfig> Search(String code, String provider, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    {
+        var exp = new WhereExpression();
+
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+        if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
+        if (enable != null) exp &= _.Enable == enable;
+        exp &= _.UpdateTime.Between(start, end);
+        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+
+        return FindAll(exp, page);
+    }
+    #endregion
+
     #region 字段名
     /// <summary>取得提供商配置字段信息的快捷方式</summary>
     public partial class _

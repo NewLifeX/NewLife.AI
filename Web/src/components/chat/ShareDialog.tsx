@@ -7,7 +7,7 @@ import { createShareLink } from '@/lib/api'
 interface ShareDialogProps {
   open: boolean
   onClose: () => void
-  conversationId: number
+  conversationId: string
 }
 
 export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps) {

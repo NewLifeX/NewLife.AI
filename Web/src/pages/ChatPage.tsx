@@ -17,12 +17,12 @@ interface ChatPageProps {
   isLoadingMessages?: boolean
   onSend: (message: string) => void
   onStop?: () => void
-  onCopy?: (id: number) => void
-  onRegenerate?: (id: number) => void
-  onEditSubmit?: (id: number, content: string) => void
-  onLike?: (id: number) => void
-  onDislike?: (id: number, reasons?: string[]) => void
-  conversationId?: number | null
+  onCopy?: (id: string) => void
+  onRegenerate?: (id: string) => void
+  onEditSubmit?: (id: string, content: string) => void
+  onLike?: (id: string) => void
+  onDislike?: (id: string, reasons?: string[]) => void
+  conversationId?: string | null
   thinkingMode?: ThinkingMode
   onThinkingModeChange?: (mode: ThinkingMode) => void
   attachments?: Attachment[]
@@ -60,10 +60,10 @@ export function ChatPage({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
-  const [editingMessageId, setEditingMessageId] = useState<number | null>(null)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
-  const [dislikeTargetId, setDislikeTargetId] = useState<number | null>(null)
+  const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
   const dragCounterRef = useRef(0)
 
   const handleAttachClick = useCallback(() => {
