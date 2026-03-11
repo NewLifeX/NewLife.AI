@@ -73,7 +73,7 @@ public partial class ProviderConfig : Entity<ProviderConfig>
                     Endpoint = provider.DefaultEndpoint,
                     ApiProtocol = provider.ApiProtocol,
                     Remark = provider.Description!,
-                    Enable = true,
+                    Enable = false,
                     Sort = sort++,
                 };
 

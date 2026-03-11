@@ -34,8 +34,15 @@ public class GeminiProvider : IAiProvider
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://generativelanguage.googleapis.com";
 
-    /// <summary>默认能力信息。Gemini 支持思考/视觉/图像生成/函数调用</summary>
-    public virtual AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
+    /// <summary>主流模型列表。Google Gemini 各主力模型及其能力</summary>
+    public virtual AiModelInfo[] Models { get; } =
+    [
+        new("gemini-2.5-pro",                  "Gemini 2.5 Pro",    new(true,  true, false, true)),
+        new("gemini-2.5-flash",                "Gemini 2.5 Flash",  new(true,  true, false, true)),
+        new("gemini-2.0-flash",                "Gemini 2.0 Flash",  new(false, true, false, true)),
+        new("gemini-1.5-pro",                  "Gemini 1.5 Pro",    new(false, true, false, true)),
+        new("imagen-3.0-generate-001",         "Imagen 3",          new(false, false, true, false)),
+    ];
 
     private static readonly HttpClient _httpClient = new(new HttpClientHandler
     {

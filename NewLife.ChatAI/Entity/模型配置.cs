@@ -55,14 +55,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [BindColumn("Name", "名称。显示名称", "", Master = true)]
     public String Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
-    private String _ModelName;
-    /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
-    [DisplayName("模型名")]
-    [Description("模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("ModelName", "模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1", "")]
-    public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
-
     private Int32 _MaxTokens;
     /// <summary>最大令牌数</summary>
     [DisplayName("最大令牌数")]
@@ -216,7 +208,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         ProviderId = model.ProviderId;
         Code = model.Code;
         Name = model.Name;
-        ModelName = model.ModelName;
         MaxTokens = model.MaxTokens;
         SupportThinking = model.SupportThinking;
         SupportVision = model.SupportVision;
@@ -249,7 +240,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
             "ProviderId" => _ProviderId,
             "Code" => _Code,
             "Name" => _Name,
-            "ModelName" => _ModelName,
             "MaxTokens" => _MaxTokens,
             "SupportThinking" => _SupportThinking,
             "SupportVision" => _SupportVision,
@@ -277,7 +267,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
                 case "ProviderId": _ProviderId = value.ToInt(); break;
                 case "Code": _Code = Convert.ToString(value); break;
                 case "Name": _Name = Convert.ToString(value); break;
-                case "ModelName": _ModelName = Convert.ToString(value); break;
                 case "MaxTokens": _MaxTokens = value.ToInt(); break;
                 case "SupportThinking": _SupportThinking = value.ToBoolean(); break;
                 case "SupportVision": _SupportVision = value.ToBoolean(); break;
@@ -396,9 +385,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         /// <summary>名称。显示名称</summary>
         public static readonly Field Name = FindByName("Name");
 
-        /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
-        public static readonly Field ModelName = FindByName("ModelName");
-
         /// <summary>最大令牌数</summary>
         public static readonly Field MaxTokens = FindByName("MaxTokens");
 
@@ -467,9 +453,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>名称。显示名称</summary>
         public const String Name = "Name";
-
-        /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
-        public const String ModelName = "ModelName";
 
         /// <summary>最大令牌数</summary>
         public const String MaxTokens = "MaxTokens";

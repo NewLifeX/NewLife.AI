@@ -11,6 +11,7 @@ using NewLife.Web;
 using XCode;
 using XCode.Cache;
 using XCode.Configuration;
+using NewLife;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -59,7 +60,7 @@ public partial class ModelConfig : Entity<ModelConfig>
     protected override void InitData()
     {
         // 新逻辑：从 ProviderConfig 表读取已配置的提供商，为每个提供商创建默认模型配置
-        var providers = ProviderConfig.FindAllEnabled();
+        var providers = ProviderConfig.FindAll();
         if (providers == null || providers.Count == 0)
         {
             if (XTrace.Debug) XTrace.WriteLine("未找到启用的提供商配置，跳过ModelConfig初始化");
@@ -72,29 +73,46 @@ public partial class ModelConfig : Entity<ModelConfig>
 
         var count = 0;
         var sort = list.Count > 0 ? list.Max(e => e.Sort) + 1 : 1;
-        
+
         foreach (var provider in providers)
         {
+            if (provider.Provider.IsNullOrEmpty()) continue;
+
             // 为每个提供商创建一个默认模型配置
-            var code = $"{provider.Code}-default";
-            if (!exists.TryGetValue(code, out var entity))
+            var prv = AiProviderFactory.Default.GetProvider(provider.Provider);
+            if (prv == null || prv.Models == null || prv.Models.Length == 0) continue;
+
+            foreach (var model in prv.Models)
             {
-                entity = new ModelConfig
+                var entity = list.FirstOrDefault(e => e.ProviderId == provider.Id && e.Code.EqualIgnoreCase(model.Model));
+                if (entity == null)
                 {
-                    Code = code,
-                    Name = $"{provider.Name} 默认模型",
-                    ProviderId = provider.Id,
-                    Enable = provider.Enable,
-                    Sort = sort++,
-                };
+                    entity = new ModelConfig
+                    {
+                        Code = model.Model,
+                        //Name = model.DisplayName ?? model.Model,
+                        ProviderId = provider.Id,
+                        Enable = provider.Enable,
+                        Sort = sort++,
+                    };
 
-                if (XTrace.Debug) XTrace.WriteLine("为提供商 {0} 创建默认模型配置", provider.Name);
+                    XTrace.WriteLine("为提供商 {0} 创建默认模型配置", provider.Name);
+                }
+
+                entity.Name = model.DisplayName ?? model.Model;
+                if (model.Capabilities != null)
+                {
+                    entity.SupportThinking = model.Capabilities.SupportThinking;
+                    entity.SupportVision = model.Capabilities.SupportVision;
+                    entity.SupportImageGeneration = model.Capabilities.SupportImageGeneration;
+                    entity.SupportFunctionCalling = model.Capabilities.SupportFunctionCalling;
+                }
+
+                count += entity.Save();
             }
-
-            count += entity.Save();
         }
 
-        if (count > 0 && XTrace.Debug)
+        if (count > 0)
             XTrace.WriteLine("完成初始化ModelConfig[模型配置]数据，修改 {0} 个模型配置！", count);
     }
 

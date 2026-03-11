@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -160,7 +160,6 @@
         <Column Name="ProviderId" DataType="Int32" Description="提供商。关联的提供商实例ID" />
         <Column Name="Code" DataType="String" Description="编码。模型唯一标识" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。显示名称" />
-        <Column Name="ModelName" DataType="String" Description="模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1" />
         <Column Name="MaxTokens" DataType="Int32" Description="最大令牌数" />
         <Column Name="SupportThinking" DataType="Boolean" Description="思考。是否支持思考模式" />
         <Column Name="SupportVision" DataType="Boolean" Description="视觉。是否支持图片输入" />

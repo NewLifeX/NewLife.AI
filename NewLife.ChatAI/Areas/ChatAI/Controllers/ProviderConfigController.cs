@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Entity;
+﻿using NewLife.ChatAI.Entity;
 using NewLife.Cube;
-using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
 using NewLife.Web;
 
@@ -16,7 +14,7 @@ public class ProviderConfigController : EntityController<ProviderConfig>
     {
         //LogOnChange = true;
 
-        //ListFields.RemoveField("Id", "Creator");
+        ListFields.RemoveField("Provider", "Endpoint");
         ListFields.RemoveCreateField().RemoveRemarkField();
         ListFields.AddListField("Remark", "UpdateUserId");
 

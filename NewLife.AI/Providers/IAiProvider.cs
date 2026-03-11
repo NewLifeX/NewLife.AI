@@ -28,8 +28,8 @@ public interface IAiProvider
     /// <summary>默认 API 地址</summary>
     String DefaultEndpoint { get; }
 
-    /// <summary>默认能力信息。表示该服务商主力模型的典型能力，用户可在模型配置中按实际模型覆盖</summary>
-    AiProviderCapabilities DefaultCapabilities { get; }
+    /// <summary>主流模型列表。该服务商下各主流模型及其能力描述，供用户选择配置时参考</summary>
+    AiModelInfo[] Models { get; }
 
     /// <summary>非流式对话。发送请求并一次性返回完整响应</summary>
     /// <param name="request">对话请求</param>
@@ -57,6 +57,12 @@ public record AiProviderCapabilities(
     Boolean SupportVision = false,
     Boolean SupportImageGeneration = false,
     Boolean SupportFunctionCalling = false);
+
+/// <summary>AI 模型信息。描述服务商旗下某具体模型的标识与能力</summary>
+/// <param name="Model">模型标识，即 API 请求中 model 字段的值，如 "gpt-4o"</param>
+/// <param name="DisplayName">模型显示名称，用于界面展示，如 "GPT-4o"</param>
+/// <param name="Capabilities">该模型支持的能力</param>
+public record AiModelInfo(String Model, String DisplayName, AiProviderCapabilities Capabilities);
 
 /// <summary>AI 服务商连接选项</summary>
 public class AiProviderOptions

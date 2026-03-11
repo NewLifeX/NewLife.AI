@@ -36,8 +36,13 @@ public class AnthropicProvider : IAiProvider
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://api.anthropic.com";
 
-    /// <summary>默认能力信息。Anthropic 支持思考/视觉/函数调用，不支持图像生成</summary>
-    public virtual AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, false, true);
+    /// <summary>主流模型列表。Anthropic Claude 各主力模型及其能力</summary>
+    public virtual AiModelInfo[] Models { get; } =
+    [
+        new("claude-opus-4-5",   "Claude Opus 4.5",   new(true,  true, false, true)),
+        new("claude-sonnet-4-5", "Claude Sonnet 4.5", new(true,  true, false, true)),
+        new("claude-haiku-3-5",  "Claude Haiku 3.5",  new(false, true, false, true)),
+    ];
 
     /// <summary>API 版本</summary>
     protected virtual String ApiVersion => "2023-06-01";

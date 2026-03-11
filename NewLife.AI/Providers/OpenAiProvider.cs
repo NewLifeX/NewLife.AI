@@ -30,8 +30,16 @@ public class OpenAiProvider : IAiProvider
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://api.openai.com";
 
-    /// <summary>默认能力信息。OpenAI 支持思考/视觉/图像生成/函数调用</summary>
-    public virtual AiProviderCapabilities DefaultCapabilities { get; } = new(true, true, true, true);
+    /// <summary>主流模型列表。OpenAI 各主力模型及其能力</summary>
+    public virtual AiModelInfo[] Models { get; } =
+    [
+        new("gpt-4.1",       "GPT-4.1",       new(false, true,  false, true)),
+        new("gpt-4o",        "GPT-4o",         new(false, true,  false, true)),
+        new("gpt-4o-mini",   "GPT-4o Mini",    new(false, true,  false, true)),
+        new("o3",            "o3",             new(true,  false, false, true)),
+        new("o4-mini",       "o4-mini",        new(true,  false, false, true)),
+        new("dall-e-3",      "DALL·E 3",       new(false, false, true,  false)),
+    ];
 
     /// <summary>对话完成路径</summary>
     protected virtual String ChatPath => "/v1/chat/completions";

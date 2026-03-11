@@ -23,9 +23,6 @@ public partial class ModelConfigModel
     /// <summary>名称。显示名称</summary>
     public String Name { get; set; }
 
-    /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
-    public String ModelName { get; set; }
-
     /// <summary>最大令牌数</summary>
     public Int32 MaxTokens { get; set; }
 
@@ -87,7 +84,6 @@ public partial class ModelConfigModel
         ProviderId = model.ProviderId;
         Code = model.Code;
         Name = model.Name;
-        ModelName = model.ModelName;
         MaxTokens = model.MaxTokens;
         SupportThinking = model.SupportThinking;
         SupportVision = model.SupportVision;
