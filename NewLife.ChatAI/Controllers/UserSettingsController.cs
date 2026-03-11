@@ -7,19 +7,22 @@ namespace NewLife.ChatAI.Controllers;
 
 /// <summary>用户设置控制器</summary>
 [ApiController]
-[Route("api/user/settings")]
+[Route("api/user")]
 public class UserSettingsController(ChatApplicationService chatService) : ControllerBase
 {
+    /// <summary>获取当前用户资料</summary>
     [HttpGet("profile")]
-    public ActionResult<UserProfileDto> GetProfile(CancellationToken cancellationToken)
+    public ActionResult<UserProfileDto> GetProfile()
     {
+        // 本期暂不启用登录鉴权，未登录时返回默认资料
         var user = ManageProvider2.User;
-        if (user == null) return Unauthorized();
+        var nickname = user?.DisplayName ?? "用户";
+        var account = user?.Name ?? "anonymous";
 
-        var result = new UserProfileDto(user.DisplayName ?? "用户", user.Name, null);
-        return Ok(result);
+        return Ok(new UserProfileDto(nickname, account, null));
     }
 
+    /// <summary>获取用户设置</summary>
     [HttpGet("settings")]
     public async Task<ActionResult<UserSettingsDto>> GetSettingsAsync(CancellationToken cancellationToken)
     {
@@ -27,6 +30,7 @@ public class UserSettingsController(ChatApplicationService chatService) : Contro
         return Ok(result);
     }
 
+    /// <summary>保存用户设置</summary>
     [HttpPut("settings")]
     public async Task<ActionResult<UserSettingsDto>> SaveSettingsAsync([FromBody] UserSettingsDto request, CancellationToken cancellationToken)
     {
@@ -34,14 +38,16 @@ public class UserSettingsController(ChatApplicationService chatService) : Contro
         return Ok(result);
     }
 
-    [HttpPost("export")]
+    /// <summary>导出用户数据</summary>
+    [HttpGet("data/export")]
     public async Task<IActionResult> ExportAsync(CancellationToken cancellationToken)
     {
         var stream = await chatService.ExportUserDataAsync(cancellationToken).ConfigureAwait(false);
         return File(stream, "application/json", "chat-export.json");
     }
 
-    [HttpDelete("conversations")]
+    /// <summary>清除用户数据</summary>
+    [HttpDelete("data/clear")]
     public async Task<IActionResult> ClearAsync(CancellationToken cancellationToken)
     {
         await chatService.ClearUserConversationsAsync(cancellationToken).ConfigureAwait(false);

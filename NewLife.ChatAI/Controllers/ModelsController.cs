@@ -10,14 +10,14 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api/models")]
 public class ModelsController(ChatApplicationService chatService) : ControllerBase
 {
+    /// <summary>查询可用模型列表</summary>
     [HttpGet]
     public async Task<ActionResult<ModelInfoDto[]>> QueryAsync(CancellationToken cancellationToken)
     {
+        // 本期暂不启用登录鉴权，未登录时使用默认角色和部门
         var user = ManageProvider2.User;
-        if (user == null) return Unauthorized();
-
-        var roleIds = user.Roles?.Select(e => e.ID).ToArray() ?? [];
-        var departmentId = user.DepartmentID;
+        var roleIds = user?.Roles?.Select(e => e.ID).ToArray() ?? [];
+        var departmentId = user?.DepartmentID ?? 0;
 
         var result = await chatService.GetModelsAsync(roleIds, departmentId, cancellationToken).ConfigureAwait(false);
         return Ok(result);
