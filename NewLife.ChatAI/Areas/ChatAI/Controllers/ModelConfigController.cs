@@ -24,23 +24,26 @@ public class ModelConfigController : EntityController<ModelConfig>
         ListFields.RemoveCreateField().RemoveRemarkField();
         ListFields.AddListField("Remark", "UpdateUserId");
 
-        //{
-        //    var df = ListFields.GetField("Code") as ListField;
-        //    df.Url = "?code={Code}";
-        //    df.Target = "_blank";
-        //}
-        //{
-        //    var df = ListFields.AddListField("devices", null, "Onlines");
-        //    df.DisplayName = "查看设备";
-        //    df.Url = "Device?groupId={Id}";
-        //    df.DataVisible = e => (e as ModelConfig).Devices > 0;
-        //    df.Target = "_frame";
-        //}
-        //{
-        //    var df = ListFields.GetField("Kind") as ListField;
-        //    df.GetValue = e => ((Int32)(e as ModelConfig).Kind).ToString("X4");
-        //}
-        //ListFields.TraceUrl("TraceId");
+        {
+            var df = AddFormFields.AddDataField("RoleIds", "RoleNames");
+            df.DataSource = entity => Role.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            AddFormFields.RemoveField("RoleNames");
+        }
+        {
+            var df = EditFormFields.AddDataField("RoleIds", "RoleNames");
+            df.DataSource = entity => Role.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            EditFormFields.RemoveField("RoleNames");
+        }
+        {
+            var df = AddFormFields.AddDataField("DepartmentIds", "DepartmentNames");
+            df.DataSource = entity => Department.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            AddFormFields.RemoveField("DepartmentNames");
+        }
+        {
+            var df = EditFormFields.AddDataField("DepartmentIds", "DepartmentNames");
+            df.DataSource = entity => Department.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            EditFormFields.RemoveField("DepartmentNames");
+        }
     }
 
     //private readonly ITracer _tracer;

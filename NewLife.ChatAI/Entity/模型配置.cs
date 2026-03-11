@@ -291,6 +291,14 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     #endregion
 
     #region 关联映射
+    /// <summary>提供商</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public ProviderConfig Provider => Extends.Get(nameof(Provider), k => ProviderConfig.FindById(ProviderId));
+
+    /// <summary>提供商</summary>
+    [Map(nameof(ProviderId), typeof(ProviderConfig), "Id")]
+    public String ProviderName => Provider?.Name;
+
     #endregion
 
     #region 扩展查询

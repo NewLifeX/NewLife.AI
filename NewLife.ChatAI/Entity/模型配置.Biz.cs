@@ -2,6 +2,7 @@
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
+using NewLife;
 using NewLife.AI.Providers;
 using NewLife.Common;
 using NewLife.Data;
@@ -11,7 +12,7 @@ using NewLife.Web;
 using XCode;
 using XCode.Cache;
 using XCode.Configuration;
-using NewLife;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -135,6 +136,14 @@ public partial class ModelConfig : Entity<ModelConfig>
     /// <summary>关联的提供商配置</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public ProviderConfig ProviderInfo => Extends.Get(nameof(ProviderInfo), k => ProviderConfig.FindById(ProviderId));
+
+    /// <summary>角色组名</summary>
+    [Map(__.RoleIds)]
+    public virtual String? RoleNames => Extends.Get(nameof(RoleNames), k => RoleIds.SplitAsInt().Select(e => Role.FindByID(e)).Join(",", e => e.Name));
+
+    /// <summary>部门组名</summary>
+    [Map(__.DepartmentIds)]
+    public virtual String? DepartmentNames => Extends.Get(nameof(DepartmentNames), k => DepartmentIds.SplitAsInt().Select(e => Department.FindByID(e)).Join(",", e => e.Name));
     #endregion
 
     #region 高级查询
