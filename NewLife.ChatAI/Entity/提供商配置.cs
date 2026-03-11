@@ -48,18 +48,18 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     public String Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
     private String _Provider;
-    /// <summary>协议。提供商协议代码，如OpenAI、Gemini、Anthropic</summary>
-    [DisplayName("协议")]
-    [Description("协议。提供商协议代码，如OpenAI、Gemini、Anthropic")]
+    /// <summary>实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider</summary>
+    [DisplayName("实现类")]
+    [Description("实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider")]
     [DataObjectField(false, false, true, 50)]
-    [BindColumn("Provider", "协议。提供商协议代码，如OpenAI、Gemini、Anthropic", "")]
+    [BindColumn("Provider", "实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider", "")]
     public String Provider { get => _Provider; set { if (OnPropertyChanging("Provider", value)) { _Provider = value; OnPropertyChanged("Provider"); } } }
 
     private String _Endpoint;
     /// <summary>接口地址。API地址</summary>
     [DisplayName("接口地址")]
     [Description("接口地址。API地址")]
-    [DataObjectField(false, false, true, 500)]
+    [DataObjectField(false, false, true, 200)]
     [BindColumn("Endpoint", "接口地址。API地址", "")]
     public String Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
 
@@ -67,7 +67,7 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     /// <summary>密钥。API访问密钥</summary>
     [DisplayName("密钥")]
     [Description("密钥。API访问密钥")]
-    [DataObjectField(false, false, true, 500)]
+    [DataObjectField(false, false, true, 50)]
     [BindColumn("ApiKey", "密钥。API访问密钥", "", ShowIn = "Auto,-List,-Search")]
     public String ApiKey { get => _ApiKey; set { if (OnPropertyChanging("ApiKey", value)) { _ApiKey = value; OnPropertyChanged("ApiKey"); } } }
 
@@ -255,8 +255,8 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
         //return Find(_.Id == id);
     }
 
-    /// <summary>根据协议查找</summary>
-    /// <param name="provider">协议</param>
+    /// <summary>根据实现类查找</summary>
+    /// <param name="provider">实现类</param>
     /// <returns>实体列表</returns>
     public static IList<ProviderConfig> FindAllByProvider(String provider)
     {
@@ -272,7 +272,7 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="code">编码。提供商实例唯一标识，如my-openai</param>
-    /// <param name="provider">协议。提供商协议代码，如OpenAI、Gemini、Anthropic</param>
+    /// <param name="provider">实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
@@ -306,7 +306,7 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
         /// <summary>名称。显示名称，如公司OpenAI账号</summary>
         public static readonly Field Name = FindByName("Name");
 
-        /// <summary>协议。提供商协议代码，如OpenAI、Gemini、Anthropic</summary>
+        /// <summary>实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider</summary>
         public static readonly Field Provider = FindByName("Provider");
 
         /// <summary>接口地址。API地址</summary>
@@ -360,7 +360,7 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
         /// <summary>名称。显示名称，如公司OpenAI账号</summary>
         public const String Name = "Name";
 
-        /// <summary>协议。提供商协议代码，如OpenAI、Gemini、Anthropic</summary>
+        /// <summary>实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider</summary>
         public const String Provider = "Provider";
 
         /// <summary>接口地址。API地址</summary>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
@@ -9,63 +10,223 @@ namespace XUnitTest;
 /// <summary>AI 服务提供商单元测试</summary>
 public class AiProviderTests
 {
-    #region 工厂测试
-    [Fact]
-    public void DefaultFactoryRegistersAllProviders()
-    {
-        var factory = AiProviderFactory.Default;
-        var names = factory.GetProviderNames();
+    // 通过 RegisteredTypes 枚举所有已注册服务商实例（每次调用工厂委托，返回新实例）
+    private static IEnumerable<IAiProvider> AllProviders(AiProviderFactory factory)
+        => factory.RegisteredTypes.Select(t => factory.GetProvider(t)!);
 
-        // 当前共 33 个内置服务商
-        Assert.Equal(33, names.Count);
+    #region 工厂基础功能
+
+    [Fact]
+    public void Default_RegistersExpectedCount()
+    {
+        // 33 个内置服务商
+        Assert.Equal(33, AiProviderFactory.Default.RegisteredTypes.Count());
     }
 
     [Fact]
-    public void GetProviderByNameIsCaseInsensitive()
+    public void RegisteredTypes_ContainsExpectedTypes()
     {
-        var factory = AiProviderFactory.Default;
+        var types = AiProviderFactory.Default.RegisteredTypes.ToHashSet();
 
-        var p1 = factory.GetProvider("openai");
-        var p2 = factory.GetProvider("OpenAI");
-        var p3 = factory.GetProvider("OPENAI");
-
-        Assert.NotNull(p1);
-        Assert.Same(p1, p2);
-        Assert.Same(p1, p3);
+        Assert.Contains(typeof(OpenAiProvider), types);
+        Assert.Contains(typeof(AnthropicProvider), types);
+        Assert.Contains(typeof(GeminiProvider), types);
+        Assert.Contains(typeof(DeepSeekProvider), types);
+        Assert.Contains(typeof(OllamaProvider), types);
     }
 
     [Fact]
-    public void GetProviderReturnsNullForUnknown()
+    public void GetProvider_ByFullName_IsCaseInsensitive()
     {
         var factory = AiProviderFactory.Default;
+        var fullName = typeof(OpenAiProvider).FullName!;
 
-        Assert.Null(factory.GetProvider("NotExist"));
+        // 每次通过委托创建新实例，大小写不敏感均能命中正确类型
+        Assert.IsType<OpenAiProvider>(factory.GetProvider(fullName));
+        Assert.IsType<OpenAiProvider>(factory.GetProvider(fullName.ToLowerInvariant()));
+        Assert.IsType<OpenAiProvider>(factory.GetProvider(fullName.ToUpperInvariant()));
+    }
+
+    [Fact]
+    public void GetProvider_ByType_ReturnsNewInstance()
+    {
+        var factory = AiProviderFactory.Default;
+        Assert.IsType<DeepSeekProvider>(factory.GetProvider(typeof(DeepSeekProvider)));
+    }
+
+    [Fact]
+    public void GetProvider_ReturnsNull_WhenStringNotFound()
+    {
+        Assert.Null(AiProviderFactory.Default.GetProvider("Unknown.Provider.Type"));
+    }
+
+    [Fact]
+    public void GetProvider_ReturnsNull_WhenStringNullOrEmpty()
+    {
+        var factory = AiProviderFactory.Default;
+        Assert.Null(factory.GetProvider((String)null!));
         Assert.Null(factory.GetProvider(""));
-        Assert.Null(factory.GetProvider(null));
+        Assert.Null(factory.GetProvider("   "));
     }
 
     [Fact]
-    public void GetRequiredProviderThrowsForUnknown()
+    public void GetProvider_ReturnsNull_WhenTypeNull()
     {
-        var factory = AiProviderFactory.Default;
-
-        var ex = Assert.Throws<InvalidOperationException>(() => factory.GetRequiredProvider("NotExist"));
-        Assert.Contains("NotExist", ex.Message);
+        Assert.Null(AiProviderFactory.Default.GetProvider((Type)null!));
     }
 
     [Fact]
-    public void CustomProviderCanBeRegistered()
+    public void GetProvider_ReturnsNull_WhenTypeNotRegistered()
     {
-        var factory = new AiProviderFactory();
-        var count = factory.GetProviderNames().Count;
-
-        factory.Register(new OpenAiProvider());
-        Assert.Equal(count + 1, factory.GetProviderNames().Count);
-        Assert.NotNull(factory.GetProvider("OpenAI"));
+        Assert.Null(new AiProviderFactory().GetProvider(typeof(OpenAiProvider)));
     }
+
     #endregion
 
-    #region OpenAI 协议服务商
+    #region 扫描与注册
+
+    [Fact]
+    public void RegisterType_CanFindByType()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(DashScopeProvider));
+
+        Assert.Contains(typeof(DashScopeProvider), factory.RegisteredTypes);
+        Assert.IsType<DashScopeProvider>(factory.GetProvider(typeof(DashScopeProvider)));
+    }
+
+    [Fact]
+    public void RegisterType_CanFindByFullName()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(DashScopeProvider));
+
+        Assert.IsType<DashScopeProvider>(factory.GetProvider(typeof(DashScopeProvider).FullName!));
+    }
+
+    [Fact]
+    public void RegisterType_ThrowsForNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new AiProviderFactory().RegisterType(null!));
+    }
+
+    [Fact]
+    public void RegisterType_Overwrites_ExistingRegistration()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(OpenAiProvider));
+        factory.RegisterType(typeof(OpenAiProvider)); // 重复注册不报错，幂等
+
+        Assert.Single(factory.RegisteredTypes.Where(t => t == typeof(OpenAiProvider)));
+    }
+
+    [Fact]
+    public void RegisteredTypes_AllImplementIAiProvider()
+    {
+        Assert.All(AiProviderFactory.Default.RegisteredTypes,
+            t => Assert.True(typeof(IAiProvider).IsAssignableFrom(t)));
+    }
+
+    [Fact]
+    public void RegisteredTypes_AllTypesCanCreateInstance()
+    {
+        var factory = AiProviderFactory.Default;
+        Assert.All(factory.RegisteredTypes, t => Assert.NotNull(factory.GetProvider(t)));
+    }
+
+    [Fact]
+    public void RegisteredTypes_CanFindByProviderCode()
+    {
+        var factory = AiProviderFactory.Default;
+        var openAiType = factory.RegisteredTypes
+            .FirstOrDefault(t => factory.GetProvider(t)?.Code.Equals("OpenAI", StringComparison.OrdinalIgnoreCase) == true);
+
+        Assert.Equal(typeof(OpenAiProvider), openAiType);
+    }
+
+    #endregion
+
+    #region 实例缓存（GetProviderForConfig / InvalidateConfig）
+
+    [Fact]
+    public void GetProviderForConfig_CreatesInstance_FirstCall()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(OpenAiProvider));
+
+        var instance = factory.GetProviderForConfig(1, typeof(OpenAiProvider).FullName!);
+        Assert.IsType<OpenAiProvider>(instance);
+    }
+
+    [Fact]
+    public void GetProviderForConfig_ReturnsCached_SameConfigId()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(OpenAiProvider));
+        var fullName = typeof(OpenAiProvider).FullName!;
+
+        var i1 = factory.GetProviderForConfig(42, fullName);
+        var i2 = factory.GetProviderForConfig(42, fullName);
+
+        Assert.NotNull(i1);
+        Assert.Same(i1, i2);
+    }
+
+    [Fact]
+    public void GetProviderForConfig_DifferentConfigIds_ReturnDifferentInstances()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(OpenAiProvider));
+        var fullName = typeof(OpenAiProvider).FullName!;
+
+        var i1 = factory.GetProviderForConfig(10, fullName);
+        var i2 = factory.GetProviderForConfig(20, fullName);
+
+        Assert.NotNull(i1);
+        Assert.NotNull(i2);
+        Assert.NotSame(i1, i2);
+    }
+
+    [Fact]
+    public void GetProviderForConfig_ReturnsNull_UnknownType()
+    {
+        Assert.Null(new AiProviderFactory().GetProviderForConfig(1, "Unknown.Provider.Type"));
+    }
+
+    [Fact]
+    public void GetProviderForConfig_ReturnsNull_NullOrEmpty()
+    {
+        var factory = new AiProviderFactory();
+        Assert.Null(factory.GetProviderForConfig(1, ""));
+        Assert.Null(factory.GetProviderForConfig(1, null!));
+    }
+
+    [Fact]
+    public void InvalidateConfig_ForcesInstanceRecreation()
+    {
+        var factory = new AiProviderFactory();
+        factory.RegisterType(typeof(OpenAiProvider));
+        var fullName = typeof(OpenAiProvider).FullName!;
+
+        var i1 = factory.GetProviderForConfig(99, fullName);
+        factory.InvalidateConfig(99);
+        var i2 = factory.GetProviderForConfig(99, fullName);
+
+        Assert.NotNull(i1);
+        Assert.NotNull(i2);
+        Assert.NotSame(i1, i2);
+    }
+
+    [Fact]
+    public void InvalidateConfig_NonExistentId_DoesNotThrow()
+    {
+        Assert.Null(Record.Exception(() => new AiProviderFactory().InvalidateConfig(999)));
+    }
+
+    #endregion
+
+    #region OpenAI 协议服务商属性
+
     [Theory]
     [InlineData(typeof(OpenAiProvider), "OpenAI", "https://api.openai.com", "ChatCompletions")]
     [InlineData(typeof(AzureAiProvider), "AzureAI", "https://models.inference.ai.azure.com", "ChatCompletions")]
@@ -98,176 +259,165 @@ public class AiProviderTests
     [InlineData(typeof(LMStudioProvider), "LMStudio", "http://localhost:1234", "ChatCompletions")]
     [InlineData(typeof(VllmProvider), "vLLM", "http://localhost:8000", "ChatCompletions")]
     [InlineData(typeof(OneApiProvider), "OneAPI", "http://localhost:3000", "ChatCompletions")]
-    public void OpenAiCompatibleProviderHasCorrectProperties(Type providerType, String expectedName, String expectedEndpoint, String expectedProtocol)
+    public void OpenAiCompatibleProvider_HasCorrectProperties(Type providerType, String expectedCode, String expectedEndpoint, String expectedProtocol)
     {
-        var provider = (IAiProvider)Activator.CreateInstance(providerType);
+        var provider = (IAiProvider)Activator.CreateInstance(providerType)!;
 
-        Assert.Equal(expectedName, provider.Name);
+        Assert.Equal(expectedCode, provider.Code);
         Assert.Equal(expectedEndpoint, provider.DefaultEndpoint);
         Assert.Equal(expectedProtocol, provider.ApiProtocol);
     }
+
     #endregion
 
-    #region Anthropic 协议服务商
+    #region Anthropic 协议服务商属性
+
     [Fact]
-    public void AnthropicProviderHasCorrectProperties()
+    public void AnthropicProvider_HasCorrectProperties()
     {
         var provider = new AnthropicProvider();
 
-        Assert.Equal("Anthropic", provider.Name);
+        Assert.Equal("Anthropic", provider.Code);
         Assert.Equal("https://api.anthropic.com", provider.DefaultEndpoint);
         Assert.Equal("AnthropicMessages", provider.ApiProtocol);
     }
+
     #endregion
 
-    #region Gemini 协议服务商
+    #region Gemini 协议服务商属性
+
     [Fact]
-    public void GeminiProviderHasCorrectProperties()
+    public void GeminiProvider_HasCorrectProperties()
     {
         var provider = new GeminiProvider();
 
-        Assert.Equal("Gemini", provider.Name);
+        Assert.Equal("Gemini", provider.Code);
         Assert.Equal("https://generativelanguage.googleapis.com", provider.DefaultEndpoint);
         Assert.Equal("Gemini", provider.ApiProtocol);
     }
+
     #endregion
 
     #region 所有服务商通用校验
-    [Fact]
-    public void AllProvidersHaveNonEmptyName()
-    {
-        var factory = AiProviderFactory.Default;
 
-        foreach (var name in factory.GetProviderNames())
-        {
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.False(String.IsNullOrWhiteSpace(provider.Name));
-        }
+    [Fact]
+    public void AllProviders_HaveNonEmptyName()
+    {
+        Assert.All(AllProviders(AiProviderFactory.Default),
+            p => Assert.False(String.IsNullOrWhiteSpace(p.Name)));
     }
 
     [Fact]
-    public void AllProvidersHaveNonEmptyEndpoint()
+    public void AllProviders_HaveNonEmptyEndpoint()
     {
-        var factory = AiProviderFactory.Default;
-
-        foreach (var name in factory.GetProviderNames())
-        {
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.False(String.IsNullOrWhiteSpace(provider.DefaultEndpoint));
-        }
+        Assert.All(AllProviders(AiProviderFactory.Default),
+            p => Assert.False(String.IsNullOrWhiteSpace(p.DefaultEndpoint)));
     }
 
     [Fact]
-    public void AllProvidersHaveValidProtocol()
+    public void AllProviders_HaveValidProtocol()
     {
         var validProtocols = new HashSet<String> { "ChatCompletions", "AnthropicMessages", "Gemini" };
-        var factory = AiProviderFactory.Default;
+        Assert.All(AllProviders(AiProviderFactory.Default),
+            p => Assert.Contains(p.ApiProtocol, validProtocols));
+    }
 
-        foreach (var name in factory.GetProviderNames())
+    [Fact]
+    public void AllProviders_CodesAreUnique()
+    {
+        var codes = AllProviders(AiProviderFactory.Default).Select(p => p.Code).ToList();
+        Assert.Equal(codes.Count, codes.Select(c => c.ToLowerInvariant()).Distinct().Count());
+    }
+
+    [Fact]
+    public void AllProviders_TypesAreUnique()
+    {
+        var types = AiProviderFactory.Default.RegisteredTypes.ToList();
+        Assert.Equal(types.Count, types.Distinct().Count());
+    }
+
+    [Fact]
+    public void AllProviders_EndpointsAreValidAbsoluteUris()
+    {
+        foreach (var p in AllProviders(AiProviderFactory.Default))
         {
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.Contains(provider.ApiProtocol, validProtocols);
+            Assert.True(
+                Uri.TryCreate(p.DefaultEndpoint, UriKind.Absolute, out var uri),
+                $"服务商 {p.Code} 的 DefaultEndpoint 不是有效 URI: {p.DefaultEndpoint}");
+            Assert.True(
+                uri!.Scheme == "http" || uri.Scheme == "https",
+                $"服务商 {p.Code} 的协议不是 http/https: {p.DefaultEndpoint}");
         }
     }
 
     [Fact]
-    public void AllProviderNamesAreUnique()
+    public void CloudProviders_UseHttps()
     {
-        var factory = AiProviderFactory.Default;
-        var names = factory.GetProviderNames();
+        var localCodes = new HashSet<String>(StringComparer.OrdinalIgnoreCase)
+            { "Ollama", "LMStudio", "vLLM", "OneAPI" };
 
-        // 名称不区分大小写时也唯一
-        var distinctNames = names.Select(n => n.ToLowerInvariant()).Distinct().ToList();
-        Assert.Equal(names.Count, distinctNames.Count);
-    }
-
-    [Fact]
-    public void AllEndpointsAreValidUris()
-    {
-        var factory = AiProviderFactory.Default;
-
-        foreach (var name in factory.GetProviderNames())
+        foreach (var p in AllProviders(AiProviderFactory.Default))
         {
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.True(Uri.TryCreate(provider.DefaultEndpoint, UriKind.Absolute, out var uri), $"服务商 {name} 的 DefaultEndpoint 不是有效 URI: {provider.DefaultEndpoint}");
-            Assert.True(uri.Scheme == "http" || uri.Scheme == "https", $"服务商 {name} 的 DefaultEndpoint 协议不是 http/https: {provider.DefaultEndpoint}");
+            if (localCodes.Contains(p.Code)) continue;
+            Assert.StartsWith("https://", p.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
         }
     }
 
     [Fact]
-    public void CloudProvidersUseHttps()
+    public void LocalProviders_UseHttp()
     {
-        var localProviders = new HashSet<String>(StringComparer.OrdinalIgnoreCase) { "Ollama", "LMStudio", "vLLM", "OneAPI" };
+        var localCodes = new[] { "Ollama", "LMStudio", "vLLM", "OneAPI" };
         var factory = AiProviderFactory.Default;
 
-        foreach (var name in factory.GetProviderNames())
+        foreach (var code in localCodes)
         {
-            if (localProviders.Contains(name)) continue;
-
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.StartsWith("https://", provider.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
+            var p = AllProviders(factory)
+                .FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(p);
+            Assert.StartsWith("http://", p.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
         }
     }
 
     [Fact]
-    public void LocalProvidersUseHttp()
+    public void Default_ContainsAllCoreProviders()
     {
-        var localProviders = new[] { "Ollama", "LMStudio", "vLLM", "OneAPI" };
+        var codes = AllProviders(AiProviderFactory.Default)
+            .Select(p => p.Code)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var factory = AiProviderFactory.Default;
-        foreach (var name in localProviders)
+        var expectedCodes = new[]
         {
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.StartsWith("http://", provider.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
-        }
+            "OpenAI", "DashScope", "DeepSeek", "VolcEngine", "Zhipu",
+            "Moonshot", "Gemini", "Anthropic", "Ollama", "LMStudio"
+        };
+        Assert.All(expectedCodes, code => Assert.Contains(code, codes));
     }
+
     #endregion
 
     #region AiProviderOptions 测试
+
     [Fact]
-    public void GetEndpointReturnsCustomWhenSet()
+    public void AiProviderOptions_GetEndpoint_ReturnsCustom_WhenSet()
     {
         var options = new AiProviderOptions { Endpoint = "https://custom.api.com" };
-
         Assert.Equal("https://custom.api.com", options.GetEndpoint("https://default.api.com"));
     }
 
     [Fact]
-    public void GetEndpointReturnsDefaultWhenEmpty()
+    public void AiProviderOptions_GetEndpoint_ReturnsDefault_WhenEmpty()
     {
         var options = new AiProviderOptions();
         Assert.Equal("https://default.api.com", options.GetEndpoint("https://default.api.com"));
-
-        options.Endpoint = "";
-        Assert.Equal("https://default.api.com", options.GetEndpoint("https://default.api.com"));
-
-        options.Endpoint = "   ";
-        Assert.Equal("https://default.api.com", options.GetEndpoint("https://default.api.com"));
     }
-    #endregion
 
-    #region 工厂注册顺序测试
     [Fact]
-    public void FactoryRegistrationOrderMatchesExpected()
+    public void AiProviderOptions_GetEndpoint_ReturnsDefault_WhenWhitespace()
     {
-        var factory = AiProviderFactory.Default;
-        var names = factory.GetProviderNames();
-
-        // 前几个应该是主流服务商
-        Assert.Equal("OpenAI", names[0]);
-        Assert.Equal("AzureAI", names[1]);
-        Assert.Equal("DashScope", names[2]);
-        Assert.Equal("DeepSeek", names[3]);
-
-        // 最后应该是 Anthropic 和 Gemini
-        Assert.Equal("Gemini", names[names.Count - 1]);
-        Assert.Equal("Anthropic", names[names.Count - 2]);
+        var options = new AiProviderOptions { Endpoint = "   " };
+        Assert.Equal("https://default.api.com", options.GetEndpoint("https://default.api.com"));
     }
+
     #endregion
 }
+

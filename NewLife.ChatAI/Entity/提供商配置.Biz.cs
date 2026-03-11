@@ -48,52 +48,70 @@ public partial class ProviderConfig : Entity<ProviderConfig>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
     {
-        // 从 AiProviderFactory 检测所有已注册的服务商，写入尚未存在的提供商配置
+        // 从 AiProviderFactory 反射扫描得到所有已注册的 IAiProvider 原型，写入尚未存在的提供商配置
         var factory = AiProviderFactory.Default;
-        var providers = factory.Providers;
-        if (providers == null || providers.Count == 0) return;
+        var prototypes = factory.RegisteredTypes.ToList();
+        if (prototypes == null || prototypes.Count == 0) return;
 
-        // 获取已有编码集合，用于跳过已存在的配置
+        // 获取已有编码集合，用于跳过已存在的配置（按 Provider=FullName 去重，每种类型只初始化一条）
         var list = FindAll();
-        var exists = list.ToDictionary(e => e.Code, StringComparer.OrdinalIgnoreCase);
 
         var count = 0;
         var sort = list.Count > 0 ? list.Max(e => e.Sort) + 1 : 1;
-        foreach (var item in providers)
+        foreach (var type in prototypes)
         {
-            var provider = item.Value;
-            var code = provider.GetType().Name.TrimEnd("Provider");
-            if (!exists.TryGetValue(code, out var entity))
+            var provider = factory.GetProvider(type)
+                ?? throw new InvalidOperationException($"无法创建提供商实例：{type.FullName}");
+            var entity = list.FirstOrDefault(e => e.Code == provider.Code) ?? list.FirstOrDefault(e => e.Provider == type.FullName);
+            if (entity == null)
             {
                 entity = new ProviderConfig
                 {
-                    Code = code,
+                    Code = provider.Code,
                     Name = provider.Name,
-                    Provider = provider.Code,
+                    Provider = type.FullName!,
                     Endpoint = provider.DefaultEndpoint,
                     ApiProtocol = provider.ApiProtocol,
-                    Remark = provider.Description,
-                    Enable = false,
+                    Remark = provider.Description!,
+                    Enable = true,
                     Sort = sort++,
                 };
 
-                if (XTrace.Debug) XTrace.WriteLine("发现新提供商配置：{0}（{1}）", provider.Name, provider.DefaultEndpoint);
+                XTrace.WriteLine("发现新提供商配置：{0}（{1}）", provider.Name, type.FullName);
             }
             else
             {
-                // 更新已有配置的基本信息（不覆盖用户配置的endpoint/apikey）
+                // 更新已有配置的基本信息（不覆盖用户配置的 Endpoint/ApiKey）
                 entity.Name = provider.Name;
-                entity.Provider = provider.Code;
+                entity.Provider = type.FullName!;
                 if (entity.Endpoint.IsNullOrEmpty()) entity.Endpoint = provider.DefaultEndpoint;
                 entity.ApiProtocol = provider.ApiProtocol;
-                entity.Remark = provider.Description;
+                entity.Remark = provider.Description!;
             }
 
             count += entity.Save();
         }
 
-        if (count > 0 && XTrace.Debug)
+        if (count > 0)
             XTrace.WriteLine("完成初始化ProviderConfig[提供商配置]数据，修改 {0} 个提供商配置！", count);
+    }
+
+    /// <summary>已重载。配置变更后使工厂缓存失效，确保下次调用使用新实例</summary>
+    /// <returns></returns>
+    protected override Int32 OnUpdate()
+    {
+        var result = base.OnUpdate();
+        AiProviderFactory.Default.InvalidateConfig(Id);
+        return result;
+    }
+
+    /// <summary>已重载。删除后清理工厂缓存</summary>
+    /// <returns></returns>
+    protected override Int32 OnDelete()
+    {
+        var result = base.OnDelete();
+        AiProviderFactory.Default.InvalidateConfig(Id);
+        return result;
     }
     #endregion
 

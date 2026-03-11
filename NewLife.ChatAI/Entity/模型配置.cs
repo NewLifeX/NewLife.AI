@@ -59,7 +59,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     /// <summary>模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1</summary>
     [DisplayName("模型名")]
     [Description("模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1")]
-    [DataObjectField(false, false, true, 100)]
+    [DataObjectField(false, false, true, 50)]
     [BindColumn("ModelName", "模型名。传递给提供商接口的实际模型名，如qwen-max、deepseek-r1", "")]
     public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
 
@@ -115,7 +115,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
     [DisplayName("角色组")]
     [Description("角色组。逗号分隔的角色ID列表，为空时不限制")]
-    [DataObjectField(false, false, true, 200)]
+    [DataObjectField(false, false, true, 50)]
     [BindColumn("RoleIds", "角色组。逗号分隔的角色ID列表，为空时不限制", "")]
     public String RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
 
@@ -123,7 +123,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
     [DisplayName("部门组")]
     [Description("部门组。逗号分隔的部门ID列表，为空时不限制")]
-    [DataObjectField(false, false, true, 200)]
+    [DataObjectField(false, false, true, 50)]
     [BindColumn("DepartmentIds", "部门组。逗号分隔的部门ID列表，为空时不限制", "")]
     public String DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
 

@@ -20,7 +20,7 @@ public partial class ProviderConfigModel
     /// <summary>名称。显示名称，如公司OpenAI账号</summary>
     public String Name { get; set; }
 
-    /// <summary>协议。提供商协议代码，如OpenAI、Gemini、Anthropic</summary>
+    /// <summary>实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider</summary>
     public String Provider { get; set; }
 
     /// <summary>接口地址。API地址</summary>

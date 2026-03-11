@@ -89,14 +89,14 @@ public class GatewayTests
     public void ProviderFactoryResolvesAllBuiltInProviders()
     {
         var factory = AiProviderFactory.Default;
+        var byCode = factory.RegisteredTypes
+            .ToDictionary(t => factory.GetProvider(t)!.Code, StringComparer.OrdinalIgnoreCase);
 
         // 验证核心服务商都能被正确查找
-        var providers = new[] { "OpenAI", "DashScope", "DeepSeek", "Anthropic", "Gemini" };
-        foreach (var name in providers)
+        var expectedCodes = new[] { "OpenAI", "DashScope", "DeepSeek", "Anthropic", "Gemini" };
+        foreach (var code in expectedCodes)
         {
-            var provider = factory.GetProvider(name);
-            Assert.NotNull(provider);
-            Assert.Equal(name, provider.Name);
+            Assert.True(byCode.ContainsKey(code), $"服务商 {code} 未注册");
         }
     }
 
@@ -113,10 +113,12 @@ public class GatewayTests
     [InlineData("DeepSeek", "ChatCompletions")]
     [InlineData("Anthropic", "AnthropicMessages")]
     [InlineData("Gemini", "Gemini")]
-    public void ProviderProtocolMatchesExpected(String providerName, String expectedProtocol)
+    public void ProviderProtocolMatchesExpected(String providerCode, String expectedProtocol)
     {
         var factory = AiProviderFactory.Default;
-        var provider = factory.GetProvider(providerName);
+        var provider = factory.RegisteredTypes
+            .Select(t => factory.GetProvider(t)!)
+            .FirstOrDefault(p => p.Code.Equals(providerCode, StringComparison.OrdinalIgnoreCase));
 
         Assert.NotNull(provider);
         Assert.Equal(expectedProtocol, provider.ApiProtocol);
@@ -271,7 +273,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyReturnsNullForEmptyHeader()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         Assert.Null(service.ValidateAppKey(null));
         Assert.Null(service.ValidateAppKey(""));
@@ -281,7 +283,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyParsesBearer()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         // 由于数据库中没有数据，FindBySecret 会返回 null
         var result = service.ValidateAppKey("Bearer sk-test-nonexistent");
@@ -291,7 +293,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyHandlesNoBearerPrefix()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         // 直接传密钥（无 Bearer 前缀）也应尝试查找
         var result = service.ValidateAppKey("sk-direct-key");
@@ -303,7 +305,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForEmpty()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         Assert.Null(service.ResolveModel(null));
         Assert.Null(service.ResolveModel(""));
@@ -313,7 +315,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForNonExistent()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         // 数据库无数据时返回 null
         Assert.Null(service.ResolveModel("nonexistent-model"));
@@ -458,8 +460,8 @@ public class GatewayTests
     public void AllChatCompletionsProvidersShareSameInterface()
     {
         var factory = AiProviderFactory.Default;
-        var chatCompletionProviders = factory.GetProviderNames()
-            .Select(n => factory.GetProvider(n))
+        var chatCompletionProviders = factory.RegisteredTypes
+            .Select(t => factory.GetProvider(t))
             .Where(p => p?.ApiProtocol == "ChatCompletions")
             .ToList();
 
@@ -477,8 +479,8 @@ public class GatewayTests
     public void ProtocolGroupCountsMatchExpected()
     {
         var factory = AiProviderFactory.Default;
-        var groups = factory.GetProviderNames()
-            .Select(n => factory.GetProvider(n))
+        var groups = factory.RegisteredTypes
+            .Select(t => factory.GetProvider(t))
             .Where(p => p != null)
             .GroupBy(p => p!.ApiProtocol)
             .ToDictionary(g => g.Key, g => g.Count());

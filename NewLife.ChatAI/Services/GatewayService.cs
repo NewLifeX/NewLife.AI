@@ -8,30 +8,19 @@ using NewLife.Log;
 namespace NewLife.ChatAI.Services;
 
 /// <summary>API 网关服务。按 model 字段路由到对应的模型提供商，支持认证校验和限流重试</summary>
-public class GatewayService
+/// <remarks>实例化网关服务</remarks>
+/// <param name="usageService">用量统计服务</param>
+/// <param name="log">日志</param>
+public class GatewayService(UsageService? usageService, IServiceProvider serviceProvider, ILog log)
 {
     #region 属性
-    private readonly AiProviderFactory _providerFactory;
-    private readonly UsageService? _usageService;
-    private readonly ILog _log;
+    private readonly AiProviderFactory _providerFactory = AiProviderFactory.Default;
 
     /// <summary>上游重试最大次数</summary>
     private const Int32 MaxRetryCount = 5;
 
     /// <summary>重试最大等待时间（秒）</summary>
     private const Int32 MaxRetryDelaySec = 30;
-    #endregion
-
-    #region 构造
-    /// <summary>实例化网关服务</summary>
-    /// <param name="usageService">用量统计服务</param>
-    /// <param name="log">日志</param>
-    public GatewayService(UsageService? usageService, ILog log)
-    {
-        _usageService = usageService;
-        _log = log;
-        _providerFactory = AiProviderFactory.Default;
-    }
     #endregion
 
     #region 认证
@@ -76,15 +65,17 @@ public class GatewayService
         return config;
     }
 
-    /// <summary>根据模型配置获取对应的 AI 服务商</summary>
+    /// <summary>根据模型配置获取对应的 AI 服务商实例。按 ProviderConfig.Id 缓存，配置变更后自动重建</summary>
     /// <param name="config">模型配置</param>
     /// <returns>服务商实例，未找到返回 null</returns>
     public IAiProvider? GetProvider(ModelConfig config)
     {
         if (config == null) return null;
 
-        var providerCode = config.GetEffectiveProvider();
-        return _providerFactory.GetProvider(providerCode);
+        var providerConfig = config.ProviderInfo;
+        if (providerConfig == null) return null;
+
+        return _providerFactory.GetProviderForConfig(providerConfig.Id, providerConfig.Provider, serviceProvider);
     }
 
     /// <summary>构建服务商连接选项。从关联的 ProviderConfig 获取 Endpoint/ApiKey</summary>
@@ -111,7 +102,7 @@ public class GatewayService
     {
         var provider = GetProvider(config);
         if (provider == null)
-            throw new InvalidOperationException($"未找到服务商 '{config.GetEffectiveProvider()}'");
+            throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
 
         var options = BuildOptions(config);
 
@@ -126,7 +117,7 @@ public class GatewayService
             catch (HttpRequestException ex) when (Is429(ex) && i < MaxRetryCount)
             {
                 var delay = GetRetryDelay(i);
-                _log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
+                log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -153,7 +144,7 @@ public class GatewayService
     {
         var provider = GetProvider(config);
         if (provider == null)
-            throw new InvalidOperationException($"未找到服务商 '{config.GetEffectiveProvider()}'");
+            throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
 
         var options = BuildOptions(config);
 
@@ -168,7 +159,7 @@ public class GatewayService
             catch (HttpRequestException ex) when (Is429(ex) && i < MaxRetryCount)
             {
                 var delay = GetRetryDelay(i);
-                _log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
+                log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -226,7 +217,7 @@ public class GatewayService
     {
         if (usage == null) return;
 
-        _usageService?.Record(
+        usageService?.Record(
             appKey?.UserId ?? 0,
             appKey?.Id ?? 0,
             0, 0,
@@ -256,7 +247,7 @@ public class GatewayService
         }
         catch (Exception ex)
         {
-            _log?.Error("更新 AppKey 用量失败: {0}", ex.Message);
+            log?.Error("更新 AppKey 用量失败: {0}", ex.Message);
         }
     }
     #endregion
