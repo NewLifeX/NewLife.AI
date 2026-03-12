@@ -4,17 +4,15 @@ using NewLife.ChatAI.Services;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>用量统计控制器</summary>
-[ApiController]
 [Route("api/usage")]
-public class UsageApiController(UsageService usageService) : ControllerBase
+public class UsageApiController(UsageService usageService) : ChatApiControllerBase
 {
     /// <summary>获取用户累计用量摘要</summary>
     /// <returns></returns>
     [HttpGet("summary")]
     public ActionResult<UsageSummaryDto> GetSummary()
     {
-        // 本期暂不启用登录鉴权，UserId 固定为 0
-        var result = usageService.GetSummary(0);
+        var result = usageService.GetSummary(GetCurrentUserId());
         return Ok(result);
     }
 
@@ -27,7 +25,7 @@ public class UsageApiController(UsageService usageService) : ControllerBase
     {
         var s = start ?? DateTime.Today.AddDays(-30);
         var e = end ?? DateTime.Today.AddDays(1);
-        var result = usageService.GetDailyUsage(0, s, e);
+        var result = usageService.GetDailyUsage(GetCurrentUserId(), s, e);
         return Ok(result);
     }
 
@@ -36,7 +34,7 @@ public class UsageApiController(UsageService usageService) : ControllerBase
     [HttpGet("models")]
     public ActionResult<IList<ModelUsageDto>> GetModelUsage()
     {
-        var result = usageService.GetModelUsage(0);
+        var result = usageService.GetModelUsage(GetCurrentUserId());
         return Ok(result);
     }
 
@@ -45,7 +43,7 @@ public class UsageApiController(UsageService usageService) : ControllerBase
     [HttpGet("appkeys")]
     public ActionResult<IList<AppKeyUsageDto>> GetAppKeyUsage()
     {
-        var result = usageService.GetAppKeyUsage(0);
+        var result = usageService.GetAppKeyUsage(GetCurrentUserId());
         return Ok(result);
     }
 

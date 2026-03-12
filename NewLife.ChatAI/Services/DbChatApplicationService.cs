@@ -69,11 +69,12 @@ public class ChatApplicationService
     }
 
     /// <summary>获取会话列表（分页）</summary>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="page">页码</param>
     /// <param name="pageSize">每页数量</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<PagedResultDto<ConversationSummaryDto>> GetConversationsAsync(Int32 page, Int32 pageSize, CancellationToken cancellationToken)
+    public Task<PagedResultDto<ConversationSummaryDto>> GetConversationsAsync(Int32 userId, Int32 page, Int32 pageSize, CancellationToken cancellationToken)
     {
         if (page <= 0) page = 1;
         if (pageSize <= 0) pageSize = 20;
@@ -81,7 +82,8 @@ public class ChatApplicationService
         var p = new PageParameter { PageIndex = page, PageSize = pageSize };
         p.Sort = Conversation._.IsPinned.Desc() + "," + Conversation._.LastMessageTime.Desc();
 
-        var list = Conversation.FindAll(null, p);
+        var exp = Conversation._.UserId == userId;
+        var list = Conversation.FindAll(exp, p);
         var items = list.Select(ToConversationSummary).ToList();
 
         return Task.FromResult(new PagedResultDto<ConversationSummaryDto>(items, (Int32)p.TotalCount, page, pageSize));
@@ -162,9 +164,10 @@ public class ChatApplicationService
     #region 消息管理
     /// <summary>获取会话消息列表</summary>
     /// <param name="conversationId">会话编号</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Int64 conversationId, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
     {
         var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
         var list = ChatMessage.Search(conversationId, DateTime.MinValue, DateTime.MinValue, null, p);
@@ -172,7 +175,7 @@ public class ChatApplicationService
         // 批量查询反馈，避免 N+1
         var messageIds = list.Select(e => e.Id).ToList();
         var feedbacks = messageIds.Count > 0
-            ? MessageFeedback.FindAll(MessageFeedback._.MessageId.In(messageIds) & MessageFeedback._.UserId == 0)
+            ? MessageFeedback.FindAll(MessageFeedback._.MessageId.In(messageIds) & MessageFeedback._.UserId == userId)
                 .ToDictionary(e => e.MessageId, e => e.FeedbackType)
             : new Dictionary<Int64, Int32>();
 
@@ -198,9 +201,10 @@ public class ChatApplicationService
 
     /// <summary>重新生成AI回复。查找上文构建上下文，调用模型重新生成</summary>
     /// <param name="messageId">消息编号</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async Task<MessageDto?> RegenerateMessageAsync(Int64 messageId, CancellationToken cancellationToken)
+    public async Task<MessageDto?> RegenerateMessageAsync(Int64 messageId, Int32 userId, CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
         if (entity == null || !entity.Role.EqualIgnoreCase("assistant"))
@@ -234,7 +238,7 @@ public class ChatApplicationService
         var contextMessages = new List<AiChatMessage>();
 
         // 注入系统提示词（用户全局级 + 模型级）
-        var systemMsg = BuildSystemMessage(modelConfig);
+        var systemMsg = BuildSystemMessage(userId, modelConfig);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -267,7 +271,7 @@ public class ChatApplicationService
             // 写入用量记录
             if (response.Usage != null)
             {
-                _usageService?.Record(0, 0, entity.ConversationId, entity.Id,
+                _usageService?.Record(userId, 0, entity.ConversationId, entity.Id,
                     modelConfig.Code, response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens, "Chat");
             }
 
@@ -283,9 +287,10 @@ public class ChatApplicationService
     /// <summary>编辑用户消息并重新发送。更新消息内容、删除后续所有消息、流式生成新 AI 回复</summary>
     /// <param name="messageId">用户消息编号</param>
     /// <param name="newContent">编辑后的内容</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<ChatStreamEvent> EditAndResendStreamAsync(Int64 messageId, String newContent, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatStreamEvent> EditAndResendStreamAsync(Int64 messageId, String newContent, Int32 userId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
         if (entity == null || !entity.Role.EqualIgnoreCase("user"))
@@ -324,7 +329,7 @@ public class ChatApplicationService
         }
 
         // 4. 构建上下文（包含编辑后的用户消息）
-        var contextMessages = BuildContextMessages(entity.ConversationId, newContent, modelConfig);
+        var contextMessages = BuildContextMessages(userId, entity.ConversationId, newContent, modelConfig);
 
         // 5. 创建新的 AI 回复消息
         var assistantMsg = new ChatMessage
@@ -417,7 +422,7 @@ public class ChatApplicationService
         conversation.Update();
 
         if (finalUsage != null)
-            _usageService?.Record(0, 0, entity.ConversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+            _usageService?.Record(userId, 0, entity.ConversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         if (!hasError && !cancellationToken.IsCancellationRequested)
         {
@@ -432,9 +437,10 @@ public class ChatApplicationService
 
     /// <summary>流式重新生成回复。替换当前 AI 回复，以 SSE 事件流返回</summary>
     /// <param name="messageId">消息编号</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, Int32 userId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
         if (entity == null || !entity.Role.EqualIgnoreCase("assistant"))
@@ -471,7 +477,7 @@ public class ChatApplicationService
         var contextMessages = new List<AiChatMessage>();
 
         // 注入系统提示词
-        var systemMsg = BuildSystemMessage(modelConfig);
+        var systemMsg = BuildSystemMessage(userId, modelConfig);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -558,7 +564,7 @@ public class ChatApplicationService
 
         // 记录用量
         if (finalUsage != null)
-            _usageService?.Record(0, 0, entity.ConversationId, entity.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+            _usageService?.Record(userId, 0, entity.ConversationId, entity.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         // message_done
         if (!hasError && !cancellationToken.IsCancellationRequested)
@@ -575,9 +581,10 @@ public class ChatApplicationService
     /// <summary>流式发送消息并获取AI回复。接入真实模型，支持 thinking/content/tool_call 事件和后台继续生成</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">发送消息请求</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, Int32 userId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var conversation = Conversation.FindById(conversationId);
         if (conversation == null)
@@ -608,7 +615,7 @@ public class ChatApplicationService
         }
 
         // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
-        var contextMessages = BuildContextMessages(conversationId, request.Content, modelConfig);
+        var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig);
 
         // 预分配AI回复消息编号
         var assistantMsg = new ChatMessage
@@ -742,7 +749,7 @@ public class ChatApplicationService
 
         // 记录用量
         if (finalUsage != null)
-            _usageService?.Record(0, 0, conversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+            _usageService?.Record(userId, 0, conversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         // 异步生成标题（首条消息时）
         String? title = null;
@@ -857,7 +864,7 @@ public class ChatApplicationService
     /// <param name="userMessage">用户消息内容（用于标题生成）</param>
     /// <returns></returns>
     private async Task PersistResultAsync(ChatMessage assistantMsg, Conversation conversation, Int64 conversationId,
-        String modelCode, String content, String? thinkingContent, ChatUsage? usage, String userMessage)
+        String modelCode, String content, String? thinkingContent, ChatUsage? usage, String userMessage, Int32 userId)
     {
         assistantMsg.Content = content;
         if (!String.IsNullOrEmpty(thinkingContent))
@@ -870,7 +877,7 @@ public class ChatApplicationService
 
         if (usage != null)
         {
-            _usageService?.Record(0, 0, conversationId, assistantMsg.Id,
+            _usageService?.Record(userId, 0, conversationId, assistantMsg.Id,
                 modelCode, usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, "Chat");
         }
 
@@ -969,12 +976,11 @@ public class ChatApplicationService
     /// <summary>提交点赞/点踩反馈</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="request">反馈请求</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, CancellationToken cancellationToken)
+    public Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, Int32 userId, CancellationToken cancellationToken)
     {
-        // 本期暂不启用登录鉴权，UserId 固定为 0
-        var userId = 0;
 
         var entity = MessageFeedback.FindByMessageIdAndUserId(messageId, userId);
         if (entity == null)
@@ -996,11 +1002,11 @@ public class ChatApplicationService
 
     /// <summary>取消反馈</summary>
     /// <param name="messageId">消息编号</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task DeleteFeedbackAsync(Int64 messageId, CancellationToken cancellationToken)
+    public Task DeleteFeedbackAsync(Int64 messageId, Int32 userId, CancellationToken cancellationToken)
     {
-        var userId = 0;
         var entity = MessageFeedback.FindByMessageIdAndUserId(messageId, userId);
         entity?.Delete();
 
@@ -1033,7 +1039,7 @@ public class ChatApplicationService
         };
         entity.Insert();
 
-        var dto = new ShareLinkDto($"/api/share/{entity.ShareToken}", entity.CreateTime, expireTime);
+        var dto = new ShareLinkDto($"/share/{entity.ShareToken}", entity.CreateTime, expireTime);
         return Task.FromResult(dto);
     }
 
@@ -1166,12 +1172,12 @@ public class ChatApplicationService
 
     #region 用户设置
     /// <summary>获取用户设置</summary>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<UserSettingsDto> GetUserSettingsAsync(CancellationToken cancellationToken)
+    public Task<UserSettingsDto> GetUserSettingsAsync(Int32 userId, CancellationToken cancellationToken)
     {
-        // 本期暂不启用登录鉴权，UserId 固定为 0
-        var entity = UserSetting.FindByUserId(0);
+        var entity = UserSetting.FindByUserId(userId);
         if (entity == null)
         {
             // 返回默认设置
@@ -1183,14 +1189,15 @@ public class ChatApplicationService
 
     /// <summary>更新用户设置</summary>
     /// <param name="settings">用户设置</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<UserSettingsDto> UpdateUserSettingsAsync(UserSettingsDto settings, CancellationToken cancellationToken)
+    public Task<UserSettingsDto> UpdateUserSettingsAsync(UserSettingsDto settings, Int32 userId, CancellationToken cancellationToken)
     {
-        var entity = UserSetting.FindByUserId(0);
+        var entity = UserSetting.FindByUserId(userId);
         if (entity == null)
         {
-            entity = new UserSetting { UserId = 0 };
+            entity = new UserSetting { UserId = userId };
         }
 
         entity.Language = settings.Language;
@@ -1211,14 +1218,12 @@ public class ChatApplicationService
     }
 
     /// <summary>导出所有对话数据</summary>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<Stream> ExportUserDataAsync(CancellationToken cancellationToken)
+    public Task<Stream> ExportUserDataAsync(Int32 userId, CancellationToken cancellationToken)
     {
-        // 本期 UserId 固定为 0，按 UserId 过滤（多用户时仅导出当前用户数据）
-        var conversations = Conversation.FindAll(Conversation._.UserId == 0, null, null, 0, 0);
-        if (conversations.Count == 0)
-            conversations = Conversation.FindAll();
+        var conversations = Conversation.FindAll(Conversation._.UserId == userId, null, null, 0, 0);
 
         var result = new List<Object>();
 
@@ -1252,12 +1257,12 @@ public class ChatApplicationService
     }
 
     /// <summary>清除所有对话</summary>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task ClearUserConversationsAsync(CancellationToken cancellationToken)
+    public Task ClearUserConversationsAsync(Int32 userId, CancellationToken cancellationToken)
     {
-        // 本期 UserId 固定为 0，获取当前用户的所有会话
-        var conversations = Conversation.FindAll();
+        var conversations = Conversation.FindAll(Conversation._.UserId == userId, null, null, 0, 0);
         if (conversations.Count == 0) return Task.CompletedTask;
 
         var convIds = conversations.Select(e => e.Id).ToArray();
@@ -1294,11 +1299,12 @@ public class ChatApplicationService
 
     #region 辅助
     /// <summary>构建上下文消息列表。按配置的轮数截取历史消息，并注入系统提示词</summary>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="conversationId">会话编号</param>
     /// <param name="currentContent">当前用户消息内容</param>
     /// <param name="modelConfig">模型配置（可选，用于注入模型级系统提示词）</param>
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
-    private IList<AiChatMessage> BuildContextMessages(Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
+    private IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
     {
         var setting = ChatSetting.Current;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
@@ -1311,7 +1317,7 @@ public class ChatApplicationService
         var messages = new List<AiChatMessage>();
 
         // 注入系统提示词（用户全局级 + 模型级）
-        var systemMsg = BuildSystemMessage(modelConfig);
+        var systemMsg = BuildSystemMessage(userId, modelConfig);
         if (systemMsg != null) messages.Add(systemMsg);
 
         // 添加历史消息
@@ -1328,12 +1334,13 @@ public class ChatApplicationService
     }
 
     /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词</summary>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="modelConfig">模型配置（可选）</param>
     /// <returns>系统消息，无提示词时返回 null</returns>
-    private static AiChatMessage? BuildSystemMessage(ModelConfig? modelConfig)
+    private static AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig)
     {
         var parts = new List<String>();
-        var userSetting = UserSetting.FindByUserId(0);
+        var userSetting = UserSetting.FindByUserId(userId);
         if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
             parts.Add(userSetting.SystemPrompt.Trim());
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))

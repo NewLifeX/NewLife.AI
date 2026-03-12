@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -1018,6 +1019,222 @@ public class ChatAITests
     {
         var req = new EditMessageRequest("修改后的内容");
         Assert.Equal("修改后的内容", req.Content);
+    }
+    #endregion
+
+    #region 路由与链接格式测试
+    [Fact]
+    [DisplayName("分享链接格式应为 /share/{token}")]
+    public async Task ShareLinkUrlFormat()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
+
+        var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(24), CancellationToken.None);
+
+        // 分享链接应以 /share/ 开头（供前端页面直接访问）
+        Assert.StartsWith("/", share.Url);
+        Assert.Contains("share", share.Url);
+    }
+
+    [Fact]
+    [DisplayName("分享链接 Token 应为不可猜测的随机值")]
+    public async Task ShareTokenIsRandom()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
+
+        var share1 = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
+        var share2 = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
+
+        // 同一会话多次分享应生成不同链接
+        Assert.NotEqual(share1.Url, share2.Url);
+    }
+
+    [Fact]
+    [DisplayName("API 密钥掩码应隐藏中间部分")]
+    public void AppKeyMaskSecretFormat()
+    {
+        var secret = "sk-abcdefghijklmnopqrstuvwxyz1234567890abcdefghijk";
+        var masked = MaskSecret(secret);
+
+        // 掩码后长度应远小于原始密钥
+        Assert.True(masked.Length < secret.Length);
+        // 仍以 sk- 开头
+        Assert.StartsWith("sk-", masked);
+    }
+    #endregion
+
+    #region 用户设置隔离性测试
+    [Fact]
+    [DisplayName("用户设置应返回默认值")]
+    public async Task UserSettingsHasDefaults()
+    {
+        var service = new InMemoryChatApplicationService();
+        var settings = await service.GetUserSettingsAsync(CancellationToken.None);
+
+        Assert.Equal("zh-CN", settings.Language);
+        Assert.Equal("system", settings.Theme);
+        Assert.Equal(16, settings.FontSize);
+        Assert.Equal("Enter", settings.SendShortcut);
+        Assert.Equal(ThinkingMode.Auto, settings.DefaultThinkingMode);
+        Assert.Equal(10, settings.ContextRounds);
+        Assert.False(settings.AllowTraining);
+    }
+
+    [Fact]
+    [DisplayName("修改用户设置后应返回更新后的值")]
+    public async Task UpdateUserSettingsPersists()
+    {
+        var service = new InMemoryChatApplicationService();
+
+        var updated = await service.UpdateUserSettingsAsync(
+            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", "deepseek-r1", ThinkingMode.Think, 5, "Be concise", true),
+            CancellationToken.None);
+
+        Assert.Equal("en", updated.Language);
+        Assert.Equal("dark", updated.Theme);
+        Assert.Equal(20, updated.FontSize);
+        Assert.Equal("Ctrl+Enter", updated.SendShortcut);
+        Assert.Equal("deepseek-r1", updated.DefaultModel);
+        Assert.Equal(ThinkingMode.Think, updated.DefaultThinkingMode);
+        Assert.Equal(5, updated.ContextRounds);
+        Assert.Equal("Be concise", updated.SystemPrompt);
+        Assert.True(updated.AllowTraining);
+
+        // 再次获取应保持不变
+        var retrieved = await service.GetUserSettingsAsync(CancellationToken.None);
+        Assert.Equal("en", retrieved.Language);
+        Assert.Equal("dark", retrieved.Theme);
+    }
+    #endregion
+
+    #region 分享过期测试
+    [Fact]
+    [DisplayName("分享可设置过期时间")]
+    public async Task ShareWithExpireTimeHasExpireTime()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
+
+        var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(72), CancellationToken.None);
+
+        Assert.NotNull(share.ExpireTime);
+        // 过期时间应在未来
+        Assert.True(share.ExpireTime > DateTime.Now);
+    }
+
+    [Fact]
+    [DisplayName("分享无过期时间时 ExpireTime 为 null")]
+    public async Task ShareWithoutExpireTimeHasNullExpireTime()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
+
+        var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
+
+        Assert.Null(share.ExpireTime);
+    }
+    #endregion
+
+    #region 消息操作完整性测试
+    [Fact]
+    [DisplayName("思考模式影响流事件")]
+    public async Task ThinkingModeAffectsStream()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+
+        var chunks = new List<ChatStreamEvent>();
+        await foreach (var chunk in service.StreamMessageAsync(conv.Id, new SendMessageRequest("复杂数学题", ThinkingMode.Think, null), CancellationToken.None))
+        {
+            chunks.Add(chunk);
+        }
+
+        // message_start 事件应包含思考模式
+        var start = chunks.FirstOrDefault(e => e.Type == "message_start");
+        Assert.NotNull(start);
+        Assert.Equal(1, start.ThinkingMode);
+    }
+
+    [Fact]
+    [DisplayName("消息编辑不应创建新消息")]
+    public async Task EditMessageDoesNotCreateNewMessage()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("原始消息", ThinkingMode.Auto, null), CancellationToken.None)) { }
+
+        var messagesBefore = await service.GetMessagesAsync(conv.Id, CancellationToken.None);
+        var userMsg = messagesBefore.First(e => e.Role == "user");
+
+        await service.EditMessageAsync(userMsg.Id, new EditMessageRequest("编辑消息"), CancellationToken.None);
+
+        var messagesAfter = await service.GetMessagesAsync(conv.Id, CancellationToken.None);
+        Assert.Equal(messagesBefore.Count, messagesAfter.Count);
+    }
+
+    [Fact]
+    [DisplayName("不存在的消息编辑应返回 null")]
+    public async Task EditNonExistentMessageReturnsNull()
+    {
+        var service = new InMemoryChatApplicationService();
+        var result = await service.EditMessageAsync(99999, new EditMessageRequest("test"), CancellationToken.None);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    [DisplayName("不存在的消息重新生成应返回 null")]
+    public async Task RegenerateNonExistentReturnsNull()
+    {
+        var service = new InMemoryChatApplicationService();
+        var result = await service.RegenerateMessageAsync(99999, CancellationToken.None);
+        Assert.Null(result);
+    }
+    #endregion
+
+    #region 会话操作完整性测试
+    [Fact]
+    [DisplayName("会话置顶排序优先")]
+    public async Task PinnedConversationsSortFirst()
+    {
+        var service = new InMemoryChatApplicationService();
+
+        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("普通会话", null), CancellationToken.None);
+        await Task.Delay(50);
+        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("要置顶的", null), CancellationToken.None);
+        await Task.Delay(50);
+        var conv3 = await service.CreateConversationAsync(new CreateConversationRequest("最新的普通", null), CancellationToken.None);
+
+        // 置顶第一个会话
+        await service.SetPinAsync(conv1.Id, true, CancellationToken.None);
+
+        var list = await service.GetConversationsAsync(1, 20, CancellationToken.None);
+        // 置顶会话应在第一位
+        Assert.Equal(conv1.Id, list.Items[0].Id);
+        Assert.True(list.Items[0].IsPinned);
+    }
+
+    [Fact]
+    [DisplayName("删除会话后列表数量减少")]
+    public async Task DeleteConversationReducesList()
+    {
+        var service = new InMemoryChatApplicationService();
+        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("会话1", null), CancellationToken.None);
+        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("会话2", null), CancellationToken.None);
+
+        var before = await service.GetConversationsAsync(1, 20, CancellationToken.None);
+        Assert.Equal(2, before.Total);
+
+        await service.DeleteConversationAsync(conv1.Id, CancellationToken.None);
+
+        var after = await service.GetConversationsAsync(1, 20, CancellationToken.None);
+        Assert.Equal(1, after.Total);
+        Assert.Equal(conv2.Id, after.Items[0].Id);
     }
     #endregion
 }

@@ -6,9 +6,8 @@ using NewLife.Serialization;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>MCP 管理控制器。MCP Server 的配置管理和工具发现</summary>
-[ApiController]
 [Route("api/mcp")]
-public class McpApiController(McpClientService mcpClientService) : ControllerBase
+public class McpApiController(McpClientService mcpClientService) : ChatApiControllerBase
 {
     #region MCP Server 管理
     /// <summary>获取已配置的 MCP Server 列表</summary>

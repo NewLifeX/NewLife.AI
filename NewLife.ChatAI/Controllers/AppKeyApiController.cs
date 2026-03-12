@@ -5,17 +5,16 @@ using NewLife.Security;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>AppKey 管理控制器。应用密钥的创建、查看、更新、删除</summary>
-[ApiController]
 [Route("api/appkeys")]
-public class AppKeyApiController : ControllerBase
+public class AppKeyApiController : ChatApiControllerBase
 {
     /// <summary>获取当前用户的 AppKey 列表</summary>
     /// <returns></returns>
     [HttpGet]
     public ActionResult<IList<AppKeyResponseDto>> GetList()
     {
-        // 本期暂不启用登录鉴权，UserId 固定为 0
-        var list = AppKey.FindAllByUserId(0);
+        var userId = GetCurrentUserId();
+        var list = AppKey.FindAllByUserId(userId);
         var items = list.Select(e => new AppKeyResponseDto(
             e.Id, e.Name, MaskSecret(e.Secret), e.Enable,
             e.ExpireTime.Year > 2000 ? e.ExpireTime : (DateTime?)null,
@@ -32,12 +31,14 @@ public class AppKeyApiController : ControllerBase
         if (String.IsNullOrWhiteSpace(request.Name))
             return BadRequest(new { code = "INVALID_REQUEST", message = "名称不能为空" });
 
+        var userId = GetCurrentUserId();
+
         // 生成 sk- 前缀的随机密钥
         var secret = "sk-" + Rand.NextString(48);
 
         var entity = new AppKey
         {
-            UserId = 0,
+            UserId = userId,
             Name = request.Name.Trim(),
             Secret = secret,
             Enable = true,

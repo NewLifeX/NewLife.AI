@@ -7,9 +7,8 @@ using NewLife.ChatAI.Services;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>消息控制器</summary>
-[ApiController]
 [Route("api")]
-public class MessagesController(ChatApplicationService chatService) : ControllerBase
+public class MessagesController(ChatApplicationService chatService) : ChatApiControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -31,7 +30,7 @@ public class MessagesController(ChatApplicationService chatService) : Controller
 
         try
         {
-            await foreach (var ev in chatService.StreamMessageAsync(conversationId, request, cancellationToken).ConfigureAwait(false))
+            await foreach (var ev in chatService.StreamMessageAsync(conversationId, request, GetCurrentUserId(), cancellationToken).ConfigureAwait(false))
             {
                 await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
             }
@@ -54,7 +53,7 @@ public class MessagesController(ChatApplicationService chatService) : Controller
     [HttpGet("conversations/{conversationId:long}/messages")]
     public async Task<ActionResult<IReadOnlyList<MessageDto>>> QueryAsync([FromRoute] Int64 conversationId, CancellationToken cancellationToken)
     {
-        var result = await chatService.GetMessagesAsync(conversationId, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.GetMessagesAsync(conversationId, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 
@@ -78,7 +77,7 @@ public class MessagesController(ChatApplicationService chatService) : Controller
     [HttpPost("messages/{id:long}/regenerate")]
     public async Task<ActionResult<MessageDto>> RegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
-        var result = await chatService.RegenerateMessageAsync(id, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.RegenerateMessageAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (result == null) return NotFound();
         return Ok(result);
     }
@@ -97,7 +96,7 @@ public class MessagesController(ChatApplicationService chatService) : Controller
 
         try
         {
-            await foreach (var ev in chatService.EditAndResendStreamAsync(id, request.Content, cancellationToken).ConfigureAwait(false))
+            await foreach (var ev in chatService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken).ConfigureAwait(false))
             {
                 await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
             }
@@ -126,7 +125,7 @@ public class MessagesController(ChatApplicationService chatService) : Controller
 
         try
         {
-            await foreach (var ev in chatService.RegenerateStreamAsync(id, cancellationToken).ConfigureAwait(false))
+            await foreach (var ev in chatService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false))
             {
                 await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
             }

@@ -6,9 +6,8 @@ using NewLife.ChatAI.Services;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>附件控制器</summary>
-[ApiController]
 [Route("api/attachments")]
-public class AttachmentsController(ChatApplicationService chatService) : ControllerBase
+public class AttachmentsController(ChatApplicationService chatService) : ChatApiControllerBase
 {
     /// <summary>附件存储根目录</summary>
     private static readonly String _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");

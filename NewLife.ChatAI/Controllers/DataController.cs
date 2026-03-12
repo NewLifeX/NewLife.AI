@@ -4,9 +4,8 @@ using NewLife.ChatAI.Services;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>数据控制器</summary>
-[ApiController]
 [Route("api/data")]
-public class DataController(ChatApplicationService chatService) : ControllerBase
+public class DataController(ChatApplicationService chatService) : ChatApiControllerBase
 {
     /// <summary>导出用户全部对话数据（JSON格式）</summary>
     /// <param name="cancellationToken">取消令牌</param>
@@ -14,7 +13,7 @@ public class DataController(ChatApplicationService chatService) : ControllerBase
     [HttpGet("export")]
     public async Task<IActionResult> ExportAsync(CancellationToken cancellationToken)
     {
-        var stream = await chatService.ExportUserDataAsync(cancellationToken).ConfigureAwait(false);
+        var stream = await chatService.ExportUserDataAsync(GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         return File(stream, "application/json", $"newlife-chat-export-{DateTime.Now:yyyyMMddHHmmss}.json");
     }
 
@@ -24,7 +23,7 @@ public class DataController(ChatApplicationService chatService) : ControllerBase
     [HttpDelete("clear")]
     public async Task<IActionResult> ClearAsync(CancellationToken cancellationToken)
     {
-        await chatService.ClearUserConversationsAsync(cancellationToken).ConfigureAwait(false);
+        await chatService.ClearUserConversationsAsync(GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         return NoContent();
     }
 }

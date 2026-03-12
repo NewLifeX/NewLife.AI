@@ -5,9 +5,8 @@ using NewLife.ChatAI.Services;
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>会话控制器</summary>
-[ApiController]
 [Route("api/conversations")]
-public class ConversationsController(ChatApplicationService chatService) : ControllerBase
+public class ConversationsController(ChatApplicationService chatService) : ChatApiControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<ConversationSummaryDto>> CreateAsync([FromBody] CreateConversationRequest request, CancellationToken cancellationToken)
@@ -19,7 +18,7 @@ public class ConversationsController(ChatApplicationService chatService) : Contr
     [HttpGet]
     public async Task<ActionResult<PagedResultDto<ConversationSummaryDto>>> QueryAsync([FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20, CancellationToken cancellationToken = default)
     {
-        var result = await chatService.GetConversationsAsync(page, pageSize, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.GetConversationsAsync(GetCurrentUserId(), page, pageSize, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 

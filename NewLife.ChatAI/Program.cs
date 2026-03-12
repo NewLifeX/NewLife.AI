@@ -70,6 +70,7 @@ app.UseStaticFiles();
 
 app.UseCube(app.Environment);
 //app.UseCubeHome();
+
 app.MapDefaultControllerRoute();
 app.MapControllers();
 
