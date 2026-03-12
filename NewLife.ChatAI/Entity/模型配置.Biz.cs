@@ -234,8 +234,9 @@ public partial class ModelConfig : Entity<ModelConfig>
     /// <returns></returns>
     public static IList<ModelConfig> FindAllByPermission(Int32[] roleIds, Int32 departmentId)
     {
-        var list = FindAll(_.Enable == true, _.Sort.Asc(), null, 0, 0);
-        if (list == null || list.Count == 0) return list;
+        //var list = FindAll(_.Enable == true, _.Sort.Asc(), null, 0, 0);
+        var list = FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
+        if (list.Count == 0) return list;
 
         // 过滤有权限的模型
         return list.Where(e => e.CheckPermission(roleIds, departmentId)).ToList();

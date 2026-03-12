@@ -1165,7 +1165,7 @@ public class ChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling, e.GetEffectiveProvider())).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling)).ToArray();
         return Task.FromResult(models);
     }
     #endregion

@@ -39,7 +39,6 @@ export interface ToolCall {
 export interface ModelInfo {
   id: string
   name: string
-  provider: string
   supportThinking?: boolean
   supportVision?: boolean
   supportImageGeneration?: boolean

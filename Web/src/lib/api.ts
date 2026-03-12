@@ -359,7 +359,6 @@ interface ModelInfoDto {
   supportVision: boolean
   supportImageGeneration: boolean
   supportFunctionCalling: boolean
-  provider?: string
 }
 
 export async function fetchModels(): Promise<ModelInfo[]> {
@@ -367,7 +366,6 @@ export async function fetchModels(): Promise<ModelInfo[]> {
   return dtos.map((d) => ({
     id: d.code,
     name: d.name,
-    provider: d.provider ?? '',
     supportThinking: d.supportThinking,
     supportVision: d.supportVision,
     supportImageGeneration: d.supportImageGeneration,
