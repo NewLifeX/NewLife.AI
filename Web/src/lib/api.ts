@@ -5,6 +5,18 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const SSE_MAX_RETRIES = 3
 
+/** 是否正在跳转登录，防止多次重定向 */
+let isRedirectingToLogin = false
+
+/** 未登录时跳转到后台登录页，分享页除外 */
+function redirectToLogin() {
+  if (isRedirectingToLogin) return
+  if (window.location.pathname.startsWith('/share/')) return
+  isRedirectingToLogin = true
+  const returnUrl = window.location.pathname + window.location.search + window.location.hash
+  window.location.href = `/admin/user/login?r=${encodeURIComponent(returnUrl)}`
+}
+
 async function fetchSSE(
   url: string,
   init: RequestInit,
@@ -20,7 +32,10 @@ async function fetchSSE(
     let streamStarted = false
     try {
       const res = await fetch(url, init)
-      if (!res.ok) throw new Error(`SSE ${res.status}: ${res.statusText}`)
+      if (!res.ok) {
+        if (res.status === 401) redirectToLogin()
+        throw new Error(`SSE ${res.status}: ${res.statusText}`)
+      }
       const reader = res.body?.getReader()
       if (!reader) throw new Error('No response body')
       streamStarted = true
@@ -79,8 +94,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (!res.ok) {
     if (res.status === 404) {
       showToast('error', `请求的资源不存在 (${path})`)
-    } else if (res.status === 401 || res.status === 403) {
-      showToast('warning', '登录已过期或无权限，请重新登录')
+    } else if (res.status === 401) {
+      redirectToLogin()
+    } else if (res.status === 403) {
+      showToast('warning', '无权限访问该资源')
     } else if (res.status === 429) {
       showToast('warning', '请求过于频繁，请稍后再试')
     } else if (res.status >= 500) {

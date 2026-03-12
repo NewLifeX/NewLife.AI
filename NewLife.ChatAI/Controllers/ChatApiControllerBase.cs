@@ -15,6 +15,7 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
 
     /// <summary>Action 执行前校验登录状态。未标记 AllowAnonymous 的接口要求已登录</summary>
     /// <param name="context">上下文</param>
+    [NonAction]
     public void OnActionExecuting(ActionExecutingContext context)
     {
         // 标记了 AllowAnonymous 的接口跳过校验
@@ -31,5 +32,6 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
 
     /// <summary>Action 执行后处理</summary>
     /// <param name="context">上下文</param>
+    [NonAction]
     public void OnActionExecuted(ActionExecutedContext context) { }
 }
