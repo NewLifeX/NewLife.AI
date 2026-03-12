@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.Models;
+﻿using NewLife.AI.ChatAI;
+
+namespace NewLife.AI.Models;
 
 /// <summary>SSE 流式事件。用于对话流式输出的事件模型</summary>
 public class ChatStreamEvent
@@ -14,7 +16,7 @@ public class ChatStreamEvent
     public String? Model { get; set; }
 
     /// <summary>思考模式</summary>
-    public Int32 ThinkingMode { get; set; }
+    public ThinkingMode ThinkingMode { get; set; }
 
     /// <summary>文本内容。content_delta / thinking_delta 时的增量文本</summary>
     public String? Content { get; set; }
@@ -59,7 +61,7 @@ public class ChatStreamEvent
     /// <param name="model">模型编码</param>
     /// <param name="thinkingMode">思考模式</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageStart(Int64 messageId, String model, Int32 thinkingMode) =>
+    public static ChatStreamEvent MessageStart(Int64 messageId, String model, ThinkingMode thinkingMode) =>
         new() { Type = "message_start", MessageId = messageId, Model = model, ThinkingMode = thinkingMode };
 
     /// <summary>思考增量事件</summary>

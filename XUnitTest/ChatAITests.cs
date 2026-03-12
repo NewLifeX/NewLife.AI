@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.ChatAI;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Controllers;
 using NewLife.ChatAI.Services;
@@ -86,12 +85,12 @@ public class ChatAITests
     [Fact]
     public void ChatStreamEventMessageStartHasAllFields()
     {
-        var ev = ChatStreamEvent.MessageStart(1001, "qwen-max", 1);
+        var ev = ChatStreamEvent.MessageStart(1001, "qwen-max", ThinkingMode.Think);
 
         Assert.Equal("message_start", ev.Type);
         Assert.Equal(1001, ev.MessageId);
         Assert.Equal("qwen-max", ev.Model);
-        Assert.Equal(1, ev.ThinkingMode);
+        Assert.Equal(ThinkingMode.Think, ev.ThinkingMode);
     }
 
     [Fact]
@@ -749,7 +748,7 @@ public class ChatAITests
 
         async IAsyncEnumerable<ChatStreamEvent> ThinkingStream()
         {
-            yield return ChatStreamEvent.MessageStart(1, "model", 1);
+            yield return ChatStreamEvent.MessageStart(1, "model", ThinkingMode.Think);
             yield return ChatStreamEvent.ThinkingDelta("让我想想...");
             yield return ChatStreamEvent.ThinkingDelta("分析完毕。");
             yield return ChatStreamEvent.ThinkingDone(1500);
@@ -1158,7 +1157,7 @@ public class ChatAITests
         // message_start 事件应包含思考模式
         var start = chunks.FirstOrDefault(e => e.Type == "message_start");
         Assert.NotNull(start);
-        Assert.Equal(1, start.ThinkingMode);
+        Assert.Equal(ThinkingMode.Think, start.ThinkingMode);
     }
 
     [Fact]

@@ -8,6 +8,7 @@ using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.McpServerConfig;
+using NewLife.AI.ChatAI;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -54,11 +55,12 @@ public class McpServerConfigController : EntityController<McpServerConfig>
     /// <returns></returns>
     protected override IEnumerable<McpServerConfig> Search(Pager p)
     {
+        var transportType = (McpTransportType)p["transportType"].ToInt(-1);
         var enable = p["enable"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return McpServerConfig.Search(enable, start, end, p["Q"], p);
+        return McpServerConfig.Search(transportType, enable, start, end, p["Q"], p);
     }
 }

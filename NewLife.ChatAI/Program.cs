@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.FileProviders;
 using NewLife;
-using NewLife.AI.ChatAI.Contracts;
 using NewLife.ChatAI.Services;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;

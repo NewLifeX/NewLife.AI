@@ -78,13 +78,13 @@ public partial class UserSetting : IEntity<UserSettingModel>
     [BindColumn("DefaultModel", "默认模型。新会话的默认模型编码", "")]
     public String DefaultModel { get => _DefaultModel; set { if (OnPropertyChanging("DefaultModel", value)) { _DefaultModel = value; OnPropertyChanged("DefaultModel"); } } }
 
-    private Int32 _DefaultThinkingMode;
+    private NewLife.AI.ChatAI.ThinkingMode _DefaultThinkingMode;
     /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
     [DisplayName("默认思考模式")]
     [Description("默认思考模式。Auto=0, Think=1, Fast=2")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("DefaultThinkingMode", "默认思考模式。Auto=0, Think=1, Fast=2", "")]
-    public Int32 DefaultThinkingMode { get => _DefaultThinkingMode; set { if (OnPropertyChanging("DefaultThinkingMode", value)) { _DefaultThinkingMode = value; OnPropertyChanged("DefaultThinkingMode"); } } }
+    public NewLife.AI.ChatAI.ThinkingMode DefaultThinkingMode { get => _DefaultThinkingMode; set { if (OnPropertyChanging("DefaultThinkingMode", value)) { _DefaultThinkingMode = value; OnPropertyChanged("DefaultThinkingMode"); } } }
 
     private Int32 _ContextRounds;
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
@@ -258,7 +258,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
                 case "FontSize": _FontSize = value.ToInt(); break;
                 case "SendShortcut": _SendShortcut = Convert.ToString(value); break;
                 case "DefaultModel": _DefaultModel = Convert.ToString(value); break;
-                case "DefaultThinkingMode": _DefaultThinkingMode = value.ToInt(); break;
+                case "DefaultThinkingMode": _DefaultThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
                 case "ContextRounds": _ContextRounds = value.ToInt(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
@@ -314,6 +314,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。设置所属用户</param>
+    /// <param name="defaultThinkingMode">默认思考模式。Auto=0, Think=1, Fast=2</param>
     /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
     /// <param name="start">更新时间开始</param>
@@ -321,11 +322,12 @@ public partial class UserSetting : IEntity<UserSettingModel>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, Boolean? allowTraining, Boolean? mcpEnabled, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.ChatAI.ThinkingMode defaultThinkingMode, Boolean? allowTraining, Boolean? mcpEnabled, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
+        if (defaultThinkingMode >= 0) exp &= _.DefaultThinkingMode == defaultThinkingMode;
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
         exp &= _.UpdateTime.Between(start, end);

@@ -27,9 +27,9 @@ public partial class ChatMessageModel
     public String ThinkingContent { get; set; }
 
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
-    public Int32 ThinkingMode { get; set; }
+    public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get; set; }
 
-    /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
+    /// <summary>附件列表。存储魔方附件ID数组</summary>
     public String Attachments { get; set; }
 
     /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
@@ -52,15 +52,6 @@ public partial class ChatMessageModel
 
     /// <summary>创建时间</summary>
     public DateTime CreateTime { get; set; }
-
-    /// <summary>更新用户</summary>
-    public Int32 UpdateUserID { get; set; }
-
-    /// <summary>更新地址</summary>
-    public String UpdateIP { get; set; }
-
-    /// <summary>更新时间</summary>
-    public DateTime UpdateTime { get; set; }
     #endregion
 
     #region 拷贝
@@ -82,9 +73,6 @@ public partial class ChatMessageModel
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
         CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
     }
     #endregion
 }

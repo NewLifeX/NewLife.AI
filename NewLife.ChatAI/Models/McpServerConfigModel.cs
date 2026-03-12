@@ -21,7 +21,7 @@ public partial class McpServerConfigModel
     public String Endpoint { get; set; }
 
     /// <summary>传输类型。Http/Sse/Stdio</summary>
-    public String TransportType { get; set; }
+    public NewLife.AI.ChatAI.McpTransportType TransportType { get; set; }
 
     /// <summary>认证类型。None/Bearer/ApiKey</summary>
     public String AuthType { get; set; }

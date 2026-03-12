@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.ChatAI;
 using NewLife.ChatAI.Entity;
 using NewLife.Cube.Entity;
 using NewLife.Data;
@@ -170,16 +170,16 @@ public class ChatApplicationService
     public Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
     {
         var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
-        var list = ChatMessage.Search(conversationId, DateTime.MinValue, DateTime.MinValue, null, p);
+        var list = ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
 
         // 批量查询反馈，避免 N+1
         var messageIds = list.Select(e => e.Id).ToList();
         var feedbacks = messageIds.Count > 0
             ? MessageFeedback.FindAll(MessageFeedback._.MessageId.In(messageIds) & MessageFeedback._.UserId == userId)
                 .ToDictionary(e => e.MessageId, e => e.FeedbackType)
-            : new Dictionary<Int64, Int32>();
+            : new Dictionary<Int64, FeedbackType>();
 
-        var items = list.Select(e => ToMessageDto(e, feedbacks.TryGetValue(e.Id, out var ft) ? ft : 0)).ToList();
+        var items = list.Select(e => ToMessageDto(e, feedbacks.TryGetValue(e.Id, out var ft) ? ft : default)).ToList();
         return Task.FromResult<IReadOnlyList<MessageDto>>(items);
     }
 
@@ -341,7 +341,7 @@ public class ChatApplicationService
         assistantMsg.Insert();
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, entity.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, (ThinkingMode)entity.ThinkingMode);
 
         // 6. 流式调用模型
         var contentBuilder = new StringBuilder();
@@ -486,7 +486,7 @@ public class ChatApplicationService
         }
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(entity.Id, modelCode, entity.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(entity.Id, modelCode, (ThinkingMode)entity.ThinkingMode);
 
         // 流式调用模型
         var contentBuilder = new StringBuilder();
@@ -599,7 +599,7 @@ public class ChatApplicationService
             ConversationId = conversationId,
             Role = "user",
             Content = request.Content,
-            ThinkingMode = (Int32)request.ThinkingMode,
+            ThinkingMode = request.ThinkingMode,
         };
         if (request.AttachmentIds is { Count: > 0 })
             userMsg.Attachments = request.AttachmentIds.ToJson();
@@ -622,12 +622,12 @@ public class ChatApplicationService
         {
             ConversationId = conversationId,
             Role = "assistant",
-            ThinkingMode = (Int32)request.ThinkingMode,
+            ThinkingMode = request.ThinkingMode,
         };
         assistantMsg.Insert();
 
         // message_start（含完整字段）
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, (Int32)request.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, request.ThinkingMode);
 
         // 流式调用模型，收集内容用于持久化
         // 注意：C# 不允许在含 catch 的 try 块中 yield return，因此使用 IAsyncEnumerator + try-finally 模式
@@ -992,7 +992,7 @@ public class ChatApplicationService
             };
         }
 
-        entity.FeedbackType = (Int32)request.Type;
+        entity.FeedbackType = request.Type;
         entity.Reason = request.Reason;
         entity.AllowTraining = request.AllowTraining ?? false;
         entity.Save();
@@ -1062,7 +1062,7 @@ public class ChatApplicationService
             exp &= ChatMessage._.Id <= share.SnapshotMessageId;
 
         var messages = ChatMessage.FindAll(exp, ChatMessage._.CreateTime.Asc(), null, 0, 0);
-        var items = messages.Select(ToMessageDto).ToList();
+        var items = messages.Select(m => ToMessageDto(m)).ToList();
 
         var result = new
         {
@@ -1205,7 +1205,7 @@ public class ChatApplicationService
         entity.FontSize = settings.FontSize;
         entity.SendShortcut = settings.SendShortcut;
         entity.DefaultModel = settings.DefaultModel;
-        entity.DefaultThinkingMode = (Int32)settings.DefaultThinkingMode;
+        entity.DefaultThinkingMode = settings.DefaultThinkingMode;
         entity.ContextRounds = settings.ContextRounds;
         entity.SystemPrompt = settings.SystemPrompt;
         entity.AllowTraining = settings.AllowTraining;
@@ -1311,7 +1311,7 @@ public class ChatApplicationService
 
         // 查询历史消息，按时间倒序取最近 N 轮（每轮 = 1条user + 1条assistant = 2条）
         var p = new PageParameter { PageSize = maxRounds * 2, Sort = Entity.ChatMessage._.CreateTime.Desc() };
-        var history = Entity.ChatMessage.Search(conversationId, DateTime.MinValue, DateTime.MinValue, null, p);
+        var history = Entity.ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
         history.Reverse();
 
         var messages = new List<AiChatMessage>();
@@ -1364,7 +1364,7 @@ public class ChatApplicationService
     /// <param name="entity">消息实体</param>
     /// <param name="feedbackType">反馈类型。0=无反馈, 1=点赞, 2=点踩</param>
     /// <returns></returns>
-    private static MessageDto ToMessageDto(ChatMessage entity, Int32 feedbackType = 0)
+    private static MessageDto ToMessageDto(ChatMessage entity, FeedbackType feedbackType = default)
     {
         // 反序列化 ToolCalls JSON
         IReadOnlyList<ToolCallDto>? toolCalls = null;
@@ -1383,7 +1383,7 @@ public class ChatApplicationService
             PromptTokens = entity.PromptTokens,
             CompletionTokens = entity.CompletionTokens,
             TotalTokens = entity.TotalTokens,
-            FeedbackType = feedbackType,
+            FeedbackType = (Int32)feedbackType,
         };
     }
 

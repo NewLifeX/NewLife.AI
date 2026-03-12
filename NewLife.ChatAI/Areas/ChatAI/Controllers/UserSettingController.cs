@@ -8,6 +8,7 @@ using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.UserSetting;
+using NewLife.AI.ChatAI;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -55,12 +56,13 @@ public class UserSettingController : EntityController<UserSetting>
     protected override IEnumerable<UserSetting> Search(Pager p)
     {
         var userId = p["userId"].ToInt(-1);
+        var defaultThinkingMode = (ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
         var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, allowTraining, mcpEnabled, start, end, p["Q"], p);
+        return UserSetting.Search(userId, defaultThinkingMode, allowTraining, mcpEnabled, start, end, p["Q"], p);
     }
 }

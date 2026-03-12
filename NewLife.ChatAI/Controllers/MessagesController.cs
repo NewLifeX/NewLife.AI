@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.ChatAI;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Services;
 

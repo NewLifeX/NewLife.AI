@@ -1,4 +1,4 @@
-﻿namespace NewLife.AI.ChatAI.Contracts;
+﻿namespace NewLife.AI.ChatAI;
 
 /// <summary>思考模式</summary>
 public enum ThinkingMode
@@ -11,7 +11,11 @@ public enum ThinkingMode
 /// <summary>反馈类型</summary>
 public enum FeedbackType
 {
+    /// <summary>无反馈</summary>
+    None = 0,
+    /// <summary>点赞</summary>
     Like = 1,
+    /// <summary>点踩</summary>
     Dislike = 2
 }
 
@@ -35,6 +39,17 @@ public enum ToolCallStatus
     Done = 1,
     /// <summary>出错</summary>
     Error = 2
+}
+
+/// <summary>MCP传输类型</summary>
+public enum McpTransportType
+{
+    /// <summary>HTTP</summary>
+    Http = 0,
+    /// <summary>SSE（Server-Sent Events）</summary>
+    Sse = 1,
+    /// <summary>标准输入输出</summary>
+    Stdio = 2,
 }
 
 /// <summary>模型信息</summary>

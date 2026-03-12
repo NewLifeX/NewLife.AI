@@ -18,7 +18,6 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("消息反馈。用户对AI回复的点赞或点踩")]
 [BindIndex("IU_MessageFeedback_MessageId_UserId", true, "MessageId,UserId")]
-[BindIndex("IX_MessageFeedback_MessageId", false, "MessageId")]
 [BindIndex("IX_MessageFeedback_UserId", false, "UserId")]
 [BindTable("MessageFeedback", Description = "消息反馈。用户对AI回复的点赞或点踩", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class MessageFeedback : IEntity<MessageFeedbackModel>
@@ -48,13 +47,13 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     [BindColumn("UserId", "用户。反馈用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
-    private Int32 _FeedbackType;
+    private NewLife.AI.ChatAI.FeedbackType _FeedbackType;
     /// <summary>反馈类型。Like=1点赞, Dislike=2点踩</summary>
     [DisplayName("反馈类型")]
     [Description("反馈类型。Like=1点赞, Dislike=2点踩")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("FeedbackType", "反馈类型。Like=1点赞, Dislike=2点踩", "")]
-    public Int32 FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
+    public NewLife.AI.ChatAI.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
 
     private String _Reason;
     /// <summary>原因。点踩原因</summary>
@@ -176,7 +175,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
                 case "Id": _Id = value.ToInt(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "FeedbackType": _FeedbackType = value.ToInt(); break;
+                case "FeedbackType": _FeedbackType = (NewLife.AI.ChatAI.FeedbackType)value.ToInt(); break;
                 case "Reason": _Reason = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -257,18 +256,20 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     /// <summary>高级查询</summary>
     /// <param name="messageId">消息。被反馈的消息</param>
     /// <param name="userId">用户。反馈用户</param>
+    /// <param name="feedbackType">反馈类型。Like=1点赞, Dislike=2点踩</param>
     /// <param name="allowTraining">允许训练。是否允许用于模型学习训练</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<MessageFeedback> Search(Int64 messageId, Int32 userId, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<MessageFeedback> Search(Int64 messageId, Int32 userId, NewLife.AI.ChatAI.FeedbackType feedbackType, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (messageId >= 0) exp &= _.MessageId == messageId;
         if (userId >= 0) exp &= _.UserId == userId;
+        if (feedbackType >= 0) exp &= _.FeedbackType == feedbackType;
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);

@@ -62,20 +62,20 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ShowIn = "Auto,-List,-Search")]
     public String ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
 
-    private Int32 _ThinkingMode;
+    private NewLife.AI.ChatAI.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     [DisplayName("思考模式")]
     [Description("思考模式。Auto=0自动, Think=1思考, Fast=2快速")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
-    public Int32 ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
+    public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
     private String _Attachments;
-    /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
+    /// <summary>附件列表。存储魔方附件ID数组</summary>
     [DisplayName("附件列表")]
-    [Description("附件列表。JSON格式，存储魔方附件ID数组")]
-    [DataObjectField(false, false, true, 2000)]
-    [BindColumn("Attachments", "附件列表。JSON格式，存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
+    [Description("附件列表。存储魔方附件ID数组")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Attachments", "附件列表。存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
     public String Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
 
     private String _ToolCalls;
@@ -136,33 +136,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [DataObjectField(false, false, true, 0)]
     [BindColumn("CreateTime", "创建时间", "")]
     public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
-
-    private Int32 _UpdateUserID;
-    /// <summary>更新用户</summary>
-    [Category("扩展")]
-    [DisplayName("更新用户")]
-    [Description("更新用户")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("UpdateUserID", "更新用户", "")]
-    public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
-
-    private String _UpdateIP;
-    /// <summary>更新地址</summary>
-    [Category("扩展")]
-    [DisplayName("更新地址")]
-    [Description("更新地址")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
-
-    private DateTime _UpdateTime;
-    /// <summary>更新时间</summary>
-    [Category("扩展")]
-    [DisplayName("更新时间")]
-    [Description("更新时间")]
-    [DataObjectField(false, false, true, 0)]
-    [BindColumn("UpdateTime", "更新时间", "")]
-    public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
     #region 拷贝
@@ -184,9 +157,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         CreateUserID = model.CreateUserID;
         CreateIP = model.CreateIP;
         CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
     }
     #endregion
 
@@ -212,9 +182,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
-            "UpdateUserID" => _UpdateUserID,
-            "UpdateIP" => _UpdateIP,
-            "UpdateTime" => _UpdateTime,
             _ => base[name]
         };
         set
@@ -226,7 +193,7 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
                 case "Role": _Role = Convert.ToString(value); break;
                 case "Content": _Content = Convert.ToString(value); break;
                 case "ThinkingContent": _ThinkingContent = Convert.ToString(value); break;
-                case "ThinkingMode": _ThinkingMode = value.ToInt(); break;
+                case "ThinkingMode": _ThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
                 case "Attachments": _Attachments = Convert.ToString(value); break;
                 case "ToolCalls": _ToolCalls = Convert.ToString(value); break;
                 case "PromptTokens": _PromptTokens = value.ToInt(); break;
@@ -235,9 +202,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
-                case "UpdateUserID": _UpdateUserID = value.ToInt(); break;
-                case "UpdateIP": _UpdateIP = Convert.ToString(value); break;
-                case "UpdateTime": _UpdateTime = value.ToDateTime(); break;
                 default: base[name] = value; break;
             }
         }
@@ -272,16 +236,18 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="conversationId">会话。所属会话</param>
+    /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatMessage> Search(Int64 conversationId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.ChatAI.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
+        if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -323,7 +289,7 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
 
-        /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
+        /// <summary>附件列表。存储魔方附件ID数组</summary>
         public static readonly Field Attachments = FindByName("Attachments");
 
         /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
@@ -346,15 +312,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
 
         /// <summary>创建时间</summary>
         public static readonly Field CreateTime = FindByName("CreateTime");
-
-        /// <summary>更新用户</summary>
-        public static readonly Field UpdateUserID = FindByName("UpdateUserID");
-
-        /// <summary>更新地址</summary>
-        public static readonly Field UpdateIP = FindByName("UpdateIP");
-
-        /// <summary>更新时间</summary>
-        public static readonly Field UpdateTime = FindByName("UpdateTime");
 
         static Field FindByName(String name) => Meta.Table.FindByName(name);
     }
@@ -380,7 +337,7 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";
 
-        /// <summary>附件列表。JSON格式，存储魔方附件ID数组</summary>
+        /// <summary>附件列表。存储魔方附件ID数组</summary>
         public const String Attachments = "Attachments";
 
         /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
@@ -403,15 +360,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
 
         /// <summary>创建时间</summary>
         public const String CreateTime = "CreateTime";
-
-        /// <summary>更新用户</summary>
-        public const String UpdateUserID = "UpdateUserID";
-
-        /// <summary>更新地址</summary>
-        public const String UpdateIP = "UpdateIP";
-
-        /// <summary>更新时间</summary>
-        public const String UpdateTime = "UpdateTime";
     }
     #endregion
 }

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using NewLife.AI.ChatAI.Contracts;
 using NewLife.AI.Models;
 using NewLife.Log;
 

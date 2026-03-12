@@ -8,6 +8,7 @@ using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.ChatMessage;
+using NewLife.AI.ChatAI;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -55,10 +56,11 @@ public class ChatMessageController : EntityController<ChatMessage>
     protected override IEnumerable<ChatMessage> Search(Pager p)
     {
         var conversationId = p["conversationId"].ToLong(-1);
+        var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ChatMessage.Search(conversationId, start, end, p["Q"], p);
+        return ChatMessage.Search(conversationId, thinkingMode, start, end, p["Q"], p);
     }
 }

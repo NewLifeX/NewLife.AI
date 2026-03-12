@@ -33,7 +33,7 @@ public partial class UserSettingModel
     public String DefaultModel { get; set; }
 
     /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
-    public Int32 DefaultThinkingMode { get; set; }
+    public NewLife.AI.ChatAI.ThinkingMode DefaultThinkingMode { get; set; }
 
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
     public Int32 ContextRounds { get; set; }

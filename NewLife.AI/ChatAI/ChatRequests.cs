@@ -1,4 +1,4 @@
-namespace NewLife.AI.ChatAI.Contracts;
+﻿namespace NewLife.AI.ChatAI;
 
 /// <summary>新建会话请求</summary>
 public record CreateConversationRequest(String? Title, String? ModelCode);

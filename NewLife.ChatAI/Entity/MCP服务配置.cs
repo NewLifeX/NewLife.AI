@@ -46,13 +46,13 @@ public partial class McpServerConfig : IEntity<McpServerConfigModel>
     [BindColumn("Endpoint", "接口地址。MCP Server地址", "")]
     public String Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
 
-    private String _TransportType;
+    private NewLife.AI.ChatAI.McpTransportType _TransportType;
     /// <summary>传输类型。Http/Sse/Stdio</summary>
     [DisplayName("传输类型")]
     [Description("传输类型。Http/Sse/Stdio")]
-    [DataObjectField(false, false, true, 50)]
+    [DataObjectField(false, false, false, 0)]
     [BindColumn("TransportType", "传输类型。Http/Sse/Stdio", "")]
-    public String TransportType { get => _TransportType; set { if (OnPropertyChanging("TransportType", value)) { _TransportType = value; OnPropertyChanged("TransportType"); } } }
+    public NewLife.AI.ChatAI.McpTransportType TransportType { get => _TransportType; set { if (OnPropertyChanging("TransportType", value)) { _TransportType = value; OnPropertyChanged("TransportType"); } } }
 
     private String _AuthType;
     /// <summary>认证类型。None/Bearer/ApiKey</summary>
@@ -215,7 +215,7 @@ public partial class McpServerConfig : IEntity<McpServerConfigModel>
                 case "Id": _Id = value.ToInt(); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "Endpoint": _Endpoint = Convert.ToString(value); break;
-                case "TransportType": _TransportType = Convert.ToString(value); break;
+                case "TransportType": _TransportType = (NewLife.AI.ChatAI.McpTransportType)value.ToInt(); break;
                 case "AuthType": _AuthType = Convert.ToString(value); break;
                 case "AuthToken": _AuthToken = Convert.ToString(value); break;
                 case "AvailableTools": _AvailableTools = Convert.ToString(value); break;
@@ -273,16 +273,18 @@ public partial class McpServerConfig : IEntity<McpServerConfigModel>
 
     #region 高级查询
     /// <summary>高级查询</summary>
+    /// <param name="transportType">传输类型。Http/Sse/Stdio</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<McpServerConfig> Search(Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<McpServerConfig> Search(NewLife.AI.ChatAI.McpTransportType transportType, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
+        if (transportType >= 0) exp &= _.TransportType == transportType;
         if (enable != null) exp &= _.Enable == enable;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);

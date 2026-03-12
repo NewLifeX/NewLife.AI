@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI.Contracts;
+using NewLife.AI.ChatAI;
 using NewLife.ChatAI.Services;
 using NewLife.Cube;
 

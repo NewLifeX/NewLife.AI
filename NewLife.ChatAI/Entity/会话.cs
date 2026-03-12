@@ -55,13 +55,13 @@ public partial class Conversation : IEntity<ConversationModel>
     [BindColumn("ModelCode", "模型编码。当前使用的模型", "")]
     public String ModelCode { get => _ModelCode; set { if (OnPropertyChanging("ModelCode", value)) { _ModelCode = value; OnPropertyChanged("ModelCode"); } } }
 
-    private Int32 _ThinkingMode;
+    private NewLife.AI.ChatAI.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     [DisplayName("思考模式")]
     [Description("思考模式。Auto=0自动, Think=1思考, Fast=2快速")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
-    public Int32 ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
+    public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
     private Boolean _IsPinned;
     /// <summary>置顶。是否置顶显示</summary>
@@ -207,7 +207,7 @@ public partial class Conversation : IEntity<ConversationModel>
                 case "UserId": _UserId = value.ToInt(); break;
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelCode": _ModelCode = Convert.ToString(value); break;
-                case "ThinkingMode": _ThinkingMode = value.ToInt(); break;
+                case "ThinkingMode": _ThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
                 case "LastMessageTime": _LastMessageTime = value.ToDateTime(); break;
@@ -253,17 +253,19 @@ public partial class Conversation : IEntity<ConversationModel>
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。会话所属用户</param>
     /// <param name="isPinned">置顶。是否置顶显示</param>
+    /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, NewLife.AI.ChatAI.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (isPinned != null) exp &= _.IsPinned == isPinned;
+        if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NewLife.AI.ChatAI;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
 using NewLife.Serialization;
@@ -40,7 +41,7 @@ public class McpApiController(McpClientService mcpClientService) : ChatApiContro
         {
             Name = request.Name.Trim(),
             Endpoint = request.Endpoint.Trim(),
-            TransportType = request.TransportType ?? "Http",
+            TransportType = request.TransportType ?? McpTransportType.Http,
             AuthType = request.AuthType ?? "None",
             AuthToken = request.AuthToken ?? String.Empty,
             Enable = true,
@@ -67,8 +68,8 @@ public class McpApiController(McpClientService mcpClientService) : ChatApiContro
             entity.Name = request.Name.Trim();
         if (!String.IsNullOrWhiteSpace(request.Endpoint))
             entity.Endpoint = request.Endpoint.Trim();
-        if (!String.IsNullOrWhiteSpace(request.TransportType))
-            entity.TransportType = request.TransportType;
+        if (request.TransportType.HasValue)
+            entity.TransportType = request.TransportType.Value;
         if (!String.IsNullOrWhiteSpace(request.AuthType))
             entity.AuthType = request.AuthType;
         if (request.AuthToken != null)
@@ -171,7 +172,7 @@ public class McpApiController(McpClientService mcpClientService) : ChatApiContro
 public record CreateMcpServerRequest(
     String Name,
     String Endpoint,
-    String? TransportType,
+    McpTransportType? TransportType,
     String? AuthType,
     String? AuthToken,
     Int32 Sort = 0,
@@ -181,7 +182,7 @@ public record CreateMcpServerRequest(
 public record UpdateMcpServerRequest(
     String? Name,
     String? Endpoint,
-    String? TransportType,
+    McpTransportType? TransportType,
     String? AuthType,
     String? AuthToken,
     Boolean? Enable,
@@ -193,7 +194,7 @@ public record McpServerResponseDto(
     Int32 Id,
     String Name,
     String Endpoint,
-    String TransportType,
+    McpTransportType TransportType,
     String AuthType,
     Boolean Enable,
     Int32 Sort,

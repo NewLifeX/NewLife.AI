@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -47,7 +47,7 @@
         <Column Name="UserId" DataType="Int32" Description="用户。会话所属用户" />
         <Column Name="Title" DataType="String" Master="True" Length="200" Description="标题。会话标题，显示在侧边栏" />
         <Column Name="ModelCode" DataType="String" Description="模型编码。当前使用的模型" />
-        <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" />
+        <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.ChatAI.ThinkingMode" />
         <Column Name="IsPinned" DataType="Boolean" Description="置顶。是否置顶显示" />
         <Column Name="MessageCount" DataType="Int32" Description="消息数" />
         <Column Name="LastMessageTime" DataType="DateTime" Description="最后消息时间。用于排序" />
@@ -71,8 +71,8 @@
         <Column Name="Role" DataType="String" Description="角色。User=用户, Assistant=AI助手" />
         <Column Name="Content" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。Markdown格式文本" />
         <Column Name="ThinkingContent" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。思考模式下的推理过程" />
-        <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" />
-        <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="附件列表。JSON格式，存储魔方附件ID数组" />
+        <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.ChatAI.ThinkingMode" />
+        <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Description="附件列表。存储魔方附件ID数组" />
         <Column Name="ToolCalls" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="工具调用。JSON格式，存储tool_call链路记录" />
         <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
         <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />
@@ -80,9 +80,6 @@
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
       </Columns>
       <Indexes>
         <Index Columns="ConversationId,Id" />
@@ -93,7 +90,7 @@
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="MessageId" DataType="Int64" Description="消息。被反馈的消息" />
         <Column Name="UserId" DataType="Int32" Description="用户。反馈用户" />
-        <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" />
+        <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" Type="NewLife.AI.ChatAI.FeedbackType" />
         <Column Name="Reason" DataType="String" Length="500" Description="原因。点踩原因" />
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许用于模型学习训练" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
@@ -105,7 +102,6 @@
       </Columns>
       <Indexes>
         <Index Columns="MessageId,UserId" Unique="True" />
-        <Index Columns="MessageId" />
         <Index Columns="UserId" />
       </Indexes>
     </Table>
@@ -192,7 +188,7 @@
         <Column Name="FontSize" DataType="Int32" Description="字体大小。14~20，默认16" />
         <Column Name="SendShortcut" DataType="String" Description="发送快捷键。Enter或Ctrl+Enter" />
         <Column Name="DefaultModel" DataType="String" Description="默认模型。新会话的默认模型编码" />
-        <Column Name="DefaultThinkingMode" DataType="Int32" Description="默认思考模式。Auto=0, Think=1, Fast=2" />
+        <Column Name="DefaultThinkingMode" DataType="Int32" Description="默认思考模式。Auto=0, Think=1, Fast=2" Type="NewLife.AI.ChatAI.ThinkingMode" />
         <Column Name="ContextRounds" DataType="Int32" Description="上下文轮数。每次请求携带的历史对话轮数，默认10" />
         <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。全局System Prompt" />
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许反馈数据用于模型改进" />
@@ -262,7 +258,7 @@
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。服务名称" />
         <Column Name="Endpoint" DataType="String" Length="500" Description="接口地址。MCP Server地址" />
-        <Column Name="TransportType" DataType="String" Description="传输类型。Http/Sse/Stdio" />
+        <Column Name="TransportType" DataType="Int32" Description="传输类型。Http/Sse/Stdio" Type="NewLife.AI.ChatAI.McpTransportType" />
         <Column Name="AuthType" DataType="String" Description="认证类型。None/Bearer/ApiKey" />
         <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
         <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />

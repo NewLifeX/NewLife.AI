@@ -8,6 +8,7 @@ using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.MessageFeedback;
+using NewLife.AI.ChatAI;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -56,11 +57,12 @@ public class MessageFeedbackController : EntityController<MessageFeedback>
     {
         var messageId = p["messageId"].ToLong(-1);
         var userId = p["userId"].ToInt(-1);
+        var feedbackType = (FeedbackType)p["feedbackType"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return MessageFeedback.Search(messageId, userId, allowTraining, start, end, p["Q"], p);
+        return MessageFeedback.Search(messageId, userId, feedbackType, allowTraining, start, end, p["Q"], p);
     }
 }

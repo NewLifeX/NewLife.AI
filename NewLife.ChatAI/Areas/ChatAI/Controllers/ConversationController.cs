@@ -8,6 +8,7 @@ using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.Conversation;
+using NewLife.AI.ChatAI;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -56,10 +57,11 @@ public class ConversationController : EntityController<Conversation>
     {
         var userId = p["userId"].ToInt(-1);
         var isPinned = p["isPinned"]?.ToBoolean();
+        var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Conversation.Search(userId, isPinned, start, end, p["Q"], p);
+        return Conversation.Search(userId, isPinned, thinkingMode, start, end, p["Q"], p);
     }
 }

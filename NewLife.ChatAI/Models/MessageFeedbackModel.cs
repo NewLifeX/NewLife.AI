@@ -21,7 +21,7 @@ public partial class MessageFeedbackModel
     public Int32 UserId { get; set; }
 
     /// <summary>反馈类型。Like=1点赞, Dislike=2点踩</summary>
-    public Int32 FeedbackType { get; set; }
+    public NewLife.AI.ChatAI.FeedbackType FeedbackType { get; set; }
 
     /// <summary>原因。点踩原因</summary>
     public String Reason { get; set; }
