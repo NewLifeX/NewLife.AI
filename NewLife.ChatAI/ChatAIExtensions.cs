@@ -72,7 +72,7 @@ public static class ChatAIExtensions
         if (redirectToChat)
         {
             app.MapGet("/", () => Results.Redirect("/chat"));
-            //app.MapFallbackToFile("chat.html");
+            app.MapFallbackToFile("chat.html");
         }
 
         return app;

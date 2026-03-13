@@ -51,6 +51,7 @@ function ChatApp() {
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
   const [appReady, setAppReady] = useState(false)
   const [siteTitle, setSiteTitle] = useState('智能助手')
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
 
   const handleNewChat = useCallback(() => {
     newChat()
@@ -66,7 +67,11 @@ function ChatApp() {
         .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
         .catch(() => {}),
       fetchSystemConfig()
-        .then((cfg) => { setSiteTitle(cfg.siteTitle); document.title = cfg.siteTitle })
+        .then((cfg) => {
+          setSiteTitle(cfg.siteTitle)
+          document.title = cfg.siteTitle
+          setSuggestedQuestions(cfg.suggestedQuestions)
+        })
         .catch(() => {}),
     ]).finally(() => setAppReady(true))
 
@@ -88,14 +93,18 @@ function ChatApp() {
 
   useEffect(() => {
     const urlId = conversationId || undefined
-    if (urlId !== activeConversationId) {
+    // 直接读取最新 store 值，避免将 activeConversationId 加入依赖导致 sendMessage
+    // 设置 activeConversationId 后 URL 尚未更新时，effect 误判并清空会话的竞态问题
+    const storeId = useChatStore.getState().activeConversationId
+    if (urlId !== storeId) {
       if (urlId != null) {
         setActiveConversation(urlId)
       } else if (!conversationId) {
         setActiveConversation(undefined)
       }
     }
-  }, [activeConversationId, conversationId, setActiveConversation])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, setActiveConversation])
 
   useEffect(() => {
     const expectedPath = activeConversationId != null
@@ -156,7 +165,14 @@ function ChatApp() {
         }
       >
         {isWelcome ? (
-          <WelcomePage onSend={sendMessage} siteTitle={siteTitle} />
+          <WelcomePage
+            onSend={sendMessage}
+            siteTitle={siteTitle}
+            suggestedQuestions={suggestedQuestions}
+            attachments={pendingAttachments}
+            onAttachmentAdd={addAttachment}
+            onAttachmentRemove={removeAttachment}
+          />
         ) : (
           <ChatPage
             messages={messages}

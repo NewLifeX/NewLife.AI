@@ -159,6 +159,7 @@ export function ChatInput({
               skills={resolvedSkills}
               onSkillClick={(id) => {
                 if (id === 'attach') onAttachmentAdd?.()
+                else if (id === 'more') setShowSkillPopover((prev) => !prev)
               }}
             />
             <div className="flex items-center space-x-2 flex-shrink-0">
