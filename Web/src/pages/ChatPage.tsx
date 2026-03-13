@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Icon } from '@/components/common/Icon'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/input/ChatInput'
-import type { Message, Attachment } from '@/types'
+import type { Message, Attachment, ToolCall } from '@/types'
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer'
 import { ThinkingBlock } from '@/components/chat/ThinkingBlock'
+import { ToolCallBadge } from '@/components/chat/ToolCallBadge'
 import { ShareDialog } from '@/components/chat/ShareDialog'
 import { DislikeReasonDialog } from '@/components/chat/DislikeReasonDialog'
 
@@ -156,7 +157,47 @@ export function ChatPage({
               <span className="ml-3 text-sm text-gray-400">{t('common.loading')}</span>
             </div>
           )}
-          {messages.map((msg) => (
+          {messages.map((msg) => {
+            // 构建交错思考+工具调用块
+            const hasSegments = msg.thinkingSegments && msg.thinkingSegments.length > 1
+            let thinkingBlock: React.ReactNode = undefined
+            let toolCallsForBubble: ToolCall[] | undefined = msg.toolCalls
+
+            if (hasSegments && msg.thinkingSegments) {
+              // 交错模式：思考段 → 工具调用 → 思考段 → ...
+              const isLastSegmentStreaming = msg.status === 'streaming' && !msg.content
+              thinkingBlock = (
+                <>
+                  {msg.thinkingSegments.map((seg, i) => (
+                    <div key={`seg-${i}`}>
+                      <ThinkingBlock
+                        content={seg.content}
+                        isStreaming={isLastSegmentStreaming && i === msg.thinkingSegments!.length - 1}
+                        thinkingTime={seg.thinkingTime}
+                      />
+                      {i === 0 && msg.toolCalls && msg.toolCalls.length > 0 && (
+                        <div className="flex items-center flex-wrap gap-2 mb-4">
+                          {msg.toolCalls.map((tc) => (
+                            <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )
+              toolCallsForBubble = undefined
+            } else if (msg.thinkingContent) {
+              thinkingBlock = (
+                <ThinkingBlock
+                  content={msg.thinkingContent}
+                  isStreaming={msg.status === 'streaming' && !msg.content}
+                  thinkingTime={msg.thinkingTime}
+                />
+              )
+            }
+
+            return (
             <MessageBubble
               key={msg.id}
               role={msg.role}
@@ -166,15 +207,8 @@ export function ChatPage({
                   : msg.content
               }
               isStreaming={msg.status === 'streaming'}
-              toolCalls={msg.toolCalls}
-              thinkingBlock={
-                msg.thinkingContent ? (
-                  <ThinkingBlock
-                    content={msg.thinkingContent}
-                    isStreaming={msg.status === 'streaming'}
-                  />
-                ) : undefined
-              }
+              toolCalls={toolCallsForBubble}
+              thinkingBlock={thinkingBlock}
               onCopy={() => onCopy?.(msg.id)}
               onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(msg.id) : undefined}
               onLike={msg.role === 'assistant' ? () => onLike?.(msg.id) : undefined}
@@ -201,7 +235,8 @@ export function ChatPage({
               isError={msg.status === 'error'}
               usage={msg.usage}
             />
-          ))}
+            )
+          })}
           <div ref={bottomRef} />
         </div>
       </div>

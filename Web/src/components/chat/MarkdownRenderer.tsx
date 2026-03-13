@@ -9,6 +9,9 @@ import mermaid from 'mermaid'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { Lightbox } from '@/components/common/Lightbox'
+import { ImageEditDialog } from '@/components/chat/ImageEditDialog'
+import { ProgressiveImage } from '@/components/chat/ProgressiveImage'
+import { editImage } from '@/lib/api'
 
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
 
@@ -64,6 +67,7 @@ function CopyCodeButton({ code }: { code: string }) {
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
 
   // 从 Markdown 内容中提取所有图片 URL
   const images = useMemo(() => {
@@ -173,14 +177,12 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               </td>
             )
           },
-          img({ src, alt, ...props }) {
+          img({ src, alt }) {
             return (
-              <img
+              <ProgressiveImage
                 src={src}
                 alt={alt ?? ''}
-                className="rounded-lg max-h-80 cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => src && handleImageClick(src)}
-                {...props}
               />
             )
           },
@@ -194,7 +196,28 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         initialIndex={lightboxIndex}
         open={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
+        onEdit={(url) => { setLightboxOpen(false); setEditImageUrl(url) }}
       />
+      {editImageUrl && (
+        <ImageEditDialog
+          imageUrl={editImageUrl}
+          onClose={() => setEditImageUrl(null)}
+          onSubmit={async (image, mask, prompt) => {
+            try {
+              const result = await editImage(image, prompt, 'dall-e-2', mask)
+              if (result.data?.[0]?.content) {
+                // 将编辑结果添加到 lightbox 图片列表并打开
+                images.push(result.data[0].content)
+                setLightboxIndex(images.length - 1)
+                setLightboxOpen(true)
+              }
+            } catch {
+              // 编辑失败静默处理
+            }
+            setEditImageUrl(null)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -6,12 +6,14 @@ import { Icon } from '@/components/common/Icon'
 interface ThinkingBlockProps {
   content: string
   isStreaming?: boolean
+  thinkingTime?: number
   className?: string
 }
 
 export function ThinkingBlock({
   content,
   isStreaming = false,
+  thinkingTime,
   className,
 }: ThinkingBlockProps) {
   const { t } = useTranslation()
@@ -31,7 +33,12 @@ export function ThinkingBlock({
         ) : (
           <>
             <Icon name="psychology" variant="outlined" size="sm" />
-            <span>{t('chat.thinkingProcess')}</span>
+            <span>
+              {t('chat.thinkingProcess')}
+              {thinkingTime != null && thinkingTime > 0 && (
+                <span className="ml-1 opacity-70">({(thinkingTime / 1000).toFixed(1)}s)</span>
+              )}
+            </span>
             <Icon
               name={collapsed ? 'expand_more' : 'expand_less'}
               variant="outlined"

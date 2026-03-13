@@ -102,6 +102,18 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
     }
     #endregion
 
+    #region Google Gemini API
+    /// <summary>Google Gemini API 兼容接口。由 GeminiProvider 负责协议转换</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    [HttpPost("v1/gemini")]
+    public async Task GeminiAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
+    {
+        await ChatCompletionsAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+    #endregion
+
     #region 图像生成
     /// <summary>图像生成接口。按 model 字段路由到对应的图像生成服务商</summary>
     /// <param name="body">请求体，包含 model/prompt/size/n 等参数</param>

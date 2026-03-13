@@ -188,4 +188,13 @@ export default {
     calls: '调用次数',
     empty: '暂无用量数据',
   },
+  imageEdit: {
+    title: '图像编辑',
+    hint: '在图片上涂抹红色区域，标记需要重绘的部分',
+    brushSize: '画笔大小',
+    clearMask: '清除涂抹',
+    promptPlaceholder: '描述你想要的编辑效果...',
+    submit: '开始编辑',
+    editImage: '编辑图片',
+  },
 } as const

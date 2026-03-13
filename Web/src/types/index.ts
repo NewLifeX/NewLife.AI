@@ -15,6 +15,11 @@ export interface TokenUsage {
   totalTokens?: number
 }
 
+export interface ThinkingSegment {
+  content: string
+  thinkingTime?: number
+}
+
 export interface Message {
   id: string
   conversationId: string
@@ -23,6 +28,8 @@ export interface Message {
   createdAt: string
   status?: 'streaming' | 'done' | 'error'
   thinkingContent?: string
+  thinkingTime?: number
+  thinkingSegments?: ThinkingSegment[]
   toolCalls?: ToolCall[]
   usage?: TokenUsage
   feedbackType?: number

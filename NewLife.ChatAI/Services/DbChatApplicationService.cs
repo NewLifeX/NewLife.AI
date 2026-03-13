@@ -821,6 +821,7 @@ public class ChatApplicationService
 
         var thinkingBuilder = new StringBuilder();
         ChatUsage? lastUsage = null;
+        Int64 thinkingStart = 0;
 
         await foreach (var chunk in provider.ChatStreamAsync(aiRequest, options, cancellationToken).ConfigureAwait(false))
         {
@@ -834,6 +835,7 @@ public class ChatApplicationService
 
             if (!String.IsNullOrEmpty(delta.ReasoningContent))
             {
+                if (thinkingStart == 0) thinkingStart = Runtime.TickCount64;
                 thinkingBuilder.Append(delta.ReasoningContent);
                 yield return ChatStreamEvent.ThinkingDelta(delta.ReasoningContent);
             }
@@ -844,7 +846,7 @@ public class ChatApplicationService
         }
 
         if (thinkingBuilder.Length > 0)
-            yield return ChatStreamEvent.ThinkingDone(0);
+            yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
 
         yield return ChatStreamEvent.MessageDone(lastUsage);
     }

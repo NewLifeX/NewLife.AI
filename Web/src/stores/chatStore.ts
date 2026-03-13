@@ -230,6 +230,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // SSE 流式接收
     let assistantMsgId: string | undefined
     const finalConvId = convId
+    let segmentFinalized = true
 
     try {
       await streamMessage(finalConvId, content, thinkingModeMap[get().thinkingMode], (event: ChatStreamEvent) => {
@@ -263,18 +264,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           case 'thinking_delta':
             if (assistantMsgId != null && event.content) {
+              const needNewSegment = segmentFinalized
+              segmentFinalized = false
               set((s) => ({
-                messages: s.messages.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, thinkingContent: (m.thinkingContent ?? '') + event.content }
-                    : m,
-                ),
+                messages: s.messages.map((m) => {
+                  if (m.id !== assistantMsgId) return m
+                  const segments = [...(m.thinkingSegments ?? [])]
+                  if (needNewSegment || segments.length === 0) {
+                    segments.push({ content: event.content! })
+                  } else {
+                    const last = segments[segments.length - 1]
+                    segments[segments.length - 1] = { ...last, content: last.content + event.content }
+                  }
+                  return { ...m, thinkingContent: (m.thinkingContent ?? '') + event.content, thinkingSegments: segments }
+                }),
               }))
             }
             break
 
           case 'thinking_done':
-            // 思考完成，thinkingTime 可用于前端展示思考耗时
+            if (assistantMsgId != null) {
+              segmentFinalized = true
+              set((s) => ({
+                messages: s.messages.map((m) => {
+                  if (m.id !== assistantMsgId) return m
+                  const segments = [...(m.thinkingSegments ?? [])]
+                  if (segments.length > 0 && event.thinkingTime) {
+                    segments[segments.length - 1] = { ...segments[segments.length - 1], thinkingTime: event.thinkingTime }
+                  }
+                  return { ...m, thinkingTime: event.thinkingTime, thinkingSegments: segments }
+                }),
+              }))
+            }
             break
 
           case 'tool_call_start':

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 interface LightboxProps {
@@ -7,12 +8,14 @@ interface LightboxProps {
   initialIndex?: number
   open: boolean
   onClose: () => void
+  onEdit?: (imageUrl: string) => void
 }
 
-export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxProps) {
+export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: LightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [scale, setScale] = useState(1)
   const backdropRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
 
   const handlePrev = useCallback(() => {
     setCurrentIndex((i) => (i > 0 ? i - 1 : images.length - 1))
@@ -98,6 +101,18 @@ export function Lightbox({ images, initialIndex = 0, open, onClose }: LightboxPr
               <path d="M11 8v6" />
             </svg>
           </button>
+          {onEdit && (
+            <button
+              onClick={() => onEdit(images[currentIndex])}
+              className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors ml-1"
+              title={t('imageEdit.editImage', '编辑图片')}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={onClose}
             className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors ml-2"

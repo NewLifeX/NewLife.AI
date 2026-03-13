@@ -589,3 +589,31 @@ export interface SystemConfig {
 export async function fetchSystemConfig(): Promise<SystemConfig> {
   return request<SystemConfig>('/api/system/config')
 }
+
+// ── Image Editing ──
+
+export interface ImageEditResult {
+  created: number
+  data: { revised_prompt?: string; content?: string }[]
+}
+
+export async function editImage(
+  image: Blob,
+  prompt: string,
+  model: string,
+  mask?: Blob,
+  size?: string,
+): Promise<ImageEditResult> {
+  const formData = new FormData()
+  formData.append('image', image, 'image.png')
+  formData.append('prompt', prompt)
+  formData.append('model', model)
+  if (mask) formData.append('mask', mask, 'mask.png')
+  if (size) formData.append('size', size)
+  const res = await fetch(`${BASE_URL}/v1/images/edits`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) throw new Error(`Image edit ${res.status}`)
+  return res.json()
+}

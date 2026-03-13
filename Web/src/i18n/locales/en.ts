@@ -188,4 +188,13 @@ export default {
     calls: 'Calls',
     empty: 'No usage data yet',
   },
+  imageEdit: {
+    title: 'Image Edit',
+    hint: 'Paint red areas on the image to mark regions for redrawing',
+    brushSize: 'Brush Size',
+    clearMask: 'Clear Mask',
+    promptPlaceholder: 'Describe the edit you want...',
+    submit: 'Start Edit',
+    editImage: 'Edit Image',
+  },
 } as const
