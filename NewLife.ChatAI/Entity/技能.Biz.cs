@@ -111,12 +111,39 @@ public partial class Skill : Entity<Skill>
     //    return base.Insert();
     //}
 
-    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
-    ///// <returns></returns>
-    //protected override Int32 OnDelete()
-    //{
-    //    return base.OnDelete();
-    //}
+    /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected override void InitData()
+    {
+        if (Meta.Session.Count > 0) return;
+
+        if (XTrace.Debug) XTrace.WriteLine("开始初始化Skill[技能]数据……");
+
+        Add("general", "通用助手", "smart_toy", "通用", "通用AI对话助手", "你是一个知识渊博、乐于助人的AI助手。请用简洁清晰的语言回答用户的问题。", 100, true);
+        Add("coder", "编程助手", "code", "开发", "专业编程开发助手", "你是一个专业的编程助手。请提供准确、高质量的代码和技术解答。注意代码的可读性、性能和最佳实践。", 90, true);
+        Add("translator", "翻译助手", "translate", "通用", "多语言翻译助手", "你是一个专业翻译助手。请准确翻译用户提供的文本，保持原文语义和风格。如果用户输入中文，翻译为英文；如果输入英文或其他语言，翻译为中文。", 80, true);
+        Add("writer", "写作助手", "edit_note", "创作", "文案与内容创作助手", "你是一个专业的写作助手。请帮助用户完善文案、撰写文章、优化表达。注意逻辑清晰、语言流畅、风格得体。", 70, true);
+        Add("analyzer", "数据分析", "analytics", "分析", "数据分析与洞察助手", "你是一个数据分析专家。请帮助用户分析数据、发现规律、提供洞察和建议。用清晰的逻辑和可视化描述呈现分析结果。", 60, true);
+
+        if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
+    }
+
+    private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort, Boolean isSystem)
+    {
+        var entity = new Skill
+        {
+            Code = code,
+            Name = name,
+            Icon = icon,
+            Category = category,
+            Description = description,
+            Content = content,
+            Sort = sort,
+            Enable = true,
+            IsSystem = isSystem,
+        };
+        entity.Insert();
+    }
     #endregion
 
     #region 扩展属性

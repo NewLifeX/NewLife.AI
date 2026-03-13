@@ -48,7 +48,7 @@ interface ChatState {
   switchModel: (modelId: number) => Promise<void>
   setActiveConversation: (id: string | undefined) => void
   newChat: () => void
-  sendMessage: (content: string) => void
+  sendMessage: (content: string, skillCode?: string) => void
   stopGenerating: () => void
   setThinkingMode: (mode: ThinkingModeKey) => void
   addAttachment: (file: File) => Promise<void>
@@ -189,7 +189,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => ({ pendingAttachments: s.pendingAttachments.filter((a) => a.id !== id) }))
   },
 
-  sendMessage: async (content) => {
+  sendMessage: async (content, skillCode) => {
     const state = get()
     let convId = state.activeConversationId
     const attachmentIds = state.pendingAttachments.map((a) => a.id)
@@ -370,7 +370,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break
           }
         }
-      }, abortController.signal, attachmentIds.length ? attachmentIds : undefined)
+      }, abortController.signal, attachmentIds.length ? attachmentIds : undefined, skillCode)
     } catch {
       // 网络错误或中断
       set((s) => ({

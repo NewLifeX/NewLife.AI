@@ -16,7 +16,7 @@ interface ChatPageProps {
   messages: Message[]
   isGenerating: boolean
   isLoadingMessages?: boolean
-  onSend: (message: string) => void
+  onSend: (message: string, skillCode?: string) => void
   onStop?: () => void
   onCopy?: (id: string) => void
   onRegenerate?: (id: string) => void

@@ -22,6 +22,7 @@ public class ChatApplicationService
     private readonly GatewayService _gatewayService;
     private readonly BackgroundGenerationService? _backgroundService;
     private readonly UsageService? _usageService;
+    private readonly SkillService? _skillService;
     private readonly ILog _log;
 
     /// <summary>附件存储根目录</summary>
@@ -34,13 +35,15 @@ public class ChatApplicationService
     /// <param name="toolCallService">工具调用编排服务</param>
     /// <param name="backgroundService">后台生成服务</param>
     /// <param name="usageService">用量统计服务</param>
+    /// <param name="skillService">技能服务</param>
     /// <param name="log">日志</param>
-    public ChatApplicationService(GatewayService gatewayService, ToolCallService? toolCallService, BackgroundGenerationService? backgroundService, UsageService? usageService, ILog log)
+    public ChatApplicationService(GatewayService gatewayService, ToolCallService? toolCallService, BackgroundGenerationService? backgroundService, UsageService? usageService, SkillService? skillService, ILog log)
     {
         _gatewayService = gatewayService;
         _toolCallService = toolCallService;
         _backgroundService = backgroundService;
         _usageService = usageService;
+        _skillService = skillService;
         _log = log;
         _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
     }
@@ -236,8 +239,9 @@ public class ChatApplicationService
 
         var contextMessages = new List<AiChatMessage>();
 
-        // 注入系统提示词（用户全局级 + 模型级）
-        var systemMsg = BuildSystemMessage(userId, modelConfig);
+        // 注入系统提示词（含技能，用户全局级 + 模型级）
+        var lastUserRegenContent = beforeMessages.LastOrDefault(m => m.Role == "user")?.Content;
+        var systemMsg = BuildSystemMessage(userId, modelConfig, conversation.SkillId, lastUserRegenContent);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -327,7 +331,7 @@ public class ChatApplicationService
         }
 
         // 4. 构建上下文（包含编辑后的用户消息）
-        var contextMessages = BuildContextMessages(userId, entity.ConversationId, newContent, modelConfig);
+        var contextMessages = BuildContextMessages(userId, entity.ConversationId, newContent, modelConfig, conversation.SkillId);
 
         // 5. 创建新的 AI 回复消息
         var assistantMsg = new ChatMessage
@@ -473,8 +477,9 @@ public class ChatApplicationService
 
         var contextMessages = new List<AiChatMessage>();
 
-        // 注入系统提示词
-        var systemMsg = BuildSystemMessage(userId, modelConfig);
+        // 注入系统提示词（含技能）
+        var lastUserContent = beforeMessages.LastOrDefault(m => m.Role == "user")?.Content;
+        var systemMsg = BuildSystemMessage(userId, modelConfig, conversation.SkillId, lastUserContent);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -610,8 +615,26 @@ public class ChatApplicationService
             yield break;
         }
 
+        // 处理技能激活：通过 SkillCode 解析技能并更新会话
+        var skillId = conversation.SkillId;
+        if (!String.IsNullOrEmpty(request.SkillCode))
+        {
+            var skill = Entity.Skill.FindByCode(request.SkillCode);
+            if (skill != null && skill.Enable)
+            {
+                skillId = skill.Id;
+                if (conversation.SkillId != skillId)
+                {
+                    conversation.SkillId = skillId;
+                    conversation.Update();
+                }
+                // 记录技能使用
+                _skillService?.RecordUsage(userId, skillId);
+            }
+        }
+
         // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
-        var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig);
+        var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig, skillId);
 
         // 预分配AI回复消息编号
         var assistantMsg = new ChatMessage
@@ -1301,8 +1324,9 @@ public class ChatApplicationService
     /// <param name="conversationId">会话编号</param>
     /// <param name="currentContent">当前用户消息内容</param>
     /// <param name="modelConfig">模型配置（可选，用于注入模型级系统提示词）</param>
+    /// <param name="conversationSkillId">会话激活的技能编号</param>
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
-    private IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
+    private IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null, Int32 conversationSkillId = 0)
     {
         var setting = ChatSetting.Current;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
@@ -1314,8 +1338,8 @@ public class ChatApplicationService
 
         var messages = new List<AiChatMessage>();
 
-        // 注入系统提示词（用户全局级 + 模型级）
-        var systemMsg = BuildSystemMessage(userId, modelConfig);
+        // 注入系统提示词（技能级 + 用户全局级 + 模型级）
+        var systemMsg = BuildSystemMessage(userId, modelConfig, conversationSkillId, currentContent);
         if (systemMsg != null) messages.Add(systemMsg);
 
         // 添加历史消息
@@ -1331,18 +1355,33 @@ public class ChatApplicationService
         return messages;
     }
 
-    /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词</summary>
+    /// <summary>构建系统提示词消息。合并技能提示词、用户全局级和模型级系统提示词</summary>
     /// <param name="userId">当前用户编号</param>
     /// <param name="modelConfig">模型配置（可选）</param>
+    /// <param name="conversationSkillId">会话激活的技能编号</param>
+    /// <param name="messageContent">用户消息内容（用于解析@引用）</param>
     /// <returns>系统消息，无提示词时返回 null</returns>
-    private static AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig)
+    private AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig, Int32 conversationSkillId = 0, String? messageContent = null)
     {
         var parts = new List<String>();
+
+        // 1. 技能提示词（系统技能 + 会话激活技能 + @引用）
+        if (_skillService != null)
+        {
+            var skillPrompt = _skillService.BuildSkillPrompt(conversationSkillId, messageContent);
+            if (!String.IsNullOrWhiteSpace(skillPrompt))
+                parts.Add(skillPrompt);
+        }
+
+        // 2. 用户全局系统提示词
         var userSetting = UserSetting.FindByUserId(userId);
         if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
             parts.Add(userSetting.SystemPrompt.Trim());
+
+        // 3. 模型级系统提示词
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
             parts.Add(modelConfig.SystemPrompt.Trim());
+
         if (parts.Count == 0) return null;
 
         return new AiChatMessage

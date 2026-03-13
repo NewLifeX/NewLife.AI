@@ -269,13 +269,19 @@ export async function streamMessage(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
   attachmentIds?: string[],
+  skillCode?: string,
 ): Promise<void> {
   await fetchSSE(
     `${BASE_URL}/api/conversations/${conversationId}/messages`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, thinkingMode, attachmentIds: attachmentIds?.length ? attachmentIds : undefined }),
+      body: JSON.stringify({
+        content,
+        thinkingMode,
+        attachmentIds: attachmentIds?.length ? attachmentIds : undefined,
+        skillCode: skillCode || undefined,
+      }),
       signal,
     },
     onEvent,
@@ -616,4 +622,32 @@ export async function editImage(
   })
   if (!res.ok) throw new Error(`Image edit ${res.status}`)
   return res.json()
+}
+
+// ── Skills ──
+
+export interface SkillInfo {
+  id: number
+  code: string
+  name: string
+  icon: string
+  category: string
+  description: string
+  isSystem: boolean
+}
+
+export async function fetchUserSkills(): Promise<SkillInfo[]> {
+  return request<SkillInfo[]>('/api/user/skills')
+}
+
+export async function fetchAllSkills(category?: string): Promise<SkillInfo[]> {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : ''
+  return request<SkillInfo[]>(`/api/skills${qs}`)
+}
+
+export async function setConversationSkill(conversationId: string, skillId: number): Promise<void> {
+  await request<unknown>(`/api/conversations/${conversationId}/skill`, {
+    method: 'PUT',
+    body: JSON.stringify({ skillId }),
+  })
 }

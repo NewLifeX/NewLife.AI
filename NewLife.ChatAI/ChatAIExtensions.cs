@@ -25,6 +25,7 @@ public static class ChatAIExtensions
     public static IServiceCollection AddChatAI(this IServiceCollection services)
     {
         services.AddScoped<ChatApplicationService>();
+        services.AddSingleton<SkillService>();
         services.AddSingleton<UsageService>();
         services.AddSingleton<GatewayService>();
         services.AddSingleton<McpClientService>();

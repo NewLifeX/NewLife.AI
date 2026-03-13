@@ -7,7 +7,11 @@ public record CreateConversationRequest(String? Title, Int32 ModelId);
 public record UpdateConversationRequest(String? Title, Int32 ModelId);
 
 /// <summary>发送消息请求</summary>
-public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IReadOnlyList<String>? AttachmentIds);
+public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IReadOnlyList<String>? AttachmentIds)
+{
+    /// <summary>技能编码。激活对应技能的系统提示词</summary>
+    public String? SkillCode { get; init; }
+};
 
 /// <summary>编辑消息请求</summary>
 public record EditMessageRequest(String Content);
