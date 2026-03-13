@@ -29,8 +29,8 @@ public partial class UserSettingModel
     /// <summary>发送快捷键。Enter或Ctrl+Enter</summary>
     public String SendShortcut { get; set; }
 
-    /// <summary>默认模型。新会话的默认模型编码</summary>
-    public String DefaultModel { get; set; }
+    /// <summary>默认模型。新会话的默认模型配置Id</summary>
+    public Int32 DefaultModel { get; set; }
 
     /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
     public NewLife.AI.ChatAI.ThinkingMode DefaultThinkingMode { get; set; }

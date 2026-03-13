@@ -52,15 +52,28 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
     #endregion
 
     #region 模型路由
-    /// <summary>根据模型编码查找模型配置</summary>
+    /// <summary>根据模型编号查找模型配置</summary>
+    /// <param name="modelId">模型编号</param>
+    /// <returns>模型配置，未找到返回 null</returns>
+    public ModelConfig? ResolveModel(Int32 modelId)
+    {
+        if (modelId <= 0) return null;
+
+        var config = ModelConfig.FindById(modelId);
+        if (config == null || !config.Enable) return null;
+
+        return config;
+    }
+
+    /// <summary>根据模型编码查找模型配置（网关场景，按Code匹配第一个启用的模型）</summary>
     /// <param name="modelCode">模型编码</param>
     /// <returns>模型配置，未找到返回 null</returns>
-    public ModelConfig? ResolveModel(String? modelCode)
+    public ModelConfig? ResolveModelByCode(String? modelCode)
     {
         if (String.IsNullOrWhiteSpace(modelCode)) return null;
 
-        var config = ModelConfig.FindByCode(modelCode);
-        if (config == null || !config.Enable) return null;
+        var list = ModelConfig.FindAll();
+        var config = list.FirstOrDefault(e => e.Code.EqualIgnoreCase(modelCode) && e.Enable);
 
         return config;
     }
@@ -129,7 +142,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
         UpdateAppKeyUsage(appKey, response.Usage);
 
         // 写入用量记录
-        RecordUsage(appKey, request.Model, response.Usage);
+        RecordUsage(appKey, config.Id, response.Usage);
 
         return response;
     }
@@ -178,7 +191,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
         UpdateAppKeyUsage(appKey, lastUsage);
 
         // 写入用量记录
-        RecordUsage(appKey, request.Model, lastUsage);
+        RecordUsage(appKey, config.Id, lastUsage);
     }
     #endregion
 
@@ -211,9 +224,9 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
 
     /// <summary>写入用量记录到 UsageRecord 表</summary>
     /// <param name="appKey">应用密钥</param>
-    /// <param name="modelCode">模型编码</param>
+    /// <param name="modelId">模型编号</param>
     /// <param name="usage">用量统计</param>
-    private void RecordUsage(AppKey? appKey, String? modelCode, ChatUsage? usage)
+    private void RecordUsage(AppKey? appKey, Int32 modelId, ChatUsage? usage)
     {
         if (usage == null) return;
 
@@ -221,7 +234,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
             appKey?.UserId ?? 0,
             appKey?.Id ?? 0,
             0, 0,
-            modelCode ?? String.Empty,
+            modelId,
             usage.PromptTokens,
             usage.CompletionTokens,
             usage.TotalTokens,

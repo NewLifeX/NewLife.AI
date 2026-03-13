@@ -31,7 +31,7 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
         }
 
         // 模型路由
-        var config = gatewayService.ResolveModel(request.Model);
+        var config = gatewayService.ResolveModelByCode(request.Model);
         if (config == null)
         {
             await WriteErrorAsync(404, "MODEL_NOT_FOUND", $"未找到模型 '{request.Model}'").ConfigureAwait(false);
@@ -124,7 +124,7 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
             return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
 
         // 路由到模型
-        var config = gatewayService.ResolveModel(modelCode);
+        var config = gatewayService.ResolveModelByCode(modelCode);
         if (config == null)
             return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
 
@@ -196,7 +196,7 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
             return BadRequest(new { code = "INVALID_REQUEST", message = "image 文件不能为空" });
 
         // 路由到模型
-        var config = gatewayService.ResolveModel(modelCode);
+        var config = gatewayService.ResolveModelByCode(modelCode);
         if (config == null)
             return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
 

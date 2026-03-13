@@ -53,13 +53,13 @@ public enum McpTransportType
 }
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(String Code, String Name, Boolean SupportThinking, Boolean SupportVision, Boolean SupportImageGeneration, Boolean SupportFunctionCalling);
+public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportVision, Boolean SupportImageGeneration, Boolean SupportFunctionCalling);
 
 /// <summary>工具调用信息</summary>
 public record ToolCallDto(String Id, String Name, ToolCallStatus Status, String? Arguments = null, String? Result = null);
 
 /// <summary>会话摘要</summary>
-public record ConversationSummaryDto(Int64 Id, String Title, String ModelCode, DateTime LastMessageTime, Boolean IsPinned)
+public record ConversationSummaryDto(Int64 Id, String Title, Int32 ModelId, DateTime LastMessageTime, Boolean IsPinned)
 {
     /// <summary>会话图标</summary>
     public String? Icon { get; set; }
@@ -100,7 +100,7 @@ public record PagedResultDto<T>(IReadOnlyList<T> Items, Int32 Total, Int32 Page,
 public record ShareLinkDto(String Url, DateTime CreateTime, DateTime? ExpireTime);
 
 /// <summary>用户设置</summary>
-public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, String DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String SystemPrompt, Boolean AllowTraining)
+public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, Int32 DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String SystemPrompt, Boolean AllowTraining)
 {
     /// <summary>是否启用 MCP</summary>
     public Boolean McpEnabled { get; set; } = true;

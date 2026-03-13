@@ -5,8 +5,8 @@ import type { ModelInfo } from '@/types'
 
 interface ModelSelectorProps {
   models: ModelInfo[]
-  currentModel: string
-  onModelChange: (modelId: string) => void
+  currentModel: number
+  onModelChange: (modelId: number) => void
   className?: string
 }
 
@@ -37,7 +37,7 @@ export function ModelSelector({
         onClick={() => setOpen(!open)}
         className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <span>{selected?.name ?? currentModel}</span>
+        <span>{selected?.name ?? '选择模型'}</span>
         <Icon name="expand_more" size="base" className={cn('transition-transform', open && 'rotate-180')} />
       </button>
 

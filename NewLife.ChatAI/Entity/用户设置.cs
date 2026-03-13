@@ -70,13 +70,13 @@ public partial class UserSetting : IEntity<UserSettingModel>
     [BindColumn("SendShortcut", "发送快捷键。Enter或Ctrl+Enter", "")]
     public String SendShortcut { get => _SendShortcut; set { if (OnPropertyChanging("SendShortcut", value)) { _SendShortcut = value; OnPropertyChanged("SendShortcut"); } } }
 
-    private String _DefaultModel;
-    /// <summary>默认模型。新会话的默认模型编码</summary>
+    private Int32 _DefaultModel;
+    /// <summary>默认模型。新会话的默认模型配置Id</summary>
     [DisplayName("默认模型")]
-    [Description("默认模型。新会话的默认模型编码")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("DefaultModel", "默认模型。新会话的默认模型编码", "")]
-    public String DefaultModel { get => _DefaultModel; set { if (OnPropertyChanging("DefaultModel", value)) { _DefaultModel = value; OnPropertyChanged("DefaultModel"); } } }
+    [Description("默认模型。新会话的默认模型配置Id")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("DefaultModel", "默认模型。新会话的默认模型配置Id", "")]
+    public Int32 DefaultModel { get => _DefaultModel; set { if (OnPropertyChanging("DefaultModel", value)) { _DefaultModel = value; OnPropertyChanged("DefaultModel"); } } }
 
     private NewLife.AI.ChatAI.ThinkingMode _DefaultThinkingMode;
     /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
@@ -257,7 +257,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
                 case "Theme": _Theme = Convert.ToString(value); break;
                 case "FontSize": _FontSize = value.ToInt(); break;
                 case "SendShortcut": _SendShortcut = Convert.ToString(value); break;
-                case "DefaultModel": _DefaultModel = Convert.ToString(value); break;
+                case "DefaultModel": _DefaultModel = value.ToInt(); break;
                 case "DefaultThinkingMode": _DefaultThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
                 case "ContextRounds": _ContextRounds = value.ToInt(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
@@ -359,7 +359,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
         /// <summary>发送快捷键。Enter或Ctrl+Enter</summary>
         public static readonly Field SendShortcut = FindByName("SendShortcut");
 
-        /// <summary>默认模型。新会话的默认模型编码</summary>
+        /// <summary>默认模型。新会话的默认模型配置Id</summary>
         public static readonly Field DefaultModel = FindByName("DefaultModel");
 
         /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
@@ -425,7 +425,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
         /// <summary>发送快捷键。Enter或Ctrl+Enter</summary>
         public const String SendShortcut = "SendShortcut";
 
-        /// <summary>默认模型。新会话的默认模型编码</summary>
+        /// <summary>默认模型。新会话的默认模型配置Id</summary>
         public const String DefaultModel = "DefaultModel";
 
         /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>

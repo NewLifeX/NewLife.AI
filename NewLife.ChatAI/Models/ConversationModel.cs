@@ -20,8 +20,8 @@ public partial class ConversationModel
     /// <summary>标题。会话标题，显示在侧边栏</summary>
     public String Title { get; set; }
 
-    /// <summary>模型编码。当前使用的模型</summary>
-    public String ModelCode { get; set; }
+    /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
+    public Int32 ModelId { get; set; }
 
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get; set; }
@@ -65,7 +65,7 @@ public partial class ConversationModel
         Id = model.Id;
         UserId = model.UserId;
         Title = model.Title;
-        ModelCode = model.ModelCode;
+        ModelId = model.ModelId;
         ThinkingMode = model.ThinkingMode;
         IsPinned = model.IsPinned;
         MessageCount = model.MessageCount;

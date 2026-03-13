@@ -122,15 +122,15 @@ public partial class UsageRecord : Entity<UsageRecord>
 
     #region 高级查询
 
-    // Select Count(Id) as Id,ModelCode From UsageRecord Where CreateTime>'2020-01-24 00:00:00' Group By ModelCode Order By Id Desc limit 20
-    static readonly FieldCache<UsageRecord> _ModelCodeCache = new(nameof(ModelCode))
+    // Select Count(Id) as Id,ModelId From UsageRecord Where CreateTime>'2020-01-24 00:00:00' Group By ModelId Order By Id Desc limit 20
+    static readonly FieldCache<UsageRecord> _ModelIdCache = new(nameof(ModelId))
     {
         //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
     };
 
-    /// <summary>获取模型编码列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
+    /// <summary>获取模型列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     /// <returns></returns>
-    public static IDictionary<String, String> GetModelCodeList() => _ModelCodeCache.FindAllName();
+    public static IDictionary<String, String> GetModelIdList() => _ModelIdCache.FindAllName();
     #endregion
 
     #region 业务操作

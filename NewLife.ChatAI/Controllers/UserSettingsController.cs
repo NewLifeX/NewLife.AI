@@ -16,8 +16,9 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
         var user = ManageProvider2.User;
         var nickname = user?.DisplayName ?? user?.Name ?? "用户";
         var account = user?.Name ?? "";
+        var avatar = user?.GetAvatarUrl();
 
-        return Ok(new UserProfileDto(nickname, account, null));
+        return Ok(new UserProfileDto(nickname, account, avatar));
     }
 
     /// <summary>获取用户设置</summary>

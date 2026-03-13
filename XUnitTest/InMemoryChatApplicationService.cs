@@ -23,16 +23,16 @@ public class InMemoryChatApplicationService
     private readonly ConcurrentDictionary<Int64, ConversationSummaryDto> _conversations = new();
     private readonly ConcurrentDictionary<Int64, List<MessageDto>> _messages = new();
     private readonly ConcurrentDictionary<String, (Int64 ConversationId, DateTime CreateTime, DateTime? ExpireTime)> _shares = new();
-    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", "qwen-max", ThinkingMode.Auto, 10, String.Empty, false);
+    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false);
     private Int64 _conversationSeed = 1000;
     private Int64 _messageSeed = 5000;
 
     public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, CancellationToken cancellationToken)
     {
         var id = Interlocked.Increment(ref _conversationSeed);
-        var modelCode = request.ModelCode ?? _settings.DefaultModel;
+        var modelId = request.ModelId > 0 ? request.ModelId : 0;
         var title = String.IsNullOrWhiteSpace(request.Title) ? "新建对话" : request.Title.Trim();
-        var item = new ConversationSummaryDto(id, title, modelCode, DateTime.Now, false);
+        var item = new ConversationSummaryDto(id, title, modelId, DateTime.Now, false);
         _conversations[id] = item;
         _messages.TryAdd(id, []);
         return Task.FromResult(item);
@@ -56,8 +56,8 @@ public class InMemoryChatApplicationService
         if (!_conversations.TryGetValue(conversationId, out var current)) return Task.FromResult<ConversationSummaryDto?>(null);
 
         var title = String.IsNullOrWhiteSpace(request.Title) ? current.Title : request.Title.Trim();
-        var modelCode = String.IsNullOrWhiteSpace(request.ModelCode) ? current.ModelCode : request.ModelCode.Trim();
-        var updated = new ConversationSummaryDto(current.Id, title, modelCode, DateTime.Now, current.IsPinned);
+        var modelId = request.ModelId > 0 ? request.ModelId : current.ModelId;
+        var updated = new ConversationSummaryDto(current.Id, title, modelId, DateTime.Now, current.IsPinned);
         _conversations[conversationId] = updated;
         return Task.FromResult<ConversationSummaryDto?>(updated);
     }
@@ -73,7 +73,7 @@ public class InMemoryChatApplicationService
     {
         if (!_conversations.TryGetValue(conversationId, out var current)) return Task.FromResult(false);
 
-        _conversations[conversationId] = new ConversationSummaryDto(current.Id, current.Title, current.ModelCode, DateTime.Now, isPinned);
+        _conversations[conversationId] = new ConversationSummaryDto(current.Id, current.Title, current.ModelId, DateTime.Now, isPinned);
         return Task.FromResult(true);
     }
 
@@ -145,7 +145,7 @@ public class InMemoryChatApplicationService
         if (msgIndex + 1 < list.Count)
             list.RemoveRange(msgIndex + 1, list.Count - msgIndex - 1);
 
-        var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelCode : "qwen-max";
+        var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelId.ToString() : "qwen-max";
         var assistantId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         yield return ChatStreamEvent.MessageStart(assistantId, modelCode, source.ThinkingMode);
 
@@ -193,7 +193,7 @@ public class InMemoryChatApplicationService
             yield break;
         }
 
-        var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelCode : "qwen-max";
+        var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelId.ToString() : "qwen-max";
         yield return ChatStreamEvent.MessageStart(source.Id, modelCode, source.ThinkingMode);
 
         var answer = "这是重新生成的流式回复。";
@@ -237,7 +237,7 @@ public class InMemoryChatApplicationService
         var assistantMessageId = Interlocked.Increment(ref _messageSeed);
 
         // message_start（含模型和思考模式）
-        var modelCode = _conversations.TryGetValue(conversationId, out var conv) ? conv.ModelCode : "qwen-max";
+        var modelCode = _conversations.TryGetValue(conversationId, out var conv) ? conv.ModelId.ToString() : "qwen-max";
         yield return ChatStreamEvent.MessageStart(assistantMessageId, modelCode, request.ThinkingMode);
 
         var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
@@ -276,7 +276,7 @@ public class InMemoryChatApplicationService
                 if (newTitle.Length > 10) newTitle = newTitle[..10] + "...";
                 title = newTitle;
             }
-            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, newTitle, conversation.ModelCode, DateTime.Now, conversation.IsPinned);
+            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, newTitle, conversation.ModelId, DateTime.Now, conversation.IsPinned);
         }
 
         // message_done，包含 Token 用量和标题
@@ -296,7 +296,7 @@ public class InMemoryChatApplicationService
         // 内存版模拟标题生成：截取前10个字符作为标题
         var title = userMessage.Length > 10 ? userMessage.Substring(0, 10) : userMessage;
         if (_conversations.TryGetValue(conversationId, out var conversation))
-            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, title, conversation.ModelCode, conversation.LastMessageTime, conversation.IsPinned);
+            _conversations[conversationId] = new ConversationSummaryDto(conversation.Id, title, conversation.ModelId, conversation.LastMessageTime, conversation.IsPinned);
 
         return Task.FromResult<String?>(title);
     }
@@ -348,9 +348,9 @@ public class InMemoryChatApplicationService
     {
         var models = new[]
         {
-            new ModelInfoDto("qwen-max", "Qwen-Max", true, true, false, true),
-            new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false, false, true),
-            new ModelInfoDto("gpt-4o", "GPT-4o", true, true, false, true)
+            new ModelInfoDto(1, "qwen-max", "Qwen-Max", true, true, false, true),
+            new ModelInfoDto(2, "deepseek-r1", "DeepSeek-R1", true, false, false, true),
+            new ModelInfoDto(3, "gpt-4o", "GPT-4o", true, true, false, true)
         };
         return Task.FromResult(models);
     }

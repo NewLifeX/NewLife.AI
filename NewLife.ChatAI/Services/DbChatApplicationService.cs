@@ -54,12 +54,11 @@ public class ChatApplicationService
     public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, CancellationToken cancellationToken)
     {
         var title = String.IsNullOrWhiteSpace(request.Title) ? "新建对话" : request.Title.Trim();
-        var modelCode = request.ModelCode ?? "qwen-max";
 
         var entity = new Conversation
         {
             Title = title,
-            ModelCode = modelCode,
+            ModelId = request.ModelId,
             LastMessageTime = DateTime.Now,
         };
         entity.Insert();
@@ -101,8 +100,8 @@ public class ChatApplicationService
 
         if (!String.IsNullOrWhiteSpace(request.Title))
             entity.Title = request.Title.Trim();
-        if (!String.IsNullOrWhiteSpace(request.ModelCode))
-            entity.ModelCode = request.ModelCode.Trim();
+        if (request.ModelId > 0)
+            entity.ModelId = request.ModelId;
 
         entity.Update();
 
@@ -214,7 +213,7 @@ public class ChatApplicationService
         var conversation = Conversation.FindById(entity.ConversationId);
         if (conversation == null) return null;
 
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelCode);
+        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             // 模型不可用时直接报错，不做降级
@@ -272,7 +271,7 @@ public class ChatApplicationService
             if (response.Usage != null)
             {
                 _usageService?.Record(userId, 0, entity.ConversationId, entity.Id,
-                    modelConfig.Code, response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens, "Chat");
+                    modelConfig.Id, response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens, "Chat");
             }
 
             return ToMessageDto(entity);
@@ -320,11 +319,10 @@ public class ChatApplicationService
         }
 
         // 3. 解析模型
-        var modelCode = conversation.ModelCode ?? "qwen-max";
-        var modelConfig = _gatewayService.ResolveModel(modelCode);
+        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelCode}' 不可用");
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
             yield break;
         }
 
@@ -341,7 +339,7 @@ public class ChatApplicationService
         assistantMsg.Insert();
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, (ThinkingMode)entity.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code, (ThinkingMode)entity.ThinkingMode);
 
         // 6. 流式调用模型
         var contentBuilder = new StringBuilder();
@@ -422,7 +420,7 @@ public class ChatApplicationService
         conversation.Update();
 
         if (finalUsage != null)
-            _usageService?.Record(userId, 0, entity.ConversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+            _usageService?.Record(userId, 0, entity.ConversationId, assistantMsg.Id, modelConfig.Id, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         if (!hasError && !cancellationToken.IsCancellationRequested)
         {
@@ -456,11 +454,10 @@ public class ChatApplicationService
             yield break;
         }
 
-        var modelCode = conversation.ModelCode ?? "qwen-max";
-        var modelConfig = _gatewayService.ResolveModel(modelCode);
+        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelCode}' 不可用");
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
             yield break;
         }
 
@@ -486,7 +483,7 @@ public class ChatApplicationService
         }
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(entity.Id, modelCode, (ThinkingMode)entity.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(entity.Id, modelConfig.Code, (ThinkingMode)entity.ThinkingMode);
 
         // 流式调用模型
         var contentBuilder = new StringBuilder();
@@ -564,7 +561,7 @@ public class ChatApplicationService
 
         // 记录用量
         if (finalUsage != null)
-            _usageService?.Record(userId, 0, entity.ConversationId, entity.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+            _usageService?.Record(userId, 0, entity.ConversationId, entity.Id, modelConfig.Id, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         // message_done
         if (!hasError && !cancellationToken.IsCancellationRequested)
@@ -606,11 +603,10 @@ public class ChatApplicationService
         userMsg.Insert();
 
         // 解析模型配置（在插入 assistant 消息之前，避免模型不可用时留下空消息残留）
-        var modelCode = conversation.ModelCode ?? "qwen-max";
-        var modelConfig = _gatewayService.ResolveModel(modelCode);
+        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelCode}' 不可用");
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
             yield break;
         }
 
@@ -627,7 +623,7 @@ public class ChatApplicationService
         assistantMsg.Insert();
 
         // message_start（含完整字段）
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelCode, request.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code, request.ThinkingMode);
 
         // 流式调用模型，收集内容用于持久化
         // 注意：C# 不允许在含 catch 的 try 块中 yield return，因此使用 IAsyncEnumerator + try-finally 模式
@@ -749,7 +745,7 @@ public class ChatApplicationService
 
         // 记录用量
         if (finalUsage != null)
-            _usageService?.Record(userId, 0, conversationId, assistantMsg.Id, modelCode, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+            _usageService?.Record(userId, 0, conversationId, assistantMsg.Id, modelConfig.Id, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         // 异步生成标题（首条消息时）
         String? title = null;
@@ -857,14 +853,14 @@ public class ChatApplicationService
     /// <param name="assistantMsg">AI 回复消息实体</param>
     /// <param name="conversation">会话实体</param>
     /// <param name="conversationId">会话编号</param>
-    /// <param name="modelCode">模型编码</param>
+    /// <param name="modelId">模型编号</param>
     /// <param name="content">回复内容</param>
     /// <param name="thinkingContent">思考内容</param>
     /// <param name="usage">用量统计</param>
     /// <param name="userMessage">用户消息内容（用于标题生成）</param>
     /// <returns></returns>
     private async Task PersistResultAsync(ChatMessage assistantMsg, Conversation conversation, Int64 conversationId,
-        String modelCode, String content, String? thinkingContent, ChatUsage? usage, String userMessage, Int32 userId)
+        Int32 modelId, String content, String? thinkingContent, ChatUsage? usage, String userMessage, Int32 userId)
     {
         assistantMsg.Content = content;
         if (!String.IsNullOrEmpty(thinkingContent))
@@ -878,7 +874,7 @@ public class ChatApplicationService
         if (usage != null)
         {
             _usageService?.Record(userId, 0, conversationId, assistantMsg.Id,
-                modelCode, usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, "Chat");
+                modelId, usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, "Chat");
         }
 
         // 异步生成标题（首条消息）
@@ -918,7 +914,7 @@ public class ChatApplicationService
         var setting = ChatSetting.Current;
 
         // 尝试通过模型生成标题
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelCode);
+        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig != null)
         {
             var provider = _gatewayService.GetProvider(modelConfig);
@@ -1159,13 +1155,13 @@ public class ChatApplicationService
         {
             return Task.FromResult(new[]
             {
-                new ModelInfoDto("qwen-max", "Qwen-Max", true, true, false, true),
-                new ModelInfoDto("deepseek-r1", "DeepSeek-R1", true, false, false, true),
-                new ModelInfoDto("gpt-4o", "GPT-4o", true, true, false, true),
+                new ModelInfoDto(0, "qwen-max", "Qwen-Max", true, true, false, true),
+                new ModelInfoDto(0, "deepseek-r1", "DeepSeek-R1", true, false, false, true),
+                new ModelInfoDto(0, "gpt-4o", "GPT-4o", true, true, false, true),
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling)).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling)).ToArray();
         return Task.FromResult(models);
     }
     #endregion
@@ -1181,7 +1177,7 @@ public class ChatApplicationService
         if (entity == null)
         {
             // 返回默认设置
-            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", "qwen-max", ThinkingMode.Auto, 10, String.Empty, false));
+            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false));
         }
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -1234,7 +1230,7 @@ public class ChatApplicationService
             {
                 conv.Id,
                 conv.Title,
-                conv.ModelCode,
+                conv.ModelId,
                 conv.IsPinned,
                 conv.LastMessageTime,
                 conv.CreateTime,
@@ -1358,7 +1354,7 @@ public class ChatApplicationService
     /// <param name="entity">会话实体</param>
     /// <returns></returns>
     private static ConversationSummaryDto ToConversationSummary(Conversation entity) =>
-        new(entity.Id, entity.Title, entity.ModelCode, entity.LastMessageTime, entity.IsPinned);
+        new(entity.Id, entity.Title, entity.ModelId, entity.LastMessageTime, entity.IsPinned);
 
     /// <summary>转换消息实体为DTO</summary>
     /// <param name="entity">消息实体</param>
@@ -1395,7 +1391,7 @@ public class ChatApplicationService
             entity.Theme ?? "system",
             entity.FontSize > 0 ? entity.FontSize : 16,
             entity.SendShortcut ?? "Enter",
-            entity.DefaultModel ?? "qwen-max",
+            entity.DefaultModel,
             (ThinkingMode)entity.DefaultThinkingMode,
             entity.ContextRounds > 0 ? entity.ContextRounds : 10,
             entity.SystemPrompt ?? String.Empty,

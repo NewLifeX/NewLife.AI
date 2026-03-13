@@ -24,13 +24,13 @@ public class UsageService
     /// <param name="appKeyId">应用密钥编号，无则为0</param>
     /// <param name="conversationId">会话编号</param>
     /// <param name="messageId">消息编号</param>
-    /// <param name="modelCode">模型编码</param>
+    /// <param name="modelId">模型编号</param>
     /// <param name="promptTokens">提示Token数</param>
     /// <param name="completionTokens">回复Token数</param>
     /// <param name="totalTokens">总Token数</param>
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
     public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId,
-        String modelCode, Int32 promptTokens, Int32 completionTokens, Int32 totalTokens, String source)
+        Int32 modelId, Int32 promptTokens, Int32 completionTokens, Int32 totalTokens, String source)
     {
         if (!ChatSetting.Current.EnableUsageStats) return;
 
@@ -42,7 +42,7 @@ public class UsageService
                 AppKeyId = appKeyId,
                 ConversationId = conversationId,
                 MessageId = messageId,
-                ModelCode = modelCode,
+                ModelId = modelId,
                 PromptTokens = promptTokens,
                 CompletionTokens = completionTokens,
                 TotalTokens = totalTokens,
@@ -84,7 +84,7 @@ public class UsageService
     /// <returns></returns>
     public IList<DailyUsageDto> GetDailyUsage(Int32 userId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(userId, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(userId, -1, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)
@@ -106,7 +106,7 @@ public class UsageService
         var list = UsageRecord.FindAll(UsageRecord._.UserId == userId);
 
         return list
-            .GroupBy(e => e.ModelCode ?? "unknown")
+            .GroupBy(e => e.ModelId)
             .Select(g => new ModelUsageDto(
                 g.Key,
                 g.Count(),
@@ -146,7 +146,7 @@ public class UsageService
     /// <returns></returns>
     public IList<DailyUsageDto> GetAppKeyDailyUsage(Int32 appKeyId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(-1, appKeyId, -1, null, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(-1, appKeyId, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)
@@ -170,7 +170,7 @@ public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 PromptT
 public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 PromptTokens, Int32 CompletionTokens, Int32 TotalTokens);
 
 /// <summary>模型使用分布</summary>
-public record ModelUsageDto(String ModelCode, Int32 Calls, Int32 TotalTokens);
+public record ModelUsageDto(Int32 ModelId, Int32 Calls, Int32 TotalTokens);
 
 /// <summary>AppKey 用量</summary>
 public record AppKeyUsageDto(Int32 AppKeyId, String Name, Int32 Calls, Int32 TotalTokens, DateTime LastCallTime);

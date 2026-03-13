@@ -37,7 +37,7 @@ const defaults: UserSettings = {
   language: 'zh',
   fontSize: 16,
   sendShortcut: 'Enter',
-  defaultModel: 'qwen-max',
+  defaultModel: 0,
   defaultThinkingMode: 0,
   contextRounds: 10,
   systemPrompt: '',

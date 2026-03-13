@@ -17,8 +17,7 @@ namespace NewLife.ChatAI.Entity;
 [Serializable]
 [DataObject]
 [Description("模型配置。后端接入的大语言模型，关联到具体的提供商实例")]
-[BindIndex("IU_ModelConfig_Code", true, "Code")]
-[BindIndex("IX_ModelConfig_ProviderId", false, "ProviderId")]
+[BindIndex("IU_ModelConfig_ProviderId_Code", true, "ProviderId,Code")]
 [BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型，关联到具体的提供商实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class ModelConfig : IEntity<ModelConfigModel>
 {
@@ -318,17 +317,19 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         //return Find(_.Id == id);
     }
 
-    /// <summary>根据编码查找</summary>
+    /// <summary>根据提供商、编码查找</summary>
+    /// <param name="providerId">提供商</param>
     /// <param name="code">编码</param>
     /// <returns>实体对象</returns>
-    public static ModelConfig FindByCode(String code)
+    public static ModelConfig FindByProviderIdAndCode(Int32 providerId, String code)
     {
+        if (providerId < 0) return null;
         if (code.IsNullOrEmpty()) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Code.EqualIgnoreCase(code));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.ProviderId == providerId && e.Code.EqualIgnoreCase(code));
 
-        return Find(_.Code == code);
+        return Find(_.ProviderId == providerId & _.Code == code);
     }
 
     /// <summary>根据提供商查找</summary>

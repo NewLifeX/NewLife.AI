@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计")]
 [BindIndex("IX_UsageRecord_UserId_Id", false, "UserId,Id")]
 [BindIndex("IX_UsageRecord_AppKeyId_Id", false, "AppKeyId,Id")]
-[BindIndex("IX_UsageRecord_ModelCode_Id", false, "ModelCode,Id")]
+[BindIndex("IX_UsageRecord_ModelId_Id", false, "ModelId,Id")]
 [BindIndex("IX_UsageRecord_ConversationId", false, "ConversationId")]
 [BindTable("UsageRecord", Description = "用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class UsageRecord : IEntity<UsageRecordModel>
@@ -65,13 +65,13 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
     [BindColumn("MessageId", "消息。对应的AI回复消息", "")]
     public Int64 MessageId { get => _MessageId; set { if (OnPropertyChanging("MessageId", value)) { _MessageId = value; OnPropertyChanged("MessageId"); } } }
 
-    private String _ModelCode;
-    /// <summary>模型编码</summary>
-    [DisplayName("模型编码")]
-    [Description("模型编码")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("ModelCode", "模型编码", "")]
-    public String ModelCode { get => _ModelCode; set { if (OnPropertyChanging("ModelCode", value)) { _ModelCode = value; OnPropertyChanged("ModelCode"); } } }
+    private Int32 _ModelId;
+    /// <summary>模型。引用ModelConfig.Id</summary>
+    [DisplayName("模型")]
+    [Description("模型。引用ModelConfig.Id")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ModelId", "模型。引用ModelConfig.Id", "")]
+    public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
 
     private Int32 _PromptTokens;
     /// <summary>提示Token数</summary>
@@ -142,7 +142,7 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
         AppKeyId = model.AppKeyId;
         ConversationId = model.ConversationId;
         MessageId = model.MessageId;
-        ModelCode = model.ModelCode;
+        ModelId = model.ModelId;
         PromptTokens = model.PromptTokens;
         CompletionTokens = model.CompletionTokens;
         TotalTokens = model.TotalTokens;
@@ -166,7 +166,7 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
             "AppKeyId" => _AppKeyId,
             "ConversationId" => _ConversationId,
             "MessageId" => _MessageId,
-            "ModelCode" => _ModelCode,
+            "ModelId" => _ModelId,
             "PromptTokens" => _PromptTokens,
             "CompletionTokens" => _CompletionTokens,
             "TotalTokens" => _TotalTokens,
@@ -185,7 +185,7 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
                 case "AppKeyId": _AppKeyId = value.ToInt(); break;
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
-                case "ModelCode": _ModelCode = Convert.ToString(value); break;
+                case "ModelId": _ModelId = value.ToInt(); break;
                 case "PromptTokens": _PromptTokens = value.ToInt(); break;
                 case "CompletionTokens": _CompletionTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
@@ -233,14 +233,14 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
         return FindAll(_.AppKeyId == appKeyId);
     }
 
-    /// <summary>根据模型编码查找</summary>
-    /// <param name="modelCode">模型编码</param>
+    /// <summary>根据模型查找</summary>
+    /// <param name="modelId">模型</param>
     /// <returns>实体列表</returns>
-    public static IList<UsageRecord> FindAllByModelCode(String modelCode)
+    public static IList<UsageRecord> FindAllByModelId(Int32 modelId)
     {
-        if (modelCode.IsNullOrEmpty()) return [];
+        if (modelId < 0) return [];
 
-        return FindAll(_.ModelCode == modelCode);
+        return FindAll(_.ModelId == modelId);
     }
 
     /// <summary>根据会话查找</summary>
@@ -259,20 +259,20 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
     /// <param name="userId">用户</param>
     /// <param name="appKeyId">应用密钥。通过API网关调用时关联的AppKey</param>
     /// <param name="conversationId">会话</param>
-    /// <param name="modelCode">模型编码</param>
+    /// <param name="modelId">模型。引用ModelConfig.Id</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UsageRecord> Search(Int32 userId, Int32 appKeyId, Int64 conversationId, String modelCode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UsageRecord> Search(Int32 userId, Int32 appKeyId, Int64 conversationId, Int32 modelId, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (appKeyId >= 0) exp &= _.AppKeyId == appKeyId;
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
-        if (!modelCode.IsNullOrEmpty()) exp &= _.ModelCode == modelCode;
+        if (modelId >= 0) exp &= _.ModelId == modelId;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -311,8 +311,8 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
         /// <summary>消息。对应的AI回复消息</summary>
         public static readonly Field MessageId = FindByName("MessageId");
 
-        /// <summary>模型编码</summary>
-        public static readonly Field ModelCode = FindByName("ModelCode");
+        /// <summary>模型。引用ModelConfig.Id</summary>
+        public static readonly Field ModelId = FindByName("ModelId");
 
         /// <summary>提示Token数</summary>
         public static readonly Field PromptTokens = FindByName("PromptTokens");
@@ -356,8 +356,8 @@ public partial class UsageRecord : IEntity<UsageRecordModel>
         /// <summary>消息。对应的AI回复消息</summary>
         public const String MessageId = "MessageId";
 
-        /// <summary>模型编码</summary>
-        public const String ModelCode = "ModelCode";
+        /// <summary>模型。引用ModelConfig.Id</summary>
+        public const String ModelId = "ModelId";
 
         /// <summary>提示Token数</summary>
         public const String PromptTokens = "PromptTokens";

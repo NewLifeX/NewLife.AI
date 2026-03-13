@@ -12,9 +12,9 @@ public class ChatSetting : Config<ChatSetting>
     [Description("分享有效期。共享链接有效天数，0 表示永不过期")]
     public Int32 ShareExpireDays { get; set; } = 30;
 
-    /// <summary>默认模型。新用户的默认模型编码</summary>
-    [Description("默认模型。新用户的默认模型编码")]
-    public String DefaultModel { get; set; } = "qwen-max";
+    /// <summary>默认模型。新用户的默认模型配置Id，0表示使用第一个可用模型</summary>
+    [Description("默认模型。新用户的默认模型配置Id，0表示使用第一个可用模型")]
+    public Int32 DefaultModel { get; set; }
 
     /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
     [Description("默认思考模式。Auto=0, Think=1, Fast=2")]

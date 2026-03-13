@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/components/common/Icon'
 import { fetchUsageSummary, fetchDailyUsage, fetchModelUsage, type UsageSummary, type DailyUsage, type ModelUsage } from '@/lib/api'
+import { useChatStore } from '@/stores/chatStore'
 
 export function UsageSettings() {
   const { t } = useTranslation()
+  const models = useChatStore((s) => s.models)
   const [summary, setSummary] = useState<UsageSummary | null>(null)
   const [dailyUsage, setDailyUsage] = useState<DailyUsage[]>([])
   const [modelUsage, setModelUsage] = useState<ModelUsage[]>([])
@@ -87,10 +89,11 @@ export function UsageSettings() {
           <div className="space-y-2">
             {modelUsage.map((m) => {
               const maxCalls = Math.max(...modelUsage.map((x) => x.calls))
+              const modelName = models.find((x) => x.id === m.modelId)?.name ?? String(m.modelId)
               return (
-                <div key={m.modelCode} className="flex items-center gap-3">
-                  <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate" title={m.modelCode}>
-                    {m.modelCode}
+                <div key={m.modelId} className="flex items-center gap-3">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate" title={modelName}>
+                    {modelName}
                   </span>
                   <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div

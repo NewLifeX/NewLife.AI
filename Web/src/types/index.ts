@@ -1,7 +1,7 @@
 export interface Conversation {
   id: string
   title: string
-  modelCode?: string
+  modelId?: number
   isPinned: boolean
   messageCount?: number
   icon?: string
@@ -37,7 +37,8 @@ export interface ToolCall {
 }
 
 export interface ModelInfo {
-  id: string
+  id: number
+  code: string
   name: string
   supportThinking?: boolean
   supportVision?: boolean
@@ -58,7 +59,7 @@ export interface UserSettings {
   language: string
   fontSize: number
   sendShortcut: 'Enter' | 'Ctrl+Enter'
-  defaultModel: string
+  defaultModel: number
   defaultThinkingMode: number
   contextRounds: number
   systemPrompt: string

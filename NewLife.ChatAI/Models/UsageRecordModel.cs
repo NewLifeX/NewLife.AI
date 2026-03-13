@@ -26,8 +26,8 @@ public partial class UsageRecordModel
     /// <summary>消息。对应的AI回复消息</summary>
     public Int64 MessageId { get; set; }
 
-    /// <summary>模型编码</summary>
-    public String ModelCode { get; set; }
+    /// <summary>模型。引用ModelConfig.Id</summary>
+    public Int32 ModelId { get; set; }
 
     /// <summary>提示Token数</summary>
     public Int32 PromptTokens { get; set; }
@@ -61,7 +61,7 @@ public partial class UsageRecordModel
         AppKeyId = model.AppKeyId;
         ConversationId = model.ConversationId;
         MessageId = model.MessageId;
-        ModelCode = model.ModelCode;
+        ModelId = model.ModelId;
         PromptTokens = model.PromptTokens;
         CompletionTokens = model.CompletionTokens;
         TotalTokens = model.TotalTokens;

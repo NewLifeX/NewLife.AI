@@ -23,7 +23,7 @@ public class ChatAITests
         var setting = new ChatSetting();
 
         Assert.Equal(30, setting.ShareExpireDays);
-        Assert.Equal("qwen-max", setting.DefaultModel);
+        Assert.Equal(0, setting.DefaultModel);
         Assert.Equal(0, setting.DefaultThinkingMode);
         Assert.Equal(10, setting.DefaultContextRounds);
         Assert.Equal(20, setting.MaxAttachmentSize);
@@ -48,12 +48,12 @@ public class ChatAITests
         var setting = new ChatSetting();
 
         setting.ShareExpireDays = 0;
-        setting.DefaultModel = "gpt-4o";
+        setting.DefaultModel = 3;
         setting.GatewayRateLimit = 100;
         setting.EnableMcp = false;
 
         Assert.Equal(0, setting.ShareExpireDays);
-        Assert.Equal("gpt-4o", setting.DefaultModel);
+        Assert.Equal(3, setting.DefaultModel);
         Assert.Equal(100, setting.GatewayRateLimit);
         Assert.False(setting.EnableMcp);
     }
@@ -219,7 +219,7 @@ public class ChatAITests
     public async Task GenerateTitleAsyncReturnsTruncatedTitle()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         var title = await service.GenerateTitleAsync(conv.Id, "这是一条超过十个字的很长的消息内容", CancellationToken.None);
 
@@ -231,7 +231,7 @@ public class ChatAITests
     public async Task GenerateTitleAsyncUpdatesConversation()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         Assert.Equal("新建对话", conv.Title);
 
         await service.GenerateTitleAsync(conv.Id, "帮我写一封邮件", CancellationToken.None);
@@ -246,7 +246,7 @@ public class ChatAITests
     public async Task GenerateTitleAsyncReturnsShortTextDirectly()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         var title = await service.GenerateTitleAsync(conv.Id, "你好", CancellationToken.None);
 
@@ -261,9 +261,9 @@ public class ChatAITests
         var service = new InMemoryChatApplicationService();
 
         // 创建会话
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest("测试会话", "qwen-max"), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest("测试会话", 1), CancellationToken.None);
         Assert.Equal("测试会话", conv.Title);
-        Assert.Equal("qwen-max", conv.ModelCode);
+        Assert.Equal(1, conv.ModelId);
 
         // 发送消息
         var chunks = new List<ChatStreamEvent>();
@@ -288,7 +288,7 @@ public class ChatAITests
     public async Task DeleteConversationCleansUpMessages()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
@@ -303,7 +303,7 @@ public class ChatAITests
     public async Task SetPinUpdatesConversation()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         Assert.False(conv.IsPinned);
 
         var result = await service.SetPinAsync(conv.Id, true, CancellationToken.None);
@@ -318,7 +318,7 @@ public class ChatAITests
     public async Task EditMessageUpdatesContent()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("原始消息", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
@@ -334,7 +334,7 @@ public class ChatAITests
     public async Task RegenerateUpdatesAssistantMessage()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
@@ -350,7 +350,7 @@ public class ChatAITests
     public async Task ShareLinkLifecycle()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(24), CancellationToken.None);
@@ -376,22 +376,22 @@ public class ChatAITests
 
         var settings = await service.GetUserSettingsAsync(CancellationToken.None);
         Assert.Equal("zh-CN", settings.Language);
-        Assert.Equal("qwen-max", settings.DefaultModel);
+        Assert.Equal(0, settings.DefaultModel);
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", "gpt-4o", ThinkingMode.Think, 20, "You are helpful", true),
+            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "You are helpful", true),
             CancellationToken.None);
         Assert.Equal("en", updated.Language);
         Assert.Equal("dark", updated.Theme);
-        Assert.Equal("gpt-4o", updated.DefaultModel);
+        Assert.Equal(3, updated.DefaultModel);
     }
 
     [Fact]
     public async Task ClearConversationsRemovesAll()
     {
         var service = new InMemoryChatApplicationService();
-        await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
-        await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
+        await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         await service.ClearUserConversationsAsync(CancellationToken.None);
 
@@ -414,7 +414,7 @@ public class ChatAITests
     {
         var service = new InMemoryChatApplicationService();
         for (var i = 0; i < 5; i++)
-            await service.CreateConversationAsync(new CreateConversationRequest($"会话{i}", null), CancellationToken.None);
+            await service.CreateConversationAsync(new CreateConversationRequest($"会话{i}", 0), CancellationToken.None);
 
         var page1 = await service.GetConversationsAsync(1, 2, CancellationToken.None);
         Assert.Equal(2, page1.Items.Count);
@@ -495,9 +495,9 @@ public class ChatAITests
     [Fact]
     public void ModelUsageDtoHasCorrectProperties()
     {
-        var dto = new ModelUsageDto("qwen-max", 100, 5000);
+        var dto = new ModelUsageDto(1, 100, 5000);
 
-        Assert.Equal("qwen-max", dto.ModelCode);
+        Assert.Equal(1, dto.ModelId);
         Assert.Equal(100, dto.Calls);
         Assert.Equal(5000, dto.TotalTokens);
     }
@@ -576,11 +576,11 @@ public class ChatAITests
     public void ConversationSummaryDtoHasAllFields()
     {
         var now = DateTime.Now;
-        var dto = new ConversationSummaryDto(1, "测试", "qwen-max", now, true);
+        var dto = new ConversationSummaryDto(1, "测试", 1, now, true);
 
         Assert.Equal(1, dto.Id);
         Assert.Equal("测试", dto.Title);
-        Assert.Equal("qwen-max", dto.ModelCode);
+        Assert.Equal(1, dto.ModelId);
         Assert.Equal(now, dto.LastMessageTime);
         Assert.True(dto.IsPinned);
     }
@@ -606,8 +606,8 @@ public class ChatAITests
     {
         var items = new List<ConversationSummaryDto>
         {
-            new(1, "a", "m", DateTime.Now, false),
-            new(2, "b", "m", DateTime.Now, false),
+            new(1, "a", 1, DateTime.Now, false),
+            new(2, "b", 1, DateTime.Now, false),
         };
         var dto = new PagedResultDto<ConversationSummaryDto>(items, 10, 1, 2);
 
@@ -632,13 +632,13 @@ public class ChatAITests
     [Fact]
     public void UserSettingsDtoHasAllFields()
     {
-        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", "qwen-max", ThinkingMode.Think, 10, "You are helpful", true);
+        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "You are helpful", true);
 
         Assert.Equal("zh-CN", dto.Language);
         Assert.Equal("dark", dto.Theme);
         Assert.Equal(18, dto.FontSize);
         Assert.Equal("Enter", dto.SendShortcut);
-        Assert.Equal("qwen-max", dto.DefaultModel);
+        Assert.Equal(1, dto.DefaultModel);
         Assert.Equal(ThinkingMode.Think, dto.DefaultThinkingMode);
         Assert.Equal(10, dto.ContextRounds);
         Assert.Equal("You are helpful", dto.SystemPrompt);
@@ -829,10 +829,10 @@ public class ChatAITests
     public async Task UpdateConversationUpdatesTitle()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest("旧标题", null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest("旧标题", 0), CancellationToken.None);
         Assert.Equal("旧标题", conv.Title);
 
-        var updated = await service.UpdateConversationAsync(conv.Id, new UpdateConversationRequest("新标题", null), CancellationToken.None);
+        var updated = await service.UpdateConversationAsync(conv.Id, new UpdateConversationRequest("新标题", 0), CancellationToken.None);
         Assert.NotNull(updated);
         Assert.Equal("新标题", updated.Title);
     }
@@ -841,7 +841,7 @@ public class ChatAITests
     public async Task UpdateNonExistentConversationReturnsNull()
     {
         var service = new InMemoryChatApplicationService();
-        var result = await service.UpdateConversationAsync(99999, new UpdateConversationRequest("test", null), CancellationToken.None);
+        var result = await service.UpdateConversationAsync(99999, new UpdateConversationRequest("test", 0), CancellationToken.None);
         Assert.Null(result);
     }
 
@@ -849,7 +849,7 @@ public class ChatAITests
     public async Task GetMessagesEmptyConversationReturnsEmpty()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         var messages = await service.GetMessagesAsync(conv.Id, CancellationToken.None);
         Assert.Empty(messages);
     }
@@ -858,7 +858,7 @@ public class ChatAITests
     public async Task SubmitFeedbackWorks()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
@@ -873,7 +873,7 @@ public class ChatAITests
     public async Task ShareWithNullExpireHours()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
@@ -893,9 +893,9 @@ public class ChatAITests
     {
         var service = new InMemoryChatApplicationService();
 
-        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("第一个", null), CancellationToken.None);
+        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("第一个", 0), CancellationToken.None);
         await Task.Delay(50);
-        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("第二个", null), CancellationToken.None);
+        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("第二个", 0), CancellationToken.None);
 
         var list = await service.GetConversationsAsync(1, 20, CancellationToken.None);
         Assert.Equal(2, list.Items.Count);
@@ -907,7 +907,7 @@ public class ChatAITests
     public async Task StreamMessageEmptyContentStillProducesEvents()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         var chunks = new List<ChatStreamEvent>();
         await foreach (var chunk in service.StreamMessageAsync(conv.Id, new SendMessageRequest("", ThinkingMode.Auto, null), CancellationToken.None))
@@ -969,8 +969,8 @@ public class ChatAITests
         var d = new DailyUsageDto(DateTime.Today, 5, 100, 200, 300);
         Assert.Equal(c, d);
 
-        var e = new ModelUsageDto("gpt-4", 10, 5000);
-        var f = new ModelUsageDto("gpt-4", 10, 5000);
+        var e = new ModelUsageDto(1, 10, 5000);
+        var f = new ModelUsageDto(1, 10, 5000);
         Assert.Equal(e, f);
     }
 
@@ -993,9 +993,9 @@ public class ChatAITests
     [Fact]
     public void CreateConversationRequestDefaults()
     {
-        var req = new CreateConversationRequest(null, null);
+        var req = new CreateConversationRequest(null, 0);
         Assert.Null(req.Title);
-        Assert.Null(req.ModelCode);
+        Assert.Equal(0, req.ModelId);
     }
 
     [Fact]
@@ -1008,9 +1008,9 @@ public class ChatAITests
     [Fact]
     public void UpdateConversationRequestHasFields()
     {
-        var req = new UpdateConversationRequest("新标题", "gpt-4o");
+        var req = new UpdateConversationRequest("新标题", 3);
         Assert.Equal("新标题", req.Title);
-        Assert.Equal("gpt-4o", req.ModelCode);
+        Assert.Equal(3, req.ModelId);
     }
 
     [Fact]
@@ -1027,7 +1027,7 @@ public class ChatAITests
     public async Task ShareLinkUrlFormat()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(24), CancellationToken.None);
@@ -1042,7 +1042,7 @@ public class ChatAITests
     public async Task ShareTokenIsRandom()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var share1 = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
@@ -1090,14 +1090,14 @@ public class ChatAITests
         var service = new InMemoryChatApplicationService();
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", "deepseek-r1", ThinkingMode.Think, 5, "Be concise", true),
+            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Be concise", true),
             CancellationToken.None);
 
         Assert.Equal("en", updated.Language);
         Assert.Equal("dark", updated.Theme);
         Assert.Equal(20, updated.FontSize);
         Assert.Equal("Ctrl+Enter", updated.SendShortcut);
-        Assert.Equal("deepseek-r1", updated.DefaultModel);
+        Assert.Equal(2, updated.DefaultModel);
         Assert.Equal(ThinkingMode.Think, updated.DefaultThinkingMode);
         Assert.Equal(5, updated.ContextRounds);
         Assert.Equal("Be concise", updated.SystemPrompt);
@@ -1116,7 +1116,7 @@ public class ChatAITests
     public async Task ShareWithExpireTimeHasExpireTime()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(72), CancellationToken.None);
@@ -1131,7 +1131,7 @@ public class ChatAITests
     public async Task ShareWithoutExpireTimeHasNullExpireTime()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("test", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
@@ -1146,7 +1146,7 @@ public class ChatAITests
     public async Task ThinkingModeAffectsStream()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
 
         var chunks = new List<ChatStreamEvent>();
         await foreach (var chunk in service.StreamMessageAsync(conv.Id, new SendMessageRequest("复杂数学题", ThinkingMode.Think, null), CancellationToken.None))
@@ -1165,7 +1165,7 @@ public class ChatAITests
     public async Task EditMessageDoesNotCreateNewMessage()
     {
         var service = new InMemoryChatApplicationService();
-        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, null), CancellationToken.None);
+        var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
         await foreach (var _ in service.StreamMessageAsync(conv.Id, new SendMessageRequest("原始消息", ThinkingMode.Auto, null), CancellationToken.None)) { }
 
         var messagesBefore = await service.GetMessagesAsync(conv.Id, CancellationToken.None);
@@ -1203,11 +1203,11 @@ public class ChatAITests
     {
         var service = new InMemoryChatApplicationService();
 
-        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("普通会话", null), CancellationToken.None);
+        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("普通会话", 0), CancellationToken.None);
         await Task.Delay(50);
-        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("要置顶的", null), CancellationToken.None);
+        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("要置顶的", 0), CancellationToken.None);
         await Task.Delay(50);
-        var conv3 = await service.CreateConversationAsync(new CreateConversationRequest("最新的普通", null), CancellationToken.None);
+        var conv3 = await service.CreateConversationAsync(new CreateConversationRequest("最新的普通", 0), CancellationToken.None);
 
         // 置顶第一个会话
         await service.SetPinAsync(conv1.Id, true, CancellationToken.None);
@@ -1223,8 +1223,8 @@ public class ChatAITests
     public async Task DeleteConversationReducesList()
     {
         var service = new InMemoryChatApplicationService();
-        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("会话1", null), CancellationToken.None);
-        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("会话2", null), CancellationToken.None);
+        var conv1 = await service.CreateConversationAsync(new CreateConversationRequest("会话1", 0), CancellationToken.None);
+        var conv2 = await service.CreateConversationAsync(new CreateConversationRequest("会话2", 0), CancellationToken.None);
 
         var before = await service.GetConversationsAsync(1, 20, CancellationToken.None);
         Assert.Equal(2, before.Total);

@@ -307,9 +307,8 @@ public class GatewayTests
     {
         var service = new GatewayService(null, null, null);
 
-        Assert.Null(service.ResolveModel(null));
-        Assert.Null(service.ResolveModel(""));
-        Assert.Null(service.ResolveModel("   "));
+        Assert.Null(service.ResolveModel(0));
+        Assert.Null(service.ResolveModel(-1));
     }
 
     [Fact]
@@ -318,7 +317,7 @@ public class GatewayTests
         var service = new GatewayService(null, null, null);
 
         // 数据库无数据时返回 null
-        Assert.Null(service.ResolveModel("nonexistent-model"));
+        Assert.Null(service.ResolveModel(99999));
     }
     #endregion
 

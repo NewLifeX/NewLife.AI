@@ -47,13 +47,13 @@ public partial class Conversation : IEntity<ConversationModel>
     [BindColumn("Title", "标题。会话标题，显示在侧边栏", "", Master = true)]
     public String Title { get => _Title; set { if (OnPropertyChanging("Title", value)) { _Title = value; OnPropertyChanged("Title"); } } }
 
-    private String _ModelCode;
-    /// <summary>模型编码。当前使用的模型</summary>
-    [DisplayName("模型编码")]
-    [Description("模型编码。当前使用的模型")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("ModelCode", "模型编码。当前使用的模型", "")]
-    public String ModelCode { get => _ModelCode; set { if (OnPropertyChanging("ModelCode", value)) { _ModelCode = value; OnPropertyChanged("ModelCode"); } } }
+    private Int32 _ModelId;
+    /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
+    [DisplayName("模型")]
+    [Description("模型。当前使用的模型Id，引用ModelConfig.Id")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ModelId", "模型。当前使用的模型Id，引用ModelConfig.Id", "")]
+    public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
 
     private NewLife.AI.ChatAI.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
@@ -159,7 +159,7 @@ public partial class Conversation : IEntity<ConversationModel>
         Id = model.Id;
         UserId = model.UserId;
         Title = model.Title;
-        ModelCode = model.ModelCode;
+        ModelId = model.ModelId;
         ThinkingMode = model.ThinkingMode;
         IsPinned = model.IsPinned;
         MessageCount = model.MessageCount;
@@ -185,7 +185,7 @@ public partial class Conversation : IEntity<ConversationModel>
             "Id" => _Id,
             "UserId" => _UserId,
             "Title" => _Title,
-            "ModelCode" => _ModelCode,
+            "ModelId" => _ModelId,
             "ThinkingMode" => _ThinkingMode,
             "IsPinned" => _IsPinned,
             "MessageCount" => _MessageCount,
@@ -206,7 +206,7 @@ public partial class Conversation : IEntity<ConversationModel>
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
                 case "Title": _Title = Convert.ToString(value); break;
-                case "ModelCode": _ModelCode = Convert.ToString(value); break;
+                case "ModelId": _ModelId = value.ToInt(); break;
                 case "ThinkingMode": _ThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
@@ -298,8 +298,8 @@ public partial class Conversation : IEntity<ConversationModel>
         /// <summary>标题。会话标题，显示在侧边栏</summary>
         public static readonly Field Title = FindByName("Title");
 
-        /// <summary>模型编码。当前使用的模型</summary>
-        public static readonly Field ModelCode = FindByName("ModelCode");
+        /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
+        public static readonly Field ModelId = FindByName("ModelId");
 
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
@@ -349,8 +349,8 @@ public partial class Conversation : IEntity<ConversationModel>
         /// <summary>标题。会话标题，显示在侧边栏</summary>
         public const String Title = "Title";
 
-        /// <summary>模型编码。当前使用的模型</summary>
-        public const String ModelCode = "ModelCode";
+        /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
+        public const String ModelId = "ModelId";
 
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";

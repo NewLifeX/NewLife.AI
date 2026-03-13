@@ -122,7 +122,7 @@ interface PagedResult<T> {
 interface ConversationDto {
   id: string
   title: string
-  modelCode: string
+  modelId: number
   lastMessageTime: string
   isPinned: boolean
   icon?: string
@@ -133,7 +133,7 @@ function toConversation(dto: ConversationDto): Conversation {
   return {
     id: dto.id,
     title: dto.title,
-    modelCode: dto.modelCode,
+    modelId: dto.modelId,
     isPinned: dto.isPinned,
     icon: dto.icon,
     iconColor: dto.iconColor,
@@ -148,17 +148,17 @@ export async function fetchConversations(page = 1, pageSize = 50): Promise<Conve
   return result.items.map(toConversation)
 }
 
-export async function createConversation(title?: string, modelCode?: string): Promise<Conversation> {
+export async function createConversation(title?: string, modelId?: number): Promise<Conversation> {
   const dto = await request<ConversationDto>('/api/conversations', {
     method: 'POST',
-    body: JSON.stringify({ title, modelCode }),
+    body: JSON.stringify({ title, modelId }),
   })
   return toConversation(dto)
 }
 
 export async function updateConversation(
   id: string,
-  data: { title?: string; modelCode?: string },
+  data: { title?: string; modelId?: number },
 ): Promise<Conversation> {
   const dto = await request<ConversationDto>(`/api/conversations/${id}`, {
     method: 'PUT',
@@ -353,6 +353,7 @@ export async function deleteFeedback(messageId: string): Promise<void> {
 // ── Models ──
 
 interface ModelInfoDto {
+  id: number
   code: string
   name: string
   supportThinking: boolean
@@ -364,7 +365,8 @@ interface ModelInfoDto {
 export async function fetchModels(): Promise<ModelInfo[]> {
   const dtos = await request<ModelInfoDto[]>('/api/models')
   return dtos.map((d) => ({
-    id: d.code,
+    id: d.id,
+    code: d.code,
     name: d.name,
     supportThinking: d.supportThinking,
     supportVision: d.supportVision,
@@ -380,7 +382,7 @@ interface UserSettingsDto {
   theme: string
   fontSize: number
   sendShortcut: string
-  defaultModel: string
+  defaultModel: number
   defaultThinkingMode: number
   contextRounds: number
   systemPrompt: string
@@ -420,7 +422,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       theme: settings.theme,
       fontSize: settings.fontSize,
       sendShortcut: settings.sendShortcut ?? 'Enter',
-      defaultModel: settings.defaultModel ?? 'qwen-max',
+      defaultModel: settings.defaultModel ?? 0,
       defaultThinkingMode: settings.defaultThinkingMode ?? 0,
       contextRounds: settings.contextRounds ?? 10,
       systemPrompt: settings.systemPrompt ?? '',
@@ -556,7 +558,7 @@ export interface DailyUsage {
 }
 
 export interface ModelUsage {
-  modelCode: string
+  modelId: number
   calls: number
   totalTokens: number
 }

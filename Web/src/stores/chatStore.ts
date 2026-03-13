@@ -45,7 +45,7 @@ interface ChatState {
   loadConversations: () => Promise<void>
   loadMoreConversations: () => Promise<void>
   loadModels: () => Promise<void>
-  switchModel: (modelId: string) => Promise<void>
+  switchModel: (modelId: number) => Promise<void>
   setActiveConversation: (id: string | undefined) => void
   newChat: () => void
   sendMessage: (content: string) => void
@@ -119,10 +119,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { activeConversationId } = get()
     if (activeConversationId != null) {
       try {
-        await updateConversation(activeConversationId, { modelCode: modelId })
+        await updateConversation(activeConversationId, { modelId })
         set((s) => ({
           conversations: s.conversations.map((c) =>
-            c.id === activeConversationId ? { ...c, modelCode: modelId } : c,
+            c.id === activeConversationId ? { ...c, modelId } : c,
           ),
         }))
       } catch { /* 静默 */ }

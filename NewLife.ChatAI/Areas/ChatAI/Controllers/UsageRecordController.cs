@@ -57,11 +57,11 @@ public class UsageRecordController : ReadOnlyEntityController<UsageRecord>
         var userId = p["userId"].ToInt(-1);
         var appKeyId = p["appKeyId"].ToInt(-1);
         var conversationId = p["conversationId"].ToLong(-1);
-        var modelCode = p["modelCode"];
+        var modelId = p["modelId"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UsageRecord.Search(userId, appKeyId, conversationId, modelCode, start, end, p["Q"], p);
+        return UsageRecord.Search(userId, appKeyId, conversationId, modelId, start, end, p["Q"], p);
     }
 }

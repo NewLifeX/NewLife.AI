@@ -1,10 +1,10 @@
 ﻿namespace NewLife.AI.ChatAI;
 
 /// <summary>新建会话请求</summary>
-public record CreateConversationRequest(String? Title, String? ModelCode);
+public record CreateConversationRequest(String? Title, Int32 ModelId);
 
 /// <summary>更新会话请求</summary>
-public record UpdateConversationRequest(String? Title, String? ModelCode);
+public record UpdateConversationRequest(String? Title, Int32 ModelId);
 
 /// <summary>发送消息请求</summary>
 public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IReadOnlyList<String>? AttachmentIds);

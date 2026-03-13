@@ -108,7 +108,8 @@ function ChatApp() {
 
   const isWelcome = messages.length === 0
   const activeConv = conversations.find((c) => c.id === activeConversationId)
-  const currentModel = activeConv?.modelCode ?? settings.defaultModel ?? 'qwen-max'
+  const resolvedModel = activeConv?.modelId ?? settings.defaultModel ?? 0
+  const currentModel = resolvedModel || models[0]?.id || 0
 
   if (!appReady) return <AppSkeleton />
 

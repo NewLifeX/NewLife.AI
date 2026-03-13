@@ -8,8 +8,8 @@ import type { ModelInfo } from '@/types'
 interface ChatSettingsProps {
   sendShortcut: 'Enter' | 'Ctrl+Enter'
   onSendShortcutChange: (v: 'Enter' | 'Ctrl+Enter') => void
-  defaultModel: string
-  onDefaultModelChange: (v: string) => void
+  defaultModel: number
+  onDefaultModelChange: (v: number) => void
   defaultThinkingMode: number
   onDefaultThinkingModeChange: (v: number) => void
   contextRounds: number
@@ -71,7 +71,7 @@ export function ChatSettings({
     5: t('settings.speedMax'),
   }
 
-  const modelOptions = models.map((m) => ({ value: m.id, label: m.name }))
+  const modelOptions = models.map((m) => ({ value: String(m.id), label: m.name }))
 
   const localThinkingOptions = thinkingModeOptions.map((o) => ({
     ...o,
@@ -108,7 +108,7 @@ export function ChatSettings({
             <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.defaultModel')}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.defaultModelDesc')}</div>
           </div>
-          <Select options={modelOptions} value={defaultModel} onChange={onDefaultModelChange} className="w-48" />
+          <Select options={modelOptions} value={String(defaultModel)} onChange={(v) => onDefaultModelChange(Number(v))} className="w-48" />
         </div>
 
         <div className="border-b border-gray-100 dark:border-gray-800" />
