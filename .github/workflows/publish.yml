@@ -7,18 +7,41 @@ on:
 
 jobs:
   build-publish:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: Web/pnpm-lock.yaml
+
+    - name: Enable Corepack
+      run: corepack enable
+
     - name: Setup dotNET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.x
-    - name: Build
+        dotnet-version: 10.x
+
+    - name: Install frontend dependencies
+      run: pnpm --dir Web install --frozen-lockfile
+
+    - name: Build frontend
+      run: pnpm --dir Web build
+
+    - name: Copy frontend assets to ChatAI wwwroot
+      shell: bash
       run: |
-        dotnet pack -c Release -o out NewLife.AI/NewLife.AI.csproj
+        mkdir -p NewLife.ChatAI/wwwroot
+        rm -rf NewLife.ChatAI/wwwroot/*
+        cp -R Web/dist/. NewLife.ChatAI/wwwroot/
+
+    - name: Pack ChatAI
+      run: dotnet pack -c Release -o out NewLife.ChatAI/NewLife.ChatAI.csproj
+
     - name: Publish
-      run: |
-        dotnet nuget push ./out/*.nupkg --skip-duplicate --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.nugetKey }}
+      run: dotnet nuget push ./out/*.nupkg --skip-duplicate --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.nugetKey }}
