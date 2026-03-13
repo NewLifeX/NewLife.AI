@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -48,6 +48,7 @@
         <Column Name="Title" DataType="String" Master="True" Length="200" Description="标题。会话标题，显示在侧边栏" />
         <Column Name="ModelId" DataType="Int32" Description="模型。当前使用的模型Id，引用ModelConfig.Id" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.ChatAI.ThinkingMode" />
+        <Column Name="SkillId" DataType="Int32" Description="技能。当前会话使用的技能，引用Skill.Id" />
         <Column Name="IsPinned" DataType="Boolean" Description="置顶。是否置顶显示" />
         <Column Name="MessageCount" DataType="Int32" Description="消息数" />
         <Column Name="LastMessageTime" DataType="DateTime" Description="最后消息时间。用于排序" />
@@ -273,6 +274,48 @@
       </Columns>
       <Indexes>
         <Index Columns="Name" Unique="True" />
+      </Indexes>
+    </Table>
+    <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Code" DataType="String" Description="编码。英文标识，唯一，如coder、translator" />
+        <Column Name="Name" DataType="String" Master="True" Description="名称。技能展示名称，同时也是@引用的标识" />
+        <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如code、translate" />
+        <Column Name="Category" DataType="String" Description="分类。通用/开发/创作/分析" />
+        <Column Name="Description" DataType="String" Length="500" Description="描述。一句话说明该技能做什么" />
+        <Column Name="Content" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
+        <Column Name="Sort" DataType="Int32" Description="排序。数值大的排前面" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />
+        <Column Name="Version" DataType="Int32" Description="版本。每次编辑自增" />
+        <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUser" DataType="String" Description="更新者" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="Code" Unique="True" />
+        <Index Columns="Category" />
+      </Indexes>
+    </Table>
+    <Table Name="UserSkill" Description="用户技能。记录用户最近使用的技能，用于SkillBar展示排序">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="SkillId" DataType="Int32" Map="Skill@Id@Name" Description="技能" />
+        <Column Name="LastUseTime" DataType="DateTime" Description="最后使用时间。用于SkillBar按最近使用排序" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,SkillId" Unique="True" />
+        <Index Columns="UserId,LastUseTime" />
       </Indexes>
     </Table>
   </Tables>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -26,17 +26,17 @@ using XCode.Shards;
 
 namespace NewLife.ChatAI.Entity;
 
-public partial class Conversation : Entity<Conversation>
+public partial class Skill : Entity<Skill>
 {
     #region 对象操作
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存
     private static Int32 MaxCacheCount = 1000;
 
-    static Conversation()
+    static Skill()
     {
         // 累加字段，生成 Update xx Set Count=Count+1234 Where xxx
         //var df = Meta.Factory.AdditionalFields;
-        //df.Add(nameof(UserId));
+        //df.Add(nameof(Sort));
 
         // 拦截器 UserInterceptor、TimeInterceptor、IPInterceptor
         Meta.Interceptors.Add(new UserInterceptor { AllowEmpty = false });
@@ -73,6 +73,9 @@ public partial class Conversation : Entity<Conversation>
         //if (method == DataMethod.Insert && !Dirtys[nameof(CreateIP)]) CreateIP = ManageProvider.UserHost;
         //if (!Dirtys[nameof(UpdateIP)]) UpdateIP = ManageProvider.UserHost;
 
+        // 检查唯一索引
+        // CheckExist(method == DataMethod.Insert, nameof(Code));
+
         return true;
     }
 
@@ -83,19 +86,22 @@ public partial class Conversation : Entity<Conversation>
     //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
     //    if (Meta.Session.Count > 0) return;
 
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化Conversation[会话]数据……");
+    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化Skill[技能]数据……");
 
-    //    var entity = new Conversation();
-    //    entity.UserId = 0;
-    //    entity.Title = "abc";
-    //    entity.ModelCode = "abc";
-    //    entity.ThinkingMode = 0;
-    //    entity.IsPinned = true;
-    //    entity.MessageCount = 0;
-    //    entity.LastMessageTime = DateTime.Now;
+    //    var entity = new Skill();
+    //    entity.Code = "abc";
+    //    entity.Name = "abc";
+    //    entity.Icon = "abc";
+    //    entity.Category = "abc";
+    //    entity.Description = "abc";
+    //    entity.Content = "abc";
+    //    entity.Sort = 0;
+    //    entity.Enable = true;
+    //    entity.IsSystem = true;
+    //    entity.Version = 0;
     //    entity.Insert();
 
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化Conversation[会话]数据！");
+    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
     //}
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
@@ -114,32 +120,25 @@ public partial class Conversation : Entity<Conversation>
     #endregion
 
     #region 扩展属性
-    /// <summary>技能</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Skill Skill => Extends.Get(nameof(Skill), k => Skill.FindById(SkillId));
-
-    /// <summary>技能</summary>
-    [Map(nameof(SkillId), typeof(Skill), "Id")]
-    public String SkillName => Skill?.Name;
     #endregion
 
     #region 高级查询
 
-    // Select Count(Id) as Id,Category From Conversation Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
-    //static readonly FieldCache<Conversation> _CategoryCache = new(nameof(Category))
-    //{
-    //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
-    //};
+    // Select Count(Id) as Id,Category From Skill Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
+    static readonly FieldCache<Skill> _CategoryCache = new(nameof(Category))
+    {
+        //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
+    };
 
-    ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
-    ///// <returns></returns>
-    //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+    /// <summary>获取分类列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
+    /// <returns></returns>
+    public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
     #endregion
 
     #region 业务操作
-    public ConversationModel ToModel()
+    public SkillModel ToModel()
     {
-        var model = new ConversationModel();
+        var model = new SkillModel();
         model.Copy(this);
 
         return model;

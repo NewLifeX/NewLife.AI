@@ -26,6 +26,9 @@ public partial class ConversationModel
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get; set; }
 
+    /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+    public Int32 SkillId { get; set; }
+
     /// <summary>置顶。是否置顶显示</summary>
     public Boolean IsPinned { get; set; }
 
@@ -67,6 +70,7 @@ public partial class ConversationModel
         Title = model.Title;
         ModelId = model.ModelId;
         ThinkingMode = model.ThinkingMode;
+        SkillId = model.SkillId;
         IsPinned = model.IsPinned;
         MessageCount = model.MessageCount;
         LastMessageTime = model.LastMessageTime;

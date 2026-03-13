@@ -63,6 +63,14 @@ public partial class Conversation : IEntity<ConversationModel>
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
     public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
+    private Int32 _SkillId;
+    /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+    [DisplayName("技能")]
+    [Description("技能。当前会话使用的技能，引用Skill.Id")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SkillId", "技能。当前会话使用的技能，引用Skill.Id", "")]
+    public Int32 SkillId { get => _SkillId; set { if (OnPropertyChanging("SkillId", value)) { _SkillId = value; OnPropertyChanged("SkillId"); } } }
+
     private Boolean _IsPinned;
     /// <summary>置顶。是否置顶显示</summary>
     [DisplayName("置顶")]
@@ -161,6 +169,7 @@ public partial class Conversation : IEntity<ConversationModel>
         Title = model.Title;
         ModelId = model.ModelId;
         ThinkingMode = model.ThinkingMode;
+        SkillId = model.SkillId;
         IsPinned = model.IsPinned;
         MessageCount = model.MessageCount;
         LastMessageTime = model.LastMessageTime;
@@ -187,6 +196,7 @@ public partial class Conversation : IEntity<ConversationModel>
             "Title" => _Title,
             "ModelId" => _ModelId,
             "ThinkingMode" => _ThinkingMode,
+            "SkillId" => _SkillId,
             "IsPinned" => _IsPinned,
             "MessageCount" => _MessageCount,
             "LastMessageTime" => _LastMessageTime,
@@ -208,6 +218,7 @@ public partial class Conversation : IEntity<ConversationModel>
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
                 case "ThinkingMode": _ThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
+                case "SkillId": _SkillId = value.ToInt(); break;
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
                 case "LastMessageTime": _LastMessageTime = value.ToDateTime(); break;
@@ -304,6 +315,9 @@ public partial class Conversation : IEntity<ConversationModel>
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
 
+        /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+        public static readonly Field SkillId = FindByName("SkillId");
+
         /// <summary>置顶。是否置顶显示</summary>
         public static readonly Field IsPinned = FindByName("IsPinned");
 
@@ -354,6 +368,9 @@ public partial class Conversation : IEntity<ConversationModel>
 
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";
+
+        /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+        public const String SkillId = "SkillId";
 
         /// <summary>置顶。是否置顶显示</summary>
         public const String IsPinned = "IsPinned";
