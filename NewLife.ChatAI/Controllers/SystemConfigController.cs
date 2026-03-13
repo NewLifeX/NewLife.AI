@@ -1,0 +1,21 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using NewLife.AI.ChatAI;
+using NewLife.ChatAI.Services;
+
+namespace NewLife.ChatAI.Controllers;
+
+/// <summary>系统公开配置接口。无需登录即可访问，供前端初始化时读取站点标题等配置</summary>
+[Route("api/system")]
+public class SystemConfigController : ChatApiControllerBase
+{
+    /// <summary>获取系统公开配置</summary>
+    [HttpGet("config")]
+    [AllowAnonymous]
+    public ActionResult<SystemConfigDto> GetConfig()
+    {
+        var s = ChatSetting.Current;
+        var questions = s.SuggestedQuestions.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        return Ok(new SystemConfigDto(s.SiteTitle, questions));
+    }
+}

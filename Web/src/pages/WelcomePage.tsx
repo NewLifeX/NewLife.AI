@@ -5,9 +5,10 @@ import { useSettingsStore } from '@/stores'
 
 interface WelcomePageProps {
   onSend: (message: string) => void
+  siteTitle?: string
 }
 
-export function WelcomePage({ onSend }: WelcomePageProps) {
+export function WelcomePage({ onSend, siteTitle }: WelcomePageProps) {
   const { t } = useTranslation()
   const sendShortcut = useSettingsStore((s) => s.sendShortcut)
 
@@ -27,6 +28,11 @@ export function WelcomePage({ onSend }: WelcomePageProps) {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mb-6">
               <span className="text-white text-2xl font-bold">N</span>
             </div>
+            {siteTitle && (
+              <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1 tracking-wide">
+                {siteTitle}
+              </p>
+            )}
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
               {t('welcome.greeting')}
             </h1>

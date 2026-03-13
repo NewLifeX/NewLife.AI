@@ -578,3 +578,14 @@ export async function fetchDailyUsage(start?: string, end?: string): Promise<Dai
 export async function fetchModelUsage(): Promise<ModelUsage[]> {
   return request<ModelUsage[]>('/api/usage/models')
 }
+
+// ── System Config ──
+
+export interface SystemConfig {
+  siteTitle: string
+  suggestedQuestions: string[]
+}
+
+export async function fetchSystemConfig(): Promise<SystemConfig> {
+  return request<SystemConfig>('/api/system/config')
+}

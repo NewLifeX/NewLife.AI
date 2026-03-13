@@ -114,3 +114,8 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
 
 /// <summary>用户资料</summary>
 public record UserProfileDto(String Nickname, String Account, String? Avatar);
+
+/// <summary>系统公开配置。前端初始化时无需登录即可拉取</summary>
+/// <param name="SiteTitle">站点标题，显示在浏览器标签和 /chat 页面</param>
+/// <param name="SuggestedQuestions">欢迎页推荐问题列表</param>
+public record SystemConfigDto(String SiteTitle, String[] SuggestedQuestions);

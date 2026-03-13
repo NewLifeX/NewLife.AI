@@ -7,7 +7,7 @@ import { SharePage } from '@/pages/SharePage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
-import { fetchUserProfile } from '@/lib/api'
+import { fetchUserProfile, fetchSystemConfig } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
 import { ToastContainer } from '@/components/common/Toast'
 
@@ -50,6 +50,7 @@ function ChatApp() {
   const [userName, setUserName] = useState<string | undefined>(undefined)
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
   const [appReady, setAppReady] = useState(false)
+  const [siteTitle, setSiteTitle] = useState('智能助手')
 
   const handleNewChat = useCallback(() => {
     newChat()
@@ -63,6 +64,9 @@ function ChatApp() {
       loadSettingsFromServer(),
       fetchUserProfile()
         .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
+        .catch(() => {}),
+      fetchSystemConfig()
+        .then((cfg) => { setSiteTitle(cfg.siteTitle); document.title = cfg.siteTitle })
         .catch(() => {}),
     ]).finally(() => setAppReady(true))
 
@@ -152,7 +156,7 @@ function ChatApp() {
         }
       >
         {isWelcome ? (
-          <WelcomePage onSend={sendMessage} />
+          <WelcomePage onSend={sendMessage} siteTitle={siteTitle} />
         ) : (
           <ChatPage
             messages={messages}
