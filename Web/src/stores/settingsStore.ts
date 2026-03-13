@@ -7,6 +7,7 @@ import { fetchUserSettings, saveUserSettings } from '@/lib/api'
 interface SettingsState extends UserSettings {
   _loaded: boolean
   loadFromServer: () => Promise<void>
+  reloadFromServer: () => Promise<void>
   update: (partial: Partial<UserSettings>) => void
   reset: () => void
 }
@@ -66,6 +67,16 @@ export const useSettingsStore = create<SettingsState>()(
           applyFontSize(get().fontSize)
           set({ _loaded: true })
         }
+      },
+
+      reloadFromServer: async () => {
+        try {
+          const remote = await fetchUserSettings()
+          if (remote.language) i18n.changeLanguage(remote.language)
+          applyTheme(remote.theme)
+          applyFontSize(remote.fontSize)
+          set({ ...remote, _loaded: true })
+        } catch { /* 静默，保留本地缓存值 */ }
       },
 
       update: (partial) => {

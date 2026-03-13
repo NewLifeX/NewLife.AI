@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { Badge } from '@/components/atoms/Badge'
@@ -19,12 +18,7 @@ interface NavLinksProps {
 }
 
 function useDefaultItems(): NavItem[] {
-  const { t } = useTranslation()
-  return [
-    { id: 'creation', icon: 'auto_awesome', label: t('sidebar.aiCreation'), badge: 'Seedance 2.0' },
-    { id: 'drive', icon: 'folder_open', label: t('sidebar.cloudDrive') },
-    { id: 'more', icon: 'grid_view', label: t('sidebar.more'), hasArrow: true },
-  ]
+  return []
 }
 
 export function NavLinks({

@@ -44,6 +44,8 @@ function ChatApp() {
   } = useChatStore()
 
   const settings = useSettingsStore()
+  const loadSettingsFromServer = settings.loadFromServer
+  const reloadSettingsFromServer = settings.reloadFromServer
   const { settingsOpen, openSettings, closeSettings, sidebarCollapsed, toggleSidebar } = useUIStore()
   const [userName, setUserName] = useState<string | undefined>(undefined)
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
@@ -58,7 +60,7 @@ function ChatApp() {
     Promise.all([
       loadConversations(),
       loadModels(),
-      settings.loadFromServer(),
+      loadSettingsFromServer(),
       fetchUserProfile()
         .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
         .catch(() => {}),
@@ -73,7 +75,12 @@ function ChatApp() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleNewChat, loadConversations, loadModels, settings])
+  }, [handleNewChat, loadConversations, loadModels, loadSettingsFromServer])
+
+  // 打开设置页时重新拉取最新设置
+  useEffect(() => {
+    if (settingsOpen) reloadSettingsFromServer()
+  }, [settingsOpen, reloadSettingsFromServer])
 
   useEffect(() => {
     const urlId = conversationId || undefined
