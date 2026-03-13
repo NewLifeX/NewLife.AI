@@ -70,7 +70,6 @@ public partial class ModelConfig : Entity<ModelConfig>
 
         // 获取已有编码集合，用于跳过已存在的配置
         var list = FindAll();
-        var exists = list.ToDictionary(e => e.Code, StringComparer.OrdinalIgnoreCase);
 
         var count = 0;
         var sort = list.Count > 0 ? list.Max(e => e.Sort) + 1 : 1;
