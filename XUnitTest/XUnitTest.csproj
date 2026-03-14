@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputPath>..\Bin\UnitTest</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -22,6 +23,10 @@
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
     <ProjectReference Include="..\NewLife.ChatAI\NewLife.ChatAI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="config\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

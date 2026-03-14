@@ -18,7 +18,7 @@ public class ChatSetting : Config<ChatSetting>
     /// <summary>推荐问题。新会话页展示的推荐问题，多个用竖线分隔</summary>
     [Category("主界面")]
     [Description("推荐问题。新会话页展示的推荐问题，多个用竖线分隔")]
-    public String SuggestedQuestions { get; set; } = "帮我写一封邮件|解释量子计算|用Python写一个排序算法|帮我翻译一段英文";
+    public String SuggestedQuestions { get; set; } = "帮我写一封邮件|解释量子计算|用C#写一个排序算法|帮我翻译一段英文";
     #endregion
 
     #region 对话默认

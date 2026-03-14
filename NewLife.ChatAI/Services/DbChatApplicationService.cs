@@ -52,14 +52,16 @@ public class ChatApplicationService
     #region 会话管理
     /// <summary>新建会话</summary>
     /// <param name="request">新建会话请求</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, CancellationToken cancellationToken)
+    public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, Int32 userId, CancellationToken cancellationToken)
     {
         var title = String.IsNullOrWhiteSpace(request.Title) ? "新建对话" : request.Title.Trim();
 
         var entity = new Conversation
         {
+            UserId = userId,
             Title = title,
             ModelId = request.ModelId,
             LastMessageTime = DateTime.Now,
@@ -608,10 +610,18 @@ public class ChatApplicationService
         userMsg.Insert();
 
         // 解析模型配置（在插入 assistant 消息之前，避免模型不可用时留下空消息残留）
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
+        // 优先使用会话绑定的模型，其次使用请求携带的模型（前端当前选择）
+        var modelId = conversation.ModelId;
+        if (modelId <= 0 && request.ModelId > 0)
+        {
+            modelId = request.ModelId;
+            conversation.ModelId = modelId;
+            conversation.Update();
+        }
+        var modelConfig = _gatewayService.ResolveModel(modelId);
         if (modelConfig == null)
         {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelId}' 不可用，请在模型选择器中选择一个可用模型");
             yield break;
         }
 

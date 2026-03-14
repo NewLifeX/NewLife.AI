@@ -11,7 +11,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
     [HttpPost]
     public async Task<ActionResult<ConversationSummaryDto>> CreateAsync([FromBody] CreateConversationRequest request, CancellationToken cancellationToken)
     {
-        var result = await chatService.CreateConversationAsync(request, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.CreateConversationAsync(request, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 

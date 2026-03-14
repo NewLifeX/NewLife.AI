@@ -193,11 +193,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const state = get()
     let convId = state.activeConversationId
     const attachmentIds = state.pendingAttachments.map((a) => a.id)
+    const defaultModel = useSettingsStore.getState().defaultModel
 
     // 如果没有当前会话，先创建
     if (convId == null) {
       try {
-        const defaultModel = useSettingsStore.getState().defaultModel
         const conv = await createConversation(content.slice(0, 30), defaultModel || undefined)
         convId = conv.id
         set((s) => ({
@@ -208,6 +208,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return
       }
     }
+
+    // 获取当前会话绑定的模型，若无则使用默认模型
+    const activeConv = get().conversations.find((c) => c.id === convId)
+    const currentModelId = activeConv?.modelId || defaultModel || 0
 
     // 乐观添加用户消息
     const userMsg: Message = {
@@ -370,7 +374,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break
           }
         }
-      }, abortController.signal, attachmentIds.length ? attachmentIds : undefined, skillCode)
+      }, abortController.signal, attachmentIds.length ? attachmentIds : undefined, skillCode, currentModelId || undefined)
     } catch {
       // 网络错误或中断
       set((s) => ({
@@ -384,8 +388,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }))
     }
 
-    // 刷新会话列表
-    get().loadConversations()
+    // 仅在 message_done 未触发刷新时才补刷一次（如中断、异常等场景）
+    if (!assistantMsgId) get().loadConversations()
   },
 
   stopGenerating: () => {

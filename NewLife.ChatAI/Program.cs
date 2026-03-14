@@ -19,6 +19,8 @@ services.AddControllersWithViews()
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        // Snowflake ID（Int64）超出 JavaScript Number.MAX_SAFE_INTEGER，序列化为字符串避免精度丢失
+        options.JsonSerializerOptions.Converters.Add(new NewLife.ChatAI.Services.LongJsonConverter());
     });
 services.AddCube();
 

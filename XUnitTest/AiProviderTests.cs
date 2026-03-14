@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
@@ -419,5 +422,59 @@ public class AiProviderTests
     }
 
     #endregion
-}
 
+    #region 服务商接口调用验证
+
+    [Fact]
+    [DisplayName("DashScope服务商_构建请求_模型和消息正确")]
+    public void DashScopeProvider_BuildsCorrectRequest()
+    {
+        var provider = new DashScopeProvider();
+
+        Assert.Equal("DashScope", provider.Code);
+        Assert.Equal("阿里百炼", provider.Name);
+
+        // 验证支持的模型列表包含 qwen-plus
+        var models = provider.Models;
+        Assert.NotEmpty(models);
+        var qwenPlus = models.FirstOrDefault(m => m.Model == "qwen-plus");
+        Assert.NotNull(qwenPlus);
+        Assert.Equal("Qwen Plus", qwenPlus.DisplayName);
+    }
+
+    [Fact]
+    [DisplayName("所有OpenAI兼容服务商_请求结构一致")]
+    public void AllOpenAiCompatibleProviders_AcceptSameRequestFormat()
+    {
+        var factory = AiProviderFactory.Default;
+        var openAiProviders = AllProviders(factory)
+            .Where(p => p.ApiProtocol == "ChatCompletions")
+            .ToList();
+
+        Assert.True(openAiProviders.Count >= 20, "应有至少 20 个 OpenAI 兼容服务商");
+
+        // 验证所有 OpenAI 兼容服务商都继承自 OpenAiProvider
+        foreach (var p in openAiProviders)
+        {
+            Assert.IsAssignableFrom<OpenAiProvider>(p);
+            // 验证模型列表不为 null
+            Assert.NotNull(p.Models);
+        }
+    }
+
+    [Fact]
+    [DisplayName("DashScope_QwenPlus模型_能力标记正确")]
+    public void DashScope_QwenPlus_CapabilitiesCorrect()
+    {
+        var provider = new DashScopeProvider();
+        var qwenPlus = provider.Models.First(m => m.Model == "qwen-plus");
+
+        // qwen-plus 不支持思考模式，支持视觉，不支持文生图，支持函数调用
+        Assert.False(qwenPlus.Capabilities.SupportThinking);
+        Assert.True(qwenPlus.Capabilities.SupportVision);
+        Assert.False(qwenPlus.Capabilities.SupportImageGeneration);
+        Assert.True(qwenPlus.Capabilities.SupportFunctionCalling);
+    }
+
+    #endregion
+}

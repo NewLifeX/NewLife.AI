@@ -14,6 +14,7 @@ public class MessagesController(ChatApplicationService chatService) : ChatApiCon
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new Services.LongJsonConverter() },
     };
 
     /// <summary>发送消息并以 SSE 流式返回。支持 message_start/thinking_delta/thinking_done/content_delta/tool_call_start/tool_call_done/tool_call_error/message_done/error 事件</summary>

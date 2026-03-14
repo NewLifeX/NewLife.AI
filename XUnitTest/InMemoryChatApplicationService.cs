@@ -28,6 +28,9 @@ public class InMemoryChatApplicationService
     private Int64 _messageSeed = 5000;
 
     public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, CancellationToken cancellationToken)
+        => CreateConversationAsync(request, 0, cancellationToken);
+
+    public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, Int32 userId, CancellationToken cancellationToken)
     {
         var id = Interlocked.Increment(ref _conversationSeed);
         var modelId = request.ModelId > 0 ? request.ModelId : 0;

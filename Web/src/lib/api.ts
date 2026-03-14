@@ -270,6 +270,7 @@ export async function streamMessage(
   signal?: AbortSignal,
   attachmentIds?: string[],
   skillCode?: string,
+  modelId?: number,
 ): Promise<void> {
   await fetchSSE(
     `${BASE_URL}/api/conversations/${conversationId}/messages`,
@@ -279,6 +280,7 @@ export async function streamMessage(
       body: JSON.stringify({
         content,
         thinkingMode,
+        modelId: modelId || undefined,
         attachmentIds: attachmentIds?.length ? attachmentIds : undefined,
         skillCode: skillCode || undefined,
       }),
