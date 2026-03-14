@@ -18,7 +18,7 @@ namespace NewLife.AI.Providers;
 /// <item>支持交错思考（extended thinking）</item>
 /// </list>
 /// </remarks>
-public class AnthropicProvider : IAiProvider
+public class AnthropicProvider : IAiProvider, IAiChatProtocol
 {
     #region 属性
     /// <summary>服务商编码</summary>
@@ -57,6 +57,11 @@ public class AnthropicProvider : IAiProvider
     #endregion
 
     #region 方法
+    /// <summary>创建已绑定连接参数的对话客户端</summary>
+    /// <param name="options">连接选项</param>
+    /// <returns>已配置的 IChatClient 实例</returns>
+    public virtual IChatClient CreateClient(AiProviderOptions options) => new OpenAiChatClient(this, options);
+
     /// <summary>非流式对话</summary>
     /// <param name="request">对话请求</param>
     /// <param name="options">连接选项</param>

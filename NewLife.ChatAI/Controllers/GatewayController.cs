@@ -160,7 +160,8 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
                 ],
             };
             var options = GatewayService.BuildOptions(config);
-            var response = await provider.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
+            using var imageClient = provider.CreateClient(options);
+            var response = await imageClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             return Ok(new
             {
@@ -253,7 +254,8 @@ public class GatewayController(GatewayService gatewayService) : ControllerBase
                 ],
             };
             var options = GatewayService.BuildOptions(config);
-            var response = await provider.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
+            using var editClient = provider.CreateClient(options);
+            var response = await editClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             return Ok(new
             {

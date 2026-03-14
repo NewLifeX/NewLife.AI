@@ -119,12 +119,13 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
 
         var options = BuildOptions(config);
 
+        using var client = provider.CreateClient(options);
         ChatCompletionResponse? response = null;
         for (var i = 0; i <= MaxRetryCount; i++)
         {
             try
             {
-                response = await provider.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
+                response = await client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
                 break;
             }
             catch (HttpRequestException ex) when (Is429(ex) && i < MaxRetryCount)
@@ -161,12 +162,13 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
 
         var options = BuildOptions(config);
 
+        using var streamClient = provider.CreateClient(options);
         IAsyncEnumerable<ChatCompletionResponse>? stream = null;
         for (var i = 0; i <= MaxRetryCount; i++)
         {
             try
             {
-                stream = provider.ChatStreamAsync(request, options, cancellationToken);
+                stream = streamClient.CompleteStreamingAsync(request, cancellationToken);
                 break;
             }
             catch (HttpRequestException ex) when (Is429(ex) && i < MaxRetryCount)

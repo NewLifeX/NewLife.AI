@@ -63,6 +63,13 @@ public class ChatMessage
 
     /// <summary>思考内容。部分模型返回的推理链路（reasoning_content）</summary>
     public String? ReasoningContent { get; set; }
+
+    /// <summary>类型化内容片段列表（MEAI 兼容）。非空时优先于 <see cref="Content"/> 使用，支持多模态消息</summary>
+    /// <remarks>
+    /// 与 <see cref="Content"/>（Object?）的关系：两者并存以保持向后兼容。
+    /// 新代码建议使用 Contents 以获得更强的类型安全性；旧代码无需修改。
+    /// </remarks>
+    public IList<AIContent>? Contents { get; set; }
     #endregion
 }
 

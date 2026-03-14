@@ -91,6 +91,7 @@ public class ToolCallService
             }
 
             var options = GatewayService.BuildOptions(modelConfig);
+            using var toolClient = provider.CreateClient(options);
             var contentBuilder = new System.Text.StringBuilder();
             var thinkingBuilder = new System.Text.StringBuilder();
             var toolCallCollector = new List<ToolCall>();
@@ -98,7 +99,7 @@ public class ToolCallService
             ChatUsage? usage = null;
             Int64 thinkingStart = 0;
 
-            await foreach (var chunk in provider.ChatStreamAsync(request, options, cancellationToken).ConfigureAwait(false))
+            await foreach (var chunk in toolClient.CompleteStreamingAsync(request, cancellationToken).ConfigureAwait(false))
             {
                 if (chunk.Usage != null) usage = chunk.Usage;
 

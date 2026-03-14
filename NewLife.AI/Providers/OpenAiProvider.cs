@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Embedding;
 using NewLife.AI.Models;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -11,8 +12,9 @@ namespace NewLife.AI.Providers;
 /// <remarks>
 /// 大部分国内外服务商均兼容 OpenAI Chat Completions 协议，
 /// 只需继承此类并设置 Name 和 DefaultEndpoint 即可完成适配。
+/// 同时实现 <see cref="IEmbeddingProvider"/> ，支持创建嵌入向量客户端。
 /// </remarks>
-public class OpenAiProvider : IAiProvider
+public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
 {
     #region 属性
     /// <summary>服务商编码</summary>
@@ -46,6 +48,9 @@ public class OpenAiProvider : IAiProvider
 
     /// <summary>日志</summary>
     public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>追踪器</summary>
+    public ITracer? Tracer { get; set; }
 
     private static readonly HttpClient _httpClient = CreateHttpClient();
     #endregion
@@ -93,6 +98,16 @@ public class OpenAiProvider : IAiProvider
 
         return ParseResponse(responseText);
     }
+
+    /// <summary>创建已绑定连接参数的对话客户端（MEAI 兼容入口）</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <returns>已配置的 IChatClient 实例</returns>
+    public virtual IChatClient CreateClient(AiProviderOptions options) => new OpenAiChatClient(this, options);
+
+    /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <returns>已配置的 IEmbeddingClient 实例</returns>
+    public virtual IEmbeddingClient CreateEmbeddingClient(AiProviderOptions options) => new OpenAiEmbeddingClient(this, options);
 
     /// <summary>流式对话</summary>
     /// <param name="request">对话请求</param>
@@ -169,7 +184,13 @@ public class OpenAiProvider : IAiProvider
         foreach (var msg in request.Messages)
         {
             var m = new Dictionary<String, Object> { ["role"] = msg.Role };
-            if (msg.Content != null) m["content"] = msg.Content;
+
+            // 类型化内容（Contents）优先于原始 Content 字段
+            if (msg.Contents != null && msg.Contents.Count > 0)
+                m["content"] = BuildContent(msg.Contents);
+            else if (msg.Content != null)
+                m["content"] = msg.Content;
+
             if (msg.Name != null) m["name"] = msg.Name;
             if (msg.ToolCallId != null) m["tool_call_id"] = msg.ToolCallId;
 
@@ -349,6 +370,38 @@ public class OpenAiProvider : IAiProvider
 
         if (!String.IsNullOrEmpty(options.Organization))
             request.Headers.Add("OpenAI-Organization", options.Organization);
+    }
+
+    /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段将</summary>
+    /// <param name="contents">AIContent 列表</param>
+    /// <returns>字符串（单一文本）或内容数组（多模态）</returns>
+    private static Object BuildContent(IList<AIContent> contents)
+    {
+        // 单纯文本优化：单个 TextContent 直接返回字符串，减少层套
+        if (contents.Count == 1 && contents[0] is TextContent singleText)
+            return singleText.Text;
+
+        var parts = new List<Object>(contents.Count);
+        foreach (var item in contents)
+        {
+            if (item is TextContent text)
+            {
+                parts.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = text.Text });
+            }
+            else if (item is ImageContent img)
+            {
+                String url;
+                if (img.Data != null && img.Data.Length > 0)
+                    url = $"data:{img.MediaType ?? "image/jpeg"};base64,{Convert.ToBase64String(img.Data)}";
+                else
+                    url = img.Uri ?? "";
+
+                var imgDic = new Dictionary<String, Object> { ["url"] = url };
+                if (img.Detail != null) imgDic["detail"] = img.Detail;
+                parts.Add(new Dictionary<String, Object> { ["type"] = "image_url", ["image_url"] = imgDic });
+            }
+        }
+        return parts;
     }
     #endregion
 }

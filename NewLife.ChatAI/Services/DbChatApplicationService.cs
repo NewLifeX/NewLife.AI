@@ -263,7 +263,8 @@ public class ChatApplicationService
                 Messages = contextMessages,
             };
             var options = GatewayService.BuildOptions(modelConfig);
-            var response = await provider.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
+            using var chatClient = provider.CreateClient(options);
+            var response = await chatClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var newContent = response.Choices?.FirstOrDefault()?.Message?.Content as String ?? String.Empty;
             var reasoning = response.Choices?.FirstOrDefault()?.Message?.ReasoningContent;
@@ -852,11 +853,12 @@ public class ChatApplicationService
         };
         var options = GatewayService.BuildOptions(modelConfig);
 
+        using var streamClient = provider.CreateClient(options);
         var thinkingBuilder = new StringBuilder();
         ChatUsage? lastUsage = null;
         Int64 thinkingStart = 0;
 
-        await foreach (var chunk in provider.ChatStreamAsync(aiRequest, options, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in streamClient.CompleteStreamingAsync(aiRequest, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
 
@@ -968,7 +970,8 @@ public class ChatApplicationService
                         MaxTokens = 30,
                     };
                     var options = GatewayService.BuildOptions(modelConfig);
-                    var response = await provider.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
+                    using var titleClient = provider.CreateClient(options);
+                    var response = await titleClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
                     var title = response.Choices?.FirstOrDefault()?.Message?.Content as String;
                     if (!String.IsNullOrWhiteSpace(title))

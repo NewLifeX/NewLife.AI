@@ -2,12 +2,13 @@
 
 namespace NewLife.AI.Providers;
 
-/// <summary>AI 服务商统一接口。所有模型服务商均需实现此接口</summary>
+/// <summary>AI 服务商统一接口。描述服务商身份与能力，并作为创建对话客户端的工厂</summary>
 /// <remarks>
 /// 接口设计原则：
 /// <list type="bullet">
+/// <item>纯工厂 + 描述者职责：仅暴露服务商元数据与 <see cref="CreateClient"/> 工厂方法</item>
+/// <item>对话执行委托给 <see cref="IChatClient"/>，对标 MEAI 的 IChatClient 设计</item>
 /// <item>使用服务商名称（字符串）而非枚举标识，方便扩展自定义服务商</item>
-/// <item>同时支持非流式和流式两种调用模式</item>
 /// <item>接口不依赖数据库，可在任意 .NET 项目中独立使用</item>
 /// </list>
 /// </remarks>
@@ -31,19 +32,14 @@ public interface IAiProvider
     /// <summary>主流模型列表。该服务商下各主流模型及其能力描述，供用户选择配置时参考</summary>
     AiModelInfo[] Models { get; }
 
-    /// <summary>非流式对话。发送请求并一次性返回完整响应</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="options">服务商连接选项（Endpoint、ApiKey 等）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>完整的对话响应</returns>
-    Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
-
-    /// <summary>流式对话。逐块返回生成内容</summary>
-    /// <param name="request">对话请求（自动设置 Stream=true）</param>
-    /// <param name="options">服务商连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>流式响应块的异步枚举</returns>
-    IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
+    /// <summary>创建已绑定连接参数的对话客户端（MEAI 兼容入口）</summary>
+    /// <remarks>
+    /// 返回的 <see cref="IChatClient"/> 已将 Endpoint 和 ApiKey 绑定，无需每次调用传入 options。
+    /// 可与 <see cref="ChatClientBuilder"/> 组合，通过中间件管道添加日志、追踪、用量统计等横切行为。
+    /// </remarks>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <returns>已配置的 IChatClient 实例</returns>
+    IChatClient CreateClient(AiProviderOptions options);
 }
 
 /// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
