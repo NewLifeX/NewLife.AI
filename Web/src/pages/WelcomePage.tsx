@@ -45,7 +45,7 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
   return (
     <>
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0">
-        <div className="max-w-3xl mx-auto w-full flex flex-col items-center justify-center h-full">
+        <div className="max-w-4xl mx-auto w-full flex flex-col items-center justify-center h-full">
           <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mb-6">
               <span className="text-white text-2xl font-bold">N</span>

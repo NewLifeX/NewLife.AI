@@ -56,6 +56,11 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
+
+  @keyframes streamFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }
 
 /* Tailwind v4 兼容：初始化 translate/scale/rotate CSS 变量默认值 */
@@ -113,12 +118,14 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
 /* Typing cursor */
 .typing-cursor {
   display: inline-block;
-  width: 8px;
-  height: 16px;
-  background-color: var(--color-primary);
-  vertical-align: middle;
-  animation: blink 1s step-end infinite;
+  width: 2px;
+  height: 1.1em;
+  background-color: currentColor;
+  vertical-align: text-bottom;
+  opacity: 0.6;
+  animation: blink 0.8s ease-in-out infinite;
   border-radius: 1px;
+  margin-left: 1px;
 }
 
 /* Terminal window font */
@@ -129,6 +136,20 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
 /* Chat font size (controlled by settings) */
 :root {
   --chat-font-size: 16px;
+}
+
+/* Streaming prose: last block element fades in as new paragraphs arrive */
+.streaming-prose > p:last-child,
+.streaming-prose > ul:last-child,
+.streaming-prose > ol:last-child,
+.streaming-prose > blockquote:last-child,
+.streaming-prose > h1:last-child,
+.streaming-prose > h2:last-child,
+.streaming-prose > h3:last-child,
+.streaming-prose > h4:last-child,
+.streaming-prose > pre:last-child,
+.streaming-prose > table:last-child {
+  animation: streamFadeIn 0.4s ease forwards;
 }
 
 /* Prose overrides */

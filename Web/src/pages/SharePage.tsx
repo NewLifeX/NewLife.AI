@@ -52,7 +52,7 @@ export function SharePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icon name="share" className="text-primary" />
             <span className="font-semibold text-gray-900 dark:text-white">{t('sharePage.title')}</span>
@@ -65,7 +65,7 @@ export function SharePage() {
       </header>
 
       {/* Banner */}
-      <div className="max-w-3xl mx-auto px-4 pt-4">
+      <div className="max-w-4xl mx-auto px-4 pt-4">
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg px-4 py-2 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
           <Icon name="info" size="base" />
           {t('sharePage.readOnlyNotice')}
@@ -73,7 +73,7 @@ export function SharePage() {
       </div>
 
       {/* Messages */}
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {data.messages.map((msg) => (
           <div
             key={msg.id}
@@ -115,7 +115,7 @@ export function SharePage() {
       </div>
 
       {/* Footer */}
-      <footer className="max-w-3xl mx-auto px-4 pb-8 text-center text-xs text-gray-400">
+      <footer className="max-w-4xl mx-auto px-4 pb-8 text-center text-xs text-gray-400">
         {t('common.aiDisclaimer')}
       </footer>
     </div>

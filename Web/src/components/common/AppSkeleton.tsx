@@ -32,7 +32,7 @@ export function AppSkeleton() {
           <Bone className="h-10 w-24 rounded-full" />
           <Bone className="h-10 w-24 rounded-full" />
         </div>
-        <div className="mt-auto w-full max-w-3xl">
+        <div className="mt-auto w-full max-w-4xl">
           <Bone className="h-14 w-full rounded-2xl" />
         </div>
       </div>

@@ -45,7 +45,19 @@ function MermaidBlock({ code }: { code: string }) {
 
 interface MarkdownRendererProps {
   content: string
+  isStreaming?: boolean
   className?: string
+}
+
+/**
+ * 将 LLM 常见的 LaTeX 分隔符统一转换为 remark-math 标准格式
+ * \[...\]  →  $$...$$  (块级公式)
+ * \(...\)  →  $...$    (行内公式)
+ */
+function preprocessMath(content: string): string {
+  let result = content.replace(/\\\[([\s\S]*?)\\\]/g, (_match, math) => `$$${math}$$`)
+  result = result.replace(/\\\(([\s\S]*?)\\\)/g, (_match, math) => `$${math}$`)
+  return result
 }
 
 function CopyCodeButton({ code }: { code: string }) {
@@ -64,7 +76,7 @@ function CopyCodeButton({ code }: { code: string }) {
   )
 }
 
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, isStreaming = false, className }: MarkdownRendererProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
@@ -80,6 +92,8 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     return urls
   }, [content])
 
+  const processedContent = useMemo(() => preprocessMath(content), [content])
+
   const handleImageClick = useCallback(
     (src: string) => {
       const idx = images.indexOf(src)
@@ -90,10 +104,10 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   )
 
   return (
-    <div className={cn('prose prose-sm dark:prose-invert max-w-none break-words', className)}>
+    <div className={cn('prose dark:prose-invert max-w-none break-words', isStreaming && 'streaming-prose', className)}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeHighlight, rehypeKatex]}
+        remarkPlugins={[remarkMath, remarkGfm]}
+        rehypePlugins={[rehypeHighlight, [rehypeKatex, { throwOnError: false, strict: false }]]}
         components={{
           pre({ children, ...props }) {
             const codeEl = Array.isArray(children)
@@ -188,7 +202,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           },
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
       <Lightbox
         key={`${lightboxOpen}-${lightboxIndex}`}

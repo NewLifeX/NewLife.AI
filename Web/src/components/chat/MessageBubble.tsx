@@ -38,7 +38,6 @@ interface MessageBubbleProps {
 export function MessageBubble({
   role,
   content,
-  userAvatar,
   isStreaming = false,
   thinkingBlock,
   toolCalls,
@@ -87,11 +86,8 @@ export function MessageBubble({
 
   if (role === 'user') {
     return (
-      <div className={cn('flex flex-row-reverse items-start mb-8 group', className)} {...longPressHandlers}>
-        <div className="flex-shrink-0 ml-3">
-          <Avatar type="user" src={userAvatar} size="md" />
-        </div>
-        <div className="max-w-[85%] relative">
+      <div className={cn('flex flex-col items-end mb-6 group', className)} {...longPressHandlers}>
+        <div className="max-w-[75%] relative">
           {isEditing ? (
             <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
               <textarea
@@ -131,7 +127,7 @@ export function MessageBubble({
                 {content}
               </div>
               {onEdit && (
-                <div className="absolute -left-12 top-2 hidden group-hover:flex space-x-1">
+                <div className="absolute -left-10 top-2 hidden group-hover:flex space-x-1">
                   <button
                     onClick={onEdit}
                     className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
@@ -156,17 +152,17 @@ export function MessageBubble({
   }
 
   return (
-    <div className={cn('flex items-start mb-6 group w-full', className)} {...longPressHandlers}>
-      <div className="flex-shrink-0 mr-3">
-        <Avatar type="ai" size="md" />
+    <div className={cn('mb-8 group w-full', className)} {...longPressHandlers}>
+      <div className="flex items-center gap-2 mb-3">
+        <Avatar type="ai" size="sm" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="w-full">
         <div
           className={cn(
-            'rounded-2xl rounded-tl-sm px-6 py-5 leading-7 shadow-soft',
+            'leading-7',
             isError
-              ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400'
-              : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 text-gray-900 dark:text-gray-100',
+              ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-4 py-3 text-red-700 dark:text-red-400'
+              : 'text-gray-900 dark:text-gray-100',
           )}
           style={{ fontSize: 'var(--chat-font-size, 16px)' }}
         >

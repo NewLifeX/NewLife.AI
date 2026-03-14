@@ -203,7 +203,7 @@ export function ChatPage({
               role={msg.role}
               content={
                 msg.role === 'assistant' && typeof msg.content === 'string'
-                  ? <MarkdownRenderer content={msg.content} />
+                  ? <MarkdownRenderer content={msg.content} isStreaming={msg.status === 'streaming'} />
                   : msg.content
               }
               isStreaming={msg.status === 'streaming'}
