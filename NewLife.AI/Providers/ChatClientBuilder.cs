@@ -1,3 +1,4 @@
+using NewLife.AI.Filters;
 using NewLife.AI.Models;
 using NewLife.Log;
 
@@ -97,4 +98,11 @@ public static class ChatClientBuilderExtensions
     /// <returns>构建器（支持链式调用）</returns>
     public static ChatClientBuilder UseUsageTracking(this ChatClientBuilder builder, Action<ChatUsage, String?> onUsage)
         => builder.Use(inner => new UsageTrackingChatClient(inner, onUsage));
+
+    /// <summary>添加过滤器链中间件。按注册顺序在 CompleteAsync 前后执行 IChatFilter 列表</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="filters">过滤器列表（顺序执行）</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseFilters(this ChatClientBuilder builder, params IChatFilter[] filters)
+        => builder.Use(inner => new FilteredChatClient(inner, filters));
 }
