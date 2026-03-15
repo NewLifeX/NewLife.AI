@@ -171,12 +171,6 @@ export function ChatInput({
   return (
     <div className={cn('w-full', className)}>
       <div className="w-full max-w-3xl mx-auto relative group">
-        {showThinkingToggle && onThinkingModeChange && (
-          <div className="mb-2 z-30">
-            <ThinkingModeToggle mode={thinkingMode} onChange={onThinkingModeChange} />
-          </div>
-        )}
-
         <SkillPopover
           open={showSkillPopover}
           onSelect={handleSkillSelect}
@@ -229,7 +223,10 @@ export function ChatInput({
                 else setActiveSkillCode((prev) => (prev === id ? undefined : id))
               }}
             />
-            <div className="flex items-center space-x-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {showThinkingToggle && onThinkingModeChange && (
+                <ThinkingModeToggle mode={thinkingMode} onChange={onThinkingModeChange} />
+              )}
               {!isGenerating && (
                 <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} />
               )}
@@ -237,7 +234,7 @@ export function ChatInput({
                 onClick={isGenerating ? onStop : handleSend}
                 disabled={!isGenerating && (!value.trim() || isOverLimit)}
                 className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 flex-shrink-0',
                   isGenerating
                     ? 'bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900'
                     : value.trim() && !isOverLimit

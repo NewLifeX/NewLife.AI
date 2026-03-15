@@ -22,7 +22,8 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
     setError(null)
     try {
       const result = await createShareLink(conversationId)
-      const fullUrl = `${window.location.origin}/share/${result.url}`
+      // result.url 已包含 /share/{token}，直接拼接 origin
+      const fullUrl = `${window.location.origin}${result.url}`
       setShareUrl(fullUrl)
     } catch {
       setError(t('share.createFailed'))

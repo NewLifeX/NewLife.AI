@@ -107,6 +107,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     }
     throw new Error(`API ${res.status}: ${res.statusText}`)
   }
+  // 204 No Content 或 202 Accepted 可能没有响应体，直接跳过 JSON 解析
+  const contentType = res.headers.get('Content-Type') ?? ''
+  if (res.status === 204 || (!contentType.includes('json') && !contentType.includes('text/plain'))) {
+    return undefined as T
+  }
   return res.json() as Promise<T>
 }
 

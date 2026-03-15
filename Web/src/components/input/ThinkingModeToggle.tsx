@@ -45,7 +45,7 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
   }, [open])
 
   return (
-    <div ref={containerRef} className="relative flex flex-col items-start">
+    <div ref={containerRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
         className={cn(
@@ -59,11 +59,11 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
       >
         <Icon name={icon} variant="symbols" size="lg" className="text-blue-500" />
         <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{config.label}</span>
-        <Icon name="keyboard_arrow_down" size="base" className="text-gray-400" />
+        <Icon name={open ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size="base" className="text-gray-400" />
       </button>
 
       {open && (
-        <div className="mt-2 w-56 py-1 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 animate-fade-in">
+        <div className="absolute bottom-full left-0 mb-2 z-50 w-56 py-1 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 animate-fade-in">
           {modes.map((m) => {
             const c = modeConfig[m]
             const active = m === mode
