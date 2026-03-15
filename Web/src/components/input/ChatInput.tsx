@@ -68,6 +68,7 @@ export function ChatInput({
   const [activeSkillCode, setActiveSkillCode] = useState<string | undefined>()
   const [value, setValue] = useState('')
   const [showSkillPopover, setShowSkillPopover] = useState(false)
+  const [atTriggerMode, setAtTriggerMode] = useState(false)
 
   // 从后端加载 SkillBar 技能列表
   useEffect(() => {
@@ -124,14 +125,27 @@ export function ChatInput({
     }
     if (e.key === 'Escape') {
       setShowSkillPopover(false)
+      setAtTriggerMode(false)
     }
   }
 
   const handleChange = (v: string) => {
     setValue(v)
-    if (v === '/' && showSkillPopover === false) {
+    // @ 技能补全触发逻辑
+    const atMatch = v.match(/@([\w\u4e00-\u9fff]*)$/)
+    if (atMatch) {
+      setAtTriggerMode(true)
+      if (allSkills.length === 0) {
+        fetchAllSkills().then(setAllSkills).catch(() => {})
+      }
+      setShowSkillPopover(true)
+      return
+    }
+    // / 触发逻辑
+    if (v === '/' && !showSkillPopover) {
       setShowSkillPopover(true)
     } else if (!v.startsWith('/')) {
+      if (atTriggerMode) setAtTriggerMode(false)
       setShowSkillPopover(false)
     }
   }
@@ -140,10 +154,18 @@ export function ChatInput({
     setShowSkillPopover(false)
     if (id === 'attach' || id === 'attachment') {
       onAttachmentAdd?.()
-    } else {
-      // 从 SkillPopover 选择技能时激活
-      setActiveSkillCode((prev) => (prev === id ? undefined : id))
+      return
     }
+    if (atTriggerMode) {
+      // @ 模式：将末尾的 @xxx 替换为 @技能名 + 空格
+      setAtTriggerMode(false)
+      const skillInfo = allSkills.find((s) => s.code === id)
+      const skillName = skillInfo?.name ?? id
+      setValue((prev) => prev.replace(/@[\w\u4e00-\u9fff]*$/, `@${skillName} `))
+      return
+    }
+    // SkillBar 点击或 / 模式：切换激活技能码
+    setActiveSkillCode((prev) => (prev === id ? undefined : id))
   }
 
   // 加载全部技能供 SkillPopover 展示
@@ -201,7 +223,9 @@ export function ChatInput({
 
           <div className="flex items-start">
             {showSkillPopover && (
-              <div className="py-3 px-1 text-base text-primary font-bold">/</div>
+              <div className="py-3 px-1 text-base text-primary font-bold">
+                {atTriggerMode ? '@' : '/'}
+              </div>
             )}
             <Textarea
               value={value}
