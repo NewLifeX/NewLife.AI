@@ -248,6 +248,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
             dic["tools"] = tools;
         }
         if (request.ToolChoice != null) dic["tool_choice"] = request.ToolChoice;
+        if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
 
         return dic.ToJson();
     }

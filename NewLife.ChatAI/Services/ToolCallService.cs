@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using NewLife.AI.ChatAI;
 using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -58,6 +59,7 @@ public class ToolCallService
     public async IAsyncEnumerable<ChatStreamEvent> StreamWithToolsAsync(
         IList<AiChatMessage> messages,
         Entity.ModelConfig modelConfig,
+        ThinkingMode thinkingMode,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var setting = ChatSetting.Current;
@@ -73,6 +75,12 @@ public class ToolCallService
                 Model = modelConfig.Code,
                 Messages = messages,
                 Stream = true,
+                EnableThinking = thinkingMode switch
+                {
+                    ThinkingMode.Think => true,
+                    ThinkingMode.Fast  => false,
+                    _                  => (Boolean?)null,
+                },
             };
 
             // 仅在启用函数调用且有可用工具时传入工具定义

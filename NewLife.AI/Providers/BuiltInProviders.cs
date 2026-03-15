@@ -60,11 +60,15 @@ public class DashScopeProvider : OpenAiProvider
     /// <summary>主流模型列表。阿里百炼/通义千问各主力模型</summary>
     public override AiModelInfo[] Models { get; } =
     [
-        new("qwen-max",     "Qwen Max",        new(true,  true,  false, true)),
-        new("qwen-plus",    "Qwen Plus",       new(false, true,  false, true)),
-        new("qwen-turbo",   "Qwen Turbo",      new(false, false, false, true)),
-        new("qwen-vl-max",  "Qwen-VL Max",     new(false, true,  false, true)),
-        new("wanx-v1",      "通义万象",          new(false, false, true,  false)),
+        new("qwen-max",          "Qwen Max",          new(true,  true,  false, true)),
+        new("qwen-plus",         "Qwen Plus",         new(true,  true,  false, true)),
+        new("qwen-turbo",        "Qwen Turbo",        new(false, false, false, true)),
+        new("qwen-vl-max",       "Qwen-VL Max",       new(false, true,  false, true)),
+        new("qwen3-235b-a22b",   "Qwen3-235B",        new(true,  false, false, true)),
+        new("qwen3-30b-a3b",     "Qwen3-30B",         new(true,  false, false, true)),
+        new("qwen3-8b",          "Qwen3-8B",          new(true,  false, false, true)),
+        new("qwq-32b",           "QwQ-32B",           new(true,  false, false, true)),
+        new("wanx-v1",           "通义万象",            new(false, false, true,  false)),
     ];
 }
 /// <remarks>

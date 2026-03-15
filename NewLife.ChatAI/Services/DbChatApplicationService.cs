@@ -8,6 +8,8 @@ using NewLife.Log;
 using NewLife.Serialization;
 using XCode;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
+using AiFunctionCall = NewLife.AI.Models.FunctionCall;
+using AiToolCall = NewLife.AI.Models.ToolCall;
 using ChatCompletionRequest = NewLife.AI.Models.ChatCompletionRequest;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 using ChatUsage = NewLife.AI.Models.ChatUsage;
@@ -355,7 +357,7 @@ public class ChatApplicationService
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
 
-        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, (ThinkingMode)entity.ThinkingMode, cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
         {
             while (true)
@@ -500,7 +502,7 @@ public class ChatApplicationService
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
 
-        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, (ThinkingMode)entity.ThinkingMode, cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
         {
             while (true)
@@ -666,7 +668,7 @@ public class ChatApplicationService
         ChatUsage? finalUsage = null;
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
-        var toolCallsCollector = new List<Object>();
+        var toolCallsCollector = new List<ToolCallDto>();
 
         var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
@@ -710,31 +712,30 @@ public class ChatApplicationService
                         break;
                     case "tool_call_start":
                         // 收集工具调用信息用于持久化
-                        toolCallsCollector.Add(new { id = ev.ToolCallId, name = ev.Name, status = 0, arguments = ev.Arguments });
+                        toolCallsCollector.Add(new ToolCallDto(ev.ToolCallId ?? String.Empty, ev.Name ?? String.Empty, ToolCallStatus.Calling, ev.Arguments));
                         yield return ev;
                         break;
                     case "tool_call_done":
-                        // 更新对应的工具调用状态
+                        // 更新对应工具调用状态，保留原 name 和 arguments
                         for (var i = toolCallsCollector.Count - 1; i >= 0; i--)
                         {
-                            var tc = toolCallsCollector[i];
-                            var tcId = tc.GetType().GetProperty("id")?.GetValue(tc) as String;
-                            if (tcId == ev.ToolCallId)
+                            if (toolCallsCollector[i].Id == ev.ToolCallId)
                             {
-                                toolCallsCollector[i] = new { id = ev.ToolCallId, name = tcId, status = 1, arguments = (String?)null, result = ev.Result };
+                                var orig = toolCallsCollector[i];
+                                toolCallsCollector[i] = new ToolCallDto(orig.Id, orig.Name, ToolCallStatus.Done, orig.Arguments, ev.Result);
                                 break;
                             }
                         }
                         yield return ev;
                         break;
                     case "tool_call_error":
+                        // 更新对应工具调用状态为错误，保留原 name 和 arguments
                         for (var i = toolCallsCollector.Count - 1; i >= 0; i--)
                         {
-                            var tc = toolCallsCollector[i];
-                            var tcId = tc.GetType().GetProperty("id")?.GetValue(tc) as String;
-                            if (tcId == ev.ToolCallId)
+                            if (toolCallsCollector[i].Id == ev.ToolCallId)
                             {
-                                toolCallsCollector[i] = new { id = ev.ToolCallId, name = tcId, status = 2, arguments = (String?)null, result = ev.Error };
+                                var orig = toolCallsCollector[i];
+                                toolCallsCollector[i] = new ToolCallDto(orig.Id, orig.Name, ToolCallStatus.Error, orig.Arguments, ev.Error);
                                 break;
                             }
                         }
@@ -816,16 +817,17 @@ public class ChatApplicationService
     private IAsyncEnumerable<ChatStreamEvent> StreamFromProviderAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
+        ThinkingMode thinkingMode,
         CancellationToken cancellationToken)
     {
         var setting = ChatSetting.Current;
 
         // 当启用函数调用/MCP 且 ToolCallService 可用时，走工具编排流程
         if (_toolCallService != null && (setting.EnableFunctionCalling || setting.EnableMcp))
-            return _toolCallService.StreamWithToolsAsync(contextMessages, modelConfig, cancellationToken);
+            return _toolCallService.StreamWithToolsAsync(contextMessages, modelConfig, thinkingMode, cancellationToken);
 
         // 否则直接调用服务商
-        return StreamFromProviderDirectAsync(contextMessages, modelConfig, cancellationToken);
+        return StreamFromProviderDirectAsync(contextMessages, modelConfig, thinkingMode, cancellationToken);
     }
 
     /// <summary>直接从服务商流式生成（不经过 ToolCallService）</summary>
@@ -836,6 +838,7 @@ public class ChatApplicationService
     private async IAsyncEnumerable<ChatStreamEvent> StreamFromProviderDirectAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
+        ThinkingMode thinkingMode,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var provider = _gatewayService.GetProvider(modelConfig);
@@ -850,6 +853,12 @@ public class ChatApplicationService
             Model = modelConfig.Code,
             Messages = contextMessages,
             Stream = true,
+            EnableThinking = thinkingMode switch
+            {
+                ThinkingMode.Think => true,
+                ThinkingMode.Fast  => false,
+                _                  => (Boolean?)null,
+            },
         };
         var options = GatewayService.BuildOptions(modelConfig);
 
@@ -1355,9 +1364,42 @@ public class ChatApplicationService
         var systemMsg = BuildSystemMessage(userId, modelConfig, conversationSkillId, currentContent);
         if (systemMsg != null) messages.Add(systemMsg);
 
-        // 添加历史消息
+        // 添加历史消息（assistant 含工具调用时重建 tool 角色消息，保持多轮上下文完整性）
         foreach (var msg in history)
         {
+            if (msg.Role == "assistant" && !String.IsNullOrEmpty(msg.ToolCalls))
+            {
+                IList<ToolCallDto>? storedDtos = null;
+                try { storedDtos = msg.ToolCalls.ToJsonEntity<List<ToolCallDto>>(); } catch { }
+                if (storedDtos != null && storedDtos.Count > 0)
+                {
+                    // 工具调用请求：assistant 发起 tool_calls
+                    messages.Add(new AiChatMessage
+                    {
+                        Role = "assistant",
+                        Content = null,
+                        ToolCalls = storedDtos.Select(tc => new AiToolCall
+                        {
+                            Id = tc.Id,
+                            Function = new AiFunctionCall { Name = tc.Name, Arguments = tc.Arguments },
+                        }).ToList(),
+                    });
+                    // 工具返回结果
+                    foreach (var tc in storedDtos)
+                    {
+                        messages.Add(new AiChatMessage
+                        {
+                            Role = "tool",
+                            ToolCallId = tc.Id,
+                            Content = tc.Result ?? String.Empty,
+                        });
+                    }
+                    // 工具调用后 assistant 的最终正文回复
+                    if (!String.IsNullOrEmpty(msg.Content))
+                        messages.Add(new AiChatMessage { Role = "assistant", Content = msg.Content });
+                    continue;
+                }
+            }
             messages.Add(new AiChatMessage
             {
                 Role = msg.Role,

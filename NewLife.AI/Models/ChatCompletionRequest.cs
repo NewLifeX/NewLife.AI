@@ -39,6 +39,9 @@ public class ChatCompletionRequest
 
     /// <summary>用户标识。用于追踪和限流</summary>
     public String? User { get; set; }
+
+    /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>
+    public Boolean? EnableThinking { get; set; }
     #endregion
 }
 
