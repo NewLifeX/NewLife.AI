@@ -41,6 +41,8 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5080',
       '/v1': 'http://localhost:5080',
+      '/admin': 'http://localhost:5080',
+      '/Sso': 'http://localhost:5080',
     },
   },
 })

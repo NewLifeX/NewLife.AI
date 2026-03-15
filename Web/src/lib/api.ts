@@ -8,13 +8,12 @@ const SSE_MAX_RETRIES = 3
 /** 是否正在跳转登录，防止多次重定向 */
 let isRedirectingToLogin = false
 
-/** 未登录时跳转到后台登录页，分享页除外 */
+/** 未登录时跳转到 SSO 云端登录，分享页除外 */
 function redirectToLogin() {
   if (isRedirectingToLogin) return
   if (window.location.pathname.startsWith('/share/')) return
   isRedirectingToLogin = true
-  const returnUrl = window.location.pathname + window.location.search + window.location.hash
-  window.location.href = `/admin/user/login?r=${encodeURIComponent(returnUrl)}`
+  window.location.href = '/Sso/Login?name=NewLife'
 }
 
 async function fetchSSE(

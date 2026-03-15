@@ -24,6 +24,7 @@ bld/
 /BinTest
 /BinUnitTest
 /MapApi/Locations/Config
+.idea/
 
 # Frontend
 node_modules/
