@@ -1,5 +1,6 @@
 using NewLife.AI.Filters;
 using NewLife.AI.Models;
+using NewLife.AI.Tools;
 using NewLife.Log;
 
 namespace NewLife.AI.Providers;
@@ -105,4 +106,11 @@ public static class ChatClientBuilderExtensions
     /// <returns>构建器（支持链式调用）</returns>
     public static ChatClientBuilder UseFilters(this ChatClientBuilder builder, params IChatFilter[] filters)
         => builder.Use(inner => new FilteredChatClient(inner, filters));
+
+    /// <summary>添加原生工具中间件。自动将 <see cref="ToolRegistry"/> 中的工具注入请求，并处理工具调用回路</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="registry">工具注册表</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseNativeTools(this ChatClientBuilder builder, ToolRegistry registry)
+        => builder.Use(inner => new NativeToolChatClient(inner, registry));
 }

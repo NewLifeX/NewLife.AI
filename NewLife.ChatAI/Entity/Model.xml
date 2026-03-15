@@ -318,5 +318,78 @@
         <Index Columns="UserId,LastUseTime" />
       </Indexes>
     </Table>
+    <Table Name="UserMemory" Description="用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据">
+      <Columns>
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="ConversationId" DataType="Int64" Description="来源会话。提取该记忆的会话编号" />
+        <Column Name="Category" DataType="String" Description="分类。preference=偏好/habit=习惯/interest=兴趣/background=背景" />
+        <Column Name="Key" DataType="String" Master="True" Length="200" Description="主题。记忆的关键词/主题，如编程语言、工作行业" />
+        <Column Name="Value" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。提取到的具体信息" />
+        <Column Name="Confidence" DataType="Int32" Description="置信度。0~100，越高越可信" />
+        <Column Name="IsActive" DataType="Boolean" Description="有效。是否仍然有效，可被覆盖或废弃" />
+        <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,Category,Key" />
+        <Index Columns="UserId,IsActive,Id" />
+        <Index Columns="ConversationId" />
+      </Indexes>
+    </Table>
+    <Table Name="UserProfile" Description="用户画像。对用户记忆的汇总分析结果，每人一条">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="Summary" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="总结。AI生成的用户综合描述" />
+        <Column Name="Preferences" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="偏好。json格式，存储用户偏好键值对" />
+        <Column Name="Habits" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="习惯。json格式，存储行为习惯" />
+        <Column Name="Interests" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="兴趣。json格式，存储兴趣爱好列表" />
+        <Column Name="MemoryCount" DataType="Int32" Description="记忆数量。关联的有效记忆碎片总数" />
+        <Column Name="LastAnalyzeTime" DataType="DateTime" Description="最后分析时间" />
+        <Column Name="AnalyzeCount" DataType="Int32" Description="分析次数。累计执行自学习分析的次数" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId" Unique="True" />
+      </Indexes>
+    </Table>
+    <Table Name="UserTag" Description="用户标签。附加在用户画像上的特征标签，支持权重排序">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="Name" DataType="String" Master="True" Description="标签名称" />
+        <Column Name="Category" DataType="String" Description="分类。preference=偏好/habit=习惯/interest=兴趣/background=背景" />
+        <Column Name="Weight" DataType="Int32" Description="权重。0~100，越高越重要，用于排序显示" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,Name" Unique="True" />
+        <Index Columns="UserId,Category,Weight" />
+      </Indexes>
+    </Table>
+    <Table Name="LearningLog" Description="学习日志。记录自学习分析任务的执行历史及结果" InsertOnly="True">
+      <Columns>
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="ConversationId" DataType="Int64" Description="触发会话" />
+        <Column Name="TriggerReason" DataType="String" Description="触发原因。Feedback=反馈触发/Scheduled=定时触发/Manual=手动触发" />
+        <Column Name="ExtractedCount" DataType="Int32" Description="提取记忆数。本次分析新增/更新的记忆数量" />
+        <Column Name="FeedbackCount" DataType="Int32" Description="处理反馈数。本次处理的反馈条数" />
+        <Column Name="Status" DataType="String" Description="状态。Success=成功/Failed=失败/Skipped=跳过" />
+        <Column Name="ElapsedMs" DataType="Int32" Description="耗时毫秒" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注。错误信息或跳过原因" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,Id" />
+        <Index Columns="ConversationId" />
+        <Index Columns="Status,Id" />
+      </Indexes>
+    </Table>
   </Tables>
 </EntityModel>

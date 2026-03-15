@@ -469,8 +469,8 @@ public class AiProviderTests
         var provider = new DashScopeProvider();
         var qwenPlus = provider.Models.First(m => m.Model == "qwen-plus");
 
-        // qwen-plus 不支持思考模式，支持视觉，不支持文生图，支持函数调用
-        Assert.False(qwenPlus.Capabilities.SupportThinking);
+        // qwen-plus 自 2025 年起已支持思考模式，支持视觉，不支持文生图，支持函数调用
+        Assert.True(qwenPlus.Capabilities.SupportThinking);
         Assert.True(qwenPlus.Capabilities.SupportVision);
         Assert.False(qwenPlus.Capabilities.SupportImageGeneration);
         Assert.True(qwenPlus.Capabilities.SupportFunctionCalling);

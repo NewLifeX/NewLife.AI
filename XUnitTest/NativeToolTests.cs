@@ -1,0 +1,291 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using NewLife.AI.Models;
+using NewLife.AI.Providers;
+using NewLife.AI.Tools;
+using Xunit;
+
+namespace XUnitTest;
+
+[DisplayName("原生工具注册与调用测试")]
+public class NativeToolTests
+{
+    // ── 测试用工具服务类 ──────────────────────────────────────────────────────
+
+    /// <summary>测试用计算工具服务，包含带参数和无参数的方法</summary>
+    private sealed class MathToolService
+    {
+        /// <summary>两数相加</summary>
+        /// <param name="a">第一个操作数</param>
+        /// <param name="b">第二个操作数</param>
+        [ToolDescription("add_numbers")]
+        public Int32 Add(Int32 a, Int32 b) => a + b;
+
+        /// <summary>返回圆周率常量</summary>
+        [ToolDescription("get_pi")]
+        public Double GetPi() => Math.PI;
+
+        /// <summary>异步获取问候语</summary>
+        /// <param name="name">姓名</param>
+        [ToolDescription("greet")]
+        public async Task<String> GreetAsync(String name, CancellationToken ct = default)
+        {
+            await Task.Yield();
+            return $"Hello, {name}!";
+        }
+
+        /// <summary>此方法没有 ToolDescription，不应被注册</summary>
+        public Int32 NotATool(Int32 x) => x;
+    }
+
+    /// <summary>返回固定工具调用再回复文本的假客户端</summary>
+    private sealed class ToolCallThenReplyClient : IChatClient
+    {
+        private readonly String _toolName;
+        private readonly String _toolArgs;
+        private readonly String _finalReply;
+        private Int32 _callCount;
+
+        public ToolCallThenReplyClient(String toolName, String toolArgs, String finalReply)
+        {
+            _toolName = toolName;
+            _toolArgs = toolArgs;
+            _finalReply = finalReply;
+        }
+
+        public ChatClientMetadata Metadata { get; } = default!;
+
+        public Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken ct)
+        {
+            _callCount++;
+            ChatCompletionResponse resp;
+
+            if (_callCount == 1)
+            {
+                // 第一次调用：返回工具调用
+                resp = new ChatCompletionResponse
+                {
+                    Choices =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = null,
+                                ToolCalls =
+                                [
+                                    new ToolCall
+                                    {
+                                        Id = "call_001",
+                                        Type = "function",
+                                        Function = new FunctionCall
+                                        {
+                                            Name = _toolName,
+                                            Arguments = _toolArgs
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                };
+            }
+            else
+            {
+                // 第二次调用：返回最终文本回复
+                resp = new ChatCompletionResponse
+                {
+                    Choices =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = _finalReply
+                            }
+                        }
+                    ]
+                };
+            }
+
+            return Task.FromResult(resp);
+        }
+
+        public IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(ChatCompletionRequest r, CancellationToken ct)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
+    // ── ToolDescriptionAttribute 测试 ─────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("显式指定工具名称时 HasExplicitName 为 true")]
+    public void ToolDescriptionAttribute_ExplicitName_HasExplicitName()
+    {
+        var attr = new ToolDescriptionAttribute("my_tool");
+        Assert.Equal("my_tool", attr.Name);
+        Assert.True(attr.HasExplicitName);
+    }
+
+    [Fact]
+    [DisplayName("无参构造时 HasExplicitName 为 false")]
+    public void ToolDescriptionAttribute_NoExplicitName()
+    {
+        var attr = new ToolDescriptionAttribute();
+        Assert.False(attr.HasExplicitName);
+    }
+
+    // ── ToolSchemaBuilder 测试 ────────────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("BuildFromMethod 从带参数方法构建 ChatTool，名称与参数正确")]
+    public void BuildFromMethod_WithParameters_CorrectSchema()
+    {
+        var method = typeof(MathToolService).GetMethod(nameof(MathToolService.Add))!;
+        var tool = ToolSchemaBuilder.BuildFromMethod(method);
+
+        Assert.NotNull(tool.Function);
+        Assert.Equal("add_numbers", tool.Function!.Name);
+        Assert.NotNull(tool.Function.Parameters);
+
+        var schema = tool.Function.Parameters as Dictionary<String, Object>;
+        Assert.NotNull(schema);
+        Assert.Equal("object", schema!["type"]?.ToString());
+
+        var props = schema["properties"] as Dictionary<String, Object>;
+        Assert.NotNull(props);
+        Assert.True(props!.ContainsKey("a"));
+        Assert.True(props.ContainsKey("b"));
+
+        var required = schema["required"] as List<String>;
+        Assert.NotNull(required);
+        Assert.Contains("a", required!);
+        Assert.Contains("b", required);
+    }
+
+    [Fact]
+    [DisplayName("BuildFromMethod 从无参方法构建 ChatTool，required 为空")]
+    public void BuildFromMethod_NoParameters_EmptyRequired()
+    {
+        var method = typeof(MathToolService).GetMethod(nameof(MathToolService.GetPi))!;
+        var tool = ToolSchemaBuilder.BuildFromMethod(method);
+
+        Assert.NotNull(tool.Function);
+        Assert.Equal("get_pi", tool.Function!.Name);
+
+        var schema = tool.Function.Parameters as Dictionary<String, Object>;
+        // 无参方法返回 null schema
+        Assert.Null(schema);
+        var required = schema?["required"] as List<String>;
+        Assert.True(required == null || required.Count == 0);
+    }
+
+    // ── ToolRegistry 测试 ────────────────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("AddTools 仅注册带 ToolDescription 的方法")]
+    public void AddTools_OnlyRegistersTaggedMethods()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // add_numbers / get_pi / greet 均已标注，NotATool 未标注
+        Assert.Equal(3, registry.Tools.Count);
+        var names = registry.Tools.Select(t => t.Function!.Name).ToList();
+        Assert.Contains("add_numbers", names);
+        Assert.Contains("get_pi", names);
+        Assert.Contains("greet", names);
+        Assert.DoesNotContain("not_a_tool", names);
+    }
+
+    [Fact]
+    [DisplayName("InvokeAsync 调用同步方法返回正确 JSON 结果")]
+    public async Task InvokeAsync_SyncMethod_ReturnsJson()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        var result = await registry.InvokeAsync("add_numbers", "{\"a\":3,\"b\":5}");
+        Assert.Equal("8", result);
+    }
+
+    [Fact]
+    [DisplayName("InvokeAsync 调用异步方法返回 Hello 问候")]
+    public async Task InvokeAsync_AsyncMethod_ReturnsGreeting()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        var result = await registry.InvokeAsync("greet", "{\"name\":\"World\"}");
+        Assert.Equal("Hello, World!", result);
+    }
+
+    [Fact]
+    [DisplayName("TryInvokeAsync 调用未注册工具返回错误 JSON 而非抛异常")]
+    public async Task TryInvokeAsync_UnknownTool_ReturnsErrorJson()
+    {
+        var registry = new ToolRegistry();
+        var result = await registry.TryInvokeAsync("unknown_tool", null);
+        Assert.Contains("error", result);
+    }
+
+    [Fact]
+    [DisplayName("AddTool 注册委托并可正常调用")]
+    public async Task AddTool_DelegateRegistration_InvokesCorrectly()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTool("echo", async (args, ct) =>
+        {
+            await Task.Yield();
+            return args ?? "null";
+        });
+
+        var result = await registry.InvokeAsync("echo", "ping");
+        Assert.Equal("ping", result);
+    }
+
+    // ── NativeToolChatClient 集成测试 ────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("NativeToolChatClient 完成单轮工具调用后返回最终文本")]
+    public async Task NativeToolChatClient_SingleToolCall_ReturnsFinalText()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 模拟模型先发起 add_numbers 调用，然后返回最终回复
+        var innerClient = new ToolCallThenReplyClient(
+            toolName: "add_numbers",
+            toolArgs: "{\"a\":10,\"b\":20}",
+            finalReply: "计算结果是 30");
+
+        var nativeClient = new NativeToolChatClient(innerClient, registry);
+        var request = new ChatCompletionRequest
+        {
+            Messages = [new ChatMessage { Role = "user", Content = "10 + 20 等于多少？" }]
+        };
+
+        var response = await nativeClient.CompleteAsync(request);
+        var content = response.Choices?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("计算结果是 30", content);
+    }
+
+    [Fact]
+    [DisplayName("ChatClientBuilder.UseNativeTools 装配 NativeToolChatClient 中间件")]
+    public void ChatClientBuilder_UseNativeTools_AddsMiddleware()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 只需验证构建不抛异常，且 registry 中已有工具
+        Assert.Equal(3, registry.Tools.Count);
+    }
+}

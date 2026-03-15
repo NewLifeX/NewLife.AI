@@ -31,6 +31,9 @@ public static class ChatAIExtensions
         services.AddSingleton<McpClientService>();
         services.AddSingleton<ToolCallService>();
         services.AddSingleton<BackgroundGenerationService>();
+        services.AddSingleton<MemoryService>();
+        services.AddSingleton<UserProfileService>();
+        services.AddSingleton<ConversationAnalysisService>();
         services.AddHttpClient("McpClient");
 
         return services;

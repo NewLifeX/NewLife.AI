@@ -9,10 +9,11 @@ import { ChatSettings } from './ChatSettings'
 import { McpSettings } from './McpSettings'
 import { DataSettings } from './DataSettings'
 import { UsageSettings } from './UsageSettings'
+import { LearningSettings } from './LearningSettings'
 import type { UserSettings, ModelInfo } from '@/types'
 import { fetchMcpServers, toggleMcpServer, type McpServer } from '@/lib/api'
 
-type SettingsTab = 'general' | 'account' | 'chat' | 'mcp' | 'usage' | 'data'
+type SettingsTab = 'general' | 'account' | 'chat' | 'mcp' | 'usage' | 'data' | 'learning'
 
 interface SettingsModalProps {
   open: boolean
@@ -47,6 +48,7 @@ export function SettingsModal({
     { id: 'chat', icon: 'chat', label: t('settings.chatPrefs') },
     { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced'), badge: 'New' },
     { id: 'usage', icon: 'bar_chart', label: t('usage.title') },
+    { id: 'learning', icon: 'psychology', label: t('learning.title') },
     { id: 'data', icon: 'storage', label: t('settings.dataManagement') },
   ]
 
@@ -185,6 +187,7 @@ export function SettingsModal({
           />
         )}
         {activeTab === 'usage' && <UsageSettings />}
+        {activeTab === 'learning' && <LearningSettings />}
       </ScrollArea>
     </Modal>
   )

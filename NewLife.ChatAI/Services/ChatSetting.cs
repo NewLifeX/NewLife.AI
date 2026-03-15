@@ -105,6 +105,11 @@ public class ChatSetting : Config<ChatSetting>
     [Description("网关限流。每分钟每用户最大请求次数")]
     public Int32 GatewayRateLimit { get; set; } = 60;
 
+    /// <summary>启用自学习。对话结束后异步提取用户记忆，构建用户画像</summary>
+    [Category("功能开关")]
+    [Description("启用自学习。对话结束后异步提取用户记忆，构建用户画像")]
+    public Boolean EnableSelfLearning { get; set; } = false;
+
     /// <summary>上游重试次数。模型返回 429 时最大重试</summary>
     [Category("功能开关")]
     [Description("上游重试次数。模型返回 429 时最大重试")]

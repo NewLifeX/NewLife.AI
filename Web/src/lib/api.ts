@@ -657,3 +657,63 @@ export async function setConversationSkill(conversationId: string, skillId: numb
     body: JSON.stringify({ skillId }),
   })
 }
+
+// ── Self-Learning Memory ──
+
+export interface MemoryItem {
+  id: number
+  category: string
+  key: string
+  value: string
+  confidence: number
+  isActive: boolean
+  createTime: string
+  updateTime: string
+}
+
+export interface UserProfileInfo {
+  id: number
+  userId: number
+  summary: string
+  preferences: string
+  habits: string
+  interests: string
+  memoryCount: number
+  lastAnalyzeTime: string | null
+  analyzeCount: number
+}
+
+export interface UserTagInfo {
+  id: number
+  name: string
+  category: string
+  weight: number
+}
+
+export async function fetchMemories(): Promise<MemoryItem[]> {
+  return request<MemoryItem[]>('/api/memory')
+}
+
+export async function updateMemory(id: number, data: { isActive?: boolean; value?: string }): Promise<void> {
+  await request<unknown>(`/api/memory/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteMemory(id: number): Promise<void> {
+  await request<unknown>(`/api/memory/${id}`, { method: 'DELETE' })
+}
+
+export async function fetchUserProfile(): Promise<UserProfileInfo> {
+  return request<UserProfileInfo>('/api/profile')
+}
+
+export async function fetchUserTags(category?: string): Promise<UserTagInfo[]> {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : ''
+  return request<UserTagInfo[]>(`/api/profile/tags${qs}`)
+}
+
+export async function deleteUserTag(id: number): Promise<void> {
+  await request<unknown>(`/api/profile/tags/${id}`, { method: 'DELETE' })
+}
