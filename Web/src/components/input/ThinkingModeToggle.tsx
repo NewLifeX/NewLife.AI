@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 
-export type ThinkingMode = 'fast' | 'balanced' | 'deep'
+export type ThinkingMode = 'fast' | 'auto' | 'think'
 
 interface ThinkingModeToggleProps {
   mode: ThinkingMode
@@ -13,11 +13,11 @@ interface ThinkingModeToggleProps {
 
 const modeIcons: Record<ThinkingMode, string> = {
   fast: 'bolt',
-  balanced: 'psychology_alt',
-  deep: 'psychology',
+  auto: 'psychology_alt',
+  think: 'psychology',
 }
 
-const modes: ThinkingMode[] = ['fast', 'balanced', 'deep']
+const modes: ThinkingMode[] = ['fast', 'auto', 'think']
 
 export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeToggleProps) {
   const { t } = useTranslation()
@@ -25,9 +25,9 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
   const containerRef = useRef<HTMLDivElement>(null)
 
   const modeConfig: Record<ThinkingMode, { label: string; description: string }> = {
-    fast: { label: t('thinking.fast'), description: t('thinking.fastDesc') },
-    balanced: { label: t('thinking.balanced'), description: t('thinking.balancedDesc') },
-    deep: { label: t('thinking.deep'), description: t('thinking.deepDesc') },
+    fast:  { label: t('thinking.fast'),  description: t('thinking.fastDesc')  },
+    auto:  { label: t('thinking.auto'),  description: t('thinking.autoDesc')  },
+    think: { label: t('thinking.think'), description: t('thinking.thinkDesc') },
   }
 
   const config = modeConfig[mode]

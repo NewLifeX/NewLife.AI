@@ -55,7 +55,7 @@ export function ChatInput({
   attachments = [],
   onAttachmentRemove,
   onAttachmentAdd,
-  thinkingMode = 'balanced',
+  thinkingMode = 'auto',
   onThinkingModeChange,
   showThinkingToggle = false,
   sendShortcut = 'Enter',

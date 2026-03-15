@@ -10,7 +10,7 @@ import { ToolCallBadge } from '@/components/chat/ToolCallBadge'
 import { ShareDialog } from '@/components/chat/ShareDialog'
 import { DislikeReasonDialog } from '@/components/chat/DislikeReasonDialog'
 
-type ThinkingMode = 'fast' | 'balanced' | 'deep'
+type ThinkingMode = 'fast' | 'auto' | 'think'
 
 interface ChatPageProps {
   messages: Message[]
@@ -26,6 +26,7 @@ interface ChatPageProps {
   conversationId?: string | null
   thinkingMode?: ThinkingMode
   onThinkingModeChange?: (mode: ThinkingMode) => void
+  supportsThinking?: boolean
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
   onAttachmentRemove?: (id: string) => void
@@ -48,8 +49,9 @@ export function ChatPage({
   onLike,
   onDislike,
   conversationId,
-  thinkingMode = 'balanced',
+  thinkingMode = 'auto',
   onThinkingModeChange,
+  supportsThinking = false,
   attachments = [],
   onAttachmentAdd,
   onAttachmentRemove,
@@ -263,7 +265,7 @@ export function ChatPage({
           onSend={onSend}
           onStop={onStop}
           isGenerating={isGenerating}
-          showThinkingToggle
+          showThinkingToggle={supportsThinking}
           thinkingMode={thinkingMode}
           onThinkingModeChange={onThinkingModeChange}
           attachments={attachments}

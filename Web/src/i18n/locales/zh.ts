@@ -69,13 +69,16 @@ export default {
   },
   thinking: {
     auto: '自动',
+    autoDesc: '模型自行决定是否启用思考',
     think: '深度思考',
+    thinkDesc: '开启推理过程，适合复杂代码分析、逻辑推导等任务，响应时间稍长',
     fast: '快速',
-    fastDesc: '极速响应，适合简单问答',
-    balanced: '平衡',
-    balancedDesc: '兼顾速度与质量',
-    deep: '深度思考 (Deep)',
-    deepDesc: '模型将进行多步推理，适用于复杂代码分析、逻辑推导及长文本生成任务。响应时间可能会稍长。',
+    fastDesc: '极速响应，关闭思考过程，适合简单问答',
+    // 兼容旧键名，避免运行时 warning
+    balanced: '自动',
+    balancedDesc: '模型自行决定是否启用思考',
+    deep: '深度思考',
+    deepDesc: '开启推理过程，适合复杂代码分析、逻辑推导等任务，响应时间稍长',
     modeEnabled: '模式已开启',
   },
   skills: {

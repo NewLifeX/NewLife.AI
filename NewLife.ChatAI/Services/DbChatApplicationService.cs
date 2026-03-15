@@ -670,7 +670,7 @@ public class ChatApplicationService
         ChatStreamEvent? deferredErrorEvent = null;
         var toolCallsCollector = new List<ToolCallDto>();
 
-        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, request.ThinkingMode, cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
         {
             while (true)
@@ -856,8 +856,8 @@ public class ChatApplicationService
             EnableThinking = thinkingMode switch
             {
                 ThinkingMode.Think => true,
-                ThinkingMode.Fast  => false,
-                _                  => (Boolean?)null,
+                ThinkingMode.Fast => false,
+                _ => (Boolean?)null,
             },
         };
         var options = GatewayService.BuildOptions(modelConfig);

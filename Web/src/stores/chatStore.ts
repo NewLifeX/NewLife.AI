@@ -20,12 +20,12 @@ import {
 import { useSettingsStore } from '@/stores/settingsStore'
 import type { Attachment, ModelInfo } from '@/types'
 
-type ThinkingModeKey = 'fast' | 'balanced' | 'deep'
+type ThinkingModeKey = 'fast' | 'auto' | 'think'
 
 const thinkingModeMap: Record<ThinkingModeKey, number> = {
-  fast: 2,      // ThinkingMode.Fast
-  balanced: 0,  // ThinkingMode.Auto
-  deep: 1,      // ThinkingMode.Think
+  fast: 2,  // ThinkingMode.Fast  → enable_thinking: false
+  auto: 0,  // ThinkingMode.Auto  → 不传 enable_thinking
+  think: 1, // ThinkingMode.Think → enable_thinking: true
 }
 
 interface ChatState {
@@ -71,7 +71,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isGenerating: false,
   isLoadingMessages: false,
-  thinkingMode: 'balanced' as ThinkingModeKey,
+  thinkingMode: 'auto' as ThinkingModeKey,
   pendingAttachments: [],
   models: [],
   _abortController: null,
@@ -236,8 +236,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const finalConvId = convId
     let segmentFinalized = true
 
+      // 查询当前模型是否支持思考模式，不支持时强制传 Auto(0)，避免发送 enable_thinking 参数
+      const currentModelInfo = get().models.find((m) => m.id === currentModelId)
+      const effectiveThinkingMode = currentModelInfo?.supportThinking
+        ? thinkingModeMap[get().thinkingMode]
+        : 0
+
     try {
-      await streamMessage(finalConvId, content, thinkingModeMap[get().thinkingMode], (event: ChatStreamEvent) => {
+      await streamMessage(finalConvId, content, effectiveThinkingMode, (event: ChatStreamEvent) => {
         switch (event.type) {
           case 'message_start':
             assistantMsgId = event.messageId

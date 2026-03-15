@@ -69,13 +69,16 @@ export default {
   },
   thinking: {
     auto: 'Auto',
+    autoDesc: 'Model decides whether to think',
     think: 'Deep Thinking',
+    thinkDesc: 'Enable reasoning for complex analysis, logical deduction, and long-form tasks. Response may take longer.',
     fast: 'Fast',
-    fastDesc: 'Quick response, ideal for simple Q&A',
-    balanced: 'Balanced',
-    balancedDesc: 'Balance between speed and quality',
+    fastDesc: 'Quick response, thinking disabled, ideal for simple Q&A',
+    // legacy keys
+    balanced: 'Auto',
+    balancedDesc: 'Model decides whether to think',
     deep: 'Deep Thinking',
-    deepDesc: 'Multi-step reasoning for complex code analysis, logical deduction, and long-form generation. Response time may be longer.',
+    deepDesc: 'Enable reasoning for complex analysis, logical deduction, and long-form tasks. Response may take longer.',
     modeEnabled: 'mode enabled',
   },
   skills: {

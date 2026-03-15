@@ -130,6 +130,14 @@ function ChatApp() {
   const activeConv = conversations.find((c) => c.id === activeConversationId)
   const resolvedModel = activeConv?.modelId ?? settings.defaultModel ?? 0
   const currentModel = resolvedModel || models[0]?.id || 0
+  const supportsThinking = models.find((m) => m.id === currentModel)?.supportThinking ?? false
+
+  // 当前模型不支持思考时，若已选了 think 模式则自动回退到 auto
+  useEffect(() => {
+    if (!supportsThinking && (thinkingMode === 'think' || thinkingMode === 'fast')) {
+      setThinkingMode('auto')
+    }
+  }, [supportsThinking, thinkingMode, setThinkingMode])
 
   if (!appReady) return <AppSkeleton />
 
@@ -188,6 +196,7 @@ function ChatApp() {
             conversationId={activeConversationId}
             thinkingMode={thinkingMode}
             onThinkingModeChange={setThinkingMode}
+            supportsThinking={supportsThinking}
             attachments={pendingAttachments}
             onAttachmentAdd={addAttachment}
             onAttachmentRemove={removeAttachment}
