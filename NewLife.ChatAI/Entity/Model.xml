@@ -284,7 +284,7 @@
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如code、translate" />
         <Column Name="Category" DataType="String" Description="分类。通用/开发/创作/分析" />
         <Column Name="Description" DataType="String" Length="500" Description="描述。一句话说明该技能做什么" />
-        <Column Name="Content" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
+        <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
         <Column Name="Sort" DataType="Int32" Description="排序。数值大的排前面" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />

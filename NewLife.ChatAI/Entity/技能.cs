@@ -76,7 +76,7 @@ public partial class Skill : IEntity<SkillModel>
     [DisplayName("技能正文")]
     [Description("技能正文。Markdown格式，包含完整的行为指令、规则和示例")]
     [DataObjectField(false, false, true, -1)]
-    [BindColumn("Content", "技能正文。Markdown格式，包含完整的行为指令、规则和示例", "", ShowIn = "Auto,-List,-Search")]
+    [BindColumn("Content", "技能正文。Markdown格式，包含完整的行为指令、规则和示例", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
 
     private Int32 _Sort;
