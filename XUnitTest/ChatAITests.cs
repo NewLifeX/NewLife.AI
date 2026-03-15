@@ -24,7 +24,7 @@ public class ChatAITests
 
         Assert.Equal(30, setting.ShareExpireDays);
         Assert.Equal(0, setting.DefaultModel);
-        Assert.Equal(0, setting.DefaultThinkingMode);
+        Assert.Equal(ThinkingMode.Auto, setting.DefaultThinkingMode);
         Assert.Equal(10, setting.DefaultContextRounds);
         Assert.Equal(20, setting.MaxAttachmentSize);
         Assert.Equal(5, setting.MaxAttachmentCount);
