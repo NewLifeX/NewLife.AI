@@ -126,14 +126,26 @@ export function MessageBubble({
               <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 leading-7 shadow-sm" style={{ fontSize: 'var(--chat-font-size, 16px)' }}>
                 {content}
               </div>
-              {onEdit && (
-                <div className="absolute -left-10 top-2 hidden group-hover:flex space-x-1">
-                  <button
-                    onClick={onEdit}
-                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                  >
-                    <Icon name="edit" variant="filled" size="base" />
-                  </button>
+              {(onCopy || onEdit) && (
+                <div className="absolute right-full -translate-x-1 top-2 hidden group-hover:flex space-x-1">
+                  {onCopy && (
+                    <button
+                      onClick={onCopy}
+                      title={t('common.copy')}
+                      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                      <Icon name="content_copy" size="base" />
+                    </button>
+                  )}
+                  {onEdit && (
+                    <button
+                      onClick={onEdit}
+                      title={t('common.edit')}
+                      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                      <Icon name="edit" variant="filled" size="base" />
+                    </button>
+                  )}
                 </div>
               )}
             </>

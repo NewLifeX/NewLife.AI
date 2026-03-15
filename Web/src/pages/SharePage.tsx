@@ -13,6 +13,12 @@ export function SharePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
+  const safeTime = (s: string | null | undefined, style: 'time' | 'full' = 'full'): string | null => {
+    if (!s) return null
+    const d = new Date(s)
+    return isNaN(d.getTime()) ? null : style === 'time' ? d.toLocaleTimeString() : d.toLocaleString()
+  }
+
   useEffect(() => {
     if (!token) return
     fetchSharedConversation(token)
@@ -58,8 +64,8 @@ export function SharePage() {
             <span className="font-semibold text-gray-900 dark:text-white">{t('sharePage.title')}</span>
           </div>
           <div className="text-xs text-gray-400">
-            {t('sharePage.sharedAt')}: {new Date(data.createTime).toLocaleString()}
-            {data.expireTime && ` · ${t('sharePage.expiresAt')}: ${new Date(data.expireTime).toLocaleString()}`}
+            {t('sharePage.sharedAt')}: {safeTime(data.createTime) ?? '—'}
+            {data.expireTime && safeTime(data.expireTime) && ` \u00b7 ${t('sharePage.expiresAt')}: ${safeTime(data.expireTime)}`}
           </div>
         </div>
       </header>
@@ -74,7 +80,9 @@ export function SharePage() {
 
       {/* Messages */}
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {data.messages.map((msg) => (
+        {data.messages.map((msg) => {
+          const msgTime = safeTime(msg.createdAt, 'time')
+          return (
           <div
             key={msg.id}
             className={cn(
@@ -101,17 +109,20 @@ export function SharePage() {
               ) : (
                 <div className="whitespace-pre-wrap">{msg.content}</div>
               )}
-              <div
-                className={cn(
-                  'text-[10px] mt-1',
-                  msg.role === 'user' ? 'text-white/60' : 'text-gray-400',
-                )}
-              >
-                {new Date(msg.createdAt).toLocaleTimeString()}
-              </div>
+              {msgTime && (
+                <div
+                  className={cn(
+                    'text-[10px] mt-1',
+                    msg.role === 'user' ? 'text-white/60' : 'text-gray-400',
+                  )}
+                >
+                  {msgTime}
+                </div>
+              )}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Footer */}
