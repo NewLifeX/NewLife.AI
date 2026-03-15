@@ -29,7 +29,7 @@ public class SkillService
         var addedIds = new HashSet<Int32>();
 
         // 最近使用的技能，按最后使用时间倒序
-        var userSkills = UserSkill.FindAllByUserId(userId);
+        var userSkills = GetUserSkills(userId);
         var recentSkills = userSkills
             .Where(e => e.LastUseTime > DateTime.MinValue)
             .OrderByDescending(e => e.LastUseTime)
@@ -38,7 +38,7 @@ public class SkillService
         foreach (var us in recentSkills)
         {
             if (result.Count >= maxCount) break;
-            var skill = Skill.FindById(us.SkillId);
+            var skill = GetSkillById(us.SkillId);
             if (skill != null && skill.Enable && addedIds.Add(skill.Id))
                 result.Add(skill);
         }
@@ -46,7 +46,7 @@ public class SkillService
         // 补充系统技能（按排序倒序）
         if (result.Count < maxCount)
         {
-            var systemSkills = Skill.FindAll(Skill._.IsSystem == true & Skill._.Enable == true, Skill._.Sort.Desc(), null, 0, 0);
+            var systemSkills = GetSystemSkills();
             foreach (var skill in systemSkills)
             {
                 if (result.Count >= maxCount) break;
@@ -107,7 +107,7 @@ public class SkillService
         var parts = new List<String>();
 
         // 1. 系统内置技能
-        var systemSkills = Skill.FindAll(Skill._.IsSystem == true & Skill._.Enable == true, Skill._.Sort.Desc(), null, 0, 0);
+        var systemSkills = GetSystemSkills();
         foreach (var skill in systemSkills)
         {
             if (!String.IsNullOrWhiteSpace(skill.Content))
@@ -120,7 +120,7 @@ public class SkillService
         // 2. 会话激活的技能
         if (conversationSkillId > 0)
         {
-            var skill = Skill.FindById(conversationSkillId);
+            var skill = GetSkillById(conversationSkillId);
             if (skill != null && skill.Enable && !String.IsNullOrWhiteSpace(skill.Content))
             {
                 var resolved = ResolveReferences(skill.Content, 0, []);
@@ -209,10 +209,28 @@ public class SkillService
         return sb.ToString();
     }
 
+    #endregion
+
+    #region 数据访问（可被测试覆盖）
+    /// <summary>获取所有启用的系统技能，按 Sort 降序</summary>
+    /// <returns></returns>
+    protected virtual IList<Skill> GetSystemSkills() =>
+        Skill.FindAll(Skill._.IsSystem == true & Skill._.Enable == true, Skill._.Sort.Desc(), null, 0, 0);
+
+    /// <summary>根据编号获取技能</summary>
+    /// <param name="id">技能编号</param>
+    /// <returns></returns>
+    protected virtual Skill? GetSkillById(Int32 id) => Skill.FindById(id);
+
+    /// <summary>获取用户技能使用记录</summary>
+    /// <param name="userId">用户编号</param>
+    /// <returns></returns>
+    protected virtual IList<UserSkill> GetUserSkills(Int32 userId) => UserSkill.FindAllByUserId(userId);
+
     /// <summary>按名称或编码查找技能</summary>
     /// <param name="name">技能名称或编码</param>
     /// <returns></returns>
-    private static Skill? FindSkillByName(String name)
+    protected virtual Skill? FindSkillByName(String name)
     {
         // 先按编码精确匹配
         var skill = Skill.FindByCode(name);
