@@ -34,7 +34,7 @@ public class OllamaProvider : OpenAiProvider
     /// <summary>主流模型列表。Ollama 本地常用开源模型（能力取决于实际加载的模型）</summary>
     public override AiModelInfo[] Models { get; } =
     [
-        new("qwen3.5",      "Qwen 3.5",     new(true,  false, false, true)),
+        new("qwen3.5:0.8b", "Qwen 3.5 0.8B", new(true,  false, false, true)),
         new("llama3.3",     "Llama 3.3",    new(false, false, false, true)),
         new("deepseek-r1",  "DeepSeek R1",  new(true,  false, false, false)),
         new("phi4",         "Phi-4",        new(false, false, false, true)),
@@ -249,6 +249,39 @@ public class OllamaProvider : OpenAiProvider
             throw new HttpRequestException($"Ollama Embed 请求失败 [{(Int32)resp.StatusCode}]: {json}");
 
         return json.ToJsonEntity<OllamaEmbedResponse>();
+    }
+
+    /// <summary>拉取（下载）模型。等待完成后返回最终状态</summary>
+    /// <param name="modelName">模型名称，如 qwen3.5:0.8b</param>
+    /// <param name="options">连接选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>拉取状态，status 为 "success" 表示成功</returns>
+    public virtual async Task<OllamaPullStatus?> PullModelAsync(String modelName, AiProviderOptions options, CancellationToken cancellationToken = default)
+    {
+        if (modelName == null) throw new ArgumentNullException(nameof(modelName));
+
+        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
+        var url = $"{endpoint}/api/pull";
+
+        // stream:false 让 Ollama 等待完成后返回单条 JSON，避免处理 NDJSON 流
+        var body = new Dictionary<String, Object> { ["model"] = modelName, ["stream"] = false }.ToJson();
+        using var req = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+        SetHeaders(req, options);
+
+        // 拉取模型可能耗时数分钟，使用 30 分钟超时
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromMinutes(30));
+
+        var resp = await HttpClient.SendAsync(req, cts.Token).ConfigureAwait(false);
+        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+            throw new HttpRequestException($"Ollama Pull 请求失败 [{(Int32)resp.StatusCode}]: {json}");
+
+        return json.ToJsonEntity<OllamaPullStatus>();
     }
     #endregion
 

@@ -273,3 +273,32 @@ public class OllamaVersionResponse
     /// <summary>版本号</summary>
     public String? Version { get; set; }
 }
+
+/// <summary>Ollama 拉取模型请求</summary>
+public class OllamaPullRequest
+{
+    /// <summary>模型名称</summary>
+    public String? Model { get; set; }
+
+    /// <summary>是否流式输出。默认 true，设为 false 时等待完成后返回单条结果</summary>
+    public Boolean? Stream { get; set; }
+
+    /// <summary>是否允许拉取未经验证的镜像</summary>
+    public Boolean? Insecure { get; set; }
+}
+
+/// <summary>Ollama 拉取模型状态（流式每帧 / 非流式最终帧）</summary>
+public class OllamaPullStatus
+{
+    /// <summary>状态描述，如 "pulling manifest"、"downloading"、"success"</summary>
+    public String? Status { get; set; }
+
+    /// <summary>当前层的文件摘要</summary>
+    public String? Digest { get; set; }
+
+    /// <summary>文件总大小（字节）</summary>
+    public Int64 Total { get; set; }
+
+    /// <summary>已完成大小（字节）</summary>
+    public Int64 Completed { get; set; }
+}
