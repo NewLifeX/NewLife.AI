@@ -15,7 +15,7 @@ namespace NewLife.AI.Providers;
 /// /v1/images/generations、/v1/images/edits 全部端点。
 /// 接入地址：https://ai.newlifex.com
 /// </remarks>
-public class NewLifeAiProvider : OpenAiProvider
+public class NewLifeAiProvider : OpenAiProvider, IModelListProvider
 {
     #region 属性
     /// <summary>服务商编码</summary>

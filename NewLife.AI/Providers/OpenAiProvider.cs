@@ -15,7 +15,7 @@ namespace NewLife.AI.Providers;
 /// 只需继承此类并设置 Name 和 DefaultEndpoint 即可完成适配。
 /// 同时实现 <see cref="IEmbeddingProvider"/> ，支持创建嵌入向量客户端。
 /// </remarks>
-public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider, IModelListProvider
+public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
 {
     #region 属性
     /// <summary>服务商编码</summary>
