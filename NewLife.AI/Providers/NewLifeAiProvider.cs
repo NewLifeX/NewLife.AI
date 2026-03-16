@@ -15,7 +15,7 @@ namespace NewLife.AI.Providers;
 /// /v1/images/generations、/v1/images/edits 全部端点。
 /// 接入地址：https://ai.newlifex.com
 /// </remarks>
-public class NewLifeAiProvider : OpenAiProvider, IModelListProvider
+public class NewLifeAiProvider : OpenAiProvider
 {
     #region 属性
     /// <summary>服务商编码</summary>
@@ -188,16 +188,7 @@ public class NewLifeAiProvider : OpenAiProvider, IModelListProvider
         var body = BuildRequestBody(request);
         var url = options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        SetHeaders(httpRequest, options);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-            throw new HttpRequestException($"NewLifeAI {path} 返回错误 [{(Int32)httpResponse.StatusCode}]: {responseText}");
-
+        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         return ParseResponse(responseText);
     }
 
@@ -213,17 +204,7 @@ public class NewLifeAiProvider : OpenAiProvider, IModelListProvider
         var body = BuildRequestBody(request);
         var url = options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        SetHeaders(httpRequest, options);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-        {
-            var errorText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"NewLifeAI {path} 返回错误 [{(Int32)httpResponse.StatusCode}]: {errorText}");
-        }
+        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
 
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);

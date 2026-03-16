@@ -1,10 +1,8 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Embedding;
 using NewLife.AI.Models;
-using NewLife.Log;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Providers;
@@ -15,7 +13,7 @@ namespace NewLife.AI.Providers;
 /// 只需继承此类并设置 Name 和 DefaultEndpoint 即可完成适配。
 /// 同时实现 <see cref="IEmbeddingProvider"/> ，支持创建嵌入向量客户端。
 /// </remarks>
-public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
+public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmbeddingProvider, IModelListProvider
 {
     #region 属性
     /// <summary>服务商编码</summary>
@@ -43,39 +41,6 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
 
     /// <summary>对话完成路径</summary>
     protected virtual String ChatPath => "/v1/chat/completions";
-
-    /// <summary>日志</summary>
-    public ILog Log { get; set; } = Logger.Null;
-
-    /// <summary>追踪器</summary>
-    public ITracer? Tracer { get; set; }
-
-    /// <summary>HTTP 请求超时时间。默认 5 分钟</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
-
-    private HttpClient? _httpClient;
-
-    /// <summary>获取 HttpClient 实例。首次访问时通过 CreateHttpClient 创建</summary>
-    protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
-    #endregion
-
-    #region 构造
-    /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
-    /// <returns>新的 HttpClient 实例</returns>
-    protected virtual HttpClient CreateHttpClient()
-    {
-        var handler = new HttpClientHandler
-        {
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        };
-        var client = new HttpClient(handler)
-        {
-            Timeout = Timeout,
-        };
-        client.DefaultRequestHeaders.Add("Accept", "application/json");
-
-        return client;
-    }
     #endregion
 
     #region 方法
@@ -92,16 +57,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
         var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + ChatPath;
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        SetHeaders(httpRequest, options);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)httpResponse.StatusCode}: {responseText}");
-
+        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         return ParseResponse(responseText);
     }
 
@@ -205,10 +161,10 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
     #endregion
 
     #region 辅助
-    /// <summary>构建请求体 JSON</summary>
+    /// <summary>构建请求体。返回符合 OpenAI 格式的字典</summary>
     /// <param name="request">请求对象</param>
-    /// <returns>JSON 字符串</returns>
-    protected virtual String BuildRequestBody(ChatCompletionRequest request)
+    /// <returns>请求体字典</returns>
+    protected virtual Object BuildRequestBody(ChatCompletionRequest request)
     {
         // 构建符合 OpenAI 格式的请求体
         var dic = new Dictionary<String, Object>();
@@ -287,7 +243,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
         if (request.ToolChoice != null) dic["tool_choice"] = request.ToolChoice;
         if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
 
-        return dic.ToJson();
+        return dic;
     }
 
     /// <summary>解析响应 JSON</summary>
@@ -409,107 +365,13 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
     /// <summary>设置请求头</summary>
     /// <param name="request">HTTP 请求</param>
     /// <param name="options">选项</param>
-    protected virtual void SetHeaders(HttpRequestMessage request, AiProviderOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, AiProviderOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         if (!String.IsNullOrEmpty(options.Organization))
             request.Headers.Add("OpenAI-Organization", options.Organization);
-    }
-
-    /// <summary>发送 GET 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
-    /// <param name="url">请求地址</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>响应字符串</returns>
-    protected async Task<String> GetAsync(String url, AiProviderOptions options, CancellationToken cancellationToken = default)
-    {
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        SetHeaders(req, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)resp.StatusCode}: {json}");
-        return json;
-    }
-
-    /// <summary>发送 GET 请求，非 2xx 时返回 null 而非抛出异常</summary>
-    /// <param name="url">请求地址</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>响应字符串，服务不可用时返回 null</returns>
-    protected async Task<String?> TryGetAsync(String url, AiProviderOptions options, CancellationToken cancellationToken = default)
-    {
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        SetHeaders(req, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode) return null;
-        return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>发送 POST 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
-    /// <param name="url">请求地址</param>
-    /// <param name="body">请求体 JSON 字符串</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>响应字符串</returns>
-    protected async Task<String> PostAsync(String url, Object? body, AiProviderOptions options, CancellationToken cancellationToken = default)
-    {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)resp.StatusCode}: {json}");
-        return json;
-    }
-
-    /// <summary>发送 POST 请求，非 2xx 时返回 null 而非抛出异常</summary>
-    /// <param name="url">请求地址</param>
-    /// <param name="body">请求体 JSON 字符串</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>响应字符串，服务不可用时返回 null</returns>
-    protected async Task<String?> TryPostAsync(String url, Object? body, AiProviderOptions options, CancellationToken cancellationToken = default)
-    {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode) return null;
-        return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>发送 POST 流式请求，返回已通过状态检查的 HttpResponseMessage。非 2xx 时抛出 HttpRequestException</summary>
-    /// <param name="url">请求地址</param>
-    /// <param name="body">请求体 JSON 字符串</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
-    protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, AiProviderOptions options, CancellationToken cancellationToken = default)
-    {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-        var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
-        {
-            var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            resp.Dispose();
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)resp.StatusCode}: {errBody}");
-        }
-        return resp;
     }
 
     /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段将</summary>
