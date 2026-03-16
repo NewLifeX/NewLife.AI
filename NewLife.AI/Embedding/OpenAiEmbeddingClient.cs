@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using NewLife.AI.Providers;
 using NewLife.Serialization;
@@ -124,11 +124,11 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
 
         var response = new EmbeddingResponse
         {
-            Model = dic.TryGetValue("model", out var model) ? model as String : null,
+            Model = dic["model"] as String,
         };
 
         // 解析 data 数组
-        if (dic.TryGetValue("data", out var dataObj) && dataObj is IList<Object> dataList)
+        if (dic["data"] is IList<Object> dataList)
         {
             var items = new List<EmbeddingItem>(dataList.Count);
             foreach (var item in dataList)
@@ -137,10 +137,10 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
 
                 var ei = new EmbeddingItem
                 {
-                    Index = itemDic.TryGetValue("index", out var idx) ? idx.ToInt() : 0,
+                    Index = itemDic["index"].ToInt(),
                 };
 
-                if (itemDic.TryGetValue("embedding", out var embObj) && embObj is IList<Object> embList)
+                if (itemDic["embedding"] is IList<Object> embList)
                 {
                     var arr = new Single[embList.Count];
                     for (var i = 0; i < embList.Count; i++)
@@ -154,12 +154,12 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
         }
 
         // 解析 usage
-        if (dic.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object> usageDic)
+        if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new EmbeddingUsage
             {
-                PromptTokens = usageDic.TryGetValue("prompt_tokens", out var pt) ? pt.ToInt() : 0,
-                TotalTokens = usageDic.TryGetValue("total_tokens", out var tt) ? tt.ToInt() : 0,
+                PromptTokens = usageDic["prompt_tokens"].ToInt(),
+                TotalTokens = usageDic["total_tokens"].ToInt(),
             };
         }
 

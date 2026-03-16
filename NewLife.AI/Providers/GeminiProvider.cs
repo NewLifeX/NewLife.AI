@@ -192,7 +192,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             Object = "chat.completion",
         };
 
-        if (dic.TryGetValue("candidates", out var candidatesObj) && candidatesObj is IList<Object> candidates)
+        if (dic["candidates"] is IList<Object> candidates)
         {
             var choices = new List<ChatChoice>();
             for (var i = 0; i < candidates.Count; i++)
@@ -200,7 +200,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
                 if (candidates[i] is not IDictionary<String, Object> candidate) continue;
 
                 var contentText = ExtractGeminiContent(candidate);
-                var finishReason = candidate.TryGetValue("finishReason", out var fr) ? MapGeminiFinishReason(fr as String) : null;
+                var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
 
                 choices.Add(new ChatChoice
                 {
@@ -213,13 +213,13 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         }
 
         // 用量统计
-        if (dic.TryGetValue("usageMetadata", out var usageObj) && usageObj is IDictionary<String, Object> usageDic)
+        if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new ChatUsage
             {
-                PromptTokens = usageDic.TryGetValue("promptTokenCount", out var pt) ? pt.ToInt() : 0,
-                CompletionTokens = usageDic.TryGetValue("candidatesTokenCount", out var ct) ? ct.ToInt() : 0,
-                TotalTokens = usageDic.TryGetValue("totalTokenCount", out var tt) ? tt.ToInt() : 0,
+                PromptTokens = usageDic["promptTokenCount"].ToInt(),
+                CompletionTokens = usageDic["candidatesTokenCount"].ToInt(),
+                TotalTokens = usageDic["totalTokenCount"].ToInt(),
             };
         }
 
@@ -241,12 +241,12 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             Object = "chat.completion.chunk",
         };
 
-        if (dic.TryGetValue("candidates", out var candidatesObj) && candidatesObj is IList<Object> candidates && candidates.Count > 0)
+        if (dic["candidates"] is IList<Object> candidates && candidates.Count > 0)
         {
             if (candidates[0] is IDictionary<String, Object> candidate)
             {
                 var contentText = ExtractGeminiContent(candidate);
-                var finishReason = candidate.TryGetValue("finishReason", out var fr) ? MapGeminiFinishReason(fr as String) : null;
+                var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
 
                 response.Choices = [new ChatChoice
                 {
@@ -257,13 +257,13 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             }
         }
 
-        if (dic.TryGetValue("usageMetadata", out var usageObj) && usageObj is IDictionary<String, Object> usageDic)
+        if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new ChatUsage
             {
-                PromptTokens = usageDic.TryGetValue("promptTokenCount", out var pt) ? pt.ToInt() : 0,
-                CompletionTokens = usageDic.TryGetValue("candidatesTokenCount", out var ct) ? ct.ToInt() : 0,
-                TotalTokens = usageDic.TryGetValue("totalTokenCount", out var tt) ? tt.ToInt() : 0,
+                PromptTokens = usageDic["promptTokenCount"].ToInt(),
+                CompletionTokens = usageDic["candidatesTokenCount"].ToInt(),
+                TotalTokens = usageDic["totalTokenCount"].ToInt(),
             };
         }
 
@@ -275,17 +275,17 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <returns></returns>
     private static String ExtractGeminiContent(IDictionary<String, Object> candidate)
     {
-        if (!candidate.TryGetValue("content", out var contentObj) || contentObj is not IDictionary<String, Object> contentDic)
+        if (candidate["content"] is not IDictionary<String, Object> contentDic)
             return "";
 
-        if (!contentDic.TryGetValue("parts", out var partsObj) || partsObj is not IList<Object> parts)
+        if (contentDic["parts"] is not IList<Object> parts)
             return "";
 
         var sb = new StringBuilder();
         foreach (var part in parts)
         {
-            if (part is IDictionary<String, Object> partDic && partDic.TryGetValue("text", out var text))
-                sb.Append(text);
+            if (part is IDictionary<String, Object> partDic)
+                sb.Append(partDic["text"]);
         }
         return sb.ToString();
     }

@@ -139,7 +139,7 @@ public class OllamaProvider : OpenAiProvider
         {
             var json = await GetAsync(url, options, cancellationToken).ConfigureAwait(false);
             var dic = JsonParser.Decode(json);
-            return dic?.TryGetValue("version", out var ver) == true ? ver as String : null;
+            return dic?["version"] as String;
         }
         catch
         {
@@ -283,16 +283,17 @@ public class OllamaProvider : OpenAiProvider
         var response = new ChatCompletionResponse
         {
             // Ollama 原生响应无 id 字段，用 created_at 生成
-            Id = dic.TryGetValue("created_at", out var createdAt) ? $"ollama-{createdAt}" : $"ollama-{DateTime.UtcNow.Ticks}",
+            Id = dic["created_at"] is Object createdAt ? $"ollama-{createdAt}" : $"ollama-{DateTime.UtcNow.Ticks}",
             Object = "chat.completion",
-            Model = dic.TryGetValue("model", out var model) ? model as String : null,
+            Model = dic["model"] as String,
         };
 
         // 解析消息并构造 choices
-        if (dic.TryGetValue("message", out var msgObj))
+        var msgObj = dic["message"];
+        if (msgObj != null)
         {
             var msg = ParseOllamaMessage(msgObj as IDictionary<String, Object>);
-            var doneReason = dic.TryGetValue("done_reason", out var dr) ? dr as String : null;
+            var doneReason = dic["done_reason"] as String;
             response.Choices =
             [
                 new ChatChoice
@@ -305,8 +306,8 @@ public class OllamaProvider : OpenAiProvider
         }
 
         // 解析 usage：prompt_eval_count = 输入 token，eval_count = 输出 token
-        var promptTokens = dic.TryGetValue("prompt_eval_count", out var pec) ? pec.ToInt() : 0;
-        var completionTokens = dic.TryGetValue("eval_count", out var ec) ? ec.ToInt() : 0;
+        var promptTokens = dic["prompt_eval_count"].ToInt();
+        var completionTokens = dic["eval_count"].ToInt();
         if (promptTokens > 0 || completionTokens > 0)
         {
             response.Usage = new ChatUsage
@@ -328,20 +329,21 @@ public class OllamaProvider : OpenAiProvider
         var dic = JsonParser.Decode(json);
         if (dic == null) return null;
 
-        var isDone = dic.TryGetValue("done", out var doneObj) && doneObj.ToBoolean();
+        var isDone = dic["done"].ToBoolean();
         var chunk = new ChatCompletionResponse
         {
-            Id = dic.TryGetValue("created_at", out var createdAt) ? $"ollama-{createdAt}" : $"ollama-{DateTime.UtcNow.Ticks}",
+            Id = dic["created_at"] is Object createdAt ? $"ollama-{createdAt}" : $"ollama-{DateTime.UtcNow.Ticks}",
             Object = "chat.completion.chunk",
-            Model = dic.TryGetValue("model", out var model) ? model as String : null,
+            Model = dic["model"] as String,
         };
 
         String? finishReason = null;
         if (isDone)
-            finishReason = dic.TryGetValue("done_reason", out var dr) ? dr as String : "stop";
+            finishReason = dic["done_reason"] as String ?? "stop";
 
         // 每个 chunk 都有 message 字段（含增量内容）
-        if (dic.TryGetValue("message", out var msgObj))
+        var msgObj = dic["message"];
+        if (msgObj != null)
         {
             var msg = ParseOllamaMessage(msgObj as IDictionary<String, Object>);
             chunk.Choices =
@@ -365,8 +367,8 @@ public class OllamaProvider : OpenAiProvider
         // 最终 done chunk 包含 usage 统计
         if (isDone)
         {
-            var promptTokens = dic.TryGetValue("prompt_eval_count", out var pec) ? pec.ToInt() : 0;
-            var completionTokens = dic.TryGetValue("eval_count", out var ec) ? ec.ToInt() : 0;
+            var promptTokens = dic["prompt_eval_count"].ToInt();
+            var completionTokens = dic["eval_count"].ToInt();
             if (promptTokens > 0 || completionTokens > 0)
             {
                 chunk.Usage = new ChatUsage
@@ -390,18 +392,16 @@ public class OllamaProvider : OpenAiProvider
 
         var msg = new ChatMessage
         {
-            Role = dic.TryGetValue("role", out var role) ? role as String ?? "assistant" : "assistant",
+            Role = dic["role"] as String ?? "assistant",
         };
 
-        if (dic.TryGetValue("content", out var content))
-            msg.Content = content;
+        msg.Content = dic["content"];
 
         // Ollama 原生思考字段为 thinking（与 OpenAI 兼容模式的 reasoning 不同）
-        if (dic.TryGetValue("thinking", out var thinking))
-            msg.ReasoningContent = thinking as String;
+        msg.ReasoningContent = dic["thinking"] as String;
 
         // 工具调用
-        if (dic.TryGetValue("tool_calls", out var tcObj) && tcObj is IList<Object> tcList)
+        if (dic["tool_calls"] is IList<Object> tcList)
         {
             var toolCalls = new List<ToolCall>();
             foreach (var tcItem in tcList)
@@ -410,16 +410,16 @@ public class OllamaProvider : OpenAiProvider
 
                 var tc = new ToolCall
                 {
-                    Id = tcDic.TryGetValue("id", out var tcId) ? tcId as String ?? "" : "",
-                    Type = tcDic.TryGetValue("type", out var tcType) ? tcType as String ?? "function" : "function",
+                    Id = tcDic["id"] as String ?? "",
+                    Type = tcDic["type"] as String ?? "function",
                 };
 
-                if (tcDic.TryGetValue("function", out var fnObj) && fnObj is IDictionary<String, Object> fnDic)
+                if (tcDic["function"] is IDictionary<String, Object> fnDic)
                 {
                     tc.Function = new FunctionCall
                     {
-                        Name = fnDic.TryGetValue("name", out var fnName) ? fnName as String ?? "" : "",
-                        Arguments = fnDic.TryGetValue("arguments", out var fnArgs) ? fnArgs?.ToJson() : null,
+                        Name = fnDic["name"] as String ?? "",
+                        Arguments = fnDic["arguments"]?.ToJson(),
                     };
                 }
 

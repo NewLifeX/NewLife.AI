@@ -174,25 +174,25 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         var response = new ChatCompletionResponse
         {
-            Id = dic.TryGetValue("id", out var id) ? id as String : null,
-            Model = dic.TryGetValue("model", out var model) ? model as String : null,
+            Id = dic["id"] as String,
+            Model = dic["model"] as String,
             Object = "chat.completion",
         };
 
         // 将 Anthropic content 数组转换为 OpenAI 格式
         var contentText = "";
         var reasoningText = "";
-        if (dic.TryGetValue("content", out var contentObj) && contentObj is IList<Object> contentList)
+        if (dic["content"] is IList<Object> contentList)
         {
             foreach (var block in contentList)
             {
                 if (block is not IDictionary<String, Object> blockDic) continue;
-                var blockType = blockDic.TryGetValue("type", out var bt) ? bt as String : null;
+                var blockType = blockDic["type"] as String;
 
-                if (blockType == "text" && blockDic.TryGetValue("text", out var text))
-                    contentText += text;
-                else if (blockType == "thinking" && blockDic.TryGetValue("thinking", out var thinking))
-                    reasoningText += thinking;
+                if (blockType == "text")
+                    contentText += blockDic["text"];
+                else if (blockType == "thinking")
+                    reasoningText += blockDic["thinking"];
             }
         }
 
@@ -200,15 +200,15 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         if (!String.IsNullOrEmpty(reasoningText))
             msg.ReasoningContent = reasoningText;
 
-        var finishReason = dic.TryGetValue("stop_reason", out var sr) ? sr as String : null;
+        var finishReason = dic["stop_reason"] as String;
         response.Choices = [new ChatChoice { Index = 0, Message = msg, FinishReason = MapStopReason(finishReason) }];
 
-        if (dic.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object> usageDic)
+        if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new ChatUsage
             {
-                PromptTokens = usageDic.TryGetValue("input_tokens", out var it) ? it.ToInt() : 0,
-                CompletionTokens = usageDic.TryGetValue("output_tokens", out var ot) ? ot.ToInt() : 0,
+                PromptTokens = usageDic["input_tokens"].ToInt(),
+                CompletionTokens = usageDic["output_tokens"].ToInt(),
             };
             response.Usage.TotalTokens = response.Usage.PromptTokens + response.Usage.CompletionTokens;
         }
@@ -230,44 +230,44 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         switch (eventType)
         {
             case "message_start":
-                if (dic.TryGetValue("message", out var msgObj) && msgObj is IDictionary<String, Object> msgDic)
+                if (dic["message"] is IDictionary<String, Object> msgDic)
                 {
-                    response.Id = msgDic.TryGetValue("id", out var id) ? id as String : null;
-                    response.Model = msgDic.TryGetValue("model", out var model) ? model as String : null;
+                    response.Id = msgDic["id"] as String;
+                    response.Model = msgDic["model"] as String;
                 }
                 response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { Role = "assistant" } }];
                 return response;
 
             case "content_block_delta":
-                if (dic.TryGetValue("delta", out var deltaObj) && deltaObj is IDictionary<String, Object> deltaDic)
+                if (dic["delta"] is IDictionary<String, Object> deltaDic)
                 {
-                    var deltaType = deltaDic.TryGetValue("type", out var dt) ? dt as String : null;
+                    var deltaType = deltaDic["type"] as String;
 
-                    if (deltaType == "text_delta" && deltaDic.TryGetValue("text", out var text))
+                    if (deltaType == "text_delta")
                     {
-                        response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { Content = text } }];
+                        response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { Content = deltaDic["text"] } }];
                         return response;
                     }
 
-                    if (deltaType == "thinking_delta" && deltaDic.TryGetValue("thinking", out var thinking))
+                    if (deltaType == "thinking_delta")
                     {
-                        response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { ReasoningContent = thinking as String } }];
+                        response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { ReasoningContent = deltaDic["thinking"] as String } }];
                         return response;
                     }
                 }
                 return null;
 
             case "message_delta":
-                if (dic.TryGetValue("delta", out var mdObj) && mdObj is IDictionary<String, Object> mdDic)
+                if (dic["delta"] is IDictionary<String, Object> mdDic)
                 {
-                    var finishReason = mdDic.TryGetValue("stop_reason", out var sr) ? sr as String : null;
+                    var finishReason = mdDic["stop_reason"] as String;
                     response.Choices = [new ChatChoice { Index = 0, FinishReason = MapStopReason(finishReason) }];
                 }
-                if (dic.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object> usageDic)
+                if (dic["usage"] is IDictionary<String, Object> usageDic)
                 {
                     response.Usage = new ChatUsage
                     {
-                        CompletionTokens = usageDic.TryGetValue("output_tokens", out var ot) ? ot.ToInt() : 0,
+                        CompletionTokens = usageDic["output_tokens"].ToInt(),
                     };
                 }
                 return response;

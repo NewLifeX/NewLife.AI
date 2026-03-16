@@ -136,10 +136,10 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
 
         var response = new OpenAiModelListResponse
         {
-            Object = dic.TryGetValue("object", out var obj) ? obj as String : null,
+            Object = dic["object"] as String,
         };
 
-        if (dic.TryGetValue("data", out var dataObj) && dataObj is IList<Object> dataList)
+        if (dic["data"] is IList<Object> dataList)
         {
             var items = new List<OpenAiModelObject>();
             foreach (var item in dataList)
@@ -147,10 +147,11 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
                 if (item is not IDictionary<String, Object> d) continue;
                 items.Add(new OpenAiModelObject
                 {
-                    Id = d.TryGetValue("id", out var id) ? id as String : null,
-                    Object = d.TryGetValue("object", out var mObj) ? mObj as String : null,
-                    Created = d.TryGetValue("created", out var created) ? created.ToLong().ToDateTime() : DateTime.MinValue,
-                    OwnedBy = d.TryGetValue("owned_by", out var ownedBy) ? ownedBy as String : null,
+                    Id = d["id"] as String,
+                    Name = d["name"] as String,
+                    Object = d["object"] as String,
+                    Created = d["created"].ToLong().ToDateTime(),
+                    OwnedBy = d["owned_by"] as String,
                 });
             }
             response.Data = [.. items];
@@ -257,13 +258,13 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
         var response = new ChatCompletionResponse
         {
             Id = dic["id"] as String,
-            Object = dic.TryGetValue("object", out var obj) ? obj as String : null,
-            Created = dic.TryGetValue("created", out var created) ? created.ToLong() : 0,
-            Model = dic.TryGetValue("model", out var model) ? model as String : null,
+            Object = dic["object"] as String,
+            Created = dic["created"].ToLong(),
+            Model = dic["model"] as String,
         };
 
         // 解析 choices
-        if (dic.TryGetValue("choices", out var choicesObj) && choicesObj is IList<Object> choicesList)
+        if (dic["choices"] is IList<Object> choicesList)
         {
             var choices = new List<ChatChoice>();
             foreach (var item in choicesList)
@@ -272,17 +273,15 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
 
                 var choice = new ChatChoice
                 {
-                    Index = choiceDic.TryGetValue("index", out var idx) ? idx.ToInt() : 0,
-                    FinishReason = choiceDic.TryGetValue("finish_reason", out var fr) ? fr as String : null,
+                    Index = choiceDic["index"].ToInt(),
+                    FinishReason = choiceDic["finish_reason"] as String,
                 };
 
                 // 非流式：message
-                if (choiceDic.TryGetValue("message", out var msgObj))
-                    choice.Message = ParseChatMessage(msgObj as IDictionary<String, Object>);
+                choice.Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>);
 
                 // 流式：delta
-                if (choiceDic.TryGetValue("delta", out var deltaObj))
-                    choice.Delta = ParseChatMessage(deltaObj as IDictionary<String, Object>);
+                choice.Delta = ParseChatMessage(choiceDic["delta"] as IDictionary<String, Object>);
 
                 choices.Add(choice);
             }
@@ -290,13 +289,13 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
         }
 
         // 解析 usage
-        if (dic.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object> usageDic)
+        if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new ChatUsage
             {
-                PromptTokens = usageDic.TryGetValue("prompt_tokens", out var pt) ? pt.ToInt() : 0,
-                CompletionTokens = usageDic.TryGetValue("completion_tokens", out var ct) ? ct.ToInt() : 0,
-                TotalTokens = usageDic.TryGetValue("total_tokens", out var tt) ? tt.ToInt() : 0,
+                PromptTokens = usageDic["prompt_tokens"].ToInt(),
+                CompletionTokens = usageDic["completion_tokens"].ToInt(),
+                TotalTokens = usageDic["total_tokens"].ToInt(),
             };
         }
 
@@ -312,21 +311,17 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
 
         var msg = new ChatMessage
         {
-            Role = dic.TryGetValue("role", out var role) ? role as String ?? "" : "",
+            Role = dic["role"] as String ?? "",
         };
 
         // content 可能是字符串或数组
-        if (dic.TryGetValue("content", out var content))
-            msg.Content = content;
+        msg.Content = dic["content"];
 
         // 思考内容（DeepSeek/Moonshot/MiMo 等模型使用 reasoning_content；Ollama OpenAI 兼容模式使用 reasoning）
-        if (dic.TryGetValue("reasoning_content", out var reasoning))
-            msg.ReasoningContent = reasoning as String;
-        else if (dic.TryGetValue("reasoning", out var ollamaReasoning))
-            msg.ReasoningContent = ollamaReasoning as String;
+        msg.ReasoningContent = dic["reasoning_content"] as String ?? dic["reasoning"] as String;
 
         // 工具调用
-        if (dic.TryGetValue("tool_calls", out var tcObj) && tcObj is IList<Object> tcList)
+        if (dic["tool_calls"] is IList<Object> tcList)
         {
             var toolCalls = new List<ToolCall>();
             foreach (var tcItem in tcList)
@@ -335,16 +330,16 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
 
                 var tc = new ToolCall
                 {
-                    Id = tcDic.TryGetValue("id", out var tcId) ? tcId as String ?? "" : "",
-                    Type = tcDic.TryGetValue("type", out var tcType) ? tcType as String ?? "function" : "function",
+                    Id = tcDic["id"] as String ?? "",
+                    Type = tcDic["type"] as String ?? "function",
                 };
 
-                if (tcDic.TryGetValue("function", out var fnObj) && fnObj is IDictionary<String, Object> fnDic)
+                if (tcDic["function"] is IDictionary<String, Object> fnDic)
                 {
                     tc.Function = new FunctionCall
                     {
-                        Name = fnDic.TryGetValue("name", out var fnName) ? fnName as String ?? "" : "",
-                        Arguments = fnDic.TryGetValue("arguments", out var fnArgs) ? fnArgs as String : null,
+                        Name = fnDic["name"] as String ?? "",
+                        Arguments = fnDic["arguments"] as String,
                     };
                 }
 

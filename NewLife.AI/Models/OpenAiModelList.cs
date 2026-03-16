@@ -16,6 +16,9 @@ public class OpenAiModelObject
     /// <summary>模型唯一标识，即请求时 model 字段的值</summary>
     public String? Id { get; set; }
 
+    /// <summary>名称</summary>
+    public String? Name { get; set; }
+
     /// <summary>对象类型，固定为 "model"</summary>
     public String? Object { get; set; }
 
