@@ -56,7 +56,8 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
     #endregion
 
     #region 构造
-    private static HttpClient CreateHttpClient()
+    /// <summary>创建 HttpClient 实例。子类可通过此方法以相同配置创建独立客户端</summary>
+    protected static HttpClient CreateHttpClient()
     {
         var handler = new HttpClientHandler
         {
@@ -313,7 +314,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
     /// <summary>解析消息对象</summary>
     /// <param name="dic">字典</param>
     /// <returns></returns>
-    private static ChatMessage? ParseChatMessage(IDictionary<String, Object>? dic)
+    protected virtual ChatMessage? ParseChatMessage(IDictionary<String, Object>? dic)
     {
         if (dic == null) return null;
 
@@ -326,9 +327,11 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
         if (dic.TryGetValue("content", out var content))
             msg.Content = content;
 
-        // 思考内容（DeepSeek/Moonshot/MiMo 等模型使用 reasoning_content）
+        // 思考内容（DeepSeek/Moonshot/MiMo 等模型使用 reasoning_content；Ollama OpenAI 兼容模式使用 reasoning）
         if (dic.TryGetValue("reasoning_content", out var reasoning))
             msg.ReasoningContent = reasoning as String;
+        else if (dic.TryGetValue("reasoning", out var ollamaReasoning))
+            msg.ReasoningContent = ollamaReasoning as String;
 
         // 工具调用
         if (dic.TryGetValue("tool_calls", out var tcObj) && tcObj is IList<Object> tcList)
@@ -358,8 +361,14 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
             msg.ToolCalls = toolCalls;
         }
 
+        OnParseChatMessage(msg, dic);
         return msg;
     }
+
+    /// <summary>消息解析扩展点。子类可重写此方法处理自定义响应字段</summary>
+    /// <param name="msg">已完成基础解析的消息对象</param>
+    /// <param name="dic">原始 JSON 字典，可读取额外字段</param>
+    protected virtual void OnParseChatMessage(ChatMessage msg, IDictionary<String, Object> dic) { }
 
     /// <summary>设置请求头</summary>
     /// <param name="request">HTTP 请求</param>

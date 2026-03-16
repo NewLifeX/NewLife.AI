@@ -436,45 +436,6 @@ public class OpenRouterProvider : OpenAiProvider
     ];
 }
 
-/// <summary>Ollama 服务商。本地部署和运行开源大模型</summary>
-/// <remarks>
-/// Ollama 提供 OpenAI 兼容 API，默认不需要 API Key。
-/// 官方文档：https://github.com/ollama/ollama/blob/main/docs/openai.md
-/// </remarks>
-public class OllamaProvider : OpenAiProvider
-{
-    /// <summary>服务商编码</summary>
-    public override String Code => "Ollama";
-
-    /// <summary>服务商名称</summary>
-    public override String Name => "Ollama";
-
-    /// <summary>服务商描述</summary>
-    public override String? Description => "本地运行开源大模型，支持 Llama/Qwen/Gemma 等";
-
-    /// <summary>默认 API 地址</summary>
-    public override String DefaultEndpoint => "http://localhost:11434";
-
-    /// <summary>主流模型列表。Ollama 本地常用开源模型（能力取决于实际加载的模型）</summary>
-    public override AiModelInfo[] Models { get; } =
-    [
-        new("llama3.3",     "Llama 3.3",    new(false, false, false, true)),
-        new("qwen2.5",      "Qwen 2.5",     new(false, false, false, true)),
-        new("deepseek-r1",  "DeepSeek R1",  new(true,  false, false, false)),
-        new("phi4",         "Phi-4",        new(false, false, false, true)),
-    ];
-
-    /// <summary>设置请求头。Ollama 默认不需要认证</summary>
-    /// <param name="request">HTTP 请求</param>
-    /// <param name="options">选项</param>
-    protected override void SetHeaders(HttpRequestMessage request, AiProviderOptions options)
-    {
-        // Ollama 默认不需要 API Key，但如果用户配置了则传递
-        if (!String.IsNullOrEmpty(options.ApiKey))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
-    }
-}
-
 /// <summary>小米 MiMo 服务商。支持 MiMo 系列推理模型</summary>
 /// <remarks>
 /// MiMo 支持 reasoning_content 字段返回推理思考过程。
