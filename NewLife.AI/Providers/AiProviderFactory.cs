@@ -1,5 +1,4 @@
 ﻿using System.Linq.Expressions;
-using NewLife.Log;
 using NewLife.Model;
 using NewLife.Reflection;
 
@@ -126,21 +125,55 @@ public class AiProviderFactory
     #endregion
 
     #region 静态方法
-    /// <summary>创建默认工厂实例。优先用 <see cref="ScanAllAsemblies"/> 扫描全部程序集；
-    /// 若失败则直接枚举 NewLife.AI 程序集作为兜底，确保内置服务商始终可用</summary>
-    /// <returns>已完成扫描的工厂实例</returns>
+    /// <summary>创建默认工厂实例。按流行度顺序显式注册内置服务商，确保注册顺序确定且可预测</summary>
+    /// <returns>已完成注册的工厂实例</returns>
     private static AiProviderFactory CreateDefault()
     {
         var factory = new AiProviderFactory();
 
-        try
-        {
-            factory.ScanAllAsemblies();
-        }
-        catch (Exception ex)
-        {
-            XTrace.WriteLine($"[AiProviderFactory] ScanAllAsemblies failed, fallback to built-in assembly: {ex.Message}");
-        }
+        // 星语网关：排名第一
+        factory.RegisterType(typeof(NewLifeAiProvider));
+
+        // 第一梯队：国内主流 + 全球主流
+        factory.RegisterType(typeof(DashScopeProvider));
+        factory.RegisterType(typeof(DeepSeekProvider));
+        factory.RegisterType(typeof(OpenAiProvider));
+        factory.RegisterType(typeof(OllamaProvider));
+        factory.RegisterType(typeof(AnthropicProvider));
+        factory.RegisterType(typeof(GeminiProvider));
+        factory.RegisterType(typeof(AzureAiProvider));
+        factory.RegisterType(typeof(VolcEngineProvider));
+
+        // 第二梯队：国内厂商
+        factory.RegisterType(typeof(ZhipuProvider));
+        factory.RegisterType(typeof(MoonshotProvider));
+        factory.RegisterType(typeof(HunyuanProvider));
+        factory.RegisterType(typeof(QianfanProvider));
+        factory.RegisterType(typeof(SparkProvider));
+        factory.RegisterType(typeof(MiniMaxProvider));
+        factory.RegisterType(typeof(SiliconFlowProvider));
+        factory.RegisterType(typeof(MiMoProvider));
+        factory.RegisterType(typeof(InfiniProvider));
+        factory.RegisterType(typeof(XiaomaPowerProvider));
+
+        // 第三梯队：海外厂商
+        factory.RegisterType(typeof(XAiProvider));
+        factory.RegisterType(typeof(MistralProvider));
+        factory.RegisterType(typeof(CohereProvider));
+        factory.RegisterType(typeof(PerplexityProvider));
+        factory.RegisterType(typeof(GroqProvider));
+        factory.RegisterType(typeof(CerebrasProvider));
+        factory.RegisterType(typeof(TogetherAiProvider));
+        factory.RegisterType(typeof(FireworksProvider));
+        factory.RegisterType(typeof(SambaNovaProvider));
+        factory.RegisterType(typeof(YiProvider));
+
+        // 第四梯队：平台 / 聚合 / 本地
+        factory.RegisterType(typeof(GitHubModelsProvider));
+        factory.RegisterType(typeof(OpenRouterProvider));
+        factory.RegisterType(typeof(LMStudioProvider));
+        factory.RegisterType(typeof(VllmProvider));
+        factory.RegisterType(typeof(OneApiProvider));
 
         return factory;
     }

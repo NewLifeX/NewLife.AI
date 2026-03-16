@@ -47,13 +47,24 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
     /// <summary>API 版本</summary>
     protected virtual String ApiVersion => "2023-06-01";
 
-    private static readonly HttpClient _httpClient = new(new HttpClientHandler
+    /// <summary>HTTP 请求超时时间。默认 5 分钟</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    private HttpClient? _httpClient;
+
+    /// <summary>获取 HttpClient 实例。首次访问时懒创建</summary>
+    protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
+
+    /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
+    /// <returns>新的 HttpClient 实例</returns>
+    protected virtual HttpClient CreateHttpClient()
     {
-        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
-    })
-    {
-        Timeout = TimeSpan.FromMinutes(5),
-    };
+        var handler = new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+        };
+        return new HttpClient(handler) { Timeout = Timeout };
+    }
     #endregion
 
     #region 方法
@@ -79,7 +90,7 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
         SetHeaders(httpRequest, options);
         httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-        using var httpResponse = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!httpResponse.IsSuccessStatusCode)
@@ -105,7 +116,7 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
         SetHeaders(httpRequest, options);
         httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-        using var httpResponse = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
 
         if (!httpResponse.IsSuccessStatusCode)
         {

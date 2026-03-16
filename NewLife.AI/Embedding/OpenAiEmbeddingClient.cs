@@ -23,7 +23,13 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
     /// <summary>客户端元数据</summary>
     public EmbeddingClientMetadata Metadata { get; }
 
-    private static readonly HttpClient _httpClient = CreateHttpClient();
+    /// <summary>HTTP 请求超时时间。默认 2 分钟</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(2);
+
+    private HttpClient? _httpClient;
+
+    /// <summary>获取 HttpClient 实例</summary>
+    protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
 
     #endregion
 
@@ -54,13 +60,13 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
     public OpenAiEmbeddingClient(IAiProvider provider, AiProviderOptions options)
         : this(provider.Name, provider.DefaultEndpoint, options) { }
 
-    private static HttpClient CreateHttpClient()
+    private HttpClient CreateHttpClient()
     {
         var handler = new HttpClientHandler
         {
             AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
         };
-        return new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(2) };
+        return new HttpClient(handler) { Timeout = Timeout };
     }
 
     #endregion
@@ -95,7 +101,7 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
         httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-        using var httpResponse = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!httpResponse.IsSuccessStatusCode)

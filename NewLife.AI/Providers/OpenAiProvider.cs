@@ -52,12 +52,19 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
     /// <summary>追踪器</summary>
     public ITracer? Tracer { get; set; }
 
-    private static readonly HttpClient _httpClient = CreateHttpClient();
+    /// <summary>HTTP 请求超时时间。默认 5 分钟</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    private HttpClient? _httpClient;
+
+    /// <summary>获取 HttpClient 实例。首次访问时通过 CreateHttpClient 创建</summary>
+    protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
     #endregion
 
     #region 构造
-    /// <summary>创建 HttpClient 实例。子类可通过此方法以相同配置创建独立客户端</summary>
-    protected static HttpClient CreateHttpClient()
+    /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
+    /// <returns>新的 HttpClient 实例</returns>
+    protected virtual HttpClient CreateHttpClient()
     {
         var handler = new HttpClientHandler
         {
@@ -65,7 +72,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
         };
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromMinutes(5),
+            Timeout = Timeout,
         };
         client.DefaultRequestHeaders.Add("Accept", "application/json");
 
@@ -91,7 +98,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
         SetHeaders(httpRequest, options);
         httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-        using var httpResponse = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!httpResponse.IsSuccessStatusCode)
@@ -127,7 +134,7 @@ public class OpenAiProvider : IAiProvider, IAiChatProtocol, IEmbeddingProvider
         SetHeaders(httpRequest, options);
         httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-        using var httpResponse = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
 
         if (!httpResponse.IsSuccessStatusCode)
         {
