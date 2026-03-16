@@ -1,6 +1,4 @@
-﻿using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.Serialization;
@@ -18,7 +16,7 @@ namespace NewLife.AI.Providers;
 /// <item>支持交错思考（extended thinking）</item>
 /// </list>
 /// </remarks>
-public class AnthropicProvider : IAiProvider, IAiChatProtocol
+public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 {
     #region 属性
     /// <summary>服务商编码</summary>
@@ -46,25 +44,6 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
 
     /// <summary>API 版本</summary>
     protected virtual String ApiVersion => "2023-06-01";
-
-    /// <summary>HTTP 请求超时时间。默认 5 分钟</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
-
-    private HttpClient? _httpClient;
-
-    /// <summary>获取 HttpClient 实例。首次访问时懒创建</summary>
-    protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
-
-    /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
-    /// <returns>新的 HttpClient 实例</returns>
-    protected virtual HttpClient CreateHttpClient()
-    {
-        var handler = new HttpClientHandler
-        {
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
-        };
-        return new HttpClient(handler) { Timeout = Timeout };
-    }
     #endregion
 
     #region 方法
@@ -86,16 +65,7 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
         var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/v1/messages";
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        SetHeaders(httpRequest, options);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)httpResponse.StatusCode}: {responseText}");
-
+        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         return ParseAnthropicResponse(responseText);
     }
 
@@ -112,17 +82,7 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
         var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/v1/messages";
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        SetHeaders(httpRequest, options);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-        {
-            var errorText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)httpResponse.StatusCode}: {errorText}");
-        }
+        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
 
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -157,7 +117,7 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
     /// <summary>构建 Anthropic 请求体</summary>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    private String BuildAnthropicRequest(ChatCompletionRequest request)
+    private Object BuildAnthropicRequest(ChatCompletionRequest request)
     {
         var dic = new Dictionary<String, Object>();
 
@@ -201,7 +161,7 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
             dic["tools"] = tools;
         }
 
-        return dic.ToJson();
+        return dic;
     }
 
     /// <summary>解析 Anthropic 非流式响应</summary>
@@ -334,13 +294,12 @@ public class AnthropicProvider : IAiProvider, IAiChatProtocol
     /// <summary>设置请求头</summary>
     /// <param name="request">HTTP 请求</param>
     /// <param name="options">选项</param>
-    private void SetHeaders(HttpRequestMessage request, AiProviderOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, AiProviderOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Add("x-api-key", options.ApiKey);
 
         request.Headers.Add("anthropic-version", ApiVersion);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
     #endregion
 }

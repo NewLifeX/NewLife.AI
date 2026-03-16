@@ -1,6 +1,4 @@
-﻿using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
@@ -110,18 +108,7 @@ public class NewLifeAiProvider : OpenAiProvider
         if (!String.IsNullOrEmpty(model)) dic["model"] = model;
         if (!String.IsNullOrEmpty(size)) dic["size"] = size;
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(dic.ToJson(), Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-
-        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"NewLifeAI 图像生成失败 [{(Int32)resp.StatusCode}]: {json}");
-
+        var json = await PostAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
         return json.ToJsonEntity<ImageGenerationResponse>();
     }
     #endregion

@@ -16,7 +16,7 @@ namespace NewLife.AI.Providers;
 /// <item>响应中的 content 使用 parts 数组</item>
 /// </list>
 /// </remarks>
-public class GeminiProvider : IAiProvider, IAiChatProtocol
+public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 {
     #region 属性
     /// <summary>服务商编码</summary>
@@ -43,25 +43,6 @@ public class GeminiProvider : IAiProvider, IAiChatProtocol
         new("gemini-1.5-pro",                  "Gemini 1.5 Pro",    new(false, true, false, true)),
         new("imagen-3.0-generate-001",         "Imagen 3",          new(false, false, true, false)),
     ];
-
-    /// <summary>HTTP 请求超时时间。默认 5 分钟</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
-
-    private HttpClient? _httpClient;
-
-    /// <summary>获取 HttpClient 实例。首次访问时懒创建</summary>
-    protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
-
-    /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
-    /// <returns>新的 HttpClient 实例</returns>
-    protected virtual HttpClient CreateHttpClient()
-    {
-        var handler = new HttpClientHandler
-        {
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
-        };
-        return new HttpClient(handler) { Timeout = Timeout };
-    }
     #endregion
 
     #region 方法
@@ -84,15 +65,7 @@ public class GeminiProvider : IAiProvider, IAiChatProtocol
         var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = $"{endpoint}/v1/models/{model}:generateContent?key={options.ApiKey}";
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)httpResponse.StatusCode}: {responseText}");
-
+        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         return ParseGeminiResponse(responseText, model);
     }
 
@@ -110,16 +83,7 @@ public class GeminiProvider : IAiProvider, IAiChatProtocol
         var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = $"{endpoint}/v1/models/{model}:streamGenerateContent?alt=sse&key={options.ApiKey}";
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
-        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-        using var httpResponse = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-
-        if (!httpResponse.IsSuccessStatusCode)
-        {
-            var errorText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"AI 服务商 {Name} 返回错误 {(Int32)httpResponse.StatusCode}: {errorText}");
-        }
+        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
 
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -146,7 +110,7 @@ public class GeminiProvider : IAiProvider, IAiChatProtocol
     /// <summary>构建 Gemini 请求体</summary>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    private String BuildGeminiRequest(ChatCompletionRequest request)
+    private Object BuildGeminiRequest(ChatCompletionRequest request)
     {
         var dic = new Dictionary<String, Object>();
 
@@ -210,7 +174,7 @@ public class GeminiProvider : IAiProvider, IAiChatProtocol
             };
         }
 
-        return dic.ToJson();
+        return dic;
     }
 
     /// <summary>解析 Gemini 非流式响应</summary>

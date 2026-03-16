@@ -1,4 +1,4 @@
-namespace NewLife.AI.Models;
+﻿namespace NewLife.AI.Models;
 
 /// <summary>OpenAI 兼容的模型列表响应。对应 GET /v1/models 返回结构</summary>
 public class OpenAiModelListResponse
@@ -20,7 +20,7 @@ public class OpenAiModelObject
     public String? Object { get; set; }
 
     /// <summary>模型创建时间（Unix 时间戳，秒）</summary>
-    public Int64 Created { get; set; }
+    public DateTime Created { get; set; }
 
     /// <summary>模型归属方，通常为提供商编码</summary>
     public String? OwnedBy { get; set; }

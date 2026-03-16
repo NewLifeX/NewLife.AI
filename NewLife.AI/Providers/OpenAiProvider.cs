@@ -149,7 +149,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
                 {
                     Id = d.TryGetValue("id", out var id) ? id as String : null,
                     Object = d.TryGetValue("object", out var mObj) ? mObj as String : null,
-                    Created = d.TryGetValue("created", out var created) ? created.ToLong() : 0L,
+                    Created = d.TryGetValue("created", out var created) ? created.ToLong().ToDateTime() : DateTime.MinValue,
                     OwnedBy = d.TryGetValue("owned_by", out var ownedBy) ? ownedBy as String : null,
                 });
             }
