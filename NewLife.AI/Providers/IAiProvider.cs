@@ -152,7 +152,7 @@ public abstract class AiProviderBase
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {GetType().Name} 返回错误 {(Int32)resp.StatusCode}: {json}");
+            throw new HttpRequestException($"AI 服务商[{(this as IAiProvider)?.Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
 
@@ -187,7 +187,7 @@ public abstract class AiProviderBase
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商 {GetType().Name} 返回错误 {(Int32)resp.StatusCode}: {json}");
+            throw new HttpRequestException($"AI 服务商[{(this as IAiProvider)?.Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
 
@@ -229,7 +229,7 @@ public abstract class AiProviderBase
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             resp.Dispose();
-            throw new HttpRequestException($"AI 服务商 {GetType().Name} 返回错误 {(Int32)resp.StatusCode}: {errBody}");
+            throw new HttpRequestException($"AI 服务商[{(this as IAiProvider)?.Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return resp;
     }
