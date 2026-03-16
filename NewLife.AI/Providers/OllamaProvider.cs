@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
@@ -23,7 +20,7 @@ public class OllamaProvider : OpenAiProvider
     public override String Code => "Ollama";
 
     /// <summary>服务商名称</summary>
-    public override String Name => "Ollama";
+    public override String Name => "本地Ollama";
 
     /// <summary>服务商描述</summary>
     public override String? Description => "本地运行开源大模型，支持 Llama/Qwen/Gemma 等";
@@ -52,22 +49,9 @@ public class OllamaProvider : OpenAiProvider
         if (request.Messages == null || request.Messages.Count == 0)
             throw new ArgumentException("消息列表不能为空", nameof(request));
 
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/chat";
-
+        var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/chat";
         var body = BuildOllamaBody(request, stream: false);
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"Ollama 请求失败 [{(Int32)resp.StatusCode}]: {json}");
-
+        var json = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         return ParseOllamaResponse(json);
     }
 
@@ -78,24 +62,9 @@ public class OllamaProvider : OpenAiProvider
     /// <returns></returns>
     public override async IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/chat";
-
+        var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/chat";
         var body = BuildOllamaBody(request, stream: true);
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-
-        var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode)
-        {
-            var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"Ollama 请求失败 [{(Int32)resp.StatusCode}]: {errBody}");
-        }
-
+        using var resp = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -126,20 +95,11 @@ public class OllamaProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表</returns>
-    public virtual async Task<OllamaTagsResponse?> ListModelsAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
+    public new virtual async Task<OllamaTagsResponse?> ListModelsAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/tags";
-
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        SetHeaders(req, options);
-
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode) return null;
-
-        return json.ToJsonEntity<OllamaTagsResponse>();
+        var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/tags";
+        var json = await TryGetAsync(url, options, cancellationToken).ConfigureAwait(false);
+        return json?.ToJsonEntity<OllamaTagsResponse>();
     }
 
     /// <summary>获取运行中的模型列表</summary>
@@ -148,18 +108,9 @@ public class OllamaProvider : OpenAiProvider
     /// <returns>运行中模型列表</returns>
     public virtual async Task<OllamaPsResponse?> ListRunningAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/ps";
-
-        using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        SetHeaders(req, options);
-
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode) return null;
-
-        return json.ToJsonEntity<OllamaPsResponse>();
+        var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/ps";
+        var json = await TryGetAsync(url, options, cancellationToken).ConfigureAwait(false);
+        return json?.ToJsonEntity<OllamaPsResponse>();
     }
 
     /// <summary>获取模型详细信息</summary>
@@ -171,22 +122,10 @@ public class OllamaProvider : OpenAiProvider
     {
         if (modelName == null) throw new ArgumentNullException(nameof(modelName));
 
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/show";
-
-        var body = new Dictionary<String, Object> { ["model"] = modelName }.ToJson();
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode) return null;
-
-        return json.ToJsonEntity<OllamaShowResponse>();
+        var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/show";
+        var body = new Dictionary<String, Object> { ["model"] = modelName };
+        var json = await TryPostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
+        return json?.ToJsonEntity<OllamaShowResponse>();
     }
 
     /// <summary>获取 Ollama 版本信息</summary>
@@ -195,18 +134,10 @@ public class OllamaProvider : OpenAiProvider
     /// <returns>版本号字符串，无法连接时返回 null</returns>
     public virtual async Task<String?> GetVersionAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/version";
-
+        var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/version";
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            SetHeaders(req, options);
-
-            var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode) return null;
-
-            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var json = await GetAsync(url, options, cancellationToken).ConfigureAwait(false);
             var dic = JsonParser.Decode(json);
             return dic?.TryGetValue("version", out var ver) == true ? ver as String : null;
         }
@@ -225,8 +156,7 @@ public class OllamaProvider : OpenAiProvider
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/embed";
+        var url = (options.Endpoint.IsNullOrEmpty() ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/embed";
 
         var dic = new Dictionary<String, Object>();
         if (request.Model != null) dic["model"] = request.Model;
@@ -235,19 +165,7 @@ public class OllamaProvider : OpenAiProvider
         if (request.Dimensions != null) dic["dimensions"] = request.Dimensions.Value;
         if (request.KeepAlive != null) dic["keep_alive"] = request.KeepAlive;
 
-        var body = dic.ToJson();
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"Ollama Embed 请求失败 [{(Int32)resp.StatusCode}]: {json}");
-
+        var json = await PostAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
         return json.ToJsonEntity<OllamaEmbedResponse>();
     }
 
@@ -260,27 +178,14 @@ public class OllamaProvider : OpenAiProvider
     {
         if (modelName == null) throw new ArgumentNullException(nameof(modelName));
 
-        var endpoint = String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/');
-        var url = $"{endpoint}/api/pull";
-
+        var url = (options.Endpoint.IsNullOrEmpty() ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/pull";
         // stream:false 让 Ollama 等待完成后返回单条 JSON，避免处理 NDJSON 流
-        var body = new Dictionary<String, Object> { ["model"] = modelName, ["stream"] = false }.ToJson();
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-
+        var body = new Dictionary<String, Object> { ["model"] = modelName, ["stream"] = false };
         // 拉取模型可能耗时数分钟，使用 30 分钟超时
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromMinutes(30));
 
-        var resp = await HttpClient.SendAsync(req, cts.Token).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"Ollama Pull 请求失败 [{(Int32)resp.StatusCode}]: {json}");
-
+        var json = await PostAsync(url, body, options, cts.Token).ConfigureAwait(false);
         return json.ToJsonEntity<OllamaPullStatus>();
     }
     #endregion

@@ -42,6 +42,16 @@ public interface IAiProvider
     IChatClient CreateClient(AiProviderOptions options);
 }
 
+/// <summary>支持列出可用模型的 AI 服务商接口。对应 OpenAI GET /v1/models 端点</summary>
+public interface IModelListProvider
+{
+    /// <summary>获取该服务商当前可用的模型列表</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>模型列表，服务不可用时返回 null</returns>
+    Task<OpenAiModelListResponse?> ListModelsAsync(AiProviderOptions options, CancellationToken cancellationToken = default);
+}
+
 /// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
 /// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
 /// <param name="SupportThinking">是否支持思考模式。如 DeepSeek-R1、Claude 的 extended thinking</param>

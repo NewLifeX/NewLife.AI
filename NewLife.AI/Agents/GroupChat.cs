@@ -1,4 +1,4 @@
-namespace NewLife.AI.Agents;
+﻿namespace NewLife.AI.Agents;
 
 /// <summary>GroupChat 发言顺序选择器接口。决定每轮由哪个代理发言</summary>
 public interface IGroupChatSelector
@@ -25,12 +25,12 @@ public sealed class RoundRobinSelector : IGroupChatSelector
         if (agents == null || agents.Count == 0) throw new ArgumentException("代理列表不能为空", nameof(agents));
 
         // 原子操作确保多线程安全
-        var next = System.Threading.Interlocked.Increment(ref _index) % agents.Count;
+        var next = Interlocked.Increment(ref _index) % agents.Count;
         return Task.FromResult(agents[next]);
     }
 
     /// <summary>重置轮询计数器</summary>
-    public void Reset() => System.Threading.Interlocked.Exchange(ref _index, -1);
+    public void Reset() => Interlocked.Exchange(ref _index, -1);
 }
 
 /// <summary>群聊控制器。协调多个 IAgent 按照选择器策略轮流发言，直到收到 StopMessage 或达到最大轮次</summary>
