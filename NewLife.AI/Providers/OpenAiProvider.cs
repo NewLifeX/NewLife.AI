@@ -441,6 +441,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
 
                 var tc = new ToolCall
                 {
+                    Index = tcDic["index"] is Object idxVal ? (Int32?)idxVal.ToInt() : null,
                     Id = tcDic["id"] as String ?? "",
                     Type = tcDic["type"] as String ?? "function",
                 };
