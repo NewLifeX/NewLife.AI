@@ -166,6 +166,9 @@ public class ImageUrl
 /// <summary>工具调用</summary>
 public class ToolCall
 {
+    /// <summary>流式下标。流式输出时用于标识属于哪个工具调用，非流式场景可忽略</summary>
+    public Int32? Index { get; set; }
+
     /// <summary>调用编号</summary>
     public String Id { get; set; } = null!;
 

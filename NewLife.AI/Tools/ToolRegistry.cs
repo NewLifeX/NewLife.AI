@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 
@@ -217,7 +217,16 @@ public class ToolRegistry
     private static Object?[] DeserializeArguments(ParameterInfo[] parameters, String arguments)
     {
         var result = new Object?[parameters.Length];
-        var parsed = arguments.ToJsonEntity<Dictionary<String, Object?>>();
+        Dictionary<String, Object?>? parsed;
+        try
+        {
+            parsed = arguments.ToJsonEntity<Dictionary<String, Object?>>();
+        }
+        catch
+        {
+            // 参数 JSON 格式异常（如流式截断导致不完整 JSON），使用默认值
+            return result;
+        }
         if (parsed == null) return result;
 
         for (var i = 0; i < parameters.Length; i++)
