@@ -3,8 +3,13 @@
 /// <summary>思考模式</summary>
 public enum ThinkingMode
 {
+    /// <summary>自动</summary>
     Auto = 0,
+
+    /// <summary>深度思考</summary>
     Think = 1,
+
+    /// <summary>快速</summary>
     Fast = 2
 }
 
@@ -13,8 +18,10 @@ public enum FeedbackType
 {
     /// <summary>无反馈</summary>
     None = 0,
+
     /// <summary>点赞</summary>
     Like = 1,
+
     /// <summary>点踩</summary>
     Dislike = 2
 }
@@ -24,8 +31,10 @@ public enum MessageStatus
 {
     /// <summary>流式输出中</summary>
     Streaming = 0,
+
     /// <summary>已完成</summary>
     Done = 1,
+
     /// <summary>出错</summary>
     Error = 2
 }
@@ -35,8 +44,10 @@ public enum ToolCallStatus
 {
     /// <summary>调用中</summary>
     Calling = 0,
+
     /// <summary>已完成</summary>
     Done = 1,
+
     /// <summary>出错</summary>
     Error = 2
 }
@@ -46,8 +57,10 @@ public enum McpTransportType
 {
     /// <summary>HTTP</summary>
     Http = 0,
+
     /// <summary>SSE（Server-Sent Events）</summary>
     Sse = 1,
+
     /// <summary>标准输入输出</summary>
     Stdio = 2,
 }

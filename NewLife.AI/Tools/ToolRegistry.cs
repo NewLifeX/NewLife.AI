@@ -8,7 +8,7 @@ namespace NewLife.AI.Tools;
 /// <remarks>
 /// 支持三种注册方式：
 /// <list type="number">
-/// <item>注册单个委托（通过 <see cref="AddTool
+/// <item>注册单个委托（通过 <see cref="AddTool"/>）</item>
 /// <item>注册整个服务类中所有 <see cref="ToolDescriptionAttribute"/> 标注方法（通过 <see cref="AddTools{T}"/>）</item>
 /// <item>扫描程序集批量注册（通过 <see cref="AddToolsFromAssembly"/>）</item>
 /// </list>
