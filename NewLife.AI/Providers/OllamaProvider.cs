@@ -227,10 +227,11 @@ public class OllamaProvider : OpenAiProvider
                     };
                     if (tc.Function != null)
                     {
+                        var args = String.IsNullOrEmpty(tc.Function.Arguments) ? "{}" : tc.Function.Arguments;
                         tcDic["function"] = new Dictionary<String, Object?>
                         {
                             ["name"] = tc.Function.Name,
-                            ["arguments"] = tc.Function.Arguments ?? "",
+                            ["arguments"] = args,
                         };
                     }
                     toolCalls.Add(tcDic);

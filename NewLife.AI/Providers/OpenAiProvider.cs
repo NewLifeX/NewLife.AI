@@ -211,10 +211,12 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
                     };
                     if (tc.Function != null)
                     {
+                        // DashScope 等服务商要求 arguments 必须是合法 JSON，空时用 "{}" 代替空字符串
+                        var args = String.IsNullOrEmpty(tc.Function.Arguments) ? "{}" : tc.Function.Arguments;
                         tcDic["function"] = new Dictionary<String, Object?>
                         {
                             ["name"] = tc.Function.Name,
-                            ["arguments"] = tc.Function.Arguments ?? "",
+                            ["arguments"] = args,
                         };
                     }
                     toolCalls.Add(tcDic);
