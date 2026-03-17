@@ -172,6 +172,99 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     }
     #endregion
 
+    #region 文生图
+    /// <summary>文生图。按 DALL·E 3 / OpenAI 兼容格式调用 /v1/images/generations 生成图像</summary>
+    /// <remarks>
+    /// 阿里百炼 Wanx 系列（wanx3.0-t2i-turbo、wanx3.0-t2i-plus 等）通过兼容端点支持此接口。
+    /// </remarks>
+    /// <param name="request">图像生成请求</param>
+    /// <param name="options">连接选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应，失败时返回 null</returns>
+    public virtual async Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    {
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = endpoint + "/v1/images/generations";
+
+        var dic = new Dictionary<String, Object?>();
+        if (!String.IsNullOrEmpty(request.Model)) dic["model"] = request.Model;
+        dic["prompt"] = request.Prompt;
+        if (request.N != null) dic["n"] = request.N.Value;
+        if (!String.IsNullOrEmpty(request.Size)) dic["size"] = request.Size;
+        if (!String.IsNullOrEmpty(request.Quality)) dic["quality"] = request.Quality;
+        if (!String.IsNullOrEmpty(request.Style)) dic["style"] = request.Style;
+        if (!String.IsNullOrEmpty(request.ResponseFormat)) dic["response_format"] = request.ResponseFormat;
+        if (!String.IsNullOrEmpty(request.User)) dic["user"] = request.User;
+        if (!String.IsNullOrEmpty(request.NegativePrompt)) dic["negative_prompt"] = request.NegativePrompt;
+
+        var json = await PostAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
+        return ParseImageGenerationResponse(json);
+    }
+
+    /// <summary>解析图像生成响应 JSON</summary>
+    /// <param name="json">响应 JSON 字符串</param>
+    /// <returns>解析后的响应对象，解析失败时返回 null</returns>
+    protected virtual ImageGenerationResponse? ParseImageGenerationResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return null;
+
+        var resp = new ImageGenerationResponse
+        {
+            Created = dic["created"].ToLong(),
+        };
+
+        if (dic["data"] is IList<Object> dataList)
+        {
+            var items = new List<ImageData>(dataList.Count);
+            foreach (var item in dataList)
+            {
+                if (item is not IDictionary<String, Object> d) continue;
+                items.Add(new ImageData
+                {
+                    Url = d["url"] as String,
+                    B64Json = d["b64_json"] as String,
+                    RevisedPrompt = d["revised_prompt"] as String,
+                });
+            }
+            resp.Data = [.. items];
+        }
+
+        return resp;
+    }
+    #endregion
+
+    #region 语音合成（TTS）
+    /// <summary>语音合成（TTS）。兼容 OpenAI /v1/audio/speech 接口，返回音频字节流</summary>
+    /// <remarks>
+    /// 阿里百炼 CosyVoice 系列（cosyvoice-v2 等）通过兼容端点支持此接口。
+    /// 常用音色：longxiaochun（男声）、longxiaochun_v2、cove（英文）等。
+    /// </remarks>
+    /// <param name="input">要合成的文本内容</param>
+    /// <param name="voice">音色名称。如 longxiaochun、alloy</param>
+    /// <param name="model">TTS 模型编码。如 cosyvoice-v2、tts-1</param>
+    /// <param name="responseFormat">音频格式。mp3（默认）/ wav / opus / flac / pcm</param>
+    /// <param name="speed">语速倍率。0.25~4.0，默认 1.0</param>
+    /// <param name="options">连接选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>音频字节流（格式由 responseFormat 决定，默认 mp3）</returns>
+    public virtual async Task<Byte[]> SpeechAsync(String input, String voice, String? model = null, String? responseFormat = null, Double? speed = null, AiProviderOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        options ??= new AiProviderOptions();
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = endpoint + "/v1/audio/speech";
+
+        var dic = new Dictionary<String, Object?>();
+        dic["model"] = model ?? (Models.Length > 0 ? Models[0].Model : "tts-1");
+        dic["input"] = input;
+        dic["voice"] = voice;
+        if (!String.IsNullOrEmpty(responseFormat)) dic["response_format"] = responseFormat;
+        if (speed != null) dic["speed"] = speed.Value;
+
+        return await PostBinaryAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
+    }
+    #endregion
+
     #region 辅助
     /// <summary>构建请求体。返回符合 OpenAI 格式的字典</summary>
     /// <param name="request">请求对象</param>

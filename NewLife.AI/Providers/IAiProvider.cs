@@ -254,5 +254,27 @@ public abstract class AiProviderBase
         }
         return resp;
     }
+    /// <summary>发送 POST 请求并返回二进制响应。用于音频合成等返回字节流的接口</summary>
+    /// <param name="url">请求地址</param>
+    /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>
+    /// <param name="options">连接选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>响应字节数组</returns>
+    protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, AiProviderOptions options, CancellationToken cancellationToken = default)
+    {
+        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
+        using var req = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
+        };
+        SetHeaders(req, options);
+        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            throw new HttpRequestException($"AI 服务商[{(this as IAiProvider)?.Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
+        }
+        return await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+    }
     #endregion
 }
