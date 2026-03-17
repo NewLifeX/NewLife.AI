@@ -88,6 +88,7 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
             dic["input"] = request.Input;
 
         if (request.Model != null) dic["model"] = request.Model;
+        else if (_options.Model != null) dic["model"] = _options.Model;
         if (request.Dimensions != null) dic["dimensions"] = request.Dimensions.Value;
         if (request.EncodingFormat != null) dic["encoding_format"] = request.EncodingFormat;
         if (request.User != null) dic["user"] = request.User;

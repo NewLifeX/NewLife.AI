@@ -91,19 +91,18 @@ public class ConversableAgent : IAgent
         foreach (var msg in AgentMessageHelper.ToChatMessages(history))
             messages.Add(msg);
 
-        var request = new ChatCompletionRequest
+        var chatOptions = new ChatOptions
         {
             Model = RequestOptions?.Model,
             Temperature = RequestOptions?.Temperature,
             MaxTokens = RequestOptions?.MaxTokens,
             Tools = Tools,
             ToolChoice = Tools != null && Tools.Count > 0 ? "auto" : null,
-            Messages = messages,
         };
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var response = await ChatClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+        var response = await ChatClient.CompleteAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
         var choice = response?.Choices?.Count > 0 ? response.Choices[0] : null;
         if (choice?.Message == null) yield break;
 

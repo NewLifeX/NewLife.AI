@@ -10,12 +10,8 @@ namespace NewLife.AI.Providers;
 /// 使用示例：
 /// <code>
 /// var client = provider.CreateClient(options);
-/// // 或通过 Builder 组装中间件管道：
-/// var client = new ChatClientBuilder(provider, options)
-///     .UseLogging(log)
-///     .UseTracing(tracer)
-///     .Build();
-/// var response = await client.CompleteAsync(request);
+/// var response = await client.CompleteAsync("你好，请介绍一下你自己");
+/// Console.WriteLine(response.Text);
 /// </code>
 /// </remarks>
 public interface IChatClient : IDisposable
@@ -23,17 +19,41 @@ public interface IChatClient : IDisposable
     /// <summary>客户端元数据。描述所连接的服务商与默认模型</summary>
     ChatClientMetadata Metadata { get; }
 
-    /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
-    /// <param name="request">对话请求</param>
+    /// <summary>非流式对话完成。发送消息列表并一次性返回完整响应</summary>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项，可覆盖客户端默认参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default);
+    Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
-    /// <param name="request">对话请求（自动设置 Stream=true）</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项，可覆盖客户端默认参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default);
+}
+
+/// <summary>IChatClient 扩展方法。提供常用便捷调用方式</summary>
+public static class ChatClientExtensions
+{
+    /// <summary>发送单条文本消息并获取完整响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="prompt">用户消息文本</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public static Task<ChatCompletionResponse> CompleteAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => client.CompleteAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
+
+    /// <summary>发送单条文本消息并获取流式响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="prompt">用户消息文本</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => client.CompleteStreamingAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
 }
 
 /// <summary>AI 对话客户端元数据。描述客户端连接的服务商与模型信息</summary>

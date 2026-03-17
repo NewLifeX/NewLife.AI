@@ -39,28 +39,31 @@ public class UsageTrackingChatClient : DelegatingChatClient
     #region 方法
 
     /// <summary>非流式对话完成，附加用量回调</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public override async Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
+    public override async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
-        var response = await base.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+        var response = await base.CompleteAsync(messages, options, cancellationToken).ConfigureAwait(false);
         if (response.Usage != null)
             _onUsage(response.Usage, response.Model);
         return response;
     }
 
     /// <summary>流式对话完成，流结束后触发用量回调（仅最后一个含 usage 的 chunk 有效）</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
     public override async IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(
-        ChatCompletionRequest request,
+        IList<ChatMessage> messages,
+        ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ChatUsage? lastUsage = null;
         String? model = null;
-        await foreach (var chunk in base.CompleteStreamingAsync(request, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in base.CompleteStreamingAsync(messages, options, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
             if (chunk.Model != null) model = chunk.Model;

@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 using NewLife.AI.Providers;
 
 namespace NewLife.AI.Planner;
@@ -108,20 +108,20 @@ public class FunctionCallingPlanner : IPlanner
         if (chatClient == null) throw new ArgumentNullException(nameof(chatClient));
         if (tools == null || tools.Count == 0) return new FunctionCallingPlan(goal, []);
 
-        var request = new ChatCompletionRequest
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "system", Content = _systemPrompt },
+            new() { Role = "user", Content = goal },
+        };
+        var chatOptions = new ChatOptions
         {
             Model = options?.Model,
             Temperature = options?.Temperature ?? 0,  // 规划阶段使用低温度以确保确定性
-            Messages =
-            [
-                new ChatMessage { Role = "system", Content = _systemPrompt },
-                new ChatMessage { Role = "user", Content = goal },
-            ],
             Tools = tools,
             ToolChoice = "required",  // 强制使用工具，确保返回步骤
         };
 
-        var response = await chatClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+        var response = await chatClient.CompleteAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
         var steps = ParseSteps(response);
         return new FunctionCallingPlan(goal, steps);
     }

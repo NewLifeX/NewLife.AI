@@ -86,11 +86,32 @@ public class AiProviderOptions
     /// <summary>组织编号。部分服务商需要（如 OpenAI）</summary>
     public String? Organization { get; set; }
 
+    /// <summary>默认模型编码。客户端每次调用时若未指定模型则使用此值</summary>
+    public String? Model { get; set; }
+
     /// <summary>获取实际使用的 API 地址</summary>
     /// <param name="defaultEndpoint">默认地址</param>
     /// <returns></returns>
     public String GetEndpoint(String defaultEndpoint) =>
         String.IsNullOrWhiteSpace(Endpoint) ? defaultEndpoint : Endpoint;
+}
+
+/// <summary>IAiProvider 扩展方法。提供更简洁的客户端创建入口</summary>
+public static class AiProviderExtensions
+{
+    /// <summary>用指定密钥和模型快速创建对话客户端，无需手动构造 AiProviderOptions</summary>
+    /// <param name="provider">AI 服务商</param>
+    /// <param name="apiKey">API 密钥</param>
+    /// <param name="model">默认模型编码，为空时使用服务商默认值</param>
+    /// <param name="endpoint">自定义接入点地址，为空时使用服务商默认地址</param>
+    /// <returns>已绑定连接参数的 IChatClient 实例</returns>
+    public static IChatClient CreateClient(this IAiProvider provider, String apiKey, String? model = null, String? endpoint = null)
+    {
+        if (provider == null) throw new ArgumentNullException(nameof(provider));
+
+        var options = new AiProviderOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint };
+        return provider.CreateClient(options);
+    }
 }
 
 /// <summary>AI 服务商抽象基类。统一封装 HttpClient 管理与 HTTP 请求辅助方法</summary>

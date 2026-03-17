@@ -51,25 +51,26 @@ public class NativeToolChatClient : DelegatingChatClient
     #region 方法
 
     /// <summary>非流式对话完成。注入工具定义并自动处理工具调用回路</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
+    public override async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
-        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (messages == null) throw new ArgumentNullException(nameof(messages));
         if (Registry.Tools.Count == 0)
-            return await InnerClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            return await InnerClient.CompleteAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
-        // 合并工具定义到请求（不修改调用方的原始请求，通过浅拷贝隔离）
-        var workRequest = ShallowCloneWithTools(request);
+        // 合并工具定义到选项（不修改调用方的原始选项）
+        var workOptions = MergeToolOptions(options);
+        var workMessages = messages.ToList();
 
         ChatCompletionResponse response;
         var iterations = 0;
-        var messages = workRequest.Messages;
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            response = await InnerClient.CompleteAsync(workRequest, cancellationToken).ConfigureAwait(false);
+            response = await InnerClient.CompleteAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false);
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Choices?.FirstOrDefault()?.Message;
@@ -78,7 +79,7 @@ public class NativeToolChatClient : DelegatingChatClient
             if (++iterations > MaxIterations) break;
 
             // 追加 assistant 消息（含工具调用）
-            messages.Add(new ChatMessage
+            workMessages.Add(new ChatMessage
             {
                 Role = "assistant",
                 Content = assistantMessage?.Content,
@@ -95,16 +96,13 @@ public class NativeToolChatClient : DelegatingChatClient
             {
                 if (tc.Function == null) continue;
                 var result = await Registry.TryInvokeAsync(tc.Function.Name, tc.Function.Arguments, cancellationToken).ConfigureAwait(false);
-                messages.Add(new ChatMessage
+                workMessages.Add(new ChatMessage
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
                     Content = result
                 });
             }
-
-            // 在下一轮请求里继续带上工具定义
-            workRequest = ShallowCloneWithTools(request, messages);
         }
 
         return response;
@@ -114,30 +112,28 @@ public class NativeToolChatClient : DelegatingChatClient
 
     #region 辅助
 
-    private ChatCompletionRequest ShallowCloneWithTools(ChatCompletionRequest src, IList<ChatMessage>? messages = null)
+    private ChatOptions MergeToolOptions(ChatOptions? options)
     {
         var tools = new List<ChatTool>(Registry.Tools);
-        if (src.Tools != null)
+        if (options?.Tools != null)
         {
-            foreach (var t in src.Tools)
+            foreach (var t in options.Tools)
                 tools.Add(t);
         }
 
-        return new ChatCompletionRequest
+        return new ChatOptions
         {
-            Model = src.Model,
-            Messages = messages ?? src.Messages.ToList(),
-            Temperature = src.Temperature,
-            TopP = src.TopP,
-            MaxTokens = src.MaxTokens,
-            Stream = src.Stream,
-            Stop = src.Stop,
-            PresencePenalty = src.PresencePenalty,
-            FrequencyPenalty = src.FrequencyPenalty,
+            Model = options?.Model,
+            Temperature = options?.Temperature,
+            TopP = options?.TopP,
+            MaxTokens = options?.MaxTokens,
+            Stop = options?.Stop,
+            PresencePenalty = options?.PresencePenalty,
+            FrequencyPenalty = options?.FrequencyPenalty,
             Tools = tools,
-            ToolChoice = src.ToolChoice ?? "auto",
-            User = src.User,
-            EnableThinking = src.EnableThinking
+            ToolChoice = options?.ToolChoice ?? "auto",
+            User = options?.User,
+            EnableThinking = options?.EnableThinking
         };
     }
 

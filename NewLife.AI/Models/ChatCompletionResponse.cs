@@ -25,6 +25,12 @@ public class ChatCompletionResponse
     /// <summary>系统指纹</summary>
     public String? SystemFingerprint { get; set; }
     #endregion
+
+    #region 便捷属性
+    /// <summary>获取回复文本。返回第一个选择项的消息内容</summary>
+    public String? Text => Choices?.FirstOrDefault()?.Message?.Content?.ToString()
+        ?? Choices?.FirstOrDefault()?.Delta?.Content?.ToString();
+    #endregion
 }
 
 /// <summary>对话选择项</summary>

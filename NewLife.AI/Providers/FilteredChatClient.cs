@@ -47,58 +47,63 @@ public class FilteredChatClient : DelegatingChatClient
     #region 方法
 
     /// <summary>非流式对话完成。依次执行过滤器链后调用内层客户端</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
+    public override async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
-            return await InnerClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            return await InnerClient.CompleteAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
+        var request = ChatCompletionRequest.Create(messages, options);
         var context = new ChatFilterContext { Request = request, IsStreaming = false };
-        await ExecuteFilterChainAsync(context, 0, cancellationToken).ConfigureAwait(false);
+        await ExecuteFilterChainAsync(context, 0, options, cancellationToken).ConfigureAwait(false);
         return context.Response ?? new ChatCompletionResponse();
     }
 
     /// <summary>流式对话完成。执行过滤器链的 before 阶段后委托给内层客户端</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
+    public override IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
-            return InnerClient.CompleteStreamingAsync(request, cancellationToken);
+            return InnerClient.CompleteStreamingAsync(messages, options, cancellationToken);
 
         // 流式场景：先运行 before 阶段，再委托给内层流
-        return RunStreamingWithFiltersAsync(request, cancellationToken);
+        return RunStreamingWithFiltersAsync(messages, options, cancellationToken);
     }
 
     #endregion
 
     #region 辅助
 
-    private async Task ExecuteFilterChainAsync(ChatFilterContext context, Int32 index, CancellationToken cancellationToken)
+    private async Task ExecuteFilterChainAsync(ChatFilterContext context, Int32 index, ChatOptions? options, CancellationToken cancellationToken)
     {
         if (index >= Filters.Count)
         {
             // 链末尾：调用内层客户端
-            context.Response = await InnerClient.CompleteAsync(context.Request, cancellationToken).ConfigureAwait(false);
+            context.Response = await InnerClient.CompleteAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         var filter = Filters[index];
-        await filter.OnChatAsync(context, (ctx, ct) => ExecuteFilterChainAsync(ctx, index + 1, ct), cancellationToken).ConfigureAwait(false);
+        await filter.OnChatAsync(context, (ctx, ct) => ExecuteFilterChainAsync(ctx, index + 1, options, ct), cancellationToken).ConfigureAwait(false);
     }
 
     private async IAsyncEnumerable<ChatCompletionResponse> RunStreamingWithFiltersAsync(
-        ChatCompletionRequest request,
+        IList<ChatMessage> messages,
+        ChatOptions? options,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // 流式只执行 before 阶段（过滤器 next 后面的代码）— 把请求作为最终状态传入
+        var request = ChatCompletionRequest.Create(messages, options);
         var context = new ChatFilterContext { Request = request, IsStreaming = true };
 
         // 运行过滤器链的 before 阶段（不设置 Response，过滤器到达链尾时不调用 CompleteAsync）
         await RunBeforeFiltersAsync(context, 0, cancellationToken).ConfigureAwait(false);
 
-        await foreach (var chunk in InnerClient.CompleteStreamingAsync(context.Request, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in InnerClient.CompleteStreamingAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false))
             yield return chunk;
     }
 

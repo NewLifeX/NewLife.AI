@@ -64,7 +64,18 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     /// <summary>创建已绑定连接参数的对话客户端（MEAI 兼容入口）</summary>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
     /// <returns>已配置的 IChatClient 实例</returns>
-    public virtual IChatClient CreateClient(AiProviderOptions options) => new OpenAiChatClient(this, options);
+    public virtual IChatClient CreateClient(AiProviderOptions options)
+    {
+        // 如果未指定模型且 Models 列表不为空，默认使用第一个模型
+        if (options.Model.IsNullOrEmpty() && Models != null && Models.Length > 0) options.Model = Models[0].Model;
+
+        var client = new OpenAiChatClient(this, options)
+        {
+            Log = Log,
+            Tracer = Tracer
+        };
+        return client;
+    }
 
     /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>

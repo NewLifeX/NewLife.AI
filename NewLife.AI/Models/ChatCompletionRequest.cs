@@ -43,6 +43,70 @@ public class ChatCompletionRequest
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>
     public Boolean? EnableThinking { get; set; }
     #endregion
+
+    #region 方法
+    /// <summary>应用对话选项。将 ChatOptions 中的非空字段合并到当前请求</summary>
+    /// <param name="options">对话选项，null 字段不覆盖</param>
+    /// <returns>当前请求实例（支持链式调用）</returns>
+    public ChatCompletionRequest Apply(ChatOptions? options)
+    {
+        if (options == null) return this;
+
+        Model ??= options.Model;
+        Temperature ??= options.Temperature;
+        TopP ??= options.TopP;
+        MaxTokens ??= options.MaxTokens;
+        Stop ??= options.Stop;
+        PresencePenalty ??= options.PresencePenalty;
+        FrequencyPenalty ??= options.FrequencyPenalty;
+        User ??= options.User;
+        EnableThinking ??= options.EnableThinking;
+
+        if (options.Tools != null && options.Tools.Count > 0)
+        {
+            Tools ??= [];
+            foreach (var t in options.Tools)
+            {
+                Tools.Add(t);
+            }
+        }
+        ToolChoice ??= options.ToolChoice;
+
+        return this;
+    }
+
+    /// <summary>根据消息列表和可选对话选项创建请求</summary>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="stream">是否流式</param>
+    /// <returns>对话请求实例</returns>
+    public static ChatCompletionRequest Create(IList<ChatMessage> messages, ChatOptions? options = null, Boolean stream = false)
+    {
+        var request = new ChatCompletionRequest
+        {
+            Messages = messages,
+            Stream = stream,
+        };
+        return request.Apply(options);
+    }
+
+    /// <summary>提取对话选项。将请求中的参数转换为 ChatOptions（不含 Messages 和 Stream）</summary>
+    /// <returns>对话选项实例</returns>
+    public ChatOptions ToChatOptions() => new()
+    {
+        Model = Model,
+        Temperature = Temperature,
+        TopP = TopP,
+        MaxTokens = MaxTokens,
+        Stop = Stop,
+        PresencePenalty = PresencePenalty,
+        FrequencyPenalty = FrequencyPenalty,
+        Tools = Tools,
+        ToolChoice = ToolChoice,
+        User = User,
+        EnableThinking = EnableThinking,
+    };
+    #endregion
 }
 
 /// <summary>对话消息</summary>

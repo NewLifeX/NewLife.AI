@@ -1,7 +1,4 @@
-using System.Net.Http;
-using System.Net.Http.Headers;
-
-namespace NewLife.AI.Providers;
+﻿namespace NewLife.AI.Providers;
 
 /// <summary>Azure AI Foundry 服务商。Azure 托管的 OpenAI 模型</summary>
 /// <remarks>
@@ -32,7 +29,6 @@ public class AzureAiProvider : OpenAiProvider
     [
         new("gpt-4o",        "GPT-4o",         new(false, true,  false, true)),
         new("gpt-4o-mini",   "GPT-4o Mini",    new(false, true,  false, true)),
-        new("o3-mini",       "o3-mini",        new(true,  false, false, true)),
         new("DeepSeek-R1",   "DeepSeek-R1",    new(true,  false, false, true)),
         new("Phi-4",         "Phi-4",          new(false, true,  false, true)),
     ];

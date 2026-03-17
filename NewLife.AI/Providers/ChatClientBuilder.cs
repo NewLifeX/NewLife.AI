@@ -1,7 +1,6 @@
-using NewLife.AI.Filters;
+﻿using NewLife.AI.Filters;
 using NewLife.AI.Models;
 using NewLife.AI.Tools;
-using NewLife.Log;
 
 namespace NewLife.AI.Providers;
 
@@ -10,16 +9,14 @@ namespace NewLife.AI.Providers;
 /// 参考 MEAI 的 ChatClientBuilder 设计。先添加的中间件包裹在最外层，请求时先执行。
 /// 使用示例：
 /// <code>
-/// // 方式一：从 IAiProvider 创建
+/// // 方式一：从 IAiProvider 创建（日志与追踪由 provider.Log / provider.Tracer 自动传播）
 /// var client = new ChatClientBuilder(provider, options)
-///     .UseLogging(log)
-///     .UseTracing(tracer)
 ///     .UseUsageTracking((usage, model) => Console.WriteLine($"{model}: {usage.TotalTokens} tokens"))
 ///     .Build();
 ///
 /// // 方式二：从已有 IChatClient 创建
 /// var client = new ChatClientBuilder(existingClient)
-///     .UseLogging()
+///     .UseUsageTracking((usage, model) => Console.WriteLine($"{model}: {usage.TotalTokens} tokens"))
 ///     .Build();
 /// </code>
 /// </remarks>
@@ -79,20 +76,6 @@ public sealed class ChatClientBuilder
 /// <summary>ChatClientBuilder 扩展方法。提供常用中间件的快捷注册入口</summary>
 public static class ChatClientBuilderExtensions
 {
-    /// <summary>添加日志中间件。记录每次请求的模型、耗时与 Token 用量</summary>
-    /// <param name="builder">构建器</param>
-    /// <param name="log">日志实例，为 null 时使用 XTrace</param>
-    /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseLogging(this ChatClientBuilder builder, ILog? log = null)
-        => builder.Use(inner => new LoggingChatClient(inner, log));
-
-    /// <summary>添加分布式追踪中间件（NewLife ITracer）。为每次对话创建 Span，记录耗时与 Token</summary>
-    /// <param name="builder">构建器</param>
-    /// <param name="tracer">追踪器，为 null 时不追踪</param>
-    /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseTracing(this ChatClientBuilder builder, ITracer? tracer = null)
-        => builder.Use(inner => new TracingChatClient(inner, tracer));
-
     /// <summary>添加用量追踪中间件。对话完成后触发回调以记录 Token 消耗</summary>
     /// <param name="builder">构建器</param>
     /// <param name="onUsage">用量回调，参数为（用量统计, 模型编码）；通常用于接入轻量聚合统计</param>
