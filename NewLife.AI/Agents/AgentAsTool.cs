@@ -104,7 +104,7 @@ public static class AgentAsTool
             }
         }
 
-        return sb.Put(true);
+        return sb.Return(true);
     }
 
     /// <summary>转换为 snake_case</summary>
@@ -130,7 +130,7 @@ public static class AgentAsTool
                 sb.Append(c);
             }
         }
-        return sb.Put(true);
+        return sb.Return(true);
     }
 
     #endregion

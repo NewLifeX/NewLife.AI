@@ -170,7 +170,7 @@ public sealed class ParallelGroupChat
         {
             Source = "system",
             Role = "user",
-            Content = sb.Put(true),
+            Content = sb.Return(true),
         });
 
         return history;
