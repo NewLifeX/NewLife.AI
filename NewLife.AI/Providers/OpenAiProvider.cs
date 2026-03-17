@@ -215,7 +215,12 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
         }
         dic["messages"] = messages;
 
-        if (request.Stream) dic["stream"] = true;
+        if (request.Stream)
+        {
+            dic["stream"] = true;
+            // 流式模式下请求返回 usage 数据（在最后一个 chunk 中）
+            dic["stream_options"] = new Dictionary<String, Object> { ["include_usage"] = true };
+        }
         if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
         if (request.TopP != null) dic["top_p"] = request.TopP.Value;
         if (request.MaxTokens != null) dic["max_tokens"] = request.MaxTokens.Value;
