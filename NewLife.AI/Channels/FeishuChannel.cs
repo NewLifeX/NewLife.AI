@@ -1,4 +1,5 @@
-﻿using NewLife.Log;
+﻿using System.Collections.Concurrent;
+using NewLife.Log;
 using NewLife.Remoting;
 
 namespace NewLife.AI.Channels;
@@ -12,7 +13,16 @@ public class FeishuChannel : IMessageChannel, ILogFeature
 
     /// <summary>日志</summary>
     public ILog Log { get; set; } = Logger.Null;
+
+    private readonly ConcurrentDictionary<String, ApiHttpClient> _clients = new();
     #endregion
+
+    private ApiHttpClient GetClient(String target)
+    {
+        var client = _clients.GetOrAdd(target, url => new ApiHttpClient(url));
+        client.Log = Log;
+        return client;
+    }
 
     /// <summary>发送消息到飞书</summary>
     /// <param name="target">目标。群Webhook地址</param>
@@ -40,7 +50,7 @@ public class FeishuChannel : IMessageChannel, ILogFeature
             }
         };
 
-        var client = new ApiHttpClient(target) { Log = Log };
+        var client = GetClient(target);
         try
         {
             var result = await client.InvokeAsync<String>("", payload, cancellationToken).ConfigureAwait(false);
