@@ -1,15 +1,13 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>ip-api.com IP 归属地查询实现。支持国际 IP，无需密钥，有速率限制</summary>
-public class IpLocationIpApiService : IIpLocationService
+/// <remarks>初始化 ip-api.com IP 查询服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class IpLocationIpApiService(HttpClient? httpClient = null) : IIpLocationService
 {
-    private readonly HttpClient _http;
-
-    /// <summary>初始化 ip-api.com IP 查询服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public IpLocationIpApiService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>查询 IP 归属地信息</summary>
     /// <param name="ip">要查询的 IP 地址；为 null 或空时查询本机公网 IP</param>
@@ -19,9 +17,8 @@ public class IpLocationIpApiService : IIpLocationService
     {
         try
         {
-            var url = String.IsNullOrWhiteSpace(ip)
-                ? "https://ip-api.com/json?fields=status,message,country,regionName,city,isp,query"
-                : $"https://ip-api.com/json/{Uri.EscapeDataString(ip.Trim())}?fields=status,message,country,regionName,city,isp,query";
+            ip = (ip + "").Trim();
+            var url = $"http://ip-api.com/json/{Uri.EscapeDataString(ip.Trim())}";
 
             var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
             var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);

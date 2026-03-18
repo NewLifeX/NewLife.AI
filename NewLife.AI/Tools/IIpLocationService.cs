@@ -1,4 +1,4 @@
-namespace NewLife.AI.Tools;
+﻿namespace NewLife.AI.Tools;
 
 /// <summary>IP 归属地查询服务接口。支持多实现链式降级（太平洋电脑网 → ip-api → 远程兜底）</summary>
 public interface IIpLocationService
@@ -29,7 +29,7 @@ public class IpLocationModel
     public String? Region { get; set; }
 
     /// <summary>完整地址描述（含运营商等附加信息）</summary>
-    public String? Addr { get; set; }
+    public String? Address { get; set; }
 
     /// <summary>互联网服务提供商</summary>
     public String? Isp { get; set; }

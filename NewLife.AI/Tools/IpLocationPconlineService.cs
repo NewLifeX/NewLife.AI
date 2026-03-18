@@ -1,15 +1,13 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>太平洋电脑网 IP 归属地查询实现。国内稳定，无需密钥，JSON 格式清晰</summary>
-public class IpLocationPconlineService : IIpLocationService
+/// <remarks>初始化太平洋电脑网 IP 查询服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class IpLocationPconlineService(HttpClient? httpClient = null) : IIpLocationService
 {
-    private readonly HttpClient _http;
-
-    /// <summary>初始化太平洋电脑网 IP 查询服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public IpLocationPconlineService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>查询 IP 归属地信息</summary>
     /// <param name="ip">要查询的 IP 地址；为 null 或空时查询本机公网 IP</param>
@@ -19,9 +17,8 @@ public class IpLocationPconlineService : IIpLocationService
     {
         try
         {
-            var url = String.IsNullOrWhiteSpace(ip)
-                ? "https://whois.pconline.com.cn/ipJson.jsp?json=true"
-                : $"https://whois.pconline.com.cn/ipJson.jsp?ip={Uri.EscapeDataString(ip.Trim())}&json=true";
+            ip = (ip + "").Trim();
+            var url = $"https://whois.pconline.com.cn/ipJson.jsp?ip={Uri.EscapeDataString(ip)}&json=true";
 
             var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
             var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -35,7 +32,7 @@ public class IpLocationPconlineService : IIpLocationService
                 Province = data.Pro,
                 City = data.City,
                 Region = data.Region,
-                Addr = data.Addr,
+                Address = data.Addr,
             };
         }
         catch
