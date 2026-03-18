@@ -201,9 +201,11 @@ public class OllamaProvider : OpenAiProvider
         {
             ["model"] = request.Model ?? "",
             ["stream"] = stream,
-            // think:false 默认关闭思考模式，防止 qwen3 等模型的思考 token 占满 max_tokens
-            ["think"] = request.EnableThinking ?? false,
         };
+        // think 参数：显式 true/false 时才传给 Ollama；null（Auto）时不传，由模型自身决定
+        // 注意：不能用 ?? false 兜底，否则 Auto 模式会意外关闭思考
+        if (request.EnableThinking.HasValue)
+            dic["think"] = request.EnableThinking.Value;
 
         // 构建消息列表
         var messages = new List<Object>();
@@ -249,6 +251,9 @@ public class OllamaProvider : OpenAiProvider
         if (request.Temperature != null) opts["temperature"] = request.Temperature.Value;
         if (request.TopP != null) opts["top_p"] = request.TopP.Value;
         if (request.Stop != null && request.Stop.Count > 0) opts["stop"] = request.Stop;
+        // 携带工具时限制思考 token 上限，防止 thinking 内容耗尽 context 导致工具调用 JSON 被截断
+        if (request.Tools != null && request.Tools.Count > 0 && !opts.ContainsKey("num_predict"))
+            opts["num_predict"] = 4096;
         if (opts.Count > 0) dic["options"] = opts;
 
         // 工具定义
