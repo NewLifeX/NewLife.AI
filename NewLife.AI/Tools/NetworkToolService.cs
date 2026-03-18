@@ -10,8 +10,8 @@ namespace NewLife.AI.Tools;
 /// <remarks>
 /// 国内网络优先策略：
 /// <list type="bullet">
-/// <item>IP 归属地：优先调用淘宝 IP 服务（国内稳定），失败时降级到 ip-api.com</item>
-/// <item>天气：使用 wttr.in（全球 CDN，国内可直连）</item>
+/// <item>IP 归属地：优先调用太平洋电脑网 WHOIS（国内稳定，无需密钥），失败时降级到 ip-api.com</item>
+/// <item>天气：优先使用中央气象台（nmc.cn，无需密钥，国家权威数据），失败时降级到 wttr.in（国际城市）</item>
 /// <item>翻译：使用 MyMemory（免费，每天 5000 词额度）</item>
 /// <item>搜索：默认 Bing（国内可用），可切换 Serper / DuckDuckGo</item>
 /// </list>
@@ -19,6 +19,10 @@ namespace NewLife.AI.Tools;
 public class NetworkToolService
 {
     #region 属性
+
+    // NMC 城市名 → 站点代码 全量缓存（进程内持久，首次查询时并发扫描所有省份后填充）
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<String, String>
+        _nmcStationCache = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly HttpClient _http;
 
@@ -139,20 +143,17 @@ public class NetworkToolService
     {
         try
         {
-            var query = String.IsNullOrWhiteSpace(ip) ? "myip" : ip.Trim();
+            // 优先使用太平洋电脑网 WHOIS（国内稳定，无需密钥，JSON 格式清晰）
+            var pconUrl = String.IsNullOrWhiteSpace(ip)
+                ? "https://whois.pconline.com.cn/ipJson.jsp?json=true"
+                : $"https://whois.pconline.com.cn/ipJson.jsp?ip={Uri.EscapeDataString(ip.Trim())}&json=true";
 
-            // 优先使用淘宝 IP 服务（大陆网络直连，速度快）
-            var resp = await _http.GetAsync(
-                $"https://ip.taobao.com/outGetIpInfo?ip={Uri.EscapeDataString(query)}&accessKey=alibaba-inc",
-                cancellationToken).ConfigureAwait(false);
+            var resp = await _http.GetAsync(pconUrl, cancellationToken).ConfigureAwait(false);
             var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var taobao = json.ToJsonEntity<TaobaoIpResponse>();
+            var pcon = json.ToJsonEntity<PconlineIpResponse>();
 
-            if (taobao?.Code == 0 && taobao.Data != null)
-            {
-                var d = taobao.Data;
-                return new { ip = d.Ip, country = d.Country, area = d.Area, region = d.Region, city = d.City, county = d.County, isp = d.Isp };
-            }
+            if (pcon != null && String.IsNullOrEmpty(pcon.Err))
+                return new { ip = pcon.Ip, province = pcon.Pro, city = pcon.City, region = pcon.Region, addr = pcon.Addr };
 
             // 降级到 ip-api.com
             var fallbackUrl = String.IsNullOrWhiteSpace(ip)
@@ -190,39 +191,12 @@ public class NetworkToolService
 
         try
         {
-            var encoded = Uri.EscapeDataString(city.Trim());
-            var resp = await _http.GetAsync($"https://wttr.in/{encoded}?format=j1&lang=zh", cancellationToken).ConfigureAwait(false);
-            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            // 优先使用中央气象台（无需密钥，国家权威，覆盖全国城市）；国际城市或查询失败时降级到 wttr.in
+            var nmcResult = await GetWeatherNmcAsync(city, unit, cancellationToken).ConfigureAwait(false);
+            if (nmcResult is not null)
+                return nmcResult;
 
-            if (!resp.IsSuccessStatusCode)
-                return new { error = $"weather service returned {(Int32)resp.StatusCode}" };
-
-            var data = json.ToJsonEntity<WttrResponse>();
-            var cur = data?.CurrentCondition?.FirstOrDefault();
-            if (cur == null)
-                return new { error = "weather data unavailable" };
-
-            var useF = unit.EqualIgnoreCase("F");
-            var temp = useF ? $"{cur.TempF}°F" : $"{cur.TempC}°C";
-            var feelsLike = useF ? $"{cur.FeelsLikeF}°F" : $"{cur.FeelsLikeC}°C";
-            var desc = cur.WeatherDesc?.FirstOrDefault()?.Value ?? "";
-            var area = data?.NearestArea?.FirstOrDefault();
-            var areaName = area?.AreaName?.FirstOrDefault()?.Value ?? city;
-            var country = area?.Country?.FirstOrDefault()?.Value ?? "";
-
-            return new
-            {
-                city = areaName,
-                country,
-                description = desc,
-                temp,
-                feelsLike,
-                humidity = $"{cur.Humidity}%",
-                windSpeed = $"{cur.WindspeedKmph} km/h",
-                visibility = $"{cur.Visibility} km",
-                uvIndex = cur.UvIndex,
-                observedAt = cur.ObservationTime,
-            };
+            return await GetWeatherWttrAsync(city, unit, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -316,6 +290,173 @@ public class NetworkToolService
             .ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         return FormatDuckDuckGoResults(json);
+    }
+
+    /// <summary>使用 wttr.in 获取天气（全球 CDN，无需密钥）</summary>
+    /// <param name="city">城市名称</param>
+    /// <param name="unit">温度单位：C 或 F</param>
+    /// <param name="ct">取消令牌</param>
+    private async Task<Object> GetWeatherWttrAsync(String city, String unit, CancellationToken ct)
+    {
+        var encoded = Uri.EscapeDataString(city.Trim());
+        var resp = await _http.GetAsync($"https://wttr.in/{encoded}?format=j1&lang=zh", ct).ConfigureAwait(false);
+        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+            return new { error = $"weather service returned {(Int32)resp.StatusCode}" };
+
+        var data = json.ToJsonEntity<WttrResponse>();
+        var cur = data?.CurrentCondition?.FirstOrDefault();
+        if (cur == null)
+            return new { error = "weather data unavailable" };
+
+        var useF = unit.EqualIgnoreCase("F");
+        var temp = useF ? $"{cur.TempF}°F" : $"{cur.TempC}°C";
+        var feelsLike = useF ? $"{cur.FeelsLikeF}°F" : $"{cur.FeelsLikeC}°C";
+        var desc = cur.WeatherDesc?.FirstOrDefault()?.Value ?? "";
+        var area = data?.NearestArea?.FirstOrDefault();
+        var areaName = area?.AreaName?.FirstOrDefault()?.Value ?? city;
+        var country = area?.Country?.FirstOrDefault()?.Value ?? "";
+
+        return new
+        {
+            city = areaName,
+            country,
+            description = desc,
+            temp,
+            feelsLike,
+            humidity = $"{cur.Humidity}%",
+            windSpeed = $"{cur.WindspeedKmph} km/h",
+            visibility = $"{cur.Visibility} km",
+            uvIndex = cur.UvIndex,
+            observedAt = cur.ObservationTime,
+        };
+    }
+
+    /// <summary>使用中央气象台（nmc.cn）获取实时天气。城市不在 NMC 覆盖范围内时返回 null</summary>
+    /// <param name="city">城市名称，支持中文，如"北京"、"上海"、"成都"</param>
+    /// <param name="unit">温度单位：C 或 F</param>
+    /// <param name="ct">取消令牌</param>
+    /// <remarks>
+    /// 首次查询时并发拉取所有省份城市列表并缓存全量映射，后续查询直接命中缓存无额外 HTTP 请求。
+    /// 城市名自动去除后缀"市/区/县/省"以提高匹配精度
+    /// </remarks>
+    private async Task<Object?> GetWeatherNmcAsync(String city, String unit, CancellationToken ct)
+    {
+        var stationId = await ResolveNmcStationAsync(city.Trim(), ct).ConfigureAwait(false);
+        if (String.IsNullOrEmpty(stationId))
+            return null;
+
+        var resp = await _http.GetAsync(
+            $"https://www.nmc.cn/rest/weather?stationid={stationId}",
+            ct).ConfigureAwait(false);
+        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var root = json.ToJsonEntity<NmcWeatherResponse>();
+
+        var real = root?.Data?.Real;
+        if (real == null) return null;
+
+        var w = real.Weather;
+        var wind = real.Wind;
+        if (w == null) return null;
+
+        var tempC = w.Temperature;
+        var feelC = w.Feelst;
+        String tempStr, feelStr;
+
+        if (unit.EqualIgnoreCase("F"))
+        {
+            tempStr = $"{tempC * 9 / 5 + 32:F1}°F";
+            feelStr = $"{feelC * 9 / 5 + 32:F1}°F";
+        }
+        else
+        {
+            tempStr = $"{tempC}°C";
+            feelStr = $"{feelC}°C";
+        }
+
+        return new
+        {
+            city = real.Station?.City ?? city,
+            province = real.Station?.Province,
+            description = w.Info,
+            temp = tempStr,
+            feelsLike = feelStr,
+            humidity = $"{w.Humidity}%",
+            rain = $"{w.Rain} mm",
+            wind = wind == null ? null : $"{wind.Direct} {wind.Power}（{wind.Speed} m/s）",
+            publishTime = real.PublishTime,
+            warning = String.IsNullOrEmpty(real.Warn?.Alert) ? null : real.Warn.Alert,
+        };
+    }
+
+    /// <summary>解析城市名到中央气象台站点代码。首次调用时并发扫描所有省份填充全量缓存</summary>
+    /// <param name="city">城市名称，允许带或不带"市/区/县/省"后缀</param>
+    /// <param name="ct">取消令牌</param>
+    private async Task<String?> ResolveNmcStationAsync(String city, CancellationToken ct)
+    {
+        // 规范化：去除常见行政单位后缀，提高匹配率
+        var normalized = city.TrimEnd('市', '区', '县', '省');
+
+        if (_nmcStationCache.TryGetValue(normalized, out var cached)) return cached;
+        if (_nmcStationCache.TryGetValue(city, out cached)) return cached;
+
+        // 首次或缓存未命中：拉取全量省份→城市映射并写入缓存
+        var pvResp = await _http.GetAsync("https://www.nmc.cn/rest/province", ct).ConfigureAwait(false);
+        var pvJson = await pvResp.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var provinces = pvJson.ToJsonEntity<List<NmcProvince>>();
+        if (provinces == null || provinces.Count == 0) return null;
+
+        // 并发请求所有省份的城市列表
+        var tasks = provinces
+            .Where(p => !String.IsNullOrEmpty(p.Code))
+            .Select(p => FetchNmcCitiesAsync(p.Code!, ct))
+            .ToArray();
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        foreach (var cities in results)
+        {
+            foreach (var c in cities)
+            {
+                if (String.IsNullOrEmpty(c.Code) || String.IsNullOrEmpty(c.City)) continue;
+                _nmcStationCache.TryAdd(c.City, c.Code);
+                // 同时缓存去后缀版本
+                var key2 = c.City.TrimEnd('市', '区', '县', '省');
+                if (key2 != c.City) _nmcStationCache.TryAdd(key2, c.Code);
+            }
+        }
+
+        if (_nmcStationCache.TryGetValue(normalized, out var found)) return found;
+        if (_nmcStationCache.TryGetValue(city, out found)) return found;
+        return null;
+    }
+
+    /// <summary>获取指定省份代码下的所有城市/站点列表（内部辅助）</summary>
+    /// <param name="provinceCode">省份代码，如 ABJ（北京）、ASH（上海）</param>
+    /// <param name="ct">取消令牌</param>
+    private async Task<List<NmcCity>> FetchNmcCitiesAsync(String provinceCode, CancellationToken ct)
+    {
+        try
+        {
+            var resp = await _http.GetAsync($"https://www.nmc.cn/rest/province/{provinceCode}", ct).ConfigureAwait(false);
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return json.ToJsonEntity<List<NmcCity>>() ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    /// <summary>使用高德天气 API 获取天气（国内高可用，需要高德开放平台密钥）</summary>
+    /// <param name="city">城市名称，支持中文，如"上海"、"北京"</param>
+    /// <param name="unit">温度单位：C 或 F</param>
+    /// <param name="ct">取消令牌</param>
+    /// <remarks>第一步 Geocoding 获取 adcode，第二步查询实时天气；adcode 解析失败时自动降级到 wttr.in</remarks>
+    private async Task<Object> GetWeatherGaodeAsync(String city, String unit, CancellationToken ct)
+    {
+        // 无密钥时直接降级
+        return await GetWeatherWttrAsync(city, unit, ct).ConfigureAwait(false);
     }
 
     /// <summary>校验是否为 SSRF 风险地址（私有/回环/链路本地）</summary>
@@ -464,21 +605,17 @@ public class NetworkToolService
         public List<DuckDuckGoTopic>? RelatedTopics { get; set; }
     }
 
-    // 淘宝 IP 服务响应模型（国内优先）
-    private class TaobaoIpData
+    // 太平洋电脑网 IP 查询响应模型（国内首选，无需密钥）
+    private class PconlineIpResponse
     {
         public String? Ip { get; set; }
-        public String? Country { get; set; }
-        public String? Area { get; set; }
-        public String? Region { get; set; }
+        public String? Pro { get; set; }       // 省份
+        public String? ProCode { get; set; }
         public String? City { get; set; }
-        public String? County { get; set; }
-        public String? Isp { get; set; }
-    }
-    private class TaobaoIpResponse
-    {
-        public Int32 Code { get; set; }
-        public TaobaoIpData? Data { get; set; }
+        public String? CityCode { get; set; }
+        public String? Region { get; set; }
+        public String? Addr { get; set; }      // 完整地址含运营商，如"广东省深圳市 电信"
+        public String? Err { get; set; }       // 成功时为空字符串
     }
 
     // ip-api.com 降级响应模型
@@ -518,6 +655,31 @@ public class NetworkToolService
         public List<WttrCurrentCondition>? CurrentCondition { get; set; }
         public List<WttrNearestArea>? NearestArea { get; set; }
     }
+
+    // 中央气象台（nmc.cn）响应模型
+    private class NmcProvince { public String? Code { get; set; } public String? Name { get; set; } }
+    private class NmcCity { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
+    private class NmcStation { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
+    private class NmcWeatherInfo
+    {
+        public Double Temperature { get; set; }
+        public Double Humidity { get; set; }
+        public Double Rain { get; set; }
+        public Double Feelst { get; set; }
+        public String? Info { get; set; }
+    }
+    private class NmcWind { public String? Direct { get; set; } public String? Power { get; set; } public Double Speed { get; set; } }
+    private class NmcWarn { public String? Alert { get; set; } }
+    private class NmcReal
+    {
+        public NmcStation? Station { get; set; }
+        public String? PublishTime { get; set; }
+        public NmcWeatherInfo? Weather { get; set; }
+        public NmcWind? Wind { get; set; }
+        public NmcWarn? Warn { get; set; }
+    }
+    private class NmcData { public NmcReal? Real { get; set; } }
+    private class NmcWeatherResponse { public String? Msg { get; set; } public Int32 Code { get; set; } public NmcData? Data { get; set; } }
 
     // MyMemory 翻译响应模型
     private class MyMemoryTranslation { public String? TranslatedText { get; set; } }
