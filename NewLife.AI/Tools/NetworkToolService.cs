@@ -1,4 +1,4 @@
-﻿using NewLife.Serialization;
+﻿using NewLife.Model;
 
 namespace NewLife.AI.Tools;
 
@@ -7,35 +7,11 @@ namespace NewLife.AI.Tools;
 /// 通过 IServiceProvider 在内部解析各服务接口集合，遍历尝试每个实现直到获取有效结果。
 /// newlife 远程兜底实现建议注册在最后，作为最终降级方案。
 /// </remarks>
-public class NetworkToolService
+/// <remarks>初始化网络工具服务，从 IServiceProvider 内部解析各服务集合</remarks>
+/// <param name="serviceProvider">依赖注入服务提供者</param>
+public class NetworkToolService(IServiceProvider serviceProvider)
 {
-    #region 属性
-
-    private readonly IEnumerable<IIpLocationService> _ipServices;
-    private readonly IEnumerable<IWeatherService> _weatherServices;
-    private readonly IEnumerable<ITranslateService> _translateServices;
-    private readonly IEnumerable<ISearchService> _searchServices;
-    private readonly IEnumerable<IWebFetchService> _fetchServices;
-
-    #endregion
-
-    #region 构造
-
-    /// <summary>初始化网络工具服务，从 IServiceProvider 内部解析各服务集合</summary>
-    /// <param name="serviceProvider">依赖注入服务提供者</param>
-    public NetworkToolService(IServiceProvider serviceProvider)
-    {
-        _ipServices = Resolve<IIpLocationService>(serviceProvider);
-        _weatherServices = Resolve<IWeatherService>(serviceProvider);
-        _translateServices = Resolve<ITranslateService>(serviceProvider);
-        _searchServices = Resolve<ISearchService>(serviceProvider);
-        _fetchServices = Resolve<IWebFetchService>(serviceProvider);
-    }
-
-    private static IEnumerable<T> Resolve<T>(IServiceProvider sp) =>
-        (IEnumerable<T>?)sp.GetService(typeof(IEnumerable<T>)) ?? [];
-
-    #endregion
+    private static IEnumerable<T> Resolve<T>(IServiceProvider sp) => sp.GetService<IEnumerable<T>>() ?? [];
 
     #region 网页工具
 
@@ -49,6 +25,7 @@ public class NetworkToolService
         if (String.IsNullOrWhiteSpace(url))
             return new { error = "url is required" };
 
+        var _fetchServices = Resolve<IWebFetchService>(serviceProvider);
         foreach (var svc in _fetchServices)
         {
             var result = await svc.FetchAsync(url, maxLength, cancellationToken).ConfigureAwait(false);
@@ -70,6 +47,7 @@ public class NetworkToolService
 
         count = Math.Max(1, Math.Min(count, 10));
 
+        var _searchServices = Resolve<ISearchService>(serviceProvider);
         foreach (var svc in _searchServices)
         {
             var result = await svc.SearchAsync(query, count, cancellationToken).ConfigureAwait(false);
@@ -94,6 +72,7 @@ public class NetworkToolService
     [ToolDescription("get_ip_location")]
     public async Task<Object> GetIpLocationAsync(String? ip = null, CancellationToken cancellationToken = default)
     {
+        var _ipServices = Resolve<IIpLocationService>(serviceProvider);
         foreach (var svc in _ipServices)
         {
             var result = await svc.GetLocationAsync(ip, cancellationToken).ConfigureAwait(false);
@@ -117,6 +96,7 @@ public class NetworkToolService
         if (String.IsNullOrWhiteSpace(city))
             return new { error = "city is required" };
 
+        var _weatherServices = Resolve<IWeatherService>(serviceProvider);
         foreach (var svc in _weatherServices)
         {
             var result = await svc.GetWeatherAsync(city, unit, cancellationToken).ConfigureAwait(false);
@@ -141,6 +121,7 @@ public class NetworkToolService
         if (String.IsNullOrEmpty(text))
             return new { error = "text is required" };
 
+        var _translateServices = Resolve<ITranslateService>(serviceProvider);
         foreach (var svc in _translateServices)
         {
             var result = await svc.TranslateAsync(text, targetLang, sourceLang, cancellationToken).ConfigureAwait(false);
