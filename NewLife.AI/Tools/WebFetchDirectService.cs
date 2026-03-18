@@ -1,13 +1,11 @@
-namespace NewLife.AI.Tools;
+﻿namespace NewLife.AI.Tools;
 
 /// <summary>直接 HTTP 网页爬取实现。含 SSRF 防护，仅允许 http/https 协议访问公网地址</summary>
-public class WebFetchDirectService : IWebFetchService
+/// <remarks>初始化直接网页爬取服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class WebFetchDirectService(HttpClient? httpClient = null) : IWebFetchService
 {
-    private readonly HttpClient _http;
-
-    /// <summary>初始化直接网页爬取服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public WebFetchDirectService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>爬取指定 URL 的网页内容并提取正文文本</summary>
     /// <param name="url">要爬取的网页地址</param>

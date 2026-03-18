@@ -1,22 +1,15 @@
-using System.Text;
+﻿using System.Text;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>Serper.dev 搜索实现。基于 Google 搜索结果，需要 serper.dev 密钥</summary>
-public class SearchSerperService : ISearchService
+/// <remarks>初始化 Serper 搜索服务</remarks>
+/// <param name="apiKey">serper.dev 密钥；为空时不可用</param>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class SearchSerperService(String? apiKey, HttpClient? httpClient = null) : ISearchService
 {
-    private readonly HttpClient _http;
-    private readonly String? _apiKey;
-
-    /// <summary>初始化 Serper 搜索服务</summary>
-    /// <param name="apiKey">serper.dev 密钥；为空时不可用</param>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public SearchSerperService(String? apiKey, HttpClient? httpClient = null)
-    {
-        _apiKey = apiKey;
-        _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
-    }
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>使用 Serper 搜索引擎检索互联网信息</summary>
     /// <param name="query">搜索关键词</param>
@@ -25,13 +18,13 @@ public class SearchSerperService : ISearchService
     /// <returns>成功返回搜索结果；无密钥或失败返回 null</returns>
     public async Task<SearchModel?> SearchAsync(String query, Int32 count = 5, CancellationToken cancellationToken = default)
     {
-        if (String.IsNullOrEmpty(_apiKey)) return null;
+        if (String.IsNullOrEmpty(apiKey)) return null;
 
         try
         {
             var body = new { q = query, num = count, hl = "zh-cn" };
             using var req = new HttpRequestMessage(HttpMethod.Post, "https://google.serper.dev/search");
-            req.Headers.Add("X-API-KEY", _apiKey);
+            req.Headers.Add("X-API-KEY", apiKey);
             req.Content = new StringContent(body.ToJson(), Encoding.UTF8, "application/json");
 
             var resp = await _http.SendAsync(req, cancellationToken).ConfigureAwait(false);

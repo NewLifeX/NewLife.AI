@@ -1,15 +1,13 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>MyMemory 文本翻译实现。免费，每天 5000 词额度，支持 60+ 种语言</summary>
-public class TranslateMyMemoryService : ITranslateService
+/// <remarks>初始化 MyMemory 翻译服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class TranslateMyMemoryService(HttpClient? httpClient = null) : ITranslateService
 {
-    private readonly HttpClient _http;
-
-    /// <summary>初始化 MyMemory 翻译服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public TranslateMyMemoryService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>将文本翻译为目标语言</summary>
     /// <param name="text">要翻译的文本内容</param>

@@ -1,4 +1,4 @@
-namespace NewLife.AI.Tools;
+﻿namespace NewLife.AI.Tools;
 
 /// <summary>工具描述特性。标注在 C# 方法上，使其可被 <see cref="ToolRegistry"/> 注册为 AI 可调用工具</summary>
 /// <remarks>
@@ -26,7 +26,7 @@ public sealed class ToolDescriptionAttribute : Attribute
     }
 
     /// <summary>初始化工具描述特性，工具名称由 <see cref="ToolSchemaBuilder"/> 依据方法名自动生成</summary>
-    public ToolDescriptionAttribute() { Name = String.Empty; }
+    public ToolDescriptionAttribute() => Name = String.Empty;
 
     /// <summary>是否通过构造函数显式指定了工具名称</summary>
     public Boolean HasExplicitName => Name.Length > 0;

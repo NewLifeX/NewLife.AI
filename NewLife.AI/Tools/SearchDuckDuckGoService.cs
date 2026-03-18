@@ -1,15 +1,13 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>DuckDuckGo 即时问答搜索实现。无需密钥，功能有限但完全免费</summary>
-public class SearchDuckDuckGoService : ISearchService
+/// <remarks>初始化 DuckDuckGo 搜索服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class SearchDuckDuckGoService(HttpClient? httpClient = null) : ISearchService
 {
-    private readonly HttpClient _http;
-
-    /// <summary>初始化 DuckDuckGo 搜索服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public SearchDuckDuckGoService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>使用 DuckDuckGo 即时问答检索信息</summary>
     /// <param name="query">搜索关键词</param>

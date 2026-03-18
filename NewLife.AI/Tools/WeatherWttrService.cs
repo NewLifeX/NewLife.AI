@@ -1,15 +1,13 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>wttr.in 天气查询实现。全球 CDN，无需密钥，支持国际城市</summary>
-public class WeatherWttrService : IWeatherService
+/// <remarks>初始化 wttr.in 天气查询服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class WeatherWttrService(HttpClient? httpClient = null) : IWeatherService
 {
-    private readonly HttpClient _http;
-
-    /// <summary>初始化 wttr.in 天气查询服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public WeatherWttrService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>获取指定城市的实时天气信息</summary>
     /// <param name="city">城市名称，支持中英文</param>

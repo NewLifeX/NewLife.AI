@@ -1,21 +1,14 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>Bing 搜索实现。需要 Azure Cognitive Services 密钥，国内可用</summary>
-public class SearchBingService : ISearchService
+/// <remarks>初始化 Bing 搜索服务</remarks>
+/// <param name="apiKey">Azure Cognitive Services 密钥；为空时不可用</param>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class SearchBingService(String? apiKey, HttpClient? httpClient = null) : ISearchService
 {
-    private readonly HttpClient _http;
-    private readonly String? _apiKey;
-
-    /// <summary>初始化 Bing 搜索服务</summary>
-    /// <param name="apiKey">Azure Cognitive Services 密钥；为空时不可用</param>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public SearchBingService(String? apiKey, HttpClient? httpClient = null)
-    {
-        _apiKey = apiKey;
-        _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
-    }
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>使用 Bing 搜索引擎检索互联网信息</summary>
     /// <param name="query">搜索关键词</param>
@@ -24,14 +17,14 @@ public class SearchBingService : ISearchService
     /// <returns>成功返回搜索结果；无密钥或失败返回 null</returns>
     public async Task<SearchModel?> SearchAsync(String query, Int32 count = 5, CancellationToken cancellationToken = default)
     {
-        if (String.IsNullOrEmpty(_apiKey)) return null;
+        if (String.IsNullOrEmpty(apiKey)) return null;
 
         try
         {
             var encoded = Uri.EscapeDataString(query);
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"https://api.bing.microsoft.com/v7.0/search?q={encoded}&count={count}&mkt=zh-CN");
-            req.Headers.Add("Ocp-Apim-Subscription-Key", _apiKey);
+            req.Headers.Add("Ocp-Apim-Subscription-Key", apiKey);
 
             var resp = await _http.SendAsync(req, cancellationToken).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return null;

@@ -1,3 +1,4 @@
+﻿using System.Collections.Concurrent;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
@@ -7,17 +8,14 @@ namespace NewLife.AI.Tools;
 /// 首次查询时并发拉取所有省份城市列表并缓存全量映射，后续查询直接命中缓存无额外 HTTP 请求。
 /// 城市名自动去除后缀"市/区/县/省"以提高匹配精度
 /// </remarks>
-public class WeatherNmcService : IWeatherService
+/// <remarks>初始化中央气象台天气查询服务</remarks>
+/// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
+public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
 {
     // 城市名 → 站点代码全量缓存（进程内持久，首次查询时并发扫描所有省份后填充）
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<String, String>
-        _stationCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<String, String> _stationCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly HttpClient _http;
-
-    /// <summary>初始化中央气象台天气查询服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-    public WeatherNmcService(HttpClient? httpClient = null) => _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>获取指定城市的实时天气信息</summary>
     /// <param name="city">城市名称，支持中文</param>
