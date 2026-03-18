@@ -1,61 +1,39 @@
-﻿using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
-using NewLife.Collections;
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
 /// <summary>网络工具服务。提供网页抓取、搜索、IP 归属地查询、实时天气、文本翻译等能力，通过 ToolRegistry 注册后供 AI 模型调用</summary>
 /// <remarks>
-/// 国内网络优先策略：
-/// <list type="bullet">
-/// <item>IP 归属地：优先调用太平洋电脑网 WHOIS（国内稳定，无需密钥），失败时降级到 ip-api.com</item>
-/// <item>天气：优先使用中央气象台（nmc.cn，无需密钥，国家权威数据），失败时降级到 wttr.in（国际城市）</item>
-/// <item>翻译：使用 MyMemory（免费，每天 5000 词额度）</item>
-/// <item>搜索：默认 Bing（国内可用），可切换 Serper / DuckDuckGo</item>
-/// </list>
+/// 通过 IServiceProvider 在内部解析各服务接口集合，遍历尝试每个实现直到获取有效结果。
+/// newlife 远程兜底实现建议注册在最后，作为最终降级方案。
 /// </remarks>
 public class NetworkToolService
 {
     #region 属性
 
-    // NMC 城市名 → 站点代码 全量缓存（进程内持久，首次查询时并发扫描所有省份后填充）
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<String, String>
-        _nmcStationCache = new(StringComparer.OrdinalIgnoreCase);
-
-    private readonly HttpClient _http;
-
-    /// <summary>搜索 API 密钥。Bing 填写 Azure Cognitive Services 密钥；Serper 填写 serper.dev 密钥；留空则退化为 DuckDuckGo 即时问答（无需密钥，功能有限）</summary>
-    public String? SearchApiKey { get; set; }
-
-    /// <summary>搜索引擎提供商：bing（默认）/ serper / duckduckgo</summary>
-    public String SearchProvider { get; set; } = "bing";
+    private readonly IEnumerable<IIpLocationService> _ipServices;
+    private readonly IEnumerable<IWeatherService> _weatherServices;
+    private readonly IEnumerable<ITranslateService> _translateServices;
+    private readonly IEnumerable<ISearchService> _searchServices;
+    private readonly IEnumerable<IWebFetchService> _fetchServices;
 
     #endregion
 
     #region 构造
 
-    /// <summary>初始化网络工具服务</summary>
-    /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例（含自动解压缩与重定向）</param>
-    public NetworkToolService(HttpClient? httpClient = null)
+    /// <summary>初始化网络工具服务，从 IServiceProvider 内部解析各服务集合</summary>
+    /// <param name="serviceProvider">依赖注入服务提供者</param>
+    public NetworkToolService(IServiceProvider serviceProvider)
     {
-        if (httpClient != null)
-        {
-            _http = httpClient;
-        }
-        else
-        {
-            _http = new HttpClient(new HttpClientHandler
-            {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-                AllowAutoRedirect = true,
-                MaxAutomaticRedirections = 5,
-            });
-            _http.Timeout = TimeSpan.FromSeconds(30);
-            _http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; NewLife.AI/1.0)");
-        }
+        _ipServices = Resolve<IIpLocationService>(serviceProvider);
+        _weatherServices = Resolve<IWeatherService>(serviceProvider);
+        _translateServices = Resolve<ITranslateService>(serviceProvider);
+        _searchServices = Resolve<ISearchService>(serviceProvider);
+        _fetchServices = Resolve<IWebFetchService>(serviceProvider);
     }
+
+    private static IEnumerable<T> Resolve<T>(IServiceProvider sp) =>
+        (IEnumerable<T>?)sp.GetService(typeof(IEnumerable<T>)) ?? [];
 
     #endregion
 
@@ -71,32 +49,13 @@ public class NetworkToolService
         if (String.IsNullOrWhiteSpace(url))
             return new { error = "url is required" };
 
-        // 仅允许 http/https，防止 SSRF 访问内网或其他协议
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            return new { error = "url must be a valid http/https address" };
-
-        if (IsSsrfRisk(uri.Host))
-            return new { error = "access to private/internal network addresses is not allowed" };
-
-        try
+        foreach (var svc in _fetchServices)
         {
-            var resp = await _http.GetAsync(uri, cancellationToken).ConfigureAwait(false);
-            var html = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-            if (!resp.IsSuccessStatusCode)
-                return new { error = $"HTTP {(Int32)resp.StatusCode}" };
-
-            var text = ExtractTextFromHtml(html);
-            if (maxLength > 0 && text.Length > maxLength)
-                text = text[..maxLength] + $"\n\n[已截断，原文共 {text.Length} 字符]";
-
-            return text;
+            var result = await svc.FetchAsync(url, maxLength, cancellationToken).ConfigureAwait(false);
+            if (result != null) return result;
         }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
+
+        return new { error = "all web fetch providers failed" };
     }
 
     /// <summary>使用搜索引擎检索互联网信息，返回标题、链接和摘要列表。适用于查找最新资讯、事实核查等场景</summary>
@@ -111,19 +70,13 @@ public class NetworkToolService
 
         count = Math.Max(1, Math.Min(count, 10));
 
-        try
+        foreach (var svc in _searchServices)
         {
-            return SearchProvider.ToLowerInvariant() switch
-            {
-                "serper" => await SearchSerperAsync(query, count, cancellationToken).ConfigureAwait(false),
-                "duckduckgo" => await SearchDuckDuckGoAsync(query, cancellationToken).ConfigureAwait(false),
-                _ => await SearchBingAsync(query, count, cancellationToken).ConfigureAwait(false),
-            };
+            var result = await svc.SearchAsync(query, count, cancellationToken).ConfigureAwait(false);
+            if (result != null && result.Items.Count > 0) return result;
         }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
+
+        return new { error = "all search providers failed" };
     }
 
     #endregion
@@ -132,7 +85,7 @@ public class NetworkToolService
 
     /// <summary>
     /// 查询 IP 地址的归属地信息（国家、省份、城市、运营商）。
-    /// 优先使用淘宝 IP 服务（国内稳定），失败时自动降级到 ip-api.com。
+    /// 按注册顺序遍历所有 IP 查询服务直到获取有效结果。
     /// 不传入 ip 时查询本机当前公网 IP。
     /// 若需查询 Web 访问者 IP，请由调用方从 HTTP 请求头中提取后传入此参数
     /// </summary>
@@ -141,38 +94,13 @@ public class NetworkToolService
     [ToolDescription("get_ip_location")]
     public async Task<Object> GetIpLocationAsync(String? ip = null, CancellationToken cancellationToken = default)
     {
-        try
+        foreach (var svc in _ipServices)
         {
-            // 优先使用太平洋电脑网 WHOIS（国内稳定，无需密钥，JSON 格式清晰）
-            var pconUrl = String.IsNullOrWhiteSpace(ip)
-                ? "https://whois.pconline.com.cn/ipJson.jsp?json=true"
-                : $"https://whois.pconline.com.cn/ipJson.jsp?ip={Uri.EscapeDataString(ip.Trim())}&json=true";
-
-            var resp = await _http.GetAsync(pconUrl, cancellationToken).ConfigureAwait(false);
-            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var pcon = json.ToJsonEntity<PconlineIpResponse>();
-
-            if (pcon != null && String.IsNullOrEmpty(pcon.Err))
-                return new { ip = pcon.Ip, province = pcon.Pro, city = pcon.City, region = pcon.Region, addr = pcon.Addr };
-
-            // 降级到 ip-api.com
-            var fallbackUrl = String.IsNullOrWhiteSpace(ip)
-                ? "https://ip-api.com/json?fields=status,message,country,regionName,city,isp,query"
-                : $"https://ip-api.com/json/{Uri.EscapeDataString(ip.Trim())}?fields=status,message,country,regionName,city,isp,query";
-
-            var fbResp = await _http.GetAsync(fallbackUrl, cancellationToken).ConfigureAwait(false);
-            var fbJson = await fbResp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var fbData = fbJson.ToJsonEntity<IpApiResponse>();
-
-            if (fbData?.Status != "success")
-                return new { error = fbData?.Message ?? "IP lookup failed" };
-
-            return new { ip = fbData.Query, country = fbData.Country, region = fbData.RegionName, city = fbData.City, isp = fbData.Isp };
+            var result = await svc.GetLocationAsync(ip, cancellationToken).ConfigureAwait(false);
+            if (result != null) return result;
         }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
+
+        return new { error = "all IP location providers failed" };
     }
 
     #endregion
@@ -189,19 +117,13 @@ public class NetworkToolService
         if (String.IsNullOrWhiteSpace(city))
             return new { error = "city is required" };
 
-        try
+        foreach (var svc in _weatherServices)
         {
-            // 优先使用中央气象台（无需密钥，国家权威，覆盖全国城市）；国际城市或查询失败时降级到 wttr.in
-            var nmcResult = await GetWeatherNmcAsync(city, unit, cancellationToken).ConfigureAwait(false);
-            if (nmcResult is not null)
-                return nmcResult;
+            var result = await svc.GetWeatherAsync(city, unit, cancellationToken).ConfigureAwait(false);
+            if (result != null) return result;
+        }
 
-            return await GetWeatherWttrAsync(city, unit, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
+        return new { error = "all weather providers failed" };
     }
 
     #endregion
@@ -219,475 +141,13 @@ public class NetworkToolService
         if (String.IsNullOrEmpty(text))
             return new { error = "text is required" };
 
-        try
+        foreach (var svc in _translateServices)
         {
-            var q = Uri.EscapeDataString(text);
-            var pair = Uri.EscapeDataString($"{sourceLang}|{targetLang}");
-            var resp = await _http.GetAsync(
-                $"https://api.mymemory.translated.net/get?q={q}&langpair={pair}",
-                cancellationToken).ConfigureAwait(false);
-            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var data = json.ToJsonEntity<MyMemoryResponse>();
-
-            if (data?.ResponseStatus != 200)
-                return new { error = data?.ResponseDetails ?? "translation failed" };
-
-            var translated = data.ResponseData?.TranslatedText ?? "";
-            return new { original = text, translated, sourceLang, targetLang };
-        }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
-    }
-
-    #endregion
-
-    #region 辅助
-
-    private async Task<Object> SearchBingAsync(String query, Int32 count, CancellationToken ct)
-    {
-        // 无密钥时降级到 DuckDuckGo
-        if (String.IsNullOrEmpty(SearchApiKey))
-            return await SearchDuckDuckGoAsync(query, ct).ConfigureAwait(false);
-
-        var encoded = Uri.EscapeDataString(query);
-        using var req = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.bing.microsoft.com/v7.0/search?q={encoded}&count={count}&mkt=zh-CN");
-        req.Headers.Add("Ocp-Apim-Subscription-Key", SearchApiKey);
-
-        var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
-            return new { error = $"Bing Search API error {(Int32)resp.StatusCode}" };
-
-        return FormatBingResults(json);
-    }
-
-    private async Task<Object> SearchSerperAsync(String query, Int32 count, CancellationToken ct)
-    {
-        if (String.IsNullOrEmpty(SearchApiKey))
-            return new { error = "SearchApiKey is required for Serper provider" };
-
-        var body = new { q = query, num = count, hl = "zh-cn" };
-        using var req = new HttpRequestMessage(HttpMethod.Post, "https://google.serper.dev/search");
-        req.Headers.Add("X-API-KEY", SearchApiKey);
-        req.Content = new StringContent(body.ToJson(), Encoding.UTF8, "application/json");
-
-        var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
-            return new { error = $"Serper API error {(Int32)resp.StatusCode}" };
-
-        return FormatSerperResults(json);
-    }
-
-    private async Task<Object> SearchDuckDuckGoAsync(String query, CancellationToken ct)
-    {
-        var encoded = Uri.EscapeDataString(query);
-        var resp = await _http.GetAsync(
-            $"https://api.duckduckgo.com/?q={encoded}&format=json&no_redirect=1&no_html=1", ct)
-            .ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        return FormatDuckDuckGoResults(json);
-    }
-
-    /// <summary>使用 wttr.in 获取天气（全球 CDN，无需密钥）</summary>
-    /// <param name="city">城市名称</param>
-    /// <param name="unit">温度单位：C 或 F</param>
-    /// <param name="ct">取消令牌</param>
-    private async Task<Object> GetWeatherWttrAsync(String city, String unit, CancellationToken ct)
-    {
-        var encoded = Uri.EscapeDataString(city.Trim());
-        var resp = await _http.GetAsync($"https://wttr.in/{encoded}?format=j1&lang=zh", ct).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-        if (!resp.IsSuccessStatusCode)
-            return new { error = $"weather service returned {(Int32)resp.StatusCode}" };
-
-        var data = json.ToJsonEntity<WttrResponse>();
-        var cur = data?.CurrentCondition?.FirstOrDefault();
-        if (cur == null)
-            return new { error = "weather data unavailable" };
-
-        var useF = unit.EqualIgnoreCase("F");
-        var temp = useF ? $"{cur.TempF}°F" : $"{cur.TempC}°C";
-        var feelsLike = useF ? $"{cur.FeelsLikeF}°F" : $"{cur.FeelsLikeC}°C";
-        var desc = cur.WeatherDesc?.FirstOrDefault()?.Value ?? "";
-        var area = data?.NearestArea?.FirstOrDefault();
-        var areaName = area?.AreaName?.FirstOrDefault()?.Value ?? city;
-        var country = area?.Country?.FirstOrDefault()?.Value ?? "";
-
-        return new
-        {
-            city = areaName,
-            country,
-            description = desc,
-            temp,
-            feelsLike,
-            humidity = $"{cur.Humidity}%",
-            windSpeed = $"{cur.WindspeedKmph} km/h",
-            visibility = $"{cur.Visibility} km",
-            uvIndex = cur.UvIndex,
-            observedAt = cur.ObservationTime,
-        };
-    }
-
-    /// <summary>使用中央气象台（nmc.cn）获取实时天气。城市不在 NMC 覆盖范围内时返回 null</summary>
-    /// <param name="city">城市名称，支持中文，如"北京"、"上海"、"成都"</param>
-    /// <param name="unit">温度单位：C 或 F</param>
-    /// <param name="ct">取消令牌</param>
-    /// <remarks>
-    /// 首次查询时并发拉取所有省份城市列表并缓存全量映射，后续查询直接命中缓存无额外 HTTP 请求。
-    /// 城市名自动去除后缀"市/区/县/省"以提高匹配精度
-    /// </remarks>
-    private async Task<Object?> GetWeatherNmcAsync(String city, String unit, CancellationToken ct)
-    {
-        var stationId = await ResolveNmcStationAsync(city.Trim(), ct).ConfigureAwait(false);
-        if (String.IsNullOrEmpty(stationId))
-            return null;
-
-        var resp = await _http.GetAsync(
-            $"https://www.nmc.cn/rest/weather?stationid={stationId}",
-            ct).ConfigureAwait(false);
-        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        var root = json.ToJsonEntity<NmcWeatherResponse>();
-
-        var real = root?.Data?.Real;
-        if (real == null) return null;
-
-        var w = real.Weather;
-        var wind = real.Wind;
-        if (w == null) return null;
-
-        var tempC = w.Temperature;
-        var feelC = w.Feelst;
-        String tempStr, feelStr;
-
-        if (unit.EqualIgnoreCase("F"))
-        {
-            tempStr = $"{tempC * 9 / 5 + 32:F1}°F";
-            feelStr = $"{feelC * 9 / 5 + 32:F1}°F";
-        }
-        else
-        {
-            tempStr = $"{tempC}°C";
-            feelStr = $"{feelC}°C";
+            var result = await svc.TranslateAsync(text, targetLang, sourceLang, cancellationToken).ConfigureAwait(false);
+            if (result != null) return result;
         }
 
-        return new
-        {
-            city = real.Station?.City ?? city,
-            province = real.Station?.Province,
-            description = w.Info,
-            temp = tempStr,
-            feelsLike = feelStr,
-            humidity = $"{w.Humidity}%",
-            rain = $"{w.Rain} mm",
-            wind = wind == null ? null : $"{wind.Direct} {wind.Power}（{wind.Speed} m/s）",
-            publishTime = real.PublishTime,
-            warning = String.IsNullOrEmpty(real.Warn?.Alert) ? null : real.Warn.Alert,
-        };
-    }
-
-    /// <summary>解析城市名到中央气象台站点代码。首次调用时并发扫描所有省份填充全量缓存</summary>
-    /// <param name="city">城市名称，允许带或不带"市/区/县/省"后缀</param>
-    /// <param name="ct">取消令牌</param>
-    private async Task<String?> ResolveNmcStationAsync(String city, CancellationToken ct)
-    {
-        // 规范化：去除常见行政单位后缀，提高匹配率
-        var normalized = city.TrimEnd('市', '区', '县', '省');
-
-        if (_nmcStationCache.TryGetValue(normalized, out var cached)) return cached;
-        if (_nmcStationCache.TryGetValue(city, out cached)) return cached;
-
-        // 首次或缓存未命中：拉取全量省份→城市映射并写入缓存
-        var pvResp = await _http.GetAsync("https://www.nmc.cn/rest/province", ct).ConfigureAwait(false);
-        var pvJson = await pvResp.Content.ReadAsStringAsync().ConfigureAwait(false);
-        var provinces = pvJson.ToJsonEntity<List<NmcProvince>>();
-        if (provinces == null || provinces.Count == 0) return null;
-
-        // 并发请求所有省份的城市列表
-        var tasks = provinces
-            .Where(p => !String.IsNullOrEmpty(p.Code))
-            .Select(p => FetchNmcCitiesAsync(p.Code!, ct))
-            .ToArray();
-        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-        foreach (var cities in results)
-        {
-            foreach (var c in cities)
-            {
-                if (String.IsNullOrEmpty(c.Code) || String.IsNullOrEmpty(c.City)) continue;
-                _nmcStationCache.TryAdd(c.City, c.Code);
-                // 同时缓存去后缀版本
-                var key2 = c.City.TrimEnd('市', '区', '县', '省');
-                if (key2 != c.City) _nmcStationCache.TryAdd(key2, c.Code);
-            }
-        }
-
-        if (_nmcStationCache.TryGetValue(normalized, out var found)) return found;
-        if (_nmcStationCache.TryGetValue(city, out found)) return found;
-        return null;
-    }
-
-    /// <summary>获取指定省份代码下的所有城市/站点列表（内部辅助）</summary>
-    /// <param name="provinceCode">省份代码，如 ABJ（北京）、ASH（上海）</param>
-    /// <param name="ct">取消令牌</param>
-    private async Task<List<NmcCity>> FetchNmcCitiesAsync(String provinceCode, CancellationToken ct)
-    {
-        try
-        {
-            var resp = await _http.GetAsync($"https://www.nmc.cn/rest/province/{provinceCode}", ct).ConfigureAwait(false);
-            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return json.ToJsonEntity<List<NmcCity>>() ?? [];
-        }
-        catch
-        {
-            return [];
-        }
-    }
-
-    /// <summary>使用高德天气 API 获取天气（国内高可用，需要高德开放平台密钥）</summary>
-    /// <param name="city">城市名称，支持中文，如"上海"、"北京"</param>
-    /// <param name="unit">温度单位：C 或 F</param>
-    /// <param name="ct">取消令牌</param>
-    /// <remarks>第一步 Geocoding 获取 adcode，第二步查询实时天气；adcode 解析失败时自动降级到 wttr.in</remarks>
-    private async Task<Object> GetWeatherGaodeAsync(String city, String unit, CancellationToken ct)
-    {
-        // 无密钥时直接降级
-        return await GetWeatherWttrAsync(city, unit, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>校验是否为 SSRF 风险地址（私有/回环/链路本地）</summary>
-    /// <param name="host">主机名或 IP</param>
-    private static Boolean IsSsrfRisk(String host)
-    {
-        if (String.IsNullOrEmpty(host)) return true;
-        var lower = host.ToLowerInvariant();
-
-        if (lower == "localhost" || lower == "ip6-localhost" || lower == "ip6-loopback") return true;
-
-        if (!IPAddress.TryParse(host, out var ip))
-            return false;
-
-        var bytes = ip.GetAddressBytes();
-        if (bytes.Length == 4)
-        {
-            if (bytes[0] == 127) return true;                          // 127.x.x.x 回环
-            if (bytes[0] == 10) return true;                           // 10.x.x.x 私有
-            if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true; // 172.16-31.x.x
-            if (bytes[0] == 192 && bytes[1] == 168) return true;       // 192.168.x.x
-            if (bytes[0] == 169 && bytes[1] == 254) return true;       // 169.254.x.x 链路本地
-            if (bytes[0] == 0) return true;                            // 0.0.0.0
-        }
-        if (bytes.Length == 16 && ip.Equals(IPAddress.IPv6Loopback)) return true;
-
-        return false;
-    }
-
-    /// <summary>从 HTML 字符串中提取纯文本正文</summary>
-    /// <param name="html">原始 HTML 内容</param>
-    private static String ExtractTextFromHtml(String html)
-    {
-        if (String.IsNullOrEmpty(html)) return String.Empty;
-
-        var text = Regex.Replace(html, @"<(script|style)[^>]*>[\s\S]*?</\1>", " ", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"<[^>]+>", " ");
-        text = WebUtility.HtmlDecode(text);
-        text = Regex.Replace(text, @"[ \t]+", " ");
-        text = Regex.Replace(text, @"\n{3,}", "\n\n");
-        return text.Trim();
-    }
-
-    private static Object FormatBingResults(String json)
-    {
-        try
-        {
-            var root = json.ToJsonEntity<BingSearchResponse>();
-            var items = root?.WebPages?.Value;
-            if (items == null || items.Count == 0) return "[]";
-
-            var sb = Pool.StringBuilder.Get();
-            sb.Append('[');
-            for (var i = 0; i < items.Count; i++)
-            {
-                if (i > 0) sb.Append(',');
-                sb.Append(new { title = items[i].Name, url = items[i].Url, snippet = items[i].Snippet });
-            }
-            sb.Append(']');
-            return sb.Return(true);
-        }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
-    }
-
-    private static Object FormatSerperResults(String json)
-    {
-        try
-        {
-            var root = json.ToJsonEntity<SerperSearchResponse>();
-            var items = root?.Organic;
-            if (items == null || items.Count == 0) return "[]";
-
-            var sb = Pool.StringBuilder.Get();
-            sb.Append('[');
-            for (var i = 0; i < items.Count; i++)
-            {
-                if (i > 0) sb.Append(',');
-                sb.Append(new { title = items[i].Title, url = items[i].Link, snippet = items[i].Snippet });
-            }
-            sb.Append(']');
-            return sb.Return(true);
-        }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
-    }
-
-    private static Object FormatDuckDuckGoResults(String json)
-    {
-        try
-        {
-            var root = json.ToJsonEntity<DuckDuckGoResponse>();
-            var sb = Pool.StringBuilder.Get();
-            sb.Append('[');
-            var first = true;
-
-            if (!String.IsNullOrEmpty(root?.AbstractText))
-            {
-                sb.Append(new { title = root.Heading, url = root.AbstractURL, snippet = root.AbstractText });
-                first = false;
-            }
-
-            if (root?.RelatedTopics != null)
-            {
-                foreach (var topic in root.RelatedTopics)
-                {
-                    if (String.IsNullOrEmpty(topic.Text)) continue;
-                    if (!first) sb.Append(',');
-                    sb.Append(new { title = topic.Text, url = topic.FirstURL, snippet = "" });
-                    first = false;
-                    if (sb.Length > 3000) break;
-                }
-            }
-
-            sb.Append(']');
-            return sb.Return(true);
-        }
-        catch (Exception ex)
-        {
-            return new { error = ex.Message };
-        }
-    }
-
-    #endregion
-
-    #region 内部模型
-
-    // 搜索响应模型
-    private class BingWebItem { public String? Name { get; set; } public String? Url { get; set; } public String? Snippet { get; set; } }
-    private class BingWebPages { public List<BingWebItem>? Value { get; set; } }
-    private class BingSearchResponse { public BingWebPages? WebPages { get; set; } }
-
-    private class SerperItem { public String? Title { get; set; } public String? Link { get; set; } public String? Snippet { get; set; } }
-    private class SerperSearchResponse { public List<SerperItem>? Organic { get; set; } }
-
-    private class DuckDuckGoTopic { public String? Text { get; set; } public String? FirstURL { get; set; } }
-    private class DuckDuckGoResponse
-    {
-        public String? Heading { get; set; }
-        public String? AbstractText { get; set; }
-        public String? AbstractURL { get; set; }
-        public List<DuckDuckGoTopic>? RelatedTopics { get; set; }
-    }
-
-    // 太平洋电脑网 IP 查询响应模型（国内首选，无需密钥）
-    private class PconlineIpResponse
-    {
-        public String? Ip { get; set; }
-        public String? Pro { get; set; }       // 省份
-        public String? ProCode { get; set; }
-        public String? City { get; set; }
-        public String? CityCode { get; set; }
-        public String? Region { get; set; }
-        public String? Addr { get; set; }      // 完整地址含运营商，如"广东省深圳市 电信"
-        public String? Err { get; set; }       // 成功时为空字符串
-    }
-
-    // ip-api.com 降级响应模型
-    private class IpApiResponse
-    {
-        public String? Status { get; set; }
-        public String? Message { get; set; }
-        public String? Country { get; set; }
-        public String? RegionName { get; set; }
-        public String? City { get; set; }
-        public String? Isp { get; set; }
-        public String? Query { get; set; }
-    }
-
-    // wttr.in j1 格式响应模型
-    private class WttrNameValue { public String? Value { get; set; } }
-    private class WttrCurrentCondition
-    {
-        public String? TempC { get; set; }
-        public String? TempF { get; set; }
-        public String? FeelsLikeC { get; set; }
-        public String? FeelsLikeF { get; set; }
-        public String? Humidity { get; set; }
-        public String? WindspeedKmph { get; set; }
-        public String? Visibility { get; set; }
-        public String? UvIndex { get; set; }
-        public String? ObservationTime { get; set; }
-        public List<WttrNameValue>? WeatherDesc { get; set; }
-    }
-    private class WttrNearestArea
-    {
-        public List<WttrNameValue>? AreaName { get; set; }
-        public List<WttrNameValue>? Country { get; set; }
-    }
-    private class WttrResponse
-    {
-        public List<WttrCurrentCondition>? CurrentCondition { get; set; }
-        public List<WttrNearestArea>? NearestArea { get; set; }
-    }
-
-    // 中央气象台（nmc.cn）响应模型
-    private class NmcProvince { public String? Code { get; set; } public String? Name { get; set; } }
-    private class NmcCity { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
-    private class NmcStation { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
-    private class NmcWeatherInfo
-    {
-        public Double Temperature { get; set; }
-        public Double Humidity { get; set; }
-        public Double Rain { get; set; }
-        public Double Feelst { get; set; }
-        public String? Info { get; set; }
-    }
-    private class NmcWind { public String? Direct { get; set; } public String? Power { get; set; } public Double Speed { get; set; } }
-    private class NmcWarn { public String? Alert { get; set; } }
-    private class NmcReal
-    {
-        public NmcStation? Station { get; set; }
-        public String? PublishTime { get; set; }
-        public NmcWeatherInfo? Weather { get; set; }
-        public NmcWind? Wind { get; set; }
-        public NmcWarn? Warn { get; set; }
-    }
-    private class NmcData { public NmcReal? Real { get; set; } }
-    private class NmcWeatherResponse { public String? Msg { get; set; } public Int32 Code { get; set; } public NmcData? Data { get; set; } }
-
-    // MyMemory 翻译响应模型
-    private class MyMemoryTranslation { public String? TranslatedText { get; set; } }
-    private class MyMemoryResponse
-    {
-        public MyMemoryTranslation? ResponseData { get; set; }
-        public Int32 ResponseStatus { get; set; }
-        public String? ResponseDetails { get; set; }
+        return new { error = "all translate providers failed" };
     }
 
     #endregion
