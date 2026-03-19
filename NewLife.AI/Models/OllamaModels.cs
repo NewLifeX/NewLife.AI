@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace NewLife.AI.Models;
 
@@ -166,7 +167,8 @@ public class OllamaModelInfo
     public String? Model { get; set; }
 
     /// <summary>修改时间</summary>
-    public String? ModifiedAt { get; set; }
+    [DataMember(Name = "modified_at")]
+    public DateTime ModifiedAt { get; set; }
 
     /// <summary>模型大小（字节）</summary>
     public Int64 Size { get; set; }
@@ -191,9 +193,11 @@ public class OllamaModelDetails
     public String[]? Families { get; set; }
 
     /// <summary>参数规模</summary>
+    [DataMember(Name = "parameter_size")]
     public String? ParameterSize { get; set; }
 
     /// <summary>量化级别</summary>
+    [DataMember(Name = "quantization_level")]
     public String? QuantizationLevel { get; set; }
 }
 
@@ -223,12 +227,15 @@ public class OllamaRunningModel
     public OllamaModelDetails? Details { get; set; }
 
     /// <summary>过期时间</summary>
-    public String? ExpiresAt { get; set; }
+    [DataMember(Name = "modified_at")]
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>显存占用（字节）</summary>
+    [DataMember(Name = "size_vram")]
     public Int64 SizeVram { get; set; }
 
     /// <summary>上下文长度</summary>
+    [DataMember(Name = "context_length")]
     public Int64 ContextLength { get; set; }
 }
 
