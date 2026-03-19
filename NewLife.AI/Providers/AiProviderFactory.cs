@@ -8,6 +8,9 @@ public class AiProviderFactory
     #region 属性
     private readonly Dictionary<String, IAiProvider> _providers = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>按类型全名索引（FullName → 实例），用于通过 ProviderConfig.Provider 字段定位实现类</summary>
+    private readonly Dictionary<String, IAiProvider> _providersByTypeName = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>已注册的服务商字典（Code → 实例，大小写不敏感）</summary>
     public Dictionary<String, IAiProvider> Providers => _providers;
 
@@ -38,6 +41,7 @@ public class AiProviderFactory
     {
         var instance = new T();
         _providers[instance.Code] = instance;
+        _providersByTypeName[instance.GetType().FullName!] = instance;
         return this;
     }
 
@@ -49,6 +53,7 @@ public class AiProviderFactory
         if (provider == null) throw new ArgumentNullException(nameof(provider));
 
         _providers[provider.Code] = provider;
+        _providersByTypeName[provider.GetType().FullName!] = provider;
         return this;
     }
 
@@ -61,19 +66,25 @@ public class AiProviderFactory
 
         var instance = (IAiProvider)Activator.CreateInstance(type)!;
         _providers[instance.Code] = instance;
+        _providersByTypeName[type.FullName!] = instance;
         return this;
     }
     #endregion
 
     #region 查找
-    /// <summary>按服务商编码获取 IAiProvider 实例（大小写不敏感）</summary>
-    /// <param name="code">服务商编码，如 "OpenAI"、"DashScope"</param>
+    /// <summary>按服务商编码或类型全名获取 IAiProvider 实例（大小写不敏感）。
+    /// 优先按 <see cref="IAiProvider.Code"/> 查找；未命中时再按类型全名查找，
+    /// 支持 ProviderConfig.Provider 字段（如 "NewLife.AI.Providers.OllamaProvider"）作为查找键</summary>
+    /// <param name="code">服务商编码（如 "OpenAI"）或类型全名（如 "NewLife.AI.Providers.OllamaProvider"）</param>
     /// <returns>服务商实例，未注册时返回 null</returns>
     public IAiProvider? GetProvider(String code)
     {
         if (code.IsNullOrWhiteSpace()) return null;
 
-        _providers.TryGetValue(code, out var provider);
+        if (_providers.TryGetValue(code, out var provider)) return provider;
+
+        // 按类型全名回退查找，支持 ProviderConfig.Provider 字段直接定位实现类
+        _providersByTypeName.TryGetValue(code, out provider);
         return provider;
     }
     #endregion
