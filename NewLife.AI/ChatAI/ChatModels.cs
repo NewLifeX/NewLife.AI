@@ -1,15 +1,21 @@
-﻿namespace NewLife.AI.ChatAI;
+﻿using System.ComponentModel;
+using NewLife.AI.Tools;
+
+namespace NewLife.AI.ChatAI;
 
 /// <summary>思考模式</summary>
 public enum ThinkingMode
 {
     /// <summary>自动</summary>
+    [Description("自动")]
     Auto = 0,
 
     /// <summary>深度思考</summary>
+    [Description("深度思考")]
     Think = 1,
 
     /// <summary>快速</summary>
+    [Description("快速")]
     Fast = 2
 }
 
@@ -20,9 +26,11 @@ public enum FeedbackType
     None = 0,
 
     /// <summary>点赞</summary>
+    [Description("点赞")]
     Like = 1,
 
     /// <summary>点踩</summary>
+    [Description("点踩")]
     Dislike = 2
 }
 

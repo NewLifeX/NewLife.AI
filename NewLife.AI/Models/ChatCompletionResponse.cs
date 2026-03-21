@@ -60,4 +60,7 @@ public class ChatUsage
 
     /// <summary>总令牌数</summary>
     public Int32 TotalTokens { get; set; }
+
+    /// <summary>耗时。本次LLM调用的端到端毫秒数</summary>
+    public Int32 ElapsedMs { get; set; }
 }
