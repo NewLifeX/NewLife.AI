@@ -1,4 +1,4 @@
-using NewLife.AI.Filters;
+﻿using NewLife.AI.Filters;
 using NewLife.AI.Models;
 
 namespace NewLife.AI.Providers;
@@ -57,11 +57,21 @@ public class FilteredChatClient : DelegatingChatClient
 
         var request = ChatCompletionRequest.Create(messages, options);
         var context = new ChatFilterContext { Request = request, IsStreaming = false };
+        if (options != null)
+        {
+            context.UserId = options.UserId;
+            context.ConversationId = options.ConversationId;
+            foreach (var kv in options.Items)
+            {
+                context.Items[kv.Key] = kv.Value;
+            }
+        }
+
         await ExecuteFilterChainAsync(context, 0, options, cancellationToken).ConfigureAwait(false);
         return context.Response ?? new ChatCompletionResponse();
     }
 
-    /// <summary>流式对话完成。执行过滤器链的 before 阶段后委托给内层客户端</summary>
+    /// <summary>流式对话完成。执行过滤器链的 before 阶段后委托给内层客户端，流结束后触发 OnStreamCompletedAsync</summary>
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -70,7 +80,7 @@ public class FilteredChatClient : DelegatingChatClient
         if (Filters.Count == 0)
             return InnerClient.CompleteStreamingAsync(messages, options, cancellationToken);
 
-        // 流式场景：先运行 before 阶段，再委托给内层流
+        // 流式场景：先运行 before 阶段，再委托给内层流，流结束后触发 OnStreamCompletedAsync
         return RunStreamingWithFiltersAsync(messages, options, cancellationToken);
     }
 
@@ -96,15 +106,56 @@ public class FilteredChatClient : DelegatingChatClient
         ChatOptions? options,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // 流式只执行 before 阶段（过滤器 next 后面的代码）— 把请求作为最终状态传入
         var request = ChatCompletionRequest.Create(messages, options);
         var context = new ChatFilterContext { Request = request, IsStreaming = true };
+        if (options != null)
+        {
+            context.UserId = options.UserId;
+            context.ConversationId = options.ConversationId;
+            foreach (var kv in options.Items)
+            {
+                context.Items[kv.Key] = kv.Value;
+            }
+        }
 
-        // 运行过滤器链的 before 阶段（不设置 Response，过滤器到达链尾时不调用 CompleteAsync）
+        // 运行过滤器链的 before 阶段（修改请求，例如注入记忆上下文）
         await RunBeforeFiltersAsync(context, 0, cancellationToken).ConfigureAwait(false);
 
+        // 流式输出，同时收集最后一个有效用量、模型名和完整回复内容（用于传给 OnStreamCompletedAsync）
+        ChatUsage? lastUsage = null;
+        String? model = null;
+        var contentBuilder = new System.Text.StringBuilder();
         await foreach (var chunk in InnerClient.CompleteStreamingAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false))
+        {
+            if (chunk.Usage != null) lastUsage = chunk.Usage;
+            if (chunk.Model != null) model = chunk.Model;
+            // 聚合正文内容，以便 OnStreamCompletedAsync 中各过滤器（如 AgentTriggerFilter）可读取完整回复
+            var delta = chunk.Choices?.FirstOrDefault()?.Delta;
+            if (delta?.Content is String text && !String.IsNullOrEmpty(text))
+                contentBuilder.Append(text);
             yield return chunk;
+        }
+
+        // 流结束后：组装包含完整回复内容的摘要响应，并以"火焰即忘"方式触发 OnStreamCompletedAsync
+        context.Response = new ChatCompletionResponse
+        {
+            Model = model,
+            Usage = lastUsage,
+            Choices = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = contentBuilder.ToString() } }],
+        };
+        var capturedContext = context;
+        var capturedFilters = Filters.ToArray();
+        _ = Task.Run(async () =>
+        {
+            foreach (var filter in capturedFilters)
+            {
+                try
+                {
+                    await filter.OnStreamCompletedAsync(capturedContext, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch { /* 后处理异常不应影响主响应链 */ }
+            }
+        });
     }
 
     private async Task RunBeforeFiltersAsync(ChatFilterContext context, Int32 index, CancellationToken cancellationToken)

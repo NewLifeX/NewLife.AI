@@ -66,7 +66,10 @@ public sealed class ChatClientBuilder
         // 倒序应用：先添加的中间件包裹在最外层（请求时先执行）
         var client = _innermost;
         for (var i = _middlewares.Count - 1; i >= 0; i--)
+        {
             client = _middlewares[i](client);
+        }
+
         return client;
     }
 

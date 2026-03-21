@@ -1,3 +1,5 @@
+﻿using NewLife.Data;
+
 namespace NewLife.AI.Models;
 
 /// <summary>对话选项。面向用户的简洁参数集合，可在每次调用时覆盖客户端默认值</summary>
@@ -6,7 +8,7 @@ namespace NewLife.AI.Models;
 /// ChatCompletionRequest 是面向协议层的完整 DTO。客户端内部将两者合并后发送给服务商。
 /// 所有属性均为 nullable，null 表示沿用客户端默认值。
 /// </remarks>
-public class ChatOptions
+public class ChatOptions : IExtend
 {
     /// <summary>模型编码。覆盖客户端默认模型</summary>
     public String? Model { get; set; }
@@ -40,4 +42,16 @@ public class ChatOptions
 
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭</summary>
     public Boolean? EnableThinking { get; set; }
+
+    /// <summary>当前请求的用户编号。传递给过滤器链，供 LearningFilter 等中间件读取</summary>
+    public Int32 UserId { get; set; }
+
+    /// <summary>当前请求的会话编号。传递给过滤器链，供 LearningFilter 等中间件读取</summary>
+    public Int64 ConversationId { get; set; }
+
+    /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器，方便访问扩展数据</summary>
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
 }
