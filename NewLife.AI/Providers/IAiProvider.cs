@@ -254,6 +254,7 @@ public abstract class AiProviderBase
         }
         return resp;
     }
+
     /// <summary>发送 POST 请求并返回二进制响应。用于音频合成等返回字节流的接口</summary>
     /// <param name="url">请求地址</param>
     /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>

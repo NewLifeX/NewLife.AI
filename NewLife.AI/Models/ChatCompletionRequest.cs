@@ -1,7 +1,9 @@
-﻿namespace NewLife.AI.Models;
+﻿using NewLife.Data;
+
+namespace NewLife.AI.Models;
 
 /// <summary>对话完成请求。兼容 OpenAI ChatCompletion 标准</summary>
-public class ChatCompletionRequest
+public class ChatCompletionRequest : IExtend
 {
     #region 属性
     /// <summary>模型编码</summary>
@@ -42,6 +44,18 @@ public class ChatCompletionRequest
 
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>
     public Boolean? EnableThinking { get; set; }
+
+    /// <summary>响应格式。用于结构化输出，如 {"type":"json_schema","json_schema":{...}}。支持的服务商：DashScope、OpenAI 等</summary>
+    public Object? ResponseFormat { get; set; }
+
+    /// <summary>是否允许并行工具调用。null=不设置，true=允许，false=禁止</summary>
+    public Boolean? ParallelToolCalls { get; set; }
+
+    /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器，方便访问扩展数据</summary>
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
     #endregion
 
     #region 方法
@@ -61,6 +75,8 @@ public class ChatCompletionRequest
         FrequencyPenalty ??= options.FrequencyPenalty;
         User ??= options.User;
         EnableThinking ??= options.EnableThinking;
+        ResponseFormat ??= options.ResponseFormat;
+        ParallelToolCalls ??= options.ParallelToolCalls;
 
         if (options.Tools != null && options.Tools.Count > 0)
         {
@@ -71,6 +87,20 @@ public class ChatCompletionRequest
             }
         }
         ToolChoice ??= options.ToolChoice;
+
+        // 合并扩展数据。选项中的键值对覆盖请求中同名键值
+        if (options.Items != null && options.Items.Count > 0)
+        {
+            if (Items == null || Items.Count == 0)
+                Items = options.Items;
+            else
+            {
+                foreach (var kv in options.Items)
+                {
+                    Items[kv.Key] = kv.Value;
+                }
+            }
+        }
 
         return this;
     }
@@ -105,6 +135,9 @@ public class ChatCompletionRequest
         ToolChoice = ToolChoice,
         User = User,
         EnableThinking = EnableThinking,
+        ResponseFormat = ResponseFormat,
+        ParallelToolCalls = ParallelToolCalls,
+        Items = Items,
     };
     #endregion
 }
@@ -192,11 +225,17 @@ public class FunctionCall
 /// <summary>聊天工具定义</summary>
 public class ChatTool
 {
-    /// <summary>类型。固定 function</summary>
+    /// <summary>类型。function / mcp / web_search / code_interpreter</summary>
     public String Type { get; set; } = "function";
 
-    /// <summary>函数定义</summary>
+    /// <summary>函数定义。Type=function 时填写</summary>
     public FunctionDefinition? Function { get; set; }
+
+    /// <summary>MCP 工具配置。Type=mcp 时填写</summary>
+    public McpToolConfig? Mcp { get; set; }
+
+    /// <summary>通用扩展配置。web_search 等内置工具类型的具体参数字典。DashScope 专用</summary>
+    public Object? Config { get; set; }
 }
 
 /// <summary>函数定义</summary>
@@ -210,4 +249,33 @@ public class FunctionDefinition
 
     /// <summary>参数。JSON Schema 格式</summary>
     public Object? Parameters { get; set; }
+}
+
+/// <summary>MCP（Model Context Protocol）工具配置</summary>
+public class McpToolConfig
+{
+    /// <summary>MCP Server 地址</summary>
+    public String? ServerUrl { get; set; }
+
+    /// <summary>MCP Server 唯一标识</summary>
+    public String? ServerId { get; set; }
+
+    /// <summary>服务器配置参数</summary>
+    public IDictionary<String, Object?>? Configs { get; set; }
+
+    /// <summary>允许调用的工具子集。为空则允许全部工具</summary>
+    public IList<String>? AllowedTools { get; set; }
+
+    /// <summary>鉴权配置</summary>
+    public McpAuthConfig? Authorization { get; set; }
+}
+
+/// <summary>MCP 工具鉴权配置</summary>
+public class McpAuthConfig
+{
+    /// <summary>鉴权类型。如 bearer</summary>
+    public String? Type { get; set; }
+
+    /// <summary>鉴权令牌</summary>
+    public String? Token { get; set; }
 }

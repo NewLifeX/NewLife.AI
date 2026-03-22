@@ -26,7 +26,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     public virtual String? Description => "OpenAI 官方 API，支持 GPT 系列模型";
 
     /// <summary>API 协议类型</summary>
-    public virtual String ApiProtocol => "ChatCompletions";
+    public virtual String ApiProtocol { get; set; } = "ChatCompletions";
 
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://api.openai.com";

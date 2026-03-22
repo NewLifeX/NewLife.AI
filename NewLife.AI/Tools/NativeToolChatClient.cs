@@ -133,7 +133,11 @@ public class NativeToolChatClient : DelegatingChatClient
             Tools = tools,
             ToolChoice = options?.ToolChoice ?? "auto",
             User = options?.User,
-            EnableThinking = options?.EnableThinking
+            EnableThinking = options?.EnableThinking,
+            ResponseFormat = options?.ResponseFormat,
+            ParallelToolCalls = options?.ParallelToolCalls,
+            UserId = options?.UserId ?? 0,
+            ConversationId = options?.ConversationId ?? 0,
         };
     }
 

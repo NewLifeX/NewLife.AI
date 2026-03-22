@@ -28,8 +28,25 @@ public class ChatCompletionResponse
 
     #region 便捷属性
     /// <summary>获取回复文本。返回第一个选择项的消息内容</summary>
-    public String? Text => Choices?.FirstOrDefault()?.Message?.Content?.ToString()
-        ?? Choices?.FirstOrDefault()?.Delta?.Content?.ToString();
+    public String? Text
+    {
+        get
+        {
+            var value = Choices?.FirstOrDefault()?.Message?.Content ?? Choices?.FirstOrDefault()?.Delta?.Content;
+            if (value == null) return null;
+            if (value is IList<Object> list) value = list.FirstOrDefault();
+            if (value is String str) return str;
+            if (value is IDictionary<String, Object?> dic)
+            {
+                if (dic.Count == 0) return String.Empty;
+                if (dic.TryGetValue("text", out var text)) return text + "";
+
+                return dic.FirstOrDefault().Value + "";
+            }
+
+            return value.ToString();
+        }
+    }
     #endregion
 }
 

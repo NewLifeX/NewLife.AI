@@ -43,6 +43,12 @@ public class ChatOptions : IExtend
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭</summary>
     public Boolean? EnableThinking { get; set; }
 
+    /// <summary>响应格式。用于结构化输出，如 {"type":"json_schema","json_schema":{...}}</summary>
+    public Object? ResponseFormat { get; set; }
+
+    /// <summary>是否允许并行工具调用。null=不设置，true=允许，false=禁止</summary>
+    public Boolean? ParallelToolCalls { get; set; }
+
     /// <summary>当前请求的用户编号。传递给过滤器链，供 LearningFilter 等中间件读取</summary>
     public Int32 UserId { get; set; }
 
