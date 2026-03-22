@@ -14,6 +14,15 @@ public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IRea
 
     /// <summary>模型编号。当会话未绑定模型时，使用此字段指定的模型</summary>
     public Int32 ModelId { get; init; }
+
+    /// <summary>扩展选项。传递服务商专属参数，最终通过 ChatOptions.Items 注入管道。
+    /// 支持的键（DashScope 原生协议）：
+    /// EnableSearch(bool) / SearchStrategy(string) / EnableSource(bool) / ForcedSearch(bool)
+    /// ThinkingBudget(int) / TopK(int) / Seed(int) / N(int)
+    /// RepetitionPenalty(double) / Logprobs(bool) / TopLogprobs(int)
+    /// EnableCodeInterpreter(bool) / VlHighResolutionImages(bool) / MaxPixels(int)
+    /// </summary>
+    public IDictionary<String, Object?>? Options { get; init; }
 };
 
 /// <summary>编辑消息请求</summary>

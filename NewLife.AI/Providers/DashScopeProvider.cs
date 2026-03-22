@@ -432,18 +432,44 @@ public class DashScopeProvider : OpenAiProvider
 
         if (request.Temperature != null) parameters["temperature"] = request.Temperature.Value;
         if (request.TopP != null) parameters["top_p"] = request.TopP.Value;
+        var topK = request["TopK"] as Int32?;
+        if (topK != null) parameters["top_k"] = topK.Value;
         if (request.MaxTokens != null) parameters["max_tokens"] = request.MaxTokens.Value;
+        var seed = request["Seed"] as Int32?;
+        if (seed != null) parameters["seed"] = seed.Value;
         if (request.Stop != null && request.Stop.Count > 0) parameters["stop"] = request.Stop;
         if (request.PresencePenalty != null) parameters["presence_penalty"] = request.PresencePenalty.Value;
         if (request.FrequencyPenalty != null) parameters["frequency_penalty"] = request.FrequencyPenalty.Value;
+        var repetitionPenalty = request["RepetitionPenalty"] as Double?;
+        if (repetitionPenalty != null) parameters["repetition_penalty"] = repetitionPenalty.Value;
+        var n = request["N"] as Int32?;
+        if (n != null) parameters["n"] = n.Value;
 
         // 深度思考
         if (request.EnableThinking != null) parameters["enable_thinking"] = request.EnableThinking.Value;
         var thinkingBudget = request["ThinkingBudget"] as Int32?;
         if (thinkingBudget != null) parameters["thinking_budget"] = thinkingBudget.Value;
 
+        // 代码解释器（仅 qwen3.5 及部分思考模式模型支持）
+        var enableCodeInterpreter = request["EnableCodeInterpreter"] as Boolean?;
+        if (enableCodeInterpreter != null) parameters["enable_code_interpreter"] = enableCodeInterpreter.Value;
+
         // 结构化输出
         if (request.ResponseFormat != null) parameters["response_format"] = request.ResponseFormat;
+
+        // 对数概率
+        var logprobs = request["Logprobs"] as Boolean?;
+        if (logprobs != null) parameters["logprobs"] = logprobs.Value;
+        var topLogprobs = request["TopLogprobs"] as Int32?;
+        if (topLogprobs != null) parameters["top_logprobs"] = topLogprobs.Value;
+
+        // VL 视觉专属参数
+        var vlHighResolutionImages = request["VlHighResolutionImages"] as Boolean?;
+        if (vlHighResolutionImages != null) parameters["vl_high_resolution_images"] = vlHighResolutionImages.Value;
+        var vlEnableImageHwOutput = request["VlEnableImageHwOutput"] as Boolean?;
+        if (vlEnableImageHwOutput != null) parameters["vl_enable_image_hw_output"] = vlEnableImageHwOutput.Value;
+        var maxPixels = request["MaxPixels"] as Int32?;
+        if (maxPixels != null) parameters["max_pixels"] = maxPixels.Value;
 
         // 工具调用
         if (request.Tools != null && request.Tools.Count > 0)
@@ -451,18 +477,25 @@ public class DashScopeProvider : OpenAiProvider
         if (request.ToolChoice != null) parameters["tool_choice"] = request.ToolChoice;
         if (request.ParallelToolCalls != null) parameters["parallel_tool_calls"] = request.ParallelToolCalls.Value;
 
-        // 内置搜索工具参数（DashScope 专属，通过 Items 索引器传入）
+        // 联网搜索（DashScope 专属，通过 Items 索引器传入）
         var enableSearch = request["EnableSearch"] as Boolean?;
         if (enableSearch != null) parameters["enable_search"] = enableSearch.Value;
+        // search_options 子对象：search_strategy / enable_source / forced_search
+        var searchOptions = new Dictionary<String, Object>();
         var searchStrategy = request["SearchStrategy"] as String;
-        if (!String.IsNullOrEmpty(searchStrategy)) parameters["search_strategy"] = searchStrategy;
+        if (!String.IsNullOrEmpty(searchStrategy)) searchOptions["search_strategy"] = searchStrategy;
         var enableSource = request["EnableSource"] as Boolean?;
-        if (enableSource != null) parameters["enable_source"] = enableSource.Value;
-        var enableSearchExtension = request["EnableSearchExtension"] as Boolean?;
-        if (enableSearchExtension != null) parameters["search_extension"] = enableSearchExtension.Value;
+        if (enableSource != null) searchOptions["enable_source"] = enableSource.Value;
+        var forcedSearch = request["ForcedSearch"] as Boolean?;
+        if (forcedSearch != null) searchOptions["forced_search"] = forcedSearch.Value;
+        if (searchOptions.Count > 0) parameters["search_options"] = searchOptions;
 
-        // 流式增量输出
-        if (stream) parameters["incremental_output"] = true;
+        // 流式输出：同时需要请求体 stream:true 和 HTTP 头 X-DashScope-SSE:enable
+        if (stream)
+        {
+            parameters["stream"] = true;
+            parameters["incremental_output"] = true;
+        }
 
         return new Dictionary<String, Object>
         {
@@ -487,7 +520,7 @@ public class DashScopeProvider : OpenAiProvider
                 m["content"] = BuildContent(msg.Contents, isMultimodal);
             else if (isMultimodal)
                 // DashScope 多模态端点要求 content 为数组格式：[{"text": "..."}]
-                m["content"] = new List<Object> { new Dictionary<String, Object> { ["text"] = msg.Content ?? "" } };
+                m["content"] = new List<Object> { new { text = msg.Content ?? "" } };
             else
                 m["content"] = msg.Content;
 
@@ -583,10 +616,10 @@ public class DashScopeProvider : OpenAiProvider
             {
                 if (isMultimodal)
                     // DashScope 原生多模态：{"text": "..."}
-                    parts.Add(new Dictionary<String, Object> { ["text"] = text.Text });
+                    parts.Add(new { text = text.Text });
                 else
                     // OpenAI 兼容格式：{"type": "text", "text": "..."}
-                    parts.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = text.Text });
+                    parts.Add(new { type = "text", text = text.Text });
             }
             else if (item is ImageContent img)
             {
@@ -598,14 +631,26 @@ public class DashScopeProvider : OpenAiProvider
 
                 if (isMultimodal)
                     // DashScope 原生多模态：{"image": "url_or_data_uri"}
-                    parts.Add(new Dictionary<String, Object> { ["image"] = url });
-                else
-                {
+                    parts.Add(new { image = url });
+                else if (img.Detail != null)
                     // OpenAI 兼容格式：{"type": "image_url", "image_url": {"url": "...", "detail": "..."}}
-                    var imgDic = new Dictionary<String, Object> { ["url"] = url };
-                    if (img.Detail != null) imgDic["detail"] = img.Detail;
-                    parts.Add(new Dictionary<String, Object> { ["type"] = "image_url", ["image_url"] = imgDic });
-                }
+                    parts.Add(new { type = "image_url", image_url = new { url, detail = img.Detail } });
+                else
+                    parts.Add(new { type = "image_url", image_url = new { url } });
+            }
+            else if (item is DataContent dataCnt && isMultimodal)
+            {
+                // 音频、视频等二进制内容（仅支持多模态端点）
+                var dataUri = $"data:{dataCnt.MediaType};base64,{Convert.ToBase64String(dataCnt.Data)}";
+                if (dataCnt.MediaType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+                    // DashScope 音频：{"audio": "data:audio/wav;base64,..."}
+                    parts.Add(new { audio = dataUri });
+                else if (dataCnt.MediaType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+                    // DashScope 视频：{"video": "data:video/mp4;base64,..."}
+                    parts.Add(new { video = dataUri });
+                else
+                    // 其他二进制（如 PDF 文档）作为 file 类型传递
+                    parts.Add(new { file = dataUri });
             }
         }
         return parts;
@@ -616,6 +661,12 @@ public class DashScopeProvider : OpenAiProvider
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 DashScope 响应");
+
+        // 业务层错误检查（HTTP 200 但业务失败时，code 为非空字符串）
+        var errCode = dic["code"] as String;
+        var errMsg = dic["message"] as String;
+        if (!String.IsNullOrEmpty(errCode))
+            throw new HttpRequestException($"[{Name}] 错误 {errCode}: {errMsg}");
 
         var response = new ChatCompletionResponse
         {
@@ -631,11 +682,12 @@ public class DashScopeProvider : OpenAiProvider
             for (var i = 0; i < choicesList.Count; i++)
             {
                 if (choicesList[i] is not IDictionary<String, Object> choiceDic) continue;
-                var choice = new ChatChoice
+                var choice = new DashScopeChoice
                 {
                     Index = i,
                     FinishReason = choiceDic["finish_reason"] as String,
                     Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),
+                    Logprobs = choiceDic.TryGetValue("logprobs", out var lp) ? lp : null,
                 };
                 choices.Add(choice);
             }
@@ -644,14 +696,7 @@ public class DashScopeProvider : OpenAiProvider
 
         // usage：原生字段名为 input_tokens / output_tokens
         if (dic["usage"] is IDictionary<String, Object> usageDic)
-        {
-            response.Usage = new ChatUsage
-            {
-                PromptTokens = usageDic["input_tokens"].ToInt(),
-                CompletionTokens = usageDic["output_tokens"].ToInt(),
-                TotalTokens = usageDic["total_tokens"].ToInt(),
-            };
-        }
+            response.Usage = ParseDashScopeUsage(usageDic);
 
         return response;
     }
@@ -675,7 +720,7 @@ public class DashScopeProvider : OpenAiProvider
             for (var i = 0; i < choicesList.Count; i++)
             {
                 if (choicesList[i] is not IDictionary<String, Object> choiceDic) continue;
-                var choice = new ChatChoice
+                var choice = new DashScopeChoice
                 {
                     Index = i,
                     FinishReason = choiceDic["finish_reason"] as String,
@@ -689,22 +734,32 @@ public class DashScopeProvider : OpenAiProvider
                 else if (choiceDic["message"] is IDictionary<String, Object> md)
                     incrementalField = md;
                 choice.Delta = ParseChatMessage(incrementalField);
+                if (choiceDic.TryGetValue("logprobs", out var lp2))
+                    choice.Logprobs = lp2;
                 choices.Add(choice);
             }
             response.Choices = choices;
         }
 
-        if (dic["usage"] is IDictionary<String, Object> usageDic)
-        {
-            response.Usage = new ChatUsage
-            {
-                PromptTokens = usageDic["input_tokens"].ToInt(),
-                CompletionTokens = usageDic["output_tokens"].ToInt(),
-                TotalTokens = usageDic["total_tokens"].ToInt(),
-            };
-        }
+        if (dic["usage"] is IDictionary<String, Object> usageDic2)
+            response.Usage = ParseDashScopeUsage(usageDic2);
 
         return response;
+    }
+
+    /// <summary>解析 DashScope 用量统计。原生字段名为 input_tokens / output_tokens，多模态还含 image/video/audio_tokens</summary>
+    /// <param name="usageDic">usage 字典</param>
+    private static DashScopeUsage ParseDashScopeUsage(IDictionary<String, Object> usageDic)
+    {
+        return new DashScopeUsage
+        {
+            PromptTokens = usageDic["input_tokens"].ToInt(),
+            CompletionTokens = usageDic["output_tokens"].ToInt(),
+            TotalTokens = usageDic["total_tokens"].ToInt(),
+            ImageTokens = usageDic.TryGetValue("image_tokens", out var img) ? img.ToInt() : 0,
+            VideoTokens = usageDic.TryGetValue("video_tokens", out var vid) ? vid.ToInt() : 0,
+            AudioTokens = usageDic.TryGetValue("audio_tokens", out var aud) ? aud.ToInt() : 0,
+        };
     }
 
     /// <summary>消息解析扩展点。将多模态响应中的 content 数组归一化为字符串</summary>
@@ -738,3 +793,22 @@ public class DashScopeProvider : OpenAiProvider
     #endregion
 }
 
+/// <summary>DashScope 专属选择项。继承 <see cref="ChatChoice"/> 并扩展 logprobs 字段</summary>
+public class DashScopeChoice : ChatChoice
+{
+    /// <summary>对数概率信息。当请求参数 logprobs=true 时返回，包含输出 Token 的概率分布</summary>
+    public Object? Logprobs { get; set; }
+}
+
+/// <summary>DashScope 专属用量统计。继承 <see cref="ChatUsage"/> 并扩展多模态 Token 字段</summary>
+public class DashScopeUsage : ChatUsage
+{
+    /// <summary>图像 Token 数。多模态请求中图像输入消耗的 Token 数</summary>
+    public Int32 ImageTokens { get; set; }
+
+    /// <summary>视频 Token 数。多模态请求中视频输入消耗的 Token 数</summary>
+    public Int32 VideoTokens { get; set; }
+
+    /// <summary>音频 Token 数。多模态请求中音频输入消耗的 Token 数</summary>
+    public Int32 AudioTokens { get; set; }
+}
