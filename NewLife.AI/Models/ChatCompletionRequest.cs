@@ -56,6 +56,9 @@ public class ChatCompletionRequest : IExtend
 
     /// <summary>索引器，方便访问扩展数据</summary>
     public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+
+    /// <summary>对话选项。SDK 内部使用，供链式调用覆盖默认值</summary>
+    public ChatOptions? Options { get; set; }
     #endregion
 
     #region 方法
@@ -101,6 +104,8 @@ public class ChatCompletionRequest : IExtend
                 }
             }
         }
+
+        Options = options;
 
         return this;
     }

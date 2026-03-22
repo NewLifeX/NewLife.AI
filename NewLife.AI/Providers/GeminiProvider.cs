@@ -44,6 +44,10 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     #endregion
 
     #region 方法
+    /// <summary>创建该服务商对应的对话选项实例</summary>
+    /// <returns>新建的 ChatOptions 实例</returns>
+    public virtual ChatOptions CreateChatOptions() => new ChatOptions();
+
     /// <summary>创建已绑定连接参数的对话客户端</summary>
     /// <param name="options">连接选项</param>
     /// <returns>已配置的 IChatClient 实例</returns>

@@ -44,6 +44,10 @@ public interface IAiProvider
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
     /// <returns>已配置的 IChatClient 实例</returns>
     IChatClient CreateClient(AiProviderOptions options);
+
+    /// <summary>创建该服务商对应的对话选项实例。DashScope 等服务商可返回强类型子类以便直接设置专属参数</summary>
+    /// <returns>新建的 ChatOptions 实例，DashScope 服务商返回 DashScopeChatOptions</returns>
+    ChatOptions CreateChatOptions();
 }
 
 /// <summary>支持列出可用模型的 AI 服务商接口。对应 OpenAI GET /v1/models 端点</summary>

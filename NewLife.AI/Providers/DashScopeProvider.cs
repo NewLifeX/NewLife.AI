@@ -131,6 +131,10 @@ public class DashScopeProvider : OpenAiProvider
         };
         return new OpenAiEmbeddingClient(Name, CompatibleEndpoint, embOptions);
     }
+
+    /// <summary>创建 DashScope 专属对话选项实例。返回 <see cref="DashScopeChatOptions"/> 以便强类型设置 DashScope 高级参数</summary>
+    /// <returns>新建的 DashScopeChatOptions 实例</returns>
+    public override ChatOptions CreateChatOptions() => new DashScopeChatOptions();
     #endregion
 
     #region 对话（ChatAsync / ChatStreamAsync）
@@ -145,7 +149,7 @@ public class DashScopeProvider : OpenAiProvider
 
         var url = BuildChatUrl(options);
         var isMultimodal = IsMultimodalModel(options.Model);
-        var body = BuildDashScopeRequestBody(request, isMultimodal: isMultimodal, stream: false);
+        var body = BuildDashScopeRequestBody(request, isMultimodal, false);
         var json = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
 
         var response = ParseDashScopeResponse(json);
@@ -169,7 +173,7 @@ public class DashScopeProvider : OpenAiProvider
 
         var url = BuildChatUrl(options);
         var isMultimodal = IsMultimodalModel(options.Model);
-        var body = BuildDashScopeRequestBody(request, isMultimodal: isMultimodal, stream: true);
+        var body = BuildDashScopeRequestBody(request, isMultimodal, true);
         var bodyStr = body?.ToJson() ?? "";
 
         // 必须手动构建请求以注入 SSE 请求头，不能通过 PostStreamAsync 基类方法（其不支持额外请求头）
@@ -430,65 +434,25 @@ public class DashScopeProvider : OpenAiProvider
             ["result_format"] = "message",
         };
 
+        // 通用参数：从 ChatCompletionRequest 标准属性读取
         if (request.Temperature != null) parameters["temperature"] = request.Temperature.Value;
         if (request.TopP != null) parameters["top_p"] = request.TopP.Value;
-        var topK = request["TopK"] as Int32?;
-        if (topK != null) parameters["top_k"] = topK.Value;
         if (request.MaxTokens != null) parameters["max_tokens"] = request.MaxTokens.Value;
-        var seed = request["Seed"] as Int32?;
-        if (seed != null) parameters["seed"] = seed.Value;
         if (request.Stop != null && request.Stop.Count > 0) parameters["stop"] = request.Stop;
         if (request.PresencePenalty != null) parameters["presence_penalty"] = request.PresencePenalty.Value;
         if (request.FrequencyPenalty != null) parameters["frequency_penalty"] = request.FrequencyPenalty.Value;
-        var repetitionPenalty = request["RepetitionPenalty"] as Double?;
-        if (repetitionPenalty != null) parameters["repetition_penalty"] = repetitionPenalty.Value;
-        var n = request["N"] as Int32?;
-        if (n != null) parameters["n"] = n.Value;
-
-        // 深度思考
         if (request.EnableThinking != null) parameters["enable_thinking"] = request.EnableThinking.Value;
-        var thinkingBudget = request["ThinkingBudget"] as Int32?;
-        if (thinkingBudget != null) parameters["thinking_budget"] = thinkingBudget.Value;
-
-        // 代码解释器（仅 qwen3.5 及部分思考模式模型支持）
-        var enableCodeInterpreter = request["EnableCodeInterpreter"] as Boolean?;
-        if (enableCodeInterpreter != null) parameters["enable_code_interpreter"] = enableCodeInterpreter.Value;
-
-        // 结构化输出
         if (request.ResponseFormat != null) parameters["response_format"] = request.ResponseFormat;
-
-        // 对数概率
-        var logprobs = request["Logprobs"] as Boolean?;
-        if (logprobs != null) parameters["logprobs"] = logprobs.Value;
-        var topLogprobs = request["TopLogprobs"] as Int32?;
-        if (topLogprobs != null) parameters["top_logprobs"] = topLogprobs.Value;
-
-        // VL 视觉专属参数
-        var vlHighResolutionImages = request["VlHighResolutionImages"] as Boolean?;
-        if (vlHighResolutionImages != null) parameters["vl_high_resolution_images"] = vlHighResolutionImages.Value;
-        var vlEnableImageHwOutput = request["VlEnableImageHwOutput"] as Boolean?;
-        if (vlEnableImageHwOutput != null) parameters["vl_enable_image_hw_output"] = vlEnableImageHwOutput.Value;
-        var maxPixels = request["MaxPixels"] as Int32?;
-        if (maxPixels != null) parameters["max_pixels"] = maxPixels.Value;
-
-        // 工具调用
         if (request.Tools != null && request.Tools.Count > 0)
             parameters["tools"] = BuildToolsParam(request.Tools);
         if (request.ToolChoice != null) parameters["tool_choice"] = request.ToolChoice;
         if (request.ParallelToolCalls != null) parameters["parallel_tool_calls"] = request.ParallelToolCalls.Value;
 
-        // 联网搜索（DashScope 专属，通过 Items 索引器传入）
-        var enableSearch = request["EnableSearch"] as Boolean?;
-        if (enableSearch != null) parameters["enable_search"] = enableSearch.Value;
-        // search_options 子对象：search_strategy / enable_source / forced_search
-        var searchOptions = new Dictionary<String, Object>();
-        var searchStrategy = request["SearchStrategy"] as String;
-        if (!String.IsNullOrEmpty(searchStrategy)) searchOptions["search_strategy"] = searchStrategy;
-        var enableSource = request["EnableSource"] as Boolean?;
-        if (enableSource != null) searchOptions["enable_source"] = enableSource.Value;
-        var forcedSearch = request["ForcedSearch"] as Boolean?;
-        if (forcedSearch != null) searchOptions["forced_search"] = forcedSearch.Value;
-        if (searchOptions.Count > 0) parameters["search_options"] = searchOptions;
+        // DashScope 专属参数 —— 强类型路径（DashScopeChatOptions）优先，回退到 Items 字典
+        if (request.Options is DashScopeChatOptions dashOpts)
+            ApplyDashScopeOptions(parameters, dashOpts);
+        else
+            ApplyDashScopeItems(parameters, request);
 
         // 流式输出：同时需要请求体 stream:true 和 HTTP 头 X-DashScope-SSE:enable
         if (stream)
@@ -503,6 +467,69 @@ public class DashScopeProvider : OpenAiProvider
             ["input"] = new Dictionary<String, Object> { ["messages"] = messages },
             ["parameters"] = parameters,
         };
+    }
+
+    /// <summary>将 DashScopeChatOptions 强类型属性写入 parameters 字典</summary>
+    /// <param name="parameters">目标参数字典</param>
+    /// <param name="opts">DashScope 专属选项</param>
+    private static void ApplyDashScopeOptions(Dictionary<String, Object> parameters, DashScopeChatOptions opts)
+    {
+        if (opts.TopK != null) parameters["top_k"] = opts.TopK.Value;
+        if (opts.Seed != null) parameters["seed"] = opts.Seed.Value;
+        if (opts.RepetitionPenalty != null) parameters["repetition_penalty"] = opts.RepetitionPenalty.Value;
+        if (opts.N != null) parameters["n"] = opts.N.Value;
+        if (opts.ThinkingBudget != null) parameters["thinking_budget"] = opts.ThinkingBudget.Value;
+        if (opts.EnableCodeInterpreter != null) parameters["enable_code_interpreter"] = opts.EnableCodeInterpreter.Value;
+        if (opts.Logprobs != null) parameters["logprobs"] = opts.Logprobs.Value;
+        if (opts.TopLogprobs != null) parameters["top_logprobs"] = opts.TopLogprobs.Value;
+        if (opts.VlHighResolutionImages != null) parameters["vl_high_resolution_images"] = opts.VlHighResolutionImages.Value;
+        if (opts.VlEnableImageHwOutput != null) parameters["vl_enable_image_hw_output"] = opts.VlEnableImageHwOutput.Value;
+        if (opts.MaxPixels != null) parameters["max_pixels"] = opts.MaxPixels.Value;
+        if (opts.EnableSearch != null) parameters["enable_search"] = opts.EnableSearch.Value;
+        var searchOptions = new Dictionary<String, Object>();
+        if (!String.IsNullOrEmpty(opts.SearchStrategy)) searchOptions["search_strategy"] = opts.SearchStrategy;
+        if (opts.EnableSource != null) searchOptions["enable_source"] = opts.EnableSource.Value;
+        if (opts.ForcedSearch != null) searchOptions["forced_search"] = opts.ForcedSearch.Value;
+        if (searchOptions.Count > 0) parameters["search_options"] = searchOptions;
+    }
+
+    /// <summary>从 request.Items 字典读取 DashScope 专属参数并写入 parameters（兼容旧接口）</summary>
+    /// <param name="parameters">目标参数字典</param>
+    /// <param name="request">对话请求</param>
+    private static void ApplyDashScopeItems(Dictionary<String, Object> parameters, ChatCompletionRequest request)
+    {
+        var topK = request["TopK"] as Int32?;
+        if (topK != null) parameters["top_k"] = topK.Value;
+        var seed = request["Seed"] as Int32?;
+        if (seed != null) parameters["seed"] = seed.Value;
+        var repetitionPenalty = request["RepetitionPenalty"] as Double?;
+        if (repetitionPenalty != null) parameters["repetition_penalty"] = repetitionPenalty.Value;
+        var n = request["N"] as Int32?;
+        if (n != null) parameters["n"] = n.Value;
+        var thinkingBudget = request["ThinkingBudget"] as Int32?;
+        if (thinkingBudget != null) parameters["thinking_budget"] = thinkingBudget.Value;
+        var enableCodeInterpreter = request["EnableCodeInterpreter"] as Boolean?;
+        if (enableCodeInterpreter != null) parameters["enable_code_interpreter"] = enableCodeInterpreter.Value;
+        var logprobs = request["Logprobs"] as Boolean?;
+        if (logprobs != null) parameters["logprobs"] = logprobs.Value;
+        var topLogprobs = request["TopLogprobs"] as Int32?;
+        if (topLogprobs != null) parameters["top_logprobs"] = topLogprobs.Value;
+        var vlHighResolutionImages = request["VlHighResolutionImages"] as Boolean?;
+        if (vlHighResolutionImages != null) parameters["vl_high_resolution_images"] = vlHighResolutionImages.Value;
+        var vlEnableImageHwOutput = request["VlEnableImageHwOutput"] as Boolean?;
+        if (vlEnableImageHwOutput != null) parameters["vl_enable_image_hw_output"] = vlEnableImageHwOutput.Value;
+        var maxPixels = request["MaxPixels"] as Int32?;
+        if (maxPixels != null) parameters["max_pixels"] = maxPixels.Value;
+        var enableSearch = request["EnableSearch"] as Boolean?;
+        if (enableSearch != null) parameters["enable_search"] = enableSearch.Value;
+        var searchOptions = new Dictionary<String, Object>();
+        var searchStrategy = request["SearchStrategy"] as String;
+        if (!String.IsNullOrEmpty(searchStrategy)) searchOptions["search_strategy"] = searchStrategy;
+        var enableSource = request["EnableSource"] as Boolean?;
+        if (enableSource != null) searchOptions["enable_source"] = enableSource.Value;
+        var forcedSearch = request["ForcedSearch"] as Boolean?;
+        if (forcedSearch != null) searchOptions["forced_search"] = forcedSearch.Value;
+        if (searchOptions.Count > 0) parameters["search_options"] = searchOptions;
     }
 
     /// <summary>构建 messages 数组。多轮对话时不传入历史 reasoning_content（DashScope 最佳实践）</summary>
@@ -791,6 +818,147 @@ public class DashScopeProvider : OpenAiProvider
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
     }
     #endregion
+}
+
+/// <summary>DashScope 专属对话选项。继承 <see cref="ChatOptions"/> 并扩展原生协议高级参数，供强类型访问以替代 Items 字典写法</summary>
+/// <remarks>
+/// 通过 <see cref="DashScopeProvider.CreateChatOptions"/> 获取实例，然后设置所需参数，
+/// 再传入 IChatClient.CompleteAsync/CompleteStreamingAsync 的 options 参数。
+/// <code>
+/// var opts = (DashScopeChatOptions)provider.CreateChatOptions();
+/// opts.EnableSearch = true;
+/// opts.TopK = 10;
+/// var response = await client.CompleteAsync(messages, opts);
+/// </code>
+/// </remarks>
+public class DashScopeChatOptions : ChatOptions
+{
+    /// <summary>候选词数量。从 top_k 个概率最高的 Token 中采样，默认不限制</summary>
+    public Int32? TopK { get; set; }
+
+    /// <summary>随机种子。固定种子可在相同参数下复现输出，范围 0~2^31-1</summary>
+    public Int32? Seed { get; set; }
+
+    /// <summary>重复惩罚。大于 1 则抑制已出现的 Token，小于 1 则鼓励重复，默认 1.1</summary>
+    public Double? RepetitionPenalty { get; set; }
+
+    /// <summary>返回候选数量。同一输入独立生成 N 条不同输出，默认 1</summary>
+    public Int32? N { get; set; }
+
+    /// <summary>思考预算（Token 数）。0=关闭深度思考，-1=不限制，仅思考模型（QwQ/Qwen3）有效</summary>
+    public Int32? ThinkingBudget { get; set; }
+
+    /// <summary>是否启用代码解释器。qwen3.5 及思考模式模型可在对话中执行代码</summary>
+    public Boolean? EnableCodeInterpreter { get; set; }
+
+    /// <summary>是否返回对数概率。开启后响应携带每个输出 Token 的 logprob 信息</summary>
+    public Boolean? Logprobs { get; set; }
+
+    /// <summary>返回对数概率的 top-K Token 数。需同时设置 Logprobs=true，范围 0~20</summary>
+    public Int32? TopLogprobs { get; set; }
+
+    /// <summary>是否启用高分辨率图像（VL 专属）。开启后 VL 模型以更高分辨率理解图像细节</summary>
+    public Boolean? VlHighResolutionImages { get; set; }
+
+    /// <summary>是否在响应中输出图像宽高（VL 专属）</summary>
+    public Boolean? VlEnableImageHwOutput { get; set; }
+
+    /// <summary>图像最大像素数（VL 专属）。限制输入图像分辨率以控制 Token 消耗</summary>
+    public Int32? MaxPixels { get; set; }
+
+    /// <summary>是否启用联网搜索。开启后模型可实时检索互联网信息以增强回复</summary>
+    public Boolean? EnableSearch { get; set; }
+
+    /// <summary>搜索策略。intelligent（智能，默认）/ force（每次强制搜索）/ prohibited（禁止搜索）</summary>
+    public String? SearchStrategy { get; set; }
+
+    /// <summary>是否在回复中展示来源引用链接</summary>
+    public Boolean? EnableSource { get; set; }
+
+    /// <summary>是否强制搜索，即使模型判断无需搜索时仍执行</summary>
+    public Boolean? ForcedSearch { get; set; }
+}
+
+/// <summary>DashScope 高级配置服务商。继承 <see cref="DashScopeProvider"/>，在服务商层面预设 DashScope 专属高级参数</summary>
+/// <remarks>
+/// 适用于需要为所有对话统一设置 DashScope 特定参数的场景。
+/// 在服务商实例上配置参数后，通过 <see cref="CreateChatOptions"/> 即可生成预填充的选项对象。
+/// <code>
+/// var provider = new DashScopeAdvancedProvider { EnableSearch = true, TopK = 10 };
+/// var opts = provider.CreateChatOptions();   // 返回 DashScopeChatOptions，已填充 EnableSearch/TopK
+/// var client = provider.CreateClient(apiKey, model);
+/// var response = await client.CompleteAsync(messages, opts);
+/// </code>
+/// </remarks>
+public class DashScopeAdvancedProvider : DashScopeProvider
+{
+    #region DashScope 高级参数
+    /// <summary>候选词数量。从 top_k 个概率最高的 Token 中采样</summary>
+    public Int32? TopK { get; set; }
+
+    /// <summary>随机种子。固定种子可在相同参数下复现输出</summary>
+    public Int32? Seed { get; set; }
+
+    /// <summary>重复惩罚。大于 1 则抑制已出现的 Token，小于 1 则鼓励重复</summary>
+    public Double? RepetitionPenalty { get; set; }
+
+    /// <summary>返回候选数量。同一输入独立生成 N 条不同输出</summary>
+    public Int32? N { get; set; }
+
+    /// <summary>思考预算（Token 数）。0=关闭，-1=不限制，仅思考模型有效</summary>
+    public Int32? ThinkingBudget { get; set; }
+
+    /// <summary>是否启用代码解释器</summary>
+    public Boolean? EnableCodeInterpreter { get; set; }
+
+    /// <summary>是否返回对数概率</summary>
+    public Boolean? Logprobs { get; set; }
+
+    /// <summary>返回对数概率的 top-K Token 数</summary>
+    public Int32? TopLogprobs { get; set; }
+
+    /// <summary>是否启用高分辨率图像（VL 专属）</summary>
+    public Boolean? VlHighResolutionImages { get; set; }
+
+    /// <summary>是否在响应中输出图像宽高（VL 专属）</summary>
+    public Boolean? VlEnableImageHwOutput { get; set; }
+
+    /// <summary>图像最大像素数（VL 专属）</summary>
+    public Int32? MaxPixels { get; set; }
+
+    /// <summary>是否启用联网搜索</summary>
+    public Boolean? EnableSearch { get; set; }
+
+    /// <summary>搜索策略。intelligent / force / prohibited</summary>
+    public String? SearchStrategy { get; set; }
+
+    /// <summary>是否在回复中展示来源引用链接</summary>
+    public Boolean? EnableSource { get; set; }
+
+    /// <summary>是否强制搜索</summary>
+    public Boolean? ForcedSearch { get; set; }
+    #endregion
+
+    /// <summary>创建预填充服务商高级参数的 DashScope 对话选项</summary>
+    /// <returns>已填充当前服务商配置的 DashScopeChatOptions 实例</returns>
+    public override ChatOptions CreateChatOptions() => new DashScopeChatOptions
+    {
+        TopK = TopK,
+        Seed = Seed,
+        RepetitionPenalty = RepetitionPenalty,
+        N = N,
+        ThinkingBudget = ThinkingBudget,
+        EnableCodeInterpreter = EnableCodeInterpreter,
+        Logprobs = Logprobs,
+        TopLogprobs = TopLogprobs,
+        VlHighResolutionImages = VlHighResolutionImages,
+        VlEnableImageHwOutput = VlEnableImageHwOutput,
+        MaxPixels = MaxPixels,
+        EnableSearch = EnableSearch,
+        SearchStrategy = SearchStrategy,
+        EnableSource = EnableSource,
+        ForcedSearch = ForcedSearch,
+    };
 }
 
 /// <summary>DashScope 专属选择项。继承 <see cref="ChatChoice"/> 并扩展 logprobs 字段</summary>

@@ -61,6 +61,10 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
         return ParseResponse(responseText);
     }
 
+    /// <summary>创建该服务商对应的对话选项实例。子类可重写以返回服务商特定的强类型子类</summary>
+    /// <returns>新建的 ChatOptions 实例</returns>
+    public virtual ChatOptions CreateChatOptions() => new ChatOptions();
+
     /// <summary>创建已绑定连接参数的对话客户端（MEAI 兼容入口）</summary>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
     /// <returns>已配置的 IChatClient 实例</returns>
