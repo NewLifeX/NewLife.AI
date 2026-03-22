@@ -1,6 +1,4 @@
-﻿using NewLife.AI.ChatAI;
-
-namespace NewLife.AI.Models;
+﻿namespace NewLife.AI.Models;
 
 /// <summary>SSE 流式事件。用于对话流式输出的事件模型</summary>
 public class ChatStreamEvent
