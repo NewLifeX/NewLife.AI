@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Providers;
 
@@ -54,6 +54,29 @@ public static class ChatClientExtensions
     /// <returns>流式响应块的异步枚举</returns>
     public static IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.CompleteStreamingAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
+
+    /// <summary>发送单条文本消息并直接返回回复文本。最简单的一行调用方式</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="prompt">用户消息文本</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>模型回复文本，失败时返回 null</returns>
+    public static async Task<String?> AskAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => (await client.CompleteAsync(prompt, options, cancellationToken).ConfigureAwait(false)).Text;
+
+    /// <summary>以元组形式传入多条消息并直接返回回复文本。对标 Python dashscope 的 messages 列表写法，无需构造 ChatMessage 对象</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="messages">消息元组数组，每项为 (role, content)，如 ("system", "你是助手"), ("user", "你好")</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>模型回复文本，失败时返回 null</returns>
+    public static async Task<String?> AskAsync(this IChatClient client, (String Role, String Content)[] messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        var chatMessages = new List<ChatMessage>(messages.Length);
+        foreach (var (role, content) in messages)
+            chatMessages.Add(new ChatMessage { Role = role, Content = content });
+        return (await client.CompleteAsync(chatMessages, options, cancellationToken).ConfigureAwait(false)).Text;
+    }
 }
 
 /// <summary>AI 对话客户端元数据。描述客户端连接的服务商与模型信息</summary>
