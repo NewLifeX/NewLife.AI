@@ -160,6 +160,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
         if (request.TopP != null) dic["top_p"] = request.TopP.Value;
         if (request.Stop != null && request.Stop.Count > 0) dic["stop_sequences"] = request.Stop;
+        if (request["top_k"] is Int32 topK) dic["top_k"] = topK;
 
         // 工具列表转换为 Anthropic 格式
         if (request.Tools != null && request.Tools.Count > 0)

@@ -1,4 +1,5 @@
-﻿using NewLife.Data;
+﻿using System.Runtime.Serialization;
+using NewLife.Data;
 
 namespace NewLife.AI.Models;
 
@@ -16,9 +17,11 @@ public class ChatCompletionRequest : IExtend
     public Double? Temperature { get; set; }
 
     /// <summary>核采样。0~1，与Temperature二选一</summary>
+    [DataMember(Name = "top_p")]
     public Double? TopP { get; set; }
 
     /// <summary>最大生成令牌数</summary>
+    [DataMember(Name = "max_tokens")]
     public Int32? MaxTokens { get; set; }
 
     /// <summary>是否流式输出</summary>
@@ -28,27 +31,33 @@ public class ChatCompletionRequest : IExtend
     public IList<String>? Stop { get; set; }
 
     /// <summary>存在惩罚。-2~2</summary>
+    [DataMember(Name = "presence_penalty")]
     public Double? PresencePenalty { get; set; }
 
     /// <summary>频率惩罚。-2~2</summary>
+    [DataMember(Name = "frequency_penalty")]
     public Double? FrequencyPenalty { get; set; }
 
     /// <summary>可用工具列表。用于函数调用</summary>
     public IList<ChatTool>? Tools { get; set; }
 
     /// <summary>工具选择策略。auto/none/required 或指定工具名</summary>
+    [DataMember(Name = "tool_choice")]
     public Object? ToolChoice { get; set; }
 
     /// <summary>用户标识。用于追踪和限流</summary>
     public String? User { get; set; }
 
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>
+    [DataMember(Name = "enable_thinking")]
     public Boolean? EnableThinking { get; set; }
 
     /// <summary>响应格式。用于结构化输出，如 {"type":"json_schema","json_schema":{...}}。支持的服务商：DashScope、OpenAI 等</summary>
+    [DataMember(Name = "response_format")]
     public Object? ResponseFormat { get; set; }
 
     /// <summary>是否允许并行工具调用。null=不设置，true=允许，false=禁止</summary>
+    [DataMember(Name = "parallel_tool_calls")]
     public Boolean? ParallelToolCalls { get; set; }
 
     /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
@@ -58,6 +67,7 @@ public class ChatCompletionRequest : IExtend
     public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
 
     /// <summary>对话选项。SDK 内部使用，供链式调用覆盖默认值</summary>
+    [IgnoreDataMember]
     public ChatOptions? Options { get; set; }
     #endregion
 
@@ -161,12 +171,15 @@ public class ChatMessage
     public String? Name { get; set; }
 
     /// <summary>工具调用列表。assistant 角色发起的工具调用</summary>
+    [DataMember(Name = "tool_calls")]
     public IList<ToolCall>? ToolCalls { get; set; }
 
     /// <summary>工具调用编号。tool 角色回传时关联的调用编号</summary>
+    [DataMember(Name = "tool_call_id")]
     public String? ToolCallId { get; set; }
 
     /// <summary>思考内容。部分模型返回的推理链路（reasoning_content）</summary>
+    [DataMember(Name = "reasoning_content")]
     public String? ReasoningContent { get; set; }
 
     /// <summary>类型化内容片段列表（MEAI 兼容）。非空时优先于 <see cref="Content"/> 使用，支持多模态消息</summary>
@@ -188,6 +201,7 @@ public class ContentPart
     public String? Text { get; set; }
 
     /// <summary>图片URL</summary>
+    [DataMember(Name = "image_url")]
     public ImageUrl? ImageUrl { get; set; }
 }
 
@@ -260,15 +274,18 @@ public class FunctionDefinition
 public class McpToolConfig
 {
     /// <summary>MCP Server 地址</summary>
+    [DataMember(Name = "server_url")]
     public String? ServerUrl { get; set; }
 
     /// <summary>MCP Server 唯一标识</summary>
+    [DataMember(Name = "server_id")]
     public String? ServerId { get; set; }
 
     /// <summary>服务器配置参数</summary>
     public IDictionary<String, Object?>? Configs { get; set; }
 
     /// <summary>允许调用的工具子集。为空则允许全部工具</summary>
+    [DataMember(Name = "allowed_tools")]
     public IList<String>? AllowedTools { get; set; }
 
     /// <summary>鉴权配置</summary>

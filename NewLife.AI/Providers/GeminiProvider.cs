@@ -166,6 +166,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         if (request.TopP != null) genConfig["topP"] = request.TopP.Value;
         if (request.MaxTokens != null) genConfig["maxOutputTokens"] = request.MaxTokens.Value;
         if (request.Stop != null && request.Stop.Count > 0) genConfig["stopSequences"] = request.Stop;
+        if (request["topK"] is Int32 topK) genConfig["topK"] = topK;
         if (genConfig.Count > 0)
             dic["generationConfig"] = genConfig;
 
