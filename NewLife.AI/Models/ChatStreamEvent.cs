@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.Models;
+﻿using NewLife.Log;
+
+namespace NewLife.AI.Models;
 
 /// <summary>SSE 流式事件。用于对话流式输出的事件模型</summary>
 public class ChatStreamEvent
@@ -91,8 +93,12 @@ public class ChatStreamEvent
     /// <param name="code">错误码</param>
     /// <param name="message">错误描述</param>
     /// <returns></returns>
-    public static ChatStreamEvent ErrorEvent(String code, String message) =>
-        new() { Type = "error", Code = code, Message = message };
+    public static ChatStreamEvent ErrorEvent(String code, String message)
+    {
+        using var span = DefaultTracer.Instance?.NewSpan("chat:StreamError", $"[{code}]{message}");
+
+        return new() { Type = "error", Code = code, Message = message };
+    }
 
     /// <summary>工具调用开始事件</summary>
     /// <param name="toolCallId">调用编号</param>
