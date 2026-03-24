@@ -67,7 +67,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildAnthropicRequest(request);
@@ -84,7 +84,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildAnthropicRequest(request);
@@ -127,7 +127,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <summary>构建 Anthropic 请求体</summary>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    private Object BuildAnthropicRequest(ChatCompletionRequest request)
+    private Object BuildAnthropicRequest(ChatRequest request)
     {
         var dic = new Dictionary<String, Object>();
 
@@ -155,7 +155,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
         if (request.TopP != null) dic["top_p"] = request.TopP.Value;
         if (request.Stop != null && request.Stop.Count > 0) dic["stop_sequences"] = request.Stop;
-        if (request["top_k"] is Int32 topK) dic["top_k"] = topK;
+        if (request.TopK != null) dic["top_k"] = request.TopK.Value;
 
         // 工具列表转换为 Anthropic 格式
         if (request.Tools != null && request.Tools.Count > 0)

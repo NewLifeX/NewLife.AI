@@ -44,7 +44,7 @@ public class OllamaProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public override async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
             throw new ArgumentException("消息列表不能为空", nameof(request));
@@ -60,7 +60,7 @@ public class OllamaProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/chat";
         var body = BuildOllamaBody(request, stream: true);
@@ -195,7 +195,7 @@ public class OllamaProvider : OpenAiProvider
     /// <param name="request">对话请求</param>
     /// <param name="stream">是否流式</param>
     /// <returns>JSON 字符串</returns>
-    private static String BuildOllamaBody(ChatCompletionRequest request, Boolean stream)
+    private static String BuildOllamaBody(ChatRequest request, Boolean stream)
     {
         var dic = new Dictionary<String, Object>
         {

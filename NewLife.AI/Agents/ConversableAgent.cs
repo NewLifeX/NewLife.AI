@@ -3,7 +3,7 @@ using NewLife.AI.Providers;
 
 namespace NewLife.AI.Agents;
 
-/// <summary>可对话代理。持有 IChatClient，将消息历史转换为 ChatCompletionRequest 并获取 LLM 响应</summary>
+/// <summary>可对话代理。持有 IChatClient，将消息历史转换为 ChatRequest 并获取 LLM 响应</summary>
 /// <remarks>
 /// 支持工具调用自动循环（Auto-tool-loop）：
 /// <list type="number">
@@ -36,7 +36,7 @@ public class ConversableAgent : IAgent
     public Int32 MaxAutoReply { get; set; } = 5;
 
     /// <summary>请求参数模板（Model、Temperature 等）</summary>
-    public ChatCompletionRequest? RequestOptions { get; set; }
+    public ChatOptions? RequestOptions { get; set; }
 
     #endregion
 

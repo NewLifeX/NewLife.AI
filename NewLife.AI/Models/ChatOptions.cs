@@ -19,7 +19,7 @@ public class ChatOptions : IExtend
     /// <summary>核采样。0~1，与Temperature二选一</summary>
     public Double? TopP { get; set; }
 
-    /// <summary>Top K</summary>
+    /// <summary>候选词数量。从 top_k 个概率最高的 Token 中采样，默认不限制</summary>
     /// <remarks>模型在生成文本的下一部分时所考虑的大多数可能标记的数目</remarks>
     public Int32? TopK { get; set; }
 

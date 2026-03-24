@@ -64,7 +64,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildGeminiRequest(request);
@@ -82,7 +82,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildGeminiRequest(request);
@@ -118,7 +118,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <summary>构建 Gemini 请求体</summary>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    private Object BuildGeminiRequest(ChatCompletionRequest request)
+    private Object BuildGeminiRequest(ChatRequest request)
     {
         var dic = new Dictionary<String, Object>();
 
@@ -161,7 +161,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         if (request.TopP != null) genConfig["topP"] = request.TopP.Value;
         if (request.MaxTokens != null) genConfig["maxOutputTokens"] = request.MaxTokens.Value;
         if (request.Stop != null && request.Stop.Count > 0) genConfig["stopSequences"] = request.Stop;
-        if (request["topK"] is Int32 topK) genConfig["topK"] = topK;
+        if (request.TopK != null) genConfig["topK"] = request.TopK.Value;
         if (genConfig.Count > 0)
             dic["generationConfig"] = genConfig;
 

@@ -48,9 +48,9 @@ public class AnthropicRequest
     #endregion
 
     #region 转换
-    /// <summary>转换为内部统一的 ChatCompletionRequest</summary>
-    /// <returns>等效的 ChatCompletionRequest 实例</returns>
-    public ChatCompletionRequest ToChatCompletionRequest()
+    /// <summary>转换为内部统一的 ChatRequest</summary>
+    /// <returns>等效的 ChatRequest 实例</returns>
+    public ChatRequest ToChatRequest()
     {
         var messages = new List<ChatMessage>();
 
@@ -61,19 +61,16 @@ public class AnthropicRequest
         foreach (var msg in Messages)
             messages.Add(new ChatMessage { Role = msg.Role, Content = msg.Content });
 
-        var items = new Dictionary<String, Object?>();
-        if (TopK != null) items["top_k"] = TopK;
-
-        return new ChatCompletionRequest
+        return new ChatRequest
         {
             Model = Model,
             Messages = messages,
             MaxTokens = MaxTokens,
             Temperature = Temperature,
             TopP = TopP,
+            TopK = TopK,
             Stream = Stream,
             Stop = StopSequences,
-            Items = items,
         };
     }
     #endregion

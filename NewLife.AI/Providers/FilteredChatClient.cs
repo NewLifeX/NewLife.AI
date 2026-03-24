@@ -1,4 +1,5 @@
-﻿using NewLife.AI.Filters;
+﻿using System.Runtime.CompilerServices;
+using NewLife.AI.Filters;
 using NewLife.AI.Models;
 
 namespace NewLife.AI.Providers;
@@ -47,76 +48,67 @@ public class FilteredChatClient : DelegatingChatClient
     #region 方法
 
     /// <summary>非流式对话完成。依次执行过滤器链后调用内层客户端</summary>
-    /// <param name="messages">消息列表</param>
-    /// <param name="options">对话选项</param>
+    /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
-            return await InnerClient.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
+            return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
 
-        var request = ChatCompletionRequest.Create(messages, options);
-        var context = new ChatFilterContext { Request = request, IsStreaming = false };
-        if (options != null)
+        var context = new ChatFilterContext
         {
-            context.UserId = options.UserId;
-            context.ConversationId = options.ConversationId;
-            foreach (var kv in options.Items)
-            {
-                context.Items[kv.Key] = kv.Value;
-            }
-        }
+            Request = request,
+            IsStreaming = false,
+            UserId = request.UserId,
+            ConversationId = request.ConversationId
+        };
+        if (request.Items != null) context.Items = request.Items;
 
-        await ExecuteFilterChainAsync(context, 0, options, cancellationToken).ConfigureAwait(false);
+        await ExecuteFilterChainAsync(context, 0, cancellationToken).ConfigureAwait(false);
         return context.Response ?? new ChatResponse();
     }
 
     /// <summary>流式对话完成。执行过滤器链的 before 阶段后委托给内层客户端，流结束后触发 OnStreamCompletedAsync</summary>
-    /// <param name="messages">消息列表</param>
-    /// <param name="options">对话选项</param>
+    /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public override IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
-            return InnerClient.GetStreamingResponseAsync(messages, options, cancellationToken);
+            return InnerClient.GetStreamingResponseAsync(request, cancellationToken);
 
         // 流式场景：先运行 before 阶段，再委托给内层流，流结束后触发 OnStreamCompletedAsync
-        return RunStreamingWithFiltersAsync(messages, options, cancellationToken);
+        return RunStreamingWithFiltersAsync(request, cancellationToken);
     }
 
     #endregion
 
     #region 辅助
 
-    private async Task ExecuteFilterChainAsync(ChatFilterContext context, Int32 index, ChatOptions? options, CancellationToken cancellationToken)
+    private async Task ExecuteFilterChainAsync(ChatFilterContext context, Int32 index, CancellationToken cancellationToken)
     {
         if (index >= Filters.Count)
         {
             // 链末尾：调用内层客户端
-            context.Response = await InnerClient.GetResponseAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false);
+            context.Response = await InnerClient.GetResponseAsync(context.Request, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         var filter = Filters[index];
-        await filter.OnChatAsync(context, (ctx, ct) => ExecuteFilterChainAsync(ctx, index + 1, options, ct), cancellationToken).ConfigureAwait(false);
+        await filter.OnChatAsync(context, (ctx, ct) => ExecuteFilterChainAsync(ctx, index + 1, ct), cancellationToken).ConfigureAwait(false);
     }
 
     private async IAsyncEnumerable<ChatResponse> RunStreamingWithFiltersAsync(
-        IList<ChatMessage> messages,
-        ChatOptions? options,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        ChatRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var request = ChatCompletionRequest.Create(messages, options);
-        var context = new ChatFilterContext { Request = request, IsStreaming = true };
-        if (options != null)
+        var context = new ChatFilterContext
         {
-            context.UserId = options.UserId;
-            context.ConversationId = options.ConversationId;
-            foreach (var kv in options.Items)
-            {
-                context.Items[kv.Key] = kv.Value;
-            }
-        }
+            Request = request,
+            IsStreaming = true,
+            UserId = request.UserId,
+            ConversationId = request.ConversationId
+        };
+        if (request.Items != null) context.Items = request.Items;
 
         // 运行过滤器链的 before 阶段（修改请求，例如注入记忆上下文）
         await RunBeforeFiltersAsync(context, 0, cancellationToken).ConfigureAwait(false);
@@ -125,7 +117,7 @@ public class FilteredChatClient : DelegatingChatClient
         UsageDetails? lastUsage = null;
         String? model = null;
         var contentBuilder = new System.Text.StringBuilder();
-        await foreach (var chunk in InnerClient.GetStreamingResponseAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in InnerClient.GetStreamingResponseAsync(context.Request, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
             if (chunk.Model != null) model = chunk.Model;

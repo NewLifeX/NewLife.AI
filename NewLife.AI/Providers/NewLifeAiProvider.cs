@@ -41,7 +41,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<ChatResponse> ResponsesAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual Task<ChatResponse> ResponsesAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
         => ChatViaPathAsync(request, options, "/v1/responses", cancellationToken);
 
     /// <summary>OpenAI Responses API 流式。路径 /v1/responses</summary>
@@ -49,7 +49,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<ChatResponse> ResponsesStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual IAsyncEnumerable<ChatResponse> ResponsesStreamAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
         => ChatStreamViaPathAsync(request, options, "/v1/responses", cancellationToken);
     #endregion
 
@@ -59,7 +59,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<ChatResponse> MessagesAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual Task<ChatResponse> MessagesAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
         => ChatViaPathAsync(request, options, "/v1/messages", cancellationToken);
 
     /// <summary>Anthropic Messages API 流式。路径 /v1/messages</summary>
@@ -67,7 +67,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<ChatResponse> MessagesStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual IAsyncEnumerable<ChatResponse> MessagesStreamAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
         => ChatStreamViaPathAsync(request, options, "/v1/messages", cancellationToken);
     #endregion
 
@@ -77,7 +77,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<ChatResponse> GeminiAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual Task<ChatResponse> GeminiAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
         => ChatViaPathAsync(request, options, "/v1/gemini", cancellationToken);
 
     /// <summary>Google Gemini API 流式。路径 /v1/gemini</summary>
@@ -85,7 +85,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<ChatResponse> GeminiStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual IAsyncEnumerable<ChatResponse> GeminiStreamAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
         => ChatStreamViaPathAsync(request, options, "/v1/gemini", cancellationToken);
     #endregion
 
@@ -169,7 +169,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="path">API 路径，如 /v1/responses</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    protected async Task<ChatResponse> ChatViaPathAsync(ChatCompletionRequest request, AiProviderOptions options, String path, CancellationToken cancellationToken)
+    protected async Task<ChatResponse> ChatViaPathAsync(ChatRequest request, AiProviderOptions options, String path, CancellationToken cancellationToken)
     {
         request.Stream = false;
         var body = BuildRequestBody(request);
@@ -185,7 +185,7 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="path">API 路径，如 /v1/responses</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    protected async IAsyncEnumerable<ChatResponse> ChatStreamViaPathAsync(ChatCompletionRequest request, AiProviderOptions options, String path, [EnumeratorCancellation] CancellationToken cancellationToken)
+    protected async IAsyncEnumerable<ChatResponse> ChatStreamViaPathAsync(ChatRequest request, AiProviderOptions options, String path, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         request.Stream = true;
         var body = BuildRequestBody(request);

@@ -48,20 +48,19 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     #region 方法
 
     /// <summary>非流式对话完成。注入工具定义并自动处理工具调用回路</summary>
-    /// <param name="messages">消息列表</param>
-    /// <param name="options">对话选项</param>
+    /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
-        if (messages == null) throw new ArgumentNullException(nameof(messages));
+        if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var (mergedTools, toolMap) = GetMergedTools(options);
+        var (mergedTools, toolMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
-            return await InnerClient.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
+            return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
 
         // 合并工具定义到选项（不修改调用方的原始选项）
-        var workOptions = MergeToolOptions(options, mergedTools);
-        var workMessages = messages.ToList();
+        var workOptions = MergeToolOptions(request, mergedTools);
+        var workMessages = request.Messages.ToList();
 
         ChatResponse response;
         var iterations = 0;
@@ -69,7 +68,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            response = await InnerClient.GetResponseAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false);
+            response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
@@ -98,26 +97,24 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     }
 
     /// <summary>流式对话完成。注入工具定义，流式执行多轮工具调用回路，对外透明</summary>
-    /// <param name="messages">消息列表</param>
-    /// <param name="options">对话选项</param>
+    /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     public override async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(
-        IList<ChatMessage> messages,
-        ChatOptions? options = null,
+        ChatRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (messages == null) throw new ArgumentNullException(nameof(messages));
+        if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var (mergedTools, toolMap) = GetMergedTools(options);
+        var (mergedTools, toolMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
         {
-            await foreach (var chunk in InnerClient.GetStreamingResponseAsync(messages, options, cancellationToken).ConfigureAwait(false))
+            await foreach (var chunk in InnerClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
                 yield return chunk;
             yield break;
         }
 
-        var workOptions = MergeToolOptions(options, mergedTools);
-        var workMessages = messages.ToList();
+        var workOptions = MergeToolOptions(request, mergedTools);
+        var workMessages = request.Messages.ToList();
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
@@ -127,7 +124,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             String? finishReason = null;
             var assistantContent = (String?)null;
 
-            await foreach (var chunk in InnerClient.GetStreamingResponseAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false))
+            await foreach (var chunk in InnerClient.GetStreamingResponseAsync(ChatRequest.Create(workMessages, workOptions, stream: true), cancellationToken).ConfigureAwait(false))
             {
                 var choice = chunk.Messages?.FirstOrDefault();
                 if (choice != null)

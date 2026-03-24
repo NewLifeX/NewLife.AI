@@ -25,6 +25,6 @@ public interface IPlanner
         String goal,
         IList<ChatTool> tools,
         IChatClient chatClient,
-        ChatCompletionRequest? options = null,
+        ChatOptions? options = null,
         CancellationToken cancellationToken = default);
 }

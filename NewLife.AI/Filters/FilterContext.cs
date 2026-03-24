@@ -6,8 +6,8 @@ namespace NewLife.AI.Filters;
 /// <summary>对话过滤器上下文。在过滤器链中传递请求与响应信息</summary>
 public class ChatFilterContext : IExtend
 {
-    /// <summary>对话完成请求。过滤器可修改此对象以影响后续处理</summary>
-    public ChatCompletionRequest Request { get; set; } = null!;
+    /// <summary>对话内部请求。过滤器可修改此对象以影响后续处理</summary>
+    public ChatRequest Request { get; set; } = null!;
 
     /// <summary>对话完成响应。在 After 阶段由过滤器读取或修改</summary>
     public ChatResponse? Response { get; set; }

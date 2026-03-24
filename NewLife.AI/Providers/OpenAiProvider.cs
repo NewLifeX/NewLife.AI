@@ -65,11 +65,11 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     public virtual IEmbeddingClient CreateEmbeddingClient(AiProviderOptions options) => new OpenAiEmbeddingClient(this, options) { Log = Log, Tracer = Tracer };
 
     /// <summary>非流式对话</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="request">内部对话请求</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildRequestBody(request);
@@ -82,11 +82,11 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     }
 
     /// <summary>流式对话</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="request">内部对话请求</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildRequestBody(request);
@@ -268,7 +268,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     /// <summary>构建请求体。返回符合 OpenAI 格式的字典</summary>
     /// <param name="request">请求对象</param>
     /// <returns>请求体字典</returns>
-    protected virtual Object BuildRequestBody(ChatCompletionRequest request)
+    protected virtual Object BuildRequestBody(ChatRequest request)
     {
         // 构建符合 OpenAI 格式的请求体
         var dic = new Dictionary<String, Object>();

@@ -143,7 +143,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整对话响应</returns>
-    public override async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         if (ApiProtocol != "DashScope") return await base.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
 
@@ -162,7 +162,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <param name="request">对话请求</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (ApiProtocol != "DashScope")
         {
@@ -404,7 +404,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <param name="request">对话请求</param>
     /// <param name="isMultimodal">是否多模态模型。多模态端点要求 content 为数组格式</param>
     /// <param name="stream">是否开启流式输出</param>
-    private static Object BuildDashScopeRequestBody(ChatCompletionRequest request, Boolean isMultimodal, Boolean stream)
+    private static Object BuildDashScopeRequestBody(ChatRequest request, Boolean isMultimodal, Boolean stream)
     {
         var messages = BuildMessages(request.Messages, isMultimodal);
 
@@ -417,6 +417,7 @@ public class DashScopeProvider : OpenAiProvider
         // 通用参数：从 ChatCompletionRequest 标准属性读取
         if (request.Temperature != null) parameters["temperature"] = request.Temperature.Value;
         if (request.TopP != null) parameters["top_p"] = request.TopP.Value;
+        if (request.TopK != null) parameters["top_k"] = request.TopK.Value;
         if (request.MaxTokens != null) parameters["max_tokens"] = request.MaxTokens.Value;
         if (request.Stop != null && request.Stop.Count > 0) parameters["stop"] = request.Stop;
         if (request.PresencePenalty != null) parameters["presence_penalty"] = request.PresencePenalty.Value;
@@ -428,11 +429,11 @@ public class DashScopeProvider : OpenAiProvider
         if (request.ToolChoice != null) parameters["tool_choice"] = request.ToolChoice;
         if (request.ParallelToolCalls != null) parameters["parallel_tool_calls"] = request.ParallelToolCalls.Value;
 
-        // DashScope 专属参数 —— 强类型路径（DashScopeChatOptions）优先，回退到 Items 字典
-        if (request.Options is DashScopeChatOptions dashOpts)
-            ApplyDashScopeOptions(parameters, dashOpts);
-        else
-            ApplyDashScopeItems(parameters, request);
+        //// DashScope 专属参数 —— 强类型路径（DashScopeChatOptions）优先，回退到 Items 字典
+        //if (request.Options is DashScopeChatOptions dashOpts)
+        //    ApplyDashScopeOptions(parameters, dashOpts);
+        //else
+        ApplyDashScopeItems(parameters, request);
 
         // 流式输出：同时需要请求体 stream:true 和 HTTP 头 X-DashScope-SSE:enable
         if (stream)
@@ -476,7 +477,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <summary>从 request.Items 字典读取 DashScope 专属参数并写入 parameters（兼容旧接口）</summary>
     /// <param name="parameters">目标参数字典</param>
     /// <param name="request">对话请求</param>
-    private static void ApplyDashScopeItems(Dictionary<String, Object> parameters, ChatCompletionRequest request)
+    private static void ApplyDashScopeItems(Dictionary<String, Object> parameters, ChatRequest request)
     {
         var topK = request["TopK"] as Int32?;
         if (topK != null) parameters["top_k"] = topK.Value;
@@ -827,9 +828,6 @@ public class DashScopeProvider : OpenAiProvider
 /// </remarks>
 public class DashScopeChatOptions : ChatOptions
 {
-    /// <summary>候选词数量。从 top_k 个概率最高的 Token 中采样，默认不限制</summary>
-    public Int32? TopK { get; set; }
-
     /// <summary>随机种子。固定种子可在相同参数下复现输出，范围 0~2^31-1</summary>
     public Int32? Seed { get; set; }
 

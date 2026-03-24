@@ -101,7 +101,7 @@ public class FunctionCallingPlanner : IPlanner
         String goal,
         IList<ChatTool> tools,
         IChatClient chatClient,
-        ChatCompletionRequest? options = null,
+        ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(goal)) throw new ArgumentNullException(nameof(goal));
