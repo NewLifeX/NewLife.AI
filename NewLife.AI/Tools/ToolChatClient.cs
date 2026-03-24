@@ -45,7 +45,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 
     #endregion
 
-    #region 鏂规硶
+    #region 方法
 
     /// <summary>非流式对话完成。注入工具定义并自动处理工具调用回路</summary>
     /// <param name="messages">消息列表</param>
