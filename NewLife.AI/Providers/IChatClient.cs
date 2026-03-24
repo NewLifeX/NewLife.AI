@@ -77,6 +77,21 @@ public static class ChatClientExtensions
             chatMessages.Add(new ChatMessage { Role = role, Content = content });
         return (await client.CompleteAsync(chatMessages, options, cancellationToken).ConfigureAwait(false)).Text;
     }
+
+    /// <summary>将客户端包装为 <see cref="ChatClientBuilder"/>，以便链式添加中间件</summary>
+    /// <param name="client">当前客户端（将作为管道的最内层）</param>
+    /// <returns>以 client 为内层的构建器</returns>
+    /// <example>
+    /// <code>
+    /// var client = new DashScopeProvider()
+    ///     .CreateClient(apiKey, "qwen3.5-flash")
+    ///     .AsBuilder()
+    ///     .UseMcp(mcpProvider)
+    ///     .UseFilters(new LogFilter())
+    ///     .Build();
+    /// </code>
+    /// </example>
+    public static ChatClientBuilder AsBuilder(this IChatClient client) => new(client);
 }
 
 /// <summary>AI 对话客户端元数据。描述客户端连接的服务商与模型信息</summary>

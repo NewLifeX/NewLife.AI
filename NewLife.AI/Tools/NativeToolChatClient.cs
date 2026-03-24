@@ -1,54 +1,51 @@
-using NewLife.AI.Filters;
+﻿using System.Runtime.CompilerServices;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
+using NewLife.Log;
 
 namespace NewLife.AI.Tools;
 
-/// <summary>原生工具对话客户端。将 <see cref="ToolRegistry"/> 中的工具自动注入请求并自动处理工具调用回路</summary>
+/// <summary>工具对话客户端中间件。注入多个 <see cref="IToolProvider"/> 的工具定义，并自动处理多轮工具调用回路</summary>
 /// <remarks>
-/// 工作流：
+/// 工作流（非流式 / 流式统一）：
 /// <list type="number">
-/// <item>CompleteAsync 前，将 <see cref="ToolRegistry.Tools"/> 合并到请求的 <c>Tools</c> 列表</item>
+/// <item>请求前，聚合所有 <see cref="Providers"/> 的工具定义与 <c>ChatOptions.Tools</c></item>
 /// <item>调用内层客户端获取响应</item>
-/// <item>若响应含 <c>tool_calls</c>，依次通过 <see cref="ToolRegistry.TryInvokeAsync"/> 执行并追加 tool 消息</item>
+/// <item>若响应含 <c>tool_calls</c>，按工具名路由到对应 Provider 执行 <see cref="ExecuteToolAsync"/></item>
 /// <item>循环重新调用模型，直到无更多工具调用（最多 <see cref="MaxIterations"/> 轮）</item>
 /// </list>
 /// 使用方式：
 /// <code>
-/// var registry = new ToolRegistry();
-/// registry.AddTools(new WeatherService());
-///
-/// var client = new ChatClientBuilder(provider, options)
-///     .UseNativeTools(registry)
+/// var client = provider.CreateClient(providerOptions)
+///     .AsBuilder()
+///     .UseTools(registry, mcpProvider)  // 多个 IToolProvider 按工具名路由
 ///     .Build();
 /// </code>
 /// </remarks>
-public class NativeToolChatClient : DelegatingChatClient
+public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 {
     #region 属性
 
-    /// <summary>工具注册表</summary>
-    public ToolRegistry Registry { get; }
+    /// <summary>工具提供者列表（按工具名直接路由执行工具调用）</summary>
+    public IReadOnlyList<IToolProvider> Providers { get; }
 
     /// <summary>最大工具调用循环次数，防止无限递归。默认 10</summary>
     public Int32 MaxIterations { get; set; } = 10;
-
     #endregion
 
     #region 构造
 
-    /// <summary>初始化原生工具客户端</summary>
+    /// <summary>初始化工具对话客户端中间件</summary>
     /// <param name="innerClient">内层客户端</param>
-    /// <param name="registry">工具注册表</param>
-    public NativeToolChatClient(IChatClient innerClient, ToolRegistry registry) : base(innerClient)
+    /// <param name="providers">工具提供者列表（按工具名路由；未找到则抛 <see cref="InvalidOperationException"/>）</param>
+    public ToolChatClient(IChatClient innerClient, params IToolProvider[] providers) : base(innerClient)
     {
-        if (registry == null) throw new ArgumentNullException(nameof(registry));
-        Registry = registry;
+        Providers = (providers ?? []).ToList().AsReadOnly();
     }
 
     #endregion
 
-    #region 方法
+    #region 鏂规硶
 
     /// <summary>非流式对话完成。注入工具定义并自动处理工具调用回路</summary>
     /// <param name="messages">消息列表</param>
@@ -57,11 +54,13 @@ public class NativeToolChatClient : DelegatingChatClient
     public override async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (messages == null) throw new ArgumentNullException(nameof(messages));
-        if (Registry.Tools.Count == 0)
+
+        var (mergedTools, toolMap) = GetMergedTools(options);
+        if (mergedTools.Count == 0)
             return await InnerClient.CompleteAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
         // 合并工具定义到选项（不修改调用方的原始选项）
-        var workOptions = MergeToolOptions(options);
+        var workOptions = MergeToolOptions(options, mergedTools);
         var workMessages = messages.ToList();
 
         ChatCompletionResponse response;
@@ -83,45 +82,192 @@ public class NativeToolChatClient : DelegatingChatClient
             {
                 Role = "assistant",
                 Content = assistantMessage?.Content,
-                ToolCalls = toolCalls.Select(tc => new ToolCall
-                {
-                    Id = tc.Id,
-                    Type = tc.Type,
-                    Function = tc.Function
-                }).ToList<ToolCall>()
+                ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList<ToolCall>(),
             });
 
             // 依次执行所有工具调用
             foreach (var tc in toolCalls)
             {
                 if (tc.Function == null) continue;
-                var result = await Registry.TryInvokeAsync(tc.Function.Name, tc.Function.Arguments, cancellationToken).ConfigureAwait(false);
-                workMessages.Add(new ChatMessage
-                {
-                    Role = "tool",
-                    ToolCallId = tc.Id,
-                    Content = result
-                });
+                var result = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
+                workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = result });
             }
         }
 
         return response;
     }
 
+    /// <summary>流式对话完成。注入工具定义，流式执行多轮工具调用回路，对外透明</summary>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override async IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(
+        IList<ChatMessage> messages,
+        ChatOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (messages == null) throw new ArgumentNullException(nameof(messages));
+
+        var (mergedTools, toolMap) = GetMergedTools(options);
+        if (mergedTools.Count == 0)
+        {
+            await foreach (var chunk in InnerClient.CompleteStreamingAsync(messages, options, cancellationToken).ConfigureAwait(false))
+                yield return chunk;
+            yield break;
+        }
+
+        var workOptions = MergeToolOptions(options, mergedTools);
+        var workMessages = messages.ToList();
+
+        for (var iteration = 0; iteration < MaxIterations; iteration++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var toolCallCollector = new List<ToolCall>();
+            String? finishReason = null;
+            var assistantContent = (String?)null;
+
+            await foreach (var chunk in InnerClient.CompleteStreamingAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false))
+            {
+                var choice = chunk.Choices?.FirstOrDefault();
+                if (choice != null)
+                {
+                    finishReason = choice.FinishReason ?? finishReason;
+                    var delta = choice.Delta;
+                    if (delta != null)
+                    {
+                        // 累积正文内容（供追加 assistant 消息）
+                        var text = delta.Content as String;
+                        if (!String.IsNullOrEmpty(text))
+                            assistantContent = (assistantContent ?? String.Empty) + text;
+
+                        // 合并流式 tool_calls 增量
+                        if (delta.ToolCalls != null)
+                        {
+                            foreach (var tc in delta.ToolCalls)
+                                MergeToolCallDelta(toolCallCollector, tc);
+                        }
+                    }
+                }
+
+                yield return chunk;
+            }
+
+            var isToolRound = finishReason.EqualIgnoreCase("tool_calls") ||
+                              (toolCallCollector.Count > 0 && String.IsNullOrEmpty(finishReason));
+
+            if (!isToolRound || toolCallCollector.Count == 0)
+                yield break;
+
+            // 追加 assistant 消息（含工具调用）
+            workMessages.Add(new ChatMessage
+            {
+                Role = "assistant",
+                Content = assistantContent,
+                ToolCalls = toolCallCollector.ToList(),
+            });
+
+            foreach (var tc in toolCallCollector)
+            {
+                if (tc.Function == null) continue;
+                using var span = Tracer?.NewSpan($"tool:{tc.Function.Name}", tc.Function.Arguments);
+                try
+                {
+                    var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
+                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = toolResult });
+                    if (span != null) span.Value = toolResult?.Length ?? 0;
+                }
+                catch (Exception ex)
+                {
+                    span?.SetError(ex, null);
+                    throw;
+                }
+            }
+            // 继续下一轮（下一轮流的 chunk 透传给调用方）
+        }
+        // 超过最大轮次，静默退出（调用方已收到全部 chunk）
+    }
+
     #endregion
 
     #region 辅助
 
-    private ChatOptions MergeToolOptions(ChatOptions? options)
+    /// <summary>按工具名路由到对应 Provider 执行工具调用。未找到则抛 <see cref="InvalidOperationException"/></summary>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="argumentsJson">参数 JSON 字符串（模型原文）</param>
+    /// <param name="toolMap">工具名到 Provider 的路由字典</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, CancellationToken cancellationToken)
     {
-        var tools = new List<ChatTool>(Registry.Tools);
+        if (toolMap.TryGetValue(toolName, out var provider))
+            return await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+        throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
+    }
+
+    /// <summary>合并流式 tool_call 增量到收集列表。OpenAI 流式协议中 tool_calls 分块到达</summary>
+    private static void MergeToolCallDelta(List<ToolCall> collector, ToolCall delta)
+    {
+        if (delta == null) return;
+
+        ToolCall? existing = null;
+        if (!String.IsNullOrEmpty(delta.Id))
+            existing = collector.FirstOrDefault(t => t.Id == delta.Id);
+        else if (delta.Index != null)
+            existing = collector.FirstOrDefault(t => t.Index == delta.Index);
+        else if (collector.Count > 0)
+            existing = collector[collector.Count - 1];  // 兜底取最后一个（单工具调用时常见）
+
+        if (existing == null && !String.IsNullOrEmpty(delta.Id))
+        {
+            collector.Add(new ToolCall
+            {
+                Index = delta.Index,
+                Id = delta.Id,
+                Type = delta.Type,
+                Function = new FunctionCall
+                {
+                    Name = delta.Function?.Name ?? String.Empty,
+                    Arguments = delta.Function?.Arguments ?? String.Empty,
+                },
+            });
+            return;
+        }
+
+        if (existing?.Function != null && delta.Function != null)
+        {
+            if (!String.IsNullOrEmpty(delta.Function.Name))
+                existing.Function.Name += delta.Function.Name;
+            if (!String.IsNullOrEmpty(delta.Function.Arguments))
+                existing.Function.Arguments += delta.Function.Arguments;
+        }
+    }
+
+    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典</summary>
+    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap) GetMergedTools(ChatOptions? options)
+    {
+        var tools = new List<ChatTool>();
+        var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
+        foreach (var provider in Providers)
+        {
+            foreach (var t in provider.GetTools())
+            {
+                tools.Add(t);
+                var name = t.Function?.Name;
+                if (!String.IsNullOrEmpty(name))
+                    toolMap[name] = provider;
+            }
+        }
         if (options?.Tools != null)
         {
             foreach (var t in options.Tools)
                 tools.Add(t);
         }
+        return (tools, toolMap);
+    }
 
-        return new ChatOptions
+    /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>
+    private static ChatOptions MergeToolOptions(ChatOptions? options, List<ChatTool> mergedTools)
+        => new()
         {
             Model = options?.Model,
             Temperature = options?.Temperature,
@@ -130,7 +276,7 @@ public class NativeToolChatClient : DelegatingChatClient
             Stop = options?.Stop,
             PresencePenalty = options?.PresencePenalty,
             FrequencyPenalty = options?.FrequencyPenalty,
-            Tools = tools,
+            Tools = mergedTools,
             ToolChoice = options?.ToolChoice ?? "auto",
             User = options?.User,
             EnableThinking = options?.EnableThinking,
@@ -138,8 +284,16 @@ public class NativeToolChatClient : DelegatingChatClient
             ParallelToolCalls = options?.ParallelToolCalls,
             UserId = options?.UserId ?? 0,
             ConversationId = options?.ConversationId ?? 0,
+            Items = options?.Items ?? new Dictionary<String, Object?>(),
         };
-    }
 
+    #endregion
+
+    #region 日志
+    /// <summary>日志</summary>
+    public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>追踪器</summary>
+    public ITracer? Tracer { get; set; }
     #endregion
 }

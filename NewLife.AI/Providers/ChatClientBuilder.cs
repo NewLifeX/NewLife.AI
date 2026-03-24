@@ -1,6 +1,7 @@
 ﻿using NewLife.AI.Filters;
 using NewLife.AI.Models;
 using NewLife.AI.Tools;
+using NewLife.Log;
 
 namespace NewLife.AI.Providers;
 
@@ -63,11 +64,17 @@ public sealed class ChatClientBuilder
     /// <returns>最外层 IChatClient，调用时按中间件添加顺序依次执行</returns>
     public IChatClient Build()
     {
+        // 从最内层提取 Log/Tracer，向外传播给各中间件（如 ToolChatClient / FilteredChatClient）
+        var log = (_innermost as ILogFeature)?.Log;
+        var tracer = (_innermost as ITracerFeature)?.Tracer;
+
         // 倒序应用：先添加的中间件包裹在最外层（请求时先执行）
         var client = _innermost;
         for (var i = _middlewares.Count - 1; i >= 0; i--)
         {
             client = _middlewares[i](client);
+            if (log != null && client is ILogFeature logFeature) logFeature.Log = log;
+            if (tracer != null && client is ITracerFeature tracerFeature) tracerFeature.Tracer = tracer;
         }
 
         return client;
@@ -93,10 +100,10 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseFilters(this ChatClientBuilder builder, params IChatFilter[] filters)
         => builder.Use(inner => new FilteredChatClient(inner, filters));
 
-    /// <summary>添加原生工具中间件。自动将 <see cref="ToolRegistry"/> 中的工具注入请求，并处理工具调用回路</summary>
+    /// <summary>添加工具中间件。按注册顺序将所有 <see cref="IToolProvider"/> 的工具注入请求并处理工具调用回路</summary>
     /// <param name="builder">构建器</param>
-    /// <param name="registry">工具注册表</param>
+    /// <param name="providers">工具提供者列表（按顺序递次尝试执行工具调用）</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseNativeTools(this ChatClientBuilder builder, ToolRegistry registry)
-        => builder.Use(inner => new NativeToolChatClient(inner, registry));
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers));
 }

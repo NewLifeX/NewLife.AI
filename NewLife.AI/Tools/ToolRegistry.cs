@@ -13,7 +13,7 @@ namespace NewLife.AI.Tools;
 /// <item>扫描程序集批量注册（通过 <see cref="AddToolsFromAssembly"/>）</item>
 /// </list>
 /// </remarks>
-public class ToolRegistry
+public class ToolRegistry : IToolProvider
 {
     #region 属性
 
@@ -262,6 +262,15 @@ public class ToolRegistry
 
         return value;
     }
+
+    #endregion
+
+    #region IToolProvider
+
+    IList<ChatTool> IToolProvider.GetTools() => new List<ChatTool>(_tools);
+
+    Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken)
+        => InvokeAsync(toolName, argumentsJson, cancellationToken);
 
     #endregion
 }
