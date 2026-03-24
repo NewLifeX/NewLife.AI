@@ -1,5 +1,4 @@
 ﻿using NewLife.AI.Filters;
-using NewLife.AI.Models;
 using NewLife.AI.Tools;
 using NewLife.Log;
 
@@ -12,12 +11,12 @@ namespace NewLife.AI.Providers;
 /// <code>
 /// // 方式一：从 IAiProvider 创建（日志与追踪由 provider.Log / provider.Tracer 自动传播）
 /// var client = new ChatClientBuilder(provider, options)
-///     .UseUsageTracking((usage, model) => Console.WriteLine($"{model}: {usage.TotalTokens} tokens"))
+///     .UseTools(toolRegistry)
 ///     .Build();
 ///
 /// // 方式二：从已有 IChatClient 创建
 /// var client = new ChatClientBuilder(existingClient)
-///     .UseUsageTracking((usage, model) => Console.WriteLine($"{model}: {usage.TotalTokens} tokens"))
+///     .UseTools(toolRegistry)
 ///     .Build();
 /// </code>
 /// </remarks>
@@ -86,13 +85,6 @@ public sealed class ChatClientBuilder
 /// <summary>ChatClientBuilder 扩展方法。提供常用中间件的快捷注册入口</summary>
 public static class ChatClientBuilderExtensions
 {
-    /// <summary>添加用量追踪中间件。对话完成后触发回调以记录 Token 消耗</summary>
-    /// <param name="builder">构建器</param>
-    /// <param name="onUsage">用量回调，参数为（用量统计, 模型编码）；通常用于接入轻量聚合统计</param>
-    /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseUsageTracking(this ChatClientBuilder builder, Action<ChatUsage, String?> onUsage)
-        => builder.Use(inner => new UsageTrackingChatClient(inner, onUsage));
-
     /// <summary>添加过滤器链中间件。按注册顺序在 CompleteAsync 前后执行 IChatFilter 列表</summary>
     /// <param name="builder">构建器</param>
     /// <param name="filters">过滤器列表（顺序执行）</param>

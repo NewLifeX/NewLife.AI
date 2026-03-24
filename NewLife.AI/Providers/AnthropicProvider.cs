@@ -49,7 +49,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     #region 方法
     /// <summary>创建该服务商对应的对话选项实例</summary>
     /// <returns>新建的 ChatOptions 实例</returns>
-    public virtual ChatOptions CreateChatOptions() => new ChatOptions();
+    public virtual ChatOptions CreateChatOptions() => new();
 
     /// <summary>创建已绑定连接参数的对话客户端</summary>
     /// <param name="options">连接选项</param>
@@ -59,12 +59,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         // 如果未指定模型且 Models 列表不为空，默认使用第一个模型
         if (options.Model.IsNullOrEmpty() && Models != null && Models.Length > 0) options.Model = Models[0].Model;
 
-        var client = new OpenAiChatClient(this, options)
-        {
-            Log = Log,
-            Tracer = Tracer
-        };
-        return client;
+        return new OpenAiChatClient(this, options) { Log = Log, Tracer = Tracer };
     }
 
     /// <summary>非流式对话</summary>
@@ -98,7 +93,6 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         var url = endpoint + "/v1/messages";
 
         using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
-
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 

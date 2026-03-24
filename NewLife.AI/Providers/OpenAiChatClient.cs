@@ -33,31 +33,15 @@ internal interface IAiChatProtocol
 
 /// <summary>内部对话客户端实现。绑定协议执行器与连接选项，实际 HTTP 通信由 IAiChatProtocol 完成</summary>
 /// <remarks>通过 <see cref="IAiProvider.CreateClient"/> 创建，请勿直接实例化。</remarks>
-internal sealed class OpenAiChatClient : IChatClient, ILogFeature, ITracerFeature
+internal sealed class OpenAiChatClient(IAiChatProtocol protocol, AiProviderOptions options) : IChatClient, ILogFeature, ITracerFeature
 {
-    private readonly IAiChatProtocol _protocol;
-    private readonly AiProviderOptions _options;
+    private readonly AiProviderOptions _options = options;
 
     /// <summary>日志</summary>
     public ILog Log { get; set; } = Logger.Null;
 
     /// <summary>追踪器</summary>
     public ITracer? Tracer { get; set; }
-
-    /// <summary>客户端元数据</summary>
-    public ChatClientMetadata Metadata { get; }
-
-    internal OpenAiChatClient(IAiChatProtocol protocol, AiProviderOptions options)
-    {
-        _protocol = protocol;
-        _options = options;
-        Metadata = new ChatClientMetadata
-        {
-            ProviderName = protocol.Name,
-            Endpoint = options.GetEndpoint(protocol.DefaultEndpoint),
-            DefaultModelId = options.Model,
-        };
-    }
 
     /// <summary>非流式对话完成</summary>
     /// <param name="messages">消息列表</param>
@@ -73,7 +57,7 @@ internal sealed class OpenAiChatClient : IChatClient, ILogFeature, ITracerFeatur
         using var span = Tracer?.NewSpan($"chat:{model}", messages?.FirstOrDefault()?.Content);
         try
         {
-            var response = await _protocol.ChatAsync(request, _options, cancellationToken).ConfigureAwait(false);
+            var response = await protocol.ChatAsync(request, _options, cancellationToken).ConfigureAwait(false);
             if (span != null && response.Usage != null)
                 span.Value = response.Usage.TotalTokens;
 
@@ -102,7 +86,7 @@ internal sealed class OpenAiChatClient : IChatClient, ILogFeature, ITracerFeatur
 
         ChatUsage? lastUsage = null;
         var chunks = 0;
-        await foreach (var chunk in _protocol.ChatStreamAsync(request, _options, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in protocol.ChatStreamAsync(request, _options, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
             chunks++;

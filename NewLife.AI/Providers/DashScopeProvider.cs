@@ -112,8 +112,8 @@ public class DashScopeProvider : OpenAiProvider
     /// <returns>已配置的 IChatClient 实例</returns>
     public override IChatClient CreateClient(AiProviderOptions options)
     {
-        if (options.Model.IsNullOrEmpty() && Models != null && Models.Length > 0)
-            options.Model = Models[0].Model;
+        if (options.Model.IsNullOrEmpty() && Models != null && Models.Length > 0) options.Model = Models[0].Model;
+
         return new OpenAiChatClient(this, options) { Log = Log, Tracer = Tracer };
     }
 

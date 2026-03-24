@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using NewLife.AI.Providers;
+using NewLife.Log;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Embedding;
@@ -10,7 +11,7 @@ namespace NewLife.AI.Embedding;
 /// 通过 <see cref="IEmbeddingProvider.CreateEmbeddingClient"/> 创建，
 /// 也可直接实例化用于支持 OpenAI Embeddings API 的服务商（阿里百炼、DeepSeek 等）。
 /// </remarks>
-public class OpenAiEmbeddingClient : IEmbeddingClient
+public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeature
 {
     #region 属性
 
@@ -174,5 +175,13 @@ public class OpenAiEmbeddingClient : IEmbeddingClient
     /// <summary>释放资源（HttpClient 为静态共享，不随实例释放）</summary>
     public void Dispose() { }
 
+    #endregion
+
+    #region 日志
+    /// <summary>日志</summary>
+    public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>追踪器</summary>
+    public ITracer? Tracer { get; set; }
     #endregion
 }

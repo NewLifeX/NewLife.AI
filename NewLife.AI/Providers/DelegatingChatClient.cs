@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Providers;
 
@@ -14,9 +14,6 @@ public abstract class DelegatingChatClient : IChatClient
 
     /// <summary>内层客户端。所有方法的默认转发目标</summary>
     protected IChatClient InnerClient { get; }
-
-    /// <summary>客户端元数据（默认转发自内层客户端）</summary>
-    public virtual ChatClientMetadata Metadata => InnerClient.Metadata;
 
     #endregion
 

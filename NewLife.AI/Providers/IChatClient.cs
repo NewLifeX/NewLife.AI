@@ -16,9 +16,6 @@ namespace NewLife.AI.Providers;
 /// </remarks>
 public interface IChatClient : IDisposable
 {
-    /// <summary>客户端元数据。描述所连接的服务商与默认模型</summary>
-    ChatClientMetadata Metadata { get; }
-
     /// <summary>非流式对话完成。发送消息列表并一次性返回完整响应</summary>
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项，可覆盖客户端默认参数</param>
@@ -92,17 +89,4 @@ public static class ChatClientExtensions
     /// </code>
     /// </example>
     public static ChatClientBuilder AsBuilder(this IChatClient client) => new(client);
-}
-
-/// <summary>AI 对话客户端元数据。描述客户端连接的服务商与模型信息</summary>
-public class ChatClientMetadata
-{
-    /// <summary>服务商名称，如 "OpenAI"、"阿里百炼"</summary>
-    public String ProviderName { get; init; } = null!;
-
-    /// <summary>API 地址</summary>
-    public String? Endpoint { get; init; }
-
-    /// <summary>默认模型编码，即 API 请求中 model 字段的值</summary>
-    public String? DefaultModelId { get; init; }
 }
