@@ -67,7 +67,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildAnthropicRequest(request);
@@ -84,7 +84,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildAnthropicRequest(request);
@@ -178,12 +178,12 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <summary>解析 Anthropic 非流式响应</summary>
     /// <param name="json">JSON 字符串</param>
     /// <returns></returns>
-    private ChatCompletionResponse ParseAnthropicResponse(String json)
+    private ChatResponse ParseAnthropicResponse(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 Anthropic 响应");
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             Id = dic["id"] as String,
             Model = dic["model"] as String,
@@ -216,12 +216,12 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
-            response.Usage = new ChatUsage
+            response.Usage = new UsageDetails
             {
-                PromptTokens = usageDic["input_tokens"].ToInt(),
-                CompletionTokens = usageDic["output_tokens"].ToInt(),
+                InputTokens = usageDic["input_tokens"].ToInt(),
+                OutputTokens = usageDic["output_tokens"].ToInt(),
             };
-            response.Usage.TotalTokens = response.Usage.PromptTokens + response.Usage.CompletionTokens;
+            response.Usage.TotalTokens = response.Usage.InputTokens + response.Usage.OutputTokens;
         }
 
         return response;
@@ -231,12 +231,12 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="eventType">SSE 事件类型</param>
     /// <param name="data">JSON 数据</param>
     /// <returns></returns>
-    private ChatCompletionResponse? ParseAnthropicStreamChunk(String eventType, String data)
+    private ChatResponse? ParseAnthropicStreamChunk(String eventType, String data)
     {
         var dic = JsonParser.Decode(data);
         if (dic == null) return null;
 
-        var response = new ChatCompletionResponse { Object = "chat.completion.chunk" };
+        var response = new ChatResponse { Object = "chat.completion.chunk" };
 
         switch (eventType)
         {
@@ -276,9 +276,9 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
                 }
                 if (dic["usage"] is IDictionary<String, Object> usageDic)
                 {
-                    response.Usage = new ChatUsage
+                    response.Usage = new UsageDetails
                     {
-                        CompletionTokens = usageDic["output_tokens"].ToInt(),
+                        OutputTokens = usageDic["output_tokens"].ToInt(),
                     };
                 }
                 return response;

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.Log;
@@ -157,7 +157,7 @@ public class BackgroundTask
     public List<ChatStreamEvent> Events { get; } = [];
 
     /// <summary>用量统计</summary>
-    public ChatUsage? Usage { get; set; }
+    public UsageDetails? Usage { get; set; }
 
     /// <summary>错误信息</summary>
     public String? Error { get; set; }

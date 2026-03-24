@@ -64,7 +64,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildGeminiRequest(request);
@@ -82,7 +82,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildGeminiRequest(request);
@@ -190,12 +190,12 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="json">JSON 字符串</param>
     /// <param name="model">模型名称</param>
     /// <returns></returns>
-    private ChatCompletionResponse ParseGeminiResponse(String json, String model)
+    private ChatResponse ParseGeminiResponse(String json, String model)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 Gemini 响应");
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             Model = model,
             Object = "chat.completion",
@@ -224,10 +224,10 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         // 用量统计
         if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
         {
-            response.Usage = new ChatUsage
+            response.Usage = new UsageDetails
             {
-                PromptTokens = usageDic["promptTokenCount"].ToInt(),
-                CompletionTokens = usageDic["candidatesTokenCount"].ToInt(),
+                InputTokens = usageDic["promptTokenCount"].ToInt(),
+                OutputTokens = usageDic["candidatesTokenCount"].ToInt(),
                 TotalTokens = usageDic["totalTokenCount"].ToInt(),
             };
         }
@@ -239,12 +239,12 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <param name="data">JSON 数据</param>
     /// <param name="model">模型名称</param>
     /// <returns></returns>
-    private ChatCompletionResponse? ParseGeminiStreamChunk(String data, String model)
+    private ChatResponse? ParseGeminiStreamChunk(String data, String model)
     {
         var dic = JsonParser.Decode(data);
         if (dic == null) return null;
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             Model = model,
             Object = "chat.completion.chunk",
@@ -268,10 +268,10 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
         {
-            response.Usage = new ChatUsage
+            response.Usage = new UsageDetails
             {
-                PromptTokens = usageDic["promptTokenCount"].ToInt(),
-                CompletionTokens = usageDic["candidatesTokenCount"].ToInt(),
+                InputTokens = usageDic["promptTokenCount"].ToInt(),
+                OutputTokens = usageDic["candidatesTokenCount"].ToInt(),
                 TotalTokens = usageDic["totalTokenCount"].ToInt(),
             };
         }

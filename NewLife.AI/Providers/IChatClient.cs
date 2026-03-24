@@ -21,14 +21,14 @@ public interface IChatClient : IDisposable
     /// <param name="options">对话选项，可覆盖客户端默认参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default);
+    Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项，可覆盖客户端默认参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>IChatClient 扩展方法。提供常用便捷调用方式</summary>
@@ -40,8 +40,8 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatCompletionResponse> CompleteAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
-        => client.CompleteAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
+    public static Task<ChatResponse> GetResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => client.GetResponseAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
 
     /// <summary>发送单条文本消息并获取流式响应</summary>
     /// <param name="client">对话客户端</param>
@@ -49,8 +49,8 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
-        => client.CompleteStreamingAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
+    public static IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync([new ChatMessage { Role = "user", Content = prompt }], options, cancellationToken);
 
     /// <summary>发送单条文本消息并直接返回回复文本。最简单的一行调用方式</summary>
     /// <param name="client">对话客户端</param>
@@ -59,7 +59,7 @@ public static class ChatClientExtensions
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型回复文本，失败时返回 null</returns>
     public static async Task<String?> AskAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
-        => (await client.CompleteAsync(prompt, options, cancellationToken).ConfigureAwait(false)).Text;
+        => (await client.GetResponseAsync(prompt, options, cancellationToken).ConfigureAwait(false)).Text;
 
     /// <summary>以元组形式传入多条消息并直接返回回复文本。对标 Python dashscope 的 messages 列表写法，无需构造 ChatMessage 对象</summary>
     /// <param name="client">对话客户端</param>
@@ -72,7 +72,7 @@ public static class ChatClientExtensions
         var chatMessages = new List<ChatMessage>(messages.Length);
         foreach (var (role, content) in messages)
             chatMessages.Add(new ChatMessage { Role = role, Content = content });
-        return (await client.CompleteAsync(chatMessages, options, cancellationToken).ConfigureAwait(false)).Text;
+        return (await client.GetResponseAsync(chatMessages, options, cancellationToken).ConfigureAwait(false)).Text;
     }
 
     /// <summary>将客户端包装为 <see cref="ChatClientBuilder"/>，以便链式添加中间件</summary>

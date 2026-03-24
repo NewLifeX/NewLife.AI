@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 using NewLife.AI.Providers;
 
 namespace NewLife.AI.Agents;
@@ -102,7 +102,7 @@ public class ConversableAgent : IAgent
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var response = await ChatClient.CompleteAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
+        var response = await ChatClient.GetResponseAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
         var choice = response?.Choices?.Count > 0 ? response.Choices[0] : null;
         if (choice?.Message == null) yield break;
 

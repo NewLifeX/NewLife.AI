@@ -22,13 +22,13 @@ internal interface IAiChatProtocol
     /// <param name="request">对话请求</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
+    Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>流式对话执行</summary>
     /// <param name="request">对话请求</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default);
 }
 
 /// <summary>内部对话客户端实现。绑定协议执行器与连接选项，实际 HTTP 通信由 IAiChatProtocol 完成</summary>
@@ -48,7 +48,7 @@ internal sealed class OpenAiChatClient(IAiChatProtocol protocol, AiProviderOptio
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var request = ChatCompletionRequest.Create(messages, options);
         request.Model ??= _options.Model;
@@ -76,7 +76,7 @@ internal sealed class OpenAiChatClient(IAiChatProtocol protocol, AiProviderOptio
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public async IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(IList<ChatMessage> messages, ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var request = ChatCompletionRequest.Create(messages, options, stream: true);
         request.Model ??= _options.Model;
@@ -84,7 +84,7 @@ internal sealed class OpenAiChatClient(IAiChatProtocol protocol, AiProviderOptio
         var model = request.Model;
         using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
 
-        ChatUsage? lastUsage = null;
+        UsageDetails? lastUsage = null;
         var chunks = 0;
         await foreach (var chunk in protocol.ChatStreamAsync(request, _options, cancellationToken).ConfigureAwait(false))
         {

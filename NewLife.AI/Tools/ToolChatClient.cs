@@ -51,25 +51,25 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (messages == null) throw new ArgumentNullException(nameof(messages));
 
         var (mergedTools, toolMap) = GetMergedTools(options);
         if (mergedTools.Count == 0)
-            return await InnerClient.CompleteAsync(messages, options, cancellationToken).ConfigureAwait(false);
+            return await InnerClient.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
         // 合并工具定义到选项（不修改调用方的原始选项）
         var workOptions = MergeToolOptions(options, mergedTools);
         var workMessages = messages.ToList();
 
-        ChatCompletionResponse response;
+        ChatResponse response;
         var iterations = 0;
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            response = await InnerClient.CompleteAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false);
+            response = await InnerClient.GetResponseAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false);
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Choices?.FirstOrDefault()?.Message;
@@ -101,7 +101,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(
+    public override async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(
         IList<ChatMessage> messages,
         ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -111,7 +111,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
         var (mergedTools, toolMap) = GetMergedTools(options);
         if (mergedTools.Count == 0)
         {
-            await foreach (var chunk in InnerClient.CompleteStreamingAsync(messages, options, cancellationToken).ConfigureAwait(false))
+            await foreach (var chunk in InnerClient.GetStreamingResponseAsync(messages, options, cancellationToken).ConfigureAwait(false))
                 yield return chunk;
             yield break;
         }
@@ -127,7 +127,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             String? finishReason = null;
             var assistantContent = (String?)null;
 
-            await foreach (var chunk in InnerClient.CompleteStreamingAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false))
+            await foreach (var chunk in InnerClient.GetStreamingResponseAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false))
             {
                 var choice = chunk.Choices?.FirstOrDefault();
                 if (choice != null)
@@ -272,6 +272,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             Model = options?.Model,
             Temperature = options?.Temperature,
             TopP = options?.TopP,
+            TopK = options?.TopK,
             MaxTokens = options?.MaxTokens,
             Stop = options?.Stop,
             PresencePenalty = options?.PresencePenalty,
@@ -282,8 +283,8 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             EnableThinking = options?.EnableThinking,
             ResponseFormat = options?.ResponseFormat,
             ParallelToolCalls = options?.ParallelToolCalls,
-            UserId = options?.UserId ?? 0,
-            ConversationId = options?.ConversationId ?? 0,
+            UserId = options?.UserId,
+            ConversationId = options?.ConversationId,
             Items = options?.Items ?? new Dictionary<String, Object?>(),
         };
 

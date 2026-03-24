@@ -121,14 +121,14 @@ public class FunctionCallingPlanner : IPlanner
             ToolChoice = "required",  // 强制使用工具，确保返回步骤
         };
 
-        var response = await chatClient.CompleteAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
+        var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
         var steps = ParseSteps(response);
         return new FunctionCallingPlan(goal, steps);
     }
 
     #region 辅助
 
-    private static IList<PlanStep> ParseSteps(ChatCompletionResponse response)
+    private static IList<PlanStep> ParseSteps(ChatResponse response)
     {
         var steps = new List<PlanStep>();
         if (response?.Choices == null) return steps;

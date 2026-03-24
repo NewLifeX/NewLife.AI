@@ -19,6 +19,10 @@ public class ChatOptions : IExtend
     /// <summary>核采样。0~1，与Temperature二选一</summary>
     public Double? TopP { get; set; }
 
+    /// <summary>Top K</summary>
+    /// <remarks>模型在生成文本的下一部分时所考虑的大多数可能标记的数目</remarks>
+    public Int32? TopK { get; set; }
+
     /// <summary>最大生成令牌数</summary>
     public Int32? MaxTokens { get; set; }
 
@@ -50,10 +54,10 @@ public class ChatOptions : IExtend
     public Boolean? ParallelToolCalls { get; set; }
 
     /// <summary>当前请求的用户编号。传递给过滤器链，供 LearningFilter 等中间件读取</summary>
-    public Int32 UserId { get; set; }
+    public String? UserId { get; set; }
 
     /// <summary>当前请求的会话编号。传递给过滤器链，供 LearningFilter 等中间件读取</summary>
-    public Int64 ConversationId { get; set; }
+    public String? ConversationId { get; set; }
 
     /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();

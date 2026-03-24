@@ -10,16 +10,16 @@ public class ChatFilterContext : IExtend
     public ChatCompletionRequest Request { get; set; } = null!;
 
     /// <summary>对话完成响应。在 After 阶段由过滤器读取或修改</summary>
-    public ChatCompletionResponse? Response { get; set; }
+    public ChatResponse? Response { get; set; }
 
     /// <summary>是否流式处理</summary>
     public Boolean IsStreaming { get; set; }
 
     /// <summary>当前请求的用户编号（0 表示未设置）。由管道调用方通过 ChatOptions.UserId 传入</summary>
-    public Int32 UserId { get; set; }
+    public String? UserId { get; set; }
 
     /// <summary>当前请求的会话编号（0 表示未设置）。由管道调用方通过 ChatOptions.ConversationId 传入</summary>
-    public Int64 ConversationId { get; set; }
+    public String? ConversationId { get; set; }
 
     /// <summary>附加数据。用于在过滤器链之间传递自定义状态</summary>
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();

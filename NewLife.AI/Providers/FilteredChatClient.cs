@@ -50,10 +50,10 @@ public class FilteredChatClient : DelegatingChatClient
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
-            return await InnerClient.CompleteAsync(messages, options, cancellationToken).ConfigureAwait(false);
+            return await InnerClient.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
         var request = ChatCompletionRequest.Create(messages, options);
         var context = new ChatFilterContext { Request = request, IsStreaming = false };
@@ -68,17 +68,17 @@ public class FilteredChatClient : DelegatingChatClient
         }
 
         await ExecuteFilterChainAsync(context, 0, options, cancellationToken).ConfigureAwait(false);
-        return context.Response ?? new ChatCompletionResponse();
+        return context.Response ?? new ChatResponse();
     }
 
     /// <summary>流式对话完成。执行过滤器链的 before 阶段后委托给内层客户端，流结束后触发 OnStreamCompletedAsync</summary>
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public override IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
-            return InnerClient.CompleteStreamingAsync(messages, options, cancellationToken);
+            return InnerClient.GetStreamingResponseAsync(messages, options, cancellationToken);
 
         // 流式场景：先运行 before 阶段，再委托给内层流，流结束后触发 OnStreamCompletedAsync
         return RunStreamingWithFiltersAsync(messages, options, cancellationToken);
@@ -93,7 +93,7 @@ public class FilteredChatClient : DelegatingChatClient
         if (index >= Filters.Count)
         {
             // 链末尾：调用内层客户端
-            context.Response = await InnerClient.CompleteAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false);
+            context.Response = await InnerClient.GetResponseAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -101,7 +101,7 @@ public class FilteredChatClient : DelegatingChatClient
         await filter.OnChatAsync(context, (ctx, ct) => ExecuteFilterChainAsync(ctx, index + 1, options, ct), cancellationToken).ConfigureAwait(false);
     }
 
-    private async IAsyncEnumerable<ChatCompletionResponse> RunStreamingWithFiltersAsync(
+    private async IAsyncEnumerable<ChatResponse> RunStreamingWithFiltersAsync(
         IList<ChatMessage> messages,
         ChatOptions? options,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
@@ -122,10 +122,10 @@ public class FilteredChatClient : DelegatingChatClient
         await RunBeforeFiltersAsync(context, 0, cancellationToken).ConfigureAwait(false);
 
         // 流式输出，同时收集最后一个有效用量、模型名和完整回复内容（用于传给 OnStreamCompletedAsync）
-        ChatUsage? lastUsage = null;
+        UsageDetails? lastUsage = null;
         String? model = null;
         var contentBuilder = new System.Text.StringBuilder();
-        await foreach (var chunk in InnerClient.CompleteStreamingAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in InnerClient.GetStreamingResponseAsync(context.Request.Messages, options, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
             if (chunk.Model != null) model = chunk.Model;
@@ -137,7 +137,7 @@ public class FilteredChatClient : DelegatingChatClient
         }
 
         // 流结束后：组装包含完整回复内容的摘要响应，并以"火焰即忘"方式触发 OnStreamCompletedAsync
-        context.Response = new ChatCompletionResponse
+        context.Response = new ChatResponse
         {
             Model = model,
             Usage = lastUsage,

@@ -44,7 +44,7 @@ public class OllamaProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public override async Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
             throw new ArgumentException("消息列表不能为空", nameof(request));
@@ -60,7 +60,7 @@ public class OllamaProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public override async IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var url = (String.IsNullOrEmpty(options.Endpoint) ? DefaultEndpoint : options.Endpoint.TrimEnd('/')) + "/api/chat";
         var body = BuildOllamaBody(request, stream: true);
@@ -281,12 +281,12 @@ public class OllamaProvider : OpenAiProvider
     /// <summary>解析 Ollama 原生 /api/chat 非流式响应</summary>
     /// <param name="json">JSON 字符串</param>
     /// <returns></returns>
-    private static ChatCompletionResponse ParseOllamaResponse(String json)
+    private static ChatResponse ParseOllamaResponse(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 Ollama 响应");
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             // Ollama 原生响应无 id 字段，用 created_at 生成
             Id = dic["created_at"] is Object createdAt ? $"ollama-{createdAt}" : $"ollama-{DateTime.UtcNow.Ticks}",
@@ -316,10 +316,10 @@ public class OllamaProvider : OpenAiProvider
         var completionTokens = dic["eval_count"].ToInt();
         if (promptTokens > 0 || completionTokens > 0)
         {
-            response.Usage = new ChatUsage
+            response.Usage = new UsageDetails
             {
-                PromptTokens = promptTokens,
-                CompletionTokens = completionTokens,
+                InputTokens = promptTokens,
+                OutputTokens = completionTokens,
                 TotalTokens = promptTokens + completionTokens,
             };
         }
@@ -330,13 +330,13 @@ public class OllamaProvider : OpenAiProvider
     /// <summary>解析 Ollama 流式 NDJSON 单行 chunk</summary>
     /// <param name="json">单行 JSON</param>
     /// <returns>解析出的响应块，无效行返回 null</returns>
-    private static ChatCompletionResponse? ParseOllamaChunk(String json)
+    private static ChatResponse? ParseOllamaChunk(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) return null;
 
         var isDone = dic["done"].ToBoolean();
-        var chunk = new ChatCompletionResponse
+        var chunk = new ChatResponse
         {
             Id = dic["created_at"] is Object createdAt ? $"ollama-{createdAt}" : $"ollama-{DateTime.UtcNow.Ticks}",
             Object = "chat.completion.chunk",
@@ -377,10 +377,10 @@ public class OllamaProvider : OpenAiProvider
             var completionTokens = dic["eval_count"].ToInt();
             if (promptTokens > 0 || completionTokens > 0)
             {
-                chunk.Usage = new ChatUsage
+                chunk.Usage = new UsageDetails
                 {
-                    PromptTokens = promptTokens,
-                    CompletionTokens = completionTokens,
+                    InputTokens = promptTokens,
+                    OutputTokens = completionTokens,
                     TotalTokens = promptTokens + completionTokens,
                 };
             }

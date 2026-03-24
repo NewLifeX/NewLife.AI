@@ -143,7 +143,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整对话响应</returns>
-    public override async Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public override async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         if (ApiProtocol != "DashScope") return await base.ChatAsync(request, options, cancellationToken).ConfigureAwait(false);
 
@@ -162,7 +162,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <param name="request">对话请求</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (ApiProtocol != "DashScope")
         {
@@ -209,7 +209,7 @@ public class DashScopeProvider : OpenAiProvider
                 throw new HttpRequestException($"[{Name}] 流式错误 {code}: {message}");
             }
 
-            ChatCompletionResponse? chunk = null;
+            ChatResponse? chunk = null;
             try
             {
                 chunk = ParseDashScopeStreamChunk(data);
@@ -664,7 +664,7 @@ public class DashScopeProvider : OpenAiProvider
     }
 
     /// <summary>解析 DashScope 非流式响应</summary>
-    private ChatCompletionResponse ParseDashScopeResponse(String json)
+    private ChatResponse ParseDashScopeResponse(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 DashScope 响应");
@@ -675,7 +675,7 @@ public class DashScopeProvider : OpenAiProvider
         if (!String.IsNullOrEmpty(errCode))
             throw new HttpRequestException($"[{Name}] 错误 {errCode}: {errMsg}");
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             Object = "chat.completion",
             Id = dic["request_id"] as String,
@@ -709,12 +709,12 @@ public class DashScopeProvider : OpenAiProvider
     }
 
     /// <summary>解析 DashScope 流式 SSE chunk。增量输出时字段名为 message（语义同 OpenAI 的 delta）</summary>
-    private ChatCompletionResponse? ParseDashScopeStreamChunk(String data)
+    private ChatResponse? ParseDashScopeStreamChunk(String data)
     {
         var dic = JsonParser.Decode(data);
         if (dic == null) return null;
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             Object = "chat.completion.chunk",
             Id = dic["request_id"] as String,
@@ -760,8 +760,8 @@ public class DashScopeProvider : OpenAiProvider
     {
         return new DashScopeUsage
         {
-            PromptTokens = usageDic["input_tokens"].ToInt(),
-            CompletionTokens = usageDic["output_tokens"].ToInt(),
+            InputTokens = usageDic["input_tokens"].ToInt(),
+            OutputTokens = usageDic["output_tokens"].ToInt(),
             TotalTokens = usageDic["total_tokens"].ToInt(),
             ImageTokens = usageDic.TryGetValue("image_tokens", out var img) ? img.ToInt() : 0,
             VideoTokens = usageDic.TryGetValue("video_tokens", out var vid) ? vid.ToInt() : 0,
@@ -962,8 +962,8 @@ public class DashScopeChoice : ChatChoice
     public Object? Logprobs { get; set; }
 }
 
-/// <summary>DashScope 专属用量统计。继承 <see cref="ChatUsage"/> 并扩展多模态 Token 字段</summary>
-public class DashScopeUsage : ChatUsage
+/// <summary>DashScope 专属用量统计。继承 <see cref="UsageDetails"/> 并扩展多模态 Token 字段</summary>
+public class DashScopeUsage : UsageDetails
 {
     /// <summary>图像 Token 数。多模态请求中图像输入消耗的 Token 数</summary>
     public Int32 ImageTokens { get; set; }

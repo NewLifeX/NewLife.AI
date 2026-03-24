@@ -36,16 +36,16 @@ public abstract class DelegatingChatClient : IChatClient
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public virtual Task<ChatCompletionResponse> CompleteAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
-        => InnerClient.CompleteAsync(messages, options, cancellationToken);
+    public virtual Task<ChatResponse> GetResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => InnerClient.GetResponseAsync(messages, options, cancellationToken);
 
     /// <summary>流式对话完成（默认转发给内层客户端）</summary>
     /// <param name="messages">消息列表</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public virtual IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
-        => InnerClient.CompleteStreamingAsync(messages, options, cancellationToken);
+    public virtual IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => InnerClient.GetStreamingResponseAsync(messages, options, cancellationToken);
 
     #endregion
 

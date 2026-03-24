@@ -69,7 +69,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatCompletionRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildRequestBody(request);
@@ -86,7 +86,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatCompletionResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatCompletionRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildRequestBody(request);
@@ -112,7 +112,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
             if (data == "[DONE]") break;
             if (data.Length == 0) continue;
 
-            ChatCompletionResponse? chunk = null;
+            ChatResponse? chunk = null;
             try
             {
                 chunk = ParseResponse(data);
@@ -360,16 +360,16 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     /// <summary>解析响应 JSON</summary>
     /// <param name="json">JSON 字符串</param>
     /// <returns></returns>
-    protected virtual ChatCompletionResponse ParseResponse(String json)
+    protected virtual ChatResponse ParseResponse(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 AI 服务商响应");
 
-        var response = new ChatCompletionResponse
+        var response = new ChatResponse
         {
             Id = dic["id"] as String,
             Object = dic["object"] as String,
-            Created = dic["created"].ToLong(),
+            Created = dic["created"].ToLong().ToDateTimeOffset(),
             Model = dic["model"] as String,
         };
 
@@ -401,10 +401,10 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
         // 解析 usage
         if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
-            response.Usage = new ChatUsage
+            response.Usage = new UsageDetails
             {
-                PromptTokens = usageDic["prompt_tokens"].ToInt(),
-                CompletionTokens = usageDic["completion_tokens"].ToInt(),
+                InputTokens = usageDic["prompt_tokens"].ToInt(),
+                OutputTokens = usageDic["completion_tokens"].ToInt(),
                 TotalTokens = usageDic["total_tokens"].ToInt(),
             };
         }

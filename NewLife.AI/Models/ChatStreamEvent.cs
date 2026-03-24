@@ -49,7 +49,7 @@ public class ChatStreamEvent
     public String? Message { get; set; }
 
     /// <summary>令牌用量统计</summary>
-    public ChatUsage? Usage { get; set; }
+    public UsageDetails? Usage { get; set; }
 
     /// <summary>会话标题。首条消息自动生成标题时返回</summary>
     public String? Title { get; set; }
@@ -86,7 +86,7 @@ public class ChatStreamEvent
     /// <param name="usage">用量统计</param>
     /// <param name="title">标题（可选）</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageDone(ChatUsage? usage = null, String? title = null) =>
+    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null) =>
         new() { Type = "message_done", Usage = usage, Title = title };
 
     /// <summary>错误事件</summary>
