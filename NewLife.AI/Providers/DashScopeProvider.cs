@@ -175,8 +175,8 @@ public class DashScopeProvider : OpenAiProvider
         var isMultimodal = IsMultimodalModel(options.Model);
         var body = BuildDashScopeRequestBody(request, isMultimodal, true);
 
-        using var resp = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
-        using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
         var lastEvent = "";

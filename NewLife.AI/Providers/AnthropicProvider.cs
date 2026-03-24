@@ -112,6 +112,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             }
 
             if (!line.StartsWith("data: ")) continue;
+
             var data = line.Substring(6).Trim();
             if (data.Length == 0) continue;
 

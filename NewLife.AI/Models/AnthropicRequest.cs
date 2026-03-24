@@ -12,7 +12,7 @@ namespace NewLife.AI.Models;
 /// <item>消息内容可以是字符串或内容块数组（text / image / tool_use / tool_result）</item>
 /// </list>
 /// </remarks>
-public class AnthropicMessageRequest
+public class AnthropicRequest
 {
     #region 属性
     /// <summary>模型编码</summary>

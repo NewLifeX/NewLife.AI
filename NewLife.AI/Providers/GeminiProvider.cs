@@ -103,6 +103,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             if (line == null) break;
 
             if (!line.StartsWith("data: ")) continue;
+
             var data = line.Substring(6).Trim();
             if (data.Length == 0) continue;
 
