@@ -72,7 +72,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             response = await InnerClient.GetResponseAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false);
 
             // 从第一个 Choice 中获取工具调用
-            var assistantMessage = response.Choices?.FirstOrDefault()?.Message;
+            var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
             var toolCalls = assistantMessage?.ToolCalls;
             if (toolCalls == null || toolCalls.Count == 0) break;
             if (++iterations > MaxIterations) break;
@@ -129,7 +129,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(workMessages, workOptions, cancellationToken).ConfigureAwait(false))
             {
-                var choice = chunk.Choices?.FirstOrDefault();
+                var choice = chunk.Messages?.FirstOrDefault();
                 if (choice != null)
                 {
                     finishReason = choice.FinishReason ?? finishReason;

@@ -300,15 +300,7 @@ public class OllamaProvider : OpenAiProvider
         {
             var msg = ParseOllamaMessage(msgObj as IDictionary<String, Object>);
             var doneReason = dic["done_reason"] as String;
-            response.Choices =
-            [
-                new ChatChoice
-                {
-                    Index = 0,
-                    Message = msg,
-                    FinishReason = doneReason,
-                }
-            ];
+            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = doneReason, }];
         }
 
         // 解析 usage：prompt_eval_count = 输入 token，eval_count = 输出 token
@@ -352,19 +344,11 @@ public class OllamaProvider : OpenAiProvider
         if (msgObj != null)
         {
             var msg = ParseOllamaMessage(msgObj as IDictionary<String, Object>);
-            chunk.Choices =
-            [
-                new ChatChoice
-                {
-                    Index = 0,
-                    Delta = msg,
-                    FinishReason = finishReason,
-                }
-            ];
+            chunk.Messages = [new ChatChoice { Index = 0, Delta = msg, FinishReason = finishReason, }];
         }
         else if (isDone)
         {
-            chunk.Choices =
+            chunk.Messages =
             [
                 new ChatChoice { Index = 0, Delta = new ChatMessage { Role = "assistant" }, FinishReason = finishReason }
             ];
@@ -399,12 +383,11 @@ public class OllamaProvider : OpenAiProvider
         var msg = new ChatMessage
         {
             Role = dic["role"] as String ?? "assistant",
+            Content = dic["content"],
+
+            // Ollama 原生思考字段为 thinking（与 OpenAI 兼容模式的 reasoning 不同）
+            ReasoningContent = dic["thinking"] as String
         };
-
-        msg.Content = dic["content"];
-
-        // Ollama 原生思考字段为 thinking（与 OpenAI 兼容模式的 reasoning 不同）
-        msg.ReasoningContent = dic["thinking"] as String;
 
         // 工具调用
         if (dic["tool_calls"] is IList<Object> tcList)

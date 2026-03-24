@@ -130,7 +130,7 @@ public class FilteredChatClient : DelegatingChatClient
             if (chunk.Usage != null) lastUsage = chunk.Usage;
             if (chunk.Model != null) model = chunk.Model;
             // 聚合正文内容，以便 OnStreamCompletedAsync 中各过滤器（如 AgentTriggerFilter）可读取完整回复
-            var delta = chunk.Choices?.FirstOrDefault()?.Delta;
+            var delta = chunk.Messages?.FirstOrDefault()?.Delta;
             if (delta?.Content is String text && !String.IsNullOrEmpty(text))
                 contentBuilder.Append(text);
             yield return chunk;
@@ -141,8 +141,10 @@ public class FilteredChatClient : DelegatingChatClient
         {
             Model = model,
             Usage = lastUsage,
-            Choices = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = contentBuilder.ToString() } }],
+            //Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = contentBuilder.ToString() } }],
         };
+        context.Response.Add(contentBuilder.ToString());
+
         var capturedContext = context;
         var capturedFilters = Filters.ToArray();
         _ = Task.Run(async () =>

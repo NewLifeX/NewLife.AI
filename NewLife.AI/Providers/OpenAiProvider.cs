@@ -385,17 +385,17 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
                 {
                     Index = choiceDic["index"].ToInt(),
                     FinishReason = choiceDic["finish_reason"] as String,
+
+                    // 非流式：message
+                    Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),
+
+                    // 流式：delta
+                    Delta = ParseChatMessage(choiceDic["delta"] as IDictionary<String, Object>)
                 };
-
-                // 非流式：message
-                choice.Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>);
-
-                // 流式：delta
-                choice.Delta = ParseChatMessage(choiceDic["delta"] as IDictionary<String, Object>);
 
                 choices.Add(choice);
             }
-            response.Choices = choices;
+            response.Messages = choices;
         }
 
         // 解析 usage

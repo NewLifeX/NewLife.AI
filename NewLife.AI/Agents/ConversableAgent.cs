@@ -103,7 +103,7 @@ public class ConversableAgent : IAgent
         cancellationToken.ThrowIfCancellationRequested();
 
         var response = await ChatClient.GetResponseAsync(messages, chatOptions, cancellationToken).ConfigureAwait(false);
-        var choice = response?.Choices?.Count > 0 ? response.Choices[0] : null;
+        var choice = response?.Messages?.Count > 0 ? response.Messages[0] : null;
         if (choice?.Message == null) yield break;
 
         var toolCalls = choice.Message.ToolCalls;

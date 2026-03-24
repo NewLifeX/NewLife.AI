@@ -203,7 +203,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         if (dic["candidates"] is IList<Object> candidates)
         {
-            var choices = new List<ChatChoice>();
+            //var choices = new List<ChatChoice>();
             for (var i = 0; i < candidates.Count; i++)
             {
                 if (candidates[i] is not IDictionary<String, Object> candidate) continue;
@@ -211,14 +211,15 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
                 var contentText = ExtractGeminiContent(candidate);
                 var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
 
-                choices.Add(new ChatChoice
-                {
-                    Index = i,
-                    Message = new ChatMessage { Role = "assistant", Content = contentText },
-                    FinishReason = finishReason,
-                });
+                //choices.Add(new ChatChoice
+                //{
+                //    Index = i,
+                //    Message = new ChatMessage { Role = "assistant", Content = contentText },
+                //    FinishReason = finishReason,
+                //});
+                response.Add(contentText, null, finishReason);
             }
-            response.Choices = choices;
+            //response.Messages = choices;
         }
 
         // 用量统计
@@ -252,18 +253,23 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         if (dic["candidates"] is IList<Object> candidates && candidates.Count > 0)
         {
-            if (candidates[0] is IDictionary<String, Object> candidate)
+            //var choices = new List<ChatChoice>();
+            for (var i = 0; i < candidates.Count; i++)
             {
+                if (candidates[i] is not IDictionary<String, Object> candidate) continue;
+
                 var contentText = ExtractGeminiContent(candidate);
                 var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
 
-                response.Choices = [new ChatChoice
-                {
-                    Index = 0,
-                    Delta = new ChatMessage { Content = contentText },
-                    FinishReason = finishReason,
-                }];
+                //choices.Add(new ChatChoice
+                //{
+                //    Index = i,
+                //    Delta = new ChatMessage { Content = contentText },
+                //    FinishReason = finishReason,
+                //});
+                response.AddDelta(contentText, null, finishReason);
             }
+            //response.Messages = choices;
         }
 
         if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)

@@ -207,12 +207,13 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             }
         }
 
-        var msg = new ChatMessage { Role = "assistant", Content = contentText };
-        if (!String.IsNullOrEmpty(reasoningText))
-            msg.ReasoningContent = reasoningText;
+        //var msg = new ChatMessage { Role = "assistant", Content = contentText };
+        //if (!String.IsNullOrEmpty(reasoningText))
+        //    msg.ReasoningContent = reasoningText;
 
         var finishReason = dic["stop_reason"] as String;
-        response.Choices = [new ChatChoice { Index = 0, Message = msg, FinishReason = MapStopReason(finishReason) }];
+        //response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = MapStopReason(finishReason) }];
+        response.Add(contentText, reasoningText, MapStopReason(finishReason));
 
         if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
@@ -246,7 +247,8 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
                     response.Id = msgDic["id"] as String;
                     response.Model = msgDic["model"] as String;
                 }
-                response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { Role = "assistant" } }];
+                //response.Messages = [new ChatChoice { Index = 0, Delta = new ChatMessage { Role = "assistant" } }];
+                response.AddDelta(null, null, null);
                 return response;
 
             case "content_block_delta":
@@ -256,13 +258,15 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
                     if (deltaType == "text_delta")
                     {
-                        response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { Content = deltaDic["text"] } }];
+                        //response.Messages = [new ChatChoice { Index = 0, Delta = new ChatMessage { Content = deltaDic["text"] } }];
+                        response.AddDelta(deltaDic["text"]);
                         return response;
                     }
 
                     if (deltaType == "thinking_delta")
                     {
-                        response.Choices = [new ChatChoice { Index = 0, Delta = new ChatMessage { ReasoningContent = deltaDic["thinking"] as String } }];
+                        //response.Messages = [new ChatChoice { Index = 0, Delta = new ChatMessage { ReasoningContent = deltaDic["thinking"] as String } }];
+                        response.AddDelta(null, deltaDic["thinking"] as String);
                         return response;
                     }
                 }
@@ -272,7 +276,7 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
                 if (dic["delta"] is IDictionary<String, Object> mdDic)
                 {
                     var finishReason = mdDic["stop_reason"] as String;
-                    response.Choices = [new ChatChoice { Index = 0, FinishReason = MapStopReason(finishReason) }];
+                    response.Messages = [new ChatChoice { Index = 0, FinishReason = MapStopReason(finishReason) }];
                 }
                 if (dic["usage"] is IDictionary<String, Object> usageDic)
                 {

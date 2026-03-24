@@ -131,10 +131,10 @@ public class FunctionCallingPlanner : IPlanner
     private static IList<PlanStep> ParseSteps(ChatResponse response)
     {
         var steps = new List<PlanStep>();
-        if (response?.Choices == null) return steps;
+        if (response?.Messages == null) return steps;
 
         var idx = 0;
-        foreach (var choice in response.Choices)
+        foreach (var choice in response.Messages)
         {
             var toolCalls = choice?.Message?.ToolCalls;
             if (toolCalls == null) continue;

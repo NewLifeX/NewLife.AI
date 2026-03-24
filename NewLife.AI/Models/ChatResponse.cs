@@ -16,11 +16,8 @@ public class ChatResponse
     /// <summary>模型编码</summary>
     public String? Model { get; set; }
 
-    /// <summary>选择列表</summary>
-    public IList<ChatChoice>? Choices { get; set; }
-
-    /// <summary>结束原因。stop/length/tool_calls/content_filter</summary>
-    public String FinishReason { get; set; }
+    /// <summary>消息列表</summary>
+    public IList<ChatChoice>? Messages { get; set; }
 
     /// <summary>令牌用量统计</summary>
     public UsageDetails? Usage { get; set; }
@@ -32,7 +29,7 @@ public class ChatResponse
     {
         get
         {
-            var value = Choices?.FirstOrDefault()?.Message?.Content ?? Choices?.FirstOrDefault()?.Delta?.Content;
+            var value = Messages?.FirstOrDefault()?.Message?.Content ?? Messages?.FirstOrDefault()?.Delta?.Content;
             if (value == null) return null;
             if (value is IList<Object> list) value = list.FirstOrDefault();
             if (value is String str) return str;
@@ -48,9 +45,47 @@ public class ChatResponse
         }
     }
     #endregion
+
+    #region 方法
+    /// <summary>添加消息项。返回新添加的项，便于后续修改</summary>
+    public ChatChoice Add(Object? content, String? reasoning = null, String? finishReeason = null)
+    {
+        var msgs = Messages ??= [];
+
+        var choice = new ChatChoice
+        {
+            Index = msgs.Count,
+            FinishReason = finishReeason
+        };
+        if (content != null || !reasoning.IsNullOrEmpty())
+            choice.Message = new ChatMessage { Content = content, ReasoningContent = reasoning, };
+
+        msgs.Add(choice);
+
+        return choice;
+    }
+
+    /// <summary>添加增量消息项。返回新添加的项，便于后续修改</summary>
+    public ChatChoice AddDelta(Object? content, String? reasoning = null, String? finishReeason = null)
+    {
+        var msgs = Messages ??= [];
+
+        var choice = new ChatChoice
+        {
+            Index = msgs.Count,
+            FinishReason = finishReeason
+        };
+        if (content != null || !reasoning.IsNullOrEmpty())
+            choice.Delta = new ChatMessage { Content = content, ReasoningContent = reasoning, };
+
+        msgs.Add(choice);
+
+        return choice;
+    }
+    #endregion
 }
 
-/// <summary>对话选择项</summary>
+/// <summary>对话消息项</summary>
 public class ChatChoice
 {
     /// <summary>序号</summary>

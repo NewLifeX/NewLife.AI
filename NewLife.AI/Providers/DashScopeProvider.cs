@@ -698,7 +698,7 @@ public class DashScopeProvider : OpenAiProvider
                 };
                 choices.Add(choice);
             }
-            response.Choices = choices;
+            response.Messages = choices;
         }
 
         // usage：原生字段名为 input_tokens / output_tokens
@@ -745,7 +745,7 @@ public class DashScopeProvider : OpenAiProvider
                     choice.Logprobs = lp2;
                 choices.Add(choice);
             }
-            response.Choices = choices;
+            response.Messages = choices;
         }
 
         if (dic["usage"] is IDictionary<String, Object> usageDic2)
