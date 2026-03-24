@@ -2,113 +2,109 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
+using NewLife.AI.Providers;
 using NewLife.Serialization;
 
-namespace NewLife.AI.Providers;
+namespace NewLife.AI.Clients;
 
-/// <summary>新生命 AI 服务商。新生命团队的统一 AI 网关，兼容 OpenAI / Anthropic / Gemini 协议</summary>
+/// <summary>新生命 AI 对话客户端。新生命团队的统一 AI 网关，兼容 OpenAI / Anthropic / Gemini 协议</summary>
 /// <remarks>
 /// 星语（StarChat）网关，支持多模型路由、负载均衡和流量控制。
-/// 提供 /v1/chat/completions、/v1/responses、/v1/messages、/v1/gemini、
+/// 除 /v1/chat/completions 外还提供 /v1/responses、/v1/messages、/v1/gemini、
 /// /v1/images/generations、/v1/images/edits 全部端点。
 /// 接入地址：https://ai.newlifex.com
 /// </remarks>
-public class NewLifeAiProvider : OpenAiProvider
+[AiClient("NewLifeAI", "新生命AI", "https://ai.newlifex.com", Description = "新生命团队星语 AI 网关，统一对接多种大模型")]
+[AiClientModel("qwen3.5", "Qwen3.5-0.8b", Thinking = true)]
+public class NewLifeAiChatClient : OpenAiChatClient
 {
     #region 属性
-    /// <summary>服务商编码</summary>
-    public override String Code => "NewLifeAI";
+    /// <inheritdoc/>
+    protected override String ClientName => "新生命AI";
 
-    /// <summary>服务商名称</summary>
-    public override String Name => "新生命AI";
-
-    /// <summary>服务商描述</summary>
-    public override String? Description => "新生命团队星语 AI 网关，统一对接多种大模型";
-
-    /// <summary>默认 API 地址</summary>
+    /// <inheritdoc/>
     public override String DefaultEndpoint => "https://ai.newlifex.com";
 
-    /// <summary>主流模型列表。通过网关路由到后端各服务商模型</summary>
-    public override AiModelInfo[] Models { get; } =
+    /// <summary>主流模型列表</summary>
+    public override AiModelInfo[] DefaultModels { get; } =
     [
         new("qwen3.5", "Qwen3.5-0.8b", new(true, false, false, true)),
     ];
     #endregion
 
+    #region 构造
+    /// <summary>用连接选项初始化新生命 AI 客户端</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+    /// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
+    public NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient = null)
+        : base(options, httpClient) { }
+    #endregion
+
     #region OpenAI Responses API（/v1/responses）
     /// <summary>OpenAI Responses API 非流式。路径 /v1/responses，语义与 Chat Completions 一致</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<ChatResponse> ResponsesAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
-        => ChatViaPathAsync(request, options, "/v1/responses", cancellationToken);
+    public virtual Task<ChatResponse> ResponsesAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => ChatViaPathAsync(request, "/v1/responses", cancellationToken);
 
     /// <summary>OpenAI Responses API 流式。路径 /v1/responses</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<ChatResponse> ResponsesStreamAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
-        => ChatStreamViaPathAsync(request, options, "/v1/responses", cancellationToken);
+    public virtual IAsyncEnumerable<ChatResponse> ResponsesStreamAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => ChatStreamViaPathAsync(request, "/v1/responses", cancellationToken);
     #endregion
 
     #region Anthropic Messages API（/v1/messages）
     /// <summary>Anthropic Messages API 非流式。路径 /v1/messages，兼容 claude 风格客户端</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<ChatResponse> MessagesAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
-        => ChatViaPathAsync(request, options, "/v1/messages", cancellationToken);
+    public virtual Task<ChatResponse> MessagesAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => ChatViaPathAsync(request, "/v1/messages", cancellationToken);
 
     /// <summary>Anthropic Messages API 流式。路径 /v1/messages</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<ChatResponse> MessagesStreamAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
-        => ChatStreamViaPathAsync(request, options, "/v1/messages", cancellationToken);
+    public virtual IAsyncEnumerable<ChatResponse> MessagesStreamAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => ChatStreamViaPathAsync(request, "/v1/messages", cancellationToken);
     #endregion
 
     #region Google Gemini API（/v1/gemini）
     /// <summary>Google Gemini API 非流式。路径 /v1/gemini，兼容 Gemini 风格客户端</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<ChatResponse> GeminiAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
-        => ChatViaPathAsync(request, options, "/v1/gemini", cancellationToken);
+    public virtual Task<ChatResponse> GeminiAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => ChatViaPathAsync(request, "/v1/gemini", cancellationToken);
 
     /// <summary>Google Gemini API 流式。路径 /v1/gemini</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<ChatResponse> GeminiStreamAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
-        => ChatStreamViaPathAsync(request, options, "/v1/gemini", cancellationToken);
+    public virtual IAsyncEnumerable<ChatResponse> GeminiStreamAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => ChatStreamViaPathAsync(request, "/v1/gemini", cancellationToken);
     #endregion
 
     #region 图像生成（/v1/images/generations）
     /// <summary>图像生成。POST /v1/images/generations</summary>
     /// <param name="prompt">图像描述提示词</param>
-    /// <param name="model">模型名称，为 null 时使用默认模型</param>
+    /// <param name="model">模型名称，为 null 时使用默认</param>
     /// <param name="size">图像尺寸，如 "1024x1024"，为 null 时使用服务端默认</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应</returns>
-    public virtual async Task<ImageGenerationResponse?> ImageGenerationsAsync(String prompt, String? model, String? size, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ImageGenerationResponse?> ImageGenerationsAsync(String prompt, String? model, String? size, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrWhiteSpace(prompt)) throw new ArgumentNullException(nameof(prompt));
 
-        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/images/generations";
-
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/images/generations";
         var dic = new Dictionary<String, Object> { ["prompt"] = prompt };
         if (!String.IsNullOrEmpty(model)) dic["model"] = model;
         if (!String.IsNullOrEmpty(size)) dic["size"] = size;
 
-        var json = await PostAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
         return json.ToJsonEntity<ImageGenerationResponse>();
     }
     #endregion
@@ -118,20 +114,18 @@ public class NewLifeAiProvider : OpenAiProvider
     /// <param name="imageStream">原始图像流（PNG 格式）</param>
     /// <param name="imageFileName">图像文件名</param>
     /// <param name="prompt">编辑提示词</param>
-    /// <param name="model">模型名称，为 null 时使用默认模型</param>
+    /// <param name="model">模型名称，为 null 时使用默认</param>
     /// <param name="size">输出尺寸，为 null 时使用服务端默认</param>
     /// <param name="maskStream">蒙版图像流（可选，PNG 格式，透明区域为编辑区域）</param>
     /// <param name="maskFileName">蒙版文件名</param>
-    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应</returns>
-    public virtual async Task<ImageGenerationResponse?> ImageEditsAsync(Stream imageStream, String imageFileName, String prompt, String? model, String? size, Stream? maskStream, String? maskFileName, AiProviderOptions options, CancellationToken cancellationToken = default)
+    public virtual async Task<ImageGenerationResponse?> ImageEditsAsync(Stream imageStream, String imageFileName, String prompt, String? model, String? size, Stream? maskStream, String? maskFileName, CancellationToken cancellationToken = default)
     {
         if (imageStream == null) throw new ArgumentNullException(nameof(imageStream));
         if (String.IsNullOrWhiteSpace(prompt)) throw new ArgumentNullException(nameof(prompt));
 
-        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/images/edits";
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/images/edits";
 
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(prompt), "prompt");
@@ -150,49 +144,38 @@ public class NewLifeAiProvider : OpenAiProvider
         }
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
-        SetHeaders(req, options);
+        SetHeaders(req, _options);
 
         using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"NewLifeAI 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
+            throw new HttpRequestException($"[{ClientName}] 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
 
         return json.ToJsonEntity<ImageGenerationResponse>();
     }
     #endregion
 
     #region 辅助
-    /// <summary>以指定路径发起非流式对话请求。供 ResponsesAsync / MessagesAsync / GeminiAsync 复用</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="path">API 路径，如 /v1/responses</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>对话响应</returns>
-    protected async Task<ChatResponse> ChatViaPathAsync(ChatRequest request, AiProviderOptions options, String path, CancellationToken cancellationToken)
+    /// <summary>以指定路径发起非流式对话请求</summary>
+    protected async Task<ChatResponse> ChatViaPathAsync(ChatRequest request, String path, CancellationToken cancellationToken)
     {
         request.Stream = false;
         var body = BuildRequestBody(request);
-        var url = options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
-        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
         return ParseResponse(responseText);
     }
 
-    /// <summary>以指定路径发起流式对话请求。供 ResponsesStreamAsync / MessagesStreamAsync / GeminiStreamAsync 复用</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="path">API 路径，如 /v1/responses</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>流式响应块序列</returns>
-    protected async IAsyncEnumerable<ChatResponse> ChatStreamViaPathAsync(ChatRequest request, AiProviderOptions options, String path, [EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <summary>以指定路径发起流式对话请求</summary>
+    protected async IAsyncEnumerable<ChatResponse> ChatStreamViaPathAsync(ChatRequest request, String path, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         request.Stream = true;
         var body = BuildRequestBody(request);
-        var url = options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
-        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
-
+        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 

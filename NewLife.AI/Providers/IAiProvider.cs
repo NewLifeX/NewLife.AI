@@ -60,24 +60,6 @@ public interface IModelListProvider
     Task<OpenAiModelListResponse?> ListModelsAsync(AiProviderOptions options, CancellationToken cancellationToken = default);
 }
 
-/// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
-/// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
-/// <param name="SupportThinking">是否支持思考模式。如 DeepSeek-R1、Claude 的 extended thinking</param>
-/// <param name="SupportVision">是否支持图片输入（视觉）。如 GPT-4V、Claude Vision、Qwen-VL</param>
-/// <param name="SupportImageGeneration">是否支持文生图。如 DALL·E、Qwen 的图像生成</param>
-/// <param name="SupportFunctionCalling">是否支持 Function Calling / Tool Use</param>
-public record AiProviderCapabilities(
-    Boolean SupportThinking = false,
-    Boolean SupportVision = false,
-    Boolean SupportImageGeneration = false,
-    Boolean SupportFunctionCalling = false);
-
-/// <summary>AI 模型信息。描述服务商旗下某具体模型的标识与能力</summary>
-/// <param name="Model">模型标识，即 API 请求中 model 字段的值，如 "gpt-4o"</param>
-/// <param name="DisplayName">模型显示名称，用于界面展示，如 "GPT-4o"</param>
-/// <param name="Capabilities">该模型支持的能力</param>
-public record AiModelInfo(String Model, String DisplayName, AiProviderCapabilities Capabilities);
-
 /// <summary>AI 服务商连接选项</summary>
 public class AiProviderOptions
 {

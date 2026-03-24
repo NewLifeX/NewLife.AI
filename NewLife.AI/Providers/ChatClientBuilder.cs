@@ -1,4 +1,5 @@
-﻿using NewLife.AI.Filters;
+﻿using NewLife.AI.Clients;
+using NewLife.AI.Filters;
 using NewLife.AI.Tools;
 using NewLife.Log;
 
@@ -9,8 +10,8 @@ namespace NewLife.AI.Providers;
 /// 参考 MEAI 的 ChatClientBuilder 设计。先添加的中间件包裹在最外层，请求时先执行。
 /// 使用示例：
 /// <code>
-/// // 方式一：从 IAiProvider 创建（日志与追踪由 provider.Log / provider.Tracer 自动传播）
-/// var client = new ChatClientBuilder(provider, options)
+/// // 方式一：从描述符工厂创建客户端并传入构建器
+/// var client = new ChatClientBuilder(AiClientRegistry.Default.CreateClient("OpenAI", opts))
 ///     .UseTools(toolRegistry)
 ///     .Build();
 ///
@@ -24,12 +25,24 @@ public sealed class ChatClientBuilder
 {
     #region 属性
 
-    private readonly IChatClient _innermost;
+    private IChatClient? _innermost;
     private readonly List<Func<IChatClient, IChatClient>> _middlewares = [];
 
     #endregion
 
     #region 构造
+
+    /// <summary>创建空构建器，后续通过 Use*() 方法设置内层客户端（MEAI 风格）</summary>
+    /// <remarks>
+    /// 与 MEAI 的 ChatClientBuilder 用法一致：
+    /// <code>
+    /// var client = new ChatClientBuilder()
+    ///     .UseOpenAI(new HttpClient { BaseAddress = new Uri("https://api.openai.com") }, apiKey: "sk-xxx")
+    ///     .UseTools(myTools)
+    ///     .Build();
+    /// </code>
+    /// </remarks>
+    public ChatClientBuilder() { }
 
     /// <summary>从已有客户端实例创建构建器</summary>
     /// <param name="innerClient">最内层客户端（实际执行 HTTP 调用的客户端）</param>
@@ -39,11 +52,14 @@ public sealed class ChatClientBuilder
         _innermost = innerClient;
     }
 
-    /// <summary>从服务商工厂创建构建器，自动调用 CreateClient 生成绑定参数的客户端</summary>
-    /// <param name="provider">AI 服务商</param>
-    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
-    public ChatClientBuilder(IAiProvider provider, AiProviderOptions options)
-        : this(provider.CreateClient(options)) { }
+    /// <summary>设置最内层客户端。供扩展方法（如 UseOpenAI）内部调用，支持链式调用</summary>
+    /// <param name="client">实际执行 HTTP 请求的客户端实例</param>
+    /// <returns>当前构建器（支持链式调用）</returns>
+    internal ChatClientBuilder SetInnerClient(IChatClient client)
+    {
+        _innermost = client ?? throw new ArgumentNullException(nameof(client));
+        return this;
+    }
 
     #endregion
 
@@ -63,6 +79,9 @@ public sealed class ChatClientBuilder
     /// <returns>最外层 IChatClient，调用时按中间件添加顺序依次执行</returns>
     public IChatClient Build()
     {
+        if (_innermost == null)
+            throw new InvalidOperationException("请先调用 Use*() 方法（如 UseOpenAI、UseDashScope）设置内层客户竭后再调用 Build()");
+
         // 从最内层提取 Log/Tracer，向外传播给各中间件（如 ToolChatClient / FilteredChatClient）
         var log = (_innermost as ILogFeature)?.Log;
         var tracer = (_innermost as ITracerFeature)?.Tracer;
@@ -98,4 +117,62 @@ public static class ChatClientBuilderExtensions
     /// <returns>构建器（支持链式调用）</returns>
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers));
+
+    // ── MEAI 风格山 Use*() 工厂方法 ─────────────────────────────────────────
+
+    /// <summary>使用 OpenAI 兴崉协议客户端作为内层客户竭</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="httpClient">HTTP 客户竭；<see cref="HttpClient.BaseAddress"/> 为服务商地址</param>
+    /// <param name="apiKey">API 密鑰</param>
+    /// <param name="model">默认模型编码，为空时由每次请求自行指定</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseOpenAI(this ChatClientBuilder builder, HttpClient httpClient, String apiKey, String? model = null)
+    {
+        var endpoint = httpClient.BaseAddress?.ToString().TrimEnd('/');
+        var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
+        return builder.SetInnerClient(new OpenAiChatClient(opts, httpClient));
+    }
+
+    /// <summary>使用阿里百炼 DashScope 客户竭作为内层客户竭</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="apiKey">阿里云 API Key</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用默认 DashScope 地址</param>
+    /// <param name="model">默认模型</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseDashScope(this ChatClientBuilder builder, String apiKey, String? endpoint = null, String? model = null)
+    {
+        var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
+        return builder.SetInnerClient(new DashScopeChatClient(opts));
+    }
+
+    /// <summary>使用 Anthropic Claude 客户竭作为内层客户竭</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="apiKey">Anthropic API Key</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <param name="model">默认模型</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseAnthropic(this ChatClientBuilder builder, String apiKey, String? endpoint = null, String? model = null)
+    {
+        var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
+        return builder.SetInnerClient(new AnthropicChatClient(opts));
+    }
+
+    /// <summary>使用 Ollama 客户竭作为内层客户竭</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="endpoint">Ollama 地址；为空时使用默认 http://localhost:11434</param>
+    /// <param name="model">默认模型</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseOllama(this ChatClientBuilder builder, String? endpoint = null, String? model = null)
+    {
+        var opts = new AiClientOptions { Endpoint = endpoint, Model = model };
+        return builder.SetInnerClient(new OllamaChatClient(opts));
+    }
+
+    /// <summary>使用任意已注册攴商码创建客户竭作为内层客户竭</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="codeOrAlias">攴商编码或别名，如 "DashScope"</param>
+    /// <param name="options">连接选项</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseAiClient(this ChatClientBuilder builder, String codeOrAlias, AiClientOptions options)
+        => builder.SetInnerClient(AiClientRegistry.Default.CreateClient(codeOrAlias, options));
 }

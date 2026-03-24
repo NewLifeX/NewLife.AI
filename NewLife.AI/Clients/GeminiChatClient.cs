@@ -1,97 +1,136 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
+using NewLife.AI.Providers;
 using NewLife.Serialization;
 
-namespace NewLife.AI.Providers;
+namespace NewLife.AI.Clients;
 
-/// <summary>Google Gemini 服务商。支持 Gemini 系列模型的原生 API 协议</summary>
+/// <summary>Google Gemini 对话客户端。实现 Gemini 原生 API 协议</summary>
 /// <remarks>
 /// Gemini API 与 OpenAI 的主要差异：
 /// <list type="bullet">
-/// <item>认证通过 URL 参数 key 传递</item>
-/// <item>请求路径包含模型名称</item>
-/// <item>消息结构使用 contents 数组，角色为 user/model</item>
-/// <item>流式接口路径为 streamGenerateContent</item>
-/// <item>响应中的 content 使用 parts 数组</item>
+/// <item>认证通过 URL 参数 key 传递，不使用 Authorization 请求头</item>
+/// <item>请求路径包含模型名称：/v1/models/{model}:generateContent</item>
+/// <item>消息结构使用 contents 数组，角色为 user/model（非 assistant）</item>
+/// <item>system 指令通过独立的 systemInstruction 顶级字段传入</item>
+/// <item>流式接口路径为 :streamGenerateContent?alt=sse</item>
 /// </list>
 /// </remarks>
-public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
+[AiClient("Gemini", "谷歌Gemini", "https://generativelanguage.googleapis.com", Protocol = "Gemini", Description = "谷歌 Gemini 系列多模态大模型，支持超长上下文")]
+[AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true)]
+[AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true)]
+[AiClientModel("imagen-3.0-generate-001", "Imagen 3", ImageGeneration = true, FunctionCalling = false)]
+public class GeminiChatClient : AiClientBase, IChatClient
 {
     #region 属性
-    /// <summary>服务商编码</summary>
-    public virtual String Code => "Gemini";
-
-    /// <summary>服务商名称</summary>
-    public virtual String Name => "谷歌Gemini";
-
-    /// <summary>服务商描述</summary>
-    public virtual String? Description => "谷歌 Gemini 系列多模态大模型，支持超长上下文";
-
-    /// <summary>API 协议类型</summary>
-    public virtual String ApiProtocol => "Gemini";
+    /// <inheritdoc/>
+    protected override String ClientName => "谷歌Gemini";
 
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://generativelanguage.googleapis.com";
 
-    /// <summary>主流模型列表。Google Gemini 各主力模型及其能力</summary>
-    public virtual AiModelInfo[] Models { get; } =
+    /// <summary>主流模型列表</summary>
+    public virtual AiModelInfo[] DefaultModels { get; } =
     [
-        new("gemini-2.5-pro",                  "Gemini 2.5 Pro",    new(true,  true, false, true)),
-        new("gemini-2.5-flash",                "Gemini 2.5 Flash",  new(true,  true, false, true)),
-        new("imagen-3.0-generate-001",         "Imagen 3",          new(false, false, true, false)),
+        new("gemini-2.5-pro",          "Gemini 2.5 Pro",   new(true,  true, false, true)),
+        new("gemini-2.5-flash",        "Gemini 2.5 Flash", new(true,  true, false, true)),
+        new("imagen-3.0-generate-001", "Imagen 3",         new(false, false, true, false)),
     ];
+
+    /// <summary>连接选项</summary>
+    protected readonly AiClientOptions _options;
+    #endregion
+
+    #region 构造
+    /// <summary>用连接选项初始化 Gemini 客户端</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+    /// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
+    public GeminiChatClient(AiClientOptions options, HttpClient? httpClient = null)
+        : base(httpClient)
+    {
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+    }
+    #endregion
+
+    #region IChatClient
+    /// <summary>非流式对话完成</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    {
+        request.Model ??= _options.Model;
+
+        var model = request.Model;
+        using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
+        try
+        {
+            var response = await ChatAsync(request, cancellationToken).ConfigureAwait(false);
+            if (span != null && response.Usage != null)
+                span.Value = response.Usage.TotalTokens;
+            return response;
+        }
+        catch (Exception ex)
+        {
+            span?.SetError(ex, null);
+            Log.Error("[{0}] GetResponseAsync error! {1}", ClientName, ex.Message);
+            throw;
+        }
+    }
+
+    /// <summary>流式对话完成</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        request.Model ??= _options.Model;
+
+        var model = request.Model;
+        using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
+
+        UsageDetails? lastUsage = null;
+        await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
+        {
+            if (chunk.Usage != null) lastUsage = chunk.Usage;
+            yield return chunk;
+        }
+
+        if (span != null && lastUsage != null)
+            span.Value = lastUsage.TotalTokens;
+    }
+
+    /// <summary>释放资源</summary>
+    public void Dispose() { }
     #endregion
 
     #region 方法
-    /// <summary>创建该服务商对应的对话选项实例</summary>
-    /// <returns>新建的 ChatOptions 实例</returns>
-    public virtual ChatOptions CreateChatOptions() => new();
-
-    /// <summary>创建已绑定连接参数的对话客户端</summary>
-    /// <param name="options">连接选项</param>
-    /// <returns>已配置的 IChatClient 实例</returns>
-    public virtual IChatClient CreateClient(AiProviderOptions options)
-    {
-        // 如果未指定模型且 Models 列表不为空，默认使用第一个模型
-        if (options.Model.IsNullOrEmpty() && Models != null && Models.Length > 0) options.Model = Models[0].Model;
-
-        return new OpenAiChatClient(this, options) { Log = Log, Tracer = Tracer };
-    }
-
     /// <summary>非流式对话</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public virtual async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
+    private async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken)
     {
         request.Stream = false;
         var body = BuildGeminiRequest(request);
 
-        var model = request.Model ?? "gemini-pro";
-        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/models/{model}:generateContent?key={options.ApiKey}";
+        var model = request.Model ?? "gemini-2.5-flash";
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = $"{endpoint}/v1/models/{model}:generateContent?key={_options.ApiKey}";
 
-        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
         return ParseGeminiResponse(responseText, model);
     }
 
     /// <summary>流式对话</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="options">连接选项</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         request.Stream = true;
         var body = BuildGeminiRequest(request);
 
-        var model = request.Model ?? "gemini-pro";
-        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/models/{model}:streamGenerateContent?alt=sse&key={options.ApiKey}";
+        var model = request.Model ?? "gemini-2.5-flash";
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = $"{endpoint}/v1/models/{model}:streamGenerateContent?alt=sse&key={_options.ApiKey}";
 
-        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -116,13 +155,10 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
     #region 辅助
     /// <summary>构建 Gemini 请求体</summary>
-    /// <param name="request">请求对象</param>
-    /// <returns></returns>
-    private Object BuildGeminiRequest(ChatRequest request)
+    private static Object BuildGeminiRequest(ChatRequest request)
     {
         var dic = new Dictionary<String, Object>();
 
-        // 转换消息为 Gemini contents 格式
         var contents = new List<Object>();
         String? systemInstruction = null;
 
@@ -134,19 +170,17 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
                 continue;
             }
 
+            // Gemini 角色为 user/model，不使用 assistant
             var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
             var parts = new List<Object>();
 
-            if (msg.Content is String textContent)
-                parts.Add(new Dictionary<String, Object> { ["text"] = textContent });
-            else if (msg.Content != null)
+            if (msg.Content != null)
                 parts.Add(new Dictionary<String, Object> { ["text"] = msg.Content.ToString() ?? "" });
 
             contents.Add(new Dictionary<String, Object> { ["role"] = role, ["parts"] = parts });
         }
         dic["contents"] = contents;
 
-        // system instruction
         if (!String.IsNullOrEmpty(systemInstruction))
         {
             dic["systemInstruction"] = new Dictionary<String, Object>
@@ -155,7 +189,6 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             };
         }
 
-        // 生成配置
         var genConfig = new Dictionary<String, Object>();
         if (request.Temperature != null) genConfig["temperature"] = request.Temperature.Value;
         if (request.TopP != null) genConfig["topP"] = request.TopP.Value;
@@ -165,7 +198,6 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         if (genConfig.Count > 0)
             dic["generationConfig"] = genConfig;
 
-        // 工具列表
         if (request.Tools != null && request.Tools.Count > 0)
         {
             var functionDeclarations = new List<Object>();
@@ -187,10 +219,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     }
 
     /// <summary>解析 Gemini 非流式响应</summary>
-    /// <param name="json">JSON 字符串</param>
-    /// <param name="model">模型名称</param>
-    /// <returns></returns>
-    private ChatResponse ParseGeminiResponse(String json, String model)
+    private static ChatResponse ParseGeminiResponse(String json, String model)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 Gemini 响应");
@@ -203,26 +232,15 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         if (dic["candidates"] is IList<Object> candidates)
         {
-            //var choices = new List<ChatChoice>();
-            for (var i = 0; i < candidates.Count; i++)
+            foreach (var item in candidates)
             {
-                if (candidates[i] is not IDictionary<String, Object> candidate) continue;
-
+                if (item is not IDictionary<String, Object> candidate) continue;
                 var contentText = ExtractGeminiContent(candidate);
                 var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
-
-                //choices.Add(new ChatChoice
-                //{
-                //    Index = i,
-                //    Message = new ChatMessage { Role = "assistant", Content = contentText },
-                //    FinishReason = finishReason,
-                //});
                 response.Add(contentText, null, finishReason);
             }
-            //response.Messages = choices;
         }
 
-        // 用量统计
         if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new UsageDetails
@@ -237,10 +255,7 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     }
 
     /// <summary>解析 Gemini 流式数据块</summary>
-    /// <param name="data">JSON 数据</param>
-    /// <param name="model">模型名称</param>
-    /// <returns></returns>
-    private ChatResponse? ParseGeminiStreamChunk(String data, String model)
+    private static ChatResponse? ParseGeminiStreamChunk(String data, String model)
     {
         var dic = JsonParser.Decode(data);
         if (dic == null) return null;
@@ -253,23 +268,13 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
 
         if (dic["candidates"] is IList<Object> candidates && candidates.Count > 0)
         {
-            //var choices = new List<ChatChoice>();
-            for (var i = 0; i < candidates.Count; i++)
+            foreach (var item in candidates)
             {
-                if (candidates[i] is not IDictionary<String, Object> candidate) continue;
-
-                var contentText = ExtractGeminiContent(candidate);
+                if (item is not IDictionary<String, Object> candidate) continue;
+                var deltaText = ExtractGeminiContent(candidate);
                 var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
-
-                //choices.Add(new ChatChoice
-                //{
-                //    Index = i,
-                //    Delta = new ChatMessage { Content = contentText },
-                //    FinishReason = finishReason,
-                //});
-                response.AddDelta(contentText, null, finishReason);
+                response.AddDelta(deltaText, null, finishReason);
             }
-            //response.Messages = choices;
         }
 
         if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
@@ -286,15 +291,10 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     }
 
     /// <summary>提取 Gemini candidate 中的文本内容</summary>
-    /// <param name="candidate">候选项字典</param>
-    /// <returns></returns>
     private static String ExtractGeminiContent(IDictionary<String, Object> candidate)
     {
-        if (candidate["content"] is not IDictionary<String, Object> contentDic)
-            return "";
-
-        if (contentDic["parts"] is not IList<Object> parts)
-            return "";
+        if (candidate["content"] is not IDictionary<String, Object> contentDic) return "";
+        if (contentDic["parts"] is not IList<Object> parts) return "";
 
         var sb = new StringBuilder();
         foreach (var part in parts)
@@ -305,16 +305,14 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
         return sb.ToString();
     }
 
-    /// <summary>映射 Gemini 的 finishReason 到 OpenAI 格式</summary>
-    /// <param name="finishReason">Gemini 结束原因</param>
-    /// <returns></returns>
+    /// <summary>映射 Gemini finishReason 到标准格式</summary>
     private static String? MapGeminiFinishReason(String? finishReason) => finishReason switch
     {
         "STOP" => "stop",
         "MAX_TOKENS" => "length",
-        "SAFETY" => "content_filter",
-        "RECITATION" => "content_filter",
-        _ => finishReason?.ToLower(),
+        "SAFETY" or "RECITATION" => "content_filter",
+        null => null,
+        _ => finishReason.ToLower(),
     };
     #endregion
 }

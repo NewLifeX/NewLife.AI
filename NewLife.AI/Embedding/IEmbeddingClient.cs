@@ -1,3 +1,5 @@
+﻿using NewLife.AI.Providers;
+
 namespace NewLife.AI.Embedding;
 
 /// <summary>AI 嵌入向量客户端接口。将文本转换为浮点向量，用于语义搜索、相似度计算等场景</summary>
@@ -93,5 +95,5 @@ public interface IEmbeddingProvider
     /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
     /// <returns>已配置的 IEmbeddingClient 实例</returns>
-    IEmbeddingClient CreateEmbeddingClient(Providers.AiProviderOptions options);
+    IEmbeddingClient CreateEmbeddingClient(AiClientOptions options);
 }

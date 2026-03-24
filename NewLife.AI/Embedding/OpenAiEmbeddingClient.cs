@@ -15,7 +15,7 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
 {
     #region 属性
 
-    private readonly AiProviderOptions _options;
+    private readonly AiClientOptions _options;
     private readonly String _defaultEndpoint;
 
     /// <summary>嵌入路径</summary>
@@ -40,7 +40,7 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
     /// <param name="providerName">服务商名称（用于元数据展示）</param>
     /// <param name="defaultEndpoint">服务商默认 API 地址</param>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
-    public OpenAiEmbeddingClient(String providerName, String defaultEndpoint, AiProviderOptions options)
+    public OpenAiEmbeddingClient(String providerName, String defaultEndpoint, AiClientOptions options)
     {
         if (providerName == null) throw new ArgumentNullException(nameof(providerName));
         if (defaultEndpoint == null) throw new ArgumentNullException(nameof(defaultEndpoint));
@@ -55,11 +55,7 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
         };
     }
 
-    /// <summary>从 IAiProvider 创建嵌入客户端（便捷重载）</summary>
-    /// <param name="provider">AI 服务商</param>
-    /// <param name="options">连接选项</param>
-    public OpenAiEmbeddingClient(IAiProvider provider, AiProviderOptions options)
-        : this(provider.Name, provider.DefaultEndpoint, options) { }
+
 
     private HttpClient CreateHttpClient()
     {
