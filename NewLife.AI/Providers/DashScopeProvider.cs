@@ -174,28 +174,8 @@ public class DashScopeProvider : OpenAiProvider
         var url = BuildChatUrl(options);
         var isMultimodal = IsMultimodalModel(options.Model);
         var body = BuildDashScopeRequestBody(request, isMultimodal, true);
-        var bodyStr = body?.ToJson() ?? "";
 
-        // 必须手动构建请求以注入 SSE 请求头，不能通过 PostStreamAsync 基类方法（其不支持额外请求头）
-        // 文本端点：X-DashScope-SSE: enable（DashScope 专有）
-        // 多模态端点：Accept: text/event-stream（标准 SSE，multimodal-generation 不支持 X-DashScope-SSE）
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
-        };
-        SetHeaders(req, options);
-        if (isMultimodal)
-            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
-        else
-            req.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
-
-        using var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode)
-        {
-            var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
-        }
-
+        using var resp = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -602,7 +582,7 @@ public class DashScopeProvider : OpenAiProvider
             }
             else if (tool.Type == "mcp" && tool.Mcp != null)
             {
-                var mcp = new Dictionary<String, Object?>();
+                var mcp = new Dictionary<String, Object>();
                 if (tool.Mcp.ServerUrl != null) mcp["server_url"] = tool.Mcp.ServerUrl;
                 if (tool.Mcp.ServerId != null) mcp["server_id"] = tool.Mcp.ServerId;
                 if (tool.Mcp.Configs != null) mcp["configs"] = tool.Mcp.Configs;
@@ -816,7 +796,21 @@ public class DashScopeProvider : OpenAiProvider
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+
+        if (ApiProtocol != "DashScope") return;
+
+        var path = request.RequestUri?.AbsolutePath;
+        if (String.IsNullOrEmpty(path)) return;
+
+        if (!path.EndsWith(ChatGenerationPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.EndsWith(MultimodalGenerationPath, StringComparison.OrdinalIgnoreCase)) return;
+
+        if (IsMultimodalModel(options.Model))
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        else
+            request.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
     }
+
     #endregion
 }
 
