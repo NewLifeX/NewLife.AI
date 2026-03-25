@@ -71,7 +71,6 @@ export interface UserSettings {
   contextRounds: number
   systemPrompt: string
   mcpEnabled: boolean
-  defaultSkill: string
   streamingSpeed: number
   allowTraining: boolean
 }

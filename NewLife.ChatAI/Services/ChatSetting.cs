@@ -126,11 +126,6 @@ public class ChatSetting : Config<ChatSetting>
     [Description("网关限流。每分钟每用户最大请求次数")]
     public Int32 GatewayRateLimit { get; set; } = 60;
 
-    /// <summary>启用自学习。对话结束后异步提取用户记忆，构建用户画像</summary>
-    [Category("功能开关")]
-    [Description("启用自学习。对话结束后异步提取用户记忆，构建用户画像")]
-    public Boolean EnableSelfLearning { get; set; } = false;
-
     /// <summary>上游重试次数。模型返回 429 时最大重试</summary>
     [Category("功能开关")]
     [Description("上游重试次数。模型返回 429 时最大重试")]
@@ -162,60 +157,4 @@ public class ChatSetting : Config<ChatSetting>
     public Boolean EnableToolApproval { get; set; } = false;
     #endregion
 
-    #region 自学习配置
-    /// <summary>评分阈值。对话质量低于此分值不触发记忆提取，默认 0.6</summary>
-    [Category("自学习配置")]
-    [Description("评分阈值。对话质量低于此分值不触发记忆提取，默认 0.6")]
-    public Double LearningScoreThreshold { get; set; } = 0.6;
-
-    /// <summary>每用户最大记忆条数。超出后按置信度淘汰旧记忆，默认 500</summary>
-    [Category("自学习配置")]
-    [Description("每用户最大记忆条数。超出后按置信度淘汰旧记忆，默认 500")]
-    public Int32 MaxMemoryPerUser { get; set; } = 500;
-
-    /// <summary>记忆保留天数。长期未强化的记忆自动过期，默认 365</summary>
-    [Category("自学习配置")]
-    [Description("记忆保留天数。长期未强化的记忆自动过期，默认 365")]
-    public Int32 MemoryRetentionDays { get; set; } = 365;
-
-    /// <summary>每次对话最大注入记忆条数。注入到 System Prompt 的记忆上限，默认 5</summary>
-    [Category("自学习配置")]
-    [Description("每次对话最大注入记忆条数。注入到 System Prompt 的记忆上限，默认 5")]
-    public Int32 MemoryInjectionCount { get; set; } = 5;
-
-    /// <summary>记忆占上下文窗口百分比上限。防止记忆注入挤占对话内容，默认 10</summary>
-    [Category("自学习配置")]
-    [Description("记忆占上下文窗口百分比上限。防止记忆注入挤占对话内容，默认 10")]
-    public Int32 MemoryTokenBudgetPercent { get; set; } = 10;
-
-    /// <summary>学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型</summary>
-    [Category("自学习配置")]
-    [Description("学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型")]
-    public String LearningModel { get; set; } = "";
-
-    /// <summary>评分提示词。自定义对话质量评分模板，为空时使用内置默认模板</summary>
-    [Category("自学习配置")]
-    [Description("评分提示词。自定义对话质量评分模板，为空时使用内置默认模板")]
-    public String ScoringPrompt { get; set; } = "";
-
-    /// <summary>提取提示词。自定义记忆提取模板，为空时使用内置默认模板</summary>
-    [Category("自学习配置")]
-    [Description("提取提示词。自定义记忆提取模板，为空时使用内置默认模板")]
-    public String ExtractionPrompt { get; set; } = "";
-
-    /// <summary>启用知识融合。定时将碎片记忆融合为更高质量的知识条目</summary>
-    [Category("自学习配置")]
-    [Description("启用知识融合。定时将碎片记忆融合为更高质量的知识条目")]
-    public Boolean EnableKnowledgeFusion { get; set; } = false;
-
-    /// <summary>融合最小记忆数。同分类记忆达到此数才触发融合，默认 5</summary>
-    [Category("自学习配置")]
-    [Description("融合最小记忆数。同分类记忆达到此数才触发融合，默认 5")]
-    public Int32 FusionMinMemories { get; set; } = 5;
-
-    /// <summary>启用知识审核。受限和普通用户的低置信度知识需人工审核</summary>
-    [Category("自学习配置")]
-    [Description("启用知识审核。受限和普通用户的低置信度知识需人工审核")]
-    public Boolean EnableKnowledgeReview { get; set; } = false;
-    #endregion
 }

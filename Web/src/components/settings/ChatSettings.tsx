@@ -18,18 +18,10 @@ interface ChatSettingsProps {
   onSystemPromptChange: (v: string) => void
   mcpEnabled: boolean
   onMcpEnabledChange: (enabled: boolean) => void
-  defaultSkill: string
-  onDefaultSkillChange: (skill: string) => void
   streamingSpeed: number
   onStreamingSpeedChange: (speed: number) => void
   models: ModelInfo[]
 }
-
-const skillOptions = [
-  { value: 'general', label: 'General (NewLife 2.0)' },
-  { value: 'code', label: 'Code (CodeMaster)' },
-  { value: 'creative', label: 'Creative (Muse)' },
-]
 
 const shortcutOptions = [
   { value: 'Enter', label: 'Enter' },
@@ -55,8 +47,6 @@ export function ChatSettings({
   onSystemPromptChange,
   mcpEnabled,
   onMcpEnabledChange,
-  defaultSkill,
-  onDefaultSkillChange,
   streamingSpeed,
   onStreamingSpeedChange,
   models,
@@ -163,16 +153,6 @@ export function ChatSettings({
             </div>
           </div>
           <Toggle checked={mcpEnabled} onChange={onMcpEnabledChange} />
-        </div>
-
-        <div className="border-b border-gray-100 dark:border-gray-800" />
-
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.defaultSkill')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.defaultSkillDesc')}</div>
-          </div>
-          <Select options={skillOptions} value={defaultSkill} onChange={onDefaultSkillChange} className="w-48" />
         </div>
 
         <div className="border-b border-gray-100 dark:border-gray-800" />

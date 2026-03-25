@@ -43,7 +43,6 @@ const defaults: UserSettings = {
   contextRounds: 10,
   systemPrompt: '',
   mcpEnabled: true,
-  defaultSkill: 'general',
   streamingSpeed: 3,
   allowTraining: false,
 }

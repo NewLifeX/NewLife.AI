@@ -274,7 +274,6 @@ export async function streamMessage(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
   attachmentIds?: string[],
-  skillCode?: string,
   modelId?: number,
 ): Promise<void> {
   await fetchSSE(
@@ -287,7 +286,6 @@ export async function streamMessage(
         thinkingMode,
         modelId: modelId || undefined,
         attachmentIds: attachmentIds?.length ? attachmentIds : undefined,
-        skillCode: skillCode || undefined,
       }),
       signal,
     },
@@ -401,7 +399,6 @@ interface UserSettingsDto {
   systemPrompt: string
   allowTraining: boolean
   mcpEnabled: boolean
-  defaultSkill: string
   streamingSpeed: number
 }
 
@@ -416,7 +413,6 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     contextRounds: dto.contextRounds,
     systemPrompt: dto.systemPrompt,
     mcpEnabled: dto.mcpEnabled,
-    defaultSkill: dto.defaultSkill,
     streamingSpeed: dto.streamingSpeed,
     allowTraining: dto.allowTraining,
   }
@@ -441,7 +437,6 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       systemPrompt: settings.systemPrompt ?? '',
       allowTraining: settings.allowTraining ?? false,
       mcpEnabled: settings.mcpEnabled,
-      defaultSkill: settings.defaultSkill,
       streamingSpeed: settings.streamingSpeed,
     }),
   })
@@ -631,90 +626,4 @@ export async function editImage(
   return res.json()
 }
 
-// ── Skills ──
 
-export interface SkillInfo {
-  id: number
-  code: string
-  name: string
-  icon: string
-  category: string
-  description: string
-  isSystem: boolean
-}
-
-export async function fetchUserSkills(): Promise<SkillInfo[]> {
-  return request<SkillInfo[]>('/api/user/skills')
-}
-
-export async function fetchAllSkills(category?: string): Promise<SkillInfo[]> {
-  const qs = category ? `?category=${encodeURIComponent(category)}` : ''
-  return request<SkillInfo[]>(`/api/skills${qs}`)
-}
-
-export async function setConversationSkill(conversationId: string, skillId: number): Promise<void> {
-  await request<unknown>(`/api/conversations/${conversationId}/skill`, {
-    method: 'PUT',
-    body: JSON.stringify({ skillId }),
-  })
-}
-
-// ── Self-Learning Memory ──
-
-export interface MemoryItem {
-  id: number
-  category: string
-  key: string
-  value: string
-  confidence: number
-  isActive: boolean
-  createTime: string
-  updateTime: string
-}
-
-export interface UserProfileInfo {
-  id: number
-  userId: number
-  summary: string
-  preferences: string
-  habits: string
-  interests: string
-  memoryCount: number
-  lastAnalyzeTime: string | null
-  analyzeCount: number
-}
-
-export interface UserTagInfo {
-  id: number
-  name: string
-  category: string
-  weight: number
-}
-
-export async function fetchMemories(): Promise<MemoryItem[]> {
-  return request<MemoryItem[]>('/api/memory')
-}
-
-export async function updateMemory(id: number, data: { isActive?: boolean; value?: string }): Promise<void> {
-  await request<unknown>(`/api/memory/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteMemory(id: number): Promise<void> {
-  await request<unknown>(`/api/memory/${id}`, { method: 'DELETE' })
-}
-
-export async function fetchUserProfile(): Promise<UserProfileInfo> {
-  return request<UserProfileInfo>('/api/profile')
-}
-
-export async function fetchUserTags(category?: string): Promise<UserTagInfo[]> {
-  const qs = category ? `?category=${encodeURIComponent(category)}` : ''
-  return request<UserTagInfo[]>(`/api/profile/tags${qs}`)
-}
-
-export async function deleteUserTag(id: number): Promise<void> {
-  await request<unknown>(`/api/profile/tags/${id}`, { method: 'DELETE' })
-}

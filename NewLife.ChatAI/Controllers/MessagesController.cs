@@ -50,7 +50,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
             return;
         }
 
-        using var span = tracer?.NewSpan("chat:StreamSend", new { request.ModelId, request.SkillCode, request.ThinkingMode });
+        using var span = tracer?.NewSpan("chat:StreamSend", new { request.ModelId, request.ThinkingMode });
         span?.AppendTag(request.Content);
         SetSseHeaders();
         await StreamEventsAsync(chatService.StreamMessageAsync(conversationId, request, userId, cancellationToken), cancellationToken, "MODEL_UNAVAILABLE", ex => span?.SetError(ex)).ConfigureAwait(false);

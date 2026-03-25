@@ -6,7 +6,7 @@ import { useSettingsStore } from '@/stores'
 import type { Attachment } from '@/types'
 
 interface WelcomePageProps {
-  onSend: (message: string, skillCode?: string) => void
+  onSend: (message: string) => void
   siteTitle?: string
   suggestedQuestions?: string[]
   attachments?: Attachment[]

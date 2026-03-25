@@ -1012,10 +1012,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         if (entity == null)
         {
             // 返回默认设置
-            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty)
-            {
-                EnableLearning = true,
-            });
+            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty));
         }
 
         return Task.FromResult(ToUserSettingsDto(entity));

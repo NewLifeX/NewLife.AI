@@ -55,20 +55,8 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     /// <summary>是否启用 MCP</summary>
     public Boolean McpEnabled { get; set; } = true;
 
-    /// <summary>默认技能</summary>
-    public String DefaultSkill { get; set; } = "general";
-
     /// <summary>流式输出速度</summary>
     public Int32 StreamingSpeed { get; set; } = 3;
-
-    /// <summary>启用个人学习。用户级自学习开关，全局开关开启后此项生效</summary>
-    public Boolean EnableLearning { get; set; } = true;
-
-    /// <summary>学习模型。用户自选的记忆提取模型，为空则使用系统配置</summary>
-    public String LearningModel { get; set; } = String.Empty;
-
-    /// <summary>记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置</summary>
-    public Int32 MemoryInjectNum { get; set; } = 0;
 };
 
 /// <summary>用户资料</summary>

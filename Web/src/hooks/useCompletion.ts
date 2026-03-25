@@ -111,7 +111,6 @@ export function useCompletion(options: UseCompletionOptions): UseCompletionRetur
           },
           controller.signal,
           undefined,
-          undefined,
           modelId,
         )
       } catch (err) {

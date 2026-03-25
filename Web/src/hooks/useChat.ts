@@ -68,8 +68,6 @@ export interface UseChatReturn {
 interface AppendOptions {
   /** 附件 Id 列表 */
   attachmentIds?: string[]
-  /** Skill 代码 */
-  skillCode?: string
 }
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
@@ -183,7 +181,6 @@ export function useChat(options: UseChatOptions): UseChatReturn {
           },
           controller.signal,
           appendOptions?.attachmentIds,
-          appendOptions?.skillCode,
           modelId,
         )
 
