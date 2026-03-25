@@ -25,8 +25,4 @@
     <ProjectReference Include="..\NewLife.ChatAI\NewLife.ChatAI.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="config\**" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>

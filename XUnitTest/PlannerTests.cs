@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -22,13 +22,11 @@ public class PlannerTests
 
         public ToolCallingFakeClient(IList<ToolCall> toolCalls) => _toolCalls = toolCalls;
 
-        public ChatClientMetadata Metadata { get; } = default!;
-
-        public Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
+        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
         {
-            var resp = new ChatCompletionResponse
+            var resp = new ChatResponse
             {
-                Choices =
+                Messages =
                 [
                     new ChatChoice
                     {
@@ -44,8 +42,8 @@ public class PlannerTests
             return Task.FromResult(resp);
         }
 
-        public IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
-            => throw new System.NotImplementedException();
+        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
 
         public void Dispose() { }
     }

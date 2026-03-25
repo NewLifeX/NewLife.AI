@@ -4,299 +4,209 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest;
 
-/// <summary>AI 服务提供商单元测试</summary>
+/// <summary>AI 客户端注册表单元测试</summary>
 public class AiProviderTests
 {
-    // 通过 RegisteredTypes 枚举所有已注册服务商实例（每次调用工厂委托，返回新实例）
-    private static IEnumerable<IAiProvider> AllProviders(AiProviderFactory factory)
-        => factory.RegisteredTypes.Select(t => factory.GetProvider(t)!);
-
-    #region 工厂基础功能
+    #region 注册表基础功能
 
     [Fact]
     public void Default_RegistersExpectedCount()
     {
-        // 33 个内置服务商
-        Assert.Equal(33, AiProviderFactory.Default.RegisteredTypes.Count());
+        // 34 个内置服务商描述符（不含 OllamaCloud，OllamaCloud 是 InitData 动态生成的）
+        Assert.Equal(34, AiClientRegistry.Default.Descriptors.Count);
     }
 
     [Fact]
-    public void RegisteredTypes_ContainsExpectedTypes()
+    public void Descriptors_ContainsExpectedCodes()
     {
-        var types = AiProviderFactory.Default.RegisteredTypes.ToHashSet();
+        var descriptors = AiClientRegistry.Default.Descriptors;
 
-        Assert.Contains(typeof(OpenAiProvider), types);
-        Assert.Contains(typeof(AnthropicProvider), types);
-        Assert.Contains(typeof(GeminiProvider), types);
-        Assert.Contains(typeof(DeepSeekProvider), types);
-        Assert.Contains(typeof(OllamaProvider), types);
+        Assert.True(descriptors.ContainsKey("OpenAI"));
+        Assert.True(descriptors.ContainsKey("Anthropic"));
+        Assert.True(descriptors.ContainsKey("Gemini"));
+        Assert.True(descriptors.ContainsKey("DeepSeek"));
+        Assert.True(descriptors.ContainsKey("Ollama"));
     }
 
     [Fact]
-    public void GetProvider_ByFullName_IsCaseInsensitive()
+    public void GetDescriptor_ByCode_IsCaseInsensitive()
     {
-        var factory = AiProviderFactory.Default;
-        var fullName = typeof(OpenAiProvider).FullName!;
+        var registry = AiClientRegistry.Default;
 
-        // 每次通过委托创建新实例，大小写不敏感均能命中正确类型
-        Assert.IsType<OpenAiProvider>(factory.GetProvider(fullName));
-        Assert.IsType<OpenAiProvider>(factory.GetProvider(fullName.ToLowerInvariant()));
-        Assert.IsType<OpenAiProvider>(factory.GetProvider(fullName.ToUpperInvariant()));
+        Assert.Equal("OpenAI", registry.GetDescriptor("OpenAI")?.Code);
+        Assert.Equal("OpenAI", registry.GetDescriptor("openai")?.Code);
+        Assert.Equal("OpenAI", registry.GetDescriptor("OPENAI")?.Code);
     }
 
     [Fact]
-    public void GetProvider_ByType_ReturnsNewInstance()
+    public void GetDescriptor_ByCode_ReturnsCorrectCode()
     {
-        var factory = AiProviderFactory.Default;
-        Assert.IsType<DeepSeekProvider>(factory.GetProvider(typeof(DeepSeekProvider)));
+        var registry = AiClientRegistry.Default;
+        Assert.Equal("DeepSeek", registry.GetDescriptor("DeepSeek")?.Code);
     }
 
     [Fact]
-    public void GetProvider_ReturnsNull_WhenStringNotFound()
+    public void GetDescriptor_ReturnsNull_WhenCodeNotFound()
     {
-        Assert.Null(AiProviderFactory.Default.GetProvider("Unknown.Provider.Type"));
+        Assert.Null(AiClientRegistry.Default.GetDescriptor("Unknown.Provider.Type"));
     }
 
     [Fact]
-    public void GetProvider_ReturnsNull_WhenStringNullOrEmpty()
+    public void GetDescriptor_ReturnsNull_WhenCodeNullOrEmpty()
     {
-        var factory = AiProviderFactory.Default;
-        Assert.Null(factory.GetProvider((String)null!));
-        Assert.Null(factory.GetProvider(""));
-        Assert.Null(factory.GetProvider("   "));
+        var registry = AiClientRegistry.Default;
+        Assert.Null(registry.GetDescriptor((String)null!));
+        Assert.Null(registry.GetDescriptor(""));
+        Assert.Null(registry.GetDescriptor("   "));
     }
 
     [Fact]
-    public void GetProvider_ReturnsNull_WhenTypeNull()
+    public void GetDescriptor_ReturnsNull_WhenEmptyRegistry()
     {
-        Assert.Null(AiProviderFactory.Default.GetProvider((Type)null!));
-    }
-
-    [Fact]
-    public void GetProvider_ReturnsNull_WhenTypeNotRegistered()
-    {
-        Assert.Null(new AiProviderFactory().GetProvider(typeof(OpenAiProvider)));
+        Assert.Null(new AiClientRegistry().GetDescriptor("OpenAI"));
     }
 
     #endregion
 
-    #region 扫描与注册
+    #region 描述符注册
 
     [Fact]
-    public void RegisterType_CanFindByType()
+    public void Register_Descriptor_CanFindByCode()
     {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(DashScopeProvider));
+        var registry = new AiClientRegistry();
+        registry.Register(new AiClientDescriptor
+        {
+            Code = "TestProvider",
+            DisplayName = "测试服务商",
+            DefaultEndpoint = "https://test.api.com",
+            Protocol = "OpenAI",
+            Factory = opts => new OpenAiChatClient(opts),
+        });
 
-        Assert.Contains(typeof(DashScopeProvider), factory.RegisteredTypes);
-        Assert.IsType<DashScopeProvider>(factory.GetProvider(typeof(DashScopeProvider)));
+        Assert.True(registry.Descriptors.ContainsKey("TestProvider"));
+        Assert.Equal("TestProvider", registry.GetDescriptor("TestProvider")?.Code);
     }
 
     [Fact]
-    public void RegisterType_CanFindByFullName()
+    public void Register_ThrowsForNull()
     {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(DashScopeProvider));
-
-        Assert.IsType<DashScopeProvider>(factory.GetProvider(typeof(DashScopeProvider).FullName!));
+        Assert.Throws<ArgumentNullException>(() => new AiClientRegistry().Register(null!));
     }
 
     [Fact]
-    public void RegisterType_ThrowsForNull()
+    public void Register_Overwrites_ExistingRegistration()
     {
-        Assert.Throws<ArgumentNullException>(() => new AiProviderFactory().RegisterType(null!));
+        var registry = new AiClientRegistry();
+        registry.Register(new AiClientDescriptor { Code = "Test", DisplayName = "v1", DefaultEndpoint = "https://a.com", Protocol = "OpenAI", Factory = opts => new OpenAiChatClient(opts) });
+        registry.Register(new AiClientDescriptor { Code = "Test", DisplayName = "v2", DefaultEndpoint = "https://b.com", Protocol = "OpenAI", Factory = opts => new OpenAiChatClient(opts) });
+
+        Assert.Equal("v2", registry.Descriptors["Test"].DisplayName);
     }
 
     [Fact]
-    public void RegisterType_Overwrites_ExistingRegistration()
+    public void RegisterAlias_CanFindByFullName()
     {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(OpenAiProvider));
-        factory.RegisterType(typeof(OpenAiProvider)); // 重复注册不报错，幂等
+        var registry = new AiClientRegistry();
+        registry.Register(new AiClientDescriptor { Code = "MyProvider", DisplayName = "My Provider", DefaultEndpoint = "https://my.api.com", Protocol = "OpenAI", Factory = opts => new OpenAiChatClient(opts) });
+        registry.RegisterAlias("My.Namespace.MyProvider", "MyProvider");
 
-        Assert.Single(factory.RegisteredTypes.Where(t => t == typeof(OpenAiProvider)));
-    }
-
-    [Fact]
-    public void RegisteredTypes_AllImplementIAiProvider()
-    {
-        Assert.All(AiProviderFactory.Default.RegisteredTypes,
-            t => Assert.True(typeof(IAiProvider).IsAssignableFrom(t)));
-    }
-
-    [Fact]
-    public void RegisteredTypes_AllTypesCanCreateInstance()
-    {
-        var factory = AiProviderFactory.Default;
-        Assert.All(factory.RegisteredTypes, t => Assert.NotNull(factory.GetProvider(t)));
-    }
-
-    [Fact]
-    public void RegisteredTypes_CanFindByProviderCode()
-    {
-        var factory = AiProviderFactory.Default;
-        var openAiType = factory.RegisteredTypes
-            .FirstOrDefault(t => factory.GetProvider(t)?.Code.Equals("OpenAI", StringComparison.OrdinalIgnoreCase) == true);
-
-        Assert.Equal(typeof(OpenAiProvider), openAiType);
+        Assert.Equal("MyProvider", registry.GetDescriptor("My.Namespace.MyProvider")?.Code);
     }
 
     #endregion
 
-    #region 实例缓存（GetProviderForConfig / InvalidateConfig）
+    #region GetDescriptor 代码查找
 
     [Fact]
-    public void GetProviderForConfig_CreatesInstance_FirstCall()
+    public void GetDescriptor_SameInstance_MultipleCallsSameCode()
     {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(OpenAiProvider));
+        var registry = AiClientRegistry.Default;
+        var d1 = registry.GetDescriptor("OpenAI");
+        var d2 = registry.GetDescriptor("OpenAI");
 
-        var instance = factory.GetProviderForConfig(1, typeof(OpenAiProvider).FullName!);
-        Assert.IsType<OpenAiProvider>(instance);
+        Assert.NotNull(d1);
+        Assert.Same(d1, d2);
     }
 
     [Fact]
-    public void GetProviderForConfig_ReturnsCached_SameConfigId()
+    public void GetDescriptor_ReturnsNull_UnknownCode()
     {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(OpenAiProvider));
-        var fullName = typeof(OpenAiProvider).FullName!;
-
-        var i1 = factory.GetProviderForConfig(42, fullName);
-        var i2 = factory.GetProviderForConfig(42, fullName);
-
-        Assert.NotNull(i1);
-        Assert.Same(i1, i2);
-    }
-
-    [Fact]
-    public void GetProviderForConfig_DifferentConfigIds_ReturnDifferentInstances()
-    {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(OpenAiProvider));
-        var fullName = typeof(OpenAiProvider).FullName!;
-
-        var i1 = factory.GetProviderForConfig(10, fullName);
-        var i2 = factory.GetProviderForConfig(20, fullName);
-
-        Assert.NotNull(i1);
-        Assert.NotNull(i2);
-        Assert.NotSame(i1, i2);
-    }
-
-    [Fact]
-    public void GetProviderForConfig_ReturnsNull_UnknownType()
-    {
-        Assert.Null(new AiProviderFactory().GetProviderForConfig(1, "Unknown.Provider.Type"));
-    }
-
-    [Fact]
-    public void GetProviderForConfig_ReturnsNull_NullOrEmpty()
-    {
-        var factory = new AiProviderFactory();
-        Assert.Null(factory.GetProviderForConfig(1, ""));
-        Assert.Null(factory.GetProviderForConfig(1, null!));
-    }
-
-    [Fact]
-    public void InvalidateConfig_ForcesInstanceRecreation()
-    {
-        var factory = new AiProviderFactory();
-        factory.RegisterType(typeof(OpenAiProvider));
-        var fullName = typeof(OpenAiProvider).FullName!;
-
-        var i1 = factory.GetProviderForConfig(99, fullName);
-        factory.InvalidateConfig(99);
-        var i2 = factory.GetProviderForConfig(99, fullName);
-
-        Assert.NotNull(i1);
-        Assert.NotNull(i2);
-        Assert.NotSame(i1, i2);
-    }
-
-    [Fact]
-    public void InvalidateConfig_NonExistentId_DoesNotThrow()
-    {
-        Assert.Null(Record.Exception(() => new AiProviderFactory().InvalidateConfig(999)));
+        Assert.Null(new AiClientRegistry().GetDescriptor("Unknown"));
     }
 
     #endregion
 
-    #region OpenAI 协议服务商属性
+    #region 服务商属性验证
 
     [Theory]
-    [InlineData(typeof(OpenAiProvider), "OpenAI", "https://api.openai.com", "ChatCompletions")]
-    [InlineData(typeof(AzureAiProvider), "AzureAI", "https://models.inference.ai.azure.com", "ChatCompletions")]
-    [InlineData(typeof(DashScopeProvider), "DashScope", "https://dashscope.aliyuncs.com/compatible-mode", "ChatCompletions")]
-    [InlineData(typeof(DeepSeekProvider), "DeepSeek", "https://api.deepseek.com", "ChatCompletions")]
-    [InlineData(typeof(VolcEngineProvider), "VolcEngine", "https://ark.cn-beijing.volces.com/api/v3", "ChatCompletions")]
-    [InlineData(typeof(ZhipuProvider), "Zhipu", "https://open.bigmodel.cn/api/paas/v4", "ChatCompletions")]
-    [InlineData(typeof(MoonshotProvider), "Moonshot", "https://api.moonshot.cn", "ChatCompletions")]
-    [InlineData(typeof(HunyuanProvider), "Hunyuan", "https://api.hunyuan.cloud.tencent.com", "ChatCompletions")]
-    [InlineData(typeof(QianfanProvider), "Qianfan", "https://qianfan.baidubce.com/v2", "ChatCompletions")]
-    [InlineData(typeof(SparkProvider), "Spark", "https://spark-api-open.xf-yun.com", "ChatCompletions")]
-    [InlineData(typeof(YiProvider), "Yi", "https://api.lingyiwanwu.com", "ChatCompletions")]
-    [InlineData(typeof(MiniMaxProvider), "MiniMax", "https://api.minimax.chat", "ChatCompletions")]
-    [InlineData(typeof(SiliconFlowProvider), "SiliconFlow", "https://api.siliconflow.cn", "ChatCompletions")]
-    [InlineData(typeof(XAiProvider), "XAI", "https://api.x.ai", "ChatCompletions")]
-    [InlineData(typeof(GitHubModelsProvider), "GitHubModels", "https://models.github.ai/inference", "ChatCompletions")]
-    [InlineData(typeof(OpenRouterProvider), "OpenRouter", "https://openrouter.ai/api", "ChatCompletions")]
-    [InlineData(typeof(OllamaProvider), "Ollama", "http://localhost:11434", "ChatCompletions")]
-    [InlineData(typeof(MiMoProvider), "MiMo", "https://api.xiaomimimo.com", "ChatCompletions")]
-    [InlineData(typeof(TogetherAiProvider), "TogetherAI", "https://api.together.xyz", "ChatCompletions")]
-    [InlineData(typeof(GroqProvider), "Groq", "https://api.groq.com/openai", "ChatCompletions")]
-    [InlineData(typeof(MistralProvider), "Mistral", "https://api.mistral.ai", "ChatCompletions")]
-    [InlineData(typeof(CohereProvider), "Cohere", "https://api.cohere.com/compatibility", "ChatCompletions")]
-    [InlineData(typeof(PerplexityProvider), "Perplexity", "https://api.perplexity.ai", "ChatCompletions")]
-    [InlineData(typeof(InfiniProvider), "Infini", "https://cloud.infini-ai.com/maas", "ChatCompletions")]
-    [InlineData(typeof(CerebrasProvider), "Cerebras", "https://api.cerebras.ai", "ChatCompletions")]
-    [InlineData(typeof(FireworksProvider), "Fireworks", "https://api.fireworks.ai/inference", "ChatCompletions")]
-    [InlineData(typeof(SambaNovaProvider), "SambaNova", "https://api.sambanova.ai", "ChatCompletions")]
-    [InlineData(typeof(XiaomaPowerProvider), "XiaomaPower", "https://openapi.xmpower.cn", "ChatCompletions")]
-    [InlineData(typeof(LMStudioProvider), "LMStudio", "http://localhost:1234", "ChatCompletions")]
-    [InlineData(typeof(VllmProvider), "vLLM", "http://localhost:8000", "ChatCompletions")]
-    [InlineData(typeof(OneApiProvider), "OneAPI", "http://localhost:3000", "ChatCompletions")]
-    public void OpenAiCompatibleProvider_HasCorrectProperties(Type providerType, String expectedCode, String expectedEndpoint, String expectedProtocol)
+    [InlineData("OpenAI", "https://api.openai.com", "OpenAI")]
+    [InlineData("AzureAI", "https://models.inference.ai.azure.com", "OpenAI")]
+    [InlineData("DashScope", "https://dashscope.aliyuncs.com/api/v1", "DashScope")]
+    [InlineData("DeepSeek", "https://api.deepseek.com", "OpenAI")]
+    [InlineData("VolcEngine", "https://ark.cn-beijing.volces.com/api/v3", "OpenAI")]
+    [InlineData("Zhipu", "https://open.bigmodel.cn/api/paas/v4", "OpenAI")]
+    [InlineData("Moonshot", "https://api.moonshot.cn", "OpenAI")]
+    [InlineData("Hunyuan", "https://api.hunyuan.cloud.tencent.com", "OpenAI")]
+    [InlineData("Qianfan", "https://qianfan.baidubce.com/v2", "OpenAI")]
+    [InlineData("Spark", "https://spark-api-open.xf-yun.com", "OpenAI")]
+    [InlineData("Yi", "https://api.lingyiwanwu.com", "OpenAI")]
+    [InlineData("MiniMax", "https://api.minimax.chat", "OpenAI")]
+    [InlineData("SiliconFlow", "https://api.siliconflow.cn", "OpenAI")]
+    [InlineData("XAI", "https://api.x.ai", "OpenAI")]
+    [InlineData("GitHubModels", "https://models.github.ai/inference", "OpenAI")]
+    [InlineData("OpenRouter", "https://openrouter.ai/api", "OpenAI")]
+    [InlineData("Ollama", "http://localhost:11434", "Ollama")]
+    [InlineData("MiMo", "https://api.xiaomimimo.com", "OpenAI")]
+    [InlineData("TogetherAI", "https://api.together.xyz", "OpenAI")]
+    [InlineData("Groq", "https://api.groq.com/openai", "OpenAI")]
+    [InlineData("Mistral", "https://api.mistral.ai", "OpenAI")]
+    [InlineData("Cohere", "https://api.cohere.com/compatibility", "OpenAI")]
+    [InlineData("Perplexity", "https://api.perplexity.ai", "OpenAI")]
+    [InlineData("Infini", "https://cloud.infini-ai.com/maas", "OpenAI")]
+    [InlineData("Cerebras", "https://api.cerebras.ai", "OpenAI")]
+    [InlineData("Fireworks", "https://api.fireworks.ai/inference", "OpenAI")]
+    [InlineData("SambaNova", "https://api.sambanova.ai", "OpenAI")]
+    [InlineData("XiaomaPower", "https://openapi.xmpower.cn", "OpenAI")]
+    [InlineData("LMStudio", "http://localhost:1234", "OpenAI")]
+    [InlineData("vLLM", "http://localhost:8000", "OpenAI")]
+    [InlineData("OneAPI", "http://localhost:3000", "OpenAI")]
+    public void Descriptor_HasCorrectEndpointAndProtocol(String code, String expectedEndpoint, String expectedProtocol)
     {
-        var provider = (IAiProvider)Activator.CreateInstance(providerType)!;
+        var descriptor = AiClientRegistry.Default.GetDescriptor(code);
 
-        Assert.Equal(expectedCode, provider.Code);
-        Assert.Equal(expectedEndpoint, provider.DefaultEndpoint);
-        Assert.Equal(expectedProtocol, provider.ApiProtocol);
+        Assert.NotNull(descriptor);
+        Assert.Equal(code, descriptor!.Code);
+        Assert.Equal(expectedEndpoint, descriptor.DefaultEndpoint);
+        Assert.Equal(expectedProtocol, descriptor.Protocol);
     }
 
-    #endregion
-
-    #region Anthropic 协议服务商属性
-
     [Fact]
-    public void AnthropicProvider_HasCorrectProperties()
+    public void AnthropicDescriptor_HasCorrectProperties()
     {
-        var provider = new AnthropicProvider();
+        var descriptor = AiClientRegistry.Default.GetDescriptor("Anthropic");
 
-        Assert.Equal("Anthropic", provider.Code);
-        Assert.Equal("https://api.anthropic.com", provider.DefaultEndpoint);
-        Assert.Equal("AnthropicMessages", provider.ApiProtocol);
+        Assert.NotNull(descriptor);
+        Assert.Equal("Anthropic", descriptor!.Code);
+        Assert.Equal("https://api.anthropic.com", descriptor.DefaultEndpoint);
+        Assert.Equal("AnthropicMessages", descriptor.Protocol);
     }
 
-    #endregion
-
-    #region Gemini 协议服务商属性
-
     [Fact]
-    public void GeminiProvider_HasCorrectProperties()
+    public void GeminiDescriptor_HasCorrectProperties()
     {
-        var provider = new GeminiProvider();
+        var descriptor = AiClientRegistry.Default.GetDescriptor("Gemini");
 
-        Assert.Equal("Gemini", provider.Code);
-        Assert.Equal("https://generativelanguage.googleapis.com", provider.DefaultEndpoint);
-        Assert.Equal("Gemini", provider.ApiProtocol);
+        Assert.NotNull(descriptor);
+        Assert.Equal("Gemini", descriptor!.Code);
+        Assert.Equal("https://generativelanguage.googleapis.com", descriptor.DefaultEndpoint);
+        Assert.Equal("Gemini", descriptor.Protocol);
     }
 
     #endregion
@@ -304,120 +214,111 @@ public class AiProviderTests
     #region 所有服务商通用校验
 
     [Fact]
-    public void AllProviders_HaveNonEmptyName()
+    public void AllDescriptors_HaveNonEmptyDisplayName()
     {
-        Assert.All(AllProviders(AiProviderFactory.Default),
-            p => Assert.False(String.IsNullOrWhiteSpace(p.Name)));
+        Assert.All(AiClientRegistry.Default.Descriptors.Values,
+            d => Assert.False(String.IsNullOrWhiteSpace(d.DisplayName)));
     }
 
     [Fact]
-    public void AllProviders_HaveNonEmptyEndpoint()
+    public void AllDescriptors_HaveNonEmptyEndpoint()
     {
-        Assert.All(AllProviders(AiProviderFactory.Default),
-            p => Assert.False(String.IsNullOrWhiteSpace(p.DefaultEndpoint)));
+        Assert.All(AiClientRegistry.Default.Descriptors.Values,
+            d => Assert.False(String.IsNullOrWhiteSpace(d.DefaultEndpoint)));
     }
 
     [Fact]
-    public void AllProviders_HaveValidProtocol()
+    public void AllDescriptors_HaveValidProtocol()
     {
-        var validProtocols = new HashSet<String> { "ChatCompletions", "AnthropicMessages", "Gemini" };
-        Assert.All(AllProviders(AiProviderFactory.Default),
-            p => Assert.Contains(p.ApiProtocol, validProtocols));
+        var validProtocols = new HashSet<String> { "OpenAI", "AnthropicMessages", "Gemini", "DashScope", "Ollama" };
+        Assert.All(AiClientRegistry.Default.Descriptors.Values,
+            d => Assert.Contains(d.Protocol, validProtocols));
     }
 
     [Fact]
-    public void AllProviders_CodesAreUnique()
+    public void AllDescriptors_CodesAreUnique()
     {
-        var codes = AllProviders(AiProviderFactory.Default).Select(p => p.Code).ToList();
+        var codes = AiClientRegistry.Default.Descriptors.Values.Select(d => d.Code).ToList();
         Assert.Equal(codes.Count, codes.Select(c => c.ToLowerInvariant()).Distinct().Count());
     }
 
     [Fact]
-    public void AllProviders_TypesAreUnique()
+    public void AllDescriptors_EndpointsAreValidAbsoluteUris()
     {
-        var types = AiProviderFactory.Default.RegisteredTypes.ToList();
-        Assert.Equal(types.Count, types.Distinct().Count());
-    }
-
-    [Fact]
-    public void AllProviders_EndpointsAreValidAbsoluteUris()
-    {
-        foreach (var p in AllProviders(AiProviderFactory.Default))
+        foreach (var d in AiClientRegistry.Default.Descriptors.Values)
         {
             Assert.True(
-                Uri.TryCreate(p.DefaultEndpoint, UriKind.Absolute, out var uri),
-                $"服务商 {p.Code} 的 DefaultEndpoint 不是有效 URI: {p.DefaultEndpoint}");
+                Uri.TryCreate(d.DefaultEndpoint, UriKind.Absolute, out var uri),
+                $"服务商 {d.Code} 的 DefaultEndpoint 不是有效 URI: {d.DefaultEndpoint}");
             Assert.True(
                 uri!.Scheme == "http" || uri.Scheme == "https",
-                $"服务商 {p.Code} 的协议不是 http/https: {p.DefaultEndpoint}");
+                $"服务商 {d.Code} 的协议不是 http/https: {d.DefaultEndpoint}");
         }
     }
 
     [Fact]
-    public void CloudProviders_UseHttps()
+    public void CloudDescriptors_UseHttps()
     {
         var localCodes = new HashSet<String>(StringComparer.OrdinalIgnoreCase)
             { "Ollama", "LMStudio", "vLLM", "OneAPI" };
 
-        foreach (var p in AllProviders(AiProviderFactory.Default))
+        foreach (var d in AiClientRegistry.Default.Descriptors.Values)
         {
-            if (localCodes.Contains(p.Code)) continue;
-            Assert.StartsWith("https://", p.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
+            if (localCodes.Contains(d.Code)) continue;
+            Assert.StartsWith("https://", d.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
         }
     }
 
     [Fact]
-    public void LocalProviders_UseHttp()
+    public void LocalDescriptors_UseHttp()
     {
         var localCodes = new[] { "Ollama", "LMStudio", "vLLM", "OneAPI" };
-        var factory = AiProviderFactory.Default;
+        var registry = AiClientRegistry.Default;
 
         foreach (var code in localCodes)
         {
-            var p = AllProviders(factory)
-                .FirstOrDefault(x => x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
-            Assert.NotNull(p);
-            Assert.StartsWith("http://", p.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
+            var d = registry.GetDescriptor(code);
+            Assert.NotNull(d);
+            Assert.StartsWith("http://", d!.DefaultEndpoint, StringComparison.OrdinalIgnoreCase);
         }
     }
 
     [Fact]
     public void Default_ContainsAllCoreProviders()
     {
-        var codes = AllProviders(AiProviderFactory.Default)
-            .Select(p => p.Code)
+        var codes = AiClientRegistry.Default.Descriptors.Keys
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var expectedCodes = new[]
         {
             "OpenAI", "DashScope", "DeepSeek", "VolcEngine", "Zhipu",
-            "Moonshot", "Gemini", "Anthropic", "Ollama", "LMStudio"
+            "Moonshot", "Gemini", "Anthropic", "Ollama", "LMStudio",
         };
         Assert.All(expectedCodes, code => Assert.Contains(code, codes));
     }
 
     #endregion
 
-    #region AiProviderOptions 测试
+    #region AiClientOptions 测试
 
     [Fact]
-    public void AiProviderOptions_GetEndpoint_ReturnsCustom_WhenSet()
+    public void AiClientOptions_GetEndpoint_ReturnsCustom_WhenSet()
     {
-        var options = new AiProviderOptions { Endpoint = "https://custom.api.com" };
+        var options = new AiClientOptions { Endpoint = "https://custom.api.com" };
         Assert.Equal("https://custom.api.com", options.GetEndpoint("https://default.api.com"));
     }
 
     [Fact]
-    public void AiProviderOptions_GetEndpoint_ReturnsDefault_WhenEmpty()
+    public void AiClientOptions_GetEndpoint_ReturnsDefault_WhenEmpty()
     {
-        var options = new AiProviderOptions();
+        var options = new AiClientOptions();
         Assert.Equal("https://default.api.com", options.GetEndpoint("https://default.api.com"));
     }
 
     [Fact]
-    public void AiProviderOptions_GetEndpoint_ReturnsDefault_WhenWhitespace()
+    public void AiClientOptions_GetEndpoint_ReturnsDefault_WhenWhitespace()
     {
-        var options = new AiProviderOptions { Endpoint = "   " };
+        var options = new AiClientOptions { Endpoint = "   " };
         Assert.Equal("https://default.api.com", options.GetEndpoint("https://default.api.com"));
     }
 
@@ -426,55 +327,148 @@ public class AiProviderTests
     #region 服务商接口调用验证
 
     [Fact]
-    [DisplayName("DashScope服务商_构建请求_模型和消息正确")]
-    public void DashScopeProvider_BuildsCorrectRequest()
+    [DisplayName("DashScope服务商_模型列表_包含qwen3.5-plus")]
+    public void DashScope_HasCorrectModels()
     {
-        var provider = new DashScopeProvider();
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope");
 
-        Assert.Equal("DashScope", provider.Code);
-        Assert.Equal("阿里百炼", provider.Name);
+        Assert.NotNull(descriptor);
+        Assert.Equal("DashScope", descriptor!.Code);
+        Assert.Equal("阿里百炼", descriptor.DisplayName);
 
-        // 验证支持的模型列表包含 qwen-plus
-        var models = provider.Models;
+        var models = descriptor.Models;
+        Assert.NotNull(models);
         Assert.NotEmpty(models);
-        var qwenPlus = models.FirstOrDefault(m => m.Model == "qwen-plus");
+        var qwenPlus = models.FirstOrDefault(m => m.Model == "qwen3.5-plus");
         Assert.NotNull(qwenPlus);
-        Assert.Equal("Qwen Plus", qwenPlus.DisplayName);
+        Assert.Equal("Qwen3.5 Plus", qwenPlus!.DisplayName);
     }
 
     [Fact]
-    [DisplayName("所有OpenAI兼容服务商_请求结构一致")]
-    public void AllOpenAiCompatibleProviders_AcceptSameRequestFormat()
+    [DisplayName("所有OpenAI兼容服务商_协议标记为OpenAI")]
+    public void AllOpenAiCompatibleDescriptors_HaveCorrectProtocol()
     {
-        var factory = AiProviderFactory.Default;
-        var openAiProviders = AllProviders(factory)
-            .Where(p => p.ApiProtocol == "ChatCompletions")
+        var openAiDescriptors = AiClientRegistry.Default.Descriptors.Values
+            .Where(d => d.Protocol == "OpenAI")
             .ToList();
 
-        Assert.True(openAiProviders.Count >= 20, "应有至少 20 个 OpenAI 兼容服务商");
-
-        // 验证所有 OpenAI 兼容服务商都继承自 OpenAiProvider
-        foreach (var p in openAiProviders)
-        {
-            Assert.IsAssignableFrom<OpenAiProvider>(p);
-            // 验证模型列表不为 null
-            Assert.NotNull(p.Models);
-        }
+        Assert.True(openAiDescriptors.Count >= 20, "应有至少 20 个 OpenAI 兼容服务商");
+        foreach (var d in openAiDescriptors)
+            Assert.NotNull(d.Factory);
     }
 
     [Fact]
     [DisplayName("DashScope_QwenPlus模型_能力标记正确")]
     public void DashScope_QwenPlus_CapabilitiesCorrect()
     {
-        var provider = new DashScopeProvider();
-        var qwenPlus = provider.Models.First(m => m.Model == "qwen-plus");
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
+        var qwenPlus = descriptor.Models!.First(m => m.Model == "qwen3.5-plus");
 
-        // qwen-plus 自 2025 年起已支持思考模式，支持视觉，不支持文生图，支持函数调用
-        Assert.True(qwenPlus.Capabilities.SupportThinking);
+        // qwen3.5-plus 支持思考模式、视觉，不支持文生图，支持函数调用
+        Assert.True(qwenPlus.Capabilities!.SupportThinking);
         Assert.True(qwenPlus.Capabilities.SupportVision);
         Assert.False(qwenPlus.Capabilities.SupportImageGeneration);
         Assert.True(qwenPlus.Capabilities.SupportFunctionCalling);
     }
 
     #endregion
+
+    #region ChatCompletionResponse 模型测试
+
+    [Fact]
+    [DisplayName("ChatCompletionResponse.Text 返回第一个 Choice 的 Content")]
+    public void ChatCompletionResponse_Text_ReturnsFirstChoiceContent()
+    {
+        var response = new ChatResponse
+        {
+            Messages =
+            [
+                new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = "你好！" } }
+            ]
+        };
+
+        Assert.Equal("你好！", response.Text);
+    }
+
+    [Fact]
+    [DisplayName("ChatCompletionResponse.Text 无内容时返回 null")]
+    public void ChatCompletionResponse_Text_ReturnsNullWhenEmpty()
+    {
+        var empty = new ChatResponse();
+
+        Assert.Null(empty.Text);
+    }
+
+    #endregion
+
+    #region AskAsync 扩展方法测试
+
+    [Fact]
+    [DisplayName("AskAsync 字符串重载直接返回模型回复文本")]
+    public async Task AskAsync_ReturnsTextFromResponse()
+    {
+        const String expected = "我是 AI 助手！";
+        var fakeClient = new FixedReplyChatClient(expected);
+
+        var result = await fakeClient.AskAsync("你是谁？");
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    [DisplayName("AskAsync 消息列表重载直接返回模型回复文本")]
+    public async Task AskAsync_WithMessages_ReturnsTextFromResponse()
+    {
+        const String expected = "收到！";
+        var fakeClient = new FixedReplyChatClient(expected);
+
+        var result = await fakeClient.AskAsync([
+                ("system", "你是一名专业的 C# 开发助手"),
+                ("user", "请解释什么是依赖注入"),
+            ]);
+
+        Assert.Equal(expected, result);
+    }
+
+    #endregion
+
+    #region 注册表 CreateClient 测试
+
+    [Fact]
+    [DisplayName("AiClientRegistry.CreateClient 按 code 创建客户端实例")]
+    public void AiClientRegistry_CreateClient_ByCode_ReturnsClient()
+    {
+        var client = AiClientRegistry.Default.CreateClient("OpenAI", new AiClientOptions { ApiKey = "sk-test-key" });
+
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    [DisplayName("AiClientRegistry.CreateClient 传入未注册 code 抛出 ArgumentException")]
+    public void AiClientRegistry_CreateClient_UnknownCode_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            AiClientRegistry.Default.CreateClient("NotExistProvider999", new AiClientOptions { ApiKey = "key" }));
+    }
+
+    #endregion
+
+    // 测试专用：返回固定文本的假客户端
+    private sealed class FixedReplyChatClient : IChatClient
+    {
+        private readonly String _text;
+
+        public FixedReplyChatClient(String text) => _text = text;
+
+        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new ChatResponse
+            {
+                Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = _text } }]
+            });
+
+        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
 }

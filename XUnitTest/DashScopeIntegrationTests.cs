@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,7 +22,7 @@ namespace XUnitTest;
 /// </remarks>
 public class DashScopeIntegrationTests
 {
-    private readonly DashScopeProvider _provider = new();
+    private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
     private readonly String _apiKey;
 
     public DashScopeIntegrationTests()
@@ -33,7 +33,7 @@ public class DashScopeIntegrationTests
     /// <summary>从 config 目录或环境变量加载 ApiKey</summary>
     private static String? LoadApiKey()
     {
-        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "DashScope.key");
+        var configPath = "config/DashScope.key".GetFullPath();
         if (File.Exists(configPath))
         {
             var key = File.ReadAllText(configPath).Trim();
@@ -54,14 +54,14 @@ public class DashScopeIntegrationTests
     private Boolean HasApiKey() => !String.IsNullOrWhiteSpace(_apiKey);
 
     /// <summary>构建默认连接选项</summary>
-    private AiProviderOptions CreateOptions() => new()
+    private AiClientOptions CreateOptions() => new()
     {
-        Endpoint = _provider.DefaultEndpoint,
+        Endpoint = _descriptor.DefaultEndpoint,
         ApiKey = _apiKey,
     };
 
     /// <summary>构建简单的用户消息请求</summary>
-    private static ChatCompletionRequest CreateSimpleRequest(String model, String prompt, Int32 maxTokens = 50) => new()
+    private static ChatRequest CreateSimpleRequest(String model, String prompt, Int32 maxTokens = 200) => new()
     {
         Model = model,
         Messages = [new ChatMessage { Role = "user", Content = prompt }],
@@ -69,7 +69,7 @@ public class DashScopeIntegrationTests
     };
 
     /// <summary>构建带系统提示的请求</summary>
-    private static ChatCompletionRequest CreateRequestWithSystem(String model, String systemPrompt, String userPrompt, Int32 maxTokens = 100) => new()
+    private static ChatRequest CreateRequestWithSystem(String model, String systemPrompt, String userPrompt, Int32 maxTokens = 100) => new()
     {
         Model = model,
         Messages =
@@ -79,6 +79,20 @@ public class DashScopeIntegrationTests
         ],
         MaxTokens = maxTokens,
     };
+    /// <summary>创建客户端并执行非流式请求</summary>
+    private async Task<ChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
+    {
+        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        return await client.GetResponseAsync(request);
+    }
+
+    /// <summary>创建客户端并执行流式请求</summary>
+    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
+            yield return chunk;
+    }
 
     #region 非流式对话 - 基本功能
 
@@ -89,19 +103,19 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("qwen-plus", "用一句话介绍自己");
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
 
-        var content = response.Choices[0].Message?.Content as String;
+        var content = response.Messages[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content), "AI 回复内容不应为空");
 
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.TotalTokens > 0, "Token 用量应大于 0");
-        Assert.True(response.Usage.PromptTokens > 0, "Prompt Token 应大于 0");
-        Assert.True(response.Usage.CompletionTokens > 0, "Completion Token 应大于 0");
+        Assert.True(response.Usage.InputTokens > 0, "Prompt Token 应大于 0");
+        Assert.True(response.Usage.OutputTokens > 0, "Completion Token 应大于 0");
     }
 
     [Fact]
@@ -111,13 +125,13 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("qwen-turbo", "1+1等于几？只回答数字");
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
 
-        var content = response.Choices[0].Message?.Content as String;
+        var content = response.Messages[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
     }
 
@@ -127,12 +141,12 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-max", "你好", 30);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-max", "你好", 200);
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -147,10 +161,10 @@ public class DashScopeIntegrationTests
             "你好",
             100);
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var content = response.Choices?[0].Message?.Content as String;
+        var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
         Assert.Contains("{", content);
         Assert.Contains("}", content);
@@ -162,7 +176,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages =
@@ -171,13 +185,13 @@ public class DashScopeIntegrationTests
                 new ChatMessage { Role = "assistant", Content = "好的，我记住了，你叫小明。" },
                 new ChatMessage { Role = "user", Content = "我叫什么名字？只回答名字" },
             ],
-            MaxTokens = 30,
+            MaxTokens = 200,
         };
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var content = response.Choices?[0].Message?.Content as String;
+        var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
         Assert.Contains("小明", content);
     }
@@ -194,12 +208,12 @@ public class DashScopeIntegrationTests
 
         var request = CreateSimpleRequest("qwen-plus", "随机说一个1到100的数字，只回答数字");
         request.Temperature = 0.0;
-        request.MaxTokens = 10;
+        request.MaxTokens = 200;
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var content = response.Choices?[0].Message?.Content as String;
+        var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
     }
 
@@ -209,14 +223,14 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 20);
+        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.TopP = 0.5;
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -226,11 +240,11 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("qwen-plus", "写一篇关于春天的作文", 10);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
         Assert.NotNull(response.Usage);
-        Assert.True(response.Usage.CompletionTokens <= 15, $"CompletionTokens={response.Usage.CompletionTokens} 应受 MaxTokens 限制");
+        Assert.True(response.Usage.OutputTokens <= 15, $"CompletionTokens={response.Usage.OutputTokens} 应受 MaxTokens 限制");
     }
 
     [Fact]
@@ -239,13 +253,13 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "从1数到10，用逗号分隔", 50);
+        var request = CreateSimpleRequest("qwen-plus", "从1数到10，用逗号分隔", 200);
         request.Stop = ["5"];
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var content = response.Choices?[0].Message?.Content as String;
+        var content = response.Messages?[0].Message?.Content as String;
         Assert.NotNull(content);
     }
 
@@ -255,14 +269,14 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 20);
+        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.PresencePenalty = 1.5;
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -271,14 +285,14 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 20);
+        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.FrequencyPenalty = 1.0;
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -287,14 +301,14 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 20);
+        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.User = "test-user-12345";
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -305,12 +319,12 @@ public class DashScopeIntegrationTests
 
         var longText = String.Join(",", Enumerable.Range(1, 100).Select(i => $"item{i}"));
         var request = CreateSimpleRequest("qwen-plus", $"count items: {longText}");
-        request.MaxTokens = 20;
+        request.MaxTokens = 200;
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
+        Assert.NotNull(response.Messages);
     }
 
     [Fact]
@@ -319,7 +333,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 20);
+        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.Temperature = 0.7;
         request.TopP = 0.9;
         request.PresencePenalty = 0.5;
@@ -327,11 +341,11 @@ public class DashScopeIntegrationTests
         request.User = "integration-test";
         request.Stop = ["."];
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     #endregion
@@ -344,11 +358,11 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "1+1=?", 30);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "1+1=?", 200);
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var finishReason = response.Choices?[0].FinishReason;
+        var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
         Assert.True(finishReason == "stop" || finishReason == "length",
             $"FinishReason should be stop or length, actual: {finishReason}");
@@ -361,10 +375,10 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("qwen-plus", "describe the solar system formation in 500 words", 5);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var finishReason = response.Choices?[0].FinishReason;
+        var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
         Assert.True(finishReason == "length" || finishReason == "stop",
             $"Expected length or stop, actual: {finishReason}");
@@ -376,8 +390,8 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Model));
@@ -390,8 +404,8 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Id));
@@ -403,8 +417,8 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
         Assert.Equal("chat.completion", response.Object);
@@ -416,12 +430,12 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
-        Assert.NotNull(response?.Choices);
-        Assert.Single(response.Choices);
-        Assert.Equal(0, response.Choices[0].Index);
+        Assert.NotNull(response?.Messages);
+        Assert.Single(response.Messages);
+        Assert.Equal(0, response.Messages[0].Index);
     }
 
     [Fact]
@@ -430,11 +444,11 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
-        Assert.NotNull(response?.Choices);
-        var msg = response.Choices[0].Message;
+        Assert.NotNull(response?.Messages);
+        var msg = response.Messages[0].Message;
         Assert.NotNull(msg);
         Assert.Equal("assistant", msg.Role);
     }
@@ -445,13 +459,13 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 20);
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response?.Usage);
-        Assert.True(response.Usage.PromptTokens > 0);
-        Assert.True(response.Usage.CompletionTokens > 0);
-        Assert.Equal(response.Usage.PromptTokens + response.Usage.CompletionTokens, response.Usage.TotalTokens);
+        Assert.True(response.Usage.InputTokens > 0);
+        Assert.True(response.Usage.OutputTokens > 0);
+        Assert.Equal(response.Usage.InputTokens + response.Usage.OutputTokens, response.Usage.TotalTokens);
     }
 
     #endregion
@@ -468,15 +482,15 @@ public class DashScopeIntegrationTests
         request.MaxTokens = 200;
         request.Stream = true;
 
-        var chunks = new List<ChatCompletionResponse>();
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        var chunks = new List<ChatResponse>();
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
         }
 
         Assert.NotEmpty(chunks);
 
-        var hasContent = chunks.Any(c => c.Choices?.Any(ch =>
+        var hasContent = chunks.Any(c => c.Messages?.Any(ch =>
         {
             var text = ch.Delta?.Content as String;
             return !String.IsNullOrEmpty(text);
@@ -493,8 +507,8 @@ public class DashScopeIntegrationTests
         var request = CreateSimpleRequest("qwen-turbo", "hi");
         request.Stream = true;
 
-        var chunks = new List<ChatCompletionResponse>();
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        var chunks = new List<ChatResponse>();
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
         }
@@ -513,11 +527,11 @@ public class DashScopeIntegrationTests
         request.Stream = true;
 
         var fullContent = "";
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
-            if (chunk.Choices != null)
+            if (chunk.Messages != null)
             {
-                foreach (var choice in chunk.Choices)
+                foreach (var choice in chunk.Messages)
                 {
                     if (choice.Delta?.Content is String text)
                         fullContent += text;
@@ -535,15 +549,15 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateRequestWithSystem("qwen-plus", "Always start reply with 'OK:'", "hello", 50);
+        var request = CreateRequestWithSystem("qwen-plus", "Always start reply with 'OK:'", "hello", 200);
         request.Stream = true;
 
         var fullContent = "";
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
-            if (chunk.Choices != null)
+            if (chunk.Messages != null)
             {
-                foreach (var choice in chunk.Choices)
+                foreach (var choice in chunk.Messages)
                 {
                     if (choice.Delta?.Content is String text)
                         fullContent += text;
@@ -565,11 +579,11 @@ public class DashScopeIntegrationTests
         request.Stream = true;
 
         using var cts = new CancellationTokenSource();
-        var chunks = new List<ChatCompletionResponse>();
+        var chunks = new List<ChatResponse>();
 
         try
         {
-            await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions(), cts.Token))
+            await foreach (var chunk in ChatStreamAsync(request, null, cts.Token))
             {
                 chunks.Add(chunk);
                 if (chunks.Count >= 3)
@@ -594,15 +608,15 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 30);
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
         var chunksWithChoices = 0;
         var totalChunks = 0;
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             totalChunks++;
-            if (chunk.Choices != null && chunk.Choices.Count > 0)
+            if (chunk.Messages != null && chunk.Messages.Count > 0)
                 chunksWithChoices++;
         }
 
@@ -616,14 +630,14 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 20);
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
         var hasDelta = false;
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
-            if (chunk.Choices == null) continue;
-            foreach (var choice in chunk.Choices)
+            if (chunk.Messages == null) continue;
+            foreach (var choice in chunk.Messages)
             {
                 if (choice.Delta != null)
                     hasDelta = true;
@@ -639,11 +653,11 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
         String? objectField = null;
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             if (chunk.Object != null)
             {
@@ -662,15 +676,15 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 20);
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
         String? lastFinishReason = null;
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
-            if (chunk.Choices != null)
+            if (chunk.Messages != null)
             {
-                foreach (var choice in chunk.Choices)
+                foreach (var choice in chunk.Messages)
                 {
                     if (choice.FinishReason != null)
                         lastFinishReason = choice.FinishReason;
@@ -689,11 +703,11 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
         String? model = null;
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             if (chunk.Model != null)
             {
@@ -712,11 +726,11 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 20);
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
-        var chunks = new List<ChatCompletionResponse>();
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        var chunks = new List<ChatResponse>();
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
         }
@@ -741,15 +755,15 @@ public class DashScopeIntegrationTests
     public async Task ChatAsync_NoApiKey_ThrowsException()
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
-            Endpoint = _provider.DefaultEndpoint,
+            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "",
         };
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await _provider.ChatAsync(request, options);
+            await ChatAsync(request, options);
         });
 
         Assert.Contains("阿里百炼", ex.Message);
@@ -761,15 +775,15 @@ public class DashScopeIntegrationTests
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
         request.Stream = true;
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
-            Endpoint = _provider.DefaultEndpoint,
+            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "",
         };
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in _provider.ChatStreamAsync(request, options))
+            await foreach (var _ in ChatStreamAsync(request, options))
             {
             }
         });
@@ -782,15 +796,15 @@ public class DashScopeIntegrationTests
     public async Task ChatAsync_InvalidApiKey_ThrowsException()
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
-            Endpoint = _provider.DefaultEndpoint,
+            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await _provider.ChatAsync(request, options);
+            await ChatAsync(request, options);
         });
 
         Assert.Contains("阿里百炼", ex.Message);
@@ -806,7 +820,7 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await _provider.ChatAsync(request, CreateOptions());
+            await ChatAsync(request);
         });
 
         Assert.Contains("阿里百炼", ex.Message);
@@ -817,7 +831,7 @@ public class DashScopeIntegrationTests
     public async Task ChatAsync_InvalidEndpoint_ThrowsException()
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
             Endpoint = "https://invalid-endpoint-that-does-not-exist.example.com",
             ApiKey = _apiKey.Length > 0 ? _apiKey : "sk-test",
@@ -825,7 +839,7 @@ public class DashScopeIntegrationTests
 
         await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
-            await _provider.ChatAsync(request, options);
+            await ChatAsync(request, options);
         });
     }
 
@@ -835,15 +849,15 @@ public class DashScopeIntegrationTests
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
         request.Stream = true;
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
-            Endpoint = _provider.DefaultEndpoint,
+            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in _provider.ChatStreamAsync(request, options))
+            await foreach (var _ in ChatStreamAsync(request, options))
             {
             }
         });
@@ -862,7 +876,7 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in _provider.ChatStreamAsync(request, CreateOptions()))
+            await foreach (var _ in ChatStreamAsync(request, CreateOptions()))
             {
             }
         });
@@ -880,16 +894,16 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages = [],
-            MaxTokens = 10,
+            MaxTokens = 200,
         };
 
         await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
-            await _provider.ChatAsync(request, CreateOptions());
+            await ChatAsync(request);
         });
     }
 
@@ -899,19 +913,19 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages = [],
-            MaxTokens = 10,
+            MaxTokens = 200,
             Stream = true,
         };
 
         // DashScope may throw HttpRequestException or return empty stream for empty messages
         try
         {
-            var chunks = new List<ChatCompletionResponse>();
-            await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+            var chunks = new List<ChatResponse>();
+            await foreach (var chunk in ChatStreamAsync(request))
             {
                 chunks.Add(chunk);
             }
@@ -933,7 +947,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages =
@@ -968,13 +982,13 @@ public class DashScopeIntegrationTests
             ],
         };
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
 
-        var choice = response.Choices[0];
+        var choice = response.Messages[0];
         if (choice.FinishReason == "tool_calls")
         {
             Assert.NotNull(choice.Message?.ToolCalls);
@@ -993,7 +1007,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages =
@@ -1050,11 +1064,11 @@ public class DashScopeIntegrationTests
             ],
         };
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -1063,11 +1077,11 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages = [new ChatMessage { Role = "user", Content = "hi" }],
-            MaxTokens = 30,
+            MaxTokens = 200,
             Tools =
             [
                 new ChatTool
@@ -1084,11 +1098,11 @@ public class DashScopeIntegrationTests
             ToolChoice = "auto",
         };
 
-        var response = await _provider.ChatAsync(request, CreateOptions());
+        var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
-        Assert.NotEmpty(response.Choices);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     [Fact]
@@ -1121,7 +1135,7 @@ public class DashScopeIntegrationTests
         };
 
         // Round 1: user asks, model calls tool
-        var request1 = new ChatCompletionRequest
+        var request1 = new ChatRequest
         {
             Model = "qwen-plus",
             Messages =
@@ -1132,10 +1146,10 @@ public class DashScopeIntegrationTests
             Tools = [weatherTool],
         };
 
-        var response1 = await _provider.ChatAsync(request1, CreateOptions());
-        Assert.NotNull(response1?.Choices);
+        var response1 = await ChatAsync(request1, CreateOptions());
+        Assert.NotNull(response1?.Messages);
 
-        var choice1 = response1.Choices[0];
+        var choice1 = response1.Messages[0];
         if (choice1.FinishReason != "tool_calls" || choice1.Message?.ToolCalls == null)
             return; // model chose to answer directly, skip round 2
 
@@ -1144,7 +1158,7 @@ public class DashScopeIntegrationTests
 
         // Round 2: submit tool result, model generates final reply
         // Covers BuildRequestBody branches: ToolCallId, Name, ToolCalls serialization
-        var request2 = new ChatCompletionRequest
+        var request2 = new ChatRequest
         {
             Model = "qwen-plus",
             Messages =
@@ -1167,13 +1181,13 @@ public class DashScopeIntegrationTests
             Tools = [weatherTool],
         };
 
-        var response2 = await _provider.ChatAsync(request2, CreateOptions());
+        var response2 = await ChatAsync(request2, CreateOptions());
 
         Assert.NotNull(response2);
-        Assert.NotNull(response2.Choices);
-        Assert.NotEmpty(response2.Choices);
+        Assert.NotNull(response2.Messages);
+        Assert.NotEmpty(response2.Messages);
 
-        var finalContent = response2.Choices[0].Message?.Content as String;
+        var finalContent = response2.Messages[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(finalContent));
     }
 
@@ -1183,7 +1197,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = new ChatCompletionRequest
+        var request = new ChatRequest
         {
             Model = "qwen-plus",
             Messages =
@@ -1219,17 +1233,17 @@ public class DashScopeIntegrationTests
             ],
         };
 
-        var chunks = new List<ChatCompletionResponse>();
-        await foreach (var chunk in _provider.ChatStreamAsync(request, CreateOptions()))
+        var chunks = new List<ChatResponse>();
+        await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
         }
 
         Assert.NotEmpty(chunks);
 
-        var hasToolCalls = chunks.Any(c => c.Choices?.Any(ch =>
+        var hasToolCalls = chunks.Any(c => c.Messages?.Any(ch =>
             ch.Delta?.ToolCalls != null && ch.Delta.ToolCalls.Count > 0) == true);
-        var hasContent = chunks.Any(c => c.Choices?.Any(ch =>
+        var hasContent = chunks.Any(c => c.Messages?.Any(ch =>
             ch.Delta?.Content is String s && !String.IsNullOrEmpty(s)) == true);
 
         Assert.True(hasToolCalls || hasContent, "stream should return tool_calls or content");
@@ -1243,35 +1257,35 @@ public class DashScopeIntegrationTests
     [DisplayName("Provider_Code为DashScope")]
     public void Provider_Code_IsDashScope()
     {
-        Assert.Equal("DashScope", _provider.Code);
+        Assert.Equal("DashScope", _descriptor.Code);
     }
 
     [Fact]
     [DisplayName("Provider_Name为阿里百炼")]
     public void Provider_Name_IsCorrect()
     {
-        Assert.Equal("阿里百炼", _provider.Name);
+        Assert.Equal("阿里百炼", _descriptor.DisplayName);
     }
 
     [Fact]
     [DisplayName("Provider_DefaultEndpoint正确")]
     public void Provider_DefaultEndpoint_IsCorrect()
     {
-        Assert.Equal("https://dashscope.aliyuncs.com/compatible-mode", _provider.DefaultEndpoint);
+        Assert.Equal("https://dashscope.aliyuncs.com/api/v1", _descriptor.DefaultEndpoint);
     }
 
     [Fact]
     [DisplayName("Provider_ApiProtocol为ChatCompletions")]
     public void Provider_ApiProtocol_IsChatCompletions()
     {
-        Assert.Equal("ChatCompletions", _provider.ApiProtocol);
+        Assert.Equal("DashScope", _descriptor.Protocol);
     }
 
     [Fact]
     [DisplayName("Provider_Models列表非空且包含qwen模型")]
     public void Provider_Models_ContainsQwen()
     {
-        var models = _provider.Models;
+        var models = _descriptor.Models;
         Assert.NotNull(models);
         Assert.NotEmpty(models);
         Assert.Contains(models, m => m.Model.Contains("qwen", StringComparison.OrdinalIgnoreCase) ||
@@ -1282,7 +1296,7 @@ public class DashScopeIntegrationTests
     [DisplayName("Provider_IAiProvider接口实现")]
     public void Provider_Implements_IAiProvider()
     {
-        Assert.IsAssignableFrom<IAiProvider>(_provider);
+        Assert.IsType<AiClientDescriptor>(_descriptor);
     }
 
     #endregion
@@ -1296,15 +1310,15 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
             Endpoint = "",
             ApiKey = _apiKey,
         };
 
-        var response = await _provider.ChatAsync(request, options);
+        var response = await ChatAsync(request, options);
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
+        Assert.NotNull(response.Messages);
     }
 
     [Fact]
@@ -1314,15 +1328,15 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var options = new AiProviderOptions
+        var options = new AiClientOptions
         {
             Endpoint = null,
             ApiKey = _apiKey,
         };
 
-        var response = await _provider.ChatAsync(request, options);
+        var response = await ChatAsync(request, options);
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
+        Assert.NotNull(response.Messages);
     }
 
     [Fact]
@@ -1331,16 +1345,16 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var options = new AiProviderOptions
+        var request = CreateSimpleRequest("qwen3.5-flash", "hi", 10);
+        var options = new AiClientOptions
         {
-            Endpoint = "https://dashscope.aliyuncs.com/compatible-mode/",
+            Endpoint = "https://dashscope.aliyuncs.com/api/v1/",
             ApiKey = _apiKey,
         };
 
-        var response = await _provider.ChatAsync(request, options);
+        var response = await ChatAsync(request, options);
         Assert.NotNull(response);
-        Assert.NotNull(response.Choices);
+        Assert.NotNull(response.Messages);
     }
 
     #endregion
@@ -1355,8 +1369,8 @@ public class DashScopeIntegrationTests
 
         var tasks = Enumerable.Range(1, 3).Select(i =>
         {
-            var request = CreateSimpleRequest("qwen-turbo", $"{i}+{i}=?", 10);
-            return _provider.ChatAsync(request, CreateOptions());
+            var request = CreateSimpleRequest("qwen3.5-flash", $"{i}+{i}=?", 10);
+            return ChatAsync(request, CreateOptions());
         }).ToArray();
 
         var responses = await Task.WhenAll(tasks);
@@ -1364,8 +1378,8 @@ public class DashScopeIntegrationTests
         foreach (var response in responses)
         {
             Assert.NotNull(response);
-            Assert.NotNull(response.Choices);
-            Assert.NotEmpty(response.Choices);
+            Assert.NotNull(response.Messages);
+            Assert.NotEmpty(response.Messages);
         }
     }
 
@@ -1376,24 +1390,200 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         // Non-streaming
-        var request1 = CreateSimpleRequest("qwen-turbo", "1+1=?", 10);
-        var response1 = await _provider.ChatAsync(request1, CreateOptions());
-        Assert.NotNull(response1?.Choices);
+        var request1 = CreateSimpleRequest("qwen3.5-flash", "1+1=?", 10);
+        var response1 = await ChatAsync(request1, CreateOptions());
+        Assert.NotNull(response1?.Messages);
 
         // Streaming
-        var request2 = CreateSimpleRequest("qwen-turbo", "2+2=?", 10);
+        var request2 = CreateSimpleRequest("qwen3.5-flash", "2+2=?", 10);
         request2.Stream = true;
-        var chunks = new List<ChatCompletionResponse>();
-        await foreach (var chunk in _provider.ChatStreamAsync(request2, CreateOptions()))
+        var chunks = new List<ChatResponse>();
+        await foreach (var chunk in ChatStreamAsync(request2, CreateOptions()))
         {
             chunks.Add(chunk);
         }
         Assert.NotEmpty(chunks);
 
         // Non-streaming again
-        var request3 = CreateSimpleRequest("qwen-turbo", "3+3=?", 10);
-        var response3 = await _provider.ChatAsync(request3, CreateOptions());
-        Assert.NotNull(response3?.Choices);
+        var request3 = CreateSimpleRequest("qwen3.5-flash", "3+3=?", 10);
+        var response3 = await ChatAsync(request3, CreateOptions());
+        Assert.NotNull(response3?.Messages);
+    }
+
+    #endregion
+
+    #region 深度思考（DeepThinking）
+
+    [Fact]
+    [DisplayName("深度思考_非流式_返回ReasoningContent")]
+    public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
+    {
+        if (!HasApiKey()) return;
+
+        var request = CreateSimpleRequest("qwen3-max", "9.11 和 9.8 哪个更大？请先思考再回答", 500);
+        request.EnableThinking = true;
+        request["ThinkingBudget"] = 1024;
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
+
+        var message = response.Messages[0].Message;
+        Assert.NotNull(message);
+        Assert.False(String.IsNullOrWhiteSpace(message.Content as String));
+
+        // 支持思考的模型应返回 reasoning_content
+        if (!String.IsNullOrWhiteSpace(message.ReasoningContent))
+            Assert.Contains("思", message.ReasoningContent + message.Content as String ?? "");
+    }
+
+    [Fact]
+    [DisplayName("深度思考_流式_增量输出ReasoningContent")]
+    public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
+    {
+        if (!HasApiKey()) return;
+
+        var request = CreateSimpleRequest("qwen3-max", "1+1等于几？思考后作答", 200);
+        request.EnableThinking = true;
+        request["ThinkingBudget"] = 512;
+        request.Stream = true;
+
+        var reasoningChunks = new List<String>();
+        var contentChunks = new List<String>();
+
+        await foreach (var chunk in ChatStreamAsync(request))
+        {
+            if (chunk.Messages == null) continue;
+            foreach (var choice in chunk.Messages)
+            {
+                if (String.IsNullOrEmpty(choice.Delta?.ReasoningContent) is false)
+                    reasoningChunks.Add(choice.Delta!.ReasoningContent!);
+                if (choice.Delta?.Content is String s && !String.IsNullOrEmpty(s))
+                    contentChunks.Add(s);
+            }
+        }
+
+        // 至少应有内容输出
+        Assert.NotEmpty(contentChunks);
+    }
+
+    #endregion
+
+    #region 结构化输出（StructuredOutput）
+
+    [Fact]
+    [DisplayName("结构化输出_JsonObject模式返回有效JSON")]
+    public async Task ChatAsync_StructuredOutput_JsonObject_ReturnsValidJson()
+    {
+        if (!HasApiKey()) return;
+
+        var request = CreateSimpleRequest("qwen3.5-plus",
+            "用 JSON 格式返回：{\"city\":\"Beijing\",\"population_million\":22}", 200);
+        request.ResponseFormat = new Dictionary<String, Object> { ["type"] = "json_object" };
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
+
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content));
+    }
+
+    #endregion
+
+    #region 联网搜索（WebSearch）
+
+    [Fact]
+    [DisplayName("联网搜索_EnableSearch_回答包含时效内容")]
+    public async Task ChatAsync_EnableSearch_Works()
+    {
+        if (!HasApiKey()) return;
+
+        var request = CreateSimpleRequest("qwen3.5-plus", "今天的日期是多少？", 200);
+        request["EnableSearch"] = true;
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
+
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content));
+    }
+
+    [Fact]
+    [DisplayName("联网搜索_EnableSource_请求被接受")]
+    public async Task ChatAsync_EnableSource_Accepted()
+    {
+        if (!HasApiKey()) return;
+
+        var request = CreateSimpleRequest("qwen3.5-plus", "今天有什么新闻？", 200);
+        request["EnableSearch"] = true;
+        request["EnableSource"] = true;
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
+    }
+
+    #endregion
+
+    #region 并行工具调用（ParallelToolCalls）
+
+    [Fact]
+    [DisplayName("并行工具调用_ParallelToolCalls参数被接受")]
+    public async Task ChatAsync_ParallelToolCalls_Accepted()
+    {
+        if (!HasApiKey()) return;
+
+        var request = new ChatRequest
+        {
+            Model = "qwen3.5-plus",
+            Messages =
+            [
+                new ChatMessage { Role = "user", Content = "查一下北京和上海的天气" },
+            ],
+            MaxTokens = 200,
+            ParallelToolCalls = true,
+            Tools =
+            [
+                new ChatTool
+                {
+                    Type = "function",
+                    Function = new FunctionDefinition
+                    {
+                        Name = "get_weather",
+                        Description = "Get weather info for a city",
+                        Parameters = new Dictionary<String, Object>
+                        {
+                            ["type"] = "object",
+                            ["properties"] = new Dictionary<String, Object>
+                            {
+                                ["city"] = new Dictionary<String, Object>
+                                {
+                                    ["type"] = "string",
+                                    ["description"] = "city name",
+                                },
+                            },
+                            ["required"] = new[] { "city" },
+                        },
+                    },
+                },
+            ],
+        };
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
     }
 
     #endregion

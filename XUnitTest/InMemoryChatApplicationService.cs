@@ -13,7 +13,7 @@ using String = System.String;
 using Boolean = System.Boolean;
 using CancellationToken = System.Threading.CancellationToken;
 using NewLife.AI.Models;
-using NewLife.AI.ChatAI;
+using NewLife.ChatAI.Models;
 
 namespace NewLife.ChatAI.Services;
 
@@ -23,7 +23,7 @@ public class InMemoryChatApplicationService
     private readonly ConcurrentDictionary<Int64, ConversationSummaryDto> _conversations = new();
     private readonly ConcurrentDictionary<Int64, List<MessageDto>> _messages = new();
     private readonly ConcurrentDictionary<String, (Int64 ConversationId, DateTime CreateTime, DateTime? ExpireTime)> _shares = new();
-    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false);
+    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty);
     private Int64 _conversationSeed = 1000;
     private Int64 _messageSeed = 5000;
 
@@ -169,7 +169,7 @@ public class InMemoryChatApplicationService
         {
             Type = "message_done",
             MessageId = assistantId,
-            Usage = new ChatUsage { PromptTokens = 10, CompletionTokens = content.Length, TotalTokens = 10 + content.Length },
+            Usage = new UsageDetails { InputTokens = 10, OutputTokens = content.Length, TotalTokens = 10 + content.Length },
         };
     }
 
@@ -216,7 +216,7 @@ public class InMemoryChatApplicationService
         {
             Type = "message_done",
             MessageId = source.Id,
-            Usage = new ChatUsage { PromptTokens = 10, CompletionTokens = content.Length, TotalTokens = 10 + content.Length },
+            Usage = new UsageDetails { InputTokens = 10, OutputTokens = content.Length, TotalTokens = 10 + content.Length },
         };
     }
 
@@ -287,7 +287,7 @@ public class InMemoryChatApplicationService
         {
             Type = "message_done",
             MessageId = assistantMessageId,
-            Usage = new ChatUsage { PromptTokens = promptTokens, CompletionTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
+            Usage = new UsageDetails { InputTokens = promptTokens, OutputTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
             Title = title,
         };
     }
@@ -351,9 +351,9 @@ public class InMemoryChatApplicationService
     {
         var models = new[]
         {
-            new ModelInfoDto(1, "qwen-max", "Qwen-Max", true, true, false, true),
-            new ModelInfoDto(2, "deepseek-r1", "DeepSeek-R1", true, false, false, true),
-            new ModelInfoDto(3, "gpt-4o", "GPT-4o", true, true, false, true)
+            new ModelInfoDto(1, "qwen-max", "Qwen-Max", true, true, false, true, "Qwen"),
+            new ModelInfoDto(2, "deepseek-r1", "DeepSeek-R1", true, false, false, true, "DeepSeek"),
+            new ModelInfoDto(3, "gpt-4o", "GPT-4o", true, true, false, true, "OpenAI")
         };
         return Task.FromResult(models);
     }

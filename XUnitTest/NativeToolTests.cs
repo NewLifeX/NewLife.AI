@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NewLife;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using NewLife.AI.Tools;
@@ -57,19 +58,17 @@ public class NativeToolTests
             _finalReply = finalReply;
         }
 
-        public ChatClientMetadata Metadata { get; } = default!;
-
-        public Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken ct)
+        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken ct = default)
         {
             _callCount++;
-            ChatCompletionResponse resp;
+            ChatResponse resp;
 
             if (_callCount == 1)
             {
                 // 第一次调用：返回工具调用
-                resp = new ChatCompletionResponse
+                resp = new ChatResponse
                 {
-                    Choices =
+                    Messages =
                     [
                         new ChatChoice
                         {
@@ -98,9 +97,9 @@ public class NativeToolTests
             else
             {
                 // 第二次调用：返回最终文本回复
-                resp = new ChatCompletionResponse
+                resp = new ChatResponse
                 {
-                    Choices =
+                    Messages =
                     [
                         new ChatChoice
                         {
@@ -117,7 +116,7 @@ public class NativeToolTests
             return Task.FromResult(resp);
         }
 
-        public IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(ChatCompletionRequest r, CancellationToken ct)
+        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public void Dispose() { }
@@ -251,10 +250,10 @@ public class NativeToolTests
         Assert.Equal("ping", result);
     }
 
-    // ── NativeToolChatClient 集成测试 ────────────────────────────────────────
+    // ── ToolChatClient 集成测试 ────────────────────────────────────────────
 
     [Fact]
-    [DisplayName("NativeToolChatClient 完成单轮工具调用后返回最终文本")]
+    [DisplayName("ToolChatClient 完成单轮工具调用后返回最终文本")]
     public async Task NativeToolChatClient_SingleToolCall_ReturnsFinalText()
     {
         var registry = new ToolRegistry();
@@ -266,20 +265,17 @@ public class NativeToolTests
             toolArgs: "{\"a\":10,\"b\":20}",
             finalReply: "计算结果是 30");
 
-        var nativeClient = new NativeToolChatClient(innerClient, registry);
-        var request = new ChatCompletionRequest
-        {
-            Messages = [new ChatMessage { Role = "user", Content = "10 + 20 等于多少？" }]
-        };
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+        IList<ChatMessage> messages = [new ChatMessage { Role = "user", Content = "10 + 20 等于多少？" }];
 
-        var response = await nativeClient.CompleteAsync(request);
-        var content = response.Choices?.FirstOrDefault()?.Message?.Content as String;
+        var response = await nativeClient.GetResponseAsync(messages);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
 
         Assert.Equal("计算结果是 30", content);
     }
 
     [Fact]
-    [DisplayName("ChatClientBuilder.UseNativeTools 装配 NativeToolChatClient 中间件")]
+    [DisplayName("ChatClientBuilder.UseTools 装配 ToolChatClient 中间件")]
     public void ChatClientBuilder_UseNativeTools_AddsMiddleware()
     {
         var registry = new ToolRegistry();
@@ -287,5 +283,70 @@ public class NativeToolTests
 
         // 只需验证构建不抛异常，且 registry 中已有工具
         Assert.Equal(3, registry.Tools.Count);
+    }
+
+    [Fact]
+    [DisplayName("MergeToolOptions 完整保留所有 ChatOptions 扩展属性")]
+    public async Task MergeToolOptions_PreservesAllOptions()
+    {
+        ChatOptions? captured = null;
+        var capturingClient = new CapturingChatClient(opts => captured = opts, "done");
+
+        var registry = new ToolRegistry();
+        var nativeClient = new ToolChatClient(capturingClient, (IToolProvider)registry);
+
+        var inputOptions = new ChatOptions
+        {
+            Model = "gpt-4",
+            EnableThinking = true,
+            ParallelToolCalls = false,
+            UserId = 99 + "",
+            ConversationId = 888L + "",
+        };
+        inputOptions["ThinkingBudget"] = 1024;
+        inputOptions["EnableSearch"] = true;
+        inputOptions["SearchStrategy"] = "pro";
+        inputOptions["EnableSource"] = true;
+        inputOptions["EnableSearchExtension"] = false;
+
+        await nativeClient.GetResponseAsync([new ChatMessage { Role = "user", Content = "ping" }], inputOptions);
+
+        Assert.NotNull(captured);
+        Assert.True(captured.EnableThinking);
+        Assert.Equal(1024, captured["ThinkingBudget"] as Int32?);
+        Assert.Equal(true, captured["EnableSearch"] as Boolean?);
+        Assert.Equal("pro", captured["SearchStrategy"] as String);
+        Assert.Equal(true, captured["EnableSource"] as Boolean?);
+        Assert.Equal(false, captured["EnableSearchExtension"] as Boolean?);
+        Assert.False(captured.ParallelToolCalls);
+        Assert.Equal(99, captured.UserId.ToInt());
+        Assert.Equal(888L, captured.ConversationId.ToLong());
+    }
+
+    // 测试专用：捕获调用选项的假客户端，不触发工具循环
+    private sealed class CapturingChatClient : IChatClient
+    {
+        private readonly Action<ChatOptions?> _capture;
+        private readonly String _finalReply;
+
+        public CapturingChatClient(Action<ChatOptions?> capture, String finalReply)
+        {
+            _capture = capture;
+            _finalReply = finalReply;
+        }
+
+        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken ct = default)
+        {
+            _capture(request);
+            return Task.FromResult(new ChatResponse
+            {
+                Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = _finalReply } }]
+            });
+        }
+
+        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
     }
 }

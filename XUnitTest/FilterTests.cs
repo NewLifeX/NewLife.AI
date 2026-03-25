@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -23,13 +23,11 @@ public class FilterTests
 
         public FakeClient(String reply = "ok") => _reply = reply;
 
-        public ChatClientMetadata Metadata { get; } = default!;
-
-        public Task<ChatCompletionResponse> CompleteAsync(ChatCompletionRequest request, CancellationToken cancellationToken = default)
+        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
         {
-            var resp = new ChatCompletionResponse
+            var resp = new ChatResponse
             {
-                Choices = [new ChatChoice
+                Messages = [new ChatChoice
                 {
                     Message = new ChatMessage { Role = "assistant", Content = _reply }
                 }]
@@ -37,11 +35,11 @@ public class FilterTests
             return Task.FromResult(resp);
         }
 
-        public async IAsyncEnumerable<ChatCompletionResponse> CompleteStreamingAsync(
-            ChatCompletionRequest request,
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(
+            ChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            yield return await CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            yield return await GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
         public void Dispose() { }
@@ -67,11 +65,14 @@ public class FilterTests
 
     private sealed class RequestModifyingFilter : IChatFilter
     {
+        public String? CapturedUser { get; private set; }
+
         public async Task OnChatAsync(ChatFilterContext context, Func<ChatFilterContext, CancellationToken, Task> next, CancellationToken ct)
         {
             // before：修改请求
             context.Request.User = "modified-by-filter";
             await next(context, ct).ConfigureAwait(false);
+            CapturedUser = context.Request.User;
         }
     }
 
@@ -82,10 +83,10 @@ public class FilterTests
     public async Task FilteredClient_NoFilters_PassesThrough()
     {
         var client = new FilteredChatClient(new FakeClient("hello"));
-        var req = new ChatCompletionRequest { Messages = [new ChatMessage { Role = "user", Content = "hi" }] };
-        var resp = await client.CompleteAsync(req);
+        IList<ChatMessage> messages = [new ChatMessage { Role = "user", Content = "hi" }];
+        var resp = await client.GetResponseAsync(messages);
 
-        Assert.Equal("hello", resp.Choices![0].Message!.Content?.ToString());
+        Assert.Equal("hello", resp.Messages![0].Message!.Content?.ToString());
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class FilterTests
     {
         var filter = new RecordingFilter("f1");
         var client = new FilteredChatClient(new FakeClient(), [filter]);
-        await client.CompleteAsync(new ChatCompletionRequest { Messages = [] });
+        await client.GetResponseAsync((IList<ChatMessage>)[]);
 
         Assert.Equal(["before-f1", "after-f1"], filter.Calls);
     }
@@ -106,7 +107,7 @@ public class FilterTests
         var f1 = new RecordingFilter("f1");
         var f2 = new RecordingFilter("f2");
         var client = new FilteredChatClient(new FakeClient(), [f1, f2]);
-        await client.CompleteAsync(new ChatCompletionRequest { Messages = [] });
+        await client.GetResponseAsync((IList<ChatMessage>)[]);
 
         // 洋葱圈：f1-before → f2-before → (inner) → f2-after → f1-after
         Assert.Equal(["before-f1"], f1.Calls.GetRange(0, 1));
@@ -125,11 +126,11 @@ public class FilterTests
         var filter = new RequestModifyingFilter();
         var client = new FilteredChatClient(new FakeClient(), [filter]);
 
-        var req = new ChatCompletionRequest { Messages = [] };
-        await client.CompleteAsync(req);
+        IList<ChatMessage> messages = [];
+        await client.GetResponseAsync(messages);
 
         // RequestModifyingFilter 在 before 阶段修改了 Request.User
-        Assert.Equal("modified-by-filter", req.User);
+        Assert.Equal("modified-by-filter", filter.CapturedUser);
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class FilterTests
             .UseFilters(filter)
             .Build();
 
-        await client.CompleteAsync(new ChatCompletionRequest { Messages = [] });
+        await client.GetResponseAsync((IList<ChatMessage>)[]);
 
         Assert.Contains("before-builderFilter", filter.Calls);
         Assert.Contains("after-builderFilter", filter.Calls);

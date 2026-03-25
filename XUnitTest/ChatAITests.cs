@@ -4,11 +4,12 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.ChatAI;
 using NewLife.AI.Models;
-using NewLife.ChatAI.Controllers;
-using NewLife.ChatAI.Services;
+using NewLife.AI.Services;
 using NewLife.Log;
+using NewLife.ChatAI.Controllers;
+using NewLife.ChatAI.Models;
+using NewLife.ChatAI.Services;
 using Xunit;
 
 namespace XUnitTest;
@@ -123,13 +124,13 @@ public class ChatAITests
     [Fact]
     public void ChatStreamEventMessageDoneCarriesUsageAndTitle()
     {
-        var usage = new ChatUsage { PromptTokens = 150, CompletionTokens = 320, TotalTokens = 470 };
+        var usage = new UsageDetails { InputTokens = 150, OutputTokens = 320, TotalTokens = 470 };
         var ev = ChatStreamEvent.MessageDone(usage, "关于量子计算的讨论");
 
         Assert.Equal("message_done", ev.Type);
         Assert.Equal(470, ev.Usage?.TotalTokens);
-        Assert.Equal(150, ev.Usage?.PromptTokens);
-        Assert.Equal(320, ev.Usage?.CompletionTokens);
+        Assert.Equal(150, ev.Usage?.InputTokens);
+        Assert.Equal(320, ev.Usage?.OutputTokens);
         Assert.Equal("关于量子计算的讨论", ev.Title);
     }
 
@@ -379,7 +380,7 @@ public class ChatAITests
         Assert.Equal(0, settings.DefaultModel);
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "You are helpful", true),
+            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "You are helpful"),
             CancellationToken.None);
         Assert.Equal("en", updated.Language);
         Assert.Equal("dark", updated.Theme);
@@ -466,84 +467,37 @@ public class ChatAITests
     }
     #endregion
 
-    #region UsageService DTO 测试
-    [Fact]
-    public void UsageSummaryDtoHasCorrectProperties()
-    {
-        var dto = new UsageSummaryDto(10, 50, 1000, 2000, 3000, DateTime.Now);
-
-        Assert.Equal(10, dto.Conversations);
-        Assert.Equal(50, dto.Messages);
-        Assert.Equal(1000, dto.PromptTokens);
-        Assert.Equal(2000, dto.CompletionTokens);
-        Assert.Equal(3000, dto.TotalTokens);
-    }
-
-    [Fact]
-    public void DailyUsageDtoHasCorrectProperties()
-    {
-        var date = DateTime.Today;
-        var dto = new DailyUsageDto(date, 5, 100, 200, 300);
-
-        Assert.Equal(date, dto.Date);
-        Assert.Equal(5, dto.Calls);
-        Assert.Equal(100, dto.PromptTokens);
-        Assert.Equal(200, dto.CompletionTokens);
-        Assert.Equal(300, dto.TotalTokens);
-    }
-
-    [Fact]
-    public void ModelUsageDtoHasCorrectProperties()
-    {
-        var dto = new ModelUsageDto(1, 100, 5000);
-
-        Assert.Equal(1, dto.ModelId);
-        Assert.Equal(100, dto.Calls);
-        Assert.Equal(5000, dto.TotalTokens);
-    }
-
-    [Fact]
-    public void AppKeyUsageDtoHasCorrectProperties()
-    {
-        var now = DateTime.Now;
-        var dto = new AppKeyUsageDto(1, "业务系统A", 50, 2500, now);
-
-        Assert.Equal(1, dto.AppKeyId);
-        Assert.Equal("业务系统A", dto.Name);
-        Assert.Equal(50, dto.Calls);
-        Assert.Equal(2500, dto.TotalTokens);
-        Assert.Equal(now, dto.LastCallTime);
-    }
-    #endregion
-
     #region AppKey API DTO 测试
     [Fact]
     public void CreateAppKeyRequestHasNameAndExpireTime()
     {
-        var request = new CreateAppKeyRequest("测试系统", DateTime.Now.AddDays(30));
+        var request = new CreateAppKeyRequest("测试系统", DateTime.Now.AddDays(30), "gpt-4o,qwen-max");
 
         Assert.Equal("测试系统", request.Name);
         Assert.NotNull(request.ExpireTime);
+        Assert.Equal("gpt-4o,qwen-max", request.Models);
     }
 
     [Fact]
     public void UpdateAppKeyRequestSupportsPartialUpdate()
     {
-        var request = new UpdateAppKeyRequest("新名称", null, null);
+        var request = new UpdateAppKeyRequest("新名称", null, null, "deepseek-r1");
 
         Assert.Equal("新名称", request.Name);
         Assert.Null(request.Enable);
         Assert.Null(request.ExpireTime);
+        Assert.Equal("deepseek-r1", request.Models);
     }
 
     [Fact]
     public void AppKeyResponseDtoMasksSecret()
     {
-        var dto = new AppKeyResponseDto(1, "测试", "sk-ab****jk", true, null, 100, 5000, DateTime.Now, DateTime.Now);
+        var dto = new AppKeyResponseDto(1, "测试", "sk-ab****jk", true, "gpt-4o", null, 100, 5000, DateTime.Now, DateTime.Now);
 
         Assert.Contains("****", dto.SecretMask);
         Assert.Equal(1, dto.Id);
         Assert.Equal("测试", dto.Name);
+        Assert.Equal("gpt-4o", dto.Models);
     }
 
     [Fact]
@@ -632,7 +586,7 @@ public class ChatAITests
     [Fact]
     public void UserSettingsDtoHasAllFields()
     {
-        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "You are helpful", true);
+        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "You are helpful");
 
         Assert.Equal("zh-CN", dto.Language);
         Assert.Equal("dark", dto.Theme);
@@ -642,7 +596,6 @@ public class ChatAITests
         Assert.Equal(ThinkingMode.Think, dto.DefaultThinkingMode);
         Assert.Equal(10, dto.ContextRounds);
         Assert.Equal("You are helpful", dto.SystemPrompt);
-        Assert.True(dto.AllowTraining);
     }
     #endregion
 
@@ -666,153 +619,6 @@ public class ChatAITests
         Assert.Equal(FeedbackType.Dislike, request.Type);
         Assert.Equal("回答不准确", request.Reason);
         Assert.True(request.AllowTraining);
-    }
-    #endregion
-
-    #region BackgroundGenerationService 测试
-    [Fact]
-    public async Task BackgroundServiceRegisterAndComplete()
-    {
-        var service = new BackgroundGenerationService(XTrace.Log);
-        var tcs = new TaskCompletionSource();
-
-        async IAsyncEnumerable<ChatStreamEvent> MockStream()
-        {
-            yield return ChatStreamEvent.MessageStart(1, "test-model", 0);
-            // 等待测试信号，确保我们能在流未完成时观察到 Running 状态
-            await tcs.Task;
-            yield return ChatStreamEvent.ContentDelta("Hello ");
-            yield return ChatStreamEvent.ContentDelta("World");
-            yield return ChatStreamEvent.MessageDone(new ChatUsage { TotalTokens = 10 });
-        }
-
-        var completed = false;
-        service.Register(1001, MockStream(), task =>
-        {
-            completed = true;
-            return Task.CompletedTask;
-        });
-
-        // 流还阻塞着，此时应处于运行中
-        Assert.True(service.IsRunning(1001));
-
-        // 释放流继续执行
-        tcs.SetResult();
-        await Task.Delay(500);
-
-        Assert.False(service.IsRunning(1001));
-        Assert.True(completed);
-
-        var task = service.GetTask(1001);
-        Assert.NotNull(task);
-        Assert.Equal(BackgroundTaskStatus.Completed, task.Status);
-        Assert.Equal("Hello World", task.ContentBuilder.ToString());
-        Assert.Equal(10, task.Usage?.TotalTokens);
-    }
-
-    [Fact]
-    public async Task BackgroundServiceStopCancelsTask()
-    {
-        var service = new BackgroundGenerationService(XTrace.Log);
-
-        async IAsyncEnumerable<ChatStreamEvent> SlowStream([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
-        {
-            yield return ChatStreamEvent.ContentDelta("start");
-            await Task.Delay(5000, ct);
-            yield return ChatStreamEvent.ContentDelta("should not reach");
-        }
-
-        service.Register(2001, SlowStream());
-        Assert.True(service.IsRunning(2001));
-
-        service.Stop(2001);
-        await Task.Delay(200);
-
-        var task = service.GetTask(2001);
-        Assert.NotNull(task);
-        Assert.Equal(BackgroundTaskStatus.Cancelled, task.Status);
-    }
-
-    [Fact]
-    public void BackgroundServiceGetTaskReturnsNullForUnknown()
-    {
-        var service = new BackgroundGenerationService(XTrace.Log);
-        Assert.Null(service.GetTask(9999));
-        Assert.False(service.IsRunning(9999));
-    }
-
-    [Fact]
-    public async Task BackgroundServiceCollectsThinkingContent()
-    {
-        var service = new BackgroundGenerationService(XTrace.Log);
-
-        async IAsyncEnumerable<ChatStreamEvent> ThinkingStream()
-        {
-            yield return ChatStreamEvent.MessageStart(1, "model", ThinkingMode.Think);
-            yield return ChatStreamEvent.ThinkingDelta("让我想想...");
-            yield return ChatStreamEvent.ThinkingDelta("分析完毕。");
-            yield return ChatStreamEvent.ThinkingDone(1500);
-            yield return ChatStreamEvent.ContentDelta("答案是42");
-            yield return ChatStreamEvent.MessageDone();
-            await Task.CompletedTask;
-        }
-
-        service.Register(3001, ThinkingStream());
-        await Task.Delay(500);
-
-        var task = service.GetTask(3001);
-        Assert.NotNull(task);
-        Assert.Equal("让我想想...分析完毕。", task.ThinkingBuilder.ToString());
-        Assert.Equal("答案是42", task.ContentBuilder.ToString());
-    }
-
-    [Fact]
-    public async Task BackgroundServiceCollectsErrorEvent()
-    {
-        var service = new BackgroundGenerationService(XTrace.Log);
-
-        async IAsyncEnumerable<ChatStreamEvent> ErrorStream()
-        {
-            yield return ChatStreamEvent.ErrorEvent("LIMIT", "超出限制");
-            await Task.CompletedTask;
-        }
-
-        service.Register(4001, ErrorStream());
-        await Task.Delay(500);
-
-        var task = service.GetTask(4001);
-        Assert.NotNull(task);
-        Assert.Equal("超出限制", task.Error);
-    }
-    #endregion
-
-    #region BackgroundTask 和枚举测试
-    [Fact]
-    public void BackgroundTaskStatusEnumValues()
-    {
-        Assert.Equal(0, (Int32)BackgroundTaskStatus.Running);
-        Assert.Equal(1, (Int32)BackgroundTaskStatus.Completed);
-        Assert.Equal(2, (Int32)BackgroundTaskStatus.Failed);
-        Assert.Equal(3, (Int32)BackgroundTaskStatus.Cancelled);
-    }
-
-    [Fact]
-    public void BackgroundTaskInitializesCorrectly()
-    {
-        var task = new BackgroundTask
-        {
-            MessageId = 1,
-            Status = BackgroundTaskStatus.Running,
-            StartTime = DateTime.Now,
-        };
-
-        Assert.Equal(1, task.MessageId);
-        Assert.Equal(BackgroundTaskStatus.Running, task.Status);
-        Assert.NotNull(task.ContentBuilder);
-        Assert.NotNull(task.ThinkingBuilder);
-        Assert.NotNull(task.Events);
-        Assert.Empty(task.Events);
-        Assert.Equal(0, task.ContentBuilder.Length);
     }
     #endregion
 
@@ -959,30 +765,6 @@ public class ChatAITests
 
     #region DTO 相等性与不可变性测试
     [Fact]
-    public void RecordDtoEquality()
-    {
-        var a = new UsageSummaryDto(10, 50, 1000, 2000, 3000, DateTime.MinValue);
-        var b = new UsageSummaryDto(10, 50, 1000, 2000, 3000, DateTime.MinValue);
-        Assert.Equal(a, b);
-
-        var c = new DailyUsageDto(DateTime.Today, 5, 100, 200, 300);
-        var d = new DailyUsageDto(DateTime.Today, 5, 100, 200, 300);
-        Assert.Equal(c, d);
-
-        var e = new ModelUsageDto(1, 10, 5000);
-        var f = new ModelUsageDto(1, 10, 5000);
-        Assert.Equal(e, f);
-    }
-
-    [Fact]
-    public void RecordDtoInequality()
-    {
-        var a = new UsageSummaryDto(10, 50, 1000, 2000, 3000, DateTime.MinValue);
-        var b = new UsageSummaryDto(20, 50, 1000, 2000, 3000, DateTime.MinValue);
-        Assert.NotEqual(a, b);
-    }
-
-    [Fact]
     public void SendMessageRequestWithNullAttachments()
     {
         var req = new SendMessageRequest("hello", ThinkingMode.Fast, null);
@@ -1080,7 +862,6 @@ public class ChatAITests
         Assert.Equal("Enter", settings.SendShortcut);
         Assert.Equal(ThinkingMode.Auto, settings.DefaultThinkingMode);
         Assert.Equal(10, settings.ContextRounds);
-        Assert.False(settings.AllowTraining);
     }
 
     [Fact]
@@ -1090,7 +871,7 @@ public class ChatAITests
         var service = new InMemoryChatApplicationService();
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Be concise", true),
+            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Be concise"),
             CancellationToken.None);
 
         Assert.Equal("en", updated.Language);
@@ -1101,7 +882,6 @@ public class ChatAITests
         Assert.Equal(ThinkingMode.Think, updated.DefaultThinkingMode);
         Assert.Equal(5, updated.ContextRounds);
         Assert.Equal("Be concise", updated.SystemPrompt);
-        Assert.True(updated.AllowTraining);
 
         // 再次获取应保持不变
         var retrieved = await service.GetUserSettingsAsync(CancellationToken.None);
