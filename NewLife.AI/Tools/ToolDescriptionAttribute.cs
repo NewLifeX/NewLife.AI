@@ -30,4 +30,7 @@ public sealed class ToolDescriptionAttribute : Attribute
 
     /// <summary>是否通过构造函数显式指定了工具名称</summary>
     public Boolean HasExplicitName => Name.Length > 0;
+
+    /// <summary>是否系统工具。true 时每次 LLM 请求自动携带，无需 @引用；false 时需在消息中 @工具名 显式引用</summary>
+    public Boolean IsSystem { get; set; }
 }

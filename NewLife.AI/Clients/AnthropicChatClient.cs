@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
@@ -25,7 +24,7 @@ public class AnthropicChatClient : AiClientBase, IChatClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String ClientName => "Anthropic";
+    protected override String Name => "Anthropic";
 
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://api.anthropic.com";
@@ -77,7 +76,7 @@ public class AnthropicChatClient : AiClientBase, IChatClient
         catch (Exception ex)
         {
             span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", ClientName, ex.Message);
+            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
             throw;
         }
     }

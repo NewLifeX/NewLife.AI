@@ -26,7 +26,7 @@ public class OllamaChatClient : AiClientBase, IChatClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String ClientName => "本地Ollama";
+    protected override String Name => "本地Ollama";
 
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "http://localhost:11434";
@@ -83,7 +83,7 @@ public class OllamaChatClient : AiClientBase, IChatClient
         catch (Exception ex)
         {
             span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", ClientName, ex.Message);
+            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
             throw;
         }
     }

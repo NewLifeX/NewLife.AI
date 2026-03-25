@@ -20,7 +20,7 @@ public class NewLifeAiChatClient : OpenAiChatClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String ClientName => "新生命AI";
+    protected override String Name => "新生命AI";
 
     /// <inheritdoc/>
     public override String DefaultEndpoint => "https://ai.newlifex.com";
@@ -150,7 +150,7 @@ public class NewLifeAiChatClient : OpenAiChatClient
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"[{ClientName}] 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
+            throw new HttpRequestException($"[{Name}] 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
 
         return json.ToJsonEntity<ImageGenerationResponse>();
     }

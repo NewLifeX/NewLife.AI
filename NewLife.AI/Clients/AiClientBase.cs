@@ -8,23 +8,17 @@ namespace NewLife.AI.Clients;
 
 /// <summary>AI 客户端抽象基类。统一封装 HttpClient 管理与 HTTP 请求辅助方法</summary>
 /// <remarks>
-/// 子类需提供 <see cref="ClientName"/> 用于错误日志，并可通过重写 <see cref="SetHeaders"/> 注入认证头。
+/// 子类需提供 <see cref="Name"/> 用于错误日志，并可通过重写 <see cref="SetHeaders"/> 注入认证头。
 /// 通过重写 <see cref="CreateHttpClient"/> 定制 HttpClient 行为。
 /// </remarks>
 public abstract class AiClientBase
 {
     #region 属性
     /// <summary>客户端名称。用于错误日志中标识服务商</summary>
-    protected abstract String ClientName { get; }
+    protected abstract String Name { get; }
 
-    /// <summary>日志</summary>
-    public ILog Log { get; set; } = Logger.Null;
-
-    /// <summary>追踪器</summary>
-    public ITracer? Tracer { get; set; }
-
-    /// <summary>HTTP 请求超时时间。默认 5 分钟</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(5);
+    /// <summary>HTTP 请求超时时间。默认 15 秒</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
 
     private HttpClient? _sharedClient;
 
@@ -41,10 +35,7 @@ public abstract class AiClientBase
 
     /// <summary>注入 HttpClient 的构造</summary>
     /// <param name="httpClient">外部管理的 HttpClient 实例，传 null 时自动创建</param>
-    protected AiClientBase(HttpClient? httpClient)
-    {
-        _externalClient = httpClient;
-    }
+    protected AiClientBase(HttpClient? httpClient) => _externalClient = httpClient;
 
     /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
     /// <returns>新的 HttpClient 实例</returns>
@@ -81,7 +72,7 @@ public abstract class AiClientBase
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商[{ClientName}]返回错误 {(Int32)resp.StatusCode}: {json}");
+            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
 
@@ -116,7 +107,7 @@ public abstract class AiClientBase
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商[{ClientName}]返回错误 {(Int32)resp.StatusCode}: {json}");
+            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
 
@@ -158,7 +149,7 @@ public abstract class AiClientBase
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             resp.Dispose();
-            throw new HttpRequestException($"AI 服务商[{ClientName}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
+            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return resp;
     }
@@ -181,9 +172,17 @@ public abstract class AiClientBase
         if (!resp.IsSuccessStatusCode)
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"AI 服务商[{ClientName}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
+            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
     }
+    #endregion
+
+    #region 日志
+    /// <summary>日志</summary>
+    public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>追踪器</summary>
+    public ITracer? Tracer { get; set; }
     #endregion
 }

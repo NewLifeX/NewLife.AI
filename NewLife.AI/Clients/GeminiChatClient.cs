@@ -25,7 +25,7 @@ public class GeminiChatClient : AiClientBase, IChatClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String ClientName => "谷歌Gemini";
+    protected override String Name => "谷歌Gemini";
 
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://generativelanguage.googleapis.com";
@@ -74,7 +74,7 @@ public class GeminiChatClient : AiClientBase, IChatClient
         catch (Exception ex)
         {
             span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", ClientName, ex.Message);
+            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
             throw;
         }
     }

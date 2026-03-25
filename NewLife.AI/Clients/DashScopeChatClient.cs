@@ -26,7 +26,7 @@ public class DashScopeChatClient : OpenAiChatClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String ClientName => "阿里百炼";
+    protected override String Name => "阿里百炼";
 
     /// <summary>原生 DashScope API 基础地址（/api/v1）</summary>
     protected virtual String NativeEndpoint => "https://dashscope.aliyuncs.com/api/v1";
@@ -120,7 +120,7 @@ public class DashScopeChatClient : OpenAiChatClient
                 var errDic = JsonParser.Decode(data);
                 var code = errDic?["code"] as String ?? "error";
                 var message = errDic?["message"] as String ?? data;
-                throw new HttpRequestException($"[{ClientName}] 流式错误 {code}: {message}");
+                throw new HttpRequestException($"[{Name}] 流式错误 {code}: {message}");
             }
 
             ChatResponse? chunk = null;
@@ -463,7 +463,7 @@ public class DashScopeChatClient : OpenAiChatClient
         var errCode = dic["code"] as String;
         var errMsg = dic["message"] as String;
         if (!String.IsNullOrEmpty(errCode))
-            throw new HttpRequestException($"[{ClientName}] 错误 {errCode}: {errMsg}");
+            throw new HttpRequestException($"[{Name}] 错误 {errCode}: {errMsg}");
 
         var response = new ChatResponse
         {
