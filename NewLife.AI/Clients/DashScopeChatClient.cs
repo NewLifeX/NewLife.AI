@@ -61,6 +61,11 @@ public class DashScopeChatClient : OpenAiChatClient
 
     #region 对话（重写）
     /// <summary>非流式对话。原生协议走 DashScope 格式，兼容模式委托基类</summary>
+    /// <remarks>
+    /// DashScope 原生端点始终以 SSE 格式响应（Content-Type: text/event-stream）。
+    /// 非流式模式下服务端返回单条 data: 事件承载完整 JSON，故不能使用 PostAsync，
+    /// 需通过 PostStreamAsync 获取流并读取第一条有效 data 行后解析。
+    /// </remarks>
     protected override async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
         if (!IsNativeProtocol)
@@ -68,10 +73,29 @@ public class DashScopeChatClient : OpenAiChatClient
 
         var url = BuildChatUrl(_options);
         var isMultimodal = IsMultimodalModel(_options.Model);
+        // stream=false 时不传 incremental_output，DashScope 返回单条 SSE 事件承载完整响应
         var body = BuildDashScopeRequestBody(request, isMultimodal, false);
-        var json = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
 
-        var response = ParseDashScopeResponse(json);
+        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        // 读取 SSE 流，取最后一条完整 data: 行作为同步响应
+        String? lastData = null;
+        while (!reader.EndOfStream)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            if (line == null) break;
+            if (!line.StartsWith("data:")) continue;
+            var data = line.Substring(5).Trim();
+            if (data.Length > 0) lastData = data;
+        }
+
+        if (lastData == null)
+            throw new InvalidOperationException($"[{Name}] 原生协议未收到有效数据");
+
+        var response = ParseDashScopeResponse(lastData);
         response.Model ??= request.Model;
         return response;
     }
@@ -566,26 +590,37 @@ public class DashScopeChatClient : OpenAiChatClient
         msg.Content = sb.Return(true);
     }
 
+    /// <inheritdoc cref="AiClientBase.CreateHttpClient"/>
+    /// <remarks>清除默认 Accept: application/json 头，改由 SetHeaders 按协议模式按需设置</remarks>
+    protected override HttpClient CreateHttpClient()
+    {
+        var client = base.CreateHttpClient();
+        client.DefaultRequestHeaders.Accept.Clear();
+        return client;
+    }
+
     /// <inheritdoc/>
     /// <remarks>
-    /// 原生协议需要附加 X-DashScope-SSE: enable 头（纯文本端点）或 Accept: text/event-stream（多模态端点）
+    /// 原生协议固定发送 Accept: text/event-stream（DashScope 原生端点只接受此值）；
+    /// 兼容模式发送 Accept: application/json。
+    /// X-DashScope-SSE: enable 流式头由 SetStreamingHeaders 按需注入。
     /// </remarks>
     protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
-        if (!IsNativeProtocol) return;
-
-        var path = request.RequestUri?.AbsolutePath;
-        if (String.IsNullOrEmpty(path)) return;
-
-        if (!path.EndsWith(ChatGenerationPath, StringComparison.OrdinalIgnoreCase) &&
-            !path.EndsWith(MultimodalGenerationPath, StringComparison.OrdinalIgnoreCase)) return;
-
-        if (IsMultimodalModel(options.Model))
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        if (IsNativeProtocol)
+            request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
         else
+            request.Headers.TryAddWithoutValidation("Accept", "application/json");
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>原生协议流式请求附加 X-DashScope-SSE: enable，通知服务端返回增量 SSE 流</remarks>
+    protected override void SetStreamingHeaders(HttpRequestMessage request, AiClientOptions options)
+    {
+        if (IsNativeProtocol)
             request.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
     }
     #endregion

@@ -235,9 +235,14 @@ public class GeminiChatClient : AiClientBase, IChatClient
             foreach (var item in candidates)
             {
                 if (item is not IDictionary<String, Object> candidate) continue;
-                var contentText = ExtractGeminiContent(candidate);
-                var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
-                response.Add(contentText, null, finishReason);
+                var (contentText, toolCalls) = ExtractGeminiContent(candidate);
+                var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate["finishReason"] as String);
+                var choice = response.Add(contentText, null, finishReason);
+                if (toolCalls?.Count > 0)
+                {
+                    choice.Message ??= new ChatMessage { Role = "model" };
+                    choice.Message.ToolCalls = toolCalls;
+                }
             }
         }
 
@@ -271,9 +276,14 @@ public class GeminiChatClient : AiClientBase, IChatClient
             foreach (var item in candidates)
             {
                 if (item is not IDictionary<String, Object> candidate) continue;
-                var deltaText = ExtractGeminiContent(candidate);
-                var finishReason = MapGeminiFinishReason(candidate["finishReason"] as String);
-                response.AddDelta(deltaText, null, finishReason);
+                var (deltaText, toolCalls) = ExtractGeminiContent(candidate);
+                var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate["finishReason"] as String);
+                var choice = response.AddDelta(deltaText, null, finishReason);
+                if (toolCalls?.Count > 0)
+                {
+                    choice.Delta ??= new ChatMessage { Role = "model" };
+                    choice.Delta.ToolCalls = toolCalls;
+                }
             }
         }
 
@@ -290,19 +300,47 @@ public class GeminiChatClient : AiClientBase, IChatClient
         return response;
     }
 
-    /// <summary>提取 Gemini candidate 中的文本内容</summary>
-    private static String ExtractGeminiContent(IDictionary<String, Object> candidate)
+    /// <summary>提取 Gemini candidate 中的文本内容和工具调用</summary>
+    /// <returns>文本内容（可能为空）和工具调用列表（无则为 null）</returns>
+    private static (String text, List<ToolCall>? toolCalls) ExtractGeminiContent(IDictionary<String, Object> candidate)
     {
-        if (candidate["content"] is not IDictionary<String, Object> contentDic) return "";
-        if (contentDic["parts"] is not IList<Object> parts) return "";
+        if (candidate["content"] is not IDictionary<String, Object> contentDic)
+            return ("", null);
+        if (contentDic["parts"] is not IList<Object> parts)
+            return ("", null);
 
         var sb = new StringBuilder();
+        List<ToolCall>? toolCalls = null;
+
         foreach (var part in parts)
         {
-            if (part is IDictionary<String, Object> partDic)
-                sb.Append(partDic["text"]);
+            if (part is not IDictionary<String, Object> partDic) continue;
+
+            if (partDic.TryGetValue("text", out var textVal) && textVal != null)
+            {
+                sb.Append(textVal);
+            }
+            else if (partDic["functionCall"] is IDictionary<String, Object> fnCallDic)
+            {
+                // Gemini functionCall part → ToolCall
+                toolCalls ??= [];
+                var argsRaw = fnCallDic["args"];
+                toolCalls.Add(new ToolCall
+                {
+                    Id = $"call_{toolCalls.Count}",
+                    Type = "function",
+                    Function = new FunctionCall
+                    {
+                        Name = fnCallDic["name"] as String ?? "",
+                        Arguments = argsRaw is IDictionary<String, Object> argsDic
+                            ? argsDic.ToJson()
+                            : argsRaw as String ?? "{}",
+                    },
+                });
+            }
         }
-        return sb.ToString();
+
+        return (sb.ToString(), toolCalls);
     }
 
     /// <summary>映射 Gemini finishReason 到标准格式</summary>

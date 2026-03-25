@@ -275,6 +275,7 @@ public class AnthropicChatClient : AiClientBase, IChatClient
         String? contentText = null;
         String? reasoningText = null;
         String? finishReason = null;
+        List<ToolCall>? toolCalls = null;
 
         if (dic["content"] is IList<Object> contentList)
         {
@@ -289,6 +290,24 @@ public class AnthropicChatClient : AiClientBase, IChatClient
                     textParts.Add(blockDic["text"] as String ?? "");
                 else if (blockType == "thinking")
                     reasoningParts.Add(blockDic["thinking"] as String ?? "");
+                else if (blockType == "tool_use")
+                {
+                    // 解析工具调用块 → ToolCall 对象（Anthropic input 字段为 object，需序列化为 JSON string）
+                    toolCalls ??= [];
+                    var inputRaw = blockDic["input"];
+                    toolCalls.Add(new ToolCall
+                    {
+                        Id = blockDic["id"] as String ?? "",
+                        Type = "function",
+                        Function = new FunctionCall
+                        {
+                            Name = blockDic["name"] as String ?? "",
+                            Arguments = inputRaw is IDictionary<String, Object> inputDic
+                                ? inputDic.ToJson()
+                                : inputRaw as String ?? "{}",
+                        },
+                    });
+                }
             }
 
             contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
@@ -297,7 +316,14 @@ public class AnthropicChatClient : AiClientBase, IChatClient
 
         var stopReason = dic["stop_reason"] as String;
         finishReason = MapStopReason(stopReason);
-        response.Add(contentText, reasoningText, finishReason);
+        var choice = response.Add(contentText, reasoningText, finishReason);
+
+        // 将工具调用挂载到 Message
+        if (toolCalls != null && toolCalls.Count > 0)
+        {
+            choice.Message ??= new ChatMessage { Role = "assistant" };
+            choice.Message.ToolCalls = toolCalls;
+        }
 
         if (dic["usage"] is IDictionary<String, Object> usageDic)
         {

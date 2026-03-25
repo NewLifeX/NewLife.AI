@@ -144,6 +144,7 @@ public abstract class AiClientBase
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
         SetHeaders(req, options);
+        SetStreamingHeaders(req, options);
         var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
         {
@@ -153,6 +154,11 @@ public abstract class AiClientBase
         }
         return resp;
     }
+
+    /// <summary>设置流式请求专属请求头。仅在 PostStreamAsync 中调用，子类可重写以注入流式特定头（如 X-DashScope-SSE: enable）</summary>
+    /// <param name="request">HTTP 请求</param>
+    /// <param name="options">连接选项</param>
+    protected virtual void SetStreamingHeaders(HttpRequestMessage request, AiClientOptions options) { }
 
     /// <summary>发送 POST 请求并返回二进制响应。用于音频合成等返回字节流的接口</summary>
     /// <param name="url">请求地址</param>
