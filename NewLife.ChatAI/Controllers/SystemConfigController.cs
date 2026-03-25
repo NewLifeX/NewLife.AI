@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI;
+using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
@@ -16,6 +16,6 @@ public class SystemConfigController : ChatApiControllerBase
     {
         var s = ChatSetting.Current;
         var questions = s.SuggestedQuestions.Split('|', StringSplitOptions.RemoveEmptyEntries);
-        return Ok(new SystemConfigDto(s.SiteTitle, questions));
+        return Ok(new SystemConfigDto(s.Name, s.SiteTitle, questions));
     }
 }

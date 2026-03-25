@@ -1,71 +1,63 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.ChatAI;
-using NewLife.ChatAI.Entity;
+using NewLife.AI.Models;
+using NewLife.AI.Providers;
+using NewLife.AI.Services;
+using NewLife.Collections;
 using NewLife.Cube.Entity;
 using NewLife.Data;
 using NewLife.Log;
 using NewLife.Serialization;
+using NewLife.ChatAI.Entity;
+using NewLife.ChatAI.Models;
 using XCode;
+using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using AiFunctionCall = NewLife.AI.Models.FunctionCall;
 using AiToolCall = NewLife.AI.Models.ToolCall;
-using ChatCompletionRequest = NewLife.AI.Models.ChatCompletionRequest;
+using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
-using ChatUsage = NewLife.AI.Models.ChatUsage;
+using UsageDetails = NewLife.AI.Models.UsageDetails;
+using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
 
 /// <summary>数据库版对话应用服务。基于 XCode 实体类持久化数据</summary>
-public class ChatApplicationService
+/// <remarks>
+/// 对话内核层：负责会话与消息的持久化管理、上下文构建以及流式编排骨架。
+/// 能力扩展层（工具调用、技能注入）与知识进化层（记忆、自学习、事件智能体）均通过 <see cref="IChatPipeline"/>
+/// 在外部装配后注入，本类对其实现细节完全透明。
+/// </remarks>
+/// <param name="pipeline">已装配好三层能力的对话执行管道</param>
+/// <param name="gatewayService">网关服务（用于模型解析）</param>
+/// <param name="backgroundService">后台生成服务</param>
+/// <param name="tracer">追踪器</param>
+/// <param name="log">日志</param>
+public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatewayService, BackgroundGenerationService? backgroundService, ITracer tracer, ILog log)
 {
     #region 属性
-    private readonly ToolCallService? _toolCallService;
-    private readonly GatewayService _gatewayService;
-    private readonly BackgroundGenerationService? _backgroundService;
-    private readonly UsageService? _usageService;
-    private readonly SkillService? _skillService;
-    private readonly ILog _log;
-
     /// <summary>附件存储根目录</summary>
-    private readonly String _attachmentRoot;
-    #endregion
-
-    #region 构造
-    /// <summary>实例化数据库版对话应用服务</summary>
-    /// <param name="gatewayService">网关服务</param>
-    /// <param name="toolCallService">工具调用编排服务</param>
-    /// <param name="backgroundService">后台生成服务</param>
-    /// <param name="usageService">用量统计服务</param>
-    /// <param name="skillService">技能服务</param>
-    /// <param name="log">日志</param>
-    public ChatApplicationService(GatewayService gatewayService, ToolCallService? toolCallService, BackgroundGenerationService? backgroundService, UsageService? usageService, SkillService? skillService, ILog log)
-    {
-        _gatewayService = gatewayService;
-        _toolCallService = toolCallService;
-        _backgroundService = backgroundService;
-        _usageService = usageService;
-        _skillService = skillService;
-        _log = log;
-        _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
-    }
+    private readonly String _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
     #endregion
 
     #region 会话管理
     /// <summary>新建会话</summary>
     /// <param name="request">新建会话请求</param>
-    /// <param name="userId">当前用户编号</param>
+    /// <param name="user">当前用户</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, Int32 userId, CancellationToken cancellationToken)
+    public Task<ConversationSummaryDto> CreateConversationAsync(CreateConversationRequest request, IUser user, CancellationToken cancellationToken)
     {
         var title = String.IsNullOrWhiteSpace(request.Title) ? "新建对话" : request.Title.Trim();
 
         var entity = new Conversation
         {
-            UserId = userId,
+            UserId = user.ID,
+            UserName = user.DisplayName ?? user.Name,
             Title = title,
             ModelId = request.ModelId,
+            ModelName = request.ModelId > 0 ? ModelConfig.FindById(request.ModelId)?.Name : null,
             LastMessageTime = DateTime.Now,
         };
         entity.Insert();
@@ -85,8 +77,12 @@ public class ChatApplicationService
         if (page <= 0) page = 1;
         if (pageSize <= 0) pageSize = 20;
 
-        var p = new PageParameter { PageIndex = page, PageSize = pageSize };
-        p.Sort = Conversation._.IsPinned.Desc() + "," + Conversation._.LastMessageTime.Desc();
+        var p = new PageParameter
+        {
+            PageIndex = page,
+            PageSize = pageSize,
+            Sort = Conversation._.IsPinned.Desc() + "," + Conversation._.LastMessageTime.Desc()
+        };
 
         var exp = Conversation._.UserId == userId;
         var list = Conversation.FindAll(exp, p);
@@ -108,7 +104,10 @@ public class ChatApplicationService
         if (!String.IsNullOrWhiteSpace(request.Title))
             entity.Title = request.Title.Trim();
         if (request.ModelId > 0)
+        {
             entity.ModelId = request.ModelId;
+            entity.ModelName = ModelConfig.FindById(request.ModelId)?.Name;
+        }
 
         entity.Update();
 
@@ -124,20 +123,18 @@ public class ChatApplicationService
         var entity = Conversation.FindById(conversationId);
         if (entity == null) return Task.FromResult(false);
 
+        using var trans = ChatMessage.Meta.CreateTrans();
+
         // 获取关联的消息 ID 列表，用于清理消息反馈
-        var messages = ChatMessage.FindAll(ChatMessage._.ConversationId == conversationId);
+        var messages = ChatMessage.FindAllByConversationId(conversationId);
         var messageIds = messages.Select(m => m.Id).ToArray();
 
         // 删除关联的消息反馈
         if (messageIds.Length > 0)
         {
-            var feedbacks = MessageFeedback.FindAll(MessageFeedback._.MessageId.In(messageIds));
+            var feedbacks = MessageFeedback.FindAllByMessageIds(messageIds);
             feedbacks.Delete();
         }
-
-        // 删除关联的用量记录
-        var usageRecords = UsageRecord.FindAll(UsageRecord._.ConversationId == conversationId);
-        usageRecords.Delete();
 
         // 删除关联的消息
         messages.Delete();
@@ -147,6 +144,9 @@ public class ChatApplicationService
         shares.Delete();
 
         entity.Delete();
+
+        trans.Commit();
+
         return Task.FromResult(true);
     }
 
@@ -168,32 +168,33 @@ public class ChatApplicationService
     #endregion
 
     #region 消息管理
-    /// <summary>获取会话消息列表</summary>
+    /// <summary>获取会话消息列表。批量查询反馈信息，避免 N+1 查询</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     public Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
     {
-        var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
-        var list = ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
+        //var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
+        //var list = ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
+        var list = ChatMessage.FindAllByConversationIdOrdered(conversationId);
 
         // 批量查询反馈，避免 N+1
         var messageIds = list.Select(e => e.Id).ToList();
         var feedbacks = messageIds.Count > 0
             ? MessageFeedback.FindAll(MessageFeedback._.MessageId.In(messageIds) & MessageFeedback._.UserId == userId)
                 .ToDictionary(e => e.MessageId, e => e.FeedbackType)
-            : new Dictionary<Int64, FeedbackType>();
+            : [];
 
         var items = list.Select(e => ToMessageDto(e, feedbacks.TryGetValue(e.Id, out var ft) ? ft : default)).ToList();
         return Task.FromResult<IReadOnlyList<MessageDto>>(items);
     }
 
-    /// <summary>编辑消息内容</summary>
+    /// <summary>编辑消息内容（仅修改文字，不重新生成）</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="request">编辑请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
+    /// <returns>更新后的消息 DTO，消息不存在时返回 null</returns>
     public Task<MessageDto?> EditMessageAsync(Int64 messageId, EditMessageRequest request, CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
@@ -205,11 +206,11 @@ public class ChatApplicationService
         return Task.FromResult<MessageDto?>(ToMessageDto(entity));
     }
 
-    /// <summary>重新生成AI回复。查找上文构建上下文，调用模型重新生成</summary>
-    /// <param name="messageId">消息编号</param>
+    /// <summary>非流式重新生成 AI 回复。构建上下文后委托管道完成，结果直接写回消息记录</summary>
+    /// <param name="messageId">消息编号（必须为 AI 回复）</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
+    /// <returns>更新后的消息 DTO，失败时返回 null</returns>
     public async Task<MessageDto?> RegenerateMessageAsync(Int64 messageId, Int32 userId, CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
@@ -220,20 +221,18 @@ public class ChatApplicationService
         var conversation = Conversation.FindById(entity.ConversationId);
         if (conversation == null) return null;
 
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             // 模型不可用时直接报错，不做降级
             return null;
         }
 
-        var provider = _gatewayService.GetProvider(modelConfig);
-        if (provider == null) return null;
+        // 服务商不可用时提前返回（管道内部也有校验，但提前失败更友好）
+        if (gatewayService.GetDescriptor(modelConfig) == null) return null;
 
         // 构建上下文：取该消息之前的所有消息（注入系统提示词）
-        var beforeMessages = ChatMessage.FindAll(
-            ChatMessage._.ConversationId == entity.ConversationId & ChatMessage._.Id < entity.Id,
-            ChatMessage._.CreateTime.Asc(), null, 0, 0);
+        var beforeMessages = ChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
 
         // 按轮数截取
         var setting = ChatSetting.Current;
@@ -243,61 +242,66 @@ public class ChatApplicationService
 
         var contextMessages = new List<AiChatMessage>();
 
-        // 注入系统提示词（含技能，用户全局级 + 模型级）
-        var lastUserRegenContent = beforeMessages.LastOrDefault(m => m.Role == "user")?.Content;
-        var systemMsg = BuildSystemMessage(userId, modelConfig, conversation.SkillId, lastUserRegenContent);
+        // 注入系统提示词（用户全局级 + 模型级；技能提示词由管道的技能注入层负责）
+        var systemMsg = BuildSystemMessage(userId, modelConfig);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
         {
             contextMessages.Add(new AiChatMessage
             {
-                Role = msg.Role,
+                Role = msg.Role ?? "user",
                 Content = msg.Content,
             });
         }
 
         try
         {
-            var request = new ChatCompletionRequest
-            {
-                Model = modelConfig.Code,
-                Messages = contextMessages,
-            };
-            var options = GatewayService.BuildOptions(modelConfig);
-            using var chatClient = provider.CreateClient(options);
-            var response = await chatClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+            // 委托管道执行（能力扩展层 + 知识进化层由管道内部处理）
+            var pipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = entity.ConversationId + "" };
+            var regenSw = Stopwatch.StartNew();
+            var response = await pipeline.CompleteAsync(contextMessages, modelConfig, pipelineCtx, cancellationToken).ConfigureAwait(false);
+            regenSw.Stop();
+            var regenElapsed = (Int32)regenSw.ElapsedMilliseconds;
 
-            var newContent = response.Choices?.FirstOrDefault()?.Message?.Content as String ?? String.Empty;
-            var reasoning = response.Choices?.FirstOrDefault()?.Message?.ReasoningContent;
+            var newContent = response.Messages?.FirstOrDefault()?.Message?.Content as String ?? String.Empty;
+            var reasoning = response.Messages?.FirstOrDefault()?.Message?.ReasoningContent;
 
             entity.Content = newContent;
             if (!String.IsNullOrEmpty(reasoning))
                 entity.ThinkingContent = reasoning;
+            entity.ElapsedMs = regenElapsed;
             entity.Update();
 
-            // 写入用量记录
+            // 写入用量记录，并累计会话 Token
             if (response.Usage != null)
             {
-                _usageService?.Record(userId, 0, entity.ConversationId, entity.Id,
-                    modelConfig.Id, response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens, "Chat");
+                var conv = Conversation.FindById(entity.ConversationId);
+                if (conv != null)
+                {
+                    conv.TotalPromptTokens += response.Usage.InputTokens;
+                    conv.TotalCompletionTokens += response.Usage.OutputTokens;
+                    conv.TotalTokens += response.Usage.TotalTokens;
+                    conv.ElapsedMs += regenElapsed;
+                    conv.Update();
+                }
             }
 
             return ToMessageDto(entity);
         }
         catch (Exception ex)
         {
-            _log?.Error("重新生成回复失败: {0}", ex.Message);
+            log?.Error("重新生成回复失败: {0}", ex.Message);
             return null;
         }
     }
 
-    /// <summary>编辑用户消息并重新发送。更新消息内容、删除后续所有消息、流式生成新 AI 回复</summary>
+    /// <summary>编辑用户消息并流式重新发送。依次：更新消息内容 → 删除后续所有消息 → 构建上下文 → 委托管道生成</summary>
     /// <param name="messageId">用户消息编号</param>
     /// <param name="newContent">编辑后的内容</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
+    /// <returns>SSE 事件流</returns>
     public async IAsyncEnumerable<ChatStreamEvent> EditAndResendStreamAsync(Int64 messageId, String newContent, Int32 userId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
@@ -319,24 +323,22 @@ public class ChatApplicationService
         entity.Update();
 
         // 2. 删除该消息之后的所有消息（包括 AI 回复及后续对话）
-        var deleted = ChatMessage.FindAll(
-            ChatMessage._.ConversationId == entity.ConversationId & ChatMessage._.Id > entity.Id,
-            null, null, 0, 0);
+        var deleted = ChatMessage.FindAllAfterId(entity.ConversationId, entity.Id);
         foreach (var msg in deleted)
         {
             msg.Delete();
         }
 
         // 3. 解析模型
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
             yield break;
         }
 
-        // 4. 构建上下文（包含编辑后的用户消息）
-        var contextMessages = BuildContextMessages(userId, entity.ConversationId, newContent, modelConfig, conversation.SkillId);
+        // 4. 构建上下文（包含编辑后的用户消息；技能提示词由管道注入）
+        var contextMessages = BuildContextMessages(userId, entity.ConversationId, newContent, modelConfig);
 
         // 5. 创建新的 AI 回复消息
         var assistantMsg = new ChatMessage
@@ -348,105 +350,48 @@ public class ChatApplicationService
         assistantMsg.Insert();
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code, (ThinkingMode)entity.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code ?? String.Empty, entity.ThinkingMode);
 
-        // 6. 流式调用模型
+        // 6. 委托管道流式执行（能力扩展层 + 知识进化层由管道内部处理）
+        var editPipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = entity.ConversationId + "" };
         var contentBuilder = new StringBuilder();
         var thinkingBuilder = new StringBuilder();
-        ChatUsage? finalUsage = null;
+        UsageDetails? finalUsage = null;
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
 
-        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, (ThinkingMode)entity.ThinkingMode, cancellationToken).GetAsyncEnumerator(cancellationToken);
-        try
+        var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, entity.ThinkingMode, editPipelineCtx, cancellationToken);
+        await foreach (var ev in DrainPipelineAsync(pipelineStream, contentBuilder, thinkingBuilder, null,
+            u => finalUsage = u, (err, e) => { hasError = err; deferredErrorEvent = e; }, "编辑重发流式生成失败", cancellationToken).ConfigureAwait(false))
         {
-            while (true)
-            {
-                Boolean moved;
-                try
-                {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    _log?.Error("编辑重发流式生成失败: {0}", ex.Message);
-                    hasError = true;
-                    deferredErrorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
-                    break;
-                }
-
-                if (!moved) break;
-
-                var ev = enumerator.Current;
-                switch (ev.Type)
-                {
-                    case "thinking_delta":
-                        thinkingBuilder.Append(ev.Content);
-                        yield return ev;
-                        break;
-                    case "content_delta":
-                        contentBuilder.Append(ev.Content);
-                        yield return ev;
-                        break;
-                    case "message_done":
-                        finalUsage = ev.Usage;
-                        break;
-                    case "error":
-                        hasError = true;
-                        deferredErrorEvent = ev;
-                        break;
-                    default:
-                        yield return ev;
-                        break;
-                }
-
-                if (hasError) break;
-            }
-        }
-        finally
-        {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
+            yield return ev;
+            if (hasError) break;
         }
 
         if (deferredErrorEvent != null)
             yield return deferredErrorEvent;
 
         // 7. 持久化
-        assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
+        assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : null;
         if (thinkingBuilder.Length > 0)
             assistantMsg.ThinkingContent = thinkingBuilder.ToString();
-        if (finalUsage != null)
-        {
-            assistantMsg.PromptTokens = finalUsage.PromptTokens;
-            assistantMsg.CompletionTokens = finalUsage.CompletionTokens;
-            assistantMsg.TotalTokens = finalUsage.TotalTokens;
-        }
+        ApplyUsageToMessage(assistantMsg, finalUsage, hasError);
         assistantMsg.Update();
 
-        conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == entity.ConversationId);
+        ApplyUsageToConversation(conversation, entity.ConversationId, finalUsage);
         conversation.Update();
-
-        if (finalUsage != null)
-            _usageService?.Record(userId, 0, entity.ConversationId, assistantMsg.Id, modelConfig.Id, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
 
         if (!hasError && !cancellationToken.IsCancellationRequested)
         {
-            yield return new ChatStreamEvent
-            {
-                Type = "message_done",
-                MessageId = assistantMsg.Id,
-                Usage = finalUsage,
-            };
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = finalUsage, };
         }
     }
 
-    /// <summary>流式重新生成回复。替换当前 AI 回复，以 SSE 事件流返回</summary>
-    /// <param name="messageId">消息编号</param>
+    /// <summary>流式重新生成 AI 回复。替换当前 AI 回复并通过 SSE 事件流返回新内容</summary>
+    /// <param name="messageId">消息编号（必须为 AI 回复）</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
+    /// <returns>SSE 事件流</returns>
     public async IAsyncEnumerable<ChatStreamEvent> RegenerateStreamAsync(Int64 messageId, Int32 userId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
@@ -463,7 +408,7 @@ public class ChatApplicationService
             yield break;
         }
 
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
@@ -471,9 +416,7 @@ public class ChatApplicationService
         }
 
         // 构建上下文：取该消息之前的所有消息
-        var beforeMessages = ChatMessage.FindAll(
-            ChatMessage._.ConversationId == entity.ConversationId & ChatMessage._.Id < entity.Id,
-            ChatMessage._.CreateTime.Asc(), null, 0, 0);
+        var beforeMessages = ChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
 
         var setting = ChatSetting.Current;
         var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
@@ -482,115 +425,69 @@ public class ChatApplicationService
 
         var contextMessages = new List<AiChatMessage>();
 
-        // 注入系统提示词（含技能）
-        var lastUserContent = beforeMessages.LastOrDefault(m => m.Role == "user")?.Content;
-        var systemMsg = BuildSystemMessage(userId, modelConfig, conversation.SkillId, lastUserContent);
+        // 注入系统提示词（技能提示词由管道注入）
+        var systemMsg = BuildSystemMessage(userId, modelConfig);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
         {
-            contextMessages.Add(new AiChatMessage { Role = msg.Role, Content = msg.Content });
+            contextMessages.Add(new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content });
         }
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(entity.Id, modelConfig.Code, (ThinkingMode)entity.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(entity.Id, modelConfig.Code ?? String.Empty, entity.ThinkingMode);
 
-        // 流式调用模型
+        // 委托管道流式执行
         var contentBuilder = new StringBuilder();
         var thinkingBuilder = new StringBuilder();
-        ChatUsage? finalUsage = null;
+        UsageDetails? finalUsage = null;
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
 
-        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, (ThinkingMode)entity.ThinkingMode, cancellationToken).GetAsyncEnumerator(cancellationToken);
-        try
+        var regenPipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = entity.ConversationId + "" };
+        var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, entity.ThinkingMode, regenPipelineCtx, cancellationToken);
+        await foreach (var ev in DrainPipelineAsync(pipelineStream, contentBuilder, thinkingBuilder, null,
+            u => finalUsage = u, (err, e) => { hasError = err; deferredErrorEvent = e; }, "流式重新生成失败", cancellationToken).ConfigureAwait(false))
         {
-            while (true)
-            {
-                Boolean moved;
-                try
-                {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    _log?.Error("流式重新生成失败: {0}", ex.Message);
-                    hasError = true;
-                    deferredErrorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
-                    break;
-                }
-
-                if (!moved) break;
-
-                var ev = enumerator.Current;
-                switch (ev.Type)
-                {
-                    case "thinking_delta":
-                        thinkingBuilder.Append(ev.Content);
-                        yield return ev;
-                        break;
-                    case "content_delta":
-                        contentBuilder.Append(ev.Content);
-                        yield return ev;
-                        break;
-                    case "message_done":
-                        finalUsage = ev.Usage;
-                        break;
-                    case "error":
-                        hasError = true;
-                        deferredErrorEvent = ev;
-                        break;
-                    default:
-                        yield return ev;
-                        break;
-                }
-
-                if (hasError) break;
-            }
-        }
-        finally
-        {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
+            yield return ev;
+            if (hasError) break;
         }
 
         if (deferredErrorEvent != null)
             yield return deferredErrorEvent;
 
         // 持久化：覆盖原消息内容
-        entity.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
+        entity.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : null;
         if (thinkingBuilder.Length > 0)
             entity.ThinkingContent = thinkingBuilder.ToString();
-        if (finalUsage != null)
-        {
-            entity.PromptTokens = finalUsage.PromptTokens;
-            entity.CompletionTokens = finalUsage.CompletionTokens;
-            entity.TotalTokens = finalUsage.TotalTokens;
-        }
+        ApplyUsageToMessage(entity, finalUsage, hasError);
         entity.Update();
 
-        // 记录用量
+        // 累计会话 Token（重新生成：叠加本次 API 消耗，不扣减被替换消息的旧 Token）
+        // 注意：重新生成不需要更新 MessageCount，仅叠加统计
+        conversation.LastMessageTime = DateTime.Now;
         if (finalUsage != null)
-            _usageService?.Record(userId, 0, entity.ConversationId, entity.Id, modelConfig.Id, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
+        {
+            conversation.TotalPromptTokens += finalUsage.InputTokens;
+            conversation.TotalCompletionTokens += finalUsage.OutputTokens;
+            conversation.TotalTokens += finalUsage.TotalTokens;
+            conversation.ElapsedMs += finalUsage.ElapsedMs;
+            conversation.Update();
+        }
 
         // message_done
         if (!hasError && !cancellationToken.IsCancellationRequested)
         {
-            yield return new ChatStreamEvent
-            {
-                Type = "message_done",
-                MessageId = entity.Id,
-                Usage = finalUsage,
-            };
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = entity.Id, Usage = finalUsage, };
         }
     }
 
-    /// <summary>流式发送消息并获取AI回复。接入真实模型，支持 thinking/content/tool_call 事件和后台继续生成</summary>
+    /// <summary>流式发送消息并获取 AI 回复。依次：保存用户消息 → 构建上下文 → 委托管道流式生成 → 持久化结果 → 推送 SSE 事件</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">发送消息请求</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
+    /// <returns>SSE 事件流，含 message_start / thinking_delta / content_delta / tool_call_* / message_done / error</returns>
     public async IAsyncEnumerable<ChatStreamEvent> StreamMessageAsync(Int64 conversationId, SendMessageRequest request, Int32 userId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var conversation = Conversation.FindById(conversationId);
@@ -621,33 +518,15 @@ public class ChatApplicationService
             conversation.ModelId = modelId;
             conversation.Update();
         }
-        var modelConfig = _gatewayService.ResolveModel(modelId);
+        var modelConfig = gatewayService.ResolveModel(modelId);
         if (modelConfig == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{modelId}' 不可用，请在模型选择器中选择一个可用模型");
             yield break;
         }
 
-        // 处理技能激活：通过 SkillCode 解析技能并更新会话
-        var skillId = conversation.SkillId;
-        if (!String.IsNullOrEmpty(request.SkillCode))
-        {
-            var skill = Entity.Skill.FindByCode(request.SkillCode);
-            if (skill != null && skill.Enable)
-            {
-                skillId = skill.Id;
-                if (conversation.SkillId != skillId)
-                {
-                    conversation.SkillId = skillId;
-                    conversation.Update();
-                }
-                // 记录技能使用
-                _skillService?.RecordUsage(userId, skillId);
-            }
-        }
-
-        // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中；传入 modelConfig 注入系统提示词）
-        var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig, skillId);
+        // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中）
+        var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig);
 
         // 预分配AI回复消息编号
         var assistantMsg = new ChatMessage
@@ -659,18 +538,91 @@ public class ChatApplicationService
         assistantMsg.Insert();
 
         // message_start（含完整字段）
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code, request.ThinkingMode);
+        using var span = tracer?.NewSpan("chat:Stream", modelConfig.Code);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code ?? String.Empty, request.ThinkingMode);
 
-        // 流式调用模型，收集内容用于持久化
-        // 注意：C# 不允许在含 catch 的 try 块中 yield return，因此使用 IAsyncEnumerator + try-finally 模式
+        // 委托管道流式执行（能力扩展层 + 知识进化层由管道内部处理）
         var contentBuilder = new StringBuilder();
         var thinkingBuilder = new StringBuilder();
-        ChatUsage? finalUsage = null;
+        UsageDetails? finalUsage = null;
         var hasError = false;
         ChatStreamEvent? deferredErrorEvent = null;
         var toolCallsCollector = new List<ToolCallDto>();
 
-        var enumerator = StreamFromProviderAsync(contextMessages, modelConfig, request.ThinkingMode, cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var msgPipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = conversationId + "" };
+        if (request.Options != null) msgPipelineCtx.Items = request.Options;
+        var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, request.ThinkingMode, msgPipelineCtx, cancellationToken);
+        await foreach (var ev in DrainPipelineAsync(pipelineStream, contentBuilder, thinkingBuilder, toolCallsCollector,
+            u => finalUsage = u, (err, e) => { hasError = err; deferredErrorEvent = e; }, "流式生成失败", cancellationToken).ConfigureAwait(false))
+        {
+            yield return ev;
+            if (hasError) break;
+        }
+
+        // 延迟发送错误事件（不能在 try-catch 中 yield）
+        if (deferredErrorEvent != null)
+            yield return deferredErrorEvent;
+
+        // 持久化结果（无论成功或中断都保存已输出内容，避免空消息残留）
+        assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : null;
+        if (thinkingBuilder.Length > 0)
+            assistantMsg.ThinkingContent = thinkingBuilder.ToString();
+        if (toolCallsCollector.Count > 0)
+            assistantMsg.ToolCalls = toolCallsCollector.ToJson();
+        ApplyUsageToMessage(assistantMsg, finalUsage, hasError);
+        assistantMsg.Update();
+
+        // 更新会话
+        ApplyUsageToConversation(conversation, conversationId, finalUsage);
+        conversation.ModelName = modelConfig.Name;
+        conversation.Update();
+
+        // 异步生成标题（首条消息时）
+        String? title = null;
+        if (!hasError && conversation.MessageCount <= 2 && ChatSetting.Current.AutoGenerateTitle)
+        {
+            using var span2 = tracer?.NewSpan("chat:GenerateTitle");
+            try
+            {
+                title = await GenerateTitleAsync(conversationId, request.Content, CancellationToken.None).ConfigureAwait(false);
+                span?.AppendTag(title!);
+            }
+            catch (Exception ex)
+            {
+                span2?.SetError(ex);
+                log?.Error("异步生成标题失败: {0}", ex.Message);
+            }
+        }
+
+        // message_done（含 MessageId、Usage、Title）
+        if (!hasError && !cancellationToken.IsCancellationRequested)
+        {
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = finalUsage, Title = title, };
+        }
+    }
+
+    /// <summary>枚举管道流，收集 content/thinking/usage，将可透传事件实时 yield，并在循环结束后写入收集结果</summary>
+    /// <param name="source">管道事件流</param>
+    /// <param name="contentBuilder">正文内容收集器</param>
+    /// <param name="thinkingBuilder">思考内容收集器</param>
+    /// <param name="toolCallsCollector">工具调用收集器（可为 null）</param>
+    /// <param name="setFinalUsage">用量回调：收到 message_done 事件时调用</param>
+    /// <param name="setErrorState">错误回调：发生异常时调用，传入 (hasError, deferredErrorEvent)</param>
+    /// <param name="errorLogPrefix">错误日志前缀</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private async IAsyncEnumerable<ChatStreamEvent> DrainPipelineAsync(
+        IAsyncEnumerable<ChatStreamEvent> source,
+        StringBuilder contentBuilder,
+        StringBuilder thinkingBuilder,
+        List<ToolCallDto>? toolCallsCollector,
+        Action<UsageDetails?> setFinalUsage,
+        Action<Boolean, ChatStreamEvent?> setErrorState,
+        String errorLogPrefix,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ISpan? toolSpan = null;
+
+        var enumerator = source.GetAsyncEnumerator(cancellationToken);
         try
         {
             while (true)
@@ -683,9 +635,8 @@ public class ChatApplicationService
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    _log?.Error("流式生成失败: {0}", ex.Message);
-                    hasError = true;
-                    deferredErrorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+                    log?.Error("{0}: {1}", errorLogPrefix, ex.Message);
+                    setErrorState(true, ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message));
                     break;
                 }
 
@@ -703,247 +654,91 @@ public class ChatApplicationService
                         yield return ev;
                         break;
                     case "message_done":
-                        finalUsage = ev.Usage;
-                        // 不直接转发，后续统一发送含 MessageId/Title 的 message_done
+                        setFinalUsage(ev.Usage);
                         break;
                     case "error":
-                        hasError = true;
-                        deferredErrorEvent = ev;
+                        setErrorState(true, ev);
                         break;
-                    case "tool_call_start":
-                        // 收集工具调用信息用于持久化
-                        toolCallsCollector.Add(new ToolCallDto(ev.ToolCallId ?? String.Empty, ev.Name ?? String.Empty, ToolCallStatus.Calling, ev.Arguments));
+                    case "tool_call_start" when toolCallsCollector != null:
+                        toolSpan = tracer?.NewSpan($"chat:ToolCall:{ev.Name}");
+                        toolCallsCollector.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments));
                         yield return ev;
                         break;
-                    case "tool_call_done":
-                        // 更新对应工具调用状态，保留原 name 和 arguments
-                        for (var i = toolCallsCollector.Count - 1; i >= 0; i--)
-                        {
-                            if (toolCallsCollector[i].Id == ev.ToolCallId)
-                            {
-                                var orig = toolCallsCollector[i];
-                                toolCallsCollector[i] = new ToolCallDto(orig.Id, orig.Name, ToolCallStatus.Done, orig.Arguments, ev.Result);
-                                break;
-                            }
-                        }
+                    case "tool_call_done" when toolCallsCollector != null:
+                        toolSpan?.AppendTag(ev.Result!);
+                        toolSpan?.Dispose();
+                        toolSpan = null;
+                        UpdateToolCallStatus(toolCallsCollector, ev.ToolCallId, ToolCallStatus.Done, ev.Result);
                         yield return ev;
                         break;
-                    case "tool_call_error":
-                        // 更新对应工具调用状态为错误，保留原 name 和 arguments
-                        for (var i = toolCallsCollector.Count - 1; i >= 0; i--)
-                        {
-                            if (toolCallsCollector[i].Id == ev.ToolCallId)
-                            {
-                                var orig = toolCallsCollector[i];
-                                toolCallsCollector[i] = new ToolCallDto(orig.Id, orig.Name, ToolCallStatus.Error, orig.Arguments, ev.Error);
-                                break;
-                            }
-                        }
+                    case "tool_call_error" when toolCallsCollector != null:
+                        toolSpan?.SetError(new Exception(ev.Error));
+                        toolSpan?.Dispose();
+                        toolSpan = null;
+                        UpdateToolCallStatus(toolCallsCollector, ev.ToolCallId, ToolCallStatus.Error, ev.Error);
                         yield return ev;
                         break;
                     default:
-                        // thinking_done 等事件直接转发
                         yield return ev;
                         break;
                 }
-
-                if (hasError) break;
             }
         }
         finally
         {
             await enumerator.DisposeAsync().ConfigureAwait(false);
         }
+    }
 
-        // 延迟发送错误事件（不能在 try-catch 中 yield）
-        if (deferredErrorEvent != null)
-            yield return deferredErrorEvent;
-
-        // 持久化结果（无论成功或中断都保存已输出内容，避免空消息残留）
-        assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : (hasError ? "[生成失败]" : "[已中断]");
-        if (thinkingBuilder.Length > 0)
-            assistantMsg.ThinkingContent = thinkingBuilder.ToString();
-        if (toolCallsCollector.Count > 0)
-            assistantMsg.ToolCalls = toolCallsCollector.ToJson();
-        if (finalUsage != null)
+    /// <summary>更新工具调用列表中指定 id 的状态与结果</summary>
+    private static void UpdateToolCallStatus(List<ToolCallDto> collector, String? toolCallId, ToolCallStatus status, String? value)
+    {
+        for (var i = collector.Count - 1; i >= 0; i--)
         {
-            assistantMsg.PromptTokens = finalUsage.PromptTokens;
-            assistantMsg.CompletionTokens = finalUsage.CompletionTokens;
-            assistantMsg.TotalTokens = finalUsage.TotalTokens;
-        }
-        assistantMsg.Update();
-
-        // 更新会话
-        conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
-        conversation.Update();
-
-        // 记录用量
-        if (finalUsage != null)
-            _usageService?.Record(userId, 0, conversationId, assistantMsg.Id, modelConfig.Id, finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens, "Chat");
-
-        // 异步生成标题（首条消息时）
-        String? title = null;
-        if (!hasError && conversation.MessageCount <= 2 && ChatSetting.Current.AutoGenerateTitle)
-        {
-            try
+            if (collector[i].Id == toolCallId)
             {
-                title = await GenerateTitleAsync(conversationId, request.Content, CancellationToken.None).ConfigureAwait(false);
+                var orig = collector[i];
+                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value);
+                break;
             }
-            catch (Exception ex)
-            {
-                _log?.Error("异步生成标题失败: {0}", ex.Message);
-            }
-        }
-
-        // message_done（含 MessageId、Usage、Title）
-        if (!hasError && !cancellationToken.IsCancellationRequested)
-        {
-            yield return new ChatStreamEvent
-            {
-                Type = "message_done",
-                MessageId = assistantMsg.Id,
-                Usage = finalUsage,
-                Title = title,
-            };
         }
     }
 
-    /// <summary>流式生成回复。优先使用 ToolCallService 支持函数调用，不可用时直接调用服务商</summary>
-    /// <param name="contextMessages">上下文消息列表</param>
-    /// <param name="modelConfig">模型配置</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    private IAsyncEnumerable<ChatStreamEvent> StreamFromProviderAsync(
-        IList<AiChatMessage> contextMessages,
-        ModelConfig modelConfig,
-        ThinkingMode thinkingMode,
-        CancellationToken cancellationToken)
+    /// <summary>将用量统计写入 AI 回复消息实体（不保存，调用方负责 Update）</summary>
+    private static void ApplyUsageToMessage(ChatMessage msg, UsageDetails? usage, Boolean hasError)
     {
-        var setting = ChatSetting.Current;
-
-        // 当启用函数调用/MCP 且 ToolCallService 可用时，走工具编排流程
-        if (_toolCallService != null && (setting.EnableFunctionCalling || setting.EnableMcp))
-            return _toolCallService.StreamWithToolsAsync(contextMessages, modelConfig, thinkingMode, cancellationToken);
-
-        // 否则直接调用服务商
-        return StreamFromProviderDirectAsync(contextMessages, modelConfig, thinkingMode, cancellationToken);
-    }
-
-    /// <summary>直接从服务商流式生成（不经过 ToolCallService）</summary>
-    /// <param name="contextMessages">上下文消息列表</param>
-    /// <param name="modelConfig">模型配置</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    private async IAsyncEnumerable<ChatStreamEvent> StreamFromProviderDirectAsync(
-        IList<AiChatMessage> contextMessages,
-        ModelConfig modelConfig,
-        ThinkingMode thinkingMode,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var provider = _gatewayService.GetProvider(modelConfig);
-        if (provider == null)
-        {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.GetEffectiveProvider()}'");
-            yield break;
-        }
-
-        var aiRequest = new ChatCompletionRequest
-        {
-            Model = modelConfig.Code,
-            Messages = contextMessages,
-            Stream = true,
-            EnableThinking = thinkingMode switch
-            {
-                ThinkingMode.Think => true,
-                ThinkingMode.Fast => false,
-                _ => (Boolean?)null,
-            },
-        };
-        var options = GatewayService.BuildOptions(modelConfig);
-
-        using var streamClient = provider.CreateClient(options);
-        var thinkingBuilder = new StringBuilder();
-        ChatUsage? lastUsage = null;
-        Int64 thinkingStart = 0;
-
-        await foreach (var chunk in streamClient.CompleteStreamingAsync(aiRequest, cancellationToken).ConfigureAwait(false))
-        {
-            if (chunk.Usage != null) lastUsage = chunk.Usage;
-
-            var choice = chunk.Choices?.FirstOrDefault();
-            if (choice == null) continue;
-
-            var delta = choice.Delta;
-            if (delta == null) continue;
-
-            if (!String.IsNullOrEmpty(delta.ReasoningContent))
-            {
-                if (thinkingStart == 0) thinkingStart = Runtime.TickCount64;
-                thinkingBuilder.Append(delta.ReasoningContent);
-                yield return ChatStreamEvent.ThinkingDelta(delta.ReasoningContent);
-            }
-
-            var text = delta.Content as String;
-            if (!String.IsNullOrEmpty(text))
-                yield return ChatStreamEvent.ContentDelta(text);
-        }
-
-        if (thinkingBuilder.Length > 0)
-            yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
-
-        yield return ChatStreamEvent.MessageDone(lastUsage);
-    }
-
-    /// <summary>持久化 AI 回复结果到数据库</summary>
-    /// <param name="assistantMsg">AI 回复消息实体</param>
-    /// <param name="conversation">会话实体</param>
-    /// <param name="conversationId">会话编号</param>
-    /// <param name="modelId">模型编号</param>
-    /// <param name="content">回复内容</param>
-    /// <param name="thinkingContent">思考内容</param>
-    /// <param name="usage">用量统计</param>
-    /// <param name="userMessage">用户消息内容（用于标题生成）</param>
-    /// <returns></returns>
-    private async Task PersistResultAsync(ChatMessage assistantMsg, Conversation conversation, Int64 conversationId,
-        Int32 modelId, String content, String? thinkingContent, ChatUsage? usage, String userMessage, Int32 userId)
-    {
-        assistantMsg.Content = content;
-        if (!String.IsNullOrEmpty(thinkingContent))
-            assistantMsg.ThinkingContent = thinkingContent;
-        assistantMsg.Update();
-
-        conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)Entity.ChatMessage.FindCount(Entity.ChatMessage._.ConversationId == conversationId);
-        conversation.Update();
-
+        if (msg.Content.IsNullOrEmpty())
+            msg.Content = hasError ? "[生成失败]" : "[已中断]";
         if (usage != null)
         {
-            _usageService?.Record(userId, 0, conversationId, assistantMsg.Id,
-                modelId, usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, "Chat");
-        }
-
-        // 异步生成标题（首条消息）
-        if (conversation.MessageCount <= 2 && ChatSetting.Current.AutoGenerateTitle)
-        {
-            try
-            {
-                await GenerateTitleAsync(conversationId, userMessage, CancellationToken.None).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _log?.Error("异步生成标题失败: {0}", ex.Message);
-            }
+            msg.PromptTokens = usage.InputTokens;
+            msg.CompletionTokens = usage.OutputTokens;
+            msg.TotalTokens = usage.TotalTokens;
+            msg.ElapsedMs = usage.ElapsedMs;
         }
     }
 
-    /// <summary>中断生成。停止后台继续生成任务</summary>
+    /// <summary>将用量统计累加到会话实体并更新最后消息时间（不保存，调用方负责 Update）</summary>
+    private static void ApplyUsageToConversation(Conversation conversation, Int64 conversationId, UsageDetails? usage)
+    {
+        conversation.LastMessageTime = DateTime.Now;
+        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
+        if (usage != null)
+        {
+            conversation.TotalPromptTokens += usage.InputTokens;
+            conversation.TotalCompletionTokens += usage.OutputTokens;
+            conversation.TotalTokens += usage.TotalTokens;
+            conversation.ElapsedMs += usage.ElapsedMs;
+        }
+    }
+
+    /// <summary>中断生成。停止后台正在运行的流式生成任务</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     public Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken)
     {
-        _backgroundService?.Stop(messageId);
+        backgroundService?.Stop(messageId);
         return Task.CompletedTask;
     }
 
@@ -960,29 +755,23 @@ public class ChatApplicationService
         var setting = ChatSetting.Current;
 
         // 尝试通过模型生成标题
-        var modelConfig = _gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
         if (modelConfig != null)
         {
-            var provider = _gatewayService.GetProvider(modelConfig);
-            if (provider != null)
+            var descriptor = gatewayService.GetDescriptor(modelConfig);
+            if (descriptor != null)
             {
                 try
                 {
                     var prompt = setting.TitlePrompt;
-                    var request = new ChatCompletionRequest
-                    {
-                        Model = modelConfig.Code,
-                        Messages =
-                        [
-                            new AiChatMessage { Role = "user", Content = $"{prompt}\n{userMessage}" }
-                        ],
-                        MaxTokens = 30,
-                    };
                     var options = GatewayService.BuildOptions(modelConfig);
-                    using var titleClient = provider.CreateClient(options);
-                    var response = await titleClient.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+                    using var titleClient = descriptor.Factory(options);
+                    var response = await titleClient.GetResponseAsync(
+                        [new AiChatMessage { Role = "user", Content = $"{prompt}\n{userMessage}" }],
+                        new ChatOptions { Model = modelConfig.Code, MaxTokens = 30 },
+                        cancellationToken).ConfigureAwait(false);
 
-                    var title = response.Choices?.FirstOrDefault()?.Message?.Content as String;
+                    var title = response.Messages?.FirstOrDefault()?.Message?.Content as String;
                     if (!String.IsNullOrWhiteSpace(title))
                     {
                         // 清理标题：去除引号和多余空白
@@ -996,7 +785,7 @@ public class ChatApplicationService
                 }
                 catch (Exception ex)
                 {
-                    _log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
+                    log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
                 }
             }
         }
@@ -1024,16 +813,14 @@ public class ChatApplicationService
     /// <returns></returns>
     public Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, Int32 userId, CancellationToken cancellationToken)
     {
-
+        var msg = ChatMessage.FindById(messageId);
         var entity = MessageFeedback.FindByMessageIdAndUserId(messageId, userId);
-        if (entity == null)
+        entity ??= new MessageFeedback
         {
-            entity = new MessageFeedback
-            {
-                MessageId = messageId,
-                UserId = userId,
-            };
-        }
+            MessageId = messageId,
+            UserId = userId,
+        };
+        if (msg != null) entity.ConversationId = msg.ConversationId;
 
         entity.FeedbackType = request.Type;
         entity.Reason = request.Reason;
@@ -1058,16 +845,18 @@ public class ChatApplicationService
     #endregion
 
     #region 分享
-    /// <summary>创建共享链接</summary>
+    /// <summary>创建共享链接。按当前消息进度生成快照，支持设置有效期</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">创建分享请求</param>
+    /// <param name="user">当前操作用户</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public Task<ShareLinkDto> CreateShareLinkAsync(Int64 conversationId, CreateShareRequest request, CancellationToken cancellationToken)
+    /// <returns>包含分享 URL 的 DTO</returns>
+    public Task<ShareLinkDto> CreateShareLinkAsync(Int64 conversationId, CreateShareRequest request, IUser user, CancellationToken cancellationToken)
     {
+        var conversation = Conversation.FindById(conversationId);
+
         // 获取当前最后一条消息的编号作为快照截止点
-        var lastMsg = ChatMessage.FindAll(ChatMessage._.ConversationId == conversationId, ChatMessage._.Id.Desc(), null, 0, 1);
-        var snapshotMessageId = lastMsg.Count > 0 ? lastMsg[0].Id : 0;
+        var snapshotMessageId = ChatMessage.FindLastByConversationId(conversationId)?.Id ?? 0;
 
         DateTime? expireTime = null;
         if (request.ExpireHours is > 0)
@@ -1077,8 +866,11 @@ public class ChatApplicationService
         {
             ConversationId = conversationId,
             ShareToken = Guid.NewGuid().ToString("N"),
+            SnapshotTitle = conversation?.Title,
             SnapshotMessageId = snapshotMessageId,
             ExpireTime = expireTime ?? DateTime.MinValue,
+            CreateUserID = user.ID,
+            CreateUser = user.DisplayName ?? user.Name,
         };
         entity.Insert();
 
@@ -1100,11 +892,7 @@ public class ChatApplicationService
             return Task.FromResult<Object?>(null);
 
         // 获取快照范围内的消息
-        var exp = ChatMessage._.ConversationId == share.ConversationId;
-        if (share.SnapshotMessageId > 0)
-            exp &= ChatMessage._.Id <= share.SnapshotMessageId;
-
-        var messages = ChatMessage.FindAll(exp, ChatMessage._.CreateTime.Asc(), null, 0, 0);
+        var messages = ChatMessage.FindByShareSnapshot(share.ConversationId, share.SnapshotMessageId);
         var items = messages.Select(m => ToMessageDto(m)).ToList();
 
         var result = new
@@ -1208,7 +996,7 @@ public class ChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code, e.Name, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling)).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportVision, e.SupportImageGeneration, e.SupportFunctionCalling, e.ProviderInfo?.Name ?? "")).ToArray();
         return Task.FromResult(models);
     }
     #endregion
@@ -1224,7 +1012,10 @@ public class ChatApplicationService
         if (entity == null)
         {
             // 返回默认设置
-            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false));
+            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty)
+            {
+                EnableLearning = true,
+            });
         }
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -1251,9 +1042,7 @@ public class ChatApplicationService
         entity.DefaultThinkingMode = settings.DefaultThinkingMode;
         entity.ContextRounds = settings.ContextRounds;
         entity.SystemPrompt = settings.SystemPrompt;
-        entity.AllowTraining = settings.AllowTraining;
         entity.McpEnabled = settings.McpEnabled;
-        entity.DefaultSkill = settings.DefaultSkill;
         entity.StreamingSpeed = settings.StreamingSpeed;
         entity.Save();
 
@@ -1266,13 +1055,13 @@ public class ChatApplicationService
     /// <returns></returns>
     public Task<Stream> ExportUserDataAsync(Int32 userId, CancellationToken cancellationToken)
     {
-        var conversations = Conversation.FindAll(Conversation._.UserId == userId, null, null, 0, 0);
+        var conversations = Conversation.FindAllByUserId(userId);
 
         var result = new List<Object>();
 
         foreach (var conv in conversations)
         {
-            var messages = ChatMessage.FindAll(ChatMessage._.ConversationId == conv.Id, ChatMessage._.CreateTime.Asc(), null, 0, 0);
+            var messages = ChatMessage.FindAllByConversationIdOrdered(conv.Id);
             result.Add(new
             {
                 conv.Id,
@@ -1326,10 +1115,6 @@ public class ChatApplicationService
             feedbacks.Delete();
         }
 
-        // 删除用量记录
-        var usageRecords = UsageRecord.FindAll(UsageRecord._.ConversationId.In(convIds));
-        usageRecords.Delete();
-
         // 删除消息
         messages.Delete();
 
@@ -1346,31 +1131,35 @@ public class ChatApplicationService
     /// <param name="conversationId">会话编号</param>
     /// <param name="currentContent">当前用户消息内容</param>
     /// <param name="modelConfig">模型配置（可选，用于注入模型级系统提示词）</param>
-    /// <param name="conversationSkillId">会话激活的技能编号</param>
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
-    private IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null, Int32 conversationSkillId = 0)
+    private IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
     {
         var setting = ChatSetting.Current;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
 
         // 查询历史消息，按时间倒序取最近 N 轮（每轮 = 1条user + 1条assistant = 2条）
-        var p = new PageParameter { PageSize = maxRounds * 2, Sort = Entity.ChatMessage._.CreateTime.Desc() };
-        var history = Entity.ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
+        //var p = new PageParameter { PageSize = maxRounds * 2, Sort = ChatMessage._.CreateTime.Desc() };
+        //var history = ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
+        var history = ChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
         history.Reverse();
 
         var messages = new List<AiChatMessage>();
 
-        // 注入系统提示词（技能级 + 用户全局级 + 模型级）
-        var systemMsg = BuildSystemMessage(userId, modelConfig, conversationSkillId, currentContent);
+        // 注入系统提示词（用户全局级 + 模型级；技能提示词由管道的 SkillFilter 在执行时注入）
+        var systemMsg = BuildSystemMessage(userId, modelConfig);
         if (systemMsg != null) messages.Add(systemMsg);
 
         // 添加历史消息（assistant 含工具调用时重建 tool 角色消息，保持多轮上下文完整性）
         foreach (var msg in history)
         {
-            if (msg.Role == "assistant" && !String.IsNullOrEmpty(msg.ToolCalls))
+            if (msg.Role == "assistant" && !msg.ToolCalls.IsNullOrEmpty())
             {
                 IList<ToolCallDto>? storedDtos = null;
-                try { storedDtos = msg.ToolCalls.ToJsonEntity<List<ToolCallDto>>(); } catch { }
+                try
+                {
+                    storedDtos = msg.ToolCalls.ToJsonEntity<List<ToolCallDto>>();
+                }
+                catch { }
                 if (storedDtos != null && storedDtos.Count > 0)
                 {
                     // 工具调用请求：assistant 发起 tool_calls
@@ -1402,7 +1191,7 @@ public class ChatApplicationService
             }
             messages.Add(new AiChatMessage
             {
-                Role = msg.Role,
+                Role = msg.Role!,
                 Content = msg.Content,
             });
         }
@@ -1410,34 +1199,49 @@ public class ChatApplicationService
         return messages;
     }
 
-    /// <summary>构建系统提示词消息。合并技能提示词、用户全局级和模型级系统提示词</summary>
+    /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词（技能提示词由管道注入）</summary>
     /// <param name="userId">当前用户编号</param>
     /// <param name="modelConfig">模型配置（可选）</param>
-    /// <param name="conversationSkillId">会话激活的技能编号</param>
-    /// <param name="messageContent">用户消息内容（用于解析@引用）</param>
     /// <returns>系统消息，无提示词时返回 null</returns>
-    private AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig, Int32 conversationSkillId = 0, String? messageContent = null)
+    private AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig)
     {
+        using var span = tracer?.NewSpan(nameof(BuildSystemMessage), new { userId });
         var parts = new List<String>();
 
-        // 1. 技能提示词（系统技能 + 会话激活技能 + @引用）
-        if (_skillService != null)
+        // 0. 当前用户基础信息
+        if (userId > 0)
         {
-            var skillPrompt = _skillService.BuildSkillPrompt(conversationSkillId, messageContent);
-            if (!String.IsNullOrWhiteSpace(skillPrompt))
-                parts.Add(skillPrompt);
+            var iuser = ManageProvider.Provider?.FindByID(userId) as IUser;
+            if (iuser != null)
+            {
+                var sb = Pool.StringBuilder.Get();
+                sb.Append($"当前用户：{iuser.DisplayName}（{iuser.Name}）");
+                var roleIds = iuser.RoleIds?.SplitAsInt();
+                if (roleIds?.Length > 0)
+                {
+                    var roleNames = roleIds.Select(id => Role.FindByID(id)?.Name).Where(n => !n.IsNullOrEmpty()).Join(",");
+                    if (!roleNames.IsNullOrEmpty()) sb.Append($"，角色：{roleNames}");
+                }
+                if (iuser.DepartmentID > 0)
+                {
+                    var dept = Department.FindByID(iuser.DepartmentID);
+                    if (dept != null) sb.Append($"，部门：{dept.Name}");
+                }
+                parts.Add(sb.Put(true));
+            }
         }
 
-        // 2. 用户全局系统提示词
+        // 1. 用户全局系统提示词
         var userSetting = UserSetting.FindByUserId(userId);
         if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
             parts.Add(userSetting.SystemPrompt.Trim());
 
-        // 3. 模型级系统提示词
+        // 2. 模型级系统提示词
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
             parts.Add(modelConfig.SystemPrompt.Trim());
 
         if (parts.Count == 0) return null;
+        span?.Value = parts.Count;
 
         return new AiChatMessage
         {
@@ -1450,7 +1254,7 @@ public class ChatApplicationService
     /// <param name="entity">会话实体</param>
     /// <returns></returns>
     private static ConversationSummaryDto ToConversationSummary(Conversation entity) =>
-        new(entity.Id, entity.Title, entity.ModelId, entity.LastMessageTime, entity.IsPinned);
+        new(entity.Id, entity.Title ?? String.Empty, entity.ModelId, entity.LastMessageTime, entity.IsPinned);
 
     /// <summary>转换消息实体为DTO</summary>
     /// <param name="entity">消息实体</param>
@@ -1469,7 +1273,7 @@ public class ChatApplicationService
             catch { }
         }
 
-        return new MessageDto(entity.Id, entity.ConversationId, entity.Role, entity.Content, entity.ThinkingContent, (ThinkingMode)entity.ThinkingMode, entity.Attachments, entity.CreateTime)
+        return new MessageDto(entity.Id, entity.ConversationId, entity.Role ?? String.Empty, entity.Content ?? String.Empty, entity.ThinkingContent, entity.ThinkingMode, entity.Attachments, entity.CreateTime)
         {
             ToolCalls = toolCalls,
             PromptTokens = entity.PromptTokens,
@@ -1488,13 +1292,11 @@ public class ChatApplicationService
             entity.FontSize > 0 ? entity.FontSize : 16,
             entity.SendShortcut ?? "Enter",
             entity.DefaultModel,
-            (ThinkingMode)entity.DefaultThinkingMode,
+            entity.DefaultThinkingMode,
             entity.ContextRounds > 0 ? entity.ContextRounds : 10,
-            entity.SystemPrompt ?? String.Empty,
-            entity.AllowTraining)
+            entity.SystemPrompt ?? String.Empty)
         {
             McpEnabled = entity.McpEnabled,
-            DefaultSkill = entity.DefaultSkill ?? "general",
             StreamingSpeed = entity.StreamingSpeed > 0 ? entity.StreamingSpeed : 3,
         };
     #endregion

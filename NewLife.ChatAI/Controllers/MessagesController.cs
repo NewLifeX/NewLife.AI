@@ -1,51 +1,25 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
+using NewLife.Log;
+using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>消息控制器</summary>
 [Route("api")]
-public class MessagesController(ChatApplicationService chatService) : ChatApiControllerBase
+public class MessagesController(ChatApplicationService chatService, MessageRateLimiter rateLimiter, ITracer tracer) : ChatApiControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new Services.LongJsonConverter() },
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new SafeInt64Converter() },
     };
-
-    /// <summary>发送消息并以 SSE 流式返回。支持 message_start/thinking_delta/thinking_done/content_delta/tool_call_start/tool_call_done/tool_call_error/message_done/error 事件</summary>
-    /// <param name="conversationId">会话编号</param>
-    /// <param name="request">发送消息请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    [HttpPost("conversations/{conversationId:long}/messages")]
-    public async Task StreamSendAsync([FromRoute] Int64 conversationId, [FromBody] SendMessageRequest request, CancellationToken cancellationToken)
-    {
-        Response.Headers.Append("Content-Type", "text/event-stream");
-        Response.Headers.Append("Cache-Control", "no-cache");
-        Response.Headers.Append("Connection", "keep-alive");
-
-        try
-        {
-            await foreach (var ev in chatService.StreamMessageAsync(conversationId, request, GetCurrentUserId(), cancellationToken).ConfigureAwait(false))
-            {
-                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // 用户取消，不需要额外处理
-        }
-        catch (Exception ex)
-        {
-            var error = ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", ex.Message);
-            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
-        }
-    }
 
     /// <summary>获取会话消息列表</summary>
     /// <param name="conversationId">会话编号</param>
@@ -56,6 +30,30 @@ public class MessagesController(ChatApplicationService chatService) : ChatApiCon
     {
         var result = await chatService.GetMessagesAsync(conversationId, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         return Ok(result);
+    }
+
+    /// <summary>发送消息并以 SSE 流式返回。支持 message_start/thinking_delta/thinking_done/content_delta/tool_call_start/tool_call_done/tool_call_error/message_done/error 事件</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="request">发送消息请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    [HttpPost("conversations/{conversationId:long}/messages")]
+    public async Task StreamSendAsync([FromRoute] Int64 conversationId, [FromBody] SendMessageRequest request, CancellationToken cancellationToken)
+    {
+        // 速率限制检查：在设置 SSE 头之前返回 429，前端可直接解析 JSON
+        var userId = GetCurrentUserId();
+        if (!rateLimiter.IsAllowed(userId, ChatSetting.Current.MaxMessagesPerMinute))
+        {
+            Response.StatusCode = 429;
+            Response.ContentType = "application/json";
+            await Response.WriteAsync("{\"code\":\"RATE_LIMITED\",\"message\":\"请求过于频繁，请稍后再试\"}", cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        using var span = tracer?.NewSpan("chat:StreamSend", new { request.ModelId, request.SkillCode, request.ThinkingMode });
+        span?.AppendTag(request.Content);
+        SetSseHeaders();
+        await StreamEventsAsync(chatService.StreamMessageAsync(conversationId, request, userId, cancellationToken), cancellationToken, "MODEL_UNAVAILABLE", ex => span?.SetError(ex)).ConfigureAwait(false);
     }
 
     /// <summary>编辑消息内容</summary>
@@ -71,7 +69,20 @@ public class MessagesController(ChatApplicationService chatService) : ChatApiCon
         return Ok(result);
     }
 
-    /// <summary>重新生成回复</summary>
+    /// <summary>编辑用户消息并重新发送，以 SSE 事件流返回。删除后续所有消息，流式生成新 AI 回复</summary>
+    /// <param name="id">用户消息编号</param>
+    /// <param name="request">编辑请求（包含新内容）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    [HttpPost("messages/{id:long}/edit-and-resend")]
+    public async Task EditAndResendStreamAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
+    {
+        using var span = tracer?.NewSpan("chat:ResendStream", new { id, request.Content });
+        SetSseHeaders();
+        await StreamEventsAsync(chatService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>重新生成回复（非流式）</summary>
     /// <param name="id">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
@@ -83,36 +94,6 @@ public class MessagesController(ChatApplicationService chatService) : ChatApiCon
         return Ok(result);
     }
 
-    /// <summary>编辑用户消息并重新发送，以 SSE 事件流返回。删除后续所有消息，流式生成新 AI 回复</summary>
-    /// <param name="id">用户消息编号</param>
-    /// <param name="request">编辑请求（包含新内容）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    [HttpPost("messages/{id:long}/edit-and-resend")]
-    public async Task EditAndResendStreamAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
-    {
-        Response.Headers.Append("Content-Type", "text/event-stream");
-        Response.Headers.Append("Cache-Control", "no-cache");
-        Response.Headers.Append("Connection", "keep-alive");
-
-        try
-        {
-            await foreach (var ev in chatService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken).ConfigureAwait(false))
-            {
-                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // 用户取消，不需要额外处理
-        }
-        catch (Exception ex)
-        {
-            var error = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
-            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
-        }
-    }
-
     /// <summary>流式重新生成回复，以 SSE 事件流返回</summary>
     /// <param name="id">消息编号</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -120,26 +101,9 @@ public class MessagesController(ChatApplicationService chatService) : ChatApiCon
     [HttpPost("messages/{id:long}/regenerate/stream")]
     public async Task StreamRegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
-        Response.Headers.Append("Content-Type", "text/event-stream");
-        Response.Headers.Append("Cache-Control", "no-cache");
-        Response.Headers.Append("Connection", "keep-alive");
-
-        try
-        {
-            await foreach (var ev in chatService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false))
-            {
-                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // 用户取消，不需要额外处理
-        }
-        catch (Exception ex)
-        {
-            var error = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
-            await WriteSseEventAsync(error, CancellationToken.None).ConfigureAwait(false);
-        }
+        using var span = tracer?.NewSpan("chat:StreamRegenerate", id);
+        SetSseHeaders();
+        await StreamEventsAsync(chatService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>停止生成</summary>
@@ -154,10 +118,44 @@ public class MessagesController(ChatApplicationService chatService) : ChatApiCon
     }
 
     #region 辅助
+    /// <summary>设置 SSE 响应头</summary>
+    private void SetSseHeaders()
+    {
+        Response.Headers.Append("Content-Type", "text/event-stream");
+        Response.Headers.Append("Cache-Control", "no-cache");
+        Response.Headers.Append("Connection", "keep-alive");
+        Response.Headers.Append("X-Accel-Buffering", "no");  // 告知 Nginx 等反向代理禁用响应缓冲，保证 SSE 实时推送
+    }
+
+    /// <summary>流式写入 SSE 事件序列，统一处理取消与异常</summary>
+    /// <param name="events">事件异步序列</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="errorCode">异常时向客户端推送的错误码</param>
+    /// <param name="onError">异常回调，可用于埋点等副作用</param>
+    private async Task StreamEventsAsync(IAsyncEnumerable<ChatStreamEvent> events, CancellationToken cancellationToken, String errorCode = "STREAM_ERROR", Action<Exception>? onError = null)
+    {
+        try
+        {
+            await foreach (var ev in events.ConfigureAwait(false))
+            {
+                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户取消，不需要额外处理
+        }
+        catch (Exception ex)
+        {
+            DefaultSpan.Current?.SetError(ex);
+            onError?.Invoke(ex);
+            await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(errorCode, ex.Message), CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>写入 SSE 事件</summary>
     /// <param name="ev">事件对象</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
     private async Task WriteSseEventAsync(ChatStreamEvent ev, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(ev, _jsonOptions);

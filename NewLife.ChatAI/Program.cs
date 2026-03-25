@@ -1,8 +1,8 @@
-﻿using NewLife;
+﻿using System.Text.Json.Serialization;
 using NewLife.ChatAI;
 using NewLife.Cube;
-using NewLife.Cube.Extensions;
 using NewLife.Log;
+using NewLife.Serialization;
 
 XTrace.UseConsole();
 
@@ -17,28 +17,12 @@ services.AddChatAI();
 services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-        // Snowflake ID（Int64）超出 JavaScript Number.MAX_SAFE_INTEGER，序列化为字符串避免精度丢失
-        options.JsonSerializerOptions.Converters.Add(new NewLife.ChatAI.Services.LongJsonConverter());
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        SystemJson.Apply(options.JsonSerializerOptions, true);
     });
 services.AddCube();
 
-// CORS：允许前端开发服务器跨域访问
-services.AddCors(options =>
-{
-    options.AddPolicy("DevCors", builder =>
-    {
-        builder.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174")
-               .AllowAnyHeader()
-               .AllowAnyMethod()
-               .AllowCredentials();
-    });
-});
-
 var app = builder.Build();
-
-app.UseCors("DevCors");
 
 app.UseCube(app.Environment);
 

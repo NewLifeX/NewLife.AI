@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI;
 using NewLife.ChatAI.Services;
 using NewLife.Cube;
+using NewLife.ChatAI.Models;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -13,7 +13,7 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
     [HttpGet("profile")]
     public ActionResult<UserProfileDto> GetProfile()
     {
-        var user = ManageProvider2.User;
+        var user = XCode.Membership.ManageProvider.User;
         var nickname = user?.DisplayName ?? user?.Name ?? "用户";
         var account = user?.Name ?? "";
         var avatar = user?.GetAvatarUrl();

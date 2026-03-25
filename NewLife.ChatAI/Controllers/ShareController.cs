@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI;
+using NewLife.Cube;
+using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
@@ -16,7 +17,8 @@ public class ShareController(ChatApplicationService chatService) : ChatApiContro
     [HttpPost("api/conversations/{conversationId:long}/share")]
     public async Task<ActionResult<ShareLinkDto>> CreateAsync([FromRoute] Int64 conversationId, [FromBody] CreateShareRequest request, CancellationToken cancellationToken)
     {
-        var result = await chatService.CreateShareLinkAsync(conversationId, request, cancellationToken).ConfigureAwait(false);
+        var user = ManageProvider2.User;
+        var result = await chatService.CreateShareLinkAsync(conversationId, request, user, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 

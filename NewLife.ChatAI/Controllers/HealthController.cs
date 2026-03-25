@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -7,6 +7,7 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api/health")]
 public class HealthController : ControllerBase
 {
+    /// <summary>健康检查接口</summary>
     [HttpGet]
     public IActionResult Get() => Ok(new { name = "NewLife.ChatAI", status = "ok", time = DateTime.Now });
 }

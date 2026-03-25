@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using NewLife.Cube;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -11,7 +11,7 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
 {
     /// <summary>获取当前登录用户编号</summary>
     /// <returns></returns>
-    protected static Int32 GetCurrentUserId() => ManageProvider2.User?.ID ?? 0;
+    protected static Int32 GetCurrentUserId() => XCode.Membership.ManageProvider.User?.ID ?? 0;
 
     /// <summary>Action 执行前校验登录状态。未标记 AllowAnonymous 的接口要求已登录</summary>
     /// <param name="context">上下文</param>
@@ -21,7 +21,7 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
         // 标记了 AllowAnonymous 的接口跳过校验
         if (context.ActionDescriptor.EndpointMetadata.OfType<AllowAnonymousAttribute>().Any()) return;
 
-        if (ManageProvider2.User == null)
+        if (ManageProvider.User == null)
         {
             context.Result = new ObjectResult(new { code = "UNAUTHORIZED", message = "未登录，请先登录" })
             {

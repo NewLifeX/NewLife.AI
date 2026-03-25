@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.Cube.Entity;
 using NewLife.ChatAI.Services;
-using NewLife.AI.ChatAI;
+using NewLife.ChatAI.Models;
 
 namespace NewLife.ChatAI.Controllers;
 

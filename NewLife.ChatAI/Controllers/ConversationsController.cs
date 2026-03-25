@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.ChatAI;
+using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -8,13 +9,16 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api/conversations")]
 public class ConversationsController(ChatApplicationService chatService) : ChatApiControllerBase
 {
+    /// <summary>创建新会话</summary>
     [HttpPost]
     public async Task<ActionResult<ConversationSummaryDto>> CreateAsync([FromBody] CreateConversationRequest request, CancellationToken cancellationToken)
     {
-        var result = await chatService.CreateConversationAsync(request, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
+        var user = ManageProvider.User;
+        var result = await chatService.CreateConversationAsync(request, user, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 
+    /// <summary>分页查询当前用户会话列表</summary>
     [HttpGet]
     public async Task<ActionResult<PagedResultDto<ConversationSummaryDto>>> QueryAsync([FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20, CancellationToken cancellationToken = default)
     {
@@ -22,6 +26,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
         return Ok(result);
     }
 
+    /// <summary>更新会话信息</summary>
     [HttpPut("{id:long}")]
     public async Task<ActionResult<ConversationSummaryDto>> UpdateAsync([FromRoute] Int64 id, [FromBody] UpdateConversationRequest request, CancellationToken cancellationToken)
     {
@@ -30,6 +35,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
         return Ok(result);
     }
 
+    /// <summary>删除会话</summary>
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
@@ -38,6 +44,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
         return NoContent();
     }
 
+    /// <summary>设置会话置顶状态</summary>
     [HttpPatch("{id:long}/pin")]
     public async Task<IActionResult> SetPinAsync([FromRoute] Int64 id, [FromQuery] Boolean isPinned, CancellationToken cancellationToken)
     {

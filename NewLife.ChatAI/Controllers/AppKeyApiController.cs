@@ -16,8 +16,9 @@ public class AppKeyApiController : ChatApiControllerBase
         var userId = GetCurrentUserId();
         var list = AppKey.FindAllByUserId(userId);
         var items = list.Select(e => new AppKeyResponseDto(
-            e.Id, e.Name, MaskSecret(e.Secret), e.Enable,
-            e.ExpireTime.Year > 2000 ? e.ExpireTime : (DateTime?)null,
+            e.Id, e.Name ?? String.Empty, MaskSecret(e.Secret ?? String.Empty), e.Enable,
+            e.Models,
+            e.ExpireTime.Year > 2000 ? e.ExpireTime : null,
             e.Calls, e.TotalTokens, e.LastCallTime, e.CreateTime)).ToList();
         return Ok(items);
     }
@@ -41,6 +42,7 @@ public class AppKeyApiController : ChatApiControllerBase
             UserId = userId,
             Name = request.Name.Trim(),
             Secret = secret,
+            Models = AppKey.NormalizeModels(request.Models),
             Enable = true,
         };
 
@@ -65,6 +67,8 @@ public class AppKeyApiController : ChatApiControllerBase
 
         if (!String.IsNullOrWhiteSpace(request.Name))
             entity.Name = request.Name.Trim();
+        if (request.Models != null)
+            entity.Models = AppKey.NormalizeModels(request.Models);
         if (request.Enable != null)
             entity.Enable = request.Enable.Value;
         if (request.ExpireTime != null)
@@ -73,7 +77,8 @@ public class AppKeyApiController : ChatApiControllerBase
         entity.Update();
 
         return Ok(new AppKeyResponseDto(
-            entity.Id, entity.Name, MaskSecret(entity.Secret), entity.Enable,
+            entity.Id, entity.Name ?? String.Empty, MaskSecret(entity.Secret ?? String.Empty), entity.Enable,
+            entity.Models,
             entity.ExpireTime.Year > 2000 ? entity.ExpireTime : null,
             entity.Calls, entity.TotalTokens, entity.LastCallTime, entity.CreateTime));
     }
@@ -106,14 +111,14 @@ public class AppKeyApiController : ChatApiControllerBase
 
 #region DTO 定义
 /// <summary>创建 AppKey 请求</summary>
-public record CreateAppKeyRequest(String Name, DateTime? ExpireTime);
+public record CreateAppKeyRequest(String Name, DateTime? ExpireTime, String? Models);
 
 /// <summary>更新 AppKey 请求</summary>
-public record UpdateAppKeyRequest(String? Name, Boolean? Enable, DateTime? ExpireTime);
+public record UpdateAppKeyRequest(String? Name, Boolean? Enable, DateTime? ExpireTime, String? Models);
 
 /// <summary>AppKey 响应（不含完整密钥）</summary>
 public record AppKeyResponseDto(Int32 Id, String Name, String SecretMask, Boolean Enable,
-    DateTime? ExpireTime, Int64 Calls, Int64 TotalTokens, DateTime LastCallTime, DateTime CreateTime);
+    String? Models, DateTime? ExpireTime, Int64 Calls, Int64 TotalTokens, DateTime LastCallTime, DateTime CreateTime);
 
 /// <summary>AppKey 创建响应（含完整密钥，仅此一次）</summary>
 public record AppKeyCreateResponseDto(Int32 Id, String Name, String Secret, DateTime CreateTime);
