@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("用户设置。用户的个性化配置")]
 [BindIndex("IU_UserSetting_UserId", true, "UserId")]
 [BindTable("UserSetting", Description = "用户设置。用户的个性化配置", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UserSetting : IEntity<UserSettingModel>
+public partial class UserSetting
 {
     #region 属性
     private Int32 _Id;
@@ -78,13 +78,13 @@ public partial class UserSetting : IEntity<UserSettingModel>
     [BindColumn("DefaultModel", "默认模型。新会话的默认模型配置Id", "")]
     public Int32 DefaultModel { get => _DefaultModel; set { if (OnPropertyChanging("DefaultModel", value)) { _DefaultModel = value; OnPropertyChanged("DefaultModel"); } } }
 
-    private NewLife.AI.ChatAI.ThinkingMode _DefaultThinkingMode;
+    private NewLife.AI.Models.ThinkingMode _DefaultThinkingMode;
     /// <summary>默认思考模式。Auto=0, Think=1, Fast=2</summary>
     [DisplayName("默认思考模式")]
     [Description("默认思考模式。Auto=0, Think=1, Fast=2")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("DefaultThinkingMode", "默认思考模式。Auto=0, Think=1, Fast=2", "")]
-    public NewLife.AI.ChatAI.ThinkingMode DefaultThinkingMode { get => _DefaultThinkingMode; set { if (OnPropertyChanging("DefaultThinkingMode", value)) { _DefaultThinkingMode = value; OnPropertyChanged("DefaultThinkingMode"); } } }
+    public NewLife.AI.Models.ThinkingMode DefaultThinkingMode { get => _DefaultThinkingMode; set { if (OnPropertyChanging("DefaultThinkingMode", value)) { _DefaultThinkingMode = value; OnPropertyChanged("DefaultThinkingMode"); } } }
 
     private Int32 _ContextRounds;
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
@@ -102,14 +102,6 @@ public partial class UserSetting : IEntity<UserSettingModel>
     [BindColumn("SystemPrompt", "系统提示词。全局System Prompt", "", ShowIn = "Auto,-List,-Search")]
     public String SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
 
-    private Boolean _AllowTraining;
-    /// <summary>允许训练。是否允许反馈数据用于模型改进</summary>
-    [DisplayName("允许训练")]
-    [Description("允许训练。是否允许反馈数据用于模型改进")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("AllowTraining", "允许训练。是否允许反馈数据用于模型改进", "")]
-    public Boolean AllowTraining { get => _AllowTraining; set { if (OnPropertyChanging("AllowTraining", value)) { _AllowTraining = value; OnPropertyChanged("AllowTraining"); } } }
-
     private Boolean _McpEnabled;
     /// <summary>启用MCP。是否启用MCP工具调用</summary>
     [DisplayName("启用MCP")]
@@ -117,14 +109,6 @@ public partial class UserSetting : IEntity<UserSettingModel>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("McpEnabled", "启用MCP。是否启用MCP工具调用", "")]
     public Boolean McpEnabled { get => _McpEnabled; set { if (OnPropertyChanging("McpEnabled", value)) { _McpEnabled = value; OnPropertyChanged("McpEnabled"); } } }
-
-    private String _DefaultSkill;
-    /// <summary>默认技能。新会话的默认技能编码</summary>
-    [DisplayName("默认技能")]
-    [Description("默认技能。新会话的默认技能编码")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("DefaultSkill", "默认技能。新会话的默认技能编码", "")]
-    public String DefaultSkill { get => _DefaultSkill; set { if (OnPropertyChanging("DefaultSkill", value)) { _DefaultSkill = value; OnPropertyChanged("DefaultSkill"); } } }
 
     private Int32 _StreamingSpeed;
     /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
@@ -189,34 +173,6 @@ public partial class UserSetting : IEntity<UserSettingModel>
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(UserSettingModel model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        Language = model.Language;
-        Theme = model.Theme;
-        FontSize = model.FontSize;
-        SendShortcut = model.SendShortcut;
-        DefaultModel = model.DefaultModel;
-        DefaultThinkingMode = model.DefaultThinkingMode;
-        ContextRounds = model.ContextRounds;
-        SystemPrompt = model.SystemPrompt;
-        AllowTraining = model.AllowTraining;
-        McpEnabled = model.McpEnabled;
-        DefaultSkill = model.DefaultSkill;
-        StreamingSpeed = model.StreamingSpeed;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -235,9 +191,7 @@ public partial class UserSetting : IEntity<UserSettingModel>
             "DefaultThinkingMode" => _DefaultThinkingMode,
             "ContextRounds" => _ContextRounds,
             "SystemPrompt" => _SystemPrompt,
-            "AllowTraining" => _AllowTraining,
             "McpEnabled" => _McpEnabled,
-            "DefaultSkill" => _DefaultSkill,
             "StreamingSpeed" => _StreamingSpeed,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -258,12 +212,10 @@ public partial class UserSetting : IEntity<UserSettingModel>
                 case "FontSize": _FontSize = value.ToInt(); break;
                 case "SendShortcut": _SendShortcut = Convert.ToString(value); break;
                 case "DefaultModel": _DefaultModel = value.ToInt(); break;
-                case "DefaultThinkingMode": _DefaultThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
+                case "DefaultThinkingMode": _DefaultThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "ContextRounds": _ContextRounds = value.ToInt(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
-                case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
-                case "DefaultSkill": _DefaultSkill = Convert.ToString(value); break;
                 case "StreamingSpeed": _StreamingSpeed = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -315,20 +267,18 @@ public partial class UserSetting : IEntity<UserSettingModel>
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。设置所属用户</param>
     /// <param name="defaultThinkingMode">默认思考模式。Auto=0, Think=1, Fast=2</param>
-    /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.ChatAI.ThinkingMode defaultThinkingMode, Boolean? allowTraining, Boolean? mcpEnabled, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, Boolean? mcpEnabled, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (defaultThinkingMode >= 0) exp &= _.DefaultThinkingMode == defaultThinkingMode;
-        if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -371,14 +321,8 @@ public partial class UserSetting : IEntity<UserSettingModel>
         /// <summary>系统提示词。全局System Prompt</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
 
-        /// <summary>允许训练。是否允许反馈数据用于模型改进</summary>
-        public static readonly Field AllowTraining = FindByName("AllowTraining");
-
         /// <summary>启用MCP。是否启用MCP工具调用</summary>
         public static readonly Field McpEnabled = FindByName("McpEnabled");
-
-        /// <summary>默认技能。新会话的默认技能编码</summary>
-        public static readonly Field DefaultSkill = FindByName("DefaultSkill");
 
         /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
         public static readonly Field StreamingSpeed = FindByName("StreamingSpeed");
@@ -437,14 +381,8 @@ public partial class UserSetting : IEntity<UserSettingModel>
         /// <summary>系统提示词。全局System Prompt</summary>
         public const String SystemPrompt = "SystemPrompt";
 
-        /// <summary>允许训练。是否允许反馈数据用于模型改进</summary>
-        public const String AllowTraining = "AllowTraining";
-
         /// <summary>启用MCP。是否启用MCP工具调用</summary>
         public const String McpEnabled = "McpEnabled";
-
-        /// <summary>默认技能。新会话的默认技能编码</summary>
-        public const String DefaultSkill = "DefaultSkill";
 
         /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
         public const String StreamingSpeed = "StreamingSpeed";

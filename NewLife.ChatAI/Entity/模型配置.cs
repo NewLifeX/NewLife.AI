@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("模型配置。后端接入的大语言模型，关联到具体的提供商实例")]
 [BindIndex("IU_ModelConfig_ProviderId_Code", true, "ProviderId,Code")]
 [BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型，关联到具体的提供商实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ModelConfig : IEntity<ModelConfigModel>
+public partial class ModelConfig
 {
     #region 属性
     private Int32 _Id;
@@ -118,6 +118,14 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     [BindColumn("DepartmentIds", "部门组。逗号分隔的部门ID列表，为空时不限制", "")]
     public String DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
 
+    private DateTime _ModelTime;
+    /// <summary>模型时间。提供商侧的模型创建或最后更新时间</summary>
+    [DisplayName("模型时间")]
+    [Description("模型时间。提供商侧的模型创建或最后更新时间")]
+    [DataObjectField(false, false, true, 0)]
+    [BindColumn("ModelTime", "模型时间。提供商侧的模型创建或最后更新时间", "")]
+    public DateTime ModelTime { get => _ModelTime; set { if (OnPropertyChanging("ModelTime", value)) { _ModelTime = value; OnPropertyChanged("ModelTime"); } } }
+
     private Boolean _Enable;
     /// <summary>启用</summary>
     [DisplayName("启用")]
@@ -198,35 +206,6 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
     public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(ModelConfigModel model)
-    {
-        Id = model.Id;
-        ProviderId = model.ProviderId;
-        Code = model.Code;
-        Name = model.Name;
-        MaxTokens = model.MaxTokens;
-        SupportThinking = model.SupportThinking;
-        SupportVision = model.SupportVision;
-        SupportImageGeneration = model.SupportImageGeneration;
-        SupportFunctionCalling = model.SupportFunctionCalling;
-        SystemPrompt = model.SystemPrompt;
-        RoleIds = model.RoleIds;
-        DepartmentIds = model.DepartmentIds;
-        Enable = model.Enable;
-        Sort = model.Sort;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -247,6 +226,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
+            "ModelTime" => _ModelTime,
             "Enable" => _Enable,
             "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
@@ -274,6 +254,7 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
+                case "ModelTime": _ModelTime = value.ToDateTime(); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -418,6 +399,9 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
         /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
         public static readonly Field DepartmentIds = FindByName("DepartmentIds");
 
+        /// <summary>模型时间。提供商侧的模型创建或最后更新时间</summary>
+        public static readonly Field ModelTime = FindByName("ModelTime");
+
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -486,6 +470,9 @@ public partial class ModelConfig : IEntity<ModelConfigModel>
 
         /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
         public const String DepartmentIds = "DepartmentIds";
+
+        /// <summary>模型时间。提供商侧的模型创建或最后更新时间</summary>
+        public const String ModelTime = "ModelTime";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

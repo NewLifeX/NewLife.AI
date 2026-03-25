@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -114,13 +114,6 @@ public partial class Conversation : Entity<Conversation>
     #endregion
 
     #region 扩展属性
-    /// <summary>技能</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Skill Skill => Extends.Get(nameof(Skill), k => Skill.FindById(SkillId));
-
-    /// <summary>技能</summary>
-    [Map(nameof(SkillId), typeof(Skill), "Id")]
-    public String SkillName => Skill?.Name;
     #endregion
 
     #region 高级查询
@@ -137,13 +130,5 @@ public partial class Conversation : Entity<Conversation>
     #endregion
 
     #region 业务操作
-    public ConversationModel ToModel()
-    {
-        var model = new ConversationModel();
-        model.Copy(this);
-
-        return model;
-    }
-
     #endregion
 }

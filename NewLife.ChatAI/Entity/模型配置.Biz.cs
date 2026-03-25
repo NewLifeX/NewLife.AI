@@ -79,10 +79,11 @@ public partial class ModelConfig : Entity<ModelConfig>
             if (provider.Provider.IsNullOrEmpty()) continue;
 
             // 为每个提供商创建一个默认模型配置
-            var prv = AiProviderFactory.Default.GetProvider(provider.Provider);
-            if (prv == null || prv.Models == null || prv.Models.Length == 0) continue;
+            var descriptor = AiClientRegistry.Default.GetDescriptor(provider.Provider)
+                ?? AiClientRegistry.Default.GetDescriptor(provider.Code);
+            if (descriptor == null || descriptor.Models == null || descriptor.Models.Length == 0) continue;
 
-            foreach (var model in prv.Models)
+            foreach (var model in descriptor.Models)
             {
                 var entity = list.FirstOrDefault(e => e.ProviderId == provider.Id && e.Code.EqualIgnoreCase(model.Model));
                 if (entity == null)
@@ -147,6 +148,23 @@ public partial class ModelConfig : Entity<ModelConfig>
 
     #region 高级查询
 
+    /// <summary>获取所有启用的模型配置，按排序升序</summary>
+    /// <returns>模型配置列表</returns>
+    public static IList<ModelConfig> FindAllEnabled()
+    {
+        return FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
+    }
+
+    /// <summary>根据编码查找启用的模型配置</summary>
+    /// <param name="code">模型编码</param>
+    /// <returns>模型配置，未找到返回null</returns>
+    public static ModelConfig FindByCode(String code)
+    {
+        if (code.IsNullOrEmpty()) return null;
+
+        return FindAllWithCache().FirstOrDefault(e => e.Enable && e.Code.EqualIgnoreCase(code));
+    }
+
     // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
     static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))
     {
@@ -159,16 +177,6 @@ public partial class ModelConfig : Entity<ModelConfig>
     #endregion
 
     #region 业务操作
-    /// <summary>转为模型类</summary>
-    /// <returns></returns>
-    public ModelConfigModel ToModel()
-    {
-        var model = new ModelConfigModel();
-        model.Copy(this);
-
-        return model;
-    }
-
     /// <summary>获取有效接口地址。从关联的提供商配置中获取</summary>
     /// <returns></returns>
     public String GetEffectiveEndpoint()

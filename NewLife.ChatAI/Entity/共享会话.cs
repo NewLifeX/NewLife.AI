@@ -19,9 +19,9 @@ namespace NewLife.ChatAI.Entity;
 [Description("共享会话。通过链接分享的对话快照")]
 [BindIndex("IU_SharedConversation_ShareToken", true, "ShareToken")]
 [BindIndex("IX_SharedConversation_ConversationId_Id", false, "ConversationId,Id")]
-[BindIndex("IX_SharedConversation_CreatorUserId_Id", false, "CreatorUserId,Id")]
+[BindIndex("IX_SharedConversation_CreateUserID_Id", false, "CreateUserID,Id")]
 [BindTable("SharedConversation", Description = "共享会话。通过链接分享的对话快照", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class SharedConversation : IEntity<SharedConversationModel>
+public partial class SharedConversation
 {
     #region 属性
     private Int64 _Id;
@@ -48,6 +48,14 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     [BindColumn("ShareToken", "分享令牌。唯一标识，用于生成分享URL", "")]
     public String ShareToken { get => _ShareToken; set { if (OnPropertyChanging("ShareToken", value)) { _ShareToken = value; OnPropertyChanged("ShareToken"); } } }
 
+    private String _SnapshotTitle;
+    /// <summary>快照标题</summary>
+    [DisplayName("快照标题")]
+    [Description("快照标题")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("SnapshotTitle", "快照标题", "")]
+    public String SnapshotTitle { get => _SnapshotTitle; set { if (OnPropertyChanging("SnapshotTitle", value)) { _SnapshotTitle = value; OnPropertyChanged("SnapshotTitle"); } } }
+
     private Int64 _SnapshotMessageId;
     /// <summary>快照消息。截止到的最后一条消息编号</summary>
     [DisplayName("快照消息")]
@@ -56,14 +64,6 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     [BindColumn("SnapshotMessageId", "快照消息。截止到的最后一条消息编号", "")]
     public Int64 SnapshotMessageId { get => _SnapshotMessageId; set { if (OnPropertyChanging("SnapshotMessageId", value)) { _SnapshotMessageId = value; OnPropertyChanged("SnapshotMessageId"); } } }
 
-    private Int32 _CreatorUserId;
-    /// <summary>创建者。分享发起用户</summary>
-    [DisplayName("创建者")]
-    [Description("创建者。分享发起用户")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("CreatorUserId", "创建者。分享发起用户", "")]
-    public Int32 CreatorUserId { get => _CreatorUserId; set { if (OnPropertyChanging("CreatorUserId", value)) { _CreatorUserId = value; OnPropertyChanged("CreatorUserId"); } } }
-
     private DateTime _ExpireTime;
     /// <summary>过期时间。null表示永不过期</summary>
     [DisplayName("过期时间")]
@@ -71,6 +71,15 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     [DataObjectField(false, false, true, 0)]
     [BindColumn("ExpireTime", "过期时间。null表示永不过期", "")]
     public DateTime ExpireTime { get => _ExpireTime; set { if (OnPropertyChanging("ExpireTime", value)) { _ExpireTime = value; OnPropertyChanged("ExpireTime"); } } }
+
+    private String _CreateUser;
+    /// <summary>创建者</summary>
+    [Category("扩展")]
+    [DisplayName("创建者")]
+    [Description("创建者")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("CreateUser", "创建者", "")]
+    public String CreateUser { get => _CreateUser; set { if (OnPropertyChanging("CreateUser", value)) { _CreateUser = value; OnPropertyChanged("CreateUser"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -127,26 +136,6 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(SharedConversationModel model)
-    {
-        Id = model.Id;
-        ConversationId = model.ConversationId;
-        ShareToken = model.ShareToken;
-        SnapshotMessageId = model.SnapshotMessageId;
-        CreatorUserId = model.CreatorUserId;
-        ExpireTime = model.ExpireTime;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -158,9 +147,10 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
             "Id" => _Id,
             "ConversationId" => _ConversationId,
             "ShareToken" => _ShareToken,
+            "SnapshotTitle" => _SnapshotTitle,
             "SnapshotMessageId" => _SnapshotMessageId,
-            "CreatorUserId" => _CreatorUserId,
             "ExpireTime" => _ExpireTime,
+            "CreateUser" => _CreateUser,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -176,9 +166,10 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
                 case "Id": _Id = value.ToLong(); break;
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "ShareToken": _ShareToken = Convert.ToString(value); break;
+                case "SnapshotTitle": _SnapshotTitle = Convert.ToString(value); break;
                 case "SnapshotMessageId": _SnapshotMessageId = value.ToLong(); break;
-                case "CreatorUserId": _CreatorUserId = value.ToInt(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
+                case "CreateUser": _CreateUser = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -225,14 +216,14 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         return FindAll(_.ConversationId == conversationId);
     }
 
-    /// <summary>根据创建者查找</summary>
-    /// <param name="creatorUserId">创建者</param>
+    /// <summary>根据创建用户查找</summary>
+    /// <param name="createUserId">创建用户</param>
     /// <returns>实体列表</returns>
-    public static IList<SharedConversation> FindAllByCreatorUserId(Int32 creatorUserId)
+    public static IList<SharedConversation> FindAllByCreateUserID(Int32 createUserId)
     {
-        if (creatorUserId < 0) return [];
+        if (createUserId < 0) return [];
 
-        return FindAll(_.CreatorUserId == creatorUserId);
+        return FindAll(_.CreateUserID == createUserId);
     }
     #endregion
 
@@ -240,19 +231,19 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
     /// <summary>高级查询</summary>
     /// <param name="conversationId">会话。被分享的会话</param>
     /// <param name="shareToken">分享令牌。唯一标识，用于生成分享URL</param>
-    /// <param name="creatorUserId">创建者。分享发起用户</param>
+    /// <param name="createUserId">创建用户</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<SharedConversation> Search(Int64 conversationId, String shareToken, Int32 creatorUserId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<SharedConversation> Search(Int64 conversationId, String shareToken, Int32 createUserId, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (!shareToken.IsNullOrEmpty()) exp &= _.ShareToken == shareToken;
-        if (creatorUserId >= 0) exp &= _.CreatorUserId == creatorUserId;
+        if (createUserId >= 0) exp &= _.CreateUserID == createUserId;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -285,14 +276,17 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         /// <summary>分享令牌。唯一标识，用于生成分享URL</summary>
         public static readonly Field ShareToken = FindByName("ShareToken");
 
+        /// <summary>快照标题</summary>
+        public static readonly Field SnapshotTitle = FindByName("SnapshotTitle");
+
         /// <summary>快照消息。截止到的最后一条消息编号</summary>
         public static readonly Field SnapshotMessageId = FindByName("SnapshotMessageId");
 
-        /// <summary>创建者。分享发起用户</summary>
-        public static readonly Field CreatorUserId = FindByName("CreatorUserId");
-
         /// <summary>过期时间。null表示永不过期</summary>
         public static readonly Field ExpireTime = FindByName("ExpireTime");
+
+        /// <summary>创建者</summary>
+        public static readonly Field CreateUser = FindByName("CreateUser");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -327,14 +321,17 @@ public partial class SharedConversation : IEntity<SharedConversationModel>
         /// <summary>分享令牌。唯一标识，用于生成分享URL</summary>
         public const String ShareToken = "ShareToken";
 
+        /// <summary>快照标题</summary>
+        public const String SnapshotTitle = "SnapshotTitle";
+
         /// <summary>快照消息。截止到的最后一条消息编号</summary>
         public const String SnapshotMessageId = "SnapshotMessageId";
 
-        /// <summary>创建者。分享发起用户</summary>
-        public const String CreatorUserId = "CreatorUserId";
-
         /// <summary>过期时间。null表示永不过期</summary>
         public const String ExpireTime = "ExpireTime";
+
+        /// <summary>创建者</summary>
+        public const String CreateUser = "CreateUser";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

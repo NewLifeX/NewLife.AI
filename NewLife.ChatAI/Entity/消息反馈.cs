@@ -19,8 +19,9 @@ namespace NewLife.ChatAI.Entity;
 [Description("消息反馈。用户对AI回复的点赞或点踩")]
 [BindIndex("IU_MessageFeedback_MessageId_UserId", true, "MessageId,UserId")]
 [BindIndex("IX_MessageFeedback_UserId", false, "UserId")]
+[BindIndex("IX_MessageFeedback_ConversationId", false, "ConversationId")]
 [BindTable("MessageFeedback", Description = "消息反馈。用户对AI回复的点赞或点踩", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class MessageFeedback : IEntity<MessageFeedbackModel>
+public partial class MessageFeedback
 {
     #region 属性
     private Int32 _Id;
@@ -30,6 +31,14 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     [DataObjectField(true, true, false, 0)]
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
+
+    private Int64 _ConversationId;
+    /// <summary>会话。被反馈的会话</summary>
+    [DisplayName("会话")]
+    [Description("会话。被反馈的会话")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ConversationId", "会话。被反馈的会话", "")]
+    public Int64 ConversationId { get => _ConversationId; set { if (OnPropertyChanging("ConversationId", value)) { _ConversationId = value; OnPropertyChanged("ConversationId"); } } }
 
     private Int64 _MessageId;
     /// <summary>消息。被反馈的消息</summary>
@@ -47,13 +56,13 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     [BindColumn("UserId", "用户。反馈用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
-    private NewLife.AI.ChatAI.FeedbackType _FeedbackType;
+    private NewLife.AI.Models.FeedbackType _FeedbackType;
     /// <summary>反馈类型。Like=1点赞, Dislike=2点踩</summary>
     [DisplayName("反馈类型")]
     [Description("反馈类型。Like=1点赞, Dislike=2点踩")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("FeedbackType", "反馈类型。Like=1点赞, Dislike=2点踩", "")]
-    public NewLife.AI.ChatAI.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
+    public NewLife.AI.Models.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
 
     private String _Reason;
     /// <summary>原因。点踩原因</summary>
@@ -126,26 +135,6 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(MessageFeedbackModel model)
-    {
-        Id = model.Id;
-        MessageId = model.MessageId;
-        UserId = model.UserId;
-        FeedbackType = model.FeedbackType;
-        Reason = model.Reason;
-        AllowTraining = model.AllowTraining;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -155,6 +144,7 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
         get => name switch
         {
             "Id" => _Id,
+            "ConversationId" => _ConversationId,
             "MessageId" => _MessageId,
             "UserId" => _UserId,
             "FeedbackType" => _FeedbackType,
@@ -173,9 +163,10 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
+                case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "FeedbackType": _FeedbackType = (NewLife.AI.ChatAI.FeedbackType)value.ToInt(); break;
+                case "FeedbackType": _FeedbackType = (NewLife.AI.Models.FeedbackType)value.ToInt(); break;
                 case "Reason": _Reason = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -250,10 +241,24 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
 
         return FindAll(_.UserId == userId);
     }
+
+    /// <summary>根据会话查找</summary>
+    /// <param name="conversationId">会话</param>
+    /// <returns>实体列表</returns>
+    public static IList<MessageFeedback> FindAllByConversationId(Int64 conversationId)
+    {
+        if (conversationId < 0) return [];
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ConversationId == conversationId);
+
+        return FindAll(_.ConversationId == conversationId);
+    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
+    /// <param name="conversationId">会话。被反馈的会话</param>
     /// <param name="messageId">消息。被反馈的消息</param>
     /// <param name="userId">用户。反馈用户</param>
     /// <param name="feedbackType">反馈类型。Like=1点赞, Dislike=2点踩</param>
@@ -263,10 +268,11 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<MessageFeedback> Search(Int64 messageId, Int32 userId, NewLife.AI.ChatAI.FeedbackType feedbackType, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<MessageFeedback> Search(Int64 conversationId, Int64 messageId, Int32 userId, NewLife.AI.Models.FeedbackType feedbackType, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
+        if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (messageId >= 0) exp &= _.MessageId == messageId;
         if (userId >= 0) exp &= _.UserId == userId;
         if (feedbackType >= 0) exp &= _.FeedbackType == feedbackType;
@@ -284,6 +290,9 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     {
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
+
+        /// <summary>会话。被反馈的会话</summary>
+        public static readonly Field ConversationId = FindByName("ConversationId");
 
         /// <summary>消息。被反馈的消息</summary>
         public static readonly Field MessageId = FindByName("MessageId");
@@ -326,6 +335,9 @@ public partial class MessageFeedback : IEntity<MessageFeedbackModel>
     {
         /// <summary>编号</summary>
         public const String Id = "Id";
+
+        /// <summary>会话。被反馈的会话</summary>
+        public const String ConversationId = "ConversationId";
 
         /// <summary>消息。被反馈的消息</summary>
         public const String MessageId = "MessageId";

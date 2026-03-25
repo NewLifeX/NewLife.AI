@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_AppKey_Secret", true, "Secret")]
 [BindIndex("IX_AppKey_UserId", false, "UserId")]
 [BindTable("AppKey", Description = "应用密钥。API网关访问凭证，用于外部系统调用模型服务", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class AppKey : IEntity<AppKeyModel>
+public partial class AppKey
 {
     #region 属性
     private Int32 _Id;
@@ -54,6 +54,14 @@ public partial class AppKey : IEntity<AppKeyModel>
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Secret", "密钥。sk-前缀的随机字符串，创建时仅展示一次", "", ShowIn = "Auto,-List,-Search")]
     public String Secret { get => _Secret; set { if (OnPropertyChanging("Secret", value)) { _Secret = value; OnPropertyChanged("Secret"); } } }
+
+    private String _Models;
+    /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
+    [DisplayName("可用模型")]
+    [Description("可用模型。逗号分隔的模型名称或编码，为空时不限制")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("Models", "可用模型。逗号分隔的模型名称或编码，为空时不限制", "")]
+    public String Models { get => _Models; set { if (OnPropertyChanging("Models", value)) { _Models = value; OnPropertyChanged("Models"); } } }
 
     private Boolean _Enable;
     /// <summary>启用</summary>
@@ -159,30 +167,6 @@ public partial class AppKey : IEntity<AppKeyModel>
     public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(AppKeyModel model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        Name = model.Name;
-        Secret = model.Secret;
-        Enable = model.Enable;
-        ExpireTime = model.ExpireTime;
-        LastCallTime = model.LastCallTime;
-        Calls = model.Calls;
-        TotalTokens = model.TotalTokens;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -195,6 +179,7 @@ public partial class AppKey : IEntity<AppKeyModel>
             "UserId" => _UserId,
             "Name" => _Name,
             "Secret" => _Secret,
+            "Models" => _Models,
             "Enable" => _Enable,
             "ExpireTime" => _ExpireTime,
             "LastCallTime" => _LastCallTime,
@@ -217,6 +202,7 @@ public partial class AppKey : IEntity<AppKeyModel>
                 case "UserId": _UserId = value.ToInt(); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "Secret": _Secret = Convert.ToString(value); break;
+                case "Models": _Models = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
                 case "LastCallTime": _LastCallTime = value.ToDateTime(); break;
@@ -320,6 +306,9 @@ public partial class AppKey : IEntity<AppKeyModel>
         /// <summary>密钥。sk-前缀的随机字符串，创建时仅展示一次</summary>
         public static readonly Field Secret = FindByName("Secret");
 
+        /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
+        public static readonly Field Models = FindByName("Models");
+
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -373,6 +362,9 @@ public partial class AppKey : IEntity<AppKeyModel>
 
         /// <summary>密钥。sk-前缀的随机字符串，创建时仅展示一次</summary>
         public const String Secret = "Secret";
+
+        /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
+        public const String Models = "Models";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_ProviderConfig_Code", true, "Code")]
 [BindIndex("IX_ProviderConfig_Provider", false, "Provider")]
 [BindTable("ProviderConfig", Description = "提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ProviderConfig : IEntity<ProviderConfigModel>
+public partial class ProviderConfig
 {
     #region 属性
     private Int32 _Id;
@@ -60,14 +60,14 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     [DisplayName("接口地址")]
     [Description("接口地址。API地址")]
     [DataObjectField(false, false, true, 200)]
-    [BindColumn("Endpoint", "接口地址。API地址", "")]
+    [BindColumn("Endpoint", "接口地址。API地址", "", ItemType = "url")]
     public String Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
 
     private String _ApiKey;
     /// <summary>密钥。API访问密钥</summary>
     [DisplayName("密钥")]
     [Description("密钥。API访问密钥")]
-    [DataObjectField(false, false, true, 50)]
+    [DataObjectField(false, false, true, 200)]
     [BindColumn("ApiKey", "密钥。API访问密钥", "", ShowIn = "Auto,-List,-Search")]
     public String ApiKey { get => _ApiKey; set { if (OnPropertyChanging("ApiKey", value)) { _ApiKey = value; OnPropertyChanged("ApiKey"); } } }
 
@@ -78,6 +78,38 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     [DataObjectField(false, false, true, 50)]
     [BindColumn("ApiProtocol", "API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini", "")]
     public String ApiProtocol { get => _ApiProtocol; set { if (OnPropertyChanging("ApiProtocol", value)) { _ApiProtocol = value; OnPropertyChanged("ApiProtocol"); } } }
+
+    private String _ModelFilter;
+    /// <summary>模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek</summary>
+    [DisplayName("模型过滤")]
+    [Description("模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("ModelFilter", "模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek", "", ShowIn = "Auto,-List")]
+    public String ModelFilter { get => _ModelFilter; set { if (OnPropertyChanging("ModelFilter", value)) { _ModelFilter = value; OnPropertyChanged("ModelFilter"); } } }
+
+    private Int32 _ModelLimit;
+    /// <summary>发现上限。单次模型发现的最大数量，0表示不限制，默认10</summary>
+    [DisplayName("发现上限")]
+    [Description("发现上限。单次模型发现的最大数量，0表示不限制，默认10")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ModelLimit", "发现上限。单次模型发现的最大数量，0表示不限制，默认10", "", DefaultValue = "10")]
+    public Int32 ModelLimit { get => _ModelLimit; set { if (OnPropertyChanging("ModelLimit", value)) { _ModelLimit = value; OnPropertyChanged("ModelLimit"); } } }
+
+    private String _RoleIds;
+    /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+    [DisplayName("角色组")]
+    [Description("角色组。逗号分隔的角色ID列表，为空时不限制")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("RoleIds", "角色组。逗号分隔的角色ID列表，为空时不限制", "")]
+    public String RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
+
+    private String _DepartmentIds;
+    /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+    [DisplayName("部门组")]
+    [Description("部门组。逗号分隔的部门ID列表，为空时不限制")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("DepartmentIds", "部门组。逗号分隔的部门ID列表，为空时不限制", "")]
+    public String DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
 
     private Boolean _Enable;
     /// <summary>启用</summary>
@@ -159,30 +191,6 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
     public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(ProviderConfigModel model)
-    {
-        Id = model.Id;
-        Code = model.Code;
-        Name = model.Name;
-        Provider = model.Provider;
-        Endpoint = model.Endpoint;
-        ApiKey = model.ApiKey;
-        ApiProtocol = model.ApiProtocol;
-        Enable = model.Enable;
-        Sort = model.Sort;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -198,6 +206,10 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
             "Endpoint" => _Endpoint,
             "ApiKey" => _ApiKey,
             "ApiProtocol" => _ApiProtocol,
+            "ModelFilter" => _ModelFilter,
+            "ModelLimit" => _ModelLimit,
+            "RoleIds" => _RoleIds,
+            "DepartmentIds" => _DepartmentIds,
             "Enable" => _Enable,
             "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
@@ -220,6 +232,10 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
                 case "Endpoint": _Endpoint = Convert.ToString(value); break;
                 case "ApiKey": _ApiKey = Convert.ToString(value); break;
                 case "ApiProtocol": _ApiProtocol = Convert.ToString(value); break;
+                case "ModelFilter": _ModelFilter = Convert.ToString(value); break;
+                case "ModelLimit": _ModelLimit = value.ToInt(); break;
+                case "RoleIds": _RoleIds = Convert.ToString(value); break;
+                case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -318,6 +334,18 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
         /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
         public static readonly Field ApiProtocol = FindByName("ApiProtocol");
 
+        /// <summary>模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek</summary>
+        public static readonly Field ModelFilter = FindByName("ModelFilter");
+
+        /// <summary>发现上限。单次模型发现的最大数量，0表示不限制，默认10</summary>
+        public static readonly Field ModelLimit = FindByName("ModelLimit");
+
+        /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+        public static readonly Field RoleIds = FindByName("RoleIds");
+
+        /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+        public static readonly Field DepartmentIds = FindByName("DepartmentIds");
+
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -371,6 +399,18 @@ public partial class ProviderConfig : IEntity<ProviderConfigModel>
 
         /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
         public const String ApiProtocol = "ApiProtocol";
+
+        /// <summary>模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek</summary>
+        public const String ModelFilter = "ModelFilter";
+
+        /// <summary>发现上限。单次模型发现的最大数量，0表示不限制，默认10</summary>
+        public const String ModelLimit = "ModelLimit";
+
+        /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
+        public const String RoleIds = "RoleIds";
+
+        /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
+        public const String DepartmentIds = "DepartmentIds";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

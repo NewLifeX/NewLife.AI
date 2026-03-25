@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_Conversation_UserId_Id", false, "UserId,Id")]
 [BindIndex("IX_Conversation_UserId_IsPinned_Id", false, "UserId,IsPinned,Id")]
 [BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class Conversation : IEntity<ConversationModel>
+public partial class Conversation
 {
     #region 属性
     private Int64 _Id;
@@ -39,6 +39,14 @@ public partial class Conversation : IEntity<ConversationModel>
     [BindColumn("UserId", "用户。会话所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
+    private String _UserName;
+    /// <summary>用户名</summary>
+    [DisplayName("用户名")]
+    [Description("用户名")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("UserName", "用户名", "")]
+    public String UserName { get => _UserName; set { if (OnPropertyChanging("UserName", value)) { _UserName = value; OnPropertyChanged("UserName"); } } }
+
     private String _Title;
     /// <summary>标题。会话标题，显示在侧边栏</summary>
     [DisplayName("标题")]
@@ -55,21 +63,21 @@ public partial class Conversation : IEntity<ConversationModel>
     [BindColumn("ModelId", "模型。当前使用的模型Id，引用ModelConfig.Id", "")]
     public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
 
-    private NewLife.AI.ChatAI.ThinkingMode _ThinkingMode;
+    private String _ModelName;
+    /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
+    [DisplayName("模型名称")]
+    [Description("模型名称。冗余存储模型名称，方便历史数据检索")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("ModelName", "模型名称。冗余存储模型名称，方便历史数据检索", "")]
+    public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
+
+    private NewLife.AI.Models.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     [DisplayName("思考模式")]
     [Description("思考模式。Auto=0自动, Think=1思考, Fast=2快速")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
-    public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
-
-    private Int32 _SkillId;
-    /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
-    [DisplayName("技能")]
-    [Description("技能。当前会话使用的技能，引用Skill.Id")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("SkillId", "技能。当前会话使用的技能，引用Skill.Id", "")]
-    public Int32 SkillId { get => _SkillId; set { if (OnPropertyChanging("SkillId", value)) { _SkillId = value; OnPropertyChanged("SkillId"); } } }
+    public NewLife.AI.Models.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
     private Boolean _IsPinned;
     /// <summary>置顶。是否置顶显示</summary>
@@ -94,6 +102,47 @@ public partial class Conversation : IEntity<ConversationModel>
     [DataObjectField(false, false, true, 0)]
     [BindColumn("LastMessageTime", "最后消息时间。用于排序", "")]
     public DateTime LastMessageTime { get => _LastMessageTime; set { if (OnPropertyChanging("LastMessageTime", value)) { _LastMessageTime = value; OnPropertyChanged("LastMessageTime"); } } }
+
+    private Int32 _TotalPromptTokens;
+    /// <summary>提问Tokens。会话累计消耗的提示Token数</summary>
+    [DisplayName("提问Tokens")]
+    [Description("提问Tokens。会话累计消耗的提示Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("TotalPromptTokens", "提问Tokens。会话累计消耗的提示Token数", "")]
+    public Int32 TotalPromptTokens { get => _TotalPromptTokens; set { if (OnPropertyChanging("TotalPromptTokens", value)) { _TotalPromptTokens = value; OnPropertyChanged("TotalPromptTokens"); } } }
+
+    private Int32 _TotalCompletionTokens;
+    /// <summary>回复Tokens。会话累计消耗的回复Token数</summary>
+    [DisplayName("回复Tokens")]
+    [Description("回复Tokens。会话累计消耗的回复Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("TotalCompletionTokens", "回复Tokens。会话累计消耗的回复Token数", "")]
+    public Int32 TotalCompletionTokens { get => _TotalCompletionTokens; set { if (OnPropertyChanging("TotalCompletionTokens", value)) { _TotalCompletionTokens = value; OnPropertyChanged("TotalCompletionTokens"); } } }
+
+    private Int32 _TotalTokens;
+    /// <summary>总Tokens。会话累计消耗的总Token数</summary>
+    [DisplayName("总Tokens")]
+    [Description("总Tokens。会话累计消耗的总Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("TotalTokens", "总Tokens。会话累计消耗的总Token数", "")]
+    public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
+
+    private Int32 _ElapsedMs;
+    /// <summary>耗时。毫秒</summary>
+    [DisplayName("耗时")]
+    [Description("耗时。毫秒")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ElapsedMs", "耗时。毫秒", "")]
+    public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
+
+    private String _TraceId;
+    /// <summary>链路。方便问题排查</summary>
+    [Category("扩展")]
+    [DisplayName("链路")]
+    [Description("链路。方便问题排查")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("TraceId", "链路。方便问题排查", "")]
+    public String TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -159,30 +208,6 @@ public partial class Conversation : IEntity<ConversationModel>
     public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(ConversationModel model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        Title = model.Title;
-        ModelId = model.ModelId;
-        ThinkingMode = model.ThinkingMode;
-        SkillId = model.SkillId;
-        IsPinned = model.IsPinned;
-        MessageCount = model.MessageCount;
-        LastMessageTime = model.LastMessageTime;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-        UpdateUserID = model.UpdateUserID;
-        UpdateIP = model.UpdateIP;
-        UpdateTime = model.UpdateTime;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -193,13 +218,19 @@ public partial class Conversation : IEntity<ConversationModel>
         {
             "Id" => _Id,
             "UserId" => _UserId,
+            "UserName" => _UserName,
             "Title" => _Title,
             "ModelId" => _ModelId,
+            "ModelName" => _ModelName,
             "ThinkingMode" => _ThinkingMode,
-            "SkillId" => _SkillId,
             "IsPinned" => _IsPinned,
             "MessageCount" => _MessageCount,
             "LastMessageTime" => _LastMessageTime,
+            "TotalPromptTokens" => _TotalPromptTokens,
+            "TotalCompletionTokens" => _TotalCompletionTokens,
+            "TotalTokens" => _TotalTokens,
+            "ElapsedMs" => _ElapsedMs,
+            "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -215,13 +246,19 @@ public partial class Conversation : IEntity<ConversationModel>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
+                case "UserName": _UserName = Convert.ToString(value); break;
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
-                case "ThinkingMode": _ThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
-                case "SkillId": _SkillId = value.ToInt(); break;
+                case "ModelName": _ModelName = Convert.ToString(value); break;
+                case "ThinkingMode": _ThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
                 case "LastMessageTime": _LastMessageTime = value.ToDateTime(); break;
+                case "TotalPromptTokens": _TotalPromptTokens = value.ToInt(); break;
+                case "TotalCompletionTokens": _TotalCompletionTokens = value.ToInt(); break;
+                case "TotalTokens": _TotalTokens = value.ToInt(); break;
+                case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
+                case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -236,6 +273,10 @@ public partial class Conversation : IEntity<ConversationModel>
     #endregion
 
     #region 关联映射
+    /// <summary>模型</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public ModelConfig Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
+
     #endregion
 
     #region 扩展查询
@@ -264,18 +305,20 @@ public partial class Conversation : IEntity<ConversationModel>
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。会话所属用户</param>
     /// <param name="isPinned">置顶。是否置顶显示</param>
+    /// <param name="modelId">模型。当前使用的模型Id，引用ModelConfig.Id</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, NewLife.AI.ChatAI.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, Int32 modelId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (isPinned != null) exp &= _.IsPinned == isPinned;
+        if (modelId >= 0) exp &= _.ModelId == modelId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -306,17 +349,20 @@ public partial class Conversation : IEntity<ConversationModel>
         /// <summary>用户。会话所属用户</summary>
         public static readonly Field UserId = FindByName("UserId");
 
+        /// <summary>用户名</summary>
+        public static readonly Field UserName = FindByName("UserName");
+
         /// <summary>标题。会话标题，显示在侧边栏</summary>
         public static readonly Field Title = FindByName("Title");
 
         /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
         public static readonly Field ModelId = FindByName("ModelId");
 
+        /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
+        public static readonly Field ModelName = FindByName("ModelName");
+
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
-
-        /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
-        public static readonly Field SkillId = FindByName("SkillId");
 
         /// <summary>置顶。是否置顶显示</summary>
         public static readonly Field IsPinned = FindByName("IsPinned");
@@ -326,6 +372,21 @@ public partial class Conversation : IEntity<ConversationModel>
 
         /// <summary>最后消息时间。用于排序</summary>
         public static readonly Field LastMessageTime = FindByName("LastMessageTime");
+
+        /// <summary>提问Tokens。会话累计消耗的提示Token数</summary>
+        public static readonly Field TotalPromptTokens = FindByName("TotalPromptTokens");
+
+        /// <summary>回复Tokens。会话累计消耗的回复Token数</summary>
+        public static readonly Field TotalCompletionTokens = FindByName("TotalCompletionTokens");
+
+        /// <summary>总Tokens。会话累计消耗的总Token数</summary>
+        public static readonly Field TotalTokens = FindByName("TotalTokens");
+
+        /// <summary>耗时。毫秒</summary>
+        public static readonly Field ElapsedMs = FindByName("ElapsedMs");
+
+        /// <summary>链路。方便问题排查</summary>
+        public static readonly Field TraceId = FindByName("TraceId");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -360,17 +421,20 @@ public partial class Conversation : IEntity<ConversationModel>
         /// <summary>用户。会话所属用户</summary>
         public const String UserId = "UserId";
 
+        /// <summary>用户名</summary>
+        public const String UserName = "UserName";
+
         /// <summary>标题。会话标题，显示在侧边栏</summary>
         public const String Title = "Title";
 
         /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
         public const String ModelId = "ModelId";
 
+        /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
+        public const String ModelName = "ModelName";
+
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";
-
-        /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
-        public const String SkillId = "SkillId";
 
         /// <summary>置顶。是否置顶显示</summary>
         public const String IsPinned = "IsPinned";
@@ -380,6 +444,21 @@ public partial class Conversation : IEntity<ConversationModel>
 
         /// <summary>最后消息时间。用于排序</summary>
         public const String LastMessageTime = "LastMessageTime";
+
+        /// <summary>提问Tokens。会话累计消耗的提示Token数</summary>
+        public const String TotalPromptTokens = "TotalPromptTokens";
+
+        /// <summary>回复Tokens。会话累计消耗的回复Token数</summary>
+        public const String TotalCompletionTokens = "TotalCompletionTokens";
+
+        /// <summary>总Tokens。会话累计消耗的总Token数</summary>
+        public const String TotalTokens = "TotalTokens";
+
+        /// <summary>耗时。毫秒</summary>
+        public const String ElapsedMs = "ElapsedMs";
+
+        /// <summary>链路。方便问题排查</summary>
+        public const String TraceId = "TraceId";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

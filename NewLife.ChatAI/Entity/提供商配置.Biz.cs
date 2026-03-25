@@ -48,70 +48,33 @@ public partial class ProviderConfig : Entity<ProviderConfig>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
     {
-        // 从 AiProviderFactory 反射扫描得到所有已注册的 IAiProvider 原型，写入尚未存在的提供商配置
-        var factory = AiProviderFactory.Default;
-        var prototypes = factory.RegisteredTypes.ToList();
-        if (prototypes == null || prototypes.Count == 0) return;
+        // 从 AiClientRegistry 获取所有内置服务商描述符，写入尚未存在的提供商配置
+        var registry = AiClientRegistry.Default;
+        var descriptors = registry.Descriptors.Values.ToList();
+        if (descriptors.Count == 0) return;
 
-        // 获取已有编码集合，用于跳过已存在的配置（按 Provider=FullName 去重，每种类型只初始化一条）
+        // 获取已有编码集合，用于跳过已存在的配置
         var list = FindAll();
 
         var count = 0;
         var sort = list.Count > 0 ? list.Max(e => e.Sort) + 1 : 1;
-        foreach (var type in prototypes)
+        foreach (var descriptor in descriptors)
         {
-            var provider = factory.GetProvider(type)
-                ?? throw new InvalidOperationException($"无法创建提供商实例：{type.FullName}");
-            var entity = list.FirstOrDefault(e => e.Code == provider.Code) ?? list.FirstOrDefault(e => e.Provider == type.FullName);
-            if (entity == null)
-            {
-                entity = new ProviderConfig
-                {
-                    Code = provider.Code,
-                    Name = provider.Name,
-                    Provider = type.FullName!,
-                    Endpoint = provider.DefaultEndpoint,
-                    ApiProtocol = provider.ApiProtocol,
-                    Remark = provider.Description!,
-                    Enable = false,
-                    Sort = sort++,
-                };
-
-                XTrace.WriteLine("发现新提供商配置：{0}（{1}）", provider.Name, type.FullName);
-            }
-            else
-            {
-                // 更新已有配置的基本信息（不覆盖用户配置的 Endpoint/ApiKey）
-                entity.Name = provider.Name;
-                entity.Provider = type.FullName!;
-                if (entity.Endpoint.IsNullOrEmpty()) entity.Endpoint = provider.DefaultEndpoint;
-                entity.ApiProtocol = provider.ApiProtocol;
-                entity.Remark = provider.Description!;
-            }
-
+            // 向后兼容：oldFullName 用于 Provider 字段（GatewayService.GetDescriptor 支持按 Code 或旧全名查找）
+            var oldFullName = $"NewLife.AI.Providers.{descriptor.Code}Provider";
+            var entity = FindOrCreate(list, descriptor.Code, oldFullName, descriptor.DisplayName, descriptor.Code, descriptor.DefaultEndpoint, descriptor.Protocol, descriptor.Description ?? "", ref sort);
             count += entity.Save();
+
+            // Ollama 额外生成一条云端 Ollama 配置条目（默认禁用）
+            if (descriptor.Code == "Ollama")
+            {
+                var cloud = FindOrCreate(list, "OllamaCloud", null, "云端Ollama", descriptor.Code, "https://ollama.com", descriptor.Protocol, descriptor.Description ?? "", ref sort);
+                count += cloud.Save();
+            }
         }
 
         if (count > 0)
             XTrace.WriteLine("完成初始化ProviderConfig[提供商配置]数据，修改 {0} 个提供商配置！", count);
-    }
-
-    /// <summary>已重载。配置变更后使工厂缓存失效，确保下次调用使用新实例</summary>
-    /// <returns></returns>
-    protected override Int32 OnUpdate()
-    {
-        var result = base.OnUpdate();
-        AiProviderFactory.Default.InvalidateConfig(Id);
-        return result;
-    }
-
-    /// <summary>已重载。删除后清理工厂缓存</summary>
-    /// <returns></returns>
-    protected override Int32 OnDelete()
-    {
-        var result = base.OnDelete();
-        AiProviderFactory.Default.InvalidateConfig(Id);
-        return result;
     }
     #endregion
 
@@ -131,33 +94,6 @@ public partial class ProviderConfig : Entity<ProviderConfig>
     #endregion
 
     #region 业务操作
-    /// <summary>转为模型类</summary>
-    /// <returns></returns>
-    public ProviderConfigModel ToModel()
-    {
-        var model = new ProviderConfigModel
-        {
-            Id = Id,
-            Code = Code,
-            Name = Name,
-            Provider = Provider,
-            Endpoint = Endpoint,
-            ApiKey = ApiKey,
-            ApiProtocol = ApiProtocol,
-            Enable = Enable,
-            Sort = Sort,
-            CreateUserID = CreateUserID,
-            CreateIP = CreateIP,
-            CreateTime = CreateTime,
-            UpdateUserID = UpdateUserID,
-            UpdateIP = UpdateIP,
-            UpdateTime = UpdateTime,
-            Remark = Remark,
-        };
-
-        return model;
-    }
-
     /// <summary>根据编码查找提供商配置</summary>
     /// <param name="code">编码</param>
     /// <returns></returns>
@@ -197,6 +133,49 @@ public partial class ProviderConfig : Entity<ProviderConfig>
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
         return FindAll(exp, page);
+    }
+
+    /// <summary>查找或初始化提供商配置，已存在则更新基本信息（不覆盖用户配置的 Endpoint/ApiKey）</summary>
+    /// <param name="list">当前已有配置列表</param>
+    /// <param name="code">编码</param>
+    /// <param name="typeFallback">按提供商类型全名兜底查找的键，传 null 则跳过兜底</param>
+    /// <param name="name">名称</param>
+    /// <param name="providerFullName">提供商类型全名</param>
+    /// <param name="defaultEndpoint">默认端点</param>
+    /// <param name="apiProtocol">API 协议</param>
+    /// <param name="remark">备注</param>
+    /// <param name="sort">当前排序号（新建时自增）</param>
+    /// <returns>待保存的实体</returns>
+    private static ProviderConfig FindOrCreate(IList<ProviderConfig> list, String code, String? typeFallback, String name, String providerFullName, String defaultEndpoint, String apiProtocol, String remark, ref Int32 sort)
+    {
+        var entity = list.FirstOrDefault(e => e.Code == code);
+        if (entity == null && !typeFallback.IsNullOrEmpty())
+            entity = list.FirstOrDefault(e => e.Provider == typeFallback);
+
+        if (entity == null)
+        {
+            entity = new ProviderConfig
+            {
+                Code = code,
+                Name = name,
+                Endpoint = defaultEndpoint,
+                Enable = false,
+                Sort = sort++,
+            };
+            XTrace.WriteLine("发现新提供商配置：{0}（{1}）", name, providerFullName);
+        }
+        else
+        {
+            if (entity.Endpoint.IsNullOrEmpty()) entity.Endpoint = defaultEndpoint;
+        }
+
+        if (entity.Name.IsNullOrEmpty()) entity.Name = name;
+        entity.Provider = providerFullName;
+        entity.ApiProtocol = apiProtocol;
+        entity.ModelLimit = 10;
+        entity.Remark = remark;
+
+        return entity;
     }
     #endregion
 }

@@ -138,13 +138,5 @@ public partial class SharedConversation : Entity<SharedConversation>
     #endregion
 
     #region 业务操作
-    public SharedConversationModel ToModel()
-    {
-        var model = new SharedConversationModel();
-        model.Copy(this);
-
-        return model;
-    }
-
     #endregion
 }

@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("对话消息。会话中的单条发言，包括用户消息和AI回复")]
 [BindIndex("IX_ChatMessage_ConversationId_Id", false, "ConversationId,Id")]
 [BindTable("ChatMessage", Description = "对话消息。会话中的单条发言，包括用户消息和AI回复", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ChatMessage : IEntity<ChatMessageModel>
+public partial class ChatMessage
 {
     #region 属性
     private Int64 _Id;
@@ -51,7 +51,7 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [DisplayName("内容")]
     [Description("内容。Markdown格式文本")]
     [DataObjectField(false, false, true, -1)]
-    [BindColumn("Content", "内容。Markdown格式文本", "", ShowIn = "Auto,-List,-Search")]
+    [BindColumn("Content", "内容。Markdown格式文本", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
 
     private String _ThinkingContent;
@@ -62,13 +62,13 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ShowIn = "Auto,-List,-Search")]
     public String ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
 
-    private NewLife.AI.ChatAI.ThinkingMode _ThinkingMode;
+    private NewLife.AI.Models.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     [DisplayName("思考模式")]
     [Description("思考模式。Auto=0自动, Think=1思考, Fast=2快速")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
-    public NewLife.AI.ChatAI.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
+    public NewLife.AI.Models.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
     private String _Attachments;
     /// <summary>附件列表。存储魔方附件ID数组</summary>
@@ -110,6 +110,23 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     [BindColumn("TotalTokens", "总Token数", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
+    private Int32 _ElapsedMs;
+    /// <summary>耗时。毫秒</summary>
+    [DisplayName("耗时")]
+    [Description("耗时。毫秒")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ElapsedMs", "耗时。毫秒", "")]
+    public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
+
+    private String _TraceId;
+    /// <summary>链路。方便问题排查</summary>
+    [Category("扩展")]
+    [DisplayName("链路")]
+    [Description("链路。方便问题排查")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("TraceId", "链路。方便问题排查", "")]
+    public String TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -138,28 +155,6 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(ChatMessageModel model)
-    {
-        Id = model.Id;
-        ConversationId = model.ConversationId;
-        Role = model.Role;
-        Content = model.Content;
-        ThinkingContent = model.ThinkingContent;
-        ThinkingMode = model.ThinkingMode;
-        Attachments = model.Attachments;
-        ToolCalls = model.ToolCalls;
-        PromptTokens = model.PromptTokens;
-        CompletionTokens = model.CompletionTokens;
-        TotalTokens = model.TotalTokens;
-        CreateUserID = model.CreateUserID;
-        CreateIP = model.CreateIP;
-        CreateTime = model.CreateTime;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -179,6 +174,8 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
             "PromptTokens" => _PromptTokens,
             "CompletionTokens" => _CompletionTokens,
             "TotalTokens" => _TotalTokens,
+            "ElapsedMs" => _ElapsedMs,
+            "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -193,12 +190,14 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
                 case "Role": _Role = Convert.ToString(value); break;
                 case "Content": _Content = Convert.ToString(value); break;
                 case "ThinkingContent": _ThinkingContent = Convert.ToString(value); break;
-                case "ThinkingMode": _ThinkingMode = (NewLife.AI.ChatAI.ThinkingMode)value.ToInt(); break;
+                case "ThinkingMode": _ThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "Attachments": _Attachments = Convert.ToString(value); break;
                 case "ToolCalls": _ToolCalls = Convert.ToString(value); break;
                 case "PromptTokens": _PromptTokens = value.ToInt(); break;
                 case "CompletionTokens": _CompletionTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
+                case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
+                case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -242,7 +241,7 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.ChatAI.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -304,6 +303,12 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
         /// <summary>总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
+        /// <summary>耗时。毫秒</summary>
+        public static readonly Field ElapsedMs = FindByName("ElapsedMs");
+
+        /// <summary>链路。方便问题排查</summary>
+        public static readonly Field TraceId = FindByName("TraceId");
+
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -351,6 +356,12 @@ public partial class ChatMessage : IEntity<ChatMessageModel>
 
         /// <summary>总Token数</summary>
         public const String TotalTokens = "TotalTokens";
+
+        /// <summary>耗时。毫秒</summary>
+        public const String ElapsedMs = "ElapsedMs";
+
+        /// <summary>链路。方便问题排查</summary>
+        public const String TraceId = "TraceId";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

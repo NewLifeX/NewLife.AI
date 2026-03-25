@@ -61,20 +61,8 @@ public partial class AppKey : Entity<AppKey>
 
         // 在新插入数据或者修改了指定字段时进行修正
 
-        // 处理当前已登录用户信息，可以由UserInterceptor拦截器代劳
-        /*var user = ManageProvider.User;
-        if (user != null)
-        {
-            if (method == DataMethod.Insert && !Dirtys[nameof(CreateUserID)]) CreateUserID = user.ID;
-            if (!Dirtys[nameof(UpdateUserID)]) UpdateUserID = user.ID;
-        }*/
-        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateTime)]) CreateTime = DateTime.Now;
-        //if (!Dirtys[nameof(UpdateTime)]) UpdateTime = DateTime.Now;
-        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateIP)]) CreateIP = ManageProvider.UserHost;
-        //if (!Dirtys[nameof(UpdateIP)]) UpdateIP = ManageProvider.UserHost;
-
-        // 检查唯一索引
-        // CheckExist(method == DataMethod.Insert, nameof(Secret));
+        // 模型列表有变化时清空缓存
+        if (Dirtys[nameof(Models)]) _allowedModels = null;
 
         return true;
     }
@@ -134,13 +122,44 @@ public partial class AppKey : Entity<AppKey>
     #endregion
 
     #region 业务操作
-    public AppKeyModel ToModel()
+    /// <summary>归一化模型限制字符串。支持逗号、中文逗号、空白和换行分隔，返回逗号拼接结果</summary>
+    /// <param name="models">原始模型限制输入</param>
+    /// <returns></returns>
+    public static String NormalizeModels(String? models)
     {
-        var model = new AppKeyModel();
-        model.Copy(this);
+        if (String.IsNullOrWhiteSpace(models)) return String.Empty;
 
-        return model;
+        var set = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        var items = models.Split([',', '，', ';', '；', '\r', '\n', '\t', ' '], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var item in items)
+        {
+            var value = item.Trim();
+            if (value.Length > 0) set.Add(value);
+        }
+
+        return set.Count > 0 ? String.Join(",", set) : String.Empty;
     }
 
+    private HashSet<String>? _allowedModels;
+
+    /// <summary>获取当前密钥允许的模型集合（模型名称/编码），结果已缓存，仅在Models字段变更时重新计算</summary>
+    /// <returns></returns>
+    public HashSet<String> GetAllowedModels()
+    {
+        if (_allowedModels != null) return _allowedModels;
+
+        var set = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        var text = NormalizeModels(Models);
+        if (!text.IsNullOrEmpty())
+        {
+            foreach (var item in text.Split(','))
+            {
+                var value = item.Trim();
+                if (value.Length > 0) set.Add(value);
+            }
+        }
+
+        return _allowedModels = set;
+    }
     #endregion
 }

@@ -136,13 +136,5 @@ public partial class UserSetting : Entity<UserSetting>
     #endregion
 
     #region 业务操作
-    public UserSettingModel ToModel()
-    {
-        var model = new UserSettingModel();
-        model.Copy(this);
-
-        return model;
-    }
-
     #endregion
 }

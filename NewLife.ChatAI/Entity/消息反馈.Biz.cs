@@ -115,9 +115,26 @@ public partial class MessageFeedback : Entity<MessageFeedback>
     #endregion
 
     #region 扩展属性
+    /// <summary>会话</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Conversation Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    /// <summary>会话</summary>
+    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    public String ConversationTitle => Conversation?.Title;
     #endregion
 
     #region 高级查询
+    /// <summary>根据多个消息编号批量查找</summary>
+    /// <param name="messageIds">消息编号集合</param>
+    /// <returns>实体列表</returns>
+    public static IList<MessageFeedback> FindAllByMessageIds(IEnumerable<Int64> messageIds)
+    {
+        var ids = messageIds?.ToArray();
+        if (ids == null || ids.Length == 0) return [];
+
+        return FindAll(_.MessageId.In(ids));
+    }
 
     // Select Count(Id) as Id,Category From MessageFeedback Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
     //static readonly FieldCache<MessageFeedback> _CategoryCache = new(nameof(Category))
@@ -131,13 +148,5 @@ public partial class MessageFeedback : Entity<MessageFeedback>
     #endregion
 
     #region 业务操作
-    public MessageFeedbackModel ToModel()
-    {
-        var model = new MessageFeedbackModel();
-        model.Copy(this);
-
-        return model;
-    }
-
     #endregion
 }

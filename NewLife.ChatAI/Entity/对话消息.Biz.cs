@@ -123,6 +123,72 @@ public partial class ChatMessage : Entity<ChatMessage>
     #endregion
 
     #region 高级查询
+    /// <summary>根据会话查找，按创建时间降序排列</summary>
+    /// <param name="conversationId">会话</param>
+    /// <returns>实体列表</returns>
+    public static IList<ChatMessage> FindAllByConversationIdDesc(Int64 conversationId, Int32 count = -1)
+    {
+        if (conversationId < 0) return [];
+
+        return FindAll(_.ConversationId == conversationId, _.Id.Desc(), null, 0, count);
+    }
+
+    /// <summary>根据会话查找，按创建时间升序排列</summary>
+    /// <param name="conversationId">会话</param>
+    /// <returns>实体列表</returns>
+    public static IList<ChatMessage> FindAllByConversationIdOrdered(Int64 conversationId, Int32 count = -1)
+    {
+        if (conversationId < 0) return [];
+
+        return FindAll(_.ConversationId == conversationId, _.Id.Asc(), null, 0, count);
+    }
+
+    /// <summary>根据会话查找指定消息之前的消息，按创建时间升序排列</summary>
+    /// <param name="conversationId">会话</param>
+    /// <param name="messageId">消息编号上限（不含）</param>
+    /// <returns>实体列表</returns>
+    public static IList<ChatMessage> FindAllBeforeId(Int64 conversationId, Int64 messageId)
+    {
+        if (conversationId < 0) return [];
+
+        return FindAll(_.ConversationId == conversationId & _.Id < messageId, _.Id.Asc(), null, 0, 0);
+    }
+
+    /// <summary>根据会话查找指定消息之后的消息</summary>
+    /// <param name="conversationId">会话</param>
+    /// <param name="messageId">消息编号下限（不含）</param>
+    /// <returns>实体列表</returns>
+    public static IList<ChatMessage> FindAllAfterId(Int64 conversationId, Int64 messageId)
+    {
+        if (conversationId < 0) return [];
+
+        return FindAll(_.ConversationId == conversationId & _.Id > messageId, null, null, 0, 0);
+    }
+
+    /// <summary>获取会话最后一条消息</summary>
+    /// <param name="conversationId">会话</param>
+    /// <returns>最后一条消息，不存在则返回null</returns>
+    public static ChatMessage? FindLastByConversationId(Int64 conversationId)
+    {
+        if (conversationId < 0) return null;
+
+        var list = FindAll(_.ConversationId == conversationId, _.Id.Desc(), null, 0, 1);
+        return list.Count > 0 ? list[0] : null;
+    }
+
+    /// <summary>根据共享快照查找会话消息，按创建时间升序排列</summary>
+    /// <param name="conversationId">会话</param>
+    /// <param name="snapshotMessageId">快照截止消息编号，0表示不限制</param>
+    /// <returns>实体列表</returns>
+    public static IList<ChatMessage> FindByShareSnapshot(Int64 conversationId, Int64 snapshotMessageId)
+    {
+        if (conversationId < 0) return [];
+
+        var exp = _.ConversationId == conversationId;
+        if (snapshotMessageId > 0) exp &= _.Id <= snapshotMessageId;
+
+        return FindAll(exp, _.Id.Asc(), null, 0, 0);
+    }
 
     // Select Count(Id) as Id,Category From ChatMessage Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
     //static readonly FieldCache<ChatMessage> _CategoryCache = new(nameof(Category))
@@ -136,13 +202,5 @@ public partial class ChatMessage : Entity<ChatMessage>
     #endregion
 
     #region 业务操作
-    public ChatMessageModel ToModel()
-    {
-        var model = new ChatMessageModel();
-        model.Copy(this);
-
-        return model;
-    }
-
     #endregion
 }
