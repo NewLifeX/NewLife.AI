@@ -1,0 +1,54 @@
+@using NewLife
+@using NewLife.Web
+@using NewLife.Cube.ViewModels
+@using NewLife.StarChat.Entity
+
+@{
+    var path = Context.Request.Path + "";
+    var conversationId = Context.Request.Query["conversationId"].ToLong(-1);
+    if (conversationId <= 0 && path.StartsWithIgnoreCase("/StarChat/Conversation/"))
+    {
+        conversationId = Context.Request.Query["Id"].ToLong(-1);
+    }
+
+    var conversation = Conversation.FindById(conversationId);
+
+    var dic = new Dictionary<String, Object>();
+    dic[$"{conversation?.Title}"] = $"/StarChat/Conversation/Edit?id={conversationId}";
+    dic["消息列表"] = $"/StarChat/ChatMessage?conversationId={conversationId}";
+    dic["消息反馈"] = $"/StarChat/MessageFeedback?conversationId={conversationId}";
+    dic["用量记录"] = $"/StarChat/UsageRecord?conversationId={conversationId}";
+    dic["共享会话"] = $"/StarChat/SharedConversation?conversationId={conversationId}";
+    dic["用户记忆"] = $"/StarChat/UserMemory?conversationId={conversationId}";
+    dic["学习日志"] = $"/StarChat/LearningLog?conversationId={conversationId}";
+    dic["渠道消息"] = $"/StarChat/ChannelMessage?conversationId={conversationId}";
+}
+<div class="navbar-collapse text-center">
+    <ul class="nav nav-pills" style="margin-bottom: 10px; display: inline-block;float: none;">
+        @foreach (var item in dic)
+        {
+            if (item.Value is IDictionary<String, Object> childs)
+            {
+                <li role="presentation" class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">@item.Key <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        @foreach (var elm in childs)
+                        {
+                            var url = elm.Value + "";
+                            var p = url.IndexOf('?');
+                            var v = p > 0 ? url.Substring(0, p) : url;
+                            <li role="presentation" class="@(path.EqualIgnoreCase(v) ? "active" : "")"><a href="@url">@elm.Key</a></li>
+                        }
+                    </ul>
+                </li>
+            }
+            else
+            {
+                var url = item.Value + "";
+                var p = url.IndexOf('?');
+                var v = p > 0 ? url.Substring(0, p) : url;
+                <li role="presentation" class="@(path.EqualIgnoreCase(v) ? "active" : "")"><a href="@url">@item.Key</a></li>
+            }
+        }
+    </ul>
+</div>

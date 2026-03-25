@@ -8,14 +8,14 @@ using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
 using static NewLife.ChatAI.Entity.MessageFeedback;
-using NewLife.AI.ChatAI;
+using NewLife.AI.Models;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>消息反馈。用户对AI回复的点赞或点踩</summary>
-[Menu(40, true, Icon = "fa-table")]
+[Menu(140, false, Icon = "fa-table")]
 [ChatAIArea]
-public class MessageFeedbackController : EntityController<MessageFeedback>
+public class MessageFeedbackController : ChatEntityController<MessageFeedback>
 {
     static MessageFeedbackController()
     {
@@ -43,13 +43,6 @@ public class MessageFeedbackController : EntityController<MessageFeedback>
         //ListFields.TraceUrl("TraceId");
     }
 
-    //private readonly ITracer _tracer;
-
-    //public MessageFeedbackController(ITracer tracer)
-    //{
-    //    _tracer = tracer;
-    //}
-
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>
     /// <returns></returns>
@@ -59,10 +52,11 @@ public class MessageFeedbackController : EntityController<MessageFeedback>
         var userId = p["userId"].ToInt(-1);
         var feedbackType = (FeedbackType)p["feedbackType"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
+        var conversationId = p["conversationId"].ToLong(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return MessageFeedback.Search(messageId, userId, feedbackType, allowTraining, start, end, p["Q"], p);
+        return MessageFeedback.Search(conversationId, messageId, userId, feedbackType, allowTraining, start, end, p["Q"], p);
     }
 }

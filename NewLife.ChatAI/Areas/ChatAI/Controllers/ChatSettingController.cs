@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc.Filters;
-using NewLife.AI.ChatAI;
+using NewLife.AI.Models;
+using NewLife.Cube;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
-using NewLife.Cube;
-using NewLife.Cube.ViewModels;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -29,7 +28,7 @@ public class ChatSettingController : ConfigController<ChatSetting>
                 df.DataSource = _ =>
                 {
                     var dic = new Dictionary<Int32, String> { [0] = "默认（第一个可用模型）" };
-                    foreach (var m in ModelConfig.FindAll().Where(m => m.Enable).OrderBy(m => m.Sort))
+                    foreach (var m in ModelConfig.FindAllEnabled())
                         dic[m.Id] = m.Name;
                     return dic;
                 };
