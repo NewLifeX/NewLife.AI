@@ -153,6 +153,10 @@ export default {
     createLink: '创建分享链接',
     createFailed: '创建分享链接失败，请稍后重试',
     linkHint: '任何拥有此链接的人都可以查看对话内容。',
+    revokeLink: '撤销分享',
+    revokeConfirm: '确定要撤销此分享链接吗？撤销后他人将无法再访问。',
+    revokeFailed: '撤销分享链接失败，请稍后重试',
+    revokeSuccess: '分享链接已撤销',
   },
   sharePage: {
     title: '分享的对话',

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { Icon } from '@/components/common/Icon'
-import { createShareLink } from '@/lib/api'
+import { createShareLink, revokeShareLink } from '@/lib/api'
 
 interface ShareDialogProps {
   open: boolean
@@ -13,7 +13,9 @@ interface ShareDialogProps {
 export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps) {
   const { t } = useTranslation()
   const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [shareToken, setShareToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [revoking, setRevoking] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,12 +27,31 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
       // result.url 已包含 /share/{token}，直接拼接 origin
       const fullUrl = `${window.location.origin}${result.url}`
       setShareUrl(fullUrl)
+      // 从 url 中提取 token（最后一段路径）
+      const token = result.url.split('/').pop() ?? ''
+      setShareToken(token)
     } catch {
       setError(t('share.createFailed'))
     } finally {
       setLoading(false)
     }
   }, [conversationId, t])
+
+  const handleRevoke = useCallback(async () => {
+    if (!shareToken) return
+    if (!confirm(t('share.revokeConfirm'))) return
+    setRevoking(true)
+    setError(null)
+    try {
+      await revokeShareLink(shareToken)
+      setShareUrl(null)
+      setShareToken(null)
+    } catch {
+      setError(t('share.revokeFailed'))
+    } finally {
+      setRevoking(false)
+    }
+  }, [shareToken, t])
 
   const handleCopy = useCallback(async () => {
     if (!shareUrl) return
@@ -55,6 +76,7 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
 
   const handleClose = useCallback(() => {
     setShareUrl(null)
+    setShareToken(null)
     setCopied(false)
     setError(null)
     onClose()
@@ -109,6 +131,21 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
             <p className="text-xs text-gray-400 dark:text-gray-500">
               {t('share.linkHint')}
             </p>
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
+            <button
+              onClick={handleRevoke}
+              disabled={revoking}
+              className="w-full py-2 px-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            >
+              {revoking ? (
+                <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+              ) : (
+                <Icon name="link_off" size="base" />
+              )}
+              {t('share.revokeLink')}
+            </button>
           </>
         )}
       </div>
