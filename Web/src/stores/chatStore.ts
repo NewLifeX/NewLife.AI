@@ -15,6 +15,7 @@ import {
   deleteFeedback,
   uploadAttachment,
   fetchModels,
+  stopGeneration,
   type ChatStreamEvent,
 } from '@/lib/api'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -38,6 +39,7 @@ interface ChatState {
   pendingAttachments: Attachment[]
   models: ModelInfo[]
   _abortController: AbortController | null
+  _generatingMsgId: string | null
   _convPage: number
   _convHasMore: boolean
   _convLoading: boolean
@@ -75,6 +77,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   pendingAttachments: [],
   models: [],
   _abortController: null,
+  _generatingMsgId: null,
   _convPage: 1,
   _convHasMore: true,
   _convLoading: false,
@@ -166,7 +169,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    set({ activeConversationId: undefined, messages: [], isGenerating: false, isLoadingMessages: false, pendingAttachments: [], _abortController: null })
+    set({ activeConversationId: undefined, messages: [], isGenerating: false, isLoadingMessages: false, pendingAttachments: [], _abortController: null, _generatingMsgId: null })
   },
 
   addAttachment: async (file) => {
@@ -229,6 +232,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isGenerating: true,
       pendingAttachments: [],
       _abortController: abortController,
+      _generatingMsgId: null,
     }))
 
     // SSE 流式接收
@@ -248,6 +252,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           case 'message_start':
             assistantMsgId = event.messageId
             if (assistantMsgId != null) {
+              set({ _generatingMsgId: assistantMsgId })
               const aiMsg: Message = {
                 id: assistantMsgId,
                 conversationId: finalConvId,
@@ -352,6 +357,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 ),
                 isGenerating: false,
                 _abortController: null,
+                _generatingMsgId: null,
                 // 如果后端返回了自动生成的标题，直接更新会话列表
                 conversations: event.title
                   ? s.conversations.map((c) => c.id === finalConvId ? { ...c, title: event.title! } : c)
@@ -373,9 +379,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 ),
                 isGenerating: false,
                 _abortController: null,
+                _generatingMsgId: null,
               }))
             } else {
-              set({ isGenerating: false, _abortController: null })
+              set({ isGenerating: false, _abortController: null, _generatingMsgId: null })
             }
             break
           }
@@ -386,6 +393,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set((s) => ({
         isGenerating: false,
         _abortController: null,
+        _generatingMsgId: null,
         messages: assistantMsgId
           ? s.messages.map((m) =>
               m.id === assistantMsgId ? { ...m, status: 'done' as const } : m,
@@ -400,8 +408,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   stopGenerating: () => {
     const ac = get()._abortController
+    const msgId = get()._generatingMsgId
     if (ac) ac.abort()
-    set({ isGenerating: false, _abortController: null })
+    if (msgId) stopGeneration(msgId).catch(() => {})
+    set({ isGenerating: false, _abortController: null, _generatingMsgId: null })
   },
 
   setThinkingMode: (mode) => {
@@ -418,7 +428,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }))
 
     const ac = new AbortController()
-    set({ _abortController: ac })
+    set({ _abortController: ac, _generatingMsgId: id })
 
     try {
       await streamRegenerate(id, (event) => {
@@ -441,6 +451,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             set((s) => ({
               isGenerating: false,
               _abortController: null,
+              _generatingMsgId: null,
               messages: s.messages.map((m) =>
                 m.id === id
                   ? { ...m, status: 'done' as const, usage: event.usage ? { promptTokens: event.usage.promptTokens, completionTokens: event.usage.completionTokens, totalTokens: event.usage.totalTokens } : m.usage }
@@ -452,6 +463,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             set((s) => ({
               isGenerating: false,
               _abortController: null,
+              _generatingMsgId: null,
               messages: s.messages.map((m) =>
                 m.id === id ? { ...m, content: event.error ?? event.message ?? '[error]', status: 'error' as const } : m,
               ),
@@ -463,7 +475,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }, ac.signal)
     } catch {
       // 网络中断或取消
-      set({ isGenerating: false, _abortController: null })
+      set({ isGenerating: false, _abortController: null, _generatingMsgId: null })
       set((s) => ({
         messages: s.messages.map((m) =>
           m.id === id && m.status === 'streaming' ? { ...m, status: 'done' as const } : m,
@@ -496,6 +508,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             case 'message_start':
               assistantMsgId = event.messageId ?? null
               if (assistantMsgId != null) {
+                set({ _generatingMsgId: assistantMsgId })
                 set((s) => ({
                   messages: [...s.messages, {
                     id: assistantMsgId!,
@@ -535,6 +548,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   ),
                   isGenerating: false,
                   _abortController: null,
+                  _generatingMsgId: null,
                 }))
               }
               break
@@ -546,9 +560,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   ),
                   isGenerating: false,
                   _abortController: null,
+                  _generatingMsgId: null,
                 }))
               } else {
-                set({ isGenerating: false, _abortController: null })
+                set({ isGenerating: false, _abortController: null, _generatingMsgId: null })
               }
               break
           }
@@ -556,6 +571,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           set((s) => ({
             isGenerating: false,
             _abortController: null,
+            _generatingMsgId: null,
             messages: assistantMsgId != null
               ? s.messages.map((m) => m.id === assistantMsgId ? { ...m, status: 'done' as const } : m)
               : s.messages,
