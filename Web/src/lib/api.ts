@@ -147,9 +147,11 @@ function toConversation(dto: ConversationDto): Conversation {
   }
 }
 
-export async function fetchConversations(page = 1, pageSize = 50): Promise<Conversation[]> {
+export async function fetchConversations(page = 1, pageSize = 50, keyword?: string): Promise<Conversation[]> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  if (keyword?.trim()) params.set('keyword', keyword.trim())
   const result = await request<PagedResult<ConversationDto>>(
-    `/api/conversations?page=${page}&pageSize=${pageSize}`,
+    `/api/conversations?${params}`,
   )
   return result.items.map(toConversation)
 }

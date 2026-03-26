@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
+import { fetchConversations } from '@/lib/api'
 import type { Conversation } from '@/types'
 
 type TimeGroup = 'pinned' | 'today' | 'yesterday' | 'past7days' | 'past30days' | 'earlier'
@@ -67,6 +68,22 @@ export function ConversationList({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const [searchResults, setSearchResults] = useState<Conversation[] | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null)
+      return
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      fetchConversations(1, 50, searchQuery.trim())
+        .then(setSearchResults)
+        .catch(() => setSearchResults([]))
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchQuery])
 
   const handleSelect = useCallback((id: string) => {
     setConfirmDeleteId(null)
@@ -108,9 +125,11 @@ export function ConversationList({
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return conversations
+    if (searchResults !== null) return searchResults
+    // 在后端搜索结果返回前，先用客户端过滤作为即时反馈
     const q = searchQuery.trim().toLowerCase()
     return conversations.filter((c) => c.title.toLowerCase().includes(q))
-  }, [conversations, searchQuery])
+  }, [conversations, searchQuery, searchResults])
 
   const grouped = useMemo(() => {
     const map = new Map<TimeGroup, Conversation[]>()

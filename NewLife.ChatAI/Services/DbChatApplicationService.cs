@@ -70,9 +70,10 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     /// <param name="userId">当前用户编号</param>
     /// <param name="page">页码</param>
     /// <param name="pageSize">每页数量</param>
+    /// <param name="keyword">搜索关键词，按标题模糊匹配</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public Task<PagedResultDto<ConversationSummaryDto>> GetConversationsAsync(Int32 userId, Int32 page, Int32 pageSize, CancellationToken cancellationToken)
+    public Task<PagedResultDto<ConversationSummaryDto>> GetConversationsAsync(Int32 userId, Int32 page, Int32 pageSize, String? keyword, CancellationToken cancellationToken)
     {
         if (page <= 0) page = 1;
         if (pageSize <= 0) pageSize = 20;
@@ -85,6 +86,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         };
 
         var exp = Conversation._.UserId == userId;
+        if (!String.IsNullOrWhiteSpace(keyword))
+            exp &= Conversation._.Title.Contains(keyword.Trim());
         var list = Conversation.FindAll(exp, p);
         var items = list.Select(ToConversationSummary).ToList();
 
@@ -1041,6 +1044,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         entity.SystemPrompt = settings.SystemPrompt;
         entity.McpEnabled = settings.McpEnabled;
         entity.StreamingSpeed = settings.StreamingSpeed;
+        entity.AllowTraining = settings.AllowTraining;
         entity.Save();
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -1238,7 +1242,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             parts.Add(modelConfig.SystemPrompt.Trim());
 
         if (parts.Count == 0) return null;
-        span?.Value = parts.Count;
+        if (span != null) span.Value = parts.Count;
 
         return new AiChatMessage
         {
@@ -1295,6 +1299,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         {
             McpEnabled = entity.McpEnabled,
             StreamingSpeed = entity.StreamingSpeed > 0 ? entity.StreamingSpeed : 3,
+            AllowTraining = entity.AllowTraining,
         };
     #endregion
 }
