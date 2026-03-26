@@ -55,7 +55,7 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
             var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
             var url = endpoint + "/api/chat";
             var body = BuildOllamaBody(request, stream: false);
-            var json = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+            var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
             var response = ParseOllamaResponse(json);
             if (response.Usage != null)
             {
@@ -88,7 +88,7 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
         using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
 
         UsageDetails? lastUsage = null;
-        using var resp = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var resp = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -161,7 +161,7 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/version";
         try
         {
-            var json = await GetAsync(url, _options, cancellationToken).ConfigureAwait(false);
+            var json = await GetAsync(url, null, _options, cancellationToken).ConfigureAwait(false);
             var dic = JsonParser.Decode(json);
             return dic?["version"] as String;
         }
@@ -184,7 +184,7 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
         if (request.Dimensions != null) dic["dimensions"] = request.Dimensions.Value;
         if (request.KeepAlive != null) dic["keep_alive"] = request.KeepAlive;
 
-        var json = await PostAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
         return json.ToJsonEntity<OllamaEmbedResponse>();
     }
 
@@ -202,14 +202,14 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
         // 拉取模型可能耗时数分钟，使用 30 分钟超时
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromMinutes(30));
-        var json = await PostAsync(url, body, _options, cts.Token).ConfigureAwait(false);
+        var json = await PostAsync(url, body, null, _options, cts.Token).ConfigureAwait(false);
         return json.ToJsonEntity<OllamaPullStatus>();
     }
     #endregion
 
     #region 辅助
     /// <inheritdoc/>
-    protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
     {
         // Ollama 默认不需要 API Key，但如果用户配置了则传递
         if (!String.IsNullOrEmpty(options.ApiKey))

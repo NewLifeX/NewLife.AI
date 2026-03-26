@@ -107,7 +107,7 @@ public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = $"{endpoint}/v1/messages";
 
-        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         return ParseAnthropicResponse(responseText, model);
     }
 
@@ -121,7 +121,7 @@ public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = $"{endpoint}/v1/messages";
 
-        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -400,7 +400,7 @@ public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient
     };
 
     /// <summary>设置 Anthropic 认证请求头</summary>
-    protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Add("x-api-key", options.ApiKey);

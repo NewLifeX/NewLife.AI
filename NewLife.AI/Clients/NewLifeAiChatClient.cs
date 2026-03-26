@@ -90,7 +90,7 @@ public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient
         if (!String.IsNullOrEmpty(model)) dic["model"] = model;
         if (!String.IsNullOrEmpty(size)) dic["size"] = size;
 
-        var json = await PostAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
         return json.ToJsonEntity<ImageGenerationResponse>();
     }
     #endregion
@@ -130,7 +130,7 @@ public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient
         }
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
-        SetHeaders(req, _options);
+        SetHeaders(req, null, _options);
 
         using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -150,7 +150,7 @@ public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient
         var body = BuildRequestBody(request);
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
-        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         return ParseResponse(responseText);
     }
 
@@ -161,7 +161,7 @@ public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient
         var body = BuildRequestBody(request);
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
-        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 

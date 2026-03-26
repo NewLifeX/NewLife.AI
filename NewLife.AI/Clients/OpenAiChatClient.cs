@@ -108,7 +108,7 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + ChatPath;
 
-        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         return ParseResponse(responseText);
     }
 
@@ -124,7 +124,7 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + ChatPath;
 
-        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -133,7 +133,6 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
             cancellationToken.ThrowIfCancellationRequested();
 
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
-            if (line == null) break;
 
             if (!line.StartsWith("data: ")) continue;
 
@@ -212,7 +211,7 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
         if (!String.IsNullOrEmpty(request.User)) dic["user"] = request.User;
         if (!String.IsNullOrEmpty(request.NegativePrompt)) dic["negative_prompt"] = request.NegativePrompt;
 
-        var json = await PostAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseImageGenerationResponse(json);
     }
 
@@ -272,7 +271,7 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
         if (!String.IsNullOrEmpty(responseFormat)) dic["response_format"] = responseFormat;
         if (speed != null) dic["speed"] = speed.Value;
 
-        return await PostBinaryAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
+        return await PostBinaryAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
     }
     #endregion
 
@@ -466,8 +465,9 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
 
     /// <summary>设置请求头。Bearer Token + OpenAI-Organization</summary>
     /// <param name="request">HTTP 请求</param>
+    /// <param name="chatRequest">对话请求，可为 null</param>
     /// <param name="options">连接选项</param>
-    protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);

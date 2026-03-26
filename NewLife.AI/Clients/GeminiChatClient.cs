@@ -105,7 +105,7 @@ public class GeminiChatClient(AiClientOptions options, HttpClient? httpClient = 
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = $"{endpoint}/v1/models/{model}:generateContent?key={_options.ApiKey}";
 
-        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         return ParseGeminiResponse(responseText, model);
     }
 
@@ -119,7 +119,7 @@ public class GeminiChatClient(AiClientOptions options, HttpClient? httpClient = 
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = $"{endpoint}/v1/models/{model}:streamGenerateContent?alt=sse&key={_options.ApiKey}";
 
-        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 

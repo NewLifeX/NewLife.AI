@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Reflection;
 using System.Text;
+using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -76,17 +76,19 @@ public abstract class AiClientBase
     /// <summary>设置请求头。子类可重写此方法注入认证信息</summary>
     /// <param name="request">HTTP 请求</param>
     /// <param name="options">连接选项</param>
-    protected virtual void SetHeaders(HttpRequestMessage request, AiClientOptions options) { }
+    /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）覆盖 options 中的默认值</param>
+    protected virtual void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
 
     /// <summary>发送 GET 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
     /// <param name="url">请求地址</param>
+    /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>响应字符串</returns>
-    protected async Task<String> GetAsync(String url, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<String> GetAsync(String url, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        SetHeaders(req, options);
+        SetHeaders(req, chatRequest, options);
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
@@ -102,7 +104,7 @@ public abstract class AiClientBase
     protected async Task<String?> TryGetAsync(String url, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        SetHeaders(req, options);
+        SetHeaders(req, null, options);
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -111,17 +113,18 @@ public abstract class AiClientBase
     /// <summary>发送 POST 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
     /// <param name="url">请求地址</param>
     /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>
+    /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>响应字符串</returns>
-    protected async Task<String> PostAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<String> PostAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         var bodyStr = body is String s ? s : body?.ToJson() ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
-        SetHeaders(req, options);
+        SetHeaders(req, chatRequest, options);
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
@@ -142,7 +145,7 @@ public abstract class AiClientBase
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
-        SetHeaders(req, options);
+        SetHeaders(req, null, options);
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -153,16 +156,17 @@ public abstract class AiClientBase
     /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders / SetStreamingHeaders 以支持运行时参数覆盖</param>
     /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
-    protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         var bodyStr = body is String s ? s : body?.ToJson() ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
-        SetHeaders(req, options);
-        SetStreamingHeaders(req, options);
+        SetHeaders(req, chatRequest, options);
+        SetStreamingHeaders(req, chatRequest, options);
         var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
         {
@@ -175,23 +179,25 @@ public abstract class AiClientBase
 
     /// <summary>设置流式请求专属请求头。仅在 PostStreamAsync 中调用，子类可重写以注入流式特定头（如 X-DashScope-SSE: enable）</summary>
     /// <param name="request">HTTP 请求</param>
+    /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）以做更精确的判断</param>
     /// <param name="options">连接选项</param>
-    protected virtual void SetStreamingHeaders(HttpRequestMessage request, AiClientOptions options) { }
+    protected virtual void SetStreamingHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
 
     /// <summary>发送 POST 请求并返回二进制响应。用于音频合成等返回字节流的接口</summary>
     /// <param name="url">请求地址</param>
     /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
     /// <returns>响应字节数组</returns>
-    protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         var bodyStr = body is String s ? s : body?.ToJson() ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
-        SetHeaders(req, options);
+        SetHeaders(req, chatRequest, options);
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
         {
