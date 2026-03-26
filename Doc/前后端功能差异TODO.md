@@ -94,12 +94,12 @@
 **现状：** 搜索仅按会话标题匹配。用户往往记住的是消息内容而非标题。
 
 **需要：**
-- [ ] **后端**：新增 `GET /api/conversations/search?q=xxx` 端点，搜索消息内容并返回匹配的会话列表
-- [ ] **前端**：搜索结果高亮匹配关键词
+- [ ] **后端**：已实现 `GET /api/messages/search?keyword=xxx` 端点，搜索消息内容并返回匹配结果
+- [ ] **前端**：搜索结果已在 ConversationList 中展示匹配的消息内容
 
 ---
 
-### TODO-5：模型切换持久化 🟢 低优先级
+### TODO-5：模型切换持久化 ✅ 已实现
 
 **现状：** 用户设置中有 `defaultModel`，新建会话时使用默认模型。但会话中途切换模型后，该选择仅在当前会话生效。
 
@@ -107,7 +107,7 @@
 
 ---
 
-### TODO-6：前端缺少对后端 `streamingSpeed` 设置的完整支持 🟢 低优先级
+### TODO-6：前端缺少对后端 `streamingSpeed` 设置的完整支持 ✅ 已实现
 
 **现状：** 前端 `settingsStore` 有 `streamingSpeed`，后端 `UserSettingsDto` 也有，确认已对齐。
 
