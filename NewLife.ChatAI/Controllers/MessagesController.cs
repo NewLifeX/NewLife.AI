@@ -42,6 +42,8 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     {
         if (String.IsNullOrWhiteSpace(keyword))
             return BadRequest(new { code = "INVALID_REQUEST", message = "keyword 不能为空" });
+        if (keyword.Length > 200)
+            return BadRequest(new { code = "INVALID_REQUEST", message = "搜索关键词过长" });
 
         var result = chatService.SearchMessages(GetCurrentUserId(), keyword, page, pageSize);
         return Ok(result);

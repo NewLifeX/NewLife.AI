@@ -22,6 +22,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
     [HttpGet]
     public async Task<ActionResult<PagedResultDto<ConversationSummaryDto>>> QueryAsync([FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20, [FromQuery] String? keyword = null, CancellationToken cancellationToken = default)
     {
+        if (keyword != null && keyword.Length > 200) return BadRequest("搜索关键词过长");
         var result = await chatService.GetConversationsAsync(GetCurrentUserId(), page, pageSize, keyword, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }

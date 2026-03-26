@@ -58,9 +58,12 @@ public class AttachmentsController(ChatApplicationService chatService) : ChatApi
     {
         if (String.IsNullOrWhiteSpace(ids)) return Ok(Array.Empty<AttachmentInfoDto>());
 
+        var idParts = ids.Split(',');
+        if (idParts.Length > 100) return BadRequest("一次最多查询100个附件");
+
         var imageExts = new HashSet<String>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg" };
         var list = new List<AttachmentInfoDto>();
-        foreach (var idStr in ids.Split(','))
+        foreach (var idStr in idParts)
         {
             var attachId = idStr.Trim().ToLong();
             if (attachId <= 0) continue;

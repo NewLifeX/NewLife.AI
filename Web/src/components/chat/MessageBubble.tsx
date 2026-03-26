@@ -72,11 +72,22 @@ export function MessageBubble({
   }, [attachments])
 
   const [attachInfos, setAttachInfos] = useState<AttachmentInfo[]>([])
+  const [attachError, setAttachError] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const lightboxRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (attachmentIds.length === 0) return
-    fetchAttachmentInfos(attachmentIds).then(setAttachInfos).catch(() => {})
+    setAttachError(false)
+    fetchAttachmentInfos(attachmentIds).then(setAttachInfos).catch(() => setAttachError(true))
   }, [attachmentIds])
+
+  useEffect(() => {
+    if (!previewUrl) return
+    document.body.style.overflow = 'hidden'
+    lightboxRef.current?.focus()
+    return () => { document.body.style.overflow = '' }
+  }, [previewUrl])
 
   // 移动端长按操作
   const [actionSheetOpen, setActionSheetOpen] = useState(false)
@@ -166,6 +177,18 @@ export function MessageBubble({
                       </a>
                     ),
                   )}
+                </div>
+              )}
+              {attachError && attachmentIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5 justify-end">
+                  {attachmentIds.map((id) => (
+                    <a key={id} href={`/api/attachments/${id}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <Icon name="attach_file" size="xs" />
+                      <span>{t('chat.attachment')}</span>
+                    </a>
+                  ))}
                 </div>
               )}
               {(onCopy || onEdit) && (
@@ -271,9 +294,21 @@ export function MessageBubble({
       <ActionSheet open={actionSheetOpen} onClose={() => setActionSheetOpen(false)} items={mobileActions} position={actionSheetPos} />
       {previewUrl && (
         <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
           onClick={() => setPreviewUrl(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setPreviewUrl(null) }}
         >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full"
+            onClick={() => setPreviewUrl(null)}
+            aria-label={t('common.close')}
+          >
+            <Icon name="close" size="xl" />
+          </button>
           <img
             src={previewUrl}
             alt="Preview"
