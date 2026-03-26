@@ -1,133 +1,100 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Embedding;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
-using NewLife.Log;
 using NewLife.Serialization;
 
-namespace NewLife.AI.Clients;
+namespace NewLife.AI.Providers;
 
-/// <summary>OpenAI 协议对话客户端。兼容所有支持 OpenAI Chat Completions API 的服务商</summary>
+/// <summary>OpenAI 协议基类。兼容所有支持 OpenAI Chat Completions API 的服务商</summary>
 /// <remarks>
-/// 大部分国内外服务商均兼容 OpenAI Chat Completions 协议。
-/// 通过设置 <see cref="ChatPath"/> 可适配不同路径的服务商（默认 /v1/chat/completions）。
-/// 类上标注的多个 <see cref="AiClientAttribute"/> 由 <see cref="AiClientRegistry"/> 反射扫描自动注册。
+/// 大部分国内外服务商均兼容 OpenAI Chat Completions 协议，
+/// 只需继承此类并设置 Name 和 DefaultEndpoint 即可完成适配。
+/// 同时实现 <see cref="IEmbeddingProvider"/> ，支持创建嵌入向量客户端。
 /// </remarks>
-/// <remarks>用连接选项初始化 OpenAI 客户端</remarks>
-/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
-/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
-// ── OpenAI 原生 ──────────────────────────────────────────────────────────────────────
-[AiClient("OpenAI", "OpenAI", "https://api.openai.com", Description = "OpenAI GPT 系列模型", Order = 1)]
-[AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true)]
-[AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true)]
-[AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true)]
-public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient, ILogFeature, ITracerFeature
+public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmbeddingProvider, IModelListProvider
 {
     #region 属性
-    /// <inheritdoc/>
-    protected override String Name => "OpenAI";
+    /// <summary>服务商编码</summary>
+    public virtual String Code => "OpenAI";
+
+    /// <summary>服务商名称</summary>
+    public virtual String Name => "OpenAI";
+
+    /// <summary>服务商描述</summary>
+    public virtual String? Description => "OpenAI 官方 API，支持 GPT 系列模型";
+
+    /// <summary>API 协议类型</summary>
+    public virtual String ApiProtocol { get; set; } = "ChatCompletions";
 
     /// <summary>默认 API 地址</summary>
     public virtual String DefaultEndpoint => "https://api.openai.com";
 
-    /// <summary>对话完成路径。默认 /v1/chat/completions，部分服务商需要调整</summary>
-    public String ChatPath { get; set; } = "/v1/chat/completions";
-
-    /// <summary>主流模型列表</summary>
-    public virtual AiModelInfo[] DefaultModels { get; } =
+    /// <summary>主流模型列表。OpenAI 各主力模型及其能力</summary>
+    public virtual AiModelInfo[] Models { get; } =
     [
-        new("gpt-4.1",     "GPT-4.1",   new(false, true,  false, true)),
-        new("gpt-4o",      "GPT-4o",    new(false, true,  false, true)),
-        new("gpt-5-mini",  "GPT-5 Mini", new(false, true,  false, true)),
+        new("gpt-4.1",       "GPT-4.1",       new(false, true,  false, true)),
+        new("gpt-4o",        "GPT-4o",         new(false, true,  false, true)),
+        new("gpt-5-mini",   "GPT-5 Mini",    new(false, true,  false, true)),
     ];
 
-    /// <summary>连接选项</summary>
-    protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
-    #endregion
-
-    #region IChatClient
-    /// <summary>非流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>完整的对话响应</returns>
-    public virtual async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
-    {
-        request.Model ??= _options.Model;
-
-        var model = request.Model;
-        using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
-        try
-        {
-            var response = await ChatAsync(request, cancellationToken).ConfigureAwait(false);
-            if (span != null && response.Usage != null)
-                span.Value = response.Usage.TotalTokens;
-            return response;
-        }
-        catch (Exception ex)
-        {
-            span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
-            throw;
-        }
-    }
-
-    /// <summary>流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>流式响应块的异步枚举</returns>
-    public virtual async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        request.Model ??= _options.Model;
-
-        var model = request.Model;
-        using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
-
-        UsageDetails? lastUsage = null;
-        await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
-        {
-            if (chunk.Usage != null) lastUsage = chunk.Usage;
-            yield return chunk;
-        }
-
-        if (span != null && lastUsage != null)
-            span.Value = lastUsage.TotalTokens;
-    }
-
-    /// <summary>释放资源</summary>
-    public virtual void Dispose() { }
+    /// <summary>对话完成路径</summary>
+    protected virtual String ChatPath => "/v1/chat/completions";
     #endregion
 
     #region 方法
+    /// <summary>创建该服务商对应的对话选项实例。子类可重写以返回服务商特定的强类型子类</summary>
+    /// <returns>新建的 ChatOptions 实例</returns>
+    public virtual ChatOptions CreateChatOptions() => new();
+
+    /// <summary>创建已绑定连接参数的对话客户端（MEAI 兼容入口）</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <returns>已配置的 IChatClient 实例</returns>
+    public virtual IChatClient CreateClient(AiProviderOptions options)
+    {
+        // 如果未指定模型且 Models 列表不为空，默认使用第一个模型
+        if (options.Model.IsNullOrEmpty() && Models != null && Models.Length > 0) options.Model = Models[0].Model;
+
+        return new OpenAiChatClient(this, options) { Log = Log, Tracer = Tracer };
+    }
+
+    /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <returns>已配置的 IEmbeddingClient 实例</returns>
+    public virtual IEmbeddingClient CreateEmbeddingClient(AiProviderOptions options) => new OpenAiEmbeddingClient(this, options) { Log = Log, Tracer = Tracer };
+
     /// <summary>非流式对话</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="request">内部对话请求</param>
+    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    protected virtual async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public virtual async Task<ChatResponse> ChatAsync(ChatRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var body = BuildRequestBody(request);
 
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + ChatPath;
 
-        var responseText = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var responseText = await PostAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         return ParseResponse(responseText);
     }
 
     /// <summary>流式对话</summary>
-    /// <param name="request">对话请求</param>
+    /// <param name="request">内部对话请求</param>
+    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    protected virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiProviderOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var body = BuildRequestBody(request);
 
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + ChatPath;
 
-        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -138,6 +105,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
 
+            // SSE 格式：data: {json}
             if (!line.StartsWith("data: ")) continue;
 
             var data = line.Substring(6).Trim();
@@ -145,7 +113,15 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
             if (data.Length == 0) continue;
 
             ChatResponse? chunk = null;
-            try { chunk = ParseResponse(data); } catch { }
+            try
+            {
+                chunk = ParseResponse(data);
+            }
+            catch
+            {
+                // 跳过无法解析的行
+            }
+
             if (chunk != null)
                 yield return chunk;
         }
@@ -154,14 +130,15 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
 
     #region 模型列表
     /// <summary>获取该服务商当前可用的模型列表</summary>
+    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表，服务不可用时返回 null</returns>
-    public virtual async Task<OpenAiModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<OpenAiModelListResponse?> ListModelsAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/v1/models";
 
-        var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
+        var json = await TryGetAsync(url, options, cancellationToken).ConfigureAwait(false);
         if (json == null) return null;
 
         var dic = JsonParser.Decode(json);
@@ -196,12 +173,16 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
 
     #region 文生图
     /// <summary>文生图。按 DALL·E 3 / OpenAI 兼容格式调用 /v1/images/generations 生成图像</summary>
+    /// <remarks>
+    /// 阿里百炼 Wanx 系列（wanx3.0-t2i-turbo、wanx3.0-t2i-plus 等）通过兼容端点支持此接口。
+    /// </remarks>
     /// <param name="request">图像生成请求</param>
+    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应，失败时返回 null</returns>
-    public virtual async Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
+    public virtual async Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/v1/images/generations";
 
         var dic = new Dictionary<String, Object?>();
@@ -215,7 +196,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
         if (!String.IsNullOrEmpty(request.User)) dic["user"] = request.User;
         if (!String.IsNullOrEmpty(request.NegativePrompt)) dic["negative_prompt"] = request.NegativePrompt;
 
-        var json = await PostAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
         return ParseImageGenerationResponse(json);
     }
 
@@ -254,28 +235,32 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
 
     #region 语音合成（TTS）
     /// <summary>语音合成（TTS）。兼容 OpenAI /v1/audio/speech 接口，返回音频字节流</summary>
+    /// <remarks>
+    /// 阿里百炼 CosyVoice 系列（cosyvoice-v2 等）通过兼容端点支持此接口。
+    /// 常用音色：longxiaochun（男声）、longxiaochun_v2、cove（英文）等。
+    /// </remarks>
     /// <param name="input">要合成的文本内容</param>
     /// <param name="voice">音色名称。如 longxiaochun、alloy</param>
     /// <param name="model">TTS 模型编码。如 cosyvoice-v2、tts-1</param>
     /// <param name="responseFormat">音频格式。mp3（默认）/ wav / opus / flac / pcm</param>
     /// <param name="speed">语速倍率。0.25~4.0，默认 1.0</param>
+    /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>音频字节流（格式由 responseFormat 决定，默认 mp3）</returns>
-    public virtual async Task<Byte[]> SpeechAsync(String input, String voice, String? model = null, String? responseFormat = null, Double? speed = null, CancellationToken cancellationToken = default)
+    public virtual async Task<Byte[]> SpeechAsync(String input, String voice, String? model = null, String? responseFormat = null, Double? speed = null, AiProviderOptions? options = null, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        options ??= new AiProviderOptions();
+        var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/v1/audio/speech";
 
-        var dic = new Dictionary<String, Object?>
-        {
-            ["model"] = model ?? (DefaultModels.Length > 0 ? DefaultModels[0].Model : "tts-1"),
-            ["input"] = input,
-            ["voice"] = voice
-        };
+        var dic = new Dictionary<String, Object?>();
+        dic["model"] = model ?? (Models.Length > 0 ? Models[0].Model : "tts-1");
+        dic["input"] = input;
+        dic["voice"] = voice;
         if (!String.IsNullOrEmpty(responseFormat)) dic["response_format"] = responseFormat;
         if (speed != null) dic["speed"] = speed.Value;
 
-        return await PostBinaryAsync(url, dic, _options, cancellationToken).ConfigureAwait(false);
+        return await PostBinaryAsync(url, dic, options, cancellationToken).ConfigureAwait(false);
     }
     #endregion
 
@@ -285,16 +270,19 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
     /// <returns>请求体字典</returns>
     protected virtual Object BuildRequestBody(ChatRequest request)
     {
+        // 构建符合 OpenAI 格式的请求体
         var dic = new Dictionary<String, Object>();
 
         if (!String.IsNullOrEmpty(request.Model))
             dic["model"] = request.Model;
 
+        // 构建消息列表
         var messages = new List<Object>();
         foreach (var msg in request.Messages)
         {
             var m = new Dictionary<String, Object> { ["role"] = msg.Role };
 
+            // 类型化内容（Contents）优先于原始 Content 字段
             if (msg.Contents != null && msg.Contents.Count > 0)
                 m["content"] = BuildContent(msg.Contents);
             else if (msg.Content != null)
@@ -315,6 +303,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
                     };
                     if (tc.Function != null)
                     {
+                        // DashScope 等服务商要求 arguments 必须是合法 JSON，空时用 "{}" 代替空字符串
                         var args = String.IsNullOrEmpty(tc.Function.Arguments) ? "{}" : tc.Function.Arguments;
                         tcDic["function"] = new Dictionary<String, Object?>
                         {
@@ -334,6 +323,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
         if (request.Stream)
         {
             dic["stream"] = true;
+            // 流式模式下请求返回 usage 数据（在最后一个 chunk 中）
             dic["stream_options"] = new Dictionary<String, Object> { ["include_usage"] = true };
         }
         if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
@@ -383,6 +373,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
             Model = dic["model"] as String,
         };
 
+        // 解析 choices
         if (dic["choices"] is IList<Object> choicesList)
         {
             var choices = new List<ChatChoice>();
@@ -394,8 +385,12 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
                 {
                     Index = choiceDic["index"].ToInt(),
                     FinishReason = choiceDic["finish_reason"] as String,
+
+                    // 非流式：message
                     Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),
-                    Delta = ParseChatMessage(choiceDic["delta"] as IDictionary<String, Object>),
+
+                    // 流式：delta
+                    Delta = ParseChatMessage(choiceDic["delta"] as IDictionary<String, Object>)
                 };
 
                 choices.Add(choice);
@@ -403,6 +398,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
             response.Messages = choices;
         }
 
+        // 解析 usage
         if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
             response.Usage = new UsageDetails
@@ -426,10 +422,15 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
         var msg = new ChatMessage
         {
             Role = dic["role"] as String ?? "",
-            Content = dic["content"],
-            ReasoningContent = dic["reasoning_content"] as String ?? dic["reasoning"] as String,
         };
 
+        // content 可能是字符串或数组
+        msg.Content = dic["content"];
+
+        // 思考内容（DeepSeek/Moonshot/MiMo 等模型使用 reasoning_content；Ollama OpenAI 兼容模式使用 reasoning）
+        msg.ReasoningContent = dic["reasoning_content"] as String ?? dic["reasoning"] as String;
+
+        // 工具调用
         if (dic["tool_calls"] is IList<Object> tcList)
         {
             var toolCalls = new List<ToolCall>();
@@ -467,10 +468,10 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
     /// <param name="dic">原始 JSON 字典，可读取额外字段</param>
     protected virtual void OnParseChatMessage(ChatMessage msg, IDictionary<String, Object> dic) { }
 
-    /// <summary>设置请求头。Bearer Token + OpenAI-Organization</summary>
+    /// <summary>设置请求头</summary>
     /// <param name="request">HTTP 请求</param>
-    /// <param name="options">连接选项</param>
-    protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
+    /// <param name="options">选项</param>
+    protected override void SetHeaders(HttpRequestMessage request, AiProviderOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
@@ -479,11 +480,12 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
             request.Headers.Add("OpenAI-Organization", options.Organization);
     }
 
-    /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段</summary>
+    /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段将</summary>
     /// <param name="contents">AIContent 列表</param>
     /// <returns>字符串（单一文本）或内容数组（多模态）</returns>
-    protected static Object BuildContent(IList<AIContent> contents)
+    private static Object BuildContent(IList<AIContent> contents)
     {
+        // 单纯文本优化：单个 TextContent 直接返回字符串，减少层套
         if (contents.Count == 1 && contents[0] is TextContent singleText)
             return singleText.Text;
 

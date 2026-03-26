@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
@@ -16,11 +17,14 @@ namespace NewLife.AI.Clients;
 /// <item>流式响应使用 event/data 格式而非 OpenAI 的 data-only 格式</item>
 /// </list>
 /// </remarks>
+/// <remarks>用连接选项初始化 Anthropic 客户端</remarks>
+/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("Anthropic", "Anthropic", "https://api.anthropic.com", Protocol = "AnthropicMessages", Description = "Anthropic Claude 系列模型")]
 [AiClientModel("claude-opus-4-6", "Claude Opus 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-sonnet-4-6", "Claude Sonnet 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-haiku-4-5", "Claude Haiku 4.5", Thinking = true, Vision = true)]
-public class AnthropicChatClient : AiClientBase, IChatClient
+public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -41,18 +45,7 @@ public class AnthropicChatClient : AiClientBase, IChatClient
     ];
 
     /// <summary>连接选项</summary>
-    protected readonly AiClientOptions _options;
-    #endregion
-
-    #region 构造
-    /// <summary>用连接选项初始化 Anthropic 客户端</summary>
-    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
-    /// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
-    public AnthropicChatClient(AiClientOptions options, HttpClient? httpClient = null)
-        : base(httpClient)
-    {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-    }
+    protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     #endregion
 
     #region IChatClient

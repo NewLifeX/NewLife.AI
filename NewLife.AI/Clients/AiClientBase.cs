@@ -17,8 +17,8 @@ public abstract class AiClientBase
     /// <summary>客户端名称。用于错误日志中标识服务商</summary>
     protected abstract String Name { get; }
 
-    /// <summary>HTTP 请求超时时间。默认 15 秒</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(15);
+    /// <summary>HTTP 请求超时时间。默认 30 秒</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
     private HttpClient? _sharedClient;
 

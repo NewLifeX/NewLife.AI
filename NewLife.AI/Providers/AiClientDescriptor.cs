@@ -1,4 +1,4 @@
-namespace NewLife.AI.Providers;
+﻿namespace NewLife.AI.Providers;
 
 /// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
 /// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
@@ -39,8 +39,7 @@ public class AiClientOptions
     /// <summary>获取实际使用的 API 地址</summary>
     /// <param name="defaultEndpoint">默认地址</param>
     /// <returns></returns>
-    public String GetEndpoint(String defaultEndpoint) =>
-        String.IsNullOrWhiteSpace(Endpoint) ? defaultEndpoint : Endpoint;
+    public String GetEndpoint(String defaultEndpoint) => String.IsNullOrWhiteSpace(Endpoint) ? defaultEndpoint : Endpoint;
 }
 
 /// <summary>AI 客户端描述符。描述一个 AI 服务商的元数据及客户端创建工厂。替代原 IAiProvider 接口</summary>

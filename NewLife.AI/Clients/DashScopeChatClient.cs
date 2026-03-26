@@ -17,12 +17,15 @@ namespace NewLife.AI.Clients;
 /// </list>
 /// 官方文档：https://help.aliyun.com/zh/model-studio/qwen-api-via-dashscope
 /// </remarks>
+/// <remarks>用连接选项初始化 DashScope 客户端</remarks>
+/// <param name="options">连接选项（Endpoint、ApiKey、Model、Protocol 等）</param>
+/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("DashScope", "阿里百炼", "https://dashscope.aliyuncs.com/api/v1", Protocol = "DashScope", Description = "阿里云百炼大模型平台，支持 Qwen/通义千问全系列商业版模型")]
 [AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true)]
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
-public class DashScopeChatClient : OpenAiChatClient
+public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAiChatClient(options, httpClient)
 {
     #region 属性
     /// <inheritdoc/>
@@ -51,21 +54,8 @@ public class DashScopeChatClient : OpenAiChatClient
     ];
     #endregion
 
-    #region 构造
-    /// <summary>用连接选项初始化 DashScope 客户端</summary>
-    /// <param name="options">连接选项（Endpoint、ApiKey、Model、Protocol 等）</param>
-    /// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
-    public DashScopeChatClient(AiClientOptions options, HttpClient? httpClient = null)
-        : base(options, httpClient) { }
-    #endregion
-
     #region 对话（重写）
     /// <summary>非流式对话。原生协议走 DashScope 格式，兼容模式委托基类</summary>
-    /// <remarks>
-    /// DashScope 原生端点始终以 SSE 格式响应（Content-Type: text/event-stream）。
-    /// 非流式模式下服务端返回单条 data: 事件承载完整 JSON，故不能使用 PostAsync，
-    /// 需通过 PostStreamAsync 获取流并读取第一条有效 data 行后解析。
-    /// </remarks>
     protected override async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
         if (!IsNativeProtocol)
@@ -73,29 +63,10 @@ public class DashScopeChatClient : OpenAiChatClient
 
         var url = BuildChatUrl(_options);
         var isMultimodal = IsMultimodalModel(_options.Model);
-        // stream=false 时不传 incremental_output，DashScope 返回单条 SSE 事件承载完整响应
         var body = BuildDashScopeRequestBody(request, isMultimodal, false);
-
-        using var httpResponse = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
-        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-
-        // 读取 SSE 流，取最后一条完整 data: 行作为同步响应
-        String? lastData = null;
-        while (!reader.EndOfStream)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync().ConfigureAwait(false);
-            if (line == null) break;
-            if (!line.StartsWith("data:")) continue;
-            var data = line.Substring(5).Trim();
-            if (data.Length > 0) lastData = data;
-        }
-
-        if (lastData == null)
-            throw new InvalidOperationException($"[{Name}] 原生协议未收到有效数据");
-
-        var response = ParseDashScopeResponse(lastData);
+        var json = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var response = ParseDashScopeResponse(json);
+        // 原生响应无顶层 model 字段，从请求回填
         response.Model ??= request.Model;
         return response;
     }
@@ -326,6 +297,11 @@ public class DashScopeChatClient : OpenAiChatClient
         {
             parameters["stream"] = true;
             parameters["incremental_output"] = true;
+        }
+        else
+        {
+            // 显式传 stream=false，避免多模态端点默认进入流式模式
+            parameters["stream"] = false;
         }
 
         return new Dictionary<String, Object>
@@ -590,37 +566,27 @@ public class DashScopeChatClient : OpenAiChatClient
         msg.Content = sb.Return(true);
     }
 
-    /// <inheritdoc cref="AiClientBase.CreateHttpClient"/>
-    /// <remarks>清除默认 Accept: application/json 头，改由 SetHeaders 按协议模式按需设置</remarks>
-    protected override HttpClient CreateHttpClient()
-    {
-        var client = base.CreateHttpClient();
-        client.DefaultRequestHeaders.Accept.Clear();
-        return client;
-    }
-
     /// <inheritdoc/>
     /// <remarks>
-    /// 原生协议固定发送 Accept: text/event-stream（DashScope 原生端点只接受此值）；
-    /// 兼容模式发送 Accept: application/json。
-    /// X-DashScope-SSE: enable 流式头由 SetStreamingHeaders 按需注入。
+    /// 原生协议对聊天路径按模型类型注入 SSE 相关头：多模态模型走 Accept: text/event-stream，
+    /// 文本模型走 X-DashScope-SSE: enable。非聊天路径（rerank/models 等）只注入 Bearer 认证。
     /// </remarks>
     protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
-        if (IsNativeProtocol)
-            request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
-        else
-            request.Headers.TryAddWithoutValidation("Accept", "application/json");
-    }
+        if (!IsNativeProtocol) return;
 
-    /// <inheritdoc/>
-    /// <remarks>原生协议流式请求附加 X-DashScope-SSE: enable，通知服务端返回增量 SSE 流</remarks>
-    protected override void SetStreamingHeaders(HttpRequestMessage request, AiClientOptions options)
-    {
-        if (IsNativeProtocol)
+        var path = request.RequestUri?.AbsolutePath;
+        if (String.IsNullOrEmpty(path)) return;
+
+        if (!path.EndsWith(ChatGenerationPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.EndsWith(MultimodalGenerationPath, StringComparison.OrdinalIgnoreCase)) return;
+
+        if (IsMultimodalModel(options.Model))
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        else
             request.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
     }
     #endregion

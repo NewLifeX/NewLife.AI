@@ -17,11 +17,14 @@ namespace NewLife.AI.Clients;
 /// <item>流式接口路径为 :streamGenerateContent?alt=sse</item>
 /// </list>
 /// </remarks>
+/// <remarks>用连接选项初始化 Gemini 客户端</remarks>
+/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("Gemini", "谷歌Gemini", "https://generativelanguage.googleapis.com", Protocol = "Gemini", Description = "谷歌 Gemini 系列多模态大模型，支持超长上下文")]
 [AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true)]
 [AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("imagen-3.0-generate-001", "Imagen 3", ImageGeneration = true, FunctionCalling = false)]
-public class GeminiChatClient : AiClientBase, IChatClient
+public class GeminiChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -39,18 +42,7 @@ public class GeminiChatClient : AiClientBase, IChatClient
     ];
 
     /// <summary>连接选项</summary>
-    protected readonly AiClientOptions _options;
-    #endregion
-
-    #region 构造
-    /// <summary>用连接选项初始化 Gemini 客户端</summary>
-    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
-    /// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
-    public GeminiChatClient(AiClientOptions options, HttpClient? httpClient = null)
-        : base(httpClient)
-    {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-    }
+    protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     #endregion
 
     #region IChatClient

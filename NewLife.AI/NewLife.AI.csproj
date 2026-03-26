@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyTitle>统一 AI 网关基础库</AssemblyTitle>
     <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 33 个服务商，提供函数调用、图像生成、MCP 工具调用等能力</Description>
     <Company>新生命开发团队</Company>
@@ -36,6 +36,16 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageReadmeFile>Readme.MD</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Providers\AnthropicProvider.cs" />
+    <Compile Remove="Providers\DashScopeProvider.cs" />
+    <Compile Remove="Providers\GeminiProvider.cs" />
+    <Compile Remove="Providers\IAiProvider.cs" />
+    <Compile Remove="Providers\NewLifeAiProvider.cs" />
+    <Compile Remove="Providers\OllamaProvider.cs" />
+    <Compile Remove="Providers\OpenAiProvider.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201">
