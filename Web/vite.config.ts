@@ -44,6 +44,7 @@ export default defineConfig({
       '/admin': 'http://localhost:5080',
       '/Admin': 'http://localhost:5080',
       '/Sso': 'http://localhost:5080',
+      '/Content': 'http://localhost:5080',
     },
   },
 })
