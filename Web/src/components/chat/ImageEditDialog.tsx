@@ -2,18 +2,21 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/components/common/Icon'
 import { cn } from '@/lib/utils'
+import type { ModelInfo } from '@/types'
 
 interface ImageEditDialogProps {
   imageUrl: string
-  onSubmit: (image: Blob, mask: Blob, prompt: string) => void
+  models: ModelInfo[]
+  onSubmit: (image: Blob, mask: Blob, prompt: string, model: string) => void
   onClose: () => void
 }
 
-export function ImageEditDialog({ imageUrl, onSubmit, onClose }: ImageEditDialogProps) {
+export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEditDialogProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const maskCanvasRef = useRef<HTMLCanvasElement>(null)
   const [prompt, setPrompt] = useState('')
+  const [selectedModel, setSelectedModel] = useState(() => models[0]?.code ?? '')
   const [brushSize, setBrushSize] = useState(30)
   const [isDrawing, setIsDrawing] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -147,11 +150,11 @@ export function ImageEditDialog({ imageUrl, onSubmit, onClose }: ImageEditDialog
         maskCanvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Failed to convert mask'))), 'image/png')
       })
 
-      onSubmit(imageBlob, maskBlob, prompt.trim())
+      onSubmit(imageBlob, maskBlob, prompt.trim(), selectedModel)
     } finally {
       setSubmitting(false)
     }
-  }, [prompt, onSubmit])
+  }, [prompt, selectedModel, onSubmit])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
@@ -208,6 +211,23 @@ export function ImageEditDialog({ imageUrl, onSubmit, onClose }: ImageEditDialog
             >
               {t('imageEdit.clearMask', '清除涂抹')}
             </button>
+            {models.length > 1 && (
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-auto">
+                {t('imageEdit.model', '模型')}
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className={cn(
+                    'px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600',
+                    'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm',
+                  )}
+                >
+                  {models.map((m) => (
+                    <option key={m.id} value={m.code}>{m.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
         </div>
 

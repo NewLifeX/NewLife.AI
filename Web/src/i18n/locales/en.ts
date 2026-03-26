@@ -190,6 +190,7 @@ export default {
     promptPlaceholder: 'Describe the edit you want...',
     submit: 'Start Edit',
     editImage: 'Edit Image',
+    model: 'Model',
   },
   appKey: {
     title: 'API Keys',

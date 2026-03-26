@@ -12,6 +12,7 @@ import { Lightbox } from '@/components/common/Lightbox'
 import { ImageEditDialog } from '@/components/chat/ImageEditDialog'
 import { ProgressiveImage } from '@/components/chat/ProgressiveImage'
 import { editImage } from '@/lib/api'
+import { useChatStore } from '@/stores/chatStore'
 
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
 
@@ -215,18 +216,19 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
       {editImageUrl && (
         <ImageEditDialog
           imageUrl={editImageUrl}
+          models={useChatStore.getState().models.filter((m) => m.supportImageGeneration)}
           onClose={() => setEditImageUrl(null)}
-          onSubmit={async (image, mask, prompt) => {
+          onSubmit={async (image, mask, prompt, model) => {
             try {
-              const result = await editImage(image, prompt, 'dall-e-2', mask)
+              const result = await editImage(image, prompt, model, mask)
               if (result.data?.[0]?.content) {
                 // 将编辑结果添加到 lightbox 图片列表并打开
                 images.push(result.data[0].content)
                 setLightboxIndex(images.length - 1)
                 setLightboxOpen(true)
               }
-            } catch {
-              // 编辑失败静默处理
+            } catch (e) {
+              console.error('Image edit failed:', e)
             }
             setEditImageUrl(null)
           }}

@@ -190,6 +190,7 @@ export default {
     promptPlaceholder: '描述你想要的編輯效果...',
     submit: '開始編輯',
     editImage: '編輯圖片',
+    model: '模型',
   },
   appKey: {
     title: 'API 金鑰',

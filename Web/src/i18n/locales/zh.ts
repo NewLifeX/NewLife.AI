@@ -190,6 +190,7 @@ export default {
     promptPlaceholder: '描述你想要的编辑效果...',
     submit: '开始编辑',
     editImage: '编辑图片',
+    model: '模型',
   },
   appKey: {
     title: 'API 密钥',
