@@ -33,6 +33,7 @@ export interface Message {
   toolCalls?: ToolCall[]
   usage?: TokenUsage
   feedbackType?: number
+  attachments?: string
 }
 
 export interface ToolCall {

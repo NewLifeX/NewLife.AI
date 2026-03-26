@@ -60,6 +60,7 @@ export default {
     thinkingInProgress: '思考中...',
     thinkingProcess: '思考過程',
     backToBottom: '回到底部',
+    attachment: '附件',
     promptTokens: '輸入 Token',
     completionTokens: '輸出 Token',
     analyzingLogs: '分析日誌中...',

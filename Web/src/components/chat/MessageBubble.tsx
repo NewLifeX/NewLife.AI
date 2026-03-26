@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useCallback } from 'react'
+import { type ReactNode, useState, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn, formatRelativeTime, formatExactTime } from '@/lib/utils'
 import { Avatar } from '@/components/common/Avatar'
@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   isStreaming?: boolean
   thinkingBlock?: ReactNode
   toolCalls?: ToolCall[]
+  attachments?: string
   onCopy?: () => void
   onRegenerate?: () => void
   onLike?: () => void
@@ -41,6 +42,7 @@ export function MessageBubble({
   isStreaming = false,
   thinkingBlock,
   toolCalls,
+  attachments,
   onCopy,
   onRegenerate,
   onLike,
@@ -62,6 +64,11 @@ export function MessageBubble({
   const locale = i18n.language
   const [editValue, setEditValue] = useState(rawContent ?? '')
   const editRef = useRef<HTMLTextAreaElement>(null)
+
+  const attachmentIds = useMemo(() => {
+    if (!attachments) return []
+    try { return (JSON.parse(attachments) as string[]).filter(Boolean) } catch { return [] }
+  }, [attachments])
 
   // 移动端长按操作
   const [actionSheetOpen, setActionSheetOpen] = useState(false)
@@ -126,6 +133,23 @@ export function MessageBubble({
               <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 leading-7 shadow-sm" style={{ fontSize: 'var(--chat-font-size, 16px)' }}>
                 {content}
               </div>
+              {attachmentIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5 justify-end">
+                  {attachmentIds.map((id) => (
+                    <a
+                      key={id}
+                      href={`/api/attachments/${id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <Icon name="attach_file" size="xs" />
+                      <span>{t('chat.attachment')}</span>
+                      <Icon name="open_in_new" size="xs" className="opacity-50" />
+                    </a>
+                  ))}
+                </div>
+              )}
               {(onCopy || onEdit) && (
                 <div className="absolute right-full -translate-x-1 top-2 hidden group-hover:flex space-x-1">
                   {onCopy && (

@@ -60,6 +60,7 @@ export default {
     thinkingInProgress: 'Thinking...',
     thinkingProcess: 'Thinking Process',
     backToBottom: 'Back to bottom',
+    attachment: 'Attachment',
     promptTokens: 'Prompt Tokens',
     completionTokens: 'Completion Tokens',
     analyzingLogs: 'Analyzing logs...',

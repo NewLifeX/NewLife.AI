@@ -212,6 +212,7 @@ interface MessageDto {
   createTime: string
   status?: number
   thinkingContent?: string
+  attachments?: string
   toolCalls?: Array<{
     id: string
     name: string
@@ -253,6 +254,7 @@ function toMessage(dto: MessageDto): Message {
       totalTokens: dto.totalTokens,
     } : undefined,
     feedbackType: dto.feedbackType,
+    attachments: dto.attachments,
   }
 }
 

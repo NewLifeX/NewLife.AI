@@ -211,6 +211,7 @@ export function ChatPage({
               isStreaming={msg.status === 'streaming'}
               toolCalls={toolCallsForBubble}
               thinkingBlock={thinkingBlock}
+              attachments={msg.attachments}
               onCopy={() => onCopy?.(msg.id)}
               onRegenerate={msg.role === 'assistant' ? () => onRegenerate?.(msg.id) : undefined}
               onLike={msg.role === 'assistant' ? () => onLike?.(msg.id) : undefined}
