@@ -618,7 +618,7 @@ export async function editImage(
   formData.append('model', model)
   if (mask) formData.append('mask', mask, 'mask.png')
   if (size) formData.append('size', size)
-  const res = await fetch(`${BASE_URL}/v1/images/edits`, {
+  const res = await fetch(`${BASE_URL}/api/images/edits`, {
     method: 'POST',
     body: formData,
   })
@@ -626,4 +626,54 @@ export async function editImage(
   return res.json()
 }
 
+// ── AppKey Management ──
+
+export interface AppKeyItem {
+  id: number
+  name: string
+  secretMask: string
+  enable: boolean
+  models: string | null
+  expireTime: string | null
+  calls: number
+  totalTokens: number
+  lastCallTime: string
+  createTime: string
+}
+
+export interface AppKeyCreateResult {
+  id: number
+  name: string
+  secret: string
+  createTime: string
+}
+
+export async function fetchAppKeys(): Promise<AppKeyItem[]> {
+  return request<AppKeyItem[]>('/api/appkeys')
+}
+
+export async function createAppKey(data: {
+  name: string
+  expireTime?: string
+  models?: string
+}): Promise<AppKeyCreateResult> {
+  return request<AppKeyCreateResult>('/api/appkeys', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateAppKey(
+  id: number,
+  data: { name?: string; enable?: boolean; expireTime?: string; models?: string },
+): Promise<AppKeyItem> {
+  return request<AppKeyItem>(`/api/appkeys/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteAppKey(id: number): Promise<void> {
+  await request<void>(`/api/appkeys/${id}`, { method: 'DELETE' })
+}
 

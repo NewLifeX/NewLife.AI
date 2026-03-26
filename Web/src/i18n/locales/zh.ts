@@ -184,4 +184,17 @@ export default {
     submit: '开始编辑',
     editImage: '编辑图片',
   },
+  appKey: {
+    title: 'API 密钥',
+    desc: '创建和管理 API 密钥，用于通过 OpenAI 兼容接口访问 AI 服务。',
+    create: '创建新密钥',
+    namePlaceholder: '输入密钥名称，如"我的应用"',
+    createSuccess: '密钥创建成功！',
+    secretOnce: '请立即复制并安全保存此密钥，关闭后将无法再次查看。',
+    copied: '已复制',
+    empty: '暂无 API 密钥，点击上方按钮创建',
+    disabled: '已禁用',
+    calls: '调用次数',
+    created: '创建于',
+  },
 } as const

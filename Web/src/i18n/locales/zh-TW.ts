@@ -184,4 +184,17 @@ export default {
     submit: '開始編輯',
     editImage: '編輯圖片',
   },
+  appKey: {
+    title: 'API 金鑰',
+    desc: '建立和管理 API 金鑰，用於透過 OpenAI 相容介面存取 AI 服務。',
+    create: '建立新金鑰',
+    namePlaceholder: '輸入金鑰名稱，如「我的應用」',
+    createSuccess: '金鑰建立成功！',
+    secretOnce: '請立即複製並安全儲存此金鑰，關閉後將無法再次查看。',
+    copied: '已複製',
+    empty: '暫無 API 金鑰，點擊上方按鈕建立',
+    disabled: '已停用',
+    calls: '呼叫次數',
+    created: '建立於',
+  },
 } as const

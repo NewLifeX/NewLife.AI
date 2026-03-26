@@ -184,4 +184,17 @@ export default {
     submit: 'Start Edit',
     editImage: 'Edit Image',
   },
+  appKey: {
+    title: 'API Keys',
+    desc: 'Create and manage API keys to access AI services via OpenAI-compatible endpoints.',
+    create: 'Create New Key',
+    namePlaceholder: 'Enter key name, e.g. "My App"',
+    createSuccess: 'Key created successfully!',
+    secretOnce: 'Copy and securely save this key now. It won\'t be shown again after closing.',
+    copied: 'Copied',
+    empty: 'No API keys yet. Click the button above to create one.',
+    disabled: 'Disabled',
+    calls: 'Calls',
+    created: 'Created',
+  },
 } as const
