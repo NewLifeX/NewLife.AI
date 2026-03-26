@@ -1,4 +1,4 @@
-namespace NewLife.AI.Providers;
+﻿namespace NewLife.AI.Providers;
 
 /// <summary>声明该类为 AI 对话客户端，供 <see cref="AiClientRegistry"/> 反射扫描自动注册服务商描述符</summary>
 /// <remarks>
@@ -13,17 +13,21 @@ namespace NewLife.AI.Providers;
 /// public class OpenAiChatClient : AiClientBase { ... }
 /// </code>
 /// </remarks>
+/// <remarks>声明此类实现指定服务商的 AI 对话客户端</remarks>
+/// <param name="code">服务商编码</param>
+/// <param name="displayName">显示名称</param>
+/// <param name="defaultEndpoint">默认 API 地址</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-public sealed class AiClientAttribute : Attribute
+public sealed class AiClientAttribute(String code, String displayName, String defaultEndpoint) : Attribute
 {
     /// <summary>服务商编码，唯一标识。如 OpenAI、DashScope</summary>
-    public String Code { get; }
+    public String Code { get; } = code;
 
     /// <summary>服务商显示名称，用于界面展示</summary>
-    public String DisplayName { get; }
+    public String DisplayName { get; } = displayName;
 
     /// <summary>默认 API 地址</summary>
-    public String DefaultEndpoint { get; }
+    public String DefaultEndpoint { get; } = defaultEndpoint;
 
     /// <summary>协议名称。默认 OpenAI；特殊协议填 AnthropicMessages / Gemini / DashScope / Ollama</summary>
     public String Protocol { get; set; } = "OpenAI";
@@ -36,15 +40,4 @@ public sealed class AiClientAttribute : Attribute
 
     /// <summary>排序序号。控制在列表中的显示顺序，数值小的在前；0 表示最高优先级</summary>
     public Int32 Order { get; set; }
-
-    /// <summary>声明此类实现指定服务商的 AI 对话客户端</summary>
-    /// <param name="code">服务商编码</param>
-    /// <param name="displayName">显示名称</param>
-    /// <param name="defaultEndpoint">默认 API 地址</param>
-    public AiClientAttribute(String code, String displayName, String defaultEndpoint)
-    {
-        Code = code;
-        DisplayName = displayName;
-        DefaultEndpoint = defaultEndpoint;
-    }
 }

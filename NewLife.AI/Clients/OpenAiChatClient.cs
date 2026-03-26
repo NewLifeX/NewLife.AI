@@ -26,21 +26,10 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String Name => "OpenAI";
-
-    /// <summary>默认 API 地址</summary>
-    public virtual String DefaultEndpoint => "https://api.openai.com";
+    public override String Name { get; set; } = "OpenAI";
 
     /// <summary>对话完成路径。默认 /v1/chat/completions，部分服务商需要调整</summary>
-    public String ChatPath { get; set; } = "/v1/chat/completions";
-
-    /// <summary>主流模型列表</summary>
-    public virtual AiModelInfo[] DefaultModels { get; } =
-    [
-        new("gpt-4.1",     "GPT-4.1",   new(false, true,  false, true)),
-        new("gpt-4o",      "GPT-4o",    new(false, true,  false, true)),
-        new("gpt-5-mini",  "GPT-5 Mini", new(false, true,  false, true)),
-    ];
+    public override String ChatPath { get; set; } = "/v1/chat/completions";
 
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -268,7 +257,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
 
         var dic = new Dictionary<String, Object?>
         {
-            ["model"] = model ?? (DefaultModels.Length > 0 ? DefaultModels[0].Model : "tts-1"),
+            ["model"] = model ?? "tts-1",
             ["input"] = input,
             ["voice"] = voice
         };

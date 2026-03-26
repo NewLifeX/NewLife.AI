@@ -23,16 +23,7 @@ public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String Name => "新生命AI";
-
-    /// <inheritdoc/>
-    public override String DefaultEndpoint => "https://ai.newlifex.com";
-
-    /// <summary>主流模型列表</summary>
-    public override AiModelInfo[] DefaultModels { get; } =
-    [
-        new("qwen3.5", "Qwen3.5-0.8b", new(true, false, false, true)),
-    ];
+    public override String Name { get; set; } = "新生命AI";
     #endregion
 
     #region OpenAI Responses API（/v1/responses）

@@ -28,21 +28,10 @@ public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String Name => "Anthropic";
-
-    /// <summary>默认 API 地址</summary>
-    public virtual String DefaultEndpoint => "https://api.anthropic.com";
+    public override String Name { get; set; } = "Anthropic";
 
     /// <summary>Anthropic API 版本</summary>
     protected virtual String ApiVersion => "2023-06-01";
-
-    /// <summary>主流模型列表</summary>
-    public virtual AiModelInfo[] DefaultModels { get; } =
-    [
-        new("claude-opus-4-6",    "Claude Opus 4.6",   new(true, true, false, true)),
-        new("claude-sonnet-4-6",  "Claude Sonnet 4.6", new(true, true, false, true)),
-        new("claude-haiku-4-5",   "Claude Haiku 4.5",  new(true, true, false, true)),
-    ];
 
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));

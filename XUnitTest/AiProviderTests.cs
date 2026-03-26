@@ -110,16 +110,6 @@ public class AiProviderTests
         Assert.Equal("v2", registry.Descriptors["Test"].DisplayName);
     }
 
-    [Fact]
-    public void RegisterAlias_CanFindByFullName()
-    {
-        var registry = new AiClientRegistry();
-        registry.Register(new AiClientDescriptor { Code = "MyProvider", DisplayName = "My Provider", DefaultEndpoint = "https://my.api.com", Protocol = "OpenAI", Factory = opts => new OpenAiChatClient(opts) });
-        registry.RegisterAlias("My.Namespace.MyProvider", "MyProvider");
-
-        Assert.Equal("MyProvider", registry.GetDescriptor("My.Namespace.MyProvider")?.Code);
-    }
-
     #endregion
 
     #region GetDescriptor 代码查找

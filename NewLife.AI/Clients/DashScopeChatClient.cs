@@ -29,7 +29,7 @@ public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String Name => "阿里百炼";
+    public override String Name { get; set; } = "阿里百炼";
 
     /// <summary>原生 DashScope API 基础地址（/api/v1）</summary>
     protected virtual String NativeEndpoint => "https://dashscope.aliyuncs.com/api/v1";
@@ -38,20 +38,15 @@ public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient
     protected virtual String CompatibleEndpoint => "https://dashscope.aliyuncs.com/compatible-mode";
 
     /// <inheritdoc/>
-    public override String DefaultEndpoint => IsNativeProtocol ? NativeEndpoint : CompatibleEndpoint;
+    public override String DefaultEndpoint
+    {
+        get => IsNativeProtocol ? NativeEndpoint : CompatibleEndpoint;
+        set => base.DefaultEndpoint = value;
+    }
 
     /// <summary>是否使用 DashScope 原生协议。Protocol 为空或 "DashScope" 时为原生模式</summary>
     protected Boolean IsNativeProtocol =>
         String.IsNullOrEmpty(_options.Protocol) || _options.Protocol == "DashScope";
-
-    /// <summary>主流对话模型列表</summary>
-    public override AiModelInfo[] DefaultModels { get; } =
-    [
-        new("qwen3-max",     "Qwen3 Max",     new(true,  false, false, true)),
-        new("qwen3.5-plus",  "Qwen3.5 Plus",  new(true,  true,  false, true)),
-        new("qwen3.5-flash", "Qwen3.5 Flash", new(true,  true,  false, true)),
-        new("qwq-plus",      "QwQ Plus",      new(true,  false, false, true)),
-    ];
     #endregion
 
     #region 对话（重写）
@@ -254,20 +249,13 @@ public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient
     /// <item>qvq- 前缀：视觉推理系列（区别于纯文本推理 qwq-）</item>
     /// <item>qwen3.5- 前缀：内置多模态能力</item>
     /// </list>
-    /// 未匹配时回退到 DefaultModels 注册表的 SupportVision 标志
     /// </remarks>
-    private Boolean IsMultimodalModel(String? model)
+    private static Boolean IsMultimodalModel(String? model)
     {
         if (String.IsNullOrEmpty(model)) return false;
         if (model.IndexOf("-vl", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (model.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase)) return true;
         if (model.StartsWith("qwen3.5-", StringComparison.OrdinalIgnoreCase)) return true;
-
-        foreach (var info in DefaultModels)
-        {
-            if (info.Model.Equals(model, StringComparison.OrdinalIgnoreCase))
-                return info.Capabilities.SupportVision;
-        }
         return false;
     }
 

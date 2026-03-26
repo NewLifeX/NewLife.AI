@@ -29,19 +29,7 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
 {
     #region 属性
     /// <inheritdoc/>
-    protected override String Name => "本地Ollama";
-
-    /// <summary>默认 API 地址</summary>
-    public virtual String DefaultEndpoint => "http://localhost:11434";
-
-    /// <summary>主流模型列表</summary>
-    public virtual AiModelInfo[] DefaultModels { get; } =
-    [
-        new("qwen3.5:0.8b", "Qwen 3.5 0.8B", new(true,  false, false, true)),
-        new("llama3.3",     "Llama 3.3",      new(false, false, false, true)),
-        new("deepseek-r1",  "DeepSeek R1",    new(true,  false, false, false)),
-        new("phi4",         "Phi-4",          new(false, false, false, true)),
-    ];
+    public override String Name { get; set; } = "本地Ollama";
 
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));

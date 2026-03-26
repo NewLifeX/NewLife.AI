@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using NewLife.AI.Clients;
 
 namespace NewLife.AI.Providers;
 
@@ -8,7 +9,6 @@ namespace NewLife.AI.Providers;
 /// <list type="bullet">
 /// <item>注册的是无状态 <see cref="AiClientDescriptor"/> 数据对象，而非服务商单例</item>
 /// <item>每次调用 <see cref="AiClientDescriptor.Factory"/> 创建新客户端实例，天然无状态</item>
-/// <item>内置 FullName→Code 别名映射，兼容数据库中存储的旧版类型全名</item>
 /// </list>
 /// </remarks>
 public class AiClientRegistry
@@ -16,8 +16,8 @@ public class AiClientRegistry
     #region 属性
     private readonly Dictionary<String, AiClientDescriptor> _descriptors = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>FullName → Code 别名映射，用于兼容数据库中存储的旧版类型全名</summary>
-    private readonly Dictionary<String, String> _aliases = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>DisplayName → Code 映射，供按显示名称回退查找</summary>
+    private readonly Dictionary<String, String> _displayNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>已注册的描述符字典（Code → 描述符，大小写不敏感）</summary>
     public IReadOnlyDictionary<String, AiClientDescriptor> Descriptors => _descriptors;
@@ -34,49 +34,38 @@ public class AiClientRegistry
     {
         if (descriptor == null) throw new ArgumentNullException(nameof(descriptor));
         _descriptors[descriptor.Code] = descriptor;
-        return this;
-    }
-
-    /// <summary>注册 FullName → Code 别名，用于兼容旧版类型全名的数据库字段</summary>
-    /// <param name="fullName">旧版类型全名，如 NewLife.AI.Providers.OpenAiProvider</param>
-    /// <param name="code">对应的新版编码，如 OpenAI</param>
-    /// <returns>当前实例（支持链式调用）</returns>
-    public AiClientRegistry RegisterAlias(String fullName, String code)
-    {
-        if (fullName == null) throw new ArgumentNullException(nameof(fullName));
-        if (code == null) throw new ArgumentNullException(nameof(code));
-        _aliases[fullName] = code;
+        _displayNames[descriptor.DisplayName] = descriptor.Code;
         return this;
     }
     #endregion
 
     #region 查找
-    /// <summary>按服务商编码或类型全名获取描述符（大小写不敏感）</summary>
-    /// <remarks>优先按 Code 查找；未命中时按 FullName 别名回退，支持旧版 ProviderConfig.Provider 字段</remarks>
-    /// <param name="codeOrAlias">服务商编码（如 "OpenAI"）或类型全名（如 "NewLife.AI.Providers.OpenAiProvider"）</param>
+    /// <summary>按服务商编码或显示名称获取描述符（大小写不敏感）</summary>
+    /// <remarks>优先按 Code 查找；未命中时按 DisplayName 回退，方便用人类可读名称查询</remarks>
+    /// <param name="code">服务商编码（如 "OpenAI"）或显示名称（如 "深度求索"）</param>
     /// <returns>描述符，未注册时返回 null</returns>
-    public AiClientDescriptor? GetDescriptor(String codeOrAlias)
+    public AiClientDescriptor? GetDescriptor(String code)
     {
-        if (String.IsNullOrWhiteSpace(codeOrAlias)) return null;
+        if (String.IsNullOrWhiteSpace(code)) return null;
 
-        if (_descriptors.TryGetValue(codeOrAlias, out var descriptor)) return descriptor;
+        if (_descriptors.TryGetValue(code, out var descriptor)) return descriptor;
 
-        // 按类型全名别名回退查找
-        if (_aliases.TryGetValue(codeOrAlias, out var code))
-            _descriptors.TryGetValue(code, out descriptor);
+        // 按显示名称回退查找
+        if (_displayNames.TryGetValue(code, out var mappedCode))
+            _descriptors.TryGetValue(mappedCode, out descriptor);
 
         return descriptor;
     }
 
-    /// <summary>按服务商编码或类型全名创建客户端实例</summary>
-    /// <param name="codeOrAlias">服务商编码或类型全名</param>
+    /// <summary>按服务商编码或显示名称创建客户端实例</summary>
+    /// <param name="code">服务商编码（如 "OpenAI"）或显示名称（如 "深度求索"）</param>
     /// <param name="options">连接选项（ApiKey、Model、Endpoint 等）</param>
     /// <returns>已绑定连接参数的客户端实例</returns>
     /// <exception cref="ArgumentException">编码未注册时抛出</exception>
-    public IChatClient CreateClient(String codeOrAlias, AiClientOptions options)
+    public IChatClient CreateClient(String code, AiClientOptions options)
     {
-        var descriptor = GetDescriptor(codeOrAlias)
-            ?? throw new ArgumentException($"未注册的服务商编码: {codeOrAlias}", nameof(codeOrAlias));
+        var descriptor = GetDescriptor(code)
+            ?? throw new ArgumentException($"未注册的服务商编码: {code}", nameof(code));
         return descriptor.Factory(options);
     }
     #endregion
@@ -85,11 +74,7 @@ public class AiClientRegistry
     private static AiClientRegistry CreateDefault()
     {
         var registry = new AiClientRegistry();
-
-        // 注册内置服务商并建立别名
         RegisterFromAttributes(registry, typeof(AiClientRegistry).Assembly);
-        RegisterAliases(registry);
-
         return registry;
     }
 
@@ -138,10 +123,6 @@ public class AiClientRegistry
             });
         var ctorParamCount = ctor?.GetParameters().Length ?? 0;
 
-        // 缓存 ChatPath 属性（仅在需要时查找，避免每次 Factory 调用反射）
-        var chatPathProp = !String.IsNullOrEmpty(attr.ChatPath)
-            ? type.GetProperty("ChatPath")
-            : null;
         var chatPath       = attr.ChatPath;
         var defaultEndpoint = attr.DefaultEndpoint;
 
@@ -155,72 +136,24 @@ public class AiClientRegistry
             Models          = models,
             Factory         = opts =>
             {
-                var filled = FillEndpoint(opts, defaultEndpoint);
+                if (String.IsNullOrEmpty(opts.Endpoint)) opts.Endpoint = defaultEndpoint;
                 Object? instance;
                 if (ctor != null)
                 {
                     var args = new Object[ctorParamCount];
-                    args[0] = filled;
+                    args[0] = opts;
                     instance = ctor.Invoke(args);
                 }
                 else
-                    instance = Activator.CreateInstance(type, filled);
+                    instance = Activator.CreateInstance(type, opts);
 
-                chatPathProp?.SetValue(instance, chatPath);
+                if (instance is AiClientBase clientBase)
+                {
+                    clientBase.Name = attr.DisplayName;
+                    if (!String.IsNullOrEmpty(chatPath)) clientBase.ChatPath = chatPath;
+                }
                 return (IChatClient)instance!;
             },
-        };
-    }
-    private static void RegisterAliases(AiClientRegistry registry)
-    {
-        // 旧版 Provider 类型全名 → 新版 Code 映射（兼容数据库中存储的旧值）
-        registry.RegisterAlias("NewLife.AI.Providers.NewLifeAiProvider", "NewLifeAI");
-        registry.RegisterAlias("NewLife.AI.Providers.DashScopeProvider", "DashScope");
-        registry.RegisterAlias("NewLife.AI.Providers.DeepSeekProvider", "DeepSeek");
-        registry.RegisterAlias("NewLife.AI.Providers.OpenAiProvider", "OpenAI");
-        registry.RegisterAlias("NewLife.AI.Providers.OllamaProvider", "Ollama");
-        registry.RegisterAlias("NewLife.AI.Providers.AnthropicProvider", "Anthropic");
-        registry.RegisterAlias("NewLife.AI.Providers.GeminiProvider", "Gemini");
-        registry.RegisterAlias("NewLife.AI.Providers.AzureAiProvider", "AzureAI");
-        registry.RegisterAlias("NewLife.AI.Providers.VolcEngineProvider", "VolcEngine");
-        registry.RegisterAlias("NewLife.AI.Providers.ZhipuProvider", "Zhipu");
-        registry.RegisterAlias("NewLife.AI.Providers.MoonshotProvider", "Moonshot");
-        registry.RegisterAlias("NewLife.AI.Providers.HunyuanProvider", "Hunyuan");
-        registry.RegisterAlias("NewLife.AI.Providers.QianfanProvider", "Qianfan");
-        registry.RegisterAlias("NewLife.AI.Providers.SparkProvider", "Spark");
-        registry.RegisterAlias("NewLife.AI.Providers.MiniMaxProvider", "MiniMax");
-        registry.RegisterAlias("NewLife.AI.Providers.SiliconFlowProvider", "SiliconFlow");
-        registry.RegisterAlias("NewLife.AI.Providers.MiMoProvider", "MiMo");
-        registry.RegisterAlias("NewLife.AI.Providers.InfiniProvider", "Infini");
-        registry.RegisterAlias("NewLife.AI.Providers.XiaomaPowerProvider", "XiaomaPower");
-        registry.RegisterAlias("NewLife.AI.Providers.XAiProvider", "XAI");
-        registry.RegisterAlias("NewLife.AI.Providers.MistralProvider", "Mistral");
-        registry.RegisterAlias("NewLife.AI.Providers.CohereProvider", "Cohere");
-        registry.RegisterAlias("NewLife.AI.Providers.PerplexityProvider", "Perplexity");
-        registry.RegisterAlias("NewLife.AI.Providers.GroqProvider", "Groq");
-        registry.RegisterAlias("NewLife.AI.Providers.CerebrasProvider", "Cerebras");
-        registry.RegisterAlias("NewLife.AI.Providers.TogetherAiProvider", "TogetherAI");
-        registry.RegisterAlias("NewLife.AI.Providers.FireworksProvider", "Fireworks");
-        registry.RegisterAlias("NewLife.AI.Providers.SambaNovaProvider", "SambaNova");
-        registry.RegisterAlias("NewLife.AI.Providers.YiProvider", "Yi");
-        registry.RegisterAlias("NewLife.AI.Providers.GitHubModelsProvider", "GitHubModels");
-        registry.RegisterAlias("NewLife.AI.Providers.OpenRouterProvider", "OpenRouter");
-        registry.RegisterAlias("NewLife.AI.Providers.LMStudioProvider", "LMStudio");
-        registry.RegisterAlias("NewLife.AI.Providers.VllmProvider", "vLLM");
-        registry.RegisterAlias("NewLife.AI.Providers.OneApiProvider", "OneAPI");
-    }
-
-    /// <summary>确保 options 含有有效 Endpoint。若已有则原样返回；为空则返回填入 defaultEndpoint 的新实例</summary>
-    private static AiClientOptions FillEndpoint(AiClientOptions opts, String defaultEndpoint)
-    {
-        if (!String.IsNullOrEmpty(opts.Endpoint)) return opts;
-        return new AiClientOptions
-        {
-            Endpoint = defaultEndpoint,
-            ApiKey = opts.ApiKey,
-            Model = opts.Model,
-            Organization = opts.Organization,
-            Protocol = opts.Protocol,
         };
     }
     #endregion

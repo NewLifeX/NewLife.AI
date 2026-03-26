@@ -14,11 +14,28 @@ namespace NewLife.AI.Clients;
 public abstract class AiClientBase
 {
     #region 属性
-    /// <summary>客户端名称。用于错误日志中标识服务商</summary>
-    protected abstract String Name { get; }
+    /// <summary>客户端名称。用于日志标识和默认端点查找；可外部设置（如注册表按服务商编码覆盖）</summary>
+    public virtual String Name { get; set; } = null!;
+
+    private String? _defaultEndpoint;
+    /// <summary>默认 API 地址。可读写；首次读取为空时自动从注册表按 Name 查找（先匹配 Code，再匹配 DisplayName）</summary>
+    public virtual String DefaultEndpoint
+    {
+        get
+        {
+            if (_defaultEndpoint != null) return _defaultEndpoint;
+            var d = AiClientRegistry.Default.GetDescriptor(Name);
+            d ??= AiClientRegistry.Default.Descriptors.Values.FirstOrDefault(x => x.DisplayName == Name);
+            return _defaultEndpoint = d?.DefaultEndpoint ?? "";
+        }
+        set => _defaultEndpoint = value;
+    }
 
     /// <summary>HTTP 请求超时时间。默认 30 秒</summary>
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>对话完成路径。为空时子类使用自身默认值；平台注册时可由注册表覆盖（如将 /v1/chat/completions 改为 /chat/completions）</summary>
+    public virtual String ChatPath { get; set; } = "";
 
     private HttpClient? _sharedClient;
 
@@ -31,11 +48,11 @@ public abstract class AiClientBase
 
     #region 构造
     /// <summary>默认构造</summary>
-    protected AiClientBase() { }
+    protected AiClientBase() => Name = GetType().Name.TrimEnd("ChatClient", "Client");
 
     /// <summary>注入 HttpClient 的构造</summary>
     /// <param name="httpClient">外部管理的 HttpClient 实例，传 null 时自动创建</param>
-    protected AiClientBase(HttpClient? httpClient) => _externalClient = httpClient;
+    protected AiClientBase(HttpClient? httpClient) : this() => _externalClient = httpClient;
 
     /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
     /// <returns>新的 HttpClient 实例</returns>
