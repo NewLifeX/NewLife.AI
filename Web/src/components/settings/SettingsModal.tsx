@@ -38,7 +38,7 @@ export function SettingsModal({
 
   useEffect(() => {
     if (open) {
-      fetchMcpServers().then(setMcpServers).catch(() => {})
+      fetchMcpServers().then(setMcpServers).catch((e) => console.error('Failed to load MCP servers:', e))
     }
   }, [open])
 
@@ -137,7 +137,7 @@ export function SettingsModal({
             }))}
             onPluginToggle={(id, enabled) => {
               const numId = Number(id)
-              toggleMcpServer(numId, enabled).catch(() => {})
+              toggleMcpServer(numId, enabled).catch((e) => console.error('Failed to toggle MCP server:', e))
               setMcpServers((prev) =>
                 prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
               )

@@ -24,7 +24,7 @@ export function AppKeySettings() {
   const load = useCallback(() => {
     fetchAppKeys()
       .then(setKeys)
-      .catch(() => {})
+      .catch((e) => console.error('Failed to load app keys:', e))
       .finally(() => setLoading(false))
   }, [])
 

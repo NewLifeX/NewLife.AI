@@ -19,7 +19,7 @@ export function UsageSettings() {
         setDailyUsage(d)
         setModelUsage(m)
       })
-      .catch(() => {})
+      .catch((e) => console.error('Failed to load usage data:', e))
       .finally(() => setLoading(false))
   }, [])
 

@@ -91,7 +91,7 @@ export const useSettingsStore = create<SettingsState>()(
         set((s) => ({ ...s, ...partial }))
         // 异步保存到后端
         const merged = { ...get(), ...partial }
-        saveUserSettings(merged).catch(() => {})
+        saveUserSettings(merged).catch((e) => console.error('Failed to save settings:', e))
       },
 
       reset: () => {
@@ -99,7 +99,7 @@ export const useSettingsStore = create<SettingsState>()(
         applyTheme(defaults.theme)
         applyFontSize(defaults.fontSize)
         set(defaults)
-        saveUserSettings(defaults).catch(() => {})
+        saveUserSettings(defaults).catch((e) => console.error('Failed to reset settings:', e))
       },
     }),
     {
