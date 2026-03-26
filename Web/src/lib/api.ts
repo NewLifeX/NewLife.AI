@@ -519,6 +519,19 @@ export async function uploadAttachment(
   return res.json()
 }
 
+export interface AttachmentInfo {
+  id: number
+  fileName: string
+  size: number
+  url: string
+  isImage: boolean
+}
+
+export async function fetchAttachmentInfos(ids: string[]): Promise<AttachmentInfo[]> {
+  if (ids.length === 0) return []
+  return request<AttachmentInfo[]>(`/api/attachments/info?ids=${ids.join(',')}`)
+}
+
 // ── MCP Servers ──
 
 export interface McpServer {

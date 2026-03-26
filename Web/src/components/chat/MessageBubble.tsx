@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useCallback, useMemo } from 'react'
+import { type ReactNode, useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn, formatRelativeTime, formatExactTime } from '@/lib/utils'
 import { Avatar } from '@/components/common/Avatar'
@@ -8,6 +8,7 @@ import { TypingCursor } from './TypingCursor'
 import { ToolCallBadge } from './ToolCallBadge'
 import { ActionSheet, type ActionSheetItem } from '@/components/common/ActionSheet'
 import { useLongPress } from '@/hooks/useLongPress'
+import { fetchAttachmentInfos, type AttachmentInfo } from '@/lib/api'
 import type { ToolCall, TokenUsage } from '@/types'
 
 interface MessageBubbleProps {
@@ -69,6 +70,13 @@ export function MessageBubble({
     if (!attachments) return []
     try { return (JSON.parse(attachments) as string[]).filter(Boolean) } catch { return [] }
   }, [attachments])
+
+  const [attachInfos, setAttachInfos] = useState<AttachmentInfo[]>([])
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (attachmentIds.length === 0) return
+    fetchAttachmentInfos(attachmentIds).then(setAttachInfos).catch(() => {})
+  }, [attachmentIds])
 
   // 移动端长按操作
   const [actionSheetOpen, setActionSheetOpen] = useState(false)
@@ -133,21 +141,31 @@ export function MessageBubble({
               <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 leading-7 shadow-sm" style={{ fontSize: 'var(--chat-font-size, 16px)' }}>
                 {content}
               </div>
-              {attachmentIds.length > 0 && (
+              {attachInfos.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-1.5 justify-end">
-                  {attachmentIds.map((id) => (
-                    <a
-                      key={id}
-                      href={`/api/attachments/${id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <Icon name="attach_file" size="xs" />
-                      <span>{t('chat.attachment')}</span>
-                      <Icon name="open_in_new" size="xs" className="opacity-50" />
-                    </a>
-                  ))}
+                  {attachInfos.map((info) =>
+                    info.isImage ? (
+                      <button
+                        key={info.id}
+                        onClick={() => setPreviewUrl(info.url)}
+                        className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 hover:opacity-80 transition-opacity"
+                      >
+                        <img src={info.url} alt={info.fileName} className="w-full h-full object-cover" />
+                      </button>
+                    ) : (
+                      <a
+                        key={info.id}
+                        href={info.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors max-w-[200px]"
+                      >
+                        <Icon name="attach_file" size="xs" className="flex-shrink-0" />
+                        <span className="truncate">{info.fileName}</span>
+                        <Icon name="download" size="xs" className="opacity-50 flex-shrink-0" />
+                      </a>
+                    ),
+                  )}
                 </div>
               )}
               {(onCopy || onEdit) && (
@@ -251,6 +269,19 @@ export function MessageBubble({
         </div>
       </div>
       <ActionSheet open={actionSheetOpen} onClose={() => setActionSheetOpen(false)} items={mobileActions} position={actionSheetPos} />
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <img
+            src={previewUrl}
+            alt="Preview"
+            className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

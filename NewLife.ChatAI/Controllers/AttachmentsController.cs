@@ -49,4 +49,30 @@ public class AttachmentsController(ChatApplicationService chatService) : ChatApi
 
         return PhysicalFile(filePath, contentType, entity.FileName);
     }
+
+    /// <summary>批量获取附件元信息</summary>
+    /// <param name="ids">附件编号列表，逗号分隔</param>
+    /// <returns></returns>
+    [HttpGet("info")]
+    public ActionResult<AttachmentInfoDto[]> GetInfos([FromQuery] String ids)
+    {
+        if (String.IsNullOrWhiteSpace(ids)) return Ok(Array.Empty<AttachmentInfoDto>());
+
+        var imageExts = new HashSet<String>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg" };
+        var list = new List<AttachmentInfoDto>();
+        foreach (var idStr in ids.Split(','))
+        {
+            var attachId = idStr.Trim().ToLong();
+            if (attachId <= 0) continue;
+
+            var entity = Attachment.FindById(attachId);
+            if (entity == null) continue;
+
+            var ext = Path.GetExtension(entity.FileName);
+            var isImage = imageExts.Contains(ext);
+            list.Add(new AttachmentInfoDto(entity.Id, entity.FileName, entity.Size, $"/api/attachments/{entity.Id}", isImage));
+        }
+
+        return Ok(list.ToArray());
+    }
 }
