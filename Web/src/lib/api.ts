@@ -324,13 +324,6 @@ export async function editMessage(id: string, content: string): Promise<Message>
   return toMessage(dto)
 }
 
-export async function regenerateMessage(id: string): Promise<Message> {
-  const dto = await request<MessageDto>(`/api/messages/${id}/regenerate`, {
-    method: 'POST',
-  })
-  return toMessage(dto)
-}
-
 export async function streamRegenerate(
   messageId: string,
   onEvent: (event: ChatStreamEvent) => void,
