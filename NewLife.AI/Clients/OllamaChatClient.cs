@@ -48,6 +48,7 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
             throw new ArgumentException("消息列表不能为空", nameof(request));
 
         var model = request.Model;
+        var startMs = Runtime.TickCount64;
         using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
         try
         {
@@ -56,8 +57,11 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
             var body = BuildOllamaBody(request, stream: false);
             var json = await PostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
             var response = ParseOllamaResponse(json);
-
-            if (span != null && response.Usage != null) span.Value = response.Usage.TotalTokens;
+            if (response.Usage != null)
+            {
+                response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+                span?.Value = response.Usage.TotalTokens;
+            }
             return response;
         }
         catch (Exception ex)
@@ -74,12 +78,16 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
     /// <returns>流式响应块的异步枚举</returns>
     public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        request.Model ??= _options.Model;
+        var model = request.Model ??= _options.Model;
 
+        var startMs = Runtime.TickCount64;
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/api/chat";
         var body = BuildOllamaBody(request, stream: true);
 
+        using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
+
+        UsageDetails? lastUsage = null;
         using var resp = await PostStreamAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -93,8 +101,17 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
 
             var chunk = ParseOllamaChunk(line);
             if (chunk != null)
+            {
+                if (chunk.Usage != null)
+                {
+                    lastUsage = chunk.Usage;
+                    lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+                }
                 yield return chunk;
+            }
         }
+
+        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
     }
 
     /// <summary>释放资源</summary>

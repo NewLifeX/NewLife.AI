@@ -45,12 +45,16 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
         request.Model ??= _options.Model;
 
         var model = request.Model;
+        var startMs = Runtime.TickCount64;
         using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
         try
         {
             var response = await ChatAsync(request, cancellationToken).ConfigureAwait(false);
-            if (span != null && response.Usage != null)
-                span.Value = response.Usage.TotalTokens;
+            if (response.Usage != null)
+            {
+                response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+                span?.Value = response.Usage.TotalTokens;
+            }
             return response;
         }
         catch (Exception ex)
@@ -70,17 +74,21 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
         request.Model ??= _options.Model;
 
         var model = request.Model;
+        var startMs = Runtime.TickCount64;
         using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
 
         UsageDetails? lastUsage = null;
         await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
         {
-            if (chunk.Usage != null) lastUsage = chunk.Usage;
+            if (chunk.Usage != null)
+            {
+                lastUsage = chunk.Usage;
+                lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+            }
             yield return chunk;
         }
 
-        if (span != null && lastUsage != null)
-            span.Value = lastUsage.TotalTokens;
+        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
     }
 
     /// <summary>释放资源</summary>

@@ -72,7 +72,6 @@ public class ChatAIPipeline(GatewayService gatewayService, IEnumerable<IToolProv
         var thinkingBuilder = new StringBuilder();
         UsageDetails? lastUsage = null;
         Int64 thinkingStart = 0;
-        var streamSw = Stopwatch.StartNew();
 
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
         {
@@ -98,10 +97,6 @@ public class ChatAIPipeline(GatewayService gatewayService, IEnumerable<IToolProv
 
         if (thinkingBuilder.Length > 0)
             yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
-
-        streamSw.Stop();
-        lastUsage ??= new UsageDetails();
-        lastUsage.ElapsedMs = (Int32)streamSw.ElapsedMilliseconds;
 
         yield return ChatStreamEvent.MessageDone(lastUsage);
     }

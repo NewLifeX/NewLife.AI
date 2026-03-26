@@ -172,7 +172,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
                 {
                     var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
                     workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = toolResult });
-                    if (span != null) span.Value = toolResult?.Length ?? 0;
+                    span?.Value = toolResult?.Length ?? 0;
                 }
                 catch (Exception ex)
                 {

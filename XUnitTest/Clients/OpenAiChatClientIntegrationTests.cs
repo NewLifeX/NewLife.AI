@@ -104,6 +104,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(response.Usage.TotalTokens > 0, "Token 用量应大于 0");
         Assert.True(response.Usage.InputTokens > 0, "Prompt Token 应大于 0");
         Assert.True(response.Usage.OutputTokens > 0, "Completion Token 应大于 0");
+        Assert.True(response.Usage.ElapsedMs > 0, "ElapsedMs 应大于 0");
     }
 
     [Fact]
@@ -136,6 +137,8 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content), "QwenMax 应返回有效回复内容");
     }
 
     [Fact]
@@ -155,9 +158,10 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
-        Assert.Contains("{", content);
-        Assert.Contains("}", content);
-        Assert.Equal("{\"reply\":\"你好！\"}", content);
+        Assert.Contains("{", content!);
+        Assert.Contains("}", content!);
+        // 不对具体措辞做 Equal 断言，以免模型回复 "你好" 与 "您好" 差异导致片状失败
+        Assert.Contains("reply", content!); // 模型应遵循系统提示，回复包含 "reply" 键
     }
 
     [Fact]
@@ -191,28 +195,33 @@ public class OpenAiChatClientIntegrationTests
     #region 非流式对话 - 参数覆盖（BuildRequestBody 所有分支）
 
     [Fact]
-    [DisplayName("参数_Temperature参数生效")]
+    [DisplayName("参数_Temperature=0_输出高度确定")]
     public async Task ChatAsync_Temperature_Accepted()
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "随机说一个1到100的数字，只回答数字");
+        // Temperature=0 趋向贪心解码，极简数学题应给出确定答案以验证其效果。
+        // 用知道正确答案的事实题：3+4=7，Temperature=0 下应可靠回答 7。
+        var request = CreateSimpleRequest("qwen-plus", "3+4等于几？只回答数字，不要其他任何内容");
         request.Temperature = 0.0;
-        request.MaxTokens = 200;
+        request.MaxTokens = 10;
 
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        var content = response.Messages?[0].Message?.Content as String;
+        var content = (response.Messages?[0].Message?.Content as String)?.Trim();
         Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.Contains("7", content!, StringComparison.Ordinal); // 确定性场景下应得到正确答案 7
     }
 
     [Fact]
-    [DisplayName("参数_TopP参数生效")]
+    [DisplayName("参数_TopP_被API接受不报错")]
     public async Task ChatAsync_TopP_Accepted()
     {
         if (!HasApiKey()) return;
 
+        // TopP 控制核采样范围（0~1），其行为效果需大量统计样本才能验证。
+        // 本测试仅确认服务端正确接收参数、不返回 4xx 错误，且响应包含有效内容。
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.TopP = 0.5;
 
@@ -221,6 +230,8 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content), "TopP 参数传递后模型应正常回复");
     }
 
     [Fact]
@@ -238,12 +249,13 @@ public class OpenAiChatClientIntegrationTests
     }
 
     [Fact]
-    [DisplayName("参数_Stop停止词生效")]
+    [DisplayName("参数_Stop停止词截断输出")]
     public async Task ChatAsync_Stop_Accepted()
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "从1数到10，用逗号分隔", 200);
+        // Stop=["5"] 使模型在即将输出 "5" 时停止生成，输出中不应包含 "5" 及之后的内容
+        var request = CreateSimpleRequest("qwen-plus", "Count from 1 to 10, comma separated, only digits", 200);
         request.Stop = ["5"];
 
         var response = await ChatAsync(request);
@@ -251,14 +263,19 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
         Assert.NotNull(content);
+        Assert.DoesNotContain("5", content, StringComparison.Ordinal); // 停止词 "5" 不应出现在输出中
+        Assert.True(content.Contains("1") || content.Contains("2") || content.Contains("3"),
+            "输出应包含停止词之前的计数序列");
     }
 
     [Fact]
-    [DisplayName("参数_PresencePenalty被接受")]
+    [DisplayName("参数_PresencePenalty_被API接受不报错")]
     public async Task ChatAsync_PresencePenalty_Accepted()
     {
         if (!HasApiKey()) return;
 
+        // PresencePenalty 对已出现词施加固定惩罚以降低重复率，效果需大量统计样本才能验证。
+        // 本测试仅确认服务端正确接收参数、不返回错误，且响应包含有效内容。
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.PresencePenalty = 1.5;
 
@@ -267,14 +284,18 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content), "PresencePenalty 参数传递后模型应正常回复");
     }
 
     [Fact]
-    [DisplayName("参数_FrequencyPenalty被接受")]
+    [DisplayName("参数_FrequencyPenalty_被API接受不报错")]
     public async Task ChatAsync_FrequencyPenalty_Accepted()
     {
         if (!HasApiKey()) return;
 
+        // FrequencyPenalty 按词出现频率动态施加惩罚，效果需大量统计样本才能验证。
+        // 本测试仅确认服务端正确接收参数、不返回错误，且响应包含有效内容。
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.FrequencyPenalty = 1.0;
 
@@ -283,14 +304,18 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content), "FrequencyPenalty 参数传递后模型应正常回复");
     }
 
     [Fact]
-    [DisplayName("参数_User标识被接受")]
+    [DisplayName("参数_User字段_被API接受不影响响应")]
     public async Task ChatAsync_User_Accepted()
     {
         if (!HasApiKey()) return;
 
+        // User 字段为请求方自定义标识，供服务端审计统计使用，不影响模型响应内容。
+        // 本测试仅确认该字段被服务端接受，且响应与不传 User 时等效。
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.User = "test-user-12345";
 
@@ -299,14 +324,17 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content), "设置 User 字段后模型应正常回复");
     }
 
     [Fact]
-    [DisplayName("参数_所有可选参数同时传递")]
+    [DisplayName("参数_所有可选参数组合_被API接受不报错")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
         if (!HasApiKey()) return;
 
+        // 所有可选参数同时传递，确认服务端不因参数组合而报错，且响应包含有效内容。
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.Temperature = 0.7;
         request.TopP = 0.9;
@@ -320,6 +348,8 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content), "多参数组合传递后模型应正常回复");
     }
 
     #endregion
@@ -440,6 +470,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(response.Usage.InputTokens > 0);
         Assert.True(response.Usage.OutputTokens > 0);
         Assert.Equal(response.Usage.InputTokens + response.Usage.OutputTokens, response.Usage.TotalTokens);
+        Assert.True(response.Usage.ElapsedMs > 0, "ElapsedMs 应大于 0");
     }
 
     #endregion
@@ -677,7 +708,7 @@ public class OpenAiChatClientIntegrationTests
     }
 
     [Fact]
-    [DisplayName("流式用量_最终Chunk可能包含Usage")]
+    [DisplayName("流式用量_最终Chunk包含Usage和ElapsedMs")]
     public async Task ChatStreamAsync_Usage_InFinalChunk()
     {
         if (!HasApiKey()) return;
@@ -693,10 +724,15 @@ public class OpenAiChatClientIntegrationTests
 
         Assert.NotEmpty(chunks);
 
-        // 兼容模式下流式响应最后一个 chunk 应包含 usage（由 stream_options 触发）
-        var lastWithUsage = chunks.LastOrDefault(c => c.Usage != null);
-        if (lastWithUsage != null)
-            Assert.True(lastWithUsage.Usage!.TotalTokens > 0);
+        // 客户端计时块：最后一个 chunk 应包含 ElapsedMs
+        var timingChunk = chunks.Last();
+        Assert.NotNull(timingChunk.Usage);
+        Assert.True(timingChunk.Usage!.ElapsedMs > 0, "ElapsedMs 应大于 0");
+
+        // 公展商流式响应最后一个真实 chunk 应包含 usage（由 stream_options 触发）
+        var lastWithTokens = chunks.LastOrDefault(c => c.Usage?.TotalTokens > 0);
+        if (lastWithTokens != null)
+            Assert.True(lastWithTokens.Usage!.TotalTokens > 0);
     }
 
     #endregion
