@@ -30,3 +30,4 @@ bld/
 node_modules/
 Web/dist/
 /NewLife.ChatAI/wwwroot/assets
+.pids
