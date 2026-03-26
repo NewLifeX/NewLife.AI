@@ -583,11 +583,11 @@ public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient
             !path.EndsWith(MultimodalGenerationPath, StringComparison.OrdinalIgnoreCase)) return;
 
         // qwen-plus 不能识别为多模态，得使用文本完成地址，但是accept需要text/event-stream
-        var model = chatRequest?.Model ?? options.Model;
-        if (IsMultimodalModel(model) || model.EndsWithIgnoreCase("-plus"))
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
-        else
-            request.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
+        //var model = chatRequest?.Model ?? options.Model;
+        //if (IsMultimodalModel(model) || model.EndsWithIgnoreCase("-max", "-plus", "-turbo"))
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        //else
+        request.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
     }
     #endregion
 }

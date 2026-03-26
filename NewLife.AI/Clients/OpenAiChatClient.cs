@@ -133,6 +133,7 @@ public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpC
             cancellationToken.ThrowIfCancellationRequested();
 
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            if (line == null) break;
 
             if (!line.StartsWith("data: ")) continue;
 
