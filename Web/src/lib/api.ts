@@ -8,10 +8,11 @@ const SSE_MAX_RETRIES = 3
 /** 是否正在跳转登录，防止多次重定向 */
 let isRedirectingToLogin = false
 
-/** 未登录时跳转到登录页，分享页除外；登录完成后跳回当前地址 */
+/** 未登录时跳转到登录页，分享页和登录页除外；登录完成后跳回当前地址 */
 function redirectToLogin() {
   if (isRedirectingToLogin) return
   if (window.location.pathname.startsWith('/share/')) return
+  if (window.location.pathname.toLowerCase().startsWith('/admin/')) return
   isRedirectingToLogin = true
   const returnUrl = encodeURIComponent(window.location.href)
   window.location.href = `/Admin/User/Login?r=${returnUrl}`
