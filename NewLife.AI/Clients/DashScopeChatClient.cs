@@ -556,14 +556,22 @@ public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient
 
     /// <inheritdoc/>
     /// <remarks>
-    /// 原生协议对聊天路径按模型类型注入 SSE 相关头：多模态模型走 Accept: text/event-stream，
-    /// 文本模型走 X-DashScope-SSE: enable。非聊天路径（rerank/models 等）只注入 Bearer 认证。
+    /// 只注入 Bearer 认证头。SSE 相关头（Accept: text/event-stream）仅流式请求需要，
+    /// 由 <see cref="SetStreamingHeaders"/> 注入，非流式请求走普通 JSON 响应。
     /// </remarks>
     protected override void SetHeaders(HttpRequestMessage request, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+    }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// DashScope 原生协议流式请求需要 Accept: text/event-stream，兼容模式不需要。
+    /// 仅对 text-generation 与 multimodal-generation 路径注入该头，其余路径（rerank/models 等）忽略。
+    /// </remarks>
+    protected override void SetStreamingHeaders(HttpRequestMessage request, AiClientOptions options)
+    {
         if (!IsNativeProtocol) return;
 
         var path = request.RequestUri?.AbsolutePath;
