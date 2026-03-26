@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Reflection;
 using System.Text;
 using NewLife.AI.Providers;
 using NewLife.Log;

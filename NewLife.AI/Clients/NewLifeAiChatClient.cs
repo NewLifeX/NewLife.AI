@@ -19,7 +19,7 @@ namespace NewLife.AI.Clients;
 /// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("NewLifeAI", "新生命AI", "https://ai.newlifex.com", Description = "新生命团队星语 AI 网关，统一对接多种大模型")]
 [AiClientModel("qwen3.5", "Qwen3.5-0.8b", Thinking = true)]
-public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAiChatClient(options, httpClient)
+public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAIChatClient(options, httpClient)
 {
     #region 属性
     /// <inheritdoc/>

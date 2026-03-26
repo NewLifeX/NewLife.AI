@@ -130,7 +130,7 @@ public static class ChatClientBuilderExtensions
     {
         var endpoint = httpClient.BaseAddress?.ToString().TrimEnd('/');
         var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
-        return builder.SetInnerClient(new OpenAiChatClient(opts, httpClient));
+        return builder.SetInnerClient(new OpenAIChatClient(opts, httpClient));
     }
 
     /// <summary>使用阿里百炼 DashScope 客户竭作为内层客户竭</summary>

@@ -73,6 +73,6 @@ namespace NewLife.AI.Clients;
     Description = "vLLM 高吞吐量推理引擎，支持自部署", Order = 28)]
 [AiClient("OneAPI", "OneAPI", "http://localhost:3000",
     Description = "OneAPI 开源 LLM API 管理和分发系统", Order = 29)]
-partial class OpenAiChatClient
+partial class OpenAIChatClient
 {
 }

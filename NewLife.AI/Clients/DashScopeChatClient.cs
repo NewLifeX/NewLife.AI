@@ -25,7 +25,7 @@ namespace NewLife.AI.Clients;
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
-public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAiChatClient(options, httpClient)
+public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAIChatClient(options, httpClient)
 {
     #region 属性
     /// <inheritdoc/>

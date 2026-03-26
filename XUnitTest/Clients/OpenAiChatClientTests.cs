@@ -10,7 +10,7 @@ namespace XUnitTest.Clients;
 /// <summary>OpenAiChatClient 单元测试（不需要网络/ApiKey，直接验证解析逻辑）</summary>
 public class OpenAiChatClientTests
 {
-    private static OpenAiChatClient CreateClient() => new(new AiClientOptions { Endpoint = "https://test.local", ApiKey = "test" });
+    private static OpenAIChatClient CreateClient() => new(new AiClientOptions { Endpoint = "https://test.local", ApiKey = "test" });
 
     #region ParseResponse 单元测试
 

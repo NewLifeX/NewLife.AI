@@ -45,7 +45,7 @@ public class OpenAiChatClientIntegrationTests
     };
 
     /// <summary>创建 OpenAiChatClient 实例</summary>
-    private OpenAiChatClient CreateClient(AiClientOptions? opts = null) => new(opts ?? CreateOptions());
+    private OpenAIChatClient CreateClient(AiClientOptions? opts = null) => new(opts ?? CreateOptions());
 
     /// <summary>构建简单的用户消息请求</summary>
     private static ChatRequest CreateSimpleRequest(String model, String prompt, Int32 maxTokens = 200) => new()

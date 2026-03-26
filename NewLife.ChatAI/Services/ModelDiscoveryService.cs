@@ -213,8 +213,8 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             ApiKey = providerConfig.ApiKey,
         };
 
-        using var client = descriptor?.Factory(opts) ?? new OpenAiChatClient(opts);
-        if (client is not OpenAiChatClient openAiClient) return;
+        using var client = descriptor?.Factory(opts) ?? new OpenAIChatClient(opts);
+        if (client is not OpenAIChatClient openAiClient) return;
 
         var modelList = await openAiClient.ListModelsAsync().ConfigureAwait(false);
         if (modelList?.Data == null || modelList.Data.Length == 0) return;

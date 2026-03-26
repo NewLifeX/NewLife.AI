@@ -22,7 +22,7 @@ namespace NewLife.AI.Clients;
 [AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true)]
 [AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true)]
 [AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true)]
-public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient, ILogFeature, ITracerFeature
+public partial class OpenAIChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient, ILogFeature, ITracerFeature
 {
     #region 属性
     /// <inheritdoc/>

@@ -85,7 +85,7 @@ public class AiProviderTests
             DisplayName = "中文显示名称",
             DefaultEndpoint = "https://test.api.com",
             Protocol = "OpenAI",
-            Factory = opts => new OpenAiChatClient(opts),
+            Factory = opts => new OpenAIChatClient(opts),
         });
 
         var descriptor = registry.GetDescriptor("中文显示名称");
@@ -104,7 +104,7 @@ public class AiProviderTests
             DisplayName = "TestDisplay",
             DefaultEndpoint = "https://test2.api.com",
             Protocol = "OpenAI",
-            Factory = opts => new OpenAiChatClient(opts),
+            Factory = opts => new OpenAIChatClient(opts),
         });
 
         Assert.Equal("TestCode2", registry.GetDescriptor("testdisplay")?.Code);
@@ -124,7 +124,7 @@ public class AiProviderTests
             DisplayName = "测试服务商",
             DefaultEndpoint = "https://test.api.com",
             Protocol = "OpenAI",
-            Factory = opts => new OpenAiChatClient(opts),
+            Factory = opts => new OpenAIChatClient(opts),
         });
 
         Assert.True(registry.Descriptors.ContainsKey("TestProvider"));
@@ -148,7 +148,7 @@ public class AiProviderTests
             DisplayName = "链式",
             DefaultEndpoint = "https://chain.api.com",
             Protocol = "OpenAI",
-            Factory = opts => new OpenAiChatClient(opts),
+            Factory = opts => new OpenAIChatClient(opts),
         });
 
         Assert.Same(registry, result);
@@ -158,8 +158,8 @@ public class AiProviderTests
     public void Register_Overwrites_ExistingRegistration()
     {
         var registry = new AiClientRegistry();
-        registry.Register(new AiClientDescriptor { Code = "Test", DisplayName = "v1", DefaultEndpoint = "https://a.com", Protocol = "OpenAI", Factory = opts => new OpenAiChatClient(opts) });
-        registry.Register(new AiClientDescriptor { Code = "Test", DisplayName = "v2", DefaultEndpoint = "https://b.com", Protocol = "OpenAI", Factory = opts => new OpenAiChatClient(opts) });
+        registry.Register(new AiClientDescriptor { Code = "Test", DisplayName = "v1", DefaultEndpoint = "https://a.com", Protocol = "OpenAI", Factory = opts => new OpenAIChatClient(opts) });
+        registry.Register(new AiClientDescriptor { Code = "Test", DisplayName = "v2", DefaultEndpoint = "https://b.com", Protocol = "OpenAI", Factory = opts => new OpenAIChatClient(opts) });
 
         Assert.Equal("v2", registry.Descriptors["Test"].DisplayName);
     }
@@ -588,7 +588,7 @@ public class AiProviderTests
             DisplayName = "占位",
             DefaultEndpoint = "https://placeholder.com",
             Protocol = "OpenAI",
-            Factory = opts => new OpenAiChatClient(opts),
+            Factory = opts => new OpenAIChatClient(opts),
         });
 
         // 再从测试程序集注册（应覆盖上面的占位）
