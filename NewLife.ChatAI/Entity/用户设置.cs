@@ -118,6 +118,14 @@ public partial class UserSetting
     [BindColumn("StreamingSpeed", "流式速度。流式输出速度等级，1~5，默认3", "")]
     public Int32 StreamingSpeed { get => _StreamingSpeed; set { if (OnPropertyChanging("StreamingSpeed", value)) { _StreamingSpeed = value; OnPropertyChanged("StreamingSpeed"); } } }
 
+    private Boolean _AllowTraining;
+    /// <summary>允许训练。是否允许对话数据用于模型改进</summary>
+    [DisplayName("允许训练")]
+    [Description("允许训练。是否允许对话数据用于模型改进")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("AllowTraining", "允许训练。是否允许对话数据用于模型改进", "")]
+    public Boolean AllowTraining { get => _AllowTraining; set { if (OnPropertyChanging("AllowTraining", value)) { _AllowTraining = value; OnPropertyChanged("AllowTraining"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -193,6 +201,7 @@ public partial class UserSetting
             "SystemPrompt" => _SystemPrompt,
             "McpEnabled" => _McpEnabled,
             "StreamingSpeed" => _StreamingSpeed,
+            "AllowTraining" => _AllowTraining,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -217,6 +226,7 @@ public partial class UserSetting
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
                 case "StreamingSpeed": _StreamingSpeed = value.ToInt(); break;
+                case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -326,6 +336,9 @@ public partial class UserSetting
 
         /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
         public static readonly Field StreamingSpeed = FindByName("StreamingSpeed");
+
+        /// <summary>允许训练。是否允许对话数据用于模型改进</summary>
+        public static readonly Field AllowTraining = FindByName("AllowTraining");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");

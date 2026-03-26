@@ -234,6 +234,7 @@
         <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。全局System Prompt" />
         <Column Name="McpEnabled" DataType="Boolean" Description="启用MCP。是否启用MCP工具调用" />
         <Column Name="StreamingSpeed" DataType="Int32" Description="流式速度。流式输出速度等级，1~5，默认3" />
+        <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许对话数据用于模型改进" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
