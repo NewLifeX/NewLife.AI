@@ -130,7 +130,7 @@ public partial class AppKey : Entity<AppKey>
         if (String.IsNullOrWhiteSpace(models)) return String.Empty;
 
         var set = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
-        var items = models.Split([',', '，', ';', '；', '\r', '\n', '\t', ' '], StringSplitOptions.RemoveEmptyEntries);
+        var items = models.Split(new Char[] { ',', '，', ';', '；', '\r', '\n', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (var item in items)
         {
             var value = item.Trim();
