@@ -1,6 +1,6 @@
 # NewLife.ChatAI 前后端功能差异 TODO
 
-> 更新时间：2026-03-26（第二轮扫描）
+> 更新时间：2026-03-26（第三轮扫描）
 > 对比范围：前端 `Web/src/` ↔ 后端 `NewLife.ChatAI/Controllers/`
 
 ---
@@ -11,125 +11,103 @@
 |---|---------|------|------|------|
 | 1 | 会话 CRUD（创建/列表/更新/删除/置顶） | ✅ | ✅ | ✅ 已对齐 |
 | 2 | 消息流式发送（SSE） | ✅ | ✅ | ✅ 已对齐 |
-| 3 | 消息编辑/重新生成/停止 | ⚠️ | ✅ | ⚠️ 见 TODO-7 |
+| 3 | 消息编辑/重新生成/停止 | ✅ | ✅ | ✅ 已对齐（TODO-7） |
 | 4 | 消息反馈（点赞/点踩） | ✅ | ✅ | ✅ 已对齐 |
 | 5 | 模型列表 | ✅ | ✅ | ✅ 已对齐 |
 | 6 | 用户设置（读取/保存） | ✅ | ✅ | ✅ 已对齐 |
 | 7 | 用户资料 | ✅ | ✅ | ✅ 已对齐 |
-| 8 | 会话分享（创建/查看） | ✅ | ✅ | ⚠️ 撤销见 TODO-8 |
+| 8 | 会话分享（创建/查看/撤销） | ✅ | ✅ | ✅ 已对齐（TODO-8） |
 | 9 | 文件上传（附件） | ✅ | ✅ | ✅ 已对齐 |
-| 10 | 系统公开配置 | ✅ | ✅ | ✅ 已对齐 |
-| 11 | MCP 服务器列表/启停 | ⚠️ | ✅ | ⚠️ 见 TODO-10 |
+| 10 | 系统公开配置 | ⚠️ | ✅ | ⚠️ 见 TODO-14 |
+| 11 | MCP 服务器列表/启停 | ✅ | ✅ | ✅ 已清理（TODO-10） |
 | 12 | 用量统计（汇总/每日/按模型） | ✅ | ✅ | ✅ 已对齐 |
 | 13 | 数据导出/清除 | ✅ | ✅ | ✅ 已对齐 |
-| 14 | 图片编辑 | ⚠️ | ✅ | ⚠️ 见 TODO-9 |
+| 14 | 图片编辑 | ✅ | ✅ | ✅ 已对齐（TODO-9） |
 | 15 | AppKey 管理（CRUD） | ✅ | ✅ | ✅ 已完成 |
 | 16 | 会话服务端搜索 | ✅ | ✅ | ✅ 已完成 |
 | 17 | 消息全文搜索 | ✅ | ✅ | ✅ 已完成 |
 | 18 | 附件下载/预览 | ✅ | ✅ | ✅ 已完成 |
 | 19 | 模型切换持久化 | ✅ | ✅ | ✅ 已实现 |
 | 20 | StreamingSpeed 支持 | ✅ | ✅ | ✅ 已实现 |
-| 21 | 语音输入 | ❌ | — | ❌ 见 TODO-11 |
-| 22 | 网关 API | — | ✅ | — 外部消费者用 |
-| 23 | 工具 API | — | ✅ | — AI 函数调用用 |
-| 24 | 健康检查 | — | ✅ | — 运维用 |
-| 25 | 后台管理（Cube Admin） | — | ✅ | — 管理员后台 |
+| 21 | 语音输入 | — | — | 已隐藏（TODO-11） |
+| 22 | 消息删除 | ❌ | ✅ | ⚠️ 见 TODO-15 |
+| 23 | 网关 API | — | ✅ | — 外部消费者用 |
+| 24 | 工具 API | — | ✅ | — AI 函数调用用 |
+| 25 | 健康检查 | — | ✅ | — 运维用 |
+| 26 | 后台管理（Cube Admin） | — | ✅ | — 管理员后台 |
 
 ---
 
-## 二、已完成的 TODO（第一轮）
+## 二、已完成的 TODO
 
-### TODO-1：AppKey 管理界面 ✅ 已完成（cca2899）
-### TODO-2：会话服务端搜索 ✅ 已完成（a96e141）
-### TODO-3：附件下载/预览 ✅ 已完成（80ed157 + ca5c2fc）
-### TODO-4：消息全文搜索 ✅ 已完成（663c313）
-### TODO-5：模型切换持久化 ✅ 已实现（无需改动）
-### TODO-6：StreamingSpeed 支持 ✅ 已实现（无需改动）
+### 第一轮（TODO-1 ~ TODO-6）
+- TODO-1：AppKey 管理界面 ✅（cca2899）
+- TODO-2：会话服务端搜索 ✅（a96e141）
+- TODO-3：附件下载/预览 ✅（80ed157 + ca5c2fc）
+- TODO-4：消息全文搜索 ✅（663c313）
+- TODO-5：模型切换持久化 ✅（无需改动）
+- TODO-6：StreamingSpeed 支持 ✅（无需改动）
+
+### 第二轮（TODO-7 ~ TODO-13）
+- TODO-7：停止生成通知后端 ✅（5bacdb7）
+- TODO-8：分享链接撤销 UI ✅（05c53c5）
+- TODO-9：图片编辑模型选择 ✅（9639abf）
+- TODO-10：MCP 设置页移除占位数据 ✅（4709ec0）
+- TODO-11：语音按钮已隐藏 ✅（4709ec0）
+- TODO-12：清理前端死代码 ✅（4f36de7）
+- TODO-13：设置页错误处理 ✅（38a8985）
 
 ---
 
-## 三、新发现的 TODO（第二轮扫描）
+## 三、新发现的 TODO（第三轮扫描）
 
-### TODO-7：停止生成未调用后端 API 🔴 高
+### TODO-14：系统配置（siteTitle / suggestedQuestions）未接入 🟡 中
 
-**现状：** 前端 `stopGenerating()` 仅在客户端 abort SSE 连接，未调用后端 `POST /api/messages/{id}/stop`。
+**现状：** `api.ts` 已有 `fetchSystemConfig()` 函数，但前端没有任何组件调用它。
 
-**后端已有：** `MessagesController.cs` → `POST /messages/{id}/stop`
+**后端已有：** `SystemConfigController.cs` → `GET /api/config` 返回 `siteTitle` 和 `suggestedQuestions`。
 
-**前端位置：** `Web/src/stores/chatStore.ts` 第 401 行
-
-**风险：** 客户端断开 SSE 后，后端可能继续调用 AI Provider 消耗 Token。
+**影响：** 站点标题、推荐问题等管理员配置无法动态生效，用户始终看到硬编码默认值。
 
 **需要：**
-- [ ] `stopGenerating` 中额外调用 `stopGeneration(messageId)` 通知后端
-- [ ] 需要在 chatStore 中保存当前正在生成的消息 ID
+- [ ] 启动时调用 `fetchSystemConfig()` 获取配置
+- [ ] `siteTitle` 动态设置 `document.title`
+- [ ] `suggestedQuestions` 填充聊天欢迎页的推荐问题列表
 
 ---
 
-### TODO-8：分享链接撤销 UI 🔴 高
+### TODO-15：消息删除功能 🔴 高
 
-**现状：** `api.ts` 中已定义 `revokeShareLink(token)` 函数，但从未被任何组件导入或调用。
+**现状：** 前端 `MessageBubble.tsx` 的操作按钮只有复制/编辑/重新生成，没有删除按钮。`api.ts` 中也没有 `deleteMessage()` 函数。
 
-**后端已有：** `ShareController.cs` → `DELETE /api/share/{token}`
-
-**前端位置：** `Web/src/components/chat/ShareDialog.tsx` — 只有创建分享，无撤销。
+**后端能力：** 消息可通过后端管理界面删除。需确认是否存在 `DELETE /api/messages/{id}` 端点。
 
 **需要：**
-- [ ] ShareDialog 中创建链接后显示「撤销分享」按钮
-- [ ] 点击后调用 `revokeShareLink(token)` + 确认对话框
-- [ ] 撤销成功后清除分享状态
+- [ ] 确认后端是否暴露消息删除 API
+- [ ] 若有：前端增加 `deleteMessage()` API 函数
+- [ ] MessageBubble 添加删除按钮（需二次确认对话框）
+- [ ] 删除后更新本地消息列表
 
 ---
 
-### TODO-9：图片编辑模型硬编码 🟡 中
+### TODO-16：纯编辑消息（不触发重新生成） 🟡 中
 
-**现状：** `MarkdownRenderer.tsx` 中图片编辑模型硬编码为 `dall-e-2`。
+**现状：** 编辑用户消息时，前端调用 `editAndResend()` 会删除后续所有消息并重新生成 AI 回复。
 
-**后端支持：** `ImageEditController.cs` 接受 `model` 参数。
+**后端已有：** `PUT /api/messages/{id}` 支持纯编辑（不触发重新生成），前端 `editMessage()` 函数存在但仅在重新生成流程中使用。
 
 **需要：**
-- [ ] 图片编辑对话框增加模型选择下拉框
-- [ ] 从后端模型列表中过滤出图片编辑能力的模型
+- [ ] 编辑 UI 提供两个按钮：「编辑并重新生成」和「仅保存修改」
+- [ ] 「仅保存修改」调用 `editMessage()` 后更新本地消息，不触发流式请求
 
 ---
 
-### TODO-10：MCP 设置页硬编码占位数据 🟡 中
+### TODO-17：AppKey 模型限制字段 UI 🟢 低
 
-**现状：** `McpSettings.tsx` 中有两个硬编码的 defaultPlugins（GitHub Copilot Bridge / Local File Access），实际数据从后端加载。
-
-**问题：** 后端返回空列表时 UI 显示假插件。`autoApproveRead` / `confirmDangerous` 开关未关联后端。
+**现状：** 后端 `PUT /api/appkeys/{id}` 接受 `models` 字段（逗号分隔的模型列表），但前端 AppKey 编辑界面未暴露该字段。
 
 **需要：**
-- [ ] 移除 `defaultPlugins` 硬编码
-- [ ] 后端无数据时显示空态提示
-
----
-
-### TODO-11：语音输入按钮无功能 🟡 中
-
-**现状：** `ChatInput.tsx` 有麦克风按钮但无 onClick。
-
-**需要（二选一）：**
-- [ ] 方案 A：接入 Web Speech API
-- [ ] 方案 B：暂时隐藏按钮
-
----
-
-### TODO-12：前端未使用的 API 函数 🟢 低
-
-| 函数 | 说明 |
-|------|------|
-| `regenerateMessage(id)` | 非流式版本，前端用流式 |
-| `stopGeneration(id)` | TODO-7 完成后使用 |
-| `revokeShareLink(token)` | TODO-8 完成后使用 |
-
----
-
-### TODO-13：设置页 API 错误静默吞没 🟢 低
-
-`SettingsModal.tsx`、`AppKeySettings.tsx`、`UsageSettings.tsx` 等使用 `.catch(() => {})`。
-
-**需要：** 失败时显示错误提示或至少 console.error。
+- [ ] AppKey 创建/编辑表单增加模型限制多选或输入框
 
 ---
 
@@ -158,13 +136,10 @@
 
 | 优先级 | TODO | 说明 |
 |--------|------|------|
-| 🔴 高 | TODO-7 | 停止生成未调用后端，可能白费 Token |
-| 🔴 高 | TODO-8 | 分享撤销 UI，后端已有前端缺入口 |
-| 🟡 中 | TODO-9 | 图片编辑模型选择，硬编码 dall-e-2 |
-| 🟡 中 | TODO-10 | MCP 硬编码占位数据 |
-| 🟡 中 | TODO-11 | 语音输入按钮无功能 |
-| 🟢 低 | TODO-12 | 未使用 API 函数（死代码） |
-| 🟢 低 | TODO-13 | 设置页错误处理 |
+| 🔴 高 | TODO-15 | 消息删除——用户无法删除单条消息 |
+| 🟡 中 | TODO-14 | 系统配置未接入——siteTitle/suggestedQuestions |
+| 🟡 中 | TODO-16 | 纯编辑消息（不重新生成） |
+| 🟢 低 | TODO-17 | AppKey 模型限制字段 UI |
 
 ---
 
