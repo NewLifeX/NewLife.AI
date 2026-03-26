@@ -32,6 +32,21 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
         return Ok(result);
     }
 
+    /// <summary>全文搜索消息内容。在当前用户所有会话中按关键词搜索</summary>
+    /// <param name="keyword">搜索关键词</param>
+    /// <param name="page">页码</param>
+    /// <param name="pageSize">每页数量</param>
+    /// <returns></returns>
+    [HttpGet("messages/search")]
+    public ActionResult<PagedResultDto<MessageSearchResultDto>> SearchAsync([FromQuery] String keyword, [FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20)
+    {
+        if (String.IsNullOrWhiteSpace(keyword))
+            return BadRequest(new { code = "INVALID_REQUEST", message = "keyword 不能为空" });
+
+        var result = chatService.SearchMessages(GetCurrentUserId(), keyword, page, pageSize);
+        return Ok(result);
+    }
+
     /// <summary>发送消息并以 SSE 流式返回。支持 message_start/thinking_delta/thinking_done/content_delta/tool_call_start/tool_call_done/tool_call_error/message_done/error 事件</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">发送消息请求</param>

@@ -805,6 +805,46 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
 
         return fallbackTitle;
     }
+
+    /// <summary>全文搜索消息内容。在当前用户的所有会话中按关键词搜索消息</summary>
+    /// <param name="userId">当前用户编号</param>
+    /// <param name="keyword">搜索关键词</param>
+    /// <param name="page">页码</param>
+    /// <param name="pageSize">每页数量</param>
+    /// <returns></returns>
+    public PagedResultDto<MessageSearchResultDto> SearchMessages(Int32 userId, String keyword, Int32 page, Int32 pageSize)
+    {
+        if (page <= 0) page = 1;
+        if (pageSize <= 0) pageSize = 20;
+
+        // 先获取用户所有会话编号
+        var convIds = Conversation.FindAll(Conversation._.UserId == userId, null, Conversation._.Id, 0, 0)
+            .Select(e => e.Id).ToArray();
+        if (convIds.Length == 0)
+            return new PagedResultDto<MessageSearchResultDto>([], 0, page, pageSize);
+
+        var p = new PageParameter
+        {
+            PageIndex = page,
+            PageSize = pageSize,
+            Sort = ChatMessage._.Id.Desc()
+        };
+
+        var exp = ChatMessage._.ConversationId.In(convIds) & ChatMessage._.Content.Contains(keyword.Trim());
+        var list = ChatMessage.FindAll(exp, p);
+
+        var items = list.Select(e => new MessageSearchResultDto
+        {
+            Id = e.Id.ToString(),
+            ConversationId = e.ConversationId.ToString(),
+            ConversationTitle = e.ConversationTitle ?? "",
+            Role = e.Role ?? "user",
+            Content = e.Content ?? "",
+            CreateTime = e.CreateTime.ToString("yyyy-MM-dd HH:mm:ss"),
+        }).ToList();
+
+        return new PagedResultDto<MessageSearchResultDto>(items, (Int32)p.TotalCount, page, pageSize);
+    }
     #endregion
 
     #region 反馈

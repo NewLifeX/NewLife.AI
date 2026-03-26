@@ -46,6 +46,28 @@ public record AttachmentInfoDto(Int64 Id, String FileName, Int64 Size, String Ur
 /// <summary>分页结果</summary>
 public record PagedResultDto<T>(IReadOnlyList<T> Items, Int32 Total, Int32 Page, Int32 PageSize);
 
+/// <summary>消息搜索结果</summary>
+public record MessageSearchResultDto
+{
+    /// <summary>消息编号</summary>
+    public String Id { get; set; } = null!;
+
+    /// <summary>会话编号</summary>
+    public String ConversationId { get; set; } = null!;
+
+    /// <summary>会话标题</summary>
+    public String ConversationTitle { get; set; } = "";
+
+    /// <summary>角色</summary>
+    public String Role { get; set; } = "user";
+
+    /// <summary>消息内容</summary>
+    public String Content { get; set; } = "";
+
+    /// <summary>创建时间</summary>
+    public String CreateTime { get; set; } = "";
+}
+
 /// <summary>分享链接</summary>
 public record ShareLinkDto(String Url, DateTime CreateTime, DateTime? ExpireTime);
 
@@ -57,6 +79,9 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
 
     /// <summary>流式输出速度</summary>
     public Int32 StreamingSpeed { get; set; } = 3;
+
+    /// <summary>允许用于模型训练改进</summary>
+    public Boolean AllowTraining { get; set; }
 };
 
 /// <summary>用户资料</summary>
@@ -67,3 +92,67 @@ public record UserProfileDto(String Nickname, String Account, String? Avatar);
 /// <param name="SiteTitle">站点标题，显示在浏览器标签和 /chat 页面</param>
 /// <param name="SuggestedQuestions">欢迎页推荐问题列表</param>
 public record SystemConfigDto(String AppName, String SiteTitle, String[] SuggestedQuestions);
+
+/// <summary>用量汇总</summary>
+public class UsageSummaryDto
+{
+    /// <summary>会话数</summary>
+    public Int32 Conversations { get; set; }
+    /// <summary>消息数</summary>
+    public Int32 Messages { get; set; }
+    /// <summary>提示Token数</summary>
+    public Int64 PromptTokens { get; set; }
+    /// <summary>回复Token数</summary>
+    public Int64 CompletionTokens { get; set; }
+    /// <summary>总Token数</summary>
+    public Int64 TotalTokens { get; set; }
+    /// <summary>最后活跃时间</summary>
+    public DateTime? LastActiveTime { get; set; }
+}
+
+/// <summary>每日用量</summary>
+public class DailyUsageDto
+{
+    /// <summary>日期（yyyy-MM-dd）</summary>
+    public String Date { get; set; } = String.Empty;
+    /// <summary>调用次数</summary>
+    public Int32 Calls { get; set; }
+    /// <summary>提示Token数</summary>
+    public Int64 PromptTokens { get; set; }
+    /// <summary>回复Token数</summary>
+    public Int64 CompletionTokens { get; set; }
+    /// <summary>总Token数</summary>
+    public Int64 TotalTokens { get; set; }
+}
+
+/// <summary>模型使用分布</summary>
+public class ModelUsageDto
+{
+    /// <summary>模型编号</summary>
+    public Int32 ModelId { get; set; }
+    /// <summary>调用次数</summary>
+    public Int32 Calls { get; set; }
+    /// <summary>总Token数</summary>
+    public Int64 TotalTokens { get; set; }
+}
+
+/// <summary>MCP 服务器信息</summary>
+public class McpServerDto
+{
+    /// <summary>编号</summary>
+    public Int32 Id { get; set; }
+    /// <summary>名称</summary>
+    public String Name { get; set; } = String.Empty;
+    /// <summary>服务端点</summary>
+    public String Endpoint { get; set; } = String.Empty;
+    /// <summary>传输类型（sse/stdio）</summary>
+    public String TransportType { get; set; } = String.Empty;
+    /// <summary>认证类型</summary>
+    public String AuthType { get; set; } = String.Empty;
+    /// <summary>是否启用</summary>
+    public Boolean Enable { get; set; }
+    /// <summary>排序</summary>
+    public Int32 Sort { get; set; }
+    /// <summary>备注</summary>
+    public String? Remark { get; set; }
+}

@@ -156,6 +156,22 @@ export async function fetchConversations(page = 1, pageSize = 50, keyword?: stri
   return result.items.map(toConversation)
 }
 
+/** 消息搜索结果 */
+export interface MessageSearchResult {
+  id: string
+  conversationId: string
+  conversationTitle: string
+  role: string
+  content: string
+  createTime: string
+}
+
+/** 全文搜索消息内容 */
+export async function searchMessages(keyword: string, page = 1, pageSize = 20): Promise<PagedResult<MessageSearchResult>> {
+  const params = new URLSearchParams({ keyword, page: String(page), pageSize: String(pageSize) })
+  return request<PagedResult<MessageSearchResult>>(`/api/messages/search?${params}`)
+}
+
 export async function createConversation(title?: string, modelId?: number): Promise<Conversation> {
   const dto = await request<ConversationDto>('/api/conversations', {
     method: 'POST',

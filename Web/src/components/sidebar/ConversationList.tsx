@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
-import { fetchConversations } from '@/lib/api'
+import { fetchConversations, searchMessages, type MessageSearchResult } from '@/lib/api'
 import type { Conversation } from '@/types'
 
 type TimeGroup = 'pinned' | 'today' | 'yesterday' | 'past7days' | 'past30days' | 'earlier'
@@ -69,18 +69,24 @@ export function ConversationList({
   const [searchQuery, setSearchQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
   const [searchResults, setSearchResults] = useState<Conversation[] | null>(null)
+  const [messageResults, setMessageResults] = useState<MessageSearchResult[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults(null)
+      setMessageResults([])
       return
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      fetchConversations(1, 50, searchQuery.trim())
+      const kw = searchQuery.trim()
+      fetchConversations(1, 50, kw)
         .then(setSearchResults)
         .catch(() => setSearchResults([]))
+      searchMessages(kw, 1, 10)
+        .then((r) => setMessageResults(r.items))
+        .catch(() => setMessageResults([]))
     }, 300)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [searchQuery])
@@ -270,6 +276,27 @@ export function ConversationList({
           </ul>
         </div>
       ))}
+      {searchQuery.trim() && messageResults.length > 0 && (
+        <div className="mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
+          <div className="text-xs text-gray-400 px-3 py-1 font-medium">{t('sidebar.messageResults')}</div>
+          <ul className="space-y-0.5">
+            {messageResults.map((msg) => (
+              <li key={msg.id}>
+                <button
+                  onClick={() => handleSelect(msg.conversationId)}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center space-x-1 text-xs text-gray-400 mb-0.5">
+                    <Icon name="chat_bubble_outline" size="xs" />
+                    <span className="truncate">{msg.conversationTitle}</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300 text-xs line-clamp-2">{msg.content}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

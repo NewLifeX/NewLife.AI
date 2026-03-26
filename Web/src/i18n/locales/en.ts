@@ -40,6 +40,7 @@ export default {
     delete: 'Delete',
     searchPlaceholder: 'Search chats...',
     noResults: 'No matching chats found',
+    messageResults: 'Message matches',
     empty: 'No chats yet, start a new one',
   },
   welcome: {

@@ -40,6 +40,7 @@ export default {
     delete: '删除',
     searchPlaceholder: '搜索对话...',
     noResults: '未找到匹配的对话',
+    messageResults: '消息内容匹配',
     empty: '还没有对话，开始新对话吧',
   },
   welcome: {
