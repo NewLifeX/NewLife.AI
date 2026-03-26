@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,7 +10,7 @@ using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Clients;
 
 /// <summary>Ollama ���ط��񼯳ɲ��ԡ���Ҫ�������� Ollama ������ȡ qwen3:0.6b ģ��</summary>
 /// <remarks>

@@ -5,49 +5,33 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Clients;
 
-/// <summary>DashScope（阿里百炼）服务商集成测试。需要有效 ApiKey 才能运行</summary>
+/// <summary>OpenAiChatClient 集成测试（指向阿里百炼 OpenAI 兼容模式）。需要有效 ApiKey 才能运行</summary>
 /// <remarks>
 /// ApiKey 读取优先级：
 /// 1. ./config/DashScope.key 文件（纯文本，首行为 ApiKey）
 /// 2. 环境变量 DASHSCOPE_API_KEY
-/// 未配置时测试自动跳过
+/// 未配置时测试自动跳过。
+/// 阿里百炼兼容模式端点：https://dashscope.aliyuncs.com/compatible-mode
+/// ChatPath 默认为 /v1/chat/completions，完整 URL 即标准 OpenAI 格式。
 /// </remarks>
-public class DashScopeIntegrationTests
+public class OpenAiChatClientIntegrationTests
 {
-    private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
+    private const String Endpoint = "https://dashscope.aliyuncs.com/compatible-mode";
     private readonly String _apiKey;
 
-    public DashScopeIntegrationTests()
+    public OpenAiChatClientIntegrationTests()
     {
-        _apiKey = LoadApiKey() ?? "";
-    }
-
-    /// <summary>从 config 目录或环境变量加载 ApiKey</summary>
-    private static String? LoadApiKey()
-    {
-        var configPath = "config/DashScope.key".GetFullPath();
-        if (File.Exists(configPath))
-        {
-            var key = File.ReadAllText(configPath).Trim();
-            if (!String.IsNullOrWhiteSpace(key)) return key;
-        }
-        else
-        {
-            var dir = Path.GetDirectoryName(configPath);
-            if (!String.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            File.WriteAllText(configPath, "");
-        }
-
-        return Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
+        _apiKey = DashScopeIntegrationTests.LoadApiKey() ?? "";
     }
 
     /// <summary>ApiKey 是否可用</summary>
@@ -56,9 +40,12 @@ public class DashScopeIntegrationTests
     /// <summary>构建默认连接选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
-        Endpoint = _descriptor.DefaultEndpoint,
+        Endpoint = Endpoint,
         ApiKey = _apiKey,
     };
+
+    /// <summary>创建 OpenAiChatClient 实例</summary>
+    private OpenAiChatClient CreateClient(AiClientOptions? opts = null) => new(opts ?? CreateOptions());
 
     /// <summary>构建简单的用户消息请求</summary>
     private static ChatRequest CreateSimpleRequest(String model, String prompt, Int32 maxTokens = 200) => new()
@@ -79,17 +66,18 @@ public class DashScopeIntegrationTests
         ],
         MaxTokens = maxTokens,
     };
+
     /// <summary>创建客户端并执行非流式请求</summary>
     private async Task<ChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
     {
-        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        using var client = CreateClient(opts);
         return await client.GetResponseAsync(request);
     }
 
     /// <summary>创建客户端并执行流式请求</summary>
-    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        using var client = CreateClient(opts);
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
             yield return chunk;
     }
@@ -312,22 +300,6 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("参数_长文本输入可处理")]
-    public async Task ChatAsync_LongInput_Accepted()
-    {
-        if (!HasApiKey()) return;
-
-        var longText = String.Join(",", Enumerable.Range(1, 100).Select(i => $"item{i}"));
-        var request = CreateSimpleRequest("qwen-plus", $"count items: {longText}");
-        request.MaxTokens = 200;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-    }
-
-    [Fact]
     [DisplayName("参数_所有可选参数同时传递")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
@@ -496,24 +468,6 @@ public class DashScopeIntegrationTests
             return !String.IsNullOrEmpty(text);
         }) == true);
         Assert.True(hasContent, "stream should contain at least one content chunk");
-    }
-
-    [Fact]
-    [DisplayName("流式_QwenTurbo_轻量模型流式可用")]
-    public async Task ChatStreamAsync_QwenTurbo_Works()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-turbo", "hi");
-        request.Stream = true;
-
-        var chunks = new List<ChatResponse>();
-        await foreach (var chunk in ChatStreamAsync(request))
-        {
-            chunks.Add(chunk);
-        }
-
-        Assert.NotEmpty(chunks);
     }
 
     [Fact]
@@ -737,13 +691,10 @@ public class DashScopeIntegrationTests
 
         Assert.NotEmpty(chunks);
 
-        // DashScope streaming API may not include usage in final chunk
-        // (requires stream_options parameter which OpenAiProvider doesn't send)
+        // 兼容模式下流式响应最后一个 chunk 应包含 usage（由 stream_options 触发）
         var lastWithUsage = chunks.LastOrDefault(c => c.Usage != null);
         if (lastWithUsage != null)
-        {
             Assert.True(lastWithUsage.Usage!.TotalTokens > 0);
-        }
     }
 
     #endregion
@@ -757,7 +708,7 @@ public class DashScopeIntegrationTests
         var request = CreateSimpleRequest("qwen-plus", "hi");
         var options = new AiClientOptions
         {
-            Endpoint = _descriptor.DefaultEndpoint,
+            Endpoint = Endpoint,
             ApiKey = "",
         };
 
@@ -766,29 +717,7 @@ public class DashScopeIntegrationTests
             await ChatAsync(request, options);
         });
 
-        Assert.Contains("阿里百炼", ex.Message);
-    }
-
-    [Fact]
-    [DisplayName("错误_无ApiKey_ChatStreamAsync抛出HttpRequestException")]
-    public async Task ChatStreamAsync_NoApiKey_ThrowsException()
-    {
-        var request = CreateSimpleRequest("qwen-plus", "hi");
-        request.Stream = true;
-        var options = new AiClientOptions
-        {
-            Endpoint = _descriptor.DefaultEndpoint,
-            ApiKey = "",
-        };
-
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
-        {
-            await foreach (var _ in ChatStreamAsync(request, options))
-            {
-            }
-        });
-
-        Assert.Contains("阿里百炼", ex.Message);
+        Assert.Contains("OpenAI", ex.Message);
     }
 
     [Fact]
@@ -798,7 +727,7 @@ public class DashScopeIntegrationTests
         var request = CreateSimpleRequest("qwen-plus", "hi");
         var options = new AiClientOptions
         {
-            Endpoint = _descriptor.DefaultEndpoint,
+            Endpoint = Endpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
@@ -807,7 +736,7 @@ public class DashScopeIntegrationTests
             await ChatAsync(request, options);
         });
 
-        Assert.Contains("阿里百炼", ex.Message);
+        Assert.Contains("OpenAI", ex.Message);
     }
 
     [Fact]
@@ -823,7 +752,7 @@ public class DashScopeIntegrationTests
             await ChatAsync(request);
         });
 
-        Assert.Contains("阿里百炼", ex.Message);
+        Assert.Contains("OpenAI", ex.Message);
     }
 
     [Fact]
@@ -851,7 +780,7 @@ public class DashScopeIntegrationTests
         request.Stream = true;
         var options = new AiClientOptions
         {
-            Endpoint = _descriptor.DefaultEndpoint,
+            Endpoint = Endpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
@@ -862,7 +791,7 @@ public class DashScopeIntegrationTests
             }
         });
 
-        Assert.Contains("阿里百炼", ex.Message);
+        Assert.Contains("OpenAI", ex.Message);
     }
 
     [Fact]
@@ -876,65 +805,12 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in ChatStreamAsync(request, CreateOptions()))
+            await foreach (var _ in ChatStreamAsync(request))
             {
             }
         });
 
-        Assert.Contains("阿里百炼", ex.Message);
-    }
-
-    #endregion
-
-    #region 错误处理 - 参数边界
-
-    [Fact]
-    [DisplayName("参数_空消息列表_抛出异常")]
-    public async Task ChatAsync_EmptyMessages_ThrowsException()
-    {
-        if (!HasApiKey()) return;
-
-        var request = new ChatRequest
-        {
-            Model = "qwen-plus",
-            Messages = [],
-            MaxTokens = 200,
-        };
-
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
-        {
-            await ChatAsync(request);
-        });
-    }
-
-    [Fact]
-    [DisplayName("参数_流式空消息列表_抛出异常或返回空")]
-    public async Task ChatStreamAsync_EmptyMessages_ThrowsOrEmpty()
-    {
-        if (!HasApiKey()) return;
-
-        var request = new ChatRequest
-        {
-            Model = "qwen-plus",
-            Messages = [],
-            MaxTokens = 200,
-            Stream = true,
-        };
-
-        // DashScope may throw HttpRequestException or return empty stream for empty messages
-        try
-        {
-            var chunks = new List<ChatResponse>();
-            await foreach (var chunk in ChatStreamAsync(request))
-            {
-                chunks.Add(chunk);
-            }
-            // If no exception, server accepted empty messages — verify no meaningful content
-        }
-        catch (HttpRequestException)
-        {
-            // Expected: server rejected the request
-        }
+        Assert.Contains("OpenAI", ex.Message);
     }
 
     #endregion
@@ -1002,76 +878,6 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("FunctionCalling_多工具定义可用")]
-    public async Task ChatAsync_FunctionCalling_MultipleTools()
-    {
-        if (!HasApiKey()) return;
-
-        var request = new ChatRequest
-        {
-            Model = "qwen-plus",
-            Messages =
-            [
-                new ChatMessage { Role = "user", Content = "check Beijing weather and calculate 123*456" },
-            ],
-            MaxTokens = 200,
-            Tools =
-            [
-                new ChatTool
-                {
-                    Type = "function",
-                    Function = new FunctionDefinition
-                    {
-                        Name = "get_weather",
-                        Description = "Get weather info for a city",
-                        Parameters = new Dictionary<String, Object>
-                        {
-                            ["type"] = "object",
-                            ["properties"] = new Dictionary<String, Object>
-                            {
-                                ["city"] = new Dictionary<String, Object>
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "city name",
-                                },
-                            },
-                            ["required"] = new[] { "city" },
-                        },
-                    },
-                },
-                new ChatTool
-                {
-                    Type = "function",
-                    Function = new FunctionDefinition
-                    {
-                        Name = "calculate",
-                        Description = "Calculate math expression",
-                        Parameters = new Dictionary<String, Object>
-                        {
-                            ["type"] = "object",
-                            ["properties"] = new Dictionary<String, Object>
-                            {
-                                ["expression"] = new Dictionary<String, Object>
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "math expression",
-                                },
-                            },
-                            ["required"] = new[] { "expression" },
-                        },
-                    },
-                },
-            ],
-        };
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-    }
-
-    [Fact]
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
@@ -1091,7 +897,11 @@ public class DashScopeIntegrationTests
                     {
                         Name = "get_time",
                         Description = "Get current time",
-                        Parameters = new Dictionary<String, Object> { ["type"] = "object", ["properties"] = new Dictionary<String, Object>() },
+                        Parameters = new Dictionary<String, Object>
+                        {
+                            ["type"] = "object",
+                            ["properties"] = new Dictionary<String, Object>(),
+                        },
                     },
                 },
             ],
@@ -1134,7 +944,7 @@ public class DashScopeIntegrationTests
             },
         };
 
-        // Round 1: user asks, model calls tool
+        // Round 1: 用户提问，模型调用工具
         var request1 = new ChatRequest
         {
             Model = "qwen-plus",
@@ -1146,18 +956,18 @@ public class DashScopeIntegrationTests
             Tools = [weatherTool],
         };
 
-        var response1 = await ChatAsync(request1, CreateOptions());
+        var response1 = await ChatAsync(request1);
         Assert.NotNull(response1?.Messages);
 
         var choice1 = response1.Messages[0];
         if (choice1.FinishReason != "tool_calls" || choice1.Message?.ToolCalls == null)
-            return; // model chose to answer directly, skip round 2
+            return; // 模型选择直接回答，跳过第二轮
 
         var toolCall = choice1.Message.ToolCalls[0];
         Assert.NotNull(toolCall.Id);
 
-        // Round 2: submit tool result, model generates final reply
-        // Covers BuildRequestBody branches: ToolCallId, Name, ToolCalls serialization
+        // Round 2: 提交工具结果，模型生成最终答复
+        // 覆盖 BuildRequestBody 中 ToolCallId、Name、ToolCalls 序列化分支
         var request2 = new ChatRequest
         {
             Model = "qwen-plus",
@@ -1181,7 +991,7 @@ public class DashScopeIntegrationTests
             Tools = [weatherTool],
         };
 
-        var response2 = await ChatAsync(request2, CreateOptions());
+        var response2 = await ChatAsync(request2);
 
         Assert.NotNull(response2);
         Assert.NotNull(response2.Messages);
@@ -1251,93 +1061,36 @@ public class DashScopeIntegrationTests
 
     #endregion
 
-    #region DashScopeProvider 属性验证
+    #region 客户端属性验证
 
     [Fact]
-    [DisplayName("Provider_Code为DashScope")]
-    public void Provider_Code_IsDashScope()
+    [DisplayName("Client_Name为OpenAI")]
+    public void Client_Name_IsOpenAI()
     {
-        Assert.Equal("DashScope", _descriptor.Code);
+        using var client = CreateClient();
+        Assert.Equal("OpenAI", client.Name);
     }
 
     [Fact]
-    [DisplayName("Provider_Name为阿里百炼")]
-    public void Provider_Name_IsCorrect()
+    [DisplayName("Client_ChatPath默认为v1/chat/completions")]
+    public void Client_ChatPath_IsDefault()
     {
-        Assert.Equal("阿里百炼", _descriptor.DisplayName);
+        using var client = CreateClient();
+        Assert.Equal("/v1/chat/completions", client.ChatPath);
     }
 
     [Fact]
-    [DisplayName("Provider_DefaultEndpoint正确")]
-    public void Provider_DefaultEndpoint_IsCorrect()
+    [DisplayName("Client_ChatPath可自定义覆盖")]
+    public void Client_ChatPath_CanBeOverridden()
     {
-        Assert.Equal("https://dashscope.aliyuncs.com/api/v1", _descriptor.DefaultEndpoint);
-    }
-
-    [Fact]
-    [DisplayName("Provider_ApiProtocol为ChatCompletions")]
-    public void Provider_ApiProtocol_IsChatCompletions()
-    {
-        Assert.Equal("DashScope", _descriptor.Protocol);
-    }
-
-    [Fact]
-    [DisplayName("Provider_Models列表非空且包含qwen模型")]
-    public void Provider_Models_ContainsQwen()
-    {
-        var models = _descriptor.Models;
-        Assert.NotNull(models);
-        Assert.NotEmpty(models);
-        Assert.Contains(models, m => m.Model.Contains("qwen", StringComparison.OrdinalIgnoreCase) ||
-                                     m.DisplayName.Contains("qwen", StringComparison.OrdinalIgnoreCase));
-    }
-
-    [Fact]
-    [DisplayName("Provider_IAiProvider接口实现")]
-    public void Provider_Implements_IAiProvider()
-    {
-        Assert.IsType<AiClientDescriptor>(_descriptor);
+        using var client = CreateClient();
+        client.ChatPath = "/custom/v2/chat";
+        Assert.Equal("/custom/v2/chat", client.ChatPath);
     }
 
     #endregion
 
-    #region SetHeaders 与 Options 验证
-
-    [Fact]
-    [DisplayName("Options_Endpoint为空时使用默认")]
-    public async Task Options_EmptyEndpoint_UsesDefault()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var options = new AiClientOptions
-        {
-            Endpoint = "",
-            ApiKey = _apiKey,
-        };
-
-        var response = await ChatAsync(request, options);
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-    }
-
-    [Fact]
-    [DisplayName("Options_Endpoint为null时使用默认")]
-    public async Task Options_NullEndpoint_UsesDefault()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
-        var options = new AiClientOptions
-        {
-            Endpoint = null,
-            ApiKey = _apiKey,
-        };
-
-        var response = await ChatAsync(request, options);
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-    }
+    #region Options 验证
 
     [Fact]
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
@@ -1345,10 +1098,10 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen3.5-flash", "hi", 10);
+        var request = CreateSimpleRequest("qwen-turbo", "hi", 10);
         var options = new AiClientOptions
         {
-            Endpoint = "https://dashscope.aliyuncs.com/api/v1/",
+            Endpoint = Endpoint + "/",
             ApiKey = _apiKey,
         };
 
@@ -1369,7 +1122,7 @@ public class DashScopeIntegrationTests
 
         var tasks = Enumerable.Range(1, 3).Select(i =>
         {
-            var request = CreateSimpleRequest("qwen3.5-flash", $"{i}+{i}=?", 10);
+            var request = CreateSimpleRequest("qwen-turbo", $"{i}+{i}=?", 10);
             return ChatAsync(request, CreateOptions());
         }).ToArray();
 
@@ -1389,201 +1142,25 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        // Non-streaming
-        var request1 = CreateSimpleRequest("qwen3.5-flash", "1+1=?", 10);
-        var response1 = await ChatAsync(request1, CreateOptions());
+        // 非流式
+        var request1 = CreateSimpleRequest("qwen-turbo", "1+1=?", 10);
+        var response1 = await ChatAsync(request1);
         Assert.NotNull(response1?.Messages);
 
-        // Streaming
-        var request2 = CreateSimpleRequest("qwen3.5-flash", "2+2=?", 10);
+        // 流式
+        var request2 = CreateSimpleRequest("qwen-turbo", "2+2=?", 10);
         request2.Stream = true;
         var chunks = new List<ChatResponse>();
-        await foreach (var chunk in ChatStreamAsync(request2, CreateOptions()))
+        await foreach (var chunk in ChatStreamAsync(request2))
         {
             chunks.Add(chunk);
         }
         Assert.NotEmpty(chunks);
 
-        // Non-streaming again
-        var request3 = CreateSimpleRequest("qwen3.5-flash", "3+3=?", 10);
-        var response3 = await ChatAsync(request3, CreateOptions());
+        // 再次非流式
+        var request3 = CreateSimpleRequest("qwen-turbo", "3+3=?", 10);
+        var response3 = await ChatAsync(request3);
         Assert.NotNull(response3?.Messages);
-    }
-
-    #endregion
-
-    #region 深度思考（DeepThinking）
-
-    [Fact]
-    [DisplayName("深度思考_非流式_返回ReasoningContent")]
-    public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3-max", "9.11 和 9.8 哪个更大？请先思考再回答", 500);
-        request.EnableThinking = true;
-        request["ThinkingBudget"] = 1024;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-
-        var message = response.Messages[0].Message;
-        Assert.NotNull(message);
-        Assert.False(String.IsNullOrWhiteSpace(message.Content as String));
-
-        // 支持思考的模型应返回 reasoning_content
-        if (!String.IsNullOrWhiteSpace(message.ReasoningContent))
-            Assert.Contains("思", message.ReasoningContent + message.Content as String ?? "");
-    }
-
-    [Fact]
-    [DisplayName("深度思考_流式_增量输出ReasoningContent")]
-    public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3-max", "1+1等于几？思考后作答", 200);
-        request.EnableThinking = true;
-        request["ThinkingBudget"] = 512;
-        request.Stream = true;
-
-        var reasoningChunks = new List<String>();
-        var contentChunks = new List<String>();
-
-        await foreach (var chunk in ChatStreamAsync(request))
-        {
-            if (chunk.Messages == null) continue;
-            foreach (var choice in chunk.Messages)
-            {
-                if (String.IsNullOrEmpty(choice.Delta?.ReasoningContent) is false)
-                    reasoningChunks.Add(choice.Delta!.ReasoningContent!);
-                if (choice.Delta?.Content is String s && !String.IsNullOrEmpty(s))
-                    contentChunks.Add(s);
-            }
-        }
-
-        // 至少应有内容输出
-        Assert.NotEmpty(contentChunks);
-    }
-
-    #endregion
-
-    #region 结构化输出（StructuredOutput）
-
-    [Fact]
-    [DisplayName("结构化输出_JsonObject模式返回有效JSON")]
-    public async Task ChatAsync_StructuredOutput_JsonObject_ReturnsValidJson()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3.5-plus",
-            "用 JSON 格式返回：{\"city\":\"Beijing\",\"population_million\":22}", 200);
-        request.ResponseFormat = new Dictionary<String, Object> { ["type"] = "json_object" };
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-
-        var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
-    }
-
-    #endregion
-
-    #region 联网搜索（WebSearch）
-
-    [Fact]
-    [DisplayName("联网搜索_EnableSearch_回答包含时效内容")]
-    public async Task ChatAsync_EnableSearch_Works()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3.5-plus", "今天的日期是多少？", 200);
-        request["EnableSearch"] = true;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-
-        var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
-    }
-
-    [Fact]
-    [DisplayName("联网搜索_EnableSource_请求被接受")]
-    public async Task ChatAsync_EnableSource_Accepted()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3.5-plus", "今天有什么新闻？", 200);
-        request["EnableSearch"] = true;
-        request["EnableSource"] = true;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-    }
-
-    #endregion
-
-    #region 并行工具调用（ParallelToolCalls）
-
-    [Fact]
-    [DisplayName("并行工具调用_ParallelToolCalls参数被接受")]
-    public async Task ChatAsync_ParallelToolCalls_Accepted()
-    {
-        if (!HasApiKey()) return;
-
-        var request = new ChatRequest
-        {
-            Model = "qwen3.5-plus",
-            Messages =
-            [
-                new ChatMessage { Role = "user", Content = "查一下北京和上海的天气" },
-            ],
-            MaxTokens = 200,
-            ParallelToolCalls = true,
-            Tools =
-            [
-                new ChatTool
-                {
-                    Type = "function",
-                    Function = new FunctionDefinition
-                    {
-                        Name = "get_weather",
-                        Description = "Get weather info for a city",
-                        Parameters = new Dictionary<String, Object>
-                        {
-                            ["type"] = "object",
-                            ["properties"] = new Dictionary<String, Object>
-                            {
-                                ["city"] = new Dictionary<String, Object>
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "city name",
-                                },
-                            },
-                            ["required"] = new[] { "city" },
-                        },
-                    },
-                },
-            ],
-        };
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
     }
 
     #endregion

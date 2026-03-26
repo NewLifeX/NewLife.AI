@@ -11,7 +11,7 @@ using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Clients;
 
 public class NewLifeAiIntegrationTests
 {
