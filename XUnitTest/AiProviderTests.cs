@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
@@ -73,6 +74,42 @@ public class AiProviderTests
         Assert.Null(new AiClientRegistry().GetDescriptor("OpenAI"));
     }
 
+    [Fact]
+    [DisplayName("GetDescriptor 按显示名称回退查找")]
+    public void GetDescriptor_ByDisplayName_ReturnDescriptor()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(new AiClientDescriptor
+        {
+            Code = "TestCode",
+            DisplayName = "中文显示名称",
+            DefaultEndpoint = "https://test.api.com",
+            Protocol = "OpenAI",
+            Factory = opts => new OpenAiChatClient(opts),
+        });
+
+        var descriptor = registry.GetDescriptor("中文显示名称");
+        Assert.NotNull(descriptor);
+        Assert.Equal("TestCode", descriptor!.Code);
+    }
+
+    [Fact]
+    [DisplayName("GetDescriptor 显示名称查找大小写不敏感")]
+    public void GetDescriptor_ByDisplayName_IsCaseInsensitive()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(new AiClientDescriptor
+        {
+            Code = "TestCode2",
+            DisplayName = "TestDisplay",
+            DefaultEndpoint = "https://test2.api.com",
+            Protocol = "OpenAI",
+            Factory = opts => new OpenAiChatClient(opts),
+        });
+
+        Assert.Equal("TestCode2", registry.GetDescriptor("testdisplay")?.Code);
+    }
+
     #endregion
 
     #region 描述符注册
@@ -97,7 +134,24 @@ public class AiProviderTests
     [Fact]
     public void Register_ThrowsForNull()
     {
-        Assert.Throws<ArgumentNullException>(() => new AiClientRegistry().Register(null!));
+        Assert.Throws<ArgumentNullException>(() => new AiClientRegistry().Register((AiClientDescriptor)null!));
+    }
+
+    [Fact]
+    [DisplayName("Register 返回当前实例支持链式调用")]
+    public void Register_ReturnsThis_ForChaining()
+    {
+        var registry = new AiClientRegistry();
+        var result = registry.Register(new AiClientDescriptor
+        {
+            Code = "Chain",
+            DisplayName = "链式",
+            DefaultEndpoint = "https://chain.api.com",
+            Protocol = "OpenAI",
+            Factory = opts => new OpenAiChatClient(opts),
+        });
+
+        Assert.Same(registry, result);
     }
 
     [Fact]
@@ -443,6 +497,222 @@ public class AiProviderTests
 
     #endregion
 
+    #region Register（程序集重载）
+
+    [Fact]
+    [DisplayName("Register(Assembly) 空程序集参数抛 ArgumentNullException")]
+    public void Register_Assembly_ThrowsForNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new AiClientRegistry().Register((Assembly)null!));
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 返回当前实例支持链式调用")]
+    public void Register_Assembly_ReturnsThis_ForChaining()
+    {
+        var registry = new AiClientRegistry();
+        var result = registry.Register(typeof(AiClientRegistry).Assembly);
+
+        Assert.Same(registry, result);
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 扫描主程序集注册数量与 Default 一致")]
+    public void Register_Assembly_MainAssembly_MatchesDefaultCount()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(AiClientRegistry).Assembly);
+
+        Assert.Equal(AiClientRegistry.Default.Descriptors.Count, registry.Descriptors.Count);
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 扫描外部程序集中标注的服务商 Code")]
+    public void Register_Assembly_WithTestAssembly_RegistersAnnotatedClient()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(AiProviderTests).Assembly);
+
+        var descriptor = registry.GetDescriptor("TestExternal");
+        Assert.NotNull(descriptor);
+        Assert.Equal("外部测试服务商", descriptor!.DisplayName);
+        Assert.Equal("https://test-external.api.com", descriptor.DefaultEndpoint);
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 扫描外部程序集中标注的服务商模型列表")]
+    public void Register_Assembly_WithTestAssembly_RegistersAnnotatedModels()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(AiProviderTests).Assembly);
+
+        var descriptor = registry.GetDescriptor("TestExternal");
+        Assert.NotNull(descriptor);
+        Assert.NotEmpty(descriptor!.Models);
+        Assert.Equal("test-model-v1", descriptor.Models[0].Model);
+        Assert.Equal("测试模型 v1", descriptor.Models[0].DisplayName);
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 支持多次调用合并多个程序集")]
+    public void Register_Assembly_MultipleAssemblies_MergesAll()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(AiClientRegistry).Assembly)
+                .Register(typeof(AiProviderTests).Assembly);
+
+        Assert.True(registry.Descriptors.ContainsKey("OpenAI"));
+        Assert.True(registry.Descriptors.ContainsKey("TestExternal"));
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 不含标注类的程序集注册数量为零")]
+    public void Register_Assembly_NoAnnotatedClients_RegistersNothing()
+    {
+        // System.Runtime 程序集不含任何 [AiClient] 标注的 IChatClient 实现
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(Object).Assembly);
+
+        Assert.Empty(registry.Descriptors);
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 后注册同 Code 覆盖先注册")]
+    public void Register_Assembly_OverwritesExistingCode()
+    {
+        var registry = new AiClientRegistry();
+        // 先手工注册一个同 Code 的占位描述符
+        registry.Register(new AiClientDescriptor
+        {
+            Code = "TestExternal",
+            DisplayName = "占位",
+            DefaultEndpoint = "https://placeholder.com",
+            Protocol = "OpenAI",
+            Factory = opts => new OpenAiChatClient(opts),
+        });
+
+        // 再从测试程序集注册（应覆盖上面的占位）
+        registry.Register(typeof(AiProviderTests).Assembly);
+
+        Assert.Equal("外部测试服务商", registry.GetDescriptor("TestExternal")?.DisplayName);
+    }
+
+    [Fact]
+    [DisplayName("Register(Assembly) 注册的服务商 Factory 可正常创建实例")]
+    public void Register_Assembly_Factory_CreatesClientInstance()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(AiProviderTests).Assembly);
+
+        using var client = registry.CreateClient("TestExternal", new AiClientOptions { ApiKey = "test-key" });
+        Assert.NotNull(client);
+        Assert.IsType<ExternalFakeChatClient>(client);
+    }
+
+    #endregion
+
+    #region Register（类型重载）
+
+    [Fact]
+    [DisplayName("Register(Type) 空类型参数抛 ArgumentNullException")]
+    public void Register_Type_ThrowsForNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new AiClientRegistry().Register((Type)null!));
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 抽象类型抛 ArgumentException")]
+    public void Register_Type_ThrowsForAbstractType()
+    {
+        Assert.Throws<ArgumentException>(() => new AiClientRegistry().Register(typeof(AiClientBase)));
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 未实现 IChatClient 的类型抛 ArgumentException")]
+    public void Register_Type_ThrowsForNonIChatClient()
+    {
+        Assert.Throws<ArgumentException>(() => new AiClientRegistry().Register(typeof(String)));
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 返回当前实例支持链式调用")]
+    public void Register_Type_ReturnsThis_ForChaining()
+    {
+        var registry = new AiClientRegistry();
+        var result = registry.Register(typeof(ExternalFakeChatClient));
+
+        Assert.Same(registry, result);
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 注册标注了 AiClient 的具体类型")]
+    public void Register_Type_RegistersAnnotatedClient()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(ExternalFakeChatClient));
+
+        var descriptor = registry.GetDescriptor("TestExternal");
+        Assert.NotNull(descriptor);
+        Assert.Equal("外部测试服务商", descriptor!.DisplayName);
+        Assert.Equal("https://test-external.api.com", descriptor.DefaultEndpoint);
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 注册的描述符包含模型列表")]
+    public void Register_Type_RegistersAnnotatedModels()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(ExternalFakeChatClient));
+
+        var descriptor = registry.GetDescriptor("TestExternal");
+        Assert.NotNull(descriptor);
+        Assert.NotEmpty(descriptor!.Models);
+        Assert.Equal("test-model-v1", descriptor.Models[0].Model);
+        Assert.Equal("测试模型 v1", descriptor.Models[0].DisplayName);
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 无 AiClientAttribute 标注时静默跳过")]
+    public void Register_Type_SkipsTypeWithNoAttributes()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(FixedReplyChatClient));
+
+        Assert.Empty(registry.Descriptors);
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 注册的服务商 Factory 可正常创建实例")]
+    public void Register_Type_Factory_CreatesClientInstance()
+    {
+        var registry = new AiClientRegistry();
+        registry.Register(typeof(ExternalFakeChatClient));
+
+        using var client = registry.CreateClient("TestExternal", new AiClientOptions { ApiKey = "test-key" });
+        Assert.NotNull(client);
+        Assert.IsType<ExternalFakeChatClient>(client);
+    }
+
+    [Fact]
+    [DisplayName("Register(Type) 与 Register(Assembly) 注册结果等价")]
+    public void Register_Type_EquivalentToAssemblyResult()
+    {
+        var byType = new AiClientRegistry();
+        byType.Register(typeof(ExternalFakeChatClient));
+
+        var byAssembly = new AiClientRegistry();
+        byAssembly.Register(typeof(ExternalFakeChatClient).Assembly);
+
+        var d1 = byType.GetDescriptor("TestExternal")!;
+        var d2 = byAssembly.GetDescriptor("TestExternal")!;
+        Assert.Equal(d1.Code, d2.Code);
+        Assert.Equal(d1.DisplayName, d2.DisplayName);
+        Assert.Equal(d1.DefaultEndpoint, d2.DefaultEndpoint);
+        Assert.Equal(d1.Models.Length, d2.Models.Length);
+    }
+
+    #endregion
+
     // 测试专用：返回固定文本的假客户端
     private sealed class FixedReplyChatClient : IChatClient
     {
@@ -461,4 +731,20 @@ public class AiProviderTests
 
         public void Dispose() { }
     }
+}
+
+// 测试专用：模拟外部程序集中标注了 [AiClient] 的服务商实现
+[AiClient("TestExternal", "外部测试服务商", "https://test-external.api.com")]
+[AiClientModel("test-model-v1", "测试模型 v1")]
+internal sealed class ExternalFakeChatClient : IChatClient
+{
+    public ExternalFakeChatClient(AiClientOptions options) { }
+
+    public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException();
+
+    public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        => throw new NotImplementedException();
+
+    public void Dispose() { }
 }
