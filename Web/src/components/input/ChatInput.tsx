@@ -108,9 +108,6 @@ export function ChatInput({
               {showThinkingToggle && onThinkingModeChange && (
                 <ThinkingModeToggle mode={thinkingMode} onChange={onThinkingModeChange} />
               )}
-              {!isGenerating && (
-                <IconButton icon="mic" size="sm" variant="ghost" label={t('chat.voiceInput')} />
-              )}
               <button
                 onClick={isGenerating ? onStop : handleSend}
                 disabled={!isGenerating && (!value.trim() || isOverLimit)}

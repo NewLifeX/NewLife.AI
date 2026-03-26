@@ -142,10 +142,6 @@ export function SettingsModal({
                 prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
               )
             }}
-            autoApproveRead={true}
-            onAutoApproveReadChange={() => {}}
-            confirmDangerous={true}
-            onConfirmDangerousChange={() => {}}
           />
         )}
         {activeTab === 'account' && (

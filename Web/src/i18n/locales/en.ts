@@ -117,6 +117,7 @@ export default {
     speedFast: 'Fast',
     speedMax: 'Max',
     installedPlugins: 'Installed Plugins',
+    noPlugins: 'No MCP plugins installed',
     managePlugins: 'Manage Plugins',
     permissions: 'Permissions',
     autoApproveRead: 'Auto-approve read operations',

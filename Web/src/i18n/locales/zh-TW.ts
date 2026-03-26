@@ -117,6 +117,7 @@ export default {
     speedFast: '快速',
     speedMax: '極速',
     installedPlugins: '已安裝外掛',
+    noPlugins: '暫無已安裝的 MCP 外掛',
     managePlugins: '管理外掛庫',
     permissions: '權限控制',
     autoApproveRead: '自動批准讀取操作',

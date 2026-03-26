@@ -117,6 +117,7 @@ export default {
     speedFast: '快速',
     speedMax: '极速',
     installedPlugins: '已安装插件',
+    noPlugins: '暂无已安装的 MCP 插件',
     managePlugins: '管理插件库',
     permissions: '权限控制',
     autoApproveRead: '自动批准读取操作',
