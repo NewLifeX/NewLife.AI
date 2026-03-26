@@ -121,6 +121,7 @@ public class OpenAiChatClientIntegrationTests
 
         var content = response.Messages[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.Equal("2", content);
     }
 
     [Fact]
@@ -156,6 +157,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(content));
         Assert.Contains("{", content);
         Assert.Contains("}", content);
+        Assert.Equal("{\"reply\":\"你好！\"}", content);
     }
 
     [Fact]

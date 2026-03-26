@@ -359,7 +359,7 @@ public partial class OpenAiChatClient(AiClientOptions options, HttpClient? httpC
     /// <summary>解析响应 JSON</summary>
     /// <param name="json">JSON 字符串</param>
     /// <returns></returns>
-    protected virtual ChatResponse ParseResponse(String json)
+    protected internal virtual ChatResponse ParseResponse(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 AI 服务商响应");
