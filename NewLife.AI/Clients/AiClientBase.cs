@@ -38,22 +38,19 @@ public abstract class AiClientBase
     /// <summary>对话完成路径。为空时子类使用自身默认值；平台注册时可由注册表覆盖（如将 /v1/chat/completions 改为 /chat/completions）</summary>
     public virtual String ChatPath { get; set; } = "";
 
-    private HttpClient? _sharedClient;
+    private HttpClient? _httpClient;
 
-    /// <summary>外部注入的 HttpClient。注入后不由本类管理生命周期</summary>
-    private readonly HttpClient? _externalClient;
-
-    /// <summary>获取 HttpClient 实例。优先使用外部注入的实例，否则首次访问时通过 CreateHttpClient 创建</summary>
-    protected HttpClient HttpClient => _externalClient ?? (_sharedClient ??= CreateHttpClient());
+    /// <summary>HTTP 客户端。首次访问时自动创建；可替换为代理、自定义管道或测试用 Mock</summary>
+    public HttpClient HttpClient
+    {
+        get => _httpClient ??= CreateHttpClient();
+        set => _httpClient = value;
+    }
     #endregion
 
     #region 构造
     /// <summary>默认构造</summary>
     protected AiClientBase() => Name = GetType().Name.TrimEnd("ChatClient", "Client");
-
-    /// <summary>注入 HttpClient 的构造</summary>
-    /// <param name="httpClient">外部管理的 HttpClient 实例，传 null 时自动创建</param>
-    protected AiClientBase(HttpClient? httpClient) : this() => _externalClient = httpClient;
 
     /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
     /// <returns>新的 HttpClient 实例</returns>

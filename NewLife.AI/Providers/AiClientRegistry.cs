@@ -130,6 +130,15 @@ public class AiClientRegistry
             ?? throw new ArgumentException($"未注册的服务商编码: {code}", nameof(code));
         return descriptor.Factory(options);
     }
+
+    /// <summary>以 API 密钥和可选模型快速创建客户端实例</summary>
+    /// <param name="code">服务商编码（如 "DashScope"）或显示名称</param>
+    /// <param name="apiKey">API 密钥</param>
+    /// <param name="model">默认模型编码，为空时由每次请求指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用服务商默认地址</param>
+    /// <returns>已绑定连接参数的客户端实例</returns>
+    public IChatClient CreateClient(String code, String apiKey, String? model = null, String? endpoint = null)
+        => CreateClient(code, new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint });
     #endregion
 
     #region 默认实例

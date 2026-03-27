@@ -118,59 +118,71 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers));
 
-    // ── MEAI 风格山 Use*() 工厂方法 ─────────────────────────────────────────
+    // ── MEAI 风格 Use*() 工厂方法 ─────────────────────────────────────────
 
-    /// <summary>使用 OpenAI 兴崉协议客户端作为内层客户竭</summary>
+    /// <summary>使用 OpenAI 兼容协议客户端作为内层客户端</summary>
     /// <param name="builder">构建器</param>
-    /// <param name="httpClient">HTTP 客户竭；<see cref="HttpClient.BaseAddress"/> 为服务商地址</param>
-    /// <param name="apiKey">API 密鑰</param>
+    /// <param name="apiKey">API 密钥</param>
     /// <param name="model">默认模型编码，为空时由每次请求自行指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseOpenAI(this ChatClientBuilder builder, HttpClient httpClient, String apiKey, String? model = null)
+    public static ChatClientBuilder UseOpenAI(this ChatClientBuilder builder, String apiKey, String? model = null, String? endpoint = null)
     {
-        var endpoint = httpClient.BaseAddress?.ToString().TrimEnd('/');
         var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
-        return builder.SetInnerClient(new OpenAIChatClient(opts, httpClient));
+        return builder.SetInnerClient(new OpenAIChatClient(opts));
     }
 
-    /// <summary>使用阿里百炼 DashScope 客户竭作为内层客户竭</summary>
+    /// <summary>使用阿里百炼 DashScope 客户端作为内层客户端</summary>
     /// <param name="builder">构建器</param>
     /// <param name="apiKey">阿里云 API Key</param>
-    /// <param name="endpoint">API 地址覆盖；为空时使用默认 DashScope 地址</param>
     /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用默认 DashScope 地址</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseDashScope(this ChatClientBuilder builder, String apiKey, String? endpoint = null, String? model = null)
+    public static ChatClientBuilder UseDashScope(this ChatClientBuilder builder, String apiKey, String? model = null, String? endpoint = null)
     {
         var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
         return builder.SetInnerClient(new DashScopeChatClient(opts));
     }
 
-    /// <summary>使用 Anthropic Claude 客户竭作为内层客户竭</summary>
+    /// <summary>使用 Anthropic Claude 客户端作为内层客户端</summary>
     /// <param name="builder">构建器</param>
     /// <param name="apiKey">Anthropic API Key</param>
-    /// <param name="endpoint">API 地址覆盖</param>
     /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseAnthropic(this ChatClientBuilder builder, String apiKey, String? endpoint = null, String? model = null)
+    public static ChatClientBuilder UseAnthropic(this ChatClientBuilder builder, String apiKey, String? model = null, String? endpoint = null)
     {
         var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
         return builder.SetInnerClient(new AnthropicChatClient(opts));
     }
 
-    /// <summary>使用 Ollama 客户竭作为内层客户竭</summary>
+    /// <summary>使用 Google Gemini 客户端作为内层客户端</summary>
     /// <param name="builder">构建器</param>
-    /// <param name="endpoint">Ollama 地址；为空时使用默认 http://localhost:11434</param>
+    /// <param name="apiKey">Google API Key</param>
     /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseOllama(this ChatClientBuilder builder, String? endpoint = null, String? model = null)
+    public static ChatClientBuilder UseGemini(this ChatClientBuilder builder, String apiKey, String? model = null, String? endpoint = null)
     {
-        var opts = new AiClientOptions { Endpoint = endpoint, Model = model };
+        var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
+        return builder.SetInnerClient(new GeminiChatClient(opts));
+    }
+
+    /// <summary>使用 Ollama 客户端作为内层客户端</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="apiKey">API 密钥；本地部署可传 null 或空字符串</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">Ollama 地址；为空时使用默认 http://localhost:11434</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseOllama(this ChatClientBuilder builder, String? apiKey = null, String? model = null, String? endpoint = null)
+    {
+        var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
         return builder.SetInnerClient(new OllamaChatClient(opts));
     }
 
-    /// <summary>使用任意已注册攴商码创建客户竭作为内层客户竭</summary>
+    /// <summary>使用任意已注册服务商码创建客户端作为内层客户端</summary>
     /// <param name="builder">构建器</param>
-    /// <param name="codeOrAlias">攴商编码或别名，如 "DashScope"</param>
+    /// <param name="codeOrAlias">服务商编码或别名，如 "DashScope"</param>
     /// <param name="options">连接选项</param>
     /// <returns>构建器（支持链式调用）</returns>
     public static ChatClientBuilder UseAiClient(this ChatClientBuilder builder, String codeOrAlias, AiClientOptions options)

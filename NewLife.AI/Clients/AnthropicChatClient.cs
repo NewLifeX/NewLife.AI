@@ -18,12 +18,11 @@ namespace NewLife.AI.Clients;
 /// </remarks>
 /// <remarks>用连接选项初始化 Anthropic 客户端</remarks>
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
-/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("Anthropic", "Anthropic", "https://api.anthropic.com", Protocol = "AnthropicMessages", Description = "Anthropic Claude 系列模型")]
 [AiClientModel("claude-opus-4-6", "Claude Opus 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-sonnet-4-6", "Claude Sonnet 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-haiku-4-5", "Claude Haiku 4.5", Thinking = true, Vision = true)]
-public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient
+public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), IChatClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -34,6 +33,15 @@ public class AnthropicChatClient(AiClientOptions options, HttpClient? httpClient
 
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+    #endregion
+
+    #region 构造
+    /// <summary>以 API 密钥和可选模型快速创建 Anthropic 客户端</summary>
+    /// <param name="apiKey">API 密钥</param>
+    /// <param name="model">默认模型编码，为空时由每次请求指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
+    public AnthropicChatClient(String apiKey, String? model = null, String? endpoint = null)
+        : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 
     #region IChatClient

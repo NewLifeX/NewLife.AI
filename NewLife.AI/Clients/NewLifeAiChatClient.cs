@@ -16,14 +16,22 @@ namespace NewLife.AI.Clients;
 /// </remarks>
 /// <remarks>用连接选项初始化新生命 AI 客户端</remarks>
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
-/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("NewLifeAI", "新生命AI", "https://ai.newlifex.com", Description = "新生命团队星语 AI 网关，统一对接多种大模型")]
 [AiClientModel("qwen3.5", "Qwen3.5-0.8b", Thinking = true)]
-public class NewLifeAiChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAIChatClient(options, httpClient)
+public class NewLifeAiChatClient(AiClientOptions options) : OpenAIChatClient(options)
 {
     #region 属性
     /// <inheritdoc/>
     public override String Name { get; set; } = "新生命AI";
+    #endregion
+
+    #region 构造
+    /// <summary>以 API 密钥和可选模型快速创建新生命 AI 客户端</summary>
+    /// <param name="apiKey">API 密钥</param>
+    /// <param name="model">默认模型编码，为空时由每次请求指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
+    public NewLifeAiChatClient(String apiKey, String? model = null, String? endpoint = null)
+        : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 
     #region OpenAI Responses API（/v1/responses）

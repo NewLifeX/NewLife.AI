@@ -19,13 +19,12 @@ namespace NewLife.AI.Clients;
 /// </remarks>
 /// <remarks>用连接选项初始化 Ollama 客户端</remarks>
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
-/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("Ollama", "本地Ollama", "http://localhost:11434", Protocol = "Ollama", Description = "本地运行开源大模型，支持 Llama/Qwen/Gemma 等")]
 [AiClientModel("qwen3.5:0.8b", "Qwen 3.5 0.8B", Thinking = true)]
 [AiClientModel("llama3.3", "Llama 3.3")]
 [AiClientModel("deepseek-r1", "DeepSeek R1", Thinking = true, FunctionCalling = false)]
 [AiClientModel("phi4", "Phi-4")]
-public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = null) : AiClientBase(httpClient), IChatClient
+public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -33,6 +32,15 @@ public class OllamaChatClient(AiClientOptions options, HttpClient? httpClient = 
 
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+    #endregion
+
+    #region 构造
+    /// <summary>以 API 密钥和可选模型快速创建 Ollama 客户端</summary>
+    /// <param name="apiKey">API 密钥；本地部署可传 null 或空串</param>
+    /// <param name="model">默认模型编码，为空时由每次请求指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用默认 http://localhost:11434</param>
+    public OllamaChatClient(String? apiKey, String? model = null, String? endpoint = null)
+        : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 
     #region IChatClient

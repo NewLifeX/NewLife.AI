@@ -21,6 +21,9 @@ public record AiModelInfo(String Model, String DisplayName, AiProviderCapabiliti
 /// <summary>AI 客户端连接选项</summary>
 public class AiClientOptions
 {
+    /// <summary>服务商编码。配置驱动场景下用于指定服务商，如 OpenAI、DashScope</summary>
+    public String? Code { get; set; }
+
     /// <summary>API 地址。为空时使用服务商默认地址</summary>
     public String? Endpoint { get; set; }
 

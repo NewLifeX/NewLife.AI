@@ -19,13 +19,12 @@ namespace NewLife.AI.Clients;
 /// </remarks>
 /// <remarks>用连接选项初始化 DashScope 客户端</remarks>
 /// <param name="options">连接选项（Endpoint、ApiKey、Model、Protocol 等）</param>
-/// <param name="httpClient">外部管理的 HttpClient，传 null 时自动创建</param>
 [AiClient("DashScope", "阿里百炼", "https://dashscope.aliyuncs.com/api/v1", Protocol = "DashScope", Description = "阿里云百炼大模型平台，支持 Qwen/通义千问全系列商业版模型")]
 [AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true)]
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
-public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient = null) : OpenAIChatClient(options, httpClient)
+public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(options)
 {
     #region 属性
     /// <inheritdoc/>
@@ -47,6 +46,15 @@ public class DashScopeChatClient(AiClientOptions options, HttpClient? httpClient
     /// <summary>是否使用 DashScope 原生协议。Protocol 为空或 "DashScope" 时为原生模式</summary>
     protected Boolean IsNativeProtocol =>
         String.IsNullOrEmpty(_options.Protocol) || _options.Protocol == "DashScope";
+    #endregion
+
+    #region 构造
+    /// <summary>以 API 密钥和可选模型快速创建阿里百炼客户端</summary>
+    /// <param name="apiKey">阿里云 API Key</param>
+    /// <param name="model">默认模型编码，为空时由每次请求指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
+    public DashScopeChatClient(String apiKey, String? model = null, String? endpoint = null)
+        : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 
     #region 对话（重写）
