@@ -204,5 +204,9 @@ export default {
     disabled: '已停用',
     calls: '呼叫次數',
     created: '建立於',
+    models: '可用模型',
+    allModels: '全部模型',
+    modelsPlaceholder: '限制可用模型，逗號分隔（留空=全部）',
+    modelsHint: '可用: {{models}}',
   },
 } as const
