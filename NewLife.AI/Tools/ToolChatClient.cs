@@ -81,7 +81,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             {
                 Role = "assistant",
                 Content = assistantMessage?.Content,
-                ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList<ToolCall>(),
+                ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
             });
 
             // 依次执行所有工具调用

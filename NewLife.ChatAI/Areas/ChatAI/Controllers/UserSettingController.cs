@@ -55,7 +55,7 @@ public class UserSettingController : EntityController<UserSetting>
     protected override IEnumerable<UserSetting> Search(Pager p)
     {
         var userId = p["userId"].ToInt(-1);
-        var defaultThinkingMode = (NewLife.AI.Models.ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
+        var defaultThinkingMode = (AI.Models.ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
         var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();

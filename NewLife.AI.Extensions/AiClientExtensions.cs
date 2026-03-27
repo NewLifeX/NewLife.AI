@@ -1,3 +1,4 @@
+﻿using NewLife.AI.Clients;
 using NewLife.AI.Providers;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -6,23 +7,23 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// <remarks>
 /// 典型用法：
 /// <code>
-/// // 单服务商
-/// services.AddAiClient(opts =>
-/// {
-///     opts.Code    = "DashScope";
-///     opts.ApiKey  = "sk-xxx";
-///     opts.Model   = "qwen3.5-flash";
-/// });
-/// // 注入：IChatClient
+/// // 通用配置驱动注册
+/// services.AddAiClient(opts => { opts.Code = "DashScope"; opts.ApiKey = "sk-xxx"; opts.Model = "qwen3.5-flash"; });
+///
+/// // 服务商专属快捷注册
+/// services.AddDashScope("sk-xxx", "qwen3.5-flash");
+/// services.AddOpenAI("sk-xxx", "gpt-4o");
 ///
 /// // 多服务商（.NET 8+）
-/// services.AddKeyedAiClient("fast",   opts => { opts.Code = "DashScope"; opts.ApiKey = "..."; opts.Model = "qwen3.5-flash"; });
-/// services.AddKeyedAiClient("strong", opts => { opts.Code = "OpenAI";    opts.ApiKey = "..."; opts.Model = "gpt-4o"; });
+/// services.AddKeyedDashScope("fast",   "sk-xxx", "qwen3.5-flash");
+/// services.AddKeyedOpenAI  ("strong", "sk-xxx", "gpt-4o");
 /// // 注入：[FromKeyedServices("fast")] IChatClient client
 /// </code>
 /// </remarks>
 public static class AiClientExtensions
 {
+    #region 通用注册
+
     /// <summary>注册默认 <see cref="IChatClient"/> 单例。通过 <paramref name="configure"/> 配置服务商编码、密钥和模型</summary>
     /// <param name="services">服务集合</param>
     /// <param name="configure">选项配置委托；必须设置 <see cref="AiClientOptions.Code"/> 以指定服务商</param>
@@ -33,7 +34,7 @@ public static class AiClientExtensions
     {
         if (configure == null) throw new ArgumentNullException(nameof(configure));
 
-        services.AddSingleton<IChatClient>(_ =>
+        services.AddSingleton(_ =>
         {
             var opts = new AiClientOptions();
             configure(opts);
@@ -45,10 +46,72 @@ public static class AiClientExtensions
         return services;
     }
 
+    #endregion
+
+    #region 服务商专属注册
+
+    /// <summary>注册 OpenAI 兼容协议 <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">API 密钥</param>
+    /// <param name="model">默认模型；为空时由每次请求自行指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddOpenAI(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new OpenAIChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册阿里百炼 DashScope <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">阿里云 API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用默认 DashScope 地址</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddDashScope(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new DashScopeChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Anthropic Claude <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">Anthropic API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddAnthropic(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new AnthropicChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Google Gemini <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">Google API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddGemini(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new GeminiChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Ollama <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">API 密钥；本地部署可传 null 或空字符串</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">Ollama 地址；为空时使用默认 http://localhost:11434</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddOllama(this IServiceCollection services, String? apiKey = null, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new OllamaChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册新生命 AI 网关 <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">新生命 AI 网关 API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">网关地址覆盖；为空时使用内置默认地址</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddNewLifeAI(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new NewLifeAiChatClient(apiKey, model, endpoint));
+
+    #endregion
+
 #if NET8_0_OR_GREATER
+    #region Keyed 注册（.NET 8+）
+
     /// <summary>注册 Keyed <see cref="IChatClient"/> 单例，适用于同一项目使用多个服务商的场景</summary>
     /// <param name="services">服务集合</param>
-    /// <param name="serviceKey">服务键，如 "fast"、"strong"，注入时通过 [FromKeyedServices] 区分</param>
+    /// <param name="serviceKey">服务键，注入时通过 [FromKeyedServices] 区分</param>
     /// <param name="configure">选项配置委托；必须设置 <see cref="AiClientOptions.Code"/> 以指定服务商</param>
     /// <returns>服务集合（支持链式调用）</returns>
     /// <exception cref="ArgumentNullException">configure 为 null 时抛出</exception>
@@ -57,7 +120,7 @@ public static class AiClientExtensions
     {
         if (configure == null) throw new ArgumentNullException(nameof(configure));
 
-        services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) =>
+        services.AddKeyedSingleton(serviceKey, (_, _) =>
         {
             var opts = new AiClientOptions();
             configure(opts);
@@ -68,5 +131,67 @@ public static class AiClientExtensions
 
         return services;
     }
+
+    /// <summary>注册 Keyed OpenAI 兼容协议 <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">API 密钥</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedOpenAI(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new OpenAIChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed 阿里百炼 DashScope <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">阿里云 API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedDashScope(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new DashScopeChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed Anthropic Claude <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">Anthropic API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedAnthropic(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new AnthropicChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed Google Gemini <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">Google API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedGemini(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new GeminiChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed Ollama <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">API 密钥；本地部署可传 null 或空字符串</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">Ollama 地址；为空时使用默认 http://localhost:11434</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedOllama(this IServiceCollection services, String serviceKey, String? apiKey = null, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new OllamaChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed 新生命 AI 网关 <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">新生命 AI 网关 API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">网关地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedNewLifeAI(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new NewLifeAiChatClient(apiKey, model, endpoint));
+
+    #endregion
 #endif
 }

@@ -180,6 +180,18 @@ public static class ChatClientBuilderExtensions
         return builder.SetInnerClient(new OllamaChatClient(opts));
     }
 
+    /// <summary>使用新生命 AI 网关客户端作为内层客户端</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="apiKey">新生命 AI 网关 API Key</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">网关地址覆盖；为空时使用内置默认地址</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseNewLifeAI(this ChatClientBuilder builder, String apiKey, String? model = null, String? endpoint = null)
+    {
+        var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
+        return builder.SetInnerClient(new NewLifeAiChatClient(opts));
+    }
+
     /// <summary>使用任意已注册服务商码创建客户端作为内层客户端</summary>
     /// <param name="builder">构建器</param>
     /// <param name="codeOrAlias">服务商编码或别名，如 "DashScope"</param>
