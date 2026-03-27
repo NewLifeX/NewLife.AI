@@ -1,4 +1,4 @@
-namespace NewLife.AI.Providers;
+﻿namespace NewLife.AI.Providers;
 
 /// <summary>声明 AI 客户端的默认模型，配合 <see cref="AiClientAttribute"/> 使用</summary>
 /// <remarks>
@@ -9,7 +9,7 @@ namespace NewLife.AI.Providers;
 /// [AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true)]
 /// [AiClient("DeepSeek", ...)]
 /// [AiClientModel("deepseek-reasoner", "DeepSeek R1", Code = "DeepSeek", Thinking = true)]
-/// public class OpenAiChatClient : ... { }
+/// public class OpenAIChatClient : ... { }
 /// </code>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]

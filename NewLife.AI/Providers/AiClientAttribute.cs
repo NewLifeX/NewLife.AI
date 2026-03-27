@@ -3,14 +3,14 @@
 /// <summary>声明该类为 AI 对话客户端，供 <see cref="AiClientRegistry"/> 反射扫描自动注册服务商描述符</summary>
 /// <remarks>
 /// 同一类上可标注多个此特性（AllowMultiple = true），每个对应一个服务商注册。<br/>
-/// 例如 <c>OpenAiChatClient</c> 上可标注 OpenAI、DeepSeek、AzureAI 等所有兼容 OpenAI 协议的服务商。<br/>
+/// 例如 <c>OpenAIChatClient</c> 上可标注 OpenAI、DeepSeek、AzureAI 等所有兼容 OpenAI 协议的服务商。<br/>
 /// 配套使用 <c>AiClientModelAttribute</c> 可声明各服务商的默认模型列表。
 /// <code>
 /// [AiClient("OpenAI", "OpenAI", "https://api.openai.com")]
 /// [AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true)]
 /// [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Order = 2)]
 /// [AiClientModel("deepseek-reasoner", "DeepSeek R1", Code = "DeepSeek", Thinking = true)]
-/// public class OpenAiChatClient : AiClientBase { ... }
+/// public class OpenAIChatClient : AiClientBase { ... }
 /// </code>
 /// </remarks>
 /// <remarks>声明此类实现指定服务商的 AI 对话客户端</remarks>
