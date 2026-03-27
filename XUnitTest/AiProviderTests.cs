@@ -445,28 +445,28 @@ public class AiProviderTests
 
     #endregion
 
-    #region AskAsync 扩展方法测试
+    #region ChatAsync 扩展方法测试
 
     [Fact]
-    [DisplayName("AskAsync 字符串重载直接返回模型回复文本")]
+    [DisplayName("ChatAsync 字符串重载直接返回模型回复文本")]
     public async Task AskAsync_ReturnsTextFromResponse()
     {
         const String expected = "我是 AI 助手！";
         var fakeClient = new FixedReplyChatClient(expected);
 
-        var result = await fakeClient.AskAsync("你是谁？");
+        var result = await fakeClient.ChatAsync("你是谁？");
 
         Assert.Equal(expected, result);
     }
 
     [Fact]
-    [DisplayName("AskAsync 消息列表重载直接返回模型回复文本")]
+    [DisplayName("ChatAsync 消息列表重载直接返回模型回复文本")]
     public async Task AskAsync_WithMessages_ReturnsTextFromResponse()
     {
         const String expected = "收到！";
         var fakeClient = new FixedReplyChatClient(expected);
 
-        var result = await fakeClient.AskAsync([
+        var result = await fakeClient.ChatAsync([
                 ("system", "你是一名专业的 C# 开发助手"),
                 ("user", "请解释什么是依赖注入"),
             ]);

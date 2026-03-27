@@ -31,11 +31,11 @@ class Program
         var client = AiClientRegistry.Default.CreateClient("DashScope", new AiClientOptions { ApiKey = apiKey, Model = "qwen3.5-flash" });
 
         // 发送单条消息，直接返回回复文本
-        var reply = await client.AskAsync("你好，请介绍一下你自己");
+        var reply = await client.ChatAsync("你好，请介绍一下你自己");
         XTrace.WriteLine(reply);
 
         // 以元组数组传入多角色消息，无需构造 ChatMessage 对象，每项为 (role, content)
-        var reply2 = await client.AskAsync([
+        var reply2 = await client.ChatAsync([
             ("system", "你是一名专业的 C# 开发助手"),
             ("user", "请解释什么是依赖注入"),
         ]);

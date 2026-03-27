@@ -34,42 +34,83 @@
 # 核心基础库
 dotnet add package NewLife.AI
 
-# ASP.NET Core MCP Server 扩展（可选）
+# ASP.NET Core DI 扩展（可选）
 dotnet add package NewLife.AI.Extensions
 ```
 
-### 代码示例
+### IChatClient 四种使用模式
 
-#### 简单 AskAsync
+#### 模式一：直接 `new`（命令行 / 脚本 / 单文件，最简）
 
 ```csharp
-using NewLife.AI.Providers;
+// 所有 6 个客户端均提供 (apiKey, model?, endpoint?) 便捷构造
+var client = new DashScopeChatClient("your-api-key", "qwen-plus");
 
-// 从空 Builder 出发，链式设置服务商，Build() 得到 IChatClient
-var client = new ChatClientBuilder()
-    .UseDashScope("your-api-key", model: "qwen-plus")
-    .Build();
+// 可选：替换底层 HttpClient（设置代理、超时等）
+client.HttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 
-// 发送单条消息，直接返回回复文本
-var reply = await client.AskAsync("你好，请介绍一下你自己");
+// 发送单条消息
+var reply = await client.ChatAsync("你好，请介绍一下你自己");
 Console.WriteLine(reply);
-```
 
-#### 简易双消息 AskAsync
-
-```csharp
-// 以元组数组传入多角色消息，无需构造 ChatMessage 对象，每项为 (role, content)
-var reply = await client.AskAsync([
+// 多角色消息（元组数组，无需构造 ChatMessage）
+var reply2 = await client.ChatAsync([
     ("system", "你是一名专业的 C# 开发助手"),
     ("user", "请解释什么是依赖注入"),
 ]);
-Console.WriteLine(reply);
 ```
 
-#### 多模态 GetStreamingResponseAsync（流式 + 图片）
+可用的便捷构造：
+
+| 客户端 | 说明 |
+|--------|------|
+| `new OpenAIChatClient(apiKey, model?, endpoint?)` | OpenAI 及全部兼容服务商（~30 个） |
+| `new DashScopeChatClient(apiKey, model?, endpoint?)` | 阿里百炼 |
+| `new AnthropicChatClient(apiKey, model?, endpoint?)` | Claude |
+| `new GeminiChatClient(apiKey, model?, endpoint?)` | Google Gemini |
+| `new OllamaChatClient(apiKey?, model?, endpoint?)` | Ollama（本地部署 apiKey 可为 null）|
+| `new NewLifeAiChatClient(apiKey, model?, endpoint?)` | 级联 NewLife.AI 实例 |
+
+#### 模式二：AiClientRegistry（配置驱动 / 动态切换服务商）
 
 ```csharp
-// 视觉理解：将图片与文字问题组合为多模态消息
+// 通过服务商编码 + 选项创建（适合从数据库/配置文件读取参数）
+var client = AiClientRegistry.Default.CreateClient("DashScope", "your-api-key", "qwen-plus");
+
+// 从 AiClientOptions（含 Code 属性）批量创建
+var opts = new AiClientOptions { Code = "OpenAI", ApiKey = "sk-xxx", Model = "gpt-4o" };
+var client2 = AiClientRegistry.Default.CreateClient(opts.Code!, opts);
+```
+
+#### 模式三：ChatClientBuilder（中间件管道）
+
+```csharp
+// MEAI 风格：先设置服务商，再链式叠加中间件
+var client = new ChatClientBuilder()
+    .UseDashScope("your-api-key", "qwen-plus")   // UseOpenAI / UseAnthropic / UseGemini / UseOllama / UseNewLifeAI
+    .UseFilters(new LoggingFilter())               // 日志 / 审计 / 速率限制
+    .UseTools(toolRegistry)                        // 自动多轮 Function Calling
+    .Build();
+```
+
+#### 模式四：DI 注入（ASP.NET Core，需 `NewLife.AI.Extensions`）
+
+```csharp
+// 单服务商 —— 专属便捷注册（推荐）
+services.AddDashScope("your-api-key", "qwen-plus");
+// 注入：IChatClient
+
+// 多服务商（.NET 8+，Keyed Services）
+services.AddKeyedDashScope("fast",   "sk-xxx", "qwen3.5-flash");
+services.AddKeyedOpenAI  ("strong", "sk-xxx", "gpt-4o");
+// 注入：[FromKeyedServices("fast")] IChatClient fastClient
+```
+
+全部专属 DI 方法：`AddOpenAI` / `AddDashScope` / `AddAnthropic` / `AddGemini` / `AddOllama` / `AddNewLifeAI`，均有对应 `AddKeyed*` 变体（.NET 8+）。
+
+#### 多模态流式输出（视觉理解）
+
+```csharp
 var message = new ChatMessage
 {
     Role = "user",
@@ -86,17 +127,6 @@ await foreach (var chunk in client.GetStreamingResponseAsync([message]))
 }
 ```
 
-#### ChatClientBuilder 中间件管道
-
-```csharp
-// MEAI 风格：先设置服务商，再链式叠加中间件
-var client = new ChatClientBuilder()
-    .UseDashScope("your-api-key", model: "qwen-plus")
-    .UseFilters(new LoggingFilter())   // 日志 / 审计 / 速率限制
-    .UseTools(toolRegistry)             // 自动多轮 Function Calling
-    .Build();
-```
-
 #### 自定义工具（原生 .NET 方法）
 
 ```csharp
@@ -106,12 +136,10 @@ public class WeatherService : IToolProvider
     public async Task<String> GetWeatherAsync(
         [Description("城市名称")] String city)
     {
-        // 调用天气 API
         return $"{city} 今天晴，25°C";
     }
 }
 
-// 注册到 DI
 services.AddSingleton<IToolProvider, WeatherService>();
 ```
 

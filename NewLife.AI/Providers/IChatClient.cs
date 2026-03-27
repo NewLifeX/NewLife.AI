@@ -68,13 +68,21 @@ public static class ChatClientExtensions
     public static IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options, stream: true), cancellationToken);
 
+    /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public static Task<ChatResponse> ChatAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetResponseAsync(request, cancellationToken);
+
     /// <summary>发送单条文本消息并直接返回回复文本。最简单的一行调用方式</summary>
     /// <param name="client">对话客户端</param>
     /// <param name="prompt">用户消息文本</param>
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型回复文本，失败时返回 null</returns>
-    public static async Task<String?> AskAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static async Task<String?> ChatAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => (await client.GetResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options), cancellationToken).ConfigureAwait(false)).Text;
 
     /// <summary>以元组形式传入多条消息并直接返回回复文本。对标 Python dashscope 的 messages 列表写法，无需构造 ChatMessage 对象</summary>
@@ -83,13 +91,111 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型回复文本，失败时返回 null</returns>
-    public static async Task<String?> AskAsync(this IChatClient client, (String Role, String Content)[] messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static async Task<String?> ChatAsync(this IChatClient client, (String Role, String Content)[] messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var chatMessages = new List<ChatMessage>(messages.Length);
         foreach (var (role, content) in messages)
             chatMessages.Add(new ChatMessage { Role = role, Content = content });
         return (await client.GetResponseAsync(ChatRequest.Create(chatMessages, options), cancellationToken).ConfigureAwait(false)).Text;
     }
+
+    /// <summary>流式对话完成。逐块返回生成内容</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(request, cancellationToken);
+
+    /// <summary>流式对话（消息列表重载）。将消息列表与选项封装为 <see cref="ChatRequest"/> 后调用接口方法</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(ChatRequest.Create(messages, options, stream: true), cancellationToken);
+
+    /// <summary>发送单条文本消息并获取流式响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="prompt">用户消息文本</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options, stream: true), cancellationToken);
+
+    #region OpenAI风格
+    /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public static Task<ChatResponse> CompleteChatAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetResponseAsync(request, cancellationToken);
+
+    /// <summary>流式对话完成。逐块返回生成内容</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> CompleteChatStreamingAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(request, cancellationToken);
+    #endregion
+
+    #region Semantic Kernel 风格
+    /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public static Task<ChatResponse> GetChatMessageContentsAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetResponseAsync(request, cancellationToken);
+
+    /// <summary>流式对话完成。逐块返回生成内容</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> GetStreamingChatMessageContentsAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(request, cancellationToken);
+    #endregion
+
+    #region Azure OpenAI SDK 风格
+    /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public static Task<ChatResponse> GetChatCompletionsAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetResponseAsync(request, cancellationToken);
+
+    /// <summary>流式对话完成。逐块返回生成内容</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> GetChatCompletionsStreamingAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(request, cancellationToken);
+    #endregion
+
+    #region LangChain.NET 风格
+    /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public static Task<ChatResponse> InvokeAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetResponseAsync(request, cancellationToken);
+
+    /// <summary>流式对话完成。逐块返回生成内容</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="request">内部对话请求，含消息列表与生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> StreamAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+        => client.GetStreamingResponseAsync(request, cancellationToken);
+    #endregion
 
     /// <summary>将客户端包装为 <see cref="ChatClientBuilder"/>，以便链式添加中间件</summary>
     /// <param name="client">当前客户端（将作为管道的最内层）</param>
