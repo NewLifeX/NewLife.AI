@@ -204,5 +204,9 @@ export default {
     disabled: 'Disabled',
     calls: 'Calls',
     created: 'Created',
+    models: 'Models',
+    allModels: 'All models',
+    modelsPlaceholder: 'Restrict models, comma separated (empty = all)',
+    modelsHint: 'Available: {{models}}',
   },
 } as const

@@ -28,7 +28,9 @@ interface MessageBubbleProps {
   disliked?: boolean
   onEdit?: () => void
   onEditSubmit?: (content: string) => void
+  onEditSaveOnly?: (content: string) => void
   onEditCancel?: () => void
+  onDelete?: () => void
   isEditing?: boolean
   rawContent?: string
   createdAt?: string
@@ -53,7 +55,9 @@ export function MessageBubble({
   disliked = false,
   onEdit,
   onEditSubmit,
+  onEditSaveOnly,
   onEditCancel,
+  onDelete,
   isEditing = false,
   rawContent,
   createdAt,
@@ -109,6 +113,7 @@ export function MessageBubble({
   if (role === 'user' && onEdit) mobileActions.push({ icon: 'edit', label: t('common.edit'), onClick: onEdit })
   if (role === 'assistant' && onRegenerate) mobileActions.push({ icon: 'refresh', label: t('common.regenerate'), onClick: onRegenerate })
   if (onShare) mobileActions.push({ icon: 'share', label: t('common.share'), onClick: onShare })
+  if (onDelete) mobileActions.push({ icon: 'delete', label: t('common.delete'), onClick: onDelete })
 
   if (role === 'user') {
     return (
@@ -138,6 +143,15 @@ export function MessageBubble({
                 >
                   {t('common.cancel')}
                 </button>
+                {onEditSaveOnly && (
+                  <button
+                    onClick={() => editValue.trim() && onEditSaveOnly(editValue.trim())}
+                    className="px-3 py-1 text-xs text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50"
+                    disabled={!editValue.trim()}
+                  >
+                    {t('common.save')}
+                  </button>
+                )}
                 <button
                   onClick={() => editValue.trim() && onEditSubmit?.(editValue.trim())}
                   className="px-3 py-1 text-xs text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50"
@@ -191,7 +205,7 @@ export function MessageBubble({
                   ))}
                 </div>
               )}
-              {(onCopy || onEdit) && (
+              {(onCopy || onEdit || onDelete) && (
                 <div className="absolute right-full -translate-x-1 top-2 hidden group-hover:flex space-x-1">
                   {onCopy && (
                     <button
@@ -209,6 +223,15 @@ export function MessageBubble({
                       className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       <Icon name="edit" variant="filled" size="base" />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={onDelete}
+                      title={t('common.delete')}
+                      className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                      <Icon name="delete" variant="outlined" size="base" />
                     </button>
                   )}
                 </div>
@@ -271,6 +294,7 @@ export function MessageBubble({
             onRegenerate={onRegenerate}
             onDislike={onDislike}
             onShare={onShare}
+            onDelete={onDelete}
             liked={liked}
             disliked={disliked}
             className="mt-0"

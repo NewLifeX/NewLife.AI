@@ -9,6 +9,7 @@ import {
   deleteAppKey,
   type AppKeyItem,
 } from '@/lib/api'
+import { useChatStore } from '@/stores/chatStore'
 
 export function AppKeySettings() {
   const { t } = useTranslation()
@@ -20,6 +21,10 @@ export function AppKeySettings() {
   const [createdSecret, setCreatedSecret] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+  const [newModels, setNewModels] = useState('')
+  const [editModelsId, setEditModelsId] = useState<number | null>(null)
+  const [editModelsValue, setEditModelsValue] = useState('')
+  const availableModels = useChatStore((s) => s.models)
 
   const load = useCallback(() => {
     fetchAppKeys()
@@ -34,9 +39,10 @@ export function AppKeySettings() {
     if (!newName.trim()) return
     setCreating(true)
     try {
-      const result = await createAppKey({ name: newName.trim() })
+      const result = await createAppKey({ name: newName.trim(), models: newModels.trim() || undefined })
       setCreatedSecret(result.secret)
       setNewName('')
+      setNewModels('')
       load()
     } catch { /* handled by api.ts */ } finally {
       setCreating(false)
@@ -128,7 +134,7 @@ export function AppKeySettings() {
 
       {/* 创建按钮/表单 */}
       {showCreate ? (
-        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 space-y-3">
           <div className="flex items-center gap-3">
             <input
               type="text"
@@ -147,11 +153,23 @@ export function AppKeySettings() {
               {creating ? t('common.loading') : t('common.confirm')}
             </button>
             <button
-              onClick={() => { setShowCreate(false); setNewName('') }}
+              onClick={() => { setShowCreate(false); setNewName(''); setNewModels('') }}
               className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               {t('common.cancel')}
             </button>
+          </div>
+          <div>
+            <input
+              type="text"
+              value={newModels}
+              onChange={(e) => setNewModels(e.target.value)}
+              placeholder={t('appKey.modelsPlaceholder')}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {t('appKey.modelsHint', { models: availableModels.map((m) => m.code).join(', ') })}
+            </p>
           </div>
         </div>
       ) : (
@@ -196,6 +214,46 @@ export function AppKeySettings() {
                   <span>Tokens: {item.totalTokens.toLocaleString()}</span>
                   <span>{t('appKey.created')}: {formatDate(item.createTime)}</span>
                 </div>
+                {editModelsId === item.id ? (
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <input
+                      type="text"
+                      value={editModelsValue}
+                      onChange={(e) => setEditModelsValue(e.target.value)}
+                      className="flex-1 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      placeholder={t('appKey.modelsPlaceholder')}
+                    />
+                    <button
+                      onClick={async () => {
+                        try {
+                          const updated = await updateAppKey(item.id, { models: editModelsValue.trim() || '' })
+                          setKeys((prev) => prev.map((k) => (k.id === item.id ? updated : k)))
+                        } catch { /* handled */ }
+                        setEditModelsId(null)
+                      }}
+                      className="px-2 py-1 text-xs rounded bg-primary text-white hover:bg-blue-600 transition-colors"
+                    >
+                      {t('common.save')}
+                    </button>
+                    <button
+                      onClick={() => setEditModelsId(null)}
+                      className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-400">
+                    <span>{t('appKey.models')}: {item.models || t('appKey.allModels')}</span>
+                    <button
+                      onClick={() => { setEditModelsId(item.id); setEditModelsValue(item.models ?? '') }}
+                      className="p-0.5 text-gray-400 hover:text-primary rounded transition-colors"
+                      title={t('common.edit')}
+                    >
+                      <Icon name="edit" size="xs" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <Toggle

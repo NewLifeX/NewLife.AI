@@ -204,5 +204,9 @@ export default {
     disabled: '已禁用',
     calls: '调用次数',
     created: '创建于',
+    models: '可用模型',
+    allModels: '全部模型',
+    modelsPlaceholder: '限制可用模型，逗号分隔（留空=全部）',
+    modelsHint: '可用: {{models}}',
   },
 } as const

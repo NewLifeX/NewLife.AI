@@ -9,6 +9,7 @@ interface MessageActionsProps {
   onLike?: () => void
   onDislike?: () => void
   onShare?: () => void
+  onDelete?: () => void
   liked?: boolean
   disliked?: boolean
   className?: string
@@ -23,6 +24,7 @@ export function MessageActions({
   onLike,
   onDislike,
   onShare,
+  onDelete,
   liked = false,
   disliked = false,
   className,
@@ -59,6 +61,11 @@ export function MessageActions({
       {onShare && (
         <button className={btnBase} onClick={onShare} title={t('common.share')}>
           <Icon name="share" variant="outlined" size="lg" />
+        </button>
+      )}
+      {onDelete && (
+        <button className={cn(btnBase, 'hover:!text-red-500')} onClick={onDelete} title={t('common.delete')}>
+          <Icon name="delete" variant="outlined" size="lg" />
         </button>
       )}
     </div>

@@ -134,6 +134,18 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
         return Accepted();
     }
 
+    /// <summary>删除单条消息</summary>
+    /// <param name="id">消息编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    [HttpDelete("messages/{id:long}")]
+    public async Task<IActionResult> DeleteAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
+    {
+        var ok = await chatService.DeleteMessageAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
+        if (!ok) return NotFound();
+        return NoContent();
+    }
+
     #region 辅助
     /// <summary>设置 SSE 响应头</summary>
     private void SetSseHeaders()
