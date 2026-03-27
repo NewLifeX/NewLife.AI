@@ -58,6 +58,7 @@ interface ChatState {
   removeAttachment: (id: string) => void
   regenerateMsg: (id: string) => Promise<void>
   editMsg: (id: string, content: string) => Promise<void>
+  editMsgOnly: (id: string, content: string) => Promise<void>
   deleteMsg: (id: string) => Promise<void>
   likeMsg: (id: string) => Promise<void>
   dislikeMsg: (id: string, reasons?: string[]) => Promise<void>
@@ -587,6 +588,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }))
       }
     } catch { /* 静默 */ }
+  },
+
+  editMsgOnly: async (id, content) => {
+    try {
+      const updated = await editMessage(id, content)
+      set((s) => ({
+        messages: s.messages.map((m) => (m.id === id ? updated : m)),
+      }))
+    } catch (e) {
+      console.error('Failed to save message:', e)
+    }
   },
 
   deleteMsg: async (id) => {

@@ -28,6 +28,7 @@ interface MessageBubbleProps {
   disliked?: boolean
   onEdit?: () => void
   onEditSubmit?: (content: string) => void
+  onEditSaveOnly?: (content: string) => void
   onEditCancel?: () => void
   onDelete?: () => void
   isEditing?: boolean
@@ -54,6 +55,7 @@ export function MessageBubble({
   disliked = false,
   onEdit,
   onEditSubmit,
+  onEditSaveOnly,
   onEditCancel,
   onDelete,
   isEditing = false,
@@ -141,6 +143,15 @@ export function MessageBubble({
                 >
                   {t('common.cancel')}
                 </button>
+                {onEditSaveOnly && (
+                  <button
+                    onClick={() => editValue.trim() && onEditSaveOnly(editValue.trim())}
+                    className="px-3 py-1 text-xs text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50"
+                    disabled={!editValue.trim()}
+                  >
+                    {t('common.save')}
+                  </button>
+                )}
                 <button
                   onClick={() => editValue.trim() && onEditSubmit?.(editValue.trim())}
                   className="px-3 py-1 text-xs text-white bg-primary hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50"
