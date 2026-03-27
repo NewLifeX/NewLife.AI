@@ -5,7 +5,7 @@ using NewLife.Caching;
 using NewLife.IP;
 using Stardust.Extensions;
 
-namespace NewLife.StarChat.Controllers;
+namespace NewLife.ChatAI.Controllers;
 
 /// <summary>公共工具 API。免密钥对外提供 IP 归属地、天气、翻译、搜索、网页爬取等能力</summary>
 /// <remarks>初始化工具 API 控制器</remarks>

@@ -1,12 +1,12 @@
 @using NewLife
 @using NewLife.Web
 @using NewLife.Cube.ViewModels
-@using NewLife.StarChat.Entity
+@using NewLife.ChatAI.Entity
 
 @{
     var path = Context.Request.Path + "";
     var conversationId = Context.Request.Query["conversationId"].ToLong(-1);
-    if (conversationId <= 0 && path.StartsWithIgnoreCase("/StarChat/Conversation/"))
+    if (conversationId <= 0 && path.StartsWithIgnoreCase("/ChatAI/Conversation/"))
     {
         conversationId = Context.Request.Query["Id"].ToLong(-1);
     }
@@ -14,14 +14,10 @@
     var conversation = Conversation.FindById(conversationId);
 
     var dic = new Dictionary<String, Object>();
-    dic[$"{conversation?.Title}"] = $"/StarChat/Conversation/Edit?id={conversationId}";
-    dic["消息列表"] = $"/StarChat/ChatMessage?conversationId={conversationId}";
-    dic["消息反馈"] = $"/StarChat/MessageFeedback?conversationId={conversationId}";
-    dic["用量记录"] = $"/StarChat/UsageRecord?conversationId={conversationId}";
-    dic["共享会话"] = $"/StarChat/SharedConversation?conversationId={conversationId}";
-    dic["用户记忆"] = $"/StarChat/UserMemory?conversationId={conversationId}";
-    dic["学习日志"] = $"/StarChat/LearningLog?conversationId={conversationId}";
-    dic["渠道消息"] = $"/StarChat/ChannelMessage?conversationId={conversationId}";
+    dic[$"{conversation?.Title}"] = $"/ChatAI/Conversation/Edit?id={conversationId}";
+    dic["消息列表"] = $"/ChatAI/ChatMessage?conversationId={conversationId}";
+    dic["消息反馈"] = $"/ChatAI/MessageFeedback?conversationId={conversationId}";
+    dic["共享会话"] = $"/ChatAI/SharedConversation?conversationId={conversationId}";
 }
 <div class="navbar-collapse text-center">
     <ul class="nav nav-pills" style="margin-bottom: 10px; display: inline-block;float: none;">
