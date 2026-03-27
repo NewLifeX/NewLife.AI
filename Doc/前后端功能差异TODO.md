@@ -18,7 +18,7 @@
 | 7 | 用户资料 | ✅ | ✅ | ✅ 已对齐 |
 | 8 | 会话分享（创建/查看/撤销） | ✅ | ✅ | ✅ 已对齐（TODO-8） |
 | 9 | 文件上传（附件） | ✅ | ✅ | ✅ 已对齐 |
-| 10 | 系统公开配置 | ⚠️ | ✅ | ⚠️ 见 TODO-14 |
+| 10 | 系统公开配置 | ✅ | ✅ | ✅ 已完成 TODO-14 |
 | 11 | MCP 服务器列表/启停 | ✅ | ✅ | ✅ 已清理（TODO-10） |
 | 12 | 用量统计（汇总/每日/按模型） | ✅ | ✅ | ✅ 已对齐 |
 | 13 | 数据导出/清除 | ✅ | ✅ | ✅ 已对齐 |
@@ -30,7 +30,7 @@
 | 19 | 模型切换持久化 | ✅ | ✅ | ✅ 已实现 |
 | 20 | StreamingSpeed 支持 | ✅ | ✅ | ✅ 已实现 |
 | 21 | 语音输入 | — | — | 已隐藏（TODO-11） |
-| 22 | 消息删除 | ❌ | ✅ | ⚠️ 见 TODO-15 |
+| 22 | 消息删除 | ✅ | ✅ | ✅ 已完成 TODO-15 |
 | 23 | 网关 API | — | ✅ | — 外部消费者用 |
 | 24 | 工具 API | — | ✅ | — AI 函数调用用 |
 | 25 | 健康检查 | — | ✅ | — 运维用 |
@@ -61,53 +61,40 @@
 
 ## 三、新发现的 TODO（第三轮扫描）
 
-### TODO-14：系统配置（siteTitle / suggestedQuestions）未接入 🟡 中
+### TODO-14：系统配置（siteTitle / suggestedQuestions）未接入 ✅ 已完成
 
-**现状：** `api.ts` 已有 `fetchSystemConfig()` 函数，但前端没有任何组件调用它。
+**结果：** 复查发现 App.tsx 已在 `useEffect` 中调用 `fetchSystemConfig()`，动态设置 `siteTitle` 和 `suggestedQuestions`。无需额外修改。
 
-**后端已有：** `SystemConfigController.cs` → `GET /api/config` 返回 `siteTitle` 和 `suggestedQuestions`。
-
-**影响：** 站点标题、推荐问题等管理员配置无法动态生效，用户始终看到硬编码默认值。
-
-**需要：**
-- [ ] 启动时调用 `fetchSystemConfig()` 获取配置
-- [ ] `siteTitle` 动态设置 `document.title`
-- [ ] `suggestedQuestions` 填充聊天欢迎页的推荐问题列表
+- [x] 启动时调用 `fetchSystemConfig()` 获取配置
+- [x] `siteTitle` 动态设置 `document.title`
+- [x] `suggestedQuestions` 填充聊天欢迎页的推荐问题列表
 
 ---
 
-### TODO-15：消息删除功能 🔴 高
+### TODO-15：消息删除功能 ✅ 已完成 (`6756df2`)
 
-**现状：** 前端 `MessageBubble.tsx` 的操作按钮只有复制/编辑/重新生成，没有删除按钮。`api.ts` 中也没有 `deleteMessage()` 函数。
-
-**后端能力：** 消息可通过后端管理界面删除。需确认是否存在 `DELETE /api/messages/{id}` 端点。
-
-**需要：**
-- [ ] 确认后端是否暴露消息删除 API
-- [ ] 若有：前端增加 `deleteMessage()` API 函数
-- [ ] MessageBubble 添加删除按钮（需二次确认对话框）
-- [ ] 删除后更新本地消息列表
+- [x] 后端新增 `DELETE /api/messages/{id}` 端点 + `DeleteMessageAsync` 服务方法
+- [x] 前端 `deleteMessage()` API 函数
+- [x] MessageBubble 用户消息/AI 消息均有删除按钮
+- [x] 移动端长按菜单支持删除
+- [x] 删除后更新本地消息列表
 
 ---
 
-### TODO-16：纯编辑消息（不触发重新生成） 🟡 中
+### TODO-16：纯编辑消息（不触发重新生成） ✅ 已完成 (`e41b513`)
 
-**现状：** 编辑用户消息时，前端调用 `editAndResend()` 会删除后续所有消息并重新生成 AI 回复。
-
-**后端已有：** `PUT /api/messages/{id}` 支持纯编辑（不触发重新生成），前端 `editMessage()` 函数存在但仅在重新生成流程中使用。
-
-**需要：**
-- [ ] 编辑 UI 提供两个按钮：「编辑并重新生成」和「仅保存修改」
-- [ ] 「仅保存修改」调用 `editMessage()` 后更新本地消息，不触发流式请求
+- [x] 编辑 UI 提供两个按钮：「发送」（编辑并重新生成）和「保存」（仅保存修改）
+- [x] 「保存」调用 `editMessage()` 后更新本地消息，不触发流式请求
+- [x] chatStore 新增 `editMsgOnly` action
 
 ---
 
-### TODO-17：AppKey 模型限制字段 UI 🟢 低
+### TODO-17：AppKey 模型限制字段 UI ✅ 已完成 (`1ea34ac`)
 
-**现状：** 后端 `PUT /api/appkeys/{id}` 接受 `models` 字段（逗号分隔的模型列表），但前端 AppKey 编辑界面未暴露该字段。
-
-**需要：**
-- [ ] AppKey 创建/编辑表单增加模型限制多选或输入框
+- [x] 创建密钥表单增加 models 输入框，逗号分隔可用模型
+- [x] 密钥列表显示可用模型信息，支持行内点击编辑
+- [x] 显示可用模型列表作为输入提示
+- [x] 三语 i18n
 
 ---
 
@@ -136,10 +123,10 @@
 
 | 优先级 | TODO | 说明 |
 |--------|------|------|
-| 🔴 高 | TODO-15 | 消息删除——用户无法删除单条消息 |
-| 🟡 中 | TODO-14 | 系统配置未接入——siteTitle/suggestedQuestions |
-| 🟡 中 | TODO-16 | 纯编辑消息（不重新生成） |
-| 🟢 低 | TODO-17 | AppKey 模型限制字段 UI |
+| ~~🔴 高~~ | TODO-15 | ✅ 消息删除 (`6756df2`) |
+| ~~🟡 中~~ | TODO-14 | ✅ 系统配置（已实现） |
+| ~~🟡 中~~ | TODO-16 | ✅ 纯编辑消息 (`e41b513`) |
+| ~~🟢 低~~ | TODO-17 | ✅ AppKey 模型限制 (`1ea34ac`) |
 
 ---
 
