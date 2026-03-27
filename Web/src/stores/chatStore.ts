@@ -11,6 +11,7 @@ import {
   streamRegenerate,
   streamEditAndResend,
   editMessage,
+  deleteMessage,
   submitFeedback,
   deleteFeedback,
   uploadAttachment,
@@ -57,6 +58,7 @@ interface ChatState {
   removeAttachment: (id: string) => void
   regenerateMsg: (id: string) => Promise<void>
   editMsg: (id: string, content: string) => Promise<void>
+  deleteMsg: (id: string) => Promise<void>
   likeMsg: (id: string) => Promise<void>
   dislikeMsg: (id: string, reasons?: string[]) => Promise<void>
   deleteConversation: (id: string) => Promise<void>
@@ -585,6 +587,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }))
       }
     } catch { /* 静默 */ }
+  },
+
+  deleteMsg: async (id) => {
+    try {
+      await deleteMessage(id)
+      set((s) => ({ messages: s.messages.filter((m) => m.id !== id) }))
+    } catch (e) {
+      console.error('Failed to delete message:', e)
+    }
   },
 
   likeMsg: async (id) => {

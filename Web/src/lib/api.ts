@@ -358,6 +358,10 @@ export async function stopGeneration(id: string): Promise<void> {
   await request<void>(`/api/messages/${id}/stop`, { method: 'POST' })
 }
 
+export async function deleteMessage(id: string): Promise<void> {
+  await request<void>(`/api/messages/${id}`, { method: 'DELETE' })
+}
+
 // ── Feedback ──
 
 export async function submitFeedback(

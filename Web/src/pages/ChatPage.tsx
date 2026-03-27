@@ -21,6 +21,7 @@ interface ChatPageProps {
   onCopy?: (id: string) => void
   onRegenerate?: (id: string) => void
   onEditSubmit?: (id: string, content: string) => void
+  onDelete?: (id: string) => void
   onLike?: (id: string) => void
   onDislike?: (id: string, reasons?: string[]) => void
   conversationId?: string | null
@@ -46,6 +47,7 @@ export function ChatPage({
   onCopy,
   onRegenerate,
   onEditSubmit,
+  onDelete,
   onLike,
   onDislike,
   conversationId,
@@ -233,6 +235,7 @@ export function ChatPage({
                 setEditingMessageId(null)
               }}
               onEditCancel={() => setEditingMessageId(null)}
+              onDelete={!isGenerating ? () => onDelete?.(msg.id) : undefined}
               onShare={msg.role === 'assistant' ? () => setShowShareDialog(true) : undefined}
               createdAt={msg.createdAt}
               isError={msg.status === 'error'}

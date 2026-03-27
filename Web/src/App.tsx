@@ -191,6 +191,7 @@ function ChatApp() {
             onCopy={copyMessage}
             onRegenerate={regenerateMsg}
             onEditSubmit={(id, content) => useChatStore.getState().editMsg(id, content)}
+            onDelete={(id) => useChatStore.getState().deleteMsg(id)}
             onLike={likeMsg}
             onDislike={(id, reasons) => dislikeMsg(id, reasons)}
             conversationId={activeConversationId}

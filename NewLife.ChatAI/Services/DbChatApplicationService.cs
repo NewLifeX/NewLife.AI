@@ -209,6 +209,28 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         return Task.FromResult<MessageDto?>(ToMessageDto(entity));
     }
 
+    /// <summary>删除单条消息</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="userId">当前用户编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>是否删除成功</returns>
+    public Task<Boolean> DeleteMessageAsync(Int64 messageId, Int32 userId, CancellationToken cancellationToken)
+    {
+        var entity = ChatMessage.FindById(messageId);
+        if (entity == null) return Task.FromResult(false);
+
+        // 验证消息所属会话归当前用户
+        var conversation = Conversation.FindById(entity.ConversationId);
+        if (conversation == null || conversation.UserId != userId) return Task.FromResult(false);
+
+        // 同时删除该消息的反馈
+        var feedback = MessageFeedback.FindByMessageIdAndUserId(entity.Id, userId);
+        feedback?.Delete();
+
+        entity.Delete();
+        return Task.FromResult(true);
+    }
+
     /// <summary>非流式重新生成 AI 回复。构建上下文后委托管道完成，结果直接写回消息记录</summary>
     /// <param name="messageId">消息编号（必须为 AI 回复）</param>
     /// <param name="userId">当前用户编号</param>
