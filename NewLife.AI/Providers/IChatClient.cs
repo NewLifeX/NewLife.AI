@@ -95,7 +95,9 @@ public static class ChatClientExtensions
     {
         var chatMessages = new List<ChatMessage>(messages.Length);
         foreach (var (role, content) in messages)
+        {
             chatMessages.Add(new ChatMessage { Role = role, Content = content });
+        }
         return (await client.GetResponseAsync(ChatRequest.Create(chatMessages, options), cancellationToken).ConfigureAwait(false)).Text;
     }
 
@@ -124,6 +126,22 @@ public static class ChatClientExtensions
     /// <returns>流式响应块的异步枚举</returns>
     public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options, stream: true), cancellationToken);
+
+    /// <summary>流式对话（消息列表重载）。将消息列表与选项封装为 <see cref="ChatRequest"/> 后调用接口方法</summary>
+    /// <param name="client">对话客户端</param>
+    /// <param name="messages">消息列表</param>
+    /// <param name="options">对话选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, (String Role, String Content)[] messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        var chatMessages = new List<ChatMessage>(messages.Length);
+        foreach (var (role, content) in messages)
+        {
+            chatMessages.Add(new ChatMessage { Role = role, Content = content });
+        }
+        return client.GetStreamingResponseAsync(ChatRequest.Create(chatMessages, options), cancellationToken);
+    }
 
     #region OpenAI风格
     /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>

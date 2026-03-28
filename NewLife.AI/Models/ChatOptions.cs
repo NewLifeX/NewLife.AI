@@ -4,8 +4,6 @@ namespace NewLife.AI.Models;
 
 /// <summary>对话选项。面向用户的简洁参数集合，可在每次调用时覆盖客户端默认值</summary>
 /// <remarks>
-/// 与 <see cref="ChatCompletionRequest"/> 的关系：ChatOptions 是面向 SDK 用户的简洁 API，
-/// ChatCompletionRequest 是面向协议层的完整 DTO。客户端内部将两者合并后发送给服务商。
 /// 所有属性均为 nullable，null 表示沿用客户端默认值。
 /// </remarks>
 public class ChatOptions : IExtend

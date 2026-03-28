@@ -1,6 +1,8 @@
-﻿namespace NewLife.AI.Models;
+﻿using System.Runtime.Serialization;
 
-/// <summary>对话完成响应。兼容 OpenAI ChatCompletion 标准</summary>
+namespace NewLife.AI.Models;
+
+/// <summary>对话完成响应。内部统一模型，由各协议专用响应类（ChatCompletionResponse / AnthropicResponse / GeminiResponse）转换后输出</summary>
 public class ChatResponse
 {
     #region 属性
@@ -16,7 +18,7 @@ public class ChatResponse
     /// <summary>模型编码</summary>
     public String? Model { get; set; }
 
-    /// <summary>消息列表</summary>
+    /// <summary>消息选择列表</summary>
     public IList<ChatChoice>? Messages { get; set; }
 
     /// <summary>令牌用量统计</summary>
@@ -25,6 +27,7 @@ public class ChatResponse
 
     #region 便捷属性
     /// <summary>获取回复文本。返回第一个选择项的消息内容</summary>
+    [IgnoreDataMember]
     public String? Text
     {
         get

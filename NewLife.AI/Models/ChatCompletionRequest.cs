@@ -136,25 +136,45 @@ public class ChatCompletionRequest : IExtend
 
     /// <summary>转换为内部统一的 ChatRequest</summary>
     /// <returns>等效的 ChatRequest 实例</returns>
-    public ChatRequest ToChatRequest() => new()
+    public ChatRequest ToChatRequest()
     {
-        Model = Model,
-        Messages = Messages,
-        Stream = Stream,
-        Temperature = Temperature,
-        TopP = TopP,
-        TopK = TopK,
-        MaxTokens = MaxTokens,
-        Stop = Stop,
-        PresencePenalty = PresencePenalty,
-        FrequencyPenalty = FrequencyPenalty,
-        Tools = Tools,
-        ToolChoice = ToolChoice,
-        User = User,
-        EnableThinking = EnableThinking,
-        ResponseFormat = ResponseFormat,
-        ParallelToolCalls = ParallelToolCalls,
-        Items = Items,
-    };
+        var messages = new List<ChatMessage>();
+        if (Messages != null)
+        {
+            foreach (var msg in Messages)
+            {
+                messages.Add(new ChatMessage
+                {
+                    Role = msg.Role,
+                    Content = msg.Content + "",
+                    ToolCalls = msg.ToolCalls,
+                    Contents = msg.Contents,
+                });
+            }
+        }
+
+        var req = new ChatRequest()
+        {
+            Model = Model,
+            Messages = messages,
+            Stream = Stream,
+            Temperature = Temperature,
+            TopP = TopP,
+            TopK = TopK,
+            MaxTokens = MaxTokens,
+            Stop = Stop,
+            PresencePenalty = PresencePenalty,
+            FrequencyPenalty = FrequencyPenalty,
+            Tools = Tools,
+            ToolChoice = ToolChoice,
+            User = User,
+            EnableThinking = EnableThinking,
+            ResponseFormat = ResponseFormat,
+            ParallelToolCalls = ParallelToolCalls,
+            Items = Items,
+        };
+
+        return req;
+    }
     #endregion
 }
