@@ -134,11 +134,13 @@ public class ChatCompletionRequest : IExtend
         return request.Apply(options);
     }
 
-    /// <summary>提取对话选项。将请求中的参数转换为 ChatOptions（不含 Messages 和 Stream）</summary>
-    /// <returns>对话选项实例</returns>
-    public ChatOptions ToChatOptions() => new()
+    /// <summary>转换为内部统一的 ChatRequest</summary>
+    /// <returns>等效的 ChatRequest 实例</returns>
+    public ChatRequest ToChatRequest() => new()
     {
         Model = Model,
+        Messages = Messages,
+        Stream = Stream,
         Temperature = Temperature,
         TopP = TopP,
         TopK = TopK,

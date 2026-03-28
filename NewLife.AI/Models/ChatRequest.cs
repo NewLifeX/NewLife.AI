@@ -70,30 +70,4 @@ public class ChatRequest : ChatOptions
         return request;
     }
     #endregion
-
-    #region 转换
-    /// <summary>从 OpenAI 协议 DTO 创建内部请求。用于 GatewayController 接收前端请求后的唯一转换入口</summary>
-    /// <param name="req">前端传入的 OpenAI 格式对话请求</param>
-    /// <returns>内部传输模型实例</returns>
-    public static ChatRequest From(ChatCompletionRequest req) => new()
-    {
-        Model = req.Model,
-        Messages = req.Messages,
-        Stream = req.Stream,
-        Temperature = req.Temperature,
-        TopP = req.TopP,
-        TopK = req.TopK,
-        MaxTokens = req.MaxTokens,
-        Stop = req.Stop,
-        PresencePenalty = req.PresencePenalty,
-        FrequencyPenalty = req.FrequencyPenalty,
-        Tools = req.Tools,
-        ToolChoice = req.ToolChoice,
-        User = req.User,
-        EnableThinking = req.EnableThinking,
-        ResponseFormat = req.ResponseFormat,
-        ParallelToolCalls = req.ParallelToolCalls,
-        Items = req.Items,
-    };
-    #endregion
 }
