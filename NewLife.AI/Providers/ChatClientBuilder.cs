@@ -189,7 +189,7 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseNewLifeAI(this ChatClientBuilder builder, String apiKey, String? model = null, String? endpoint = null)
     {
         var opts = new AiClientOptions { Endpoint = endpoint, ApiKey = apiKey, Model = model };
-        return builder.SetInnerClient(new NewLifeAiChatClient(opts));
+        return builder.SetInnerClient(new NewLifeAIChatClient(opts));
     }
 
     /// <summary>使用任意已注册服务商码创建客户端作为内层客户端</summary>

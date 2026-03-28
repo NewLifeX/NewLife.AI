@@ -102,7 +102,7 @@ public static class AiClientExtensions
     /// <param name="endpoint">网关地址覆盖；为空时使用内置默认地址</param>
     /// <returns>服务集合（支持链式调用）</returns>
     public static IServiceCollection AddNewLifeAI(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
-        => services.AddSingleton<IChatClient>(_ => new NewLifeAiChatClient(apiKey, model, endpoint));
+        => services.AddSingleton<IChatClient>(_ => new NewLifeAIChatClient(apiKey, model, endpoint));
 
     #endregion
 
@@ -190,7 +190,7 @@ public static class AiClientExtensions
     /// <param name="endpoint">网关地址覆盖</param>
     /// <returns>服务集合（支持链式调用）</returns>
     public static IServiceCollection AddKeyedNewLifeAI(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
-        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new NewLifeAiChatClient(apiKey, model, endpoint));
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new NewLifeAIChatClient(apiKey, model, endpoint));
 
     #endregion
 #endif

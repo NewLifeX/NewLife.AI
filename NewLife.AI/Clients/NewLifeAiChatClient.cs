@@ -17,8 +17,8 @@ namespace NewLife.AI.Clients;
 /// <remarks>用连接选项初始化新生命 AI 客户端</remarks>
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("NewLifeAI", "新生命AI", "https://ai.newlifex.com", Description = "新生命团队星语 AI 网关，统一对接多种大模型")]
-[AiClientModel("qwen3.5", "Qwen3.5-0.8b", Thinking = true)]
-public class NewLifeAiChatClient(AiClientOptions options) : OpenAIChatClient(options)
+[AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true)]
+public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(options)
 {
     #region 属性
     /// <inheritdoc/>
@@ -30,7 +30,7 @@ public class NewLifeAiChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <param name="apiKey">API 密钥</param>
     /// <param name="model">默认模型编码，为空时由每次请求指定</param>
     /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
-    public NewLifeAiChatClient(String apiKey, String? model = null, String? endpoint = null)
+    public NewLifeAIChatClient(String apiKey, String? model = null, String? endpoint = null)
         : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 

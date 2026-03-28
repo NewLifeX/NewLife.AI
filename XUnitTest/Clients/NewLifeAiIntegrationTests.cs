@@ -87,7 +87,7 @@ public class NewLifeAiIntegrationTests
     }
 
     /// <summary>���� NewLifeAI ר�ÿͻ��ˣ��� ResponsesAsync/MessagesAsync ����չ�˵㣩</summary>
-    private NewLifeAiChatClient CreateNewLifeAiClient() => (NewLifeAiChatClient)_descriptor.Factory(CreateOptions());
+    private NewLifeAIChatClient CreateNewLifeAiClient() => (NewLifeAIChatClient)_descriptor.Factory(CreateOptions());
 
     #region Ԫ������֤������ AppKey��
 
