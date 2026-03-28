@@ -9,7 +9,7 @@ using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Filters;
 
 [DisplayName("过滤器管道测试")]
 public class FilterTests

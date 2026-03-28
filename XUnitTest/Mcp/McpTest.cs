@@ -5,7 +5,7 @@ using NewLife.Data;
 using NewLife.AI;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Mcp;
 
 [DisplayName("MCP 集成占位测试")]
 public class McpTest

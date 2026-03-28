@@ -9,7 +9,7 @@ using NewLife.AI.Planner;
 using NewLife.AI.Providers;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Planner;
 
 [DisplayName("规划器测试")]
 public class PlannerTests

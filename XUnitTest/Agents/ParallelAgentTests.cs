@@ -11,7 +11,7 @@ using NewLife.AI.Providers;
 using NewLife.AI.Tools;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Agents;
 
 [DisplayName("多Agent增强：DelegatingAgent / ParallelGroupChat / AgentAsTool")]
 public class ParallelAgentTests

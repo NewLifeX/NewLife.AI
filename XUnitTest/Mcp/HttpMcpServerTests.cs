@@ -7,7 +7,7 @@ using NewLife.Http;
 using NewLife.Log;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Mcp;
 
 /// <summary>HttpMcpServer单元测试</summary>
 public class HttpMcpServerTests : IDisposable

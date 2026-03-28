@@ -6,7 +6,7 @@ using NewLife.Log;
 using NewLife.Remoting;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Mcp;
 
 /// <summary>McpServer单元测试</summary>
 public class McpServerTests

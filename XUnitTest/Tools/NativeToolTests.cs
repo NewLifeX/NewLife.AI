@@ -10,7 +10,7 @@ using NewLife.AI.Providers;
 using NewLife.AI.Tools;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Tools;
 
 [DisplayName("原生工具注册与调用测试")]
 public class NativeToolTests
@@ -289,7 +289,7 @@ public class NativeToolTests
     [DisplayName("MergeToolOptions 完整保留所有 ChatOptions 扩展属性")]
     public async Task MergeToolOptions_PreservesAllOptions()
     {
-        ChatOptions? captured = null;
+        ChatOptions captured = null;
         var capturingClient = new CapturingChatClient(opts => captured = opts, "done");
 
         var registry = new ToolRegistry();
@@ -348,5 +348,167 @@ public class NativeToolTests
             => throw new NotImplementedException();
 
         public void Dispose() { }
+    }
+
+    // ── ToolHelper.IsSsrfRisk ─────────────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("localhost 为 SSRF 风险地址")]
+    public void IsSsrfRisk_Localhost_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("localhost"));
+
+    [Fact]
+    [DisplayName("ip6-localhost 为 SSRF 风险地址")]
+    public void IsSsrfRisk_Ip6Localhost_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("ip6-localhost"));
+
+    [Fact]
+    [DisplayName("127.0.0.1 回环地址为 SSRF 风险")]
+    public void IsSsrfRisk_Loopback_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("127.0.0.1"));
+
+    [Fact]
+    [DisplayName("10.0.0.1 A 类私有地址为 SSRF 风险")]
+    public void IsSsrfRisk_PrivateClassA_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("10.0.0.1"));
+
+    [Fact]
+    [DisplayName("172.16.0.1 B 类私有地址下沿为 SSRF 风险")]
+    public void IsSsrfRisk_PrivateClassB_Lower_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("172.16.0.1"));
+
+    [Fact]
+    [DisplayName("172.31.255.0 B 类私有地址上沿为 SSRF 风险")]
+    public void IsSsrfRisk_PrivateClassB_Upper_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("172.31.255.0"));
+
+    [Fact]
+    [DisplayName("172.15.0.1 不在 B 类私有段，非 SSRF 风险")]
+    public void IsSsrfRisk_PrivateClassB_OutOfRange_ReturnsFalse()
+        => Assert.False(ToolHelper.IsSsrfRisk("172.15.0.1"));
+
+    [Fact]
+    [DisplayName("192.168.1.1 C 类私有地址为 SSRF 风险")]
+    public void IsSsrfRisk_PrivateClassC_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("192.168.1.1"));
+
+    [Fact]
+    [DisplayName("169.254.0.1 链路本地地址为 SSRF 风险")]
+    public void IsSsrfRisk_LinkLocal_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("169.254.0.1"));
+
+    [Fact]
+    [DisplayName("0.0.0.0 为 SSRF 风险地址")]
+    public void IsSsrfRisk_ZeroAddress_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("0.0.0.0"));
+
+    [Fact]
+    [DisplayName("8.8.8.8 公网地址非 SSRF 风险")]
+    public void IsSsrfRisk_PublicIp_ReturnsFalse()
+        => Assert.False(ToolHelper.IsSsrfRisk("8.8.8.8"));
+
+    [Fact]
+    [DisplayName("1.1.1.1 公网地址非 SSRF 风险")]
+    public void IsSsrfRisk_PublicIp2_ReturnsFalse()
+        => Assert.False(ToolHelper.IsSsrfRisk("1.1.1.1"));
+
+    [Fact]
+    [DisplayName("空字符串为 SSRF 风险")]
+    public void IsSsrfRisk_EmptyString_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk(String.Empty));
+
+    [Fact]
+    [DisplayName("IPv6 回环 ::1 为 SSRF 风险")]
+    public void IsSsrfRisk_Ipv6Loopback_ReturnsTrue()
+        => Assert.True(ToolHelper.IsSsrfRisk("::1"));
+
+    // ── ToolHelper.ExtractTextFromHtml ────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("空字符串输入返回空字符串")]
+    public void ExtractTextFromHtml_EmptyInput_ReturnsEmpty()
+        => Assert.Equal(String.Empty, ToolHelper.ExtractTextFromHtml(String.Empty));
+
+    [Fact]
+    [DisplayName("纯文本 HTML 去除标签后保留正文")]
+    public void ExtractTextFromHtml_PlainHtml_ReturnText()
+    {
+        var html = "<html><body><p>Hello World</p></body></html>";
+        var result = ToolHelper.ExtractTextFromHtml(html);
+        Assert.Contains("Hello World", result);
+    }
+
+    [Fact]
+    [DisplayName("移除 script 块内容")]
+    public void ExtractTextFromHtml_RemovesScriptBlock()
+    {
+        var html = "<html><body><script>var x = 1;</script><p>Visible</p></body></html>";
+        var result = ToolHelper.ExtractTextFromHtml(html);
+        Assert.DoesNotContain("var x", result);
+        Assert.Contains("Visible", result);
+    }
+
+    [Fact]
+    [DisplayName("移除 style 块内容")]
+    public void ExtractTextFromHtml_RemovesStyleBlock()
+    {
+        var html = "<html><head><style>body { color: red; }</style></head><body>Text</body></html>";
+        var result = ToolHelper.ExtractTextFromHtml(html);
+        Assert.DoesNotContain("color: red", result);
+        Assert.Contains("Text", result);
+    }
+
+    [Fact]
+    [DisplayName("解码 HTML 实体（&amp; → &）")]
+    public void ExtractTextFromHtml_DecodesAmpersand()
+    {
+        var html = "<p>Tom &amp; Jerry</p>";
+        var result = ToolHelper.ExtractTextFromHtml(html);
+        Assert.Contains("Tom & Jerry", result);
+    }
+
+    [Fact]
+    [DisplayName("解码 &lt; 和 &gt; 实体")]
+    public void ExtractTextFromHtml_DecodesLtGt()
+    {
+        var html = "<p>1 &lt; 2 &gt; 0</p>";
+        var result = ToolHelper.ExtractTextFromHtml(html);
+        Assert.Contains("1 < 2 > 0", result);
+    }
+
+    [Fact]
+    [DisplayName("折叠连续空格为单空格")]
+    public void ExtractTextFromHtml_CollapsesMultipleSpaces()
+    {
+        var html = "<p>Hello   World</p>";
+        var result = ToolHelper.ExtractTextFromHtml(html);
+        Assert.DoesNotContain("   ", result);
+    }
+
+    // ── ToolHelper.CreateDefaultHttpClient ───────────────────────────────────
+
+    [Fact]
+    [DisplayName("CreateDefaultHttpClient 返回非空 HttpClient")]
+    public void CreateDefaultHttpClient_ReturnsNonNull()
+    {
+        using var client = ToolHelper.CreateDefaultHttpClient();
+        Assert.NotNull(client);
+    }
+
+    [Fact]
+    [DisplayName("CreateDefaultHttpClient 超时时间为 30 秒")]
+    public void CreateDefaultHttpClient_Timeout_Is30Seconds()
+    {
+        using var client = ToolHelper.CreateDefaultHttpClient();
+        Assert.Equal(TimeSpan.FromSeconds(30), client.Timeout);
+    }
+
+    [Fact]
+    [DisplayName("CreateDefaultHttpClient 设置包含 Mozilla 的 User-Agent 头")]
+    public void CreateDefaultHttpClient_HasUserAgentHeader()
+    {
+        using var client = ToolHelper.CreateDefaultHttpClient();
+        var ua = client.DefaultRequestHeaders.UserAgent.ToString();
+        Assert.Contains("Mozilla", ua);
     }
 }

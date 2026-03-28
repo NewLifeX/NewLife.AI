@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using NewLife.AI.Memory;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Memory;
 
 [DisplayName("内存语义存储测试")]
 public class MemoryTests

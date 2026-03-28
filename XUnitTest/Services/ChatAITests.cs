@@ -12,7 +12,7 @@ using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Services;
 
 /// <summary>ChatAI 后端功能单元测试</summary>
 public class ChatAITests

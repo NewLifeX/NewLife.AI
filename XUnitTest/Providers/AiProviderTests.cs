@@ -10,7 +10,7 @@ using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Providers;
 
 /// <summary>AI 客户端注册表单元测试</summary>
 public class AiProviderTests

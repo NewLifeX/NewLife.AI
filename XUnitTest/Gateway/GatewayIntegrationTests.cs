@@ -11,7 +11,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace XUnitTest;
+namespace XUnitTest.Gateway;
 
 /// <summary>API 网关集成测试。覆盖 GatewayController 全部公开端点</summary>
 /// <remarks>

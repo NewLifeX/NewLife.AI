@@ -11,12 +11,12 @@ using NewLife.ChatAI.Services;
 using Xunit;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
 
-namespace XUnitTest;
+namespace XUnitTest.Gateway;
 
-/// <summary>API ���ص�Ԫ����</summary>
+/// <summary>API 网关单元测试</summary>
 public class GatewayTests
 {
-    #region �����ӳٲ���
+    #region 指数退避延迟测试
     [Fact]
     public void GetRetryDelayReturnsIncreasingValues()
     {
@@ -25,7 +25,7 @@ public class GatewayTests
         var d2 = GatewayService.GetRetryDelay(2);
         var d3 = GatewayService.GetRetryDelay(3);
 
-        // �����ӳ٣�1s, 2s, 4s, 8s + 0~250ms ����
+        // 指数退避延迟：1s, 2s, 4s, 8s + 0~250ms 抖动
         Assert.InRange(d0, 1000, 1250);
         Assert.InRange(d1, 2000, 2250);
         Assert.InRange(d2, 4000, 4250);
@@ -35,7 +35,7 @@ public class GatewayTests
     [Fact]
     public void GetRetryDelayCapsAtMaximum()
     {
-        // ��10�����ԣ�2^10 = 1024s >> 30s��Ӧ�������� 30s
+        // 超过10次重试，2^10 = 1024s >> 30s，应被上限截止在 30s
         var delay = GatewayService.GetRetryDelay(10);
 
         Assert.InRange(delay, 30000, 30250);
@@ -44,16 +44,16 @@ public class GatewayTests
     [Fact]
     public void GetRetryDelayIncludesJitter()
     {
-        // ��ε���ͬһ retryIndex���������������Ӧ������ֵͬ
+        // 多次调用同一 retryIndex，不同调用结果不应完全相同
         var delays = Enumerable.Range(0, 100).Select(_ => GatewayService.GetRetryDelay(0)).ToList();
         var distinct = delays.Distinct().Count();
 
-        // ����ʳ��ֶ��ֲ�ֵͬ��������С����ȫ��ͬ��
-        Assert.True(distinct > 1, "�����ӳ�Ӧ�����������");
+        // 合理情况下多数分布值不同，大概率不全相同
+        Assert.True(distinct > 1, "抖动延迟应产生多个不同值");
     }
     #endregion
 
-    #region 429 ������
+    #region 429 限流检测
     [Fact]
     public void Is429DetectsStatusCodeProperty()
     {
@@ -65,7 +65,7 @@ public class GatewayTests
     [Fact]
     public void Is429DetectsMessageFallback()
     {
-        var ex = new HttpRequestException("AI ������ OpenAI ���ش��� 429: rate limit exceeded");
+        var ex = new HttpRequestException("AI 服务商 OpenAI 返回错误 429: rate limit exceeded");
 
         Assert.True(GatewayService.Is429(ex));
     }
@@ -87,7 +87,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region ģ��·�ɲ���
+    #region 服务商路由测试
     [Fact]
     public void ProviderFactoryResolvesAllBuiltInProviders()
     {
@@ -95,11 +95,11 @@ public class GatewayTests
         var byCode = registry.Descriptors.Values
             .ToDictionary(p => p.Code, StringComparer.OrdinalIgnoreCase);
 
-        // ��֤���ķ����̶��ܱ���ȷ����
+        // 验证常见的服务商都能被正确识别
         var expectedCodes = new[] { "OpenAI", "DashScope", "DeepSeek", "Anthropic", "Gemini" };
         foreach (var code in expectedCodes)
         {
-            Assert.True(byCode.ContainsKey(code), $"������ {code} δע��");
+            Assert.True(byCode.ContainsKey(code), $"服务商 {code} 未注册");
         }
     }
 
@@ -127,7 +127,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region AiClientOptions ����
+    #region AiClientOptions 测试
     [Fact]
     public void BuildOptionsUsesEndpointAndApiKey()
     {
@@ -156,7 +156,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region ChatCompletionRequest ��������
+    #region ChatCompletionRequest 构造测试
     [Fact]
     public void RequestCanSetModelAndMessages()
     {
@@ -212,7 +212,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region ChatCompletionResponse ��������
+    #region ChatCompletionResponse 构造测试
     [Fact]
     public void ResponseHasCorrectStructure()
     {
@@ -271,7 +271,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region ��֤����
+    #region 鉴权测试
     [Fact]
     public void ValidateAppKeyReturnsNullForEmptyHeader()
     {
@@ -287,7 +287,7 @@ public class GatewayTests
     {
         var service = new GatewayService(null, null);
 
-        // �������ݿ���û�����ݣ�FindBySecret �᷵�� null
+        // 当数据库没有该数据时，FindBySecret 会返回 null
         var result = service.ValidateAppKey("Bearer sk-test-nonexistent");
         Assert.Null(result);
     }
@@ -297,13 +297,13 @@ public class GatewayTests
     {
         var service = new GatewayService(null, null);
 
-        // ֱ�Ӵ���Կ���� Bearer ǰ׺��ҲӦ���Բ���
+        // 直接传密钥，没有 Bearer 前缀，也应当可以尝试
         var result = service.ValidateAppKey("sk-direct-key");
         Assert.Null(result);
     }
     #endregion
 
-    #region ģ�ͽ�������
+    #region 模型解析测试
     [Fact]
     public void ResolveModelReturnsNullForEmpty()
     {
@@ -318,7 +318,7 @@ public class GatewayTests
     {
         var service = new GatewayService(null, null);
 
-        // ���ݿ�������ʱ���� null
+        // 数据库无数据时返回 null
         Assert.Null(service.ResolveModel(99999));
     }
 
@@ -352,7 +352,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region SSE �¼�ģ�Ͳ���
+    #region SSE 事件模型测试
     [Fact]
     public void ChatStreamEventFactoryMethodsCreateCorrectTypes()
     {
@@ -361,9 +361,9 @@ public class GatewayTests
         Assert.Equal(1001, start.MessageId);
         Assert.Equal("gpt-4o", start.Model);
 
-        var thinkDelta = ChatStreamEvent.ThinkingDelta("������...");
+        var thinkDelta = ChatStreamEvent.ThinkingDelta("思考中...");
         Assert.Equal("thinking_delta", thinkDelta.Type);
-        Assert.Equal("������...", thinkDelta.Content);
+        Assert.Equal("思考中...", thinkDelta.Content);
 
         var thinkDone = ChatStreamEvent.ThinkingDone(3200);
         Assert.Equal("thinking_done", thinkDone.Type);
@@ -373,21 +373,21 @@ public class GatewayTests
         Assert.Equal("content_delta", contentDelta.Type);
         Assert.Equal("Hello", contentDelta.Content);
 
-        var done = ChatStreamEvent.MessageDone(new UsageDetails { TotalTokens = 100 }, "���Ա���");
+        var done = ChatStreamEvent.MessageDone(new UsageDetails { TotalTokens = 100 }, "对话标题");
         Assert.Equal("message_done", done.Type);
         Assert.Equal(100, done.Usage?.TotalTokens);
-        Assert.Equal("���Ա���", done.Title);
+        Assert.Equal("对话标题", done.Title);
 
-        var error = ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", "ģ�Ͳ�����");
+        var error = ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", "模型不可用");
         Assert.Equal("error", error.Type);
         Assert.Equal("MODEL_UNAVAILABLE", error.Code);
-        Assert.Equal("ģ�Ͳ�����", error.Message);
+        Assert.Equal("模型不可用", error.Message);
     }
 
     [Fact]
     public void ChatStreamEventToolCallEventsHaveCorrectFields()
     {
-        var toolStart = ChatStreamEvent.ToolCallStart("call_001", "get_weather", "{\"city\":\"����\"}");
+        var toolStart = ChatStreamEvent.ToolCallStart("call_001", "get_weather", "{\"city\":\"北京\"}");
         Assert.Equal("tool_call_start", toolStart.Type);
         Assert.Equal("call_001", toolStart.ToolCallId);
         Assert.Equal("get_weather", toolStart.Name);
@@ -396,13 +396,13 @@ public class GatewayTests
         Assert.Equal("tool_call_done", toolDone.Type);
         Assert.True(toolDone.Success);
 
-        var toolError = ChatStreamEvent.ToolCallError("call_001", "���񲻿���");
+        var toolError = ChatStreamEvent.ToolCallError("call_001", "服务不可用");
         Assert.Equal("tool_call_error", toolError.Type);
-        Assert.Equal("���񲻿���", toolError.Error);
+        Assert.Equal("服务不可用", toolError.Error);
     }
     #endregion
 
-    #region ������������Բ���
+    #region 请求附加参数测试
     [Fact]
     public void RequestSupportsAllOptionalParameters()
     {
@@ -434,13 +434,13 @@ public class GatewayTests
         var msg = new ChatMessage
         {
             Role = "assistant",
-            Content = "���մ�",
-            ReasoningContent = "�ȷ�������...",
+            Content = "最终答案",
+            ReasoningContent = "先分析一下...",
         };
 
         Assert.Equal("assistant", msg.Role);
-        Assert.Equal("���մ�", msg.Content as String);
-        Assert.Equal("�ȷ�������...", msg.ReasoningContent);
+        Assert.Equal("最终答案", msg.Content as String);
+        Assert.Equal("先分析一下...", msg.ReasoningContent);
     }
 
     [Fact]
@@ -485,7 +485,7 @@ public class GatewayTests
     }
     #endregion
 
-    #region �������·��һ���Բ���
+    #region 服务商路由一致性测试
     [Fact]
     public void AllChatCompletionsProvidersShareSameInterface()
     {
@@ -494,8 +494,8 @@ public class GatewayTests
             .Where(p => p.Protocol == "OpenAI")
             .ToList();
 
-        // ����28�� OpenAI ���� + 3���������� = 31
-        Assert.True(chatCompletionProviders.Count >= 28, $"ChatCompletions Э�������Ӧ����28����ʵ�� {chatCompletionProviders.Count}");
+        // 至少有28个 OpenAI 协议 + 3个其他协议 = 31
+        Assert.True(chatCompletionProviders.Count >= 28, $"ChatCompletions 协议数量应至少28，实际 {chatCompletionProviders.Count}");
 
         foreach (var descriptor in chatCompletionProviders)
         {
@@ -511,10 +511,10 @@ public class GatewayTests
             .GroupBy(p => p.Protocol)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        // Anthropic Э��1����Gemini Э��1��
+        // Anthropic 协议1个，Gemini 协议1个
         Assert.Equal(1, groups["AnthropicMessages"]);
         Assert.Equal(1, groups["Gemini"]);
-        // ChatCompletions ����28��
+        // ChatCompletions 至少28个
         Assert.True(groups["OpenAI"] >= 28);
     }
     #endregion
