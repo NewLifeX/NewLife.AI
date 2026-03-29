@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
+using NewLife.AI.Clients;
 using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -32,6 +33,8 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
     /// <summary>获取 HttpClient 实例</summary>
     protected HttpClient HttpClient => _httpClient ??= CreateHttpClient();
 
+    /// <summary>JSON 处理器。默认使用 SystemJson，映射到 System.Text.Json </summary>
+    public IJsonHost JsonHost { get; set; } = AiClientBase.GetDefaultJsonHost();
     #endregion
 
     #region 构造
@@ -90,7 +93,7 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
         if (request.EncodingFormat != null) dic["encoding_format"] = request.EncodingFormat;
         if (request.User != null) dic["user"] = request.User;
 
-        var body = dic.ToJson();
+        var body = JsonHost.Write(dic);
         var endpoint = _options.GetEndpoint(_defaultEndpoint).TrimEnd('/');
         var url = endpoint + EmbeddingPath;
 

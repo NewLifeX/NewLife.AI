@@ -66,7 +66,7 @@ public class AnthropicResponse
                 if (block.Type == "text")
                     textParts.Add(block.Text ?? "");
                 else if (block.Type == "thinking")
-                    reasoningParts.Add(block.Text ?? "");
+                    reasoningParts.Add(block.Thinking ?? block.Text ?? "");
                 else if (block.Type == "tool_use")
                 {
                     toolCalls ??= [];
@@ -262,8 +262,11 @@ public class AnthropicContentBlock
     /// <summary>类型。text/image/tool_use/tool_result/thinking</summary>
     public String? Type { get; set; }
 
-    /// <summary>文本内容（text/thinking 类型使用）</summary>
+    /// <summary>文本内容（text 类型使用）</summary>
     public String? Text { get; set; }
+
+    /// <summary>思考内容（thinking 类型使用）</summary>
+    public String? Thinking { get; set; }
 
     /// <summary>工具调用编号（tool_use 类型使用）</summary>
     public String? Id { get; set; }

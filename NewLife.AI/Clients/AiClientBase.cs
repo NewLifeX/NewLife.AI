@@ -4,6 +4,7 @@ using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using NewLife.Log;
+using NewLife.Reflection;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients;
@@ -48,16 +49,43 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         set => _httpClient = value;
     }
 
+    /// <summary>JSON 处理器。默认使用 SystemJson，映射到 System.Text.Json </summary>
+    public IJsonHost JsonHost { get; set; }
+
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options;
+
+    private static IJsonHost _host;
     #endregion
 
     #region 构造
+    static AiClientBase()
+    {
+        // 尝试使用System.Text.Json，不支持时使用FastJson
+        var host = JsonHelper.Default;
+        if (host == null || host.GetType().Name == "FastJson")
+        {
+            // 当前组件输出net45和netstandard2.0，而SystemJson要求net5以上，因此通过反射加载
+            try
+            {
+                var type = $"{typeof(FastJson).Namespace}.SystemJson".GetTypeEx();
+                if (type != null)
+                {
+                    host = type.CreateInstance() as IJsonHost;
+                }
+            }
+            catch { }
+        }
+
+        _host = host ?? JsonHelper.Default;
+    }
+
     /// <summary>默认构造</summary>
     public AiClientBase(AiClientOptions options)
     {
         Name = GetType().Name.TrimEnd("ChatClient", "Client");
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        JsonHost = _host;
     }
 
     /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
@@ -182,6 +210,9 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）覆盖 options 中的默认值</param>
     /// <param name="options">连接选项</param>
     protected virtual void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
+
+    /// <summary>获取 JSON 处理器</summary>
+    public static IJsonHost GetDefaultJsonHost() => _host;
     #endregion
 
     #region Http请求
@@ -225,7 +256,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串</returns>
     protected async Task<String> PostAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -246,7 +277,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串，服务不可用时返回 null</returns>
     protected async Task<String?> TryPostAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -266,7 +297,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
     protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -291,7 +322,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字节数组</returns>
     protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : body?.ToJson() ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
