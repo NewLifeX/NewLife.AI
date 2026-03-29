@@ -80,6 +80,9 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         _host = host ?? JsonHelper.Default;
     }
 
+    /// <summary>获取 JSON 处理器</summary>
+    public static IJsonHost GetDefaultJsonHost() => _host;
+
     /// <summary>默认构造</summary>
     public AiClientBase(AiClientOptions options)
     {
@@ -210,9 +213,6 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）覆盖 options 中的默认值</param>
     /// <param name="options">连接选项</param>
     protected virtual void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
-
-    /// <summary>获取 JSON 处理器</summary>
-    public static IJsonHost GetDefaultJsonHost() => _host;
     #endregion
 
     #region Http请求
