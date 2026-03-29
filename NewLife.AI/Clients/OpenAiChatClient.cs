@@ -214,54 +214,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <param name="json">JSON 字符串</param>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    protected override ChatResponse ParseResponse(String json, ChatRequest request)
-    {
-        var dic = JsonParser.Decode(json);
-        if (dic == null) throw new InvalidOperationException("无法解析 AI 服务商响应");
-
-        var response = new ChatResponse
-        {
-            Id = dic["id"] as String,
-            Object = dic["object"] as String,
-            Created = dic["created"].ToLong().ToDateTimeOffset(),
-            Model = dic["model"] as String,
-        };
-
-        if (dic["choices"] is IList<Object> choicesList)
-        {
-            var choices = new List<ChatChoice>();
-            foreach (var item in choicesList)
-            {
-                if (item is not IDictionary<String, Object> choiceDic) continue;
-
-                var choice = new ChatChoice
-                {
-                    Index = choiceDic["index"].ToInt(),
-                    FinishReason = choiceDic["finish_reason"] as String,
-                    Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),
-                    Delta = ParseChatMessage(choiceDic["delta"] as IDictionary<String, Object>),
-                };
-
-                choices.Add(choice);
-            }
-            response.Messages = choices;
-        }
-
-        if (dic["usage"] is IDictionary<String, Object> usageDic)
-            response.Usage = ParseUsage(usageDic);
-
-        return response;
-    }
-
-    /// <summary>解析用量统计</summary>
-    /// <param name="dic">用量字典</param>
-    /// <returns></returns>
-    protected virtual UsageDetails ParseUsage(IDictionary<String, Object> dic) => new()
-    {
-        InputTokens = dic["prompt_tokens"].ToInt(),
-        OutputTokens = dic["completion_tokens"].ToInt(),
-        TotalTokens = dic["total_tokens"].ToInt(),
-    };
+    protected override ChatResponse ParseResponse(String json, ChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
 
     /// <summary>解析消息对象</summary>
     /// <param name="dic">字典</param>

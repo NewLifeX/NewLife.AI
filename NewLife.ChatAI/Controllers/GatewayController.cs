@@ -70,7 +70,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="cancellationToken">取消令牌</param>
     [HttpPost("v1/chat/completions")]
     public async Task ChatCompletionsAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(ChatRequest.From(request), cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request.ToChatRequest(), cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region OpenAI Response API
@@ -80,7 +80,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <remarks>协议格式与 ChatCompletions 完全兼容，复用同一处理逻辑</remarks>
     [HttpPost("v1/responses")]
     public async Task ResponsesAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(ChatRequest.From(request), cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request.ToChatRequest(), cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region Anthropic Messages API

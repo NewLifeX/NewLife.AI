@@ -91,51 +91,7 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
     protected override Object BuildRequest(ChatRequest request) => AnthropicRequest.FromChatRequest(request);
 
     /// <summary>解析 Anthropic 非流式响应</summary>
-    protected override ChatResponse ParseResponse(String json, ChatRequest request)
-    {
-        var dic = JsonParser.Decode(json);
-        if (dic == null) throw new InvalidOperationException("无法解析 Anthropic 响应");
-
-        var resp = new AnthropicResponse
-        {
-            Id = dic["id"] as String,
-            Type = dic["type"] as String,
-            Role = dic["role"] as String,
-            Model = dic["model"] as String,
-            StopReason = dic["stop_reason"] as String,
-        };
-
-        // 解析内容块
-        if (dic["content"] is IList<Object> contentList)
-        {
-            var blocks = new List<AnthropicContentBlock>();
-            foreach (var block in contentList)
-            {
-                if (block is not IDictionary<String, Object> blockDic) continue;
-                blocks.Add(new AnthropicContentBlock
-                {
-                    Type = blockDic["type"] as String,
-                    Text = blockDic["text"] as String ?? blockDic["thinking"] as String,
-                    Id = blockDic["id"] as String,
-                    Name = blockDic["name"] as String,
-                    Input = blockDic.TryGetValue("input", out var input) ? input : null,
-                });
-            }
-            resp.Content = blocks;
-        }
-
-        // 解析用量
-        if (dic["usage"] is IDictionary<String, Object> usageDic)
-        {
-            resp.Usage = new AnthropicUsage
-            {
-                InputTokens = usageDic["input_tokens"].ToInt(),
-                OutputTokens = usageDic["output_tokens"].ToInt(),
-            };
-        }
-
-        return resp.ToChatResponse(request.Model);
-    }
+    protected override ChatResponse ParseResponse(String json, ChatRequest request) => json.ToJsonEntity<AnthropicResponse>()!.ToChatResponse(request.Model);
 
     /// <summary>解析 Anthropic 流式 chunk</summary>
     protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)

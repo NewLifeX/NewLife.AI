@@ -266,13 +266,13 @@ public class ModelTests
 
     #endregion
 
-    // ── ChatRequest.From ────────────────────────────────────────────────────
+    // ── ChatRequest.ToChatRequest ────────────────────────────────────────────
 
-    #region ChatRequest.From
+    #region ChatRequest.ToChatRequest
 
     [Fact]
-    [DisplayName("ChatRequest.From—从 ChatCompletionRequest 正确映射基础字段")]
-    public void ChatRequest_From_MapsBasicFields()
+    [DisplayName("ToChatRequest—从 ChatCompletionRequest 正确映射基础字段")]
+    public void ChatRequest_ToChatRequest_MapsBasicFields()
     {
         var cr = new ChatCompletionRequest
         {
@@ -282,7 +282,7 @@ public class ModelTests
             Temperature = 0.5,
             MaxTokens = 1024,
         };
-        var req = ChatRequest.From(cr);
+        var req = cr.ToChatRequest();
         Assert.Equal("deepseek-chat", req.Model);
         Assert.Single(req.Messages);
         Assert.True(req.Stream);

@@ -84,75 +84,7 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
     protected override Object BuildRequest(ChatRequest request) => GeminiRequest.FromChatRequest(request);
 
     /// <summary>解析 Gemini 响应</summary>
-    protected override ChatResponse ParseResponse(String data, ChatRequest request)
-    {
-        var dic = JsonParser.Decode(data);
-        if (dic == null) throw new InvalidOperationException("无法解析 Gemini 响应");
-
-        var gr = BuildGeminiResponseFromDict(dic);
-        return gr.ToChatResponse(request.Model, request.Stream);
-    }
-
-    /// <summary>从字典构建 GeminiResponse 实例</summary>
-    private static GeminiResponse BuildGeminiResponseFromDict(IDictionary<String, Object?> dic)
-    {
-        var gr = new GeminiResponse();
-
-        if (dic["candidates"] is IList<Object> candidates)
-        {
-            gr.Candidates = [];
-            foreach (var item in candidates)
-            {
-                if (item is not IDictionary<String, Object> candidateDic) continue;
-                var candidate = new GeminiCandidate
-                {
-                    FinishReason = candidateDic["finishReason"] as String,
-                };
-
-                if (candidateDic["content"] is IDictionary<String, Object> contentDic)
-                {
-                    candidate.Content = new GeminiResponseContent { Role = contentDic["role"] as String };
-                    if (contentDic["parts"] is IList<Object> parts)
-                    {
-                        candidate.Content.Parts = [];
-                        foreach (var partObj in parts)
-                        {
-                            if (partObj is not IDictionary<String, Object> partDic) continue;
-                            var part = new GeminiResponsePart();
-
-                            if (partDic.TryGetValue("text", out var textVal) && textVal != null)
-                                part.Text = textVal.ToString();
-
-                            if (partDic["functionCall"] is IDictionary<String, Object> fnCallDic)
-                            {
-                                part.FunctionCall = new GeminiFunctionCall
-                                {
-                                    Name = fnCallDic["name"] as String,
-                                    Args = fnCallDic["args"],
-                                };
-                            }
-
-                            candidate.Content.Parts.Add(part);
-                        }
-                    }
-                }
-
-                gr.Candidates.Add(candidate);
-            }
-        }
-
-        if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
-        {
-            gr.UsageMetadata = new GeminiUsageMetadata
-            {
-                PromptTokenCount = usageDic["promptTokenCount"].ToInt(),
-                CandidatesTokenCount = usageDic["candidatesTokenCount"].ToInt(),
-                TotalTokenCount = usageDic["totalTokenCount"].ToInt(),
-            };
-        }
-
-        return gr;
-    }
+    protected override ChatResponse ParseResponse(String data, ChatRequest request) => data.ToJsonEntity<GeminiResponse>()!.ToChatResponse(request.Model, request.Stream);
 
     #endregion
 }
