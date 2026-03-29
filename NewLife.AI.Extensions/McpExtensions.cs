@@ -2,6 +2,7 @@
 
 namespace Microsoft.Extensions.DependencyInjection;
 
+/// <summary>MCP扩展</summary>
 public static class McpExtensions
 {
     /// <summary>启用MCP</summary>

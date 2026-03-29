@@ -29,9 +29,6 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     #region 属性
     /// <inheritdoc/>
     public override String Name { get; set; } = "本地Ollama";
-
-    /// <summary>连接选项</summary>
-    protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     #endregion
 
     #region 构造

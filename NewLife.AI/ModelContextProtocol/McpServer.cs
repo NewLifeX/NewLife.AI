@@ -144,7 +144,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature
         //var tool = Tools.FirstOrDefault(t => t.Name.Equals(ps.Name, StringComparison.OrdinalIgnoreCase));
         //if (tool == null) throw new ArgumentOutOfRangeException(nameof(request.Params), $"Tool '{ps.Name}' not found in the server capabilities.");
 
-        var result = _handler.Execute(null, ps.Name, ps.Arguments, null!, serviceProvider);
+        var result = _handler.Execute(null!, ps.Name, ps.Arguments, null!, serviceProvider);
 
         List<ContentItem> content = [new("text", result?.ToString() ?? String.Empty)];
         return new(content);

@@ -242,7 +242,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var path = IsMultimodalModel(request.Model) ? MultimodalGenerationPath : ChatGenerationPath;
 
         // 原生协议只能对接 /api/v1 端点；若用户配置了兼容模式地址则忽略并回退到原生端点
-        var endpoint = options.Endpoint;
+        var endpoint = _options.Endpoint;
         if (endpoint.IsNullOrWhiteSpace() ||
             endpoint.IndexOf("compatible-mode", StringComparison.OrdinalIgnoreCase) >= 0)
             endpoint = NativeEndpoint;
