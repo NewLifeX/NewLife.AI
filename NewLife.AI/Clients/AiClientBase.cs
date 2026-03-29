@@ -125,7 +125,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         using var span = Tracer?.NewSpan($"ai:Chat:{request.Model}", request.Messages?.FirstOrDefault()?.Content);
         try
         {
-            var response = await ChatAsync(request);
+            var response = await ChatAsync(request, cancellationToken);
             if (response.Usage != null)
             {
                 response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
