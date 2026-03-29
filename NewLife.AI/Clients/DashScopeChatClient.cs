@@ -44,8 +44,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <summary>是否使用 DashScope 原生协议。Protocol 为空或 "DashScope" 时为原生模式</summary>
-    protected Boolean IsNativeProtocol =>
-        String.IsNullOrEmpty(_options.Protocol) || _options.Protocol == "DashScope";
+    protected Boolean IsNativeProtocol => _options.Protocol.IsNullOrEmpty() || _options.Protocol == "DashScope";
     #endregion
 
     #region 构造
@@ -65,13 +64,14 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
             return await base.ChatAsync(request, cancellationToken).ConfigureAwait(false);
 
         var model = request.Model ?? _options.Model;
-        var url = BuildChatUrl(_options, model);
-        var isMultimodal = IsMultimodalModel(model);
-        var body = BuildDashScopeRequestBody(request, isMultimodal, false);
+        var url = BuildUrl(request);
+        var body = BuildDashScopeRequestBody(request);
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         var response = ParseDashScopeResponse(json);
+
         // 原生响应无顶层 model 字段，从请求回填
         response.Model ??= model;
+
         return response;
     }
 
@@ -85,10 +85,8 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
             yield break;
         }
 
-        var model = request.Model ?? _options.Model;
-        var url = BuildChatUrl(_options, model);
-        var isMultimodal = IsMultimodalModel(model);
-        var body = BuildDashScopeRequestBody(request, isMultimodal, true);
+        var url = BuildUrl(request);
+        var body = BuildDashScopeRequestBody(request);
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -124,11 +122,11 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
             }
 
             ChatResponse? chunk = null;
-            try { chunk = ParseDashScopeStreamChunk(data); } catch { }
+            try { chunk = ParseChunk(data, request, null); } catch { }
 
             if (chunk != null)
             {
-                chunk.Model ??= model;
+                chunk.Model ??= request.Model;
                 yield return chunk;
             }
         }
@@ -238,14 +236,14 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     // 原生对话路径（多模态：含视觉/音频/视频输入）
     private const String MultimodalGenerationPath = "/services/aigc/multimodal-generation/generation";
 
-    /// <summary>构建 DashScope 原生对话 URL。根据模型特性选择 text-generation 或 multimodal-generation 路径</summary>
-    private String BuildChatUrl(AiClientOptions options, String? model)
+    /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
+    protected override String BuildUrl(ChatRequest request)
     {
-        var path = IsMultimodalModel(model) ? MultimodalGenerationPath : ChatGenerationPath;
+        var path = IsMultimodalModel(request.Model) ? MultimodalGenerationPath : ChatGenerationPath;
 
         // 原生协议只能对接 /api/v1 端点；若用户配置了兼容模式地址则忽略并回退到原生端点
         var endpoint = options.Endpoint;
-        if (String.IsNullOrWhiteSpace(endpoint) ||
+        if (endpoint.IsNullOrWhiteSpace() ||
             endpoint.IndexOf("compatible-mode", StringComparison.OrdinalIgnoreCase) >= 0)
             endpoint = NativeEndpoint;
         return endpoint.TrimEnd('/') + path;
@@ -270,8 +268,9 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <summary>构建 DashScope 原生请求体</summary>
-    private static Object BuildDashScopeRequestBody(ChatRequest request, Boolean isMultimodal, Boolean stream)
+    private static Object BuildDashScopeRequestBody(ChatRequest request)
     {
+        var isMultimodal = IsMultimodalModel(request.Model);
         var messages = BuildDashScopeMessages(request.Messages, isMultimodal);
 
         var parameters = new Dictionary<String, Object> { ["result_format"] = "message" };
@@ -291,7 +290,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
 
         ApplyDashScopeItems(parameters, request);
 
-        if (stream)
+        if (request.Stream)
         {
             parameters["stream"] = true;
             parameters["incremental_output"] = true;
@@ -494,7 +493,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <summary>解析 DashScope 原生流式 SSE chunk</summary>
-    private ChatResponse? ParseDashScopeStreamChunk(String data)
+    protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
     {
         var dic = JsonParser.Decode(data);
         if (dic == null) return null;
@@ -565,24 +564,13 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// 只注入 Bearer 认证头。SSE 相关头（Accept: text/event-stream）仅流式请求需要，
-    /// 由 <see cref="SetStreamingHeaders"/> 注入，非流式请求走普通 JSON 响应。
-    /// </remarks>
     protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
-    }
 
-    /// <inheritdoc/>
-    /// <remarks>
-    /// DashScope 原生协议流式请求需要 Accept: text/event-stream，兼容模式不需要。
-    /// 仅对 text-generation 与 multimodal-generation 路径注入该头，其余路径（rerank/models 等）忽略。
-    /// </remarks>
-    protected override void SetStreamingHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
-    {
         if (!IsNativeProtocol) return;
+        if (chatRequest == null || !chatRequest.Stream) return;
 
         var path = request.RequestUri?.AbsolutePath;
         if (String.IsNullOrEmpty(path)) return;

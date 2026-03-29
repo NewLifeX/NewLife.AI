@@ -32,6 +32,10 @@ public class ChatCompletionRequest : IExtend
     /// <summary>是否流式输出</summary>
     public Boolean Stream { get; set; }
 
+    /// <summary>流式选项。Stream=true 时附带，请求包含用量统计</summary>
+    [DataMember(Name = "stream_options")]
+    public IDictionary<String, Object>? StreamOptions { get; set; }
+
     /// <summary>停止词列表</summary>
     public IList<String>? Stop { get; set; }
 
@@ -66,13 +70,100 @@ public class ChatCompletionRequest : IExtend
     public Boolean? ParallelToolCalls { get; set; }
 
     /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
+    [IgnoreDataMember]
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
 
     /// <summary>索引器，方便访问扩展数据</summary>
+    [IgnoreDataMember]
     public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
     #endregion
 
     #region 方法
+    /// <summary>从内部统一 ChatRequest 构建 OpenAI 协议请求</summary>
+    /// <param name="request">内部统一请求</param>
+    /// <returns>可直接 ToJson 序列化的 OpenAI 协议请求</returns>
+    public static ChatCompletionRequest FromChatRequest(ChatRequest request)
+    {
+        var result = new ChatCompletionRequest
+        {
+            Model = request.Model,
+            Stream = request.Stream,
+            Temperature = request.Temperature,
+            TopP = request.TopP,
+            TopK = request.TopK,
+            MaxTokens = request.MaxTokens,
+            Stop = request.Stop,
+            PresencePenalty = request.PresencePenalty,
+            FrequencyPenalty = request.FrequencyPenalty,
+            ToolChoice = request.ToolChoice,
+            User = request.User,
+            EnableThinking = request.EnableThinking,
+            ResponseFormat = request.ResponseFormat,
+            ParallelToolCalls = request.ParallelToolCalls,
+        };
+
+        if (request.Stream)
+            result.StreamOptions = new Dictionary<String, Object> { ["include_usage"] = true };
+
+        // 转换消息列表：处理 Contents（类型化多模态内容）→ Content（OpenAI 协议格式）
+        var messages = new List<ChatMessage>();
+        foreach (var msg in request.Messages)
+        {
+            var cm = new ChatMessage
+            {
+                Role = msg.Role,
+                Name = msg.Name,
+                ToolCallId = msg.ToolCallId,
+                ToolCalls = msg.ToolCalls,
+            };
+
+            if (msg.Contents != null && msg.Contents.Count > 0)
+                cm.Content = BuildContent(msg.Contents);
+            else
+                cm.Content = msg.Content;
+
+            messages.Add(cm);
+        }
+        result.Messages = messages;
+
+        // 转换工具定义
+        if (request.Tools != null && request.Tools.Count > 0)
+            result.Tools = request.Tools;
+
+        return result;
+    }
+
+    /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段值</summary>
+    /// <param name="contents">AIContent 列表</param>
+    /// <returns>字符串（单一文本）或内容数组（多模态）</returns>
+    public static Object BuildContent(IList<AIContent> contents)
+    {
+        if (contents.Count == 1 && contents[0] is TextContent singleText)
+            return singleText.Text;
+
+        var parts = new List<Object>(contents.Count);
+        foreach (var item in contents)
+        {
+            if (item is TextContent text)
+            {
+                parts.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = text.Text });
+            }
+            else if (item is ImageContent img)
+            {
+                String url;
+                if (img.Data != null && img.Data.Length > 0)
+                    url = $"data:{img.MediaType ?? "image/jpeg"};base64,{Convert.ToBase64String(img.Data)}";
+                else
+                    url = img.Uri ?? "";
+
+                var imgDic = new Dictionary<String, Object> { ["url"] = url };
+                if (img.Detail != null) imgDic["detail"] = img.Detail;
+                parts.Add(new Dictionary<String, Object> { ["type"] = "image_url", ["image_url"] = imgDic });
+            }
+        }
+        return parts;
+    }
+
     /// <summary>应用对话选项。将 ChatOptions 中的非空字段合并到当前请求</summary>
     /// <param name="options">对话选项，null 字段不覆盖</param>
     /// <returns>当前请求实例（支持链式调用）</returns>

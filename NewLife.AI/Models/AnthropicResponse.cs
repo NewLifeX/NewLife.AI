@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Models;
 
@@ -39,6 +40,88 @@ public class AnthropicResponse
     #endregion
 
     #region 转换
+    /// <summary>转换为内部统一 ChatResponse</summary>
+    /// <param name="model">模型编码（Anthropic 响应可能不含模型信息）</param>
+    /// <returns>等效的 ChatResponse 实例</returns>
+    public ChatResponse ToChatResponse(String? model = null)
+    {
+        var response = new ChatResponse
+        {
+            Id = Id,
+            Object = "chat.completion",
+            Model = Model ?? model,
+        };
+
+        String? contentText = null;
+        String? reasoningText = null;
+        List<ToolCall>? toolCalls = null;
+
+        if (Content != null)
+        {
+            var textParts = new List<String>();
+            var reasoningParts = new List<String>();
+
+            foreach (var block in Content)
+            {
+                if (block.Type == "text")
+                    textParts.Add(block.Text ?? "");
+                else if (block.Type == "thinking")
+                    reasoningParts.Add(block.Text ?? "");
+                else if (block.Type == "tool_use")
+                {
+                    toolCalls ??= [];
+                    var inputRaw = block.Input;
+                    toolCalls.Add(new ToolCall
+                    {
+                        Id = block.Id ?? "",
+                        Type = "function",
+                        Function = new FunctionCall
+                        {
+                            Name = block.Name ?? "",
+                            Arguments = inputRaw is IDictionary<String, Object> inputDic
+                                ? inputDic.ToJson()
+                                : inputRaw as String ?? "{}",
+                        },
+                    });
+                }
+            }
+
+            contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
+            reasoningText = reasoningParts.Count > 0 ? String.Join("", reasoningParts) : null;
+        }
+
+        var finishReason = MapStopReason(StopReason);
+        var choice = response.Add(contentText, reasoningText, finishReason);
+
+        if (toolCalls != null && toolCalls.Count > 0)
+        {
+            choice.Message ??= new ChatMessage { Role = "assistant" };
+            choice.Message.ToolCalls = toolCalls;
+        }
+
+        if (Usage != null)
+        {
+            response.Usage = new UsageDetails
+            {
+                InputTokens = Usage.InputTokens,
+                OutputTokens = Usage.OutputTokens,
+                TotalTokens = Usage.InputTokens + Usage.OutputTokens,
+            };
+        }
+
+        return response;
+    }
+
+    /// <summary>映射 Anthropic stop_reason 到标准 finish_reason</summary>
+    internal static String? MapStopReason(String? stopReason) => stopReason switch
+    {
+        "end_turn" => "stop",
+        "max_tokens" => "length",
+        "tool_use" => "tool_calls",
+        null => null,
+        _ => stopReason,
+    };
+
     /// <summary>从内部统一响应转换为 Anthropic 非流式响应</summary>
     /// <param name="response">内部统一响应</param>
     /// <returns>Anthropic 格式响应</returns>
@@ -176,11 +259,20 @@ public class AnthropicResponse
 /// <summary>Anthropic 内容块</summary>
 public class AnthropicContentBlock
 {
-    /// <summary>类型。text/image/tool_use/tool_result</summary>
+    /// <summary>类型。text/image/tool_use/tool_result/thinking</summary>
     public String? Type { get; set; }
 
-    /// <summary>文本内容</summary>
+    /// <summary>文本内容（text/thinking 类型使用）</summary>
     public String? Text { get; set; }
+
+    /// <summary>工具调用编号（tool_use 类型使用）</summary>
+    public String? Id { get; set; }
+
+    /// <summary>工具名称（tool_use 类型使用）</summary>
+    public String? Name { get; set; }
+
+    /// <summary>工具调用参数（tool_use 类型使用）。反序列化后为 IDictionary</summary>
+    public Object? Input { get; set; }
 }
 
 /// <summary>Anthropic 令牌用量统计</summary>

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
@@ -12,7 +13,7 @@ namespace NewLife.AI.Clients;
 /// 子类需提供 <see cref="Name"/> 用于错误日志，并可通过重写 <see cref="SetHeaders"/> 注入认证头。
 /// 通过重写 <see cref="CreateHttpClient"/> 定制 HttpClient 行为。
 /// </remarks>
-public abstract class AiClientBase
+public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
 {
     #region 属性
     /// <summary>客户端名称。用于日志标识和默认端点查找；可外部设置（如注册表按服务商编码覆盖）</summary>
@@ -46,11 +47,18 @@ public abstract class AiClientBase
         get => _httpClient ??= CreateHttpClient();
         set => _httpClient = value;
     }
+
+    /// <summary>连接选项</summary>
+    protected readonly AiClientOptions _options;
     #endregion
 
     #region 构造
     /// <summary>默认构造</summary>
-    protected AiClientBase() => Name = GetType().Name.TrimEnd("ChatClient", "Client");
+    public AiClientBase(AiClientOptions options)
+    {
+        Name = GetType().Name.TrimEnd("ChatClient", "Client");
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+    }
 
     /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>
     /// <returns>新的 HttpClient 实例</returns>
@@ -67,15 +75,116 @@ public abstract class AiClientBase
         client.DefaultRequestHeaders.Add("Accept", "application/json");
         return client;
     }
+
+    /// <summary>释放资源</summary>
+    public virtual void Dispose() { }
+    #endregion
+
+    #region 核心方法
+    /// <summary>非流式对话完成</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整的对话响应</returns>
+    public virtual async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.Messages == null || request.Messages.Count == 0)
+            throw new ArgumentException("消息列表不能为空", nameof(request));
+
+        request.Stream = false;
+        if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
+
+        var startMs = Runtime.TickCount64;
+        using var span = Tracer?.NewSpan($"ai:Chat:{request.Model}", request.Messages?.FirstOrDefault()?.Content);
+        try
+        {
+            var response = await ChatAsync(request);
+            if (response.Usage != null)
+            {
+                response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+                span?.Value = response.Usage.TotalTokens;
+            }
+            return response;
+        }
+        catch (Exception ex)
+        {
+            span?.SetError(ex, null);
+            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
+            throw;
+        }
+    }
+
+    /// <summary>流式对话完成</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>流式响应块的异步枚举</returns>
+    public virtual async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (request.Messages == null || request.Messages.Count == 0)
+            throw new ArgumentException("消息列表不能为空", nameof(request));
+
+        request.Stream = true;
+        if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
+
+        var startMs = Runtime.TickCount64;
+        using var span = Tracer?.NewSpan($"ai:Streaming:{request.Model}", request.Messages?.FirstOrDefault()?.Content);
+
+        UsageDetails? lastUsage = null;
+        await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
+        {
+            if (chunk.Usage != null)
+            {
+                lastUsage = chunk.Usage;
+                lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+            }
+            yield return chunk;
+        }
+
+        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
+    }
+
+    /// <summary>非流式对话</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    protected virtual async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    {
+        var url = BuildUrl(request);
+        var body = BuildRequest(request);
+
+        var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        return ParseResponse(json, request);
+    }
+
+    /// <summary>流式对话</summary>
+    /// <param name="request">对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    protected abstract IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, CancellationToken cancellationToken = default);
     #endregion
 
     #region 辅助
+    /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
+    protected abstract String BuildUrl(ChatRequest request);
+
+    /// <summary>构建请求体。返回符合协议格式的协议请求对象</summary>
+    /// <param name="request">请求对象</param>
+    /// <returns>各协议的请求实例，由 PostAsync 调用 ToJson 序列化</returns>
+    protected abstract Object BuildRequest(ChatRequest request);
+
+    /// <summary>解析响应字符串。子类实现此方法将原始 JSON 转换为统一的 ChatResponse</summary>
+    protected abstract ChatResponse ParseResponse(String data, ChatRequest request);
+
+    /// <summary>解析流式响应字符串</summary>
+    protected virtual ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent) => ParseResponse(data, request);
+
     /// <summary>设置请求头。子类可重写此方法注入认证信息</summary>
     /// <param name="request">HTTP 请求</param>
-    /// <param name="options">连接选项</param>
     /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）覆盖 options 中的默认值</param>
+    /// <param name="options">连接选项</param>
     protected virtual void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
+    #endregion
 
+    #region Http请求
     /// <summary>发送 GET 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
     /// <param name="url">请求地址</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
@@ -163,7 +272,6 @@ public abstract class AiClientBase
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
         SetHeaders(req, chatRequest, options);
-        SetStreamingHeaders(req, chatRequest, options);
         var resp = await HttpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
         {
@@ -173,12 +281,6 @@ public abstract class AiClientBase
         }
         return resp;
     }
-
-    /// <summary>设置流式请求专属请求头。仅在 PostStreamAsync 中调用，子类可重写以注入流式特定头（如 X-DashScope-SSE: enable）</summary>
-    /// <param name="request">HTTP 请求</param>
-    /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）以做更精确的判断</param>
-    /// <param name="options">连接选项</param>
-    protected virtual void SetStreamingHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
 
     /// <summary>发送 POST 请求并返回二进制响应。用于音频合成等返回字节流的接口</summary>
     /// <param name="url">请求地址</param>

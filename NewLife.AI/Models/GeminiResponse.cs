@@ -1,4 +1,6 @@
 using System.Runtime.Serialization;
+using NewLife.Collections;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Models;
 
@@ -24,6 +26,52 @@ public class GeminiResponse
     #endregion
 
     #region 转换
+    /// <summary>将 Gemini 原生响应转换为内部统一 ChatResponse</summary>
+    /// <param name="model">模型编码</param>
+    /// <param name="streaming">是否流式响应块</param>
+    /// <returns>统一的 ChatResponse</returns>
+    public ChatResponse ToChatResponse(String? model = null, Boolean streaming = false)
+    {
+        var response = new ChatResponse
+        {
+            Model = model,
+            Object = streaming ? "chat.completion.chunk" : "chat.completion",
+        };
+
+        if (Candidates != null)
+        {
+            foreach (var candidate in Candidates)
+            {
+                var (text, toolCalls) = ExtractContent(candidate);
+                var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate.FinishReason);
+
+                ChatChoice choice;
+                if (streaming)
+                    choice = response.AddDelta(text, null, finishReason);
+                else
+                    choice = response.Add(text, null, finishReason);
+
+                if (toolCalls?.Count > 0)
+                {
+                    var msg = streaming ? (choice.Delta ??= new ChatMessage { Role = "model" }) : (choice.Message ??= new ChatMessage { Role = "model" });
+                    msg.ToolCalls = toolCalls;
+                }
+            }
+        }
+
+        if (UsageMetadata != null)
+        {
+            response.Usage = new UsageDetails
+            {
+                InputTokens = UsageMetadata.PromptTokenCount,
+                OutputTokens = UsageMetadata.CandidatesTokenCount,
+                TotalTokens = UsageMetadata.TotalTokenCount,
+            };
+        }
+
+        return response;
+    }
+
     /// <summary>从内部统一响应转换为 Gemini 非流式响应</summary>
     /// <param name="response">内部统一响应</param>
     /// <returns>Gemini 格式响应</returns>
@@ -67,6 +115,52 @@ public class GeminiResponse
     #endregion
 
     #region 辅助
+    /// <summary>提取候选回复中的文本内容和工具调用</summary>
+    private static (String text, List<ToolCall>? toolCalls) ExtractContent(GeminiCandidate candidate)
+    {
+        if (candidate.Content?.Parts == null) return ("", null);
+
+        var sb = Pool.StringBuilder.Get();
+        List<ToolCall>? toolCalls = null;
+
+        foreach (var part in candidate.Content.Parts)
+        {
+            if (part.Text != null)
+            {
+                sb.Append(part.Text);
+            }
+            else if (part.FunctionCall != null)
+            {
+                toolCalls ??= [];
+                var argsJson = part.FunctionCall.Args is IDictionary<String, Object> argsDic
+                    ? argsDic.ToJson()
+                    : part.FunctionCall.Args as String ?? "{}";
+                toolCalls.Add(new ToolCall
+                {
+                    Id = $"call_{toolCalls.Count}",
+                    Type = "function",
+                    Function = new FunctionCall
+                    {
+                        Name = part.FunctionCall.Name ?? "",
+                        Arguments = argsJson,
+                    },
+                });
+            }
+        }
+
+        return (sb.Return(true), toolCalls);
+    }
+
+    /// <summary>映射 Gemini finishReason 到标准 finish_reason</summary>
+    internal static String? MapGeminiFinishReason(String? finishReason) => finishReason switch
+    {
+        "STOP" => "stop",
+        "MAX_TOKENS" => "length",
+        "SAFETY" or "RECITATION" => "content_filter",
+        null => null,
+        _ => finishReason.ToLower(),
+    };
+
     /// <summary>将内部 finish_reason 映射为 Gemini finishReason</summary>
     /// <param name="reason">内部结束原因</param>
     /// <returns>Gemini 结束原因</returns>
@@ -109,6 +203,20 @@ public class GeminiResponsePart
 {
     /// <summary>文本内容</summary>
     public String? Text { get; set; }
+
+    /// <summary>函数调用</summary>
+    [DataMember(Name = "functionCall")]
+    public GeminiFunctionCall? FunctionCall { get; set; }
+}
+
+/// <summary>Gemini 函数调用</summary>
+public class GeminiFunctionCall
+{
+    /// <summary>函数名称</summary>
+    public String? Name { get; set; }
+
+    /// <summary>函数参数</summary>
+    public Object? Args { get; set; }
 }
 
 /// <summary>Gemini 令牌用量统计</summary>

@@ -31,7 +31,9 @@ public class ChatMessage
     /// <remarks>
     /// 与 <see cref="Content"/>（Object?）的关系：两者并存以保持向后兼容。
     /// 新代码建议使用 Contents 以获得更强的类型安全性；旧代码无需修改。
+    /// 序列化时不输出此属性：由各协议客户端在构建请求时将 Contents 转为协议格式赋值给 Content。
     /// </remarks>
+    [IgnoreDataMember]
     public IList<AIContent>? Contents { get; set; }
     #endregion
 }

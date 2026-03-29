@@ -155,18 +155,18 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     protected async Task<ChatResponse> ChatViaPathAsync(ChatRequest request, String path, CancellationToken cancellationToken)
     {
         request.Stream = false;
-        var body = BuildRequestBody(request);
+        var body = BuildRequest(request);
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
         var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        return ParseResponse(responseText);
+        return ParseResponse(responseText, request);
     }
 
     /// <summary>以指定路径发起流式对话请求</summary>
     protected async IAsyncEnumerable<ChatResponse> ChatStreamViaPathAsync(ChatRequest request, String path, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         request.Stream = true;
-        var body = BuildRequestBody(request);
+        var body = BuildRequest(request);
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + path;
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
@@ -187,7 +187,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             if (data.Length == 0) continue;
 
             ChatResponse? chunk = null;
-            try { chunk = ParseResponse(data); } catch { }
+            try { chunk = ParseResponse(data, request); } catch { }
             if (chunk != null) yield return chunk;
         }
     }

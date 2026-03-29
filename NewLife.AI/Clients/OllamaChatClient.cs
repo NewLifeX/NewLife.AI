@@ -24,7 +24,7 @@ namespace NewLife.AI.Clients;
 [AiClientModel("llama3.3", "Llama 3.3")]
 [AiClientModel("deepseek-r1", "DeepSeek R1", Thinking = true, FunctionCalling = false)]
 [AiClientModel("phi4", "Phi-4")]
-public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatClient
+public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
 {
     #region 属性
     /// <inheritdoc/>
@@ -44,60 +44,17 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatCl
     #endregion
 
     #region IChatClient
-    /// <summary>非流式对话完成</summary>
+    /// <summary>流式对话</summary>
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>完整的对话响应</returns>
-    public async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    /// <returns></returns>
+    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        request.Model ??= _options.Model;
+        var url = BuildUrl(request);
+        var body = BuildRequest(request);
 
-        if (request.Messages == null || request.Messages.Count == 0)
-            throw new ArgumentException("消息列表不能为空", nameof(request));
-
-        var model = request.Model;
-        var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
-        try
-        {
-            var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-            var url = endpoint + "/api/chat";
-            var body = BuildOllamaBody(request, stream: false);
-            var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-            var response = ParseOllamaResponse(json);
-            if (response.Usage != null)
-            {
-                response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-                span?.Value = response.Usage.TotalTokens;
-            }
-            return response;
-        }
-        catch (Exception ex)
-        {
-            span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
-            throw;
-        }
-    }
-
-    /// <summary>流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>流式响应块的异步枚举</returns>
-    public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        var model = request.Model ??= _options.Model;
-
-        var startMs = Runtime.TickCount64;
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/api/chat";
-        var body = BuildOllamaBody(request, stream: true);
-
-        using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
-
-        UsageDetails? lastUsage = null;
-        using var resp = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
         while (!reader.EndOfStream)
@@ -107,23 +64,11 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatCl
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (String.IsNullOrEmpty(line)) continue;
 
-            var chunk = ParseOllamaChunk(line);
+            var chunk = ParseChunk(line, request, null);
             if (chunk != null)
-            {
-                if (chunk.Usage != null)
-                {
-                    lastUsage = chunk.Usage;
-                    lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-                }
                 yield return chunk;
-            }
         }
-
-        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
     }
-
-    /// <summary>释放资源</summary>
-    public void Dispose() { }
     #endregion
 
     #region 方法
@@ -216,6 +161,13 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatCl
     #endregion
 
     #region 辅助
+    /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
+    protected override String BuildUrl(ChatRequest request)
+    {
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        return endpoint + "/api/chat";
+    }
+
     /// <inheritdoc/>
     protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
     {
@@ -225,12 +177,12 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatCl
     }
 
     /// <summary>构建 Ollama 原生请求体（JSON 字符串）</summary>
-    private static String BuildOllamaBody(ChatRequest request, Boolean stream)
+    protected override Object BuildRequest(ChatRequest request)
     {
         var dic = new Dictionary<String, Object>
         {
             ["model"] = request.Model ?? "",
-            ["stream"] = stream,
+            ["stream"] = request.Stream,
         };
 
         // think 参数：显式 true/false 时才传给 Ollama；null（Auto）时不传，由模型自身决定
@@ -303,7 +255,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatCl
     }
 
     /// <summary>解析 Ollama 非流式响应</summary>
-    private static ChatResponse ParseOllamaResponse(String json)
+    protected override ChatResponse ParseResponse(String json, ChatRequest request)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 Ollama 响应");
@@ -339,7 +291,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(), IChatCl
     }
 
     /// <summary>解析 Ollama 流式 NDJSON 单行 chunk</summary>
-    private static ChatResponse? ParseOllamaChunk(String json)
+    protected override ChatResponse? ParseChunk(String json, ChatRequest request, String? lastEvent)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) return null;

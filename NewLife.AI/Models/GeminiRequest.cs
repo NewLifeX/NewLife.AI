@@ -17,6 +17,7 @@ public class GeminiRequest
 {
     #region 属性
     /// <summary>模型编码。Gemini 原生 API 将模型置于 URL 路径，此处作为扩展字段</summary>
+    [IgnoreDataMember]
     public String? Model { get; set; }
 
     /// <summary>对话内容列表。role 为 user / model</summary>
@@ -31,10 +32,83 @@ public class GeminiRequest
     public GeminiGenerationConfig? GenerationConfig { get; set; }
 
     /// <summary>是否流式输出。Gemini 原生通过不同端点区分，此处作为扩展字段</summary>
+    [IgnoreDataMember]
     public Boolean Stream { get; set; }
+
+    /// <summary>工具定义列表。Gemini 格式：[{functionDeclarations:[...]}]</summary>
+    public IList<Object>? Tools { get; set; }
+
+    /// <summary>工具声明列表。仅用于 FromChatRequest 构建时临时存储，序列化时由 Tools 输出</summary>
+    [IgnoreDataMember]
+    internal IList<Object>? ToolDeclarations { get => Tools; set => Tools = value; }
     #endregion
 
     #region 转换
+    /// <summary>从内部统一 ChatRequest 构建 Gemini 协议请求</summary>
+    /// <param name="request">内部统一请求</param>
+    /// <returns>可直接 ToJson 序列化的 Gemini 协议请求</returns>
+    public static GeminiRequest FromChatRequest(ChatRequest request)
+    {
+        var result = new GeminiRequest
+        {
+            Model = request.Model,
+            Stream = request.Stream,
+        };
+
+        // 分离 system 消息和普通消息
+        var contents = new List<GeminiContent>();
+        foreach (var msg in request.Messages)
+        {
+            if (msg.Role.Equals("system", StringComparison.OrdinalIgnoreCase))
+            {
+                var text = msg.Content?.ToString();
+                if (!String.IsNullOrEmpty(text))
+                    result.SystemInstruction = new GeminiContent { Parts = [new GeminiPart { Text = text }] };
+                continue;
+            }
+
+            var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
+            var parts = new List<GeminiPart>();
+            if (msg.Content != null)
+                parts.Add(new GeminiPart { Text = msg.Content.ToString() ?? "" });
+
+            contents.Add(new GeminiContent { Role = role, Parts = parts });
+        }
+        result.Contents = contents;
+
+        // 生成配置
+        var hasConfig = request.Temperature != null || request.TopP != null || request.TopK != null
+            || request.MaxTokens != null || (request.Stop != null && request.Stop.Count > 0);
+        if (hasConfig)
+        {
+            result.GenerationConfig = new GeminiGenerationConfig
+            {
+                Temperature = request.Temperature,
+                TopP = request.TopP,
+                TopK = request.TopK,
+                MaxOutputTokens = request.MaxTokens,
+                StopSequences = request.Stop,
+            };
+        }
+
+        // 工具定义 → functionDeclarations
+        if (request.Tools != null && request.Tools.Count > 0)
+        {
+            var declarations = new List<Object>();
+            foreach (var tool in request.Tools)
+            {
+                if (tool.Function == null) continue;
+                var fn = new Dictionary<String, Object?> { ["name"] = tool.Function.Name };
+                if (tool.Function.Description != null) fn["description"] = tool.Function.Description;
+                if (tool.Function.Parameters != null) fn["parameters"] = tool.Function.Parameters;
+                declarations.Add(fn);
+            }
+            result.ToolDeclarations = [new Dictionary<String, Object> { ["functionDeclarations"] = declarations }];
+        }
+
+        return result;
+    }
+
     /// <summary>转换为内部统一的 ChatRequest</summary>
     /// <returns>等效的 ChatRequest 实例</returns>
     public ChatRequest ToChatRequest()

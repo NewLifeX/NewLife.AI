@@ -34,6 +34,47 @@ public class ChatCompletionResponse
     #endregion
 
     #region 转换
+    /// <summary>转换为内部统一 ChatResponse</summary>
+    /// <returns>等效的 ChatResponse 实例</returns>
+    public ChatResponse ToChatResponse()
+    {
+        var response = new ChatResponse
+        {
+            Id = Id,
+            Object = Object,
+            Created = Created > 0 ? DateTimeOffset.FromUnixTimeSeconds(Created) : DateTimeOffset.UtcNow,
+            Model = Model,
+        };
+
+        if (Choices != null)
+        {
+            var choices = new List<ChatChoice>();
+            foreach (var choice in Choices)
+            {
+                choices.Add(new ChatChoice
+                {
+                    Index = choice.Index,
+                    Message = choice.Message,
+                    Delta = choice.Delta,
+                    FinishReason = choice.FinishReason,
+                });
+            }
+            response.Messages = choices;
+        }
+
+        if (Usage != null)
+        {
+            response.Usage = new UsageDetails
+            {
+                InputTokens = Usage.PromptTokens,
+                OutputTokens = Usage.CompletionTokens,
+                TotalTokens = Usage.TotalTokens,
+            };
+        }
+
+        return response;
+    }
+
     /// <summary>从内部统一响应转换为 OpenAI 非流式响应</summary>
     /// <param name="response">内部统一响应</param>
     /// <returns>OpenAI 格式响应</returns>

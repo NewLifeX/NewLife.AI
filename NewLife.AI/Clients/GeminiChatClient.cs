@@ -23,14 +23,11 @@ namespace NewLife.AI.Clients;
 [AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true)]
 [AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("imagen-3.0-generate-001", "Imagen 3", ImageGeneration = true, FunctionCalling = false)]
-public class GeminiChatClient(AiClientOptions options) : AiClientBase(), IChatClient
+public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
 {
     #region 属性
     /// <inheritdoc/>
     public override String Name { get; set; } = "谷歌Gemini";
-
-    /// <summary>连接选项</summary>
-    protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     #endregion
 
     #region 构造
@@ -42,90 +39,12 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(), IChatCl
         : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 
-    #region IChatClient
-    /// <summary>非流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>完整的对话响应</returns>
-    public async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
-    {
-        request.Model ??= _options.Model;
-
-        var model = request.Model;
-        var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
-        try
-        {
-            var response = await ChatAsync(request, cancellationToken).ConfigureAwait(false);
-            if (response.Usage != null)
-            {
-                response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-                span?.Value = response.Usage.TotalTokens;
-            }
-            return response;
-        }
-        catch (Exception ex)
-        {
-            span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
-            throw;
-        }
-    }
-
-    /// <summary>流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>流式响应块的异步枚举</returns>
-    public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        request.Model ??= _options.Model;
-
-        var model = request.Model;
-        var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
-
-        UsageDetails? lastUsage = null;
-        await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
-        {
-            if (chunk.Usage != null)
-            {
-                lastUsage = chunk.Usage;
-                lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-            }
-            yield return chunk;
-        }
-
-        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
-    }
-
-    /// <summary>释放资源</summary>
-    public void Dispose() { }
-    #endregion
-
     #region 方法
-    /// <summary>非流式对话</summary>
-    private async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken)
-    {
-        request.Stream = false;
-        var body = BuildGeminiRequest(request);
-
-        var model = request.Model ?? "gemini-2.5-flash";
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/models/{model}:generateContent?key={_options.ApiKey}";
-
-        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        return ParseGeminiResponse(responseText, model);
-    }
-
     /// <summary>流式对话</summary>
-    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        request.Stream = true;
-        var body = BuildGeminiRequest(request);
-
-        var model = request.Model ?? "gemini-2.5-flash";
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/models/{model}:streamGenerateContent?alt=sse&key={_options.ApiKey}";
+        var url = BuildUrl(request);
+        var body = BuildRequest(request);
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -143,7 +62,7 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(), IChatCl
             var data = line.Substring(6).Trim();
             if (data.Length == 0) continue;
 
-            var chunk = ParseGeminiStreamChunk(data, model);
+            var chunk = ParseChunk(data, request, null);
             if (chunk != null)
                 yield return chunk;
         }
@@ -151,203 +70,89 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(), IChatCl
     #endregion
 
     #region 辅助
-    /// <summary>构建 Gemini 请求体</summary>
-    private static Object BuildGeminiRequest(ChatRequest request)
+    /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
+    protected override String BuildUrl(ChatRequest request)
     {
-        var dic = new Dictionary<String, Object>();
-
-        var contents = new List<Object>();
-        String? systemInstruction = null;
-
-        foreach (var msg in request.Messages)
-        {
-            if (msg.Role.Equals("system", StringComparison.OrdinalIgnoreCase))
-            {
-                systemInstruction = msg.Content?.ToString();
-                continue;
-            }
-
-            // Gemini 角色为 user/model，不使用 assistant
-            var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
-            var parts = new List<Object>();
-
-            if (msg.Content != null)
-                parts.Add(new Dictionary<String, Object> { ["text"] = msg.Content.ToString() ?? "" });
-
-            contents.Add(new Dictionary<String, Object> { ["role"] = role, ["parts"] = parts });
-        }
-        dic["contents"] = contents;
-
-        if (!String.IsNullOrEmpty(systemInstruction))
-        {
-            dic["systemInstruction"] = new Dictionary<String, Object>
-            {
-                ["parts"] = new List<Object> { new Dictionary<String, Object> { ["text"] = systemInstruction } }
-            };
-        }
-
-        var genConfig = new Dictionary<String, Object>();
-        if (request.Temperature != null) genConfig["temperature"] = request.Temperature.Value;
-        if (request.TopP != null) genConfig["topP"] = request.TopP.Value;
-        if (request.MaxTokens != null) genConfig["maxOutputTokens"] = request.MaxTokens.Value;
-        if (request.Stop != null && request.Stop.Count > 0) genConfig["stopSequences"] = request.Stop;
-        if (request.TopK != null) genConfig["topK"] = request.TopK.Value;
-        if (genConfig.Count > 0)
-            dic["generationConfig"] = genConfig;
-
-        if (request.Tools != null && request.Tools.Count > 0)
-        {
-            var functionDeclarations = new List<Object>();
-            foreach (var tool in request.Tools)
-            {
-                if (tool.Function == null) continue;
-                var fn = new Dictionary<String, Object?> { ["name"] = tool.Function.Name };
-                if (tool.Function.Description != null) fn["description"] = tool.Function.Description;
-                if (tool.Function.Parameters != null) fn["parameters"] = tool.Function.Parameters;
-                functionDeclarations.Add(fn);
-            }
-            dic["tools"] = new List<Object>
-            {
-                new Dictionary<String, Object> { ["functionDeclarations"] = functionDeclarations }
-            };
-        }
-
-        return dic;
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        if (request.Stream)
+            return $"{endpoint}/v1/models/{request.Model}:streamGenerateContent?alt=sse&key={_options.ApiKey}";
+        else
+            return $"{endpoint}/v1/models/{request.Model}:generateContent?key={_options.ApiKey}";
     }
 
-    /// <summary>解析 Gemini 非流式响应</summary>
-    private static ChatResponse ParseGeminiResponse(String json, String model)
+    /// <summary>构建 Gemini 请求体</summary>
+    protected override Object BuildRequest(ChatRequest request) => GeminiRequest.FromChatRequest(request);
+
+    /// <summary>解析 Gemini 响应</summary>
+    protected override ChatResponse ParseResponse(String data, ChatRequest request)
     {
-        var dic = JsonParser.Decode(json);
+        var dic = JsonParser.Decode(data);
         if (dic == null) throw new InvalidOperationException("无法解析 Gemini 响应");
 
-        var response = new ChatResponse
-        {
-            Model = model,
-            Object = "chat.completion",
-        };
+        var gr = BuildGeminiResponseFromDict(dic);
+        return gr.ToChatResponse(request.Model, request.Stream);
+    }
+
+    /// <summary>从字典构建 GeminiResponse 实例</summary>
+    private static GeminiResponse BuildGeminiResponseFromDict(IDictionary<String, Object?> dic)
+    {
+        var gr = new GeminiResponse();
 
         if (dic["candidates"] is IList<Object> candidates)
         {
+            gr.Candidates = [];
             foreach (var item in candidates)
             {
-                if (item is not IDictionary<String, Object> candidate) continue;
-                var (contentText, toolCalls) = ExtractGeminiContent(candidate);
-                var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate["finishReason"] as String);
-                var choice = response.Add(contentText, null, finishReason);
-                if (toolCalls?.Count > 0)
+                if (item is not IDictionary<String, Object> candidateDic) continue;
+                var candidate = new GeminiCandidate
                 {
-                    choice.Message ??= new ChatMessage { Role = "model" };
-                    choice.Message.ToolCalls = toolCalls;
-                }
-            }
-        }
+                    FinishReason = candidateDic["finishReason"] as String,
+                };
 
-        if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
-        {
-            response.Usage = new UsageDetails
-            {
-                InputTokens = usageDic["promptTokenCount"].ToInt(),
-                OutputTokens = usageDic["candidatesTokenCount"].ToInt(),
-                TotalTokens = usageDic["totalTokenCount"].ToInt(),
-            };
-        }
-
-        return response;
-    }
-
-    /// <summary>解析 Gemini 流式数据块</summary>
-    private static ChatResponse? ParseGeminiStreamChunk(String data, String model)
-    {
-        var dic = JsonParser.Decode(data);
-        if (dic == null) return null;
-
-        var response = new ChatResponse
-        {
-            Model = model,
-            Object = "chat.completion.chunk",
-        };
-
-        if (dic["candidates"] is IList<Object> candidates && candidates.Count > 0)
-        {
-            foreach (var item in candidates)
-            {
-                if (item is not IDictionary<String, Object> candidate) continue;
-                var (deltaText, toolCalls) = ExtractGeminiContent(candidate);
-                var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate["finishReason"] as String);
-                var choice = response.AddDelta(deltaText, null, finishReason);
-                if (toolCalls?.Count > 0)
+                if (candidateDic["content"] is IDictionary<String, Object> contentDic)
                 {
-                    choice.Delta ??= new ChatMessage { Role = "model" };
-                    choice.Delta.ToolCalls = toolCalls;
-                }
-            }
-        }
-
-        if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
-        {
-            response.Usage = new UsageDetails
-            {
-                InputTokens = usageDic["promptTokenCount"].ToInt(),
-                OutputTokens = usageDic["candidatesTokenCount"].ToInt(),
-                TotalTokens = usageDic["totalTokenCount"].ToInt(),
-            };
-        }
-
-        return response;
-    }
-
-    /// <summary>提取 Gemini candidate 中的文本内容和工具调用</summary>
-    /// <returns>文本内容（可能为空）和工具调用列表（无则为 null）</returns>
-    private static (String text, List<ToolCall>? toolCalls) ExtractGeminiContent(IDictionary<String, Object> candidate)
-    {
-        if (candidate["content"] is not IDictionary<String, Object> contentDic)
-            return ("", null);
-        if (contentDic["parts"] is not IList<Object> parts)
-            return ("", null);
-
-        var sb = new StringBuilder();
-        List<ToolCall>? toolCalls = null;
-
-        foreach (var part in parts)
-        {
-            if (part is not IDictionary<String, Object> partDic) continue;
-
-            if (partDic.TryGetValue("text", out var textVal) && textVal != null)
-            {
-                sb.Append(textVal);
-            }
-            else if (partDic["functionCall"] is IDictionary<String, Object> fnCallDic)
-            {
-                // Gemini functionCall part → ToolCall
-                toolCalls ??= [];
-                var argsRaw = fnCallDic["args"];
-                toolCalls.Add(new ToolCall
-                {
-                    Id = $"call_{toolCalls.Count}",
-                    Type = "function",
-                    Function = new FunctionCall
+                    candidate.Content = new GeminiResponseContent { Role = contentDic["role"] as String };
+                    if (contentDic["parts"] is IList<Object> parts)
                     {
-                        Name = fnCallDic["name"] as String ?? "",
-                        Arguments = argsRaw is IDictionary<String, Object> argsDic
-                            ? argsDic.ToJson()
-                            : argsRaw as String ?? "{}",
-                    },
-                });
+                        candidate.Content.Parts = [];
+                        foreach (var partObj in parts)
+                        {
+                            if (partObj is not IDictionary<String, Object> partDic) continue;
+                            var part = new GeminiResponsePart();
+
+                            if (partDic.TryGetValue("text", out var textVal) && textVal != null)
+                                part.Text = textVal.ToString();
+
+                            if (partDic["functionCall"] is IDictionary<String, Object> fnCallDic)
+                            {
+                                part.FunctionCall = new GeminiFunctionCall
+                                {
+                                    Name = fnCallDic["name"] as String,
+                                    Args = fnCallDic["args"],
+                                };
+                            }
+
+                            candidate.Content.Parts.Add(part);
+                        }
+                    }
+                }
+
+                gr.Candidates.Add(candidate);
             }
         }
 
-        return (sb.ToString(), toolCalls);
+        if (dic["usageMetadata"] is IDictionary<String, Object> usageDic)
+        {
+            gr.UsageMetadata = new GeminiUsageMetadata
+            {
+                PromptTokenCount = usageDic["promptTokenCount"].ToInt(),
+                CandidatesTokenCount = usageDic["candidatesTokenCount"].ToInt(),
+                TotalTokenCount = usageDic["totalTokenCount"].ToInt(),
+            };
+        }
+
+        return gr;
     }
 
-    /// <summary>映射 Gemini finishReason 到标准格式</summary>
-    private static String? MapGeminiFinishReason(String? finishReason) => finishReason switch
-    {
-        "STOP" => "stop",
-        "MAX_TOKENS" => "length",
-        "SAFETY" or "RECITATION" => "content_filter",
-        null => null,
-        _ => finishReason.ToLower(),
-    };
     #endregion
 }

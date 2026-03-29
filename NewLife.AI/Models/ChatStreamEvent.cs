@@ -95,7 +95,7 @@ public class ChatStreamEvent
     /// <returns></returns>
     public static ChatStreamEvent ErrorEvent(String code, String message)
     {
-        using var span = DefaultTracer.Instance?.NewSpan("chat:StreamError", $"[{code}]{message}");
+        using var span = DefaultTracer.Instance?.NewSpan("ai:StreamError", $"[{code}]{message}");
 
         return new() { Type = "error", Code = code, Message = message };
     }

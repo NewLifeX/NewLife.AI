@@ -22,7 +22,7 @@ namespace NewLife.AI.Clients;
 [AiClientModel("claude-opus-4-6", "Claude Opus 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-sonnet-4-6", "Claude Sonnet 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-haiku-4-5", "Claude Haiku 4.5", Thinking = true, Vision = true)]
-public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), IChatClient
+public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options)
 {
     #region 属性
     /// <inheritdoc/>
@@ -30,9 +30,6 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), ICha
 
     /// <summary>Anthropic API 版本</summary>
     protected virtual String ApiVersion => "2023-06-01";
-
-    /// <summary>连接选项</summary>
-    protected readonly AiClientOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     #endregion
 
     #region 构造
@@ -44,90 +41,12 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), ICha
         : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
     #endregion
 
-    #region IChatClient
-    /// <summary>非流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>完整的对话响应</returns>
-    public async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
-    {
-        request.Model ??= _options.Model;
-
-        var model = request.Model;
-        var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"chat:{model}", request.Messages?.FirstOrDefault()?.Content);
-        try
-        {
-            var response = await ChatAsync(request, cancellationToken).ConfigureAwait(false);
-            if (response.Usage != null)
-            {
-                response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-                span?.Value = response.Usage.TotalTokens;
-            }
-            return response;
-        }
-        catch (Exception ex)
-        {
-            span?.SetError(ex, null);
-            Log.Error("[{0}] GetResponseAsync error! {1}", Name, ex.Message);
-            throw;
-        }
-    }
-
-    /// <summary>流式对话完成</summary>
-    /// <param name="request">对话请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>流式响应块的异步枚举</returns>
-    public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        request.Model ??= _options.Model;
-
-        var model = request.Model;
-        var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"chat:streaming:{model}", model);
-
-        UsageDetails? lastUsage = null;
-        await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
-        {
-            if (chunk.Usage != null)
-            {
-                lastUsage = chunk.Usage;
-                lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-            }
-            yield return chunk;
-        }
-
-        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
-    }
-
-    /// <summary>释放资源</summary>
-    public void Dispose() { }
-    #endregion
-
     #region 方法
-    /// <summary>非流式对话</summary>
-    private async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken)
-    {
-        request.Stream = false;
-        var body = BuildAnthropicRequest(request);
-
-        var model = request.Model ?? "";
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/messages";
-
-        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        return ParseAnthropicResponse(responseText, model);
-    }
-
     /// <summary>流式对话</summary>
-    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        request.Stream = true;
-        var body = BuildAnthropicRequest(request);
-
-        var model = request.Model ?? "";
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1/messages";
+        var url = BuildUrl(request);
+        var body = BuildRequest(request);
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -152,7 +71,7 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), ICha
             var data = line.Substring(5).Trim();
             if (data.Length == 0) continue;
 
-            var chunk = ParseAnthropicStreamChunk(data, model, lastEvent);
+            var chunk = ParseChunk(data, request, lastEvent);
             if (chunk != null)
                 yield return chunk;
         }
@@ -160,190 +79,73 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), ICha
     #endregion
 
     #region 辅助
-    /// <summary>构建 Anthropic 请求体</summary>
-    /// <param name="request">请求</param>
-    private static Object BuildAnthropicRequest(ChatRequest request)
+    /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
+    protected override String BuildUrl(ChatRequest request)
     {
-        var dic = new Dictionary<String, Object?>();
-        dic["model"] = request.Model ?? "";
-
-        // system 作为顶级字段，不放入 messages 数组
-        String? systemContent = null;
-        var messages = new List<Object>();
-        foreach (var msg in request.Messages)
-        {
-            if (msg.Role.Equals("system", StringComparison.OrdinalIgnoreCase))
-            {
-                systemContent = msg.Content?.ToString();
-                continue;
-            }
-
-            var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "assistant" : "user";
-            var m = new Dictionary<String, Object?> { ["role"] = role };
-
-            // 工具结果消息
-            if (msg.ToolCallId != null)
-            {
-                m["role"] = "user";
-                m["content"] = new List<Object>
-                {
-                    new Dictionary<String, Object?>
-                    {
-                        ["type"] = "tool_result",
-                        ["tool_use_id"] = msg.ToolCallId,
-                        ["content"] = msg.Content?.ToString() ?? "",
-                    }
-                };
-            }
-            else if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
-            {
-                // assistant 带工具调用
-                var contentBlocks = new List<Object>();
-                if (msg.Content != null)
-                    contentBlocks.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = msg.Content.ToString()! });
-                foreach (var tc in msg.ToolCalls)
-                {
-                    Object input = tc.Function?.Arguments != null
-                        ? (JsonParser.Decode(tc.Function.Arguments) ?? new Dictionary<String, Object?>())
-                        : new Dictionary<String, Object?>();
-                    contentBlocks.Add(new Dictionary<String, Object?>
-                    {
-                        ["type"] = "tool_use",
-                        ["id"] = tc.Id,
-                        ["name"] = tc.Function?.Name ?? "",
-                        ["input"] = input,
-                    });
-                }
-                m["content"] = contentBlocks;
-            }
-            else
-            {
-                m["content"] = msg.Content;
-            }
-
-            messages.Add(m);
-        }
-
-        if (!String.IsNullOrEmpty(systemContent))
-            dic["system"] = systemContent;
-        dic["messages"] = messages;
-
-        // max_tokens 在 Anthropic 中是必填项，默认 4096
-        dic["max_tokens"] = request.MaxTokens ?? 4096;
-
-        if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
-        if (request.TopP != null) dic["top_p"] = request.TopP.Value;
-        if (request.Stop != null && request.Stop.Count > 0) dic["stop_sequences"] = request.Stop;
-        if (request.Stream) dic["stream"] = true;
-
-        if (request.Tools != null && request.Tools.Count > 0)
-        {
-            var tools = new List<Object>();
-            foreach (var tool in request.Tools)
-            {
-                if (tool.Function == null) continue;
-                var fn = new Dictionary<String, Object?>
-                {
-                    ["name"] = tool.Function.Name,
-                    ["description"] = tool.Function.Description,
-                    ["input_schema"] = tool.Function.Parameters ?? (Object)new Dictionary<String, Object> { ["type"] = "object" },
-                };
-                tools.Add(fn);
-            }
-            dic["tools"] = tools;
-        }
-
-        return dic;
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        return $"{endpoint}/v1/messages";
     }
 
+    /// <summary>构建 Anthropic 请求体</summary>
+    /// <param name="request">请求</param>
+    protected override Object BuildRequest(ChatRequest request) => AnthropicRequest.FromChatRequest(request);
+
     /// <summary>解析 Anthropic 非流式响应</summary>
-    private static ChatResponse ParseAnthropicResponse(String json, String model)
+    protected override ChatResponse ParseResponse(String json, ChatRequest request)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) throw new InvalidOperationException("无法解析 Anthropic 响应");
 
-        var response = new ChatResponse
+        var resp = new AnthropicResponse
         {
             Id = dic["id"] as String,
-            Object = "chat.completion",
-            Model = dic["model"] as String ?? model,
+            Type = dic["type"] as String,
+            Role = dic["role"] as String,
+            Model = dic["model"] as String,
+            StopReason = dic["stop_reason"] as String,
         };
 
-        String? contentText = null;
-        String? reasoningText = null;
-        String? finishReason = null;
-        List<ToolCall>? toolCalls = null;
-
+        // 解析内容块
         if (dic["content"] is IList<Object> contentList)
         {
-            var textParts = new List<String>();
-            var reasoningParts = new List<String>();
-
+            var blocks = new List<AnthropicContentBlock>();
             foreach (var block in contentList)
             {
                 if (block is not IDictionary<String, Object> blockDic) continue;
-                var blockType = blockDic["type"] as String;
-                if (blockType == "text")
-                    textParts.Add(blockDic["text"] as String ?? "");
-                else if (blockType == "thinking")
-                    reasoningParts.Add(blockDic["thinking"] as String ?? "");
-                else if (blockType == "tool_use")
+                blocks.Add(new AnthropicContentBlock
                 {
-                    // 解析工具调用块 → ToolCall 对象（Anthropic input 字段为 object，需序列化为 JSON string）
-                    toolCalls ??= [];
-                    var inputRaw = blockDic["input"];
-                    toolCalls.Add(new ToolCall
-                    {
-                        Id = blockDic["id"] as String ?? "",
-                        Type = "function",
-                        Function = new FunctionCall
-                        {
-                            Name = blockDic["name"] as String ?? "",
-                            Arguments = inputRaw is IDictionary<String, Object> inputDic
-                                ? inputDic.ToJson()
-                                : inputRaw as String ?? "{}",
-                        },
-                    });
-                }
+                    Type = blockDic["type"] as String,
+                    Text = blockDic["text"] as String ?? blockDic["thinking"] as String,
+                    Id = blockDic["id"] as String,
+                    Name = blockDic["name"] as String,
+                    Input = blockDic.TryGetValue("input", out var input) ? input : null,
+                });
             }
-
-            contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
-            reasoningText = reasoningParts.Count > 0 ? String.Join("", reasoningParts) : null;
+            resp.Content = blocks;
         }
 
-        var stopReason = dic["stop_reason"] as String;
-        finishReason = MapStopReason(stopReason);
-        var choice = response.Add(contentText, reasoningText, finishReason);
-
-        // 将工具调用挂载到 Message
-        if (toolCalls != null && toolCalls.Count > 0)
-        {
-            choice.Message ??= new ChatMessage { Role = "assistant" };
-            choice.Message.ToolCalls = toolCalls;
-        }
-
+        // 解析用量
         if (dic["usage"] is IDictionary<String, Object> usageDic)
         {
-            response.Usage = new UsageDetails
+            resp.Usage = new AnthropicUsage
             {
                 InputTokens = usageDic["input_tokens"].ToInt(),
                 OutputTokens = usageDic["output_tokens"].ToInt(),
-                TotalTokens = usageDic["input_tokens"].ToInt() + usageDic["output_tokens"].ToInt(),
             };
         }
 
-        return response;
+        return resp.ToChatResponse(request.Model);
     }
 
     /// <summary>解析 Anthropic 流式 chunk</summary>
-    private static ChatResponse? ParseAnthropicStreamChunk(String data, String model, String lastEvent)
+    protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
     {
         var dic = JsonParser.Decode(data);
         if (dic == null) return null;
 
         var response = new ChatResponse
         {
-            Model = model,
+            Model = request.Model,
             Object = "chat.completion.chunk",
         };
 
@@ -380,7 +182,7 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), ICha
                 if (dic["delta"] is IDictionary<String, Object> msgDeltaDic)
                 {
                     var stopReason = msgDeltaDic["stop_reason"] as String;
-                    var finishReason = MapStopReason(stopReason);
+                    var finishReason = AnthropicResponse.MapStopReason(stopReason);
                     response.AddDelta(null, null, finishReason);
                 }
                 if (dic["usage"] is IDictionary<String, Object> deltaUsageDic)
@@ -396,16 +198,6 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(), ICha
                 return null;
         }
     }
-
-    /// <summary>映射 Anthropic stop_reason 到标准格式</summary>
-    private static String? MapStopReason(String? stopReason) => stopReason switch
-    {
-        "end_turn" => "stop",
-        "max_tokens" => "length",
-        "tool_use" => "tool_calls",
-        null => null,
-        _ => stopReason,
-    };
 
     /// <summary>设置 Anthropic 认证请求头</summary>
     protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
