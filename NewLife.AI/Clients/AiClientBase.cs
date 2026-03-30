@@ -5,6 +5,7 @@ using NewLife.AI.Models;
 using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.Reflection;
+using NewLife.Remoting;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients;
@@ -229,7 +230,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
+            throw new ApiException((Int32)resp.StatusCode, json);
+        //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
 
@@ -265,7 +267,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
+            throw new ApiException((Int32)resp.StatusCode, json);
+        //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
 
@@ -308,7 +311,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             resp.Dispose();
-            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
+            throw new ApiException((Int32)resp.StatusCode, errBody);
+            //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return resp;
     }
@@ -332,7 +336,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         if (!resp.IsSuccessStatusCode)
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
+            throw new ApiException((Int32)resp.StatusCode, errBody);
+            //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
     }

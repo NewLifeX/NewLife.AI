@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Providers;
+using NewLife.Remoting;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients;
@@ -144,7 +145,8 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!resp.IsSuccessStatusCode)
-            throw new HttpRequestException($"[{Name}] 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
+            throw new ApiException((Int32)resp.StatusCode, json);
+        //throw new HttpRequestException($"[{Name}] 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
 
         return json.ToJsonEntity<ImageGenerationResponse>();
     }

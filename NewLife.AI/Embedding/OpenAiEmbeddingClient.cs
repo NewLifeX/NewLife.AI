@@ -3,6 +3,7 @@ using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Providers;
 using NewLife.Log;
+using NewLife.Remoting;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Embedding;
@@ -106,7 +107,8 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
         var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         if (!httpResponse.IsSuccessStatusCode)
-            throw new HttpRequestException($"Embedding API 返回错误 {(Int32)httpResponse.StatusCode}: {responseText}");
+            throw new ApiException((Int32)httpResponse.StatusCode, responseText);
+        //throw new HttpRequestException($"Embedding API 返回错误 {(Int32)httpResponse.StatusCode}: {responseText}");
 
         return ParseResponse(responseText);
     }
