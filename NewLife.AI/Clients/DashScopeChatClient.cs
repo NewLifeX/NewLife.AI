@@ -255,7 +255,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <list type="bullet">
     /// <item>含 -vl：Vision-Language 系列</item>
     /// <item>qvq- 前缀：视觉推理系列（区别于纯文本推理 qwq-）</item>
-    /// <item>qwen3.5- 前缀：内置多模态能力</item>
+    /// <item>qwen3.5- 前缀：内置多模态能力，仅支持 multimodal-generation 端点</item>
     /// </list>
     /// </remarks>
     private static Boolean IsMultimodalModel(String? model)
