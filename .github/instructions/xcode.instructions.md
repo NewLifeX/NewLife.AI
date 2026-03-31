@@ -381,6 +381,82 @@ var list = User.FindAllWithCache();
 var user = User.FindByKeyWithCache(1);
 ```
 
+### 5.6 Biz 文件数据层逻辑规范
+
+**核心理念**：所有需要人工编写的数据层逻辑代码，一律放在实体类的 Biz 文件（`*.Biz.cs`）中，包括**高级查询**（`#region 高级查询`）与**添删改查重载**等。外部调用方只传语义化参数，不感知 `WhereExpression` 拼接细节。
+
+#### 高级查询封装选择
+
+| 场景 | 方法形式 | 说明 | 示例 |
+|------|---------|------|------|
+| 返回单个对象，参数 ≤2 个 | `FindByXxx` | 未查到时返回 `null` | `FindByUserId(userId)` |
+| 返回列表，参数 ≤2 个，无模糊查询、无分页 | `FindAllByXxx` / `FindAllByXxxAndYyy` | 未查到时返回空列表，**不返回 null** | `FindAllByUserId(userId)` |
+| 参数较多，或含模糊查询，或含分页 | `Search(...)` | 未查到时返回空列表，**不返回 null** | `Search(userId, key, page)` |
+| 实体缓存内过滤（`Meta.Cache.FindAll(...)`） | `FindAllCachedXxx` / `FindCachedXxx` | — | `FindAllCachedEnabled()` / `FindCachedByQuestion(q)` |
+
+**命名约定说明**：
+- `FindByXxx`：返回**单个对象**（`TEntity?`），语义为"按条件查找一条记录"，未找到返回 `null`
+- `FindAllByXxx`：返回**对象列表**（`IList<TEntity>`），语义为"按条件查找所有匹配记录"，结果为空时返回空列表而非 `null`
+- `Search`：同样返回**对象列表**，结果为空时返回空列表而非 `null`
+
+#### Search 方法签名约定
+
+参数顺序（由左到右，按重要程度）：
+
+```
+Search(业务过滤字段..., DateTime start, DateTime end, String? key, PageParameter page)
+```
+
+- 时间区间 `(DateTime start, DateTime end)` 放在 key / page 左边
+- 模糊查询关键词 `String? key` 放在 page 左边（倒数第二）
+- 分页参数 `PageParameter page` 始终最后
+
+#### 表达式简写
+
+在 Biz 文件的静态方法内部，可**省略类名前缀**：
+
+```csharp
+// ✅ 推荐（Biz 文件内部）
+var exp = _.UserId == userId;
+if (!keyword.IsNullOrEmpty()) exp &= _.Title.Contains(keyword.Trim());
+return FindAll(exp, page);
+
+// ❌ 避免（外部业务代码中拼接表达式）
+var exp = Conversation._.UserId == userId;
+if (!keyword.IsNullOrEmpty()) exp &= Conversation._.Title.Contains(keyword.Trim());
+var list = Conversation.FindAll(exp, p);
+```
+
+#### 示例
+
+```csharp
+// Biz 文件内 #region 高级查询
+
+/// <summary>根据用户编号查找最新一条会话</summary>
+/// <param name="userId">用户编号</param>
+/// <returns>会话对象，不存在时返回 null</returns>
+public static Conversation? FindByUserId(Int32 userId) => Find(_.UserId == userId);
+
+/// <summary>根据用户编号查找所有会话</summary>
+/// <param name="userId">用户编号</param>
+/// <returns>会话列表，不存在时返回空列表</returns>
+public static IList<Conversation> FindAllByUserId(Int32 userId) => FindAll(_.UserId == userId);
+
+/// <summary>分页搜索用户会话列表</summary>
+/// <param name="userId">用户编号</param>
+/// <param name="keyword">标题关键字，为空时不过滤</param>
+/// <param name="page">分页参数</param>
+/// <returns>会话列表，不存在时返回空列表</returns>
+public static IList<Conversation> Search(Int32 userId, String? keyword, PageParameter page)
+{
+    var exp = new WhereExpression();
+    exp &= _.UserId == userId;
+    if (!keyword.IsNullOrEmpty()) exp &= _.Title.Contains(keyword.Trim());
+
+    return FindAll(exp, page);
+}
+```
+
 ---
 
 ## 6. 运行时机制
