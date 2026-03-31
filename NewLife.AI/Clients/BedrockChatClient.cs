@@ -108,236 +108,20 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Bedrock Converse API 请求体</summary>
-    protected override Object BuildRequest(ChatRequest request)
-    {
-        var dic = new Dictionary<String, Object>();
-
-        // 构建 messages 数组
-        var messages = new List<Object>();
-        var systemTexts = new List<Object>();
-
-        if (request.Messages != null)
-        {
-            foreach (var msg in request.Messages)
-            {
-                if (msg.Role == "system")
-                {
-                    // system 消息放到顶级 system 字段
-                    var content = msg.Content as String;
-                    if (!String.IsNullOrEmpty(content))
-                        systemTexts.Add(new Dictionary<String, Object> { ["text"] = content });
-                }
-                else if (msg.Role == "tool")
-                {
-                    // 工具结果映射
-                    var toolResultContent = new List<Object>
-                    {
-                        new Dictionary<String, Object> { ["text"] = msg.Content as String ?? "" }
-                    };
-                    var toolResult = new Dictionary<String, Object>
-                    {
-                        ["toolUseId"] = msg.ToolCallId ?? "",
-                        ["content"] = toolResultContent,
-                    };
-                    messages.Add(new Dictionary<String, Object>
-                    {
-                        ["role"] = "user",
-                        ["content"] = new List<Object>
-                        {
-                            new Dictionary<String, Object> { ["toolResult"] = toolResult }
-                        }
-                    });
-                }
-                else
-                {
-                    var contentBlocks = new List<Object>();
-
-                    // 处理工具调用（assistant 消息中的 tool_calls）
-                    if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
-                    {
-                        foreach (var tc in msg.ToolCalls)
-                        {
-                            if (tc.Function == null) continue;
-                            var toolUse = new Dictionary<String, Object>
-                            {
-                                ["toolUseId"] = tc.Id ?? "",
-                                ["name"] = tc.Function.Name ?? "",
-                            };
-
-                            // 将 arguments JSON 字符串解析为对象
-                            if (!String.IsNullOrEmpty(tc.Function.Arguments))
-                            {
-                                var args = JsonParser.Decode(tc.Function.Arguments);
-                                if (args != null)
-                                    toolUse["input"] = args;
-                                else
-                                    toolUse["input"] = new Dictionary<String, Object>();
-                            }
-                            else
-                            {
-                                toolUse["input"] = new Dictionary<String, Object>();
-                            }
-
-                            contentBlocks.Add(new Dictionary<String, Object> { ["toolUse"] = toolUse });
-                        }
-                    }
-
-                    // 文本内容
-                    var textContent = msg.Content as String;
-                    if (!String.IsNullOrEmpty(textContent))
-                        contentBlocks.Add(new Dictionary<String, Object> { ["text"] = textContent });
-
-                    if (contentBlocks.Count > 0)
-                    {
-                        messages.Add(new Dictionary<String, Object>
-                        {
-                            ["role"] = msg.Role == "assistant" ? "assistant" : "user",
-                            ["content"] = contentBlocks,
-                        });
-                    }
-                }
-            }
-        }
-
-        dic["messages"] = messages;
-
-        if (systemTexts.Count > 0)
-            dic["system"] = systemTexts;
-
-        // 推理配置
-        var inferenceConfig = new Dictionary<String, Object>();
-        if (request.MaxTokens > 0)
-            inferenceConfig["maxTokens"] = request.MaxTokens;
-        if (request.Temperature != null)
-            inferenceConfig["temperature"] = request.Temperature.Value;
-        if (request.TopP != null)
-            inferenceConfig["topP"] = request.TopP.Value;
-        if (request.Stop != null && request.Stop.Count > 0)
-            inferenceConfig["stopSequences"] = request.Stop;
-
-        if (inferenceConfig.Count > 0)
-            dic["inferenceConfig"] = inferenceConfig;
-
-        // 工具配置
-        if (request.Tools != null && request.Tools.Count > 0)
-        {
-            var toolList = new List<Object>();
-            foreach (var tool in request.Tools)
-            {
-                if (tool.Function == null) continue;
-                var toolSpec = new Dictionary<String, Object>
-                {
-                    ["name"] = tool.Function.Name ?? "",
-                    ["description"] = tool.Function.Description ?? "",
-                };
-                if (tool.Function.Parameters != null)
-                    toolSpec["inputSchema"] = new Dictionary<String, Object>
-                    {
-                        ["json"] = tool.Function.Parameters
-                    };
-
-                toolList.Add(new Dictionary<String, Object> { ["toolSpec"] = toolSpec });
-            }
-
-            if (toolList.Count > 0)
-                dic["toolConfig"] = new Dictionary<String, Object> { ["tools"] = toolList };
-        }
-
-        return dic;
-    }
+    protected override Object BuildRequest(ChatRequest request) => BedrockRequest.FromChatRequest(request);
 
     /// <summary>解析 Bedrock Converse API 非流式响应</summary>
     protected override ChatResponse ParseResponse(String json, ChatRequest request)
     {
-        var dic = JsonParser.Decode(json);
-        if (dic == null)
-            return new ChatResponse { Model = request.Model };
-
-        var response = new ChatResponse
-        {
-            Model = request.Model,
-            Object = "chat.completion",
-        };
-
-        // 解析 output.message
-        if (dic["output"] is IDictionary<String, Object> output &&
-            output["message"] is IDictionary<String, Object> message)
-        {
-            var role = message["role"] as String ?? "assistant";
-            var contentText = "";
-            String? reasoning = null;
-            List<ToolCall>? toolCalls = null;
-
-            if (message["content"] is IList<Object> contentBlocks)
-            {
-                foreach (var block in contentBlocks)
-                {
-                    if (block is not IDictionary<String, Object> blockDic) continue;
-
-                    if (blockDic.TryGetValue("text", out var textVal))
-                        contentText += textVal as String;
-
-                    if (blockDic.TryGetValue("reasoningContent", out var reasonVal) &&
-                        reasonVal is IDictionary<String, Object> reasonDic &&
-                        reasonDic.TryGetValue("reasoningText", out var reasonText))
-                        reasoning = reasonText as String;
-
-                    if (blockDic.TryGetValue("toolUse", out var toolVal) &&
-                        toolVal is IDictionary<String, Object> toolDic)
-                    {
-                        toolCalls ??= [];
-                        var tc = new ToolCall
-                        {
-                            Id = toolDic["toolUseId"] as String ?? "",
-                            Type = "function",
-                            Function = new FunctionCall
-                            {
-                                Name = toolDic["name"] as String ?? "",
-                                Arguments = toolDic.TryGetValue("input", out var inputVal)
-                                    ? JsonHost.Write(inputVal!) : "{}",
-                            }
-                        };
-                        toolCalls.Add(tc);
-                    }
-                }
-            }
-
-            var chatMsg = new ChatMessage
-            {
-                Role = role,
-                Content = contentText,
-                ReasoningContent = reasoning,
-                ToolCalls = toolCalls,
-            };
-
-            response.Messages =
-            [
-                new ChatChoice
-                {
-                    Message = chatMsg,
-                    FinishReason = MapStopReason(dic["stopReason"] as String),
-                }
-            ];
-        }
-
-        // 解析 usage
-        if (dic["usage"] is IDictionary<String, Object> usageDic)
-        {
-            response.Usage = new UsageDetails
-            {
-                InputTokens = usageDic["inputTokens"].ToInt(),
-                OutputTokens = usageDic["outputTokens"].ToInt(),
-            };
-        }
-
-        return response;
+        var bedrockResp = json.ToJsonEntity<BedrockResponse>();
+        return bedrockResp?.ToChatResponse(request.Model) ?? new ChatResponse { Model = request.Model };
     }
 
     /// <summary>解析流式 chunk</summary>
     protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
     {
-        var dic = JsonParser.Decode(data);
-        if (dic == null) return null;
+        var streamEvent = data.ToJsonEntity<BedrockStreamEvent>();
+        if (streamEvent == null) return null;
 
         var response = new ChatResponse
         {
@@ -345,87 +129,39 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
             Object = "chat.completion.chunk",
         };
 
-        // Bedrock ConverseStream 事件类型
-        if (dic.TryGetValue("contentBlockDelta", out var deltaObj) &&
-            deltaObj is IDictionary<String, Object> deltaDic &&
-            deltaDic.TryGetValue("delta", out var deltaContent) &&
-            deltaContent is IDictionary<String, Object> deltaContentDic)
+        if (streamEvent.MessageStart?.Message != null)
         {
-            if (deltaContentDic.TryGetValue("text", out var textVal))
-            {
-                response.AddDelta(textVal as String, null, null);
-                return response;
-            }
-            if (deltaContentDic.TryGetValue("reasoningContent", out var reasonVal) &&
-                reasonVal is IDictionary<String, Object> reasonDic &&
-                reasonDic.TryGetValue("text", out var reasonText))
-            {
-                response.AddDelta(null, reasonText as String, null);
-                return response;
-            }
-            if (deltaContentDic.TryGetValue("toolUse", out var toolVal) &&
-                toolVal is IDictionary<String, Object> toolDic)
-            {
-                var tc = new ToolCall
-                {
-                    Id = toolDic["toolUseId"] as String ?? "",
-                    Type = "function",
-                    Function = new FunctionCall
-                    {
-                        Name = toolDic["name"] as String ?? "",
-                        Arguments = toolDic.TryGetValue("input", out var inputVal)
-                            ? inputVal as String ?? "" : "",
-                    }
-                };
-                response.AddDelta(null, null, null);
-                if (response.Messages?.Count > 0)
-                    response.Messages[0].Message ??= new ChatMessage { Role = "assistant", ToolCalls = [tc] };
-                return response;
-            }
-        }
-
-        // contentBlockStart — 工具调用开始
-        if (dic.TryGetValue("contentBlockStart", out var startObj) &&
-            startObj is IDictionary<String, Object> startDic &&
-            startDic.TryGetValue("start", out var startContent) &&
-            startContent is IDictionary<String, Object> startContentDic &&
-            startContentDic.TryGetValue("toolUse", out var toolStartVal) &&
-            toolStartVal is IDictionary<String, Object> toolStartDic)
-        {
-            var tc = new ToolCall
-            {
-                Id = toolStartDic["toolUseId"] as String ?? "",
-                Type = "function",
-                Function = new FunctionCall
-                {
-                    Name = toolStartDic["name"] as String ?? "",
-                }
-            };
             response.AddDelta(null, null, null);
-            if (response.Messages?.Count > 0)
-                response.Messages[0].Message ??= new ChatMessage { Role = "assistant", ToolCalls = [tc] };
             return response;
         }
 
-        // messageStop — 包含 stopReason
-        if (dic.TryGetValue("messageStop", out var stopObj) &&
-            stopObj is IDictionary<String, Object> stopDic)
+        if (streamEvent.ContentBlockDelta?.Delta != null)
         {
-            var stopReason = stopDic["stopReason"] as String;
-            response.AddDelta(null, null, MapStopReason(stopReason));
+            var delta = streamEvent.ContentBlockDelta.Delta;
+            if (!String.IsNullOrEmpty(delta.Text))
+            {
+                response.AddDelta(delta.Text, null, null);
+                return response;
+            }
+            if (delta.ReasoningContent != null && !String.IsNullOrEmpty(delta.ReasoningContent.ReasoningText))
+            {
+                response.AddDelta(null, delta.ReasoningContent.ReasoningText, null);
+                return response;
+            }
+        }
+
+        if (streamEvent.MessageStop?.StopReason != null)
+        {
+            response.AddDelta(null, null, MapStopReason(streamEvent.MessageStop.StopReason));
             return response;
         }
 
-        // metadata — 包含 usage
-        if (dic.TryGetValue("metadata", out var metaObj) &&
-            metaObj is IDictionary<String, Object> metaDic &&
-            metaDic.TryGetValue("usage", out var usageObj) &&
-            usageObj is IDictionary<String, Object> usageDic)
+        if (streamEvent.Metadata?.Usage != null)
         {
             response.Usage = new UsageDetails
             {
-                InputTokens = usageDic["inputTokens"].ToInt(),
-                OutputTokens = usageDic["outputTokens"].ToInt(),
+                InputTokens = streamEvent.Metadata.Usage.InputTokens,
+                OutputTokens = streamEvent.Metadata.Usage.OutputTokens,
             };
             response.AddDelta(null, null, null);
             return response;

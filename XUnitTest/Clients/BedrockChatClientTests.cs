@@ -158,21 +158,17 @@ public class BedrockChatClientTests
 
         var method = typeof(BedrockChatClient).GetMethod("BuildRequest",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var body = method!.Invoke(client, [request]) as IDictionary<String, Object>;
+        var body = method!.Invoke(client, [request]) as BedrockRequest;
 
         Assert.NotNull(body);
-        Assert.True(body.ContainsKey("system"));
-        Assert.True(body.ContainsKey("messages"));
+        Assert.NotNull(body.System);
+        Assert.NotNull(body.Messages);
 
         // system 应为顶级列表
-        var system = body["system"] as IList<Object>;
-        Assert.NotNull(system);
-        Assert.Single(system);
+        Assert.Single(body.System);
 
         // messages 不应包含 system 角色
-        var messages = body["messages"] as IList<Object>;
-        Assert.NotNull(messages);
-        Assert.Single(messages); // 仅 user 消息
+        Assert.Single(body.Messages); // 仅 user 消息
     }
 
     [Fact]
@@ -191,16 +187,13 @@ public class BedrockChatClientTests
 
         var method = typeof(BedrockChatClient).GetMethod("BuildRequest",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var body = method!.Invoke(client, [request]) as IDictionary<String, Object>;
+        var body = method!.Invoke(client, [request]) as BedrockRequest;
 
         Assert.NotNull(body);
-        Assert.True(body.ContainsKey("inferenceConfig"));
-
-        var config = body["inferenceConfig"] as IDictionary<String, Object>;
-        Assert.NotNull(config);
-        Assert.Equal(1024, config["maxTokens"]);
-        Assert.Equal(0.7, config["temperature"]);
-        Assert.Equal(0.9, config["topP"]);
+        Assert.NotNull(body.InferenceConfig);
+        Assert.Equal(1024, body.InferenceConfig.MaxTokens);
+        Assert.Equal(0.7, body.InferenceConfig.Temperature);
+        Assert.Equal(0.9, body.InferenceConfig.TopP);
     }
 
     #endregion
@@ -217,7 +210,7 @@ public class BedrockChatClientTests
     [InlineData(null, null)]
     public void MapStopReason_BedrockReasons_MappedCorrectly(String? input, String? expected)
     {
-        var result = BedrockChatClient.MapStopReason(input);
+        var result = BedrockResponse.MapStopReason(input);
         Assert.Equal(expected, result);
     }
 
