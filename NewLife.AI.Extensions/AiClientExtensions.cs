@@ -104,6 +104,25 @@ public static class AiClientExtensions
     public static IServiceCollection AddNewLifeAI(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
         => services.AddSingleton<IChatClient>(_ => new NewLifeAIChatClient(apiKey, model, endpoint));
 
+    /// <summary>注册 Azure OpenAI <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">Azure API Key</param>
+    /// <param name="model">deployment 名称（对应 Azure 中的模型部署）</param>
+    /// <param name="endpoint">Azure OpenAI 完整地址，如 https://myresource.openai.azure.com</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddAzureAI(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new AzureAIChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 AWS Bedrock <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="accessKeyId">AWS Access Key ID</param>
+    /// <param name="secretAccessKey">AWS Secret Access Key</param>
+    /// <param name="model">默认模型 ID，如 anthropic.claude-sonnet-4-20250514-v1:0</param>
+    /// <param name="region">AWS 区域，默认 us-east-1</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddBedrock(this IServiceCollection services, String accessKeyId, String secretAccessKey, String? model = null, String? region = null)
+        => services.AddSingleton<IChatClient>(_ => new BedrockChatClient(accessKeyId, secretAccessKey, model, region));
+
     #endregion
 
 #if NET8_0_OR_GREATER
@@ -191,6 +210,27 @@ public static class AiClientExtensions
     /// <returns>服务集合（支持链式调用）</returns>
     public static IServiceCollection AddKeyedNewLifeAI(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
         => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new NewLifeAIChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed Azure OpenAI <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">Azure API Key</param>
+    /// <param name="model">deployment 名称</param>
+    /// <param name="endpoint">Azure OpenAI 完整地址</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedAzureAI(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new AzureAIChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed AWS Bedrock <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="accessKeyId">AWS Access Key ID</param>
+    /// <param name="secretAccessKey">AWS Secret Access Key</param>
+    /// <param name="model">默认模型 ID</param>
+    /// <param name="region">AWS 区域</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedBedrock(this IServiceCollection services, String serviceKey, String accessKeyId, String secretAccessKey, String? model = null, String? region = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new BedrockChatClient(accessKeyId, secretAccessKey, model, region));
 
     #endregion
 #endif

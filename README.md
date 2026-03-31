@@ -5,14 +5,14 @@
 [![.NET](https://img.shields.io/badge/.NET-Standard2.1%2Bnet8%2Bnet10-purple?style=flat-square)](https://dotnet.microsoft.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-**NewLife.AI** 是统一 AI 网关基础库，支持 33 个主流 AI 服务商的接入与编排。
+**NewLife.AI** 是统一 AI 网关基础库，支持 48 个主流 AI 服务商的接入与编排。
 **NewLife.ChatAI** 是基于 NewLife.AI 构建的完整 AI 对话应用，提供对话 Web 前端、API 网关路由、使用量统计等全套业务能力。
 
 ---
 
 ## 核心特性
 
-- **33 个服务商支持**：OpenAI、Anthropic（Claude）、Google Gemini、阿里百炼（通义千问）、DeepSeek、Kimi、豆包、智谱、百度、讯飞、腾讯混元、Ollama（本地）等
+- **48 个服务商支持**：OpenAI、Azure OpenAI、AWS Bedrock、Anthropic（Claude）、Google Gemini、阿里百炼（通义千问）、DeepSeek、Kimi、豆包、智谱、百度、讯飞、腾讯混元、Ollama（本地）等
 - **统一接口 `IChatClient`**：屏蔽协议差异，流式与非流式双模式，对标 Microsoft MEAI 规范
 - **`AiClientRegistry` 自动注册**：通过 `[AiClient]` 特性标注，反射扫描自动发现所有服务商
 - **`ChatClientBuilder` 中间件管道**：`UseFilters()` + `UseTools()` 链式组装，灵活扩展
@@ -23,6 +23,97 @@
 - **Planner 规划器**：`FunctionCallingPlanner` 将目标拆解为工具调用步骤并执行
 - **MultiAgent 框架**：`GroupChat` 多 Agent 轮询、`ParallelGroupChat` 并行协作、`AgentAsTool` 嵌套
 - **语义记忆抽象**：`ISemanticMemory` + `IVectorStore` 接口，内存版实现开箱即用
+
+---
+
+## 支持的协议与服务商
+
+### 通信协议（6 种）
+
+| 协议 | 客户端类 | 适用服务商 | 认证方式 |
+|------|---------|---------|---------|
+| **OpenAI** | `OpenAiChatClient` | ~44 个 OpenAI 兼容服务商 | `Authorization: Bearer` |
+| **Azure OpenAI** | `AzureAIChatClient` | Azure OpenAI（部署名称 URL） | `api-key` 请求头 |
+| **Anthropic** | `AnthropicChatClient` | Anthropic Claude 系列 | `x-api-key` 请求头 |
+| **Google Gemini** | `GeminiChatClient` | Google Gemini 系列 | `?key=` 查询参数 |
+| **AWS Bedrock** | `BedrockChatClient` | AWS Bedrock Converse API | AWS SigV4 签名 |
+| **DashScope** | `DashScopeChatClient` | 阿里百炼（兼容 OpenAI 路由） | `Authorization: Bearer` |
+| **Ollama** | `OllamaChatClient` | 本地 Ollama 服务 | 无需认证 |
+
+---
+
+### 国内服务商（18 个）
+
+| 编码 | 服务商 | 代表模型 | 特色 |
+|------|-------|---------|------|
+| `DeepSeek` | 深度求索 ★ | DeepSeek-V3 / R1 | 推理能力强，开源友好 |
+| `DashScope` | 阿里百炼 / 通义千问 | Qwen-Max / Qwen-Plus | 阿里云生态，模型最全 |
+| `VolcEngine` | 字节火山方舟（企业版） | 豆包 1.5 Pro | 字节跳动企业端入口 |
+| `Doubao` | 抖音豆包（消费端） | — | 字节跳动消费端入口 |
+| `Zhipu` | 智谱 AI | GLM-4 / CogView-3 | 代码 + 图像生成 |
+| `Moonshot` | 月之暗面 Kimi | Kimi-K1.5 / 128K | 超长上下文，网页阅读 |
+| `Hunyuan` | 腾讯混元 | 混元 T1 | 腾讯云生态 |
+| `Qianfan` | 百度文心千帆 | ERNIE 4.5 Turbo | 百度搜索生态 |
+| `Spark` | 讯飞星火 | 星火 4.0 Ultra | 语音 + 教育场景 |
+| `Stepfun` | 阶跃星辰 | Step-2 | 强推理，多模态 |
+| `Baichuan` | 百川智能 | 百川4 Turbo | 医疗 / 法律专项 |
+| `SenseNova` | 商汤日日新 | SenseNova 系列 | 商汤视觉 AI 融合 |
+| `MiniMax` | MiniMax | MiniMax-Text-01 | 超长上下文 |
+| `SiliconFlow` | 硅基流动 | Qwen / DeepSeek 托管 | 国内开源模型推理平台 |
+| `Yi` | 零一万物 | Yi-Large | 李开复旗下 |
+| `MiMo` | 小米 MiMo | MiMo 系列 | 小米推理模型 |
+| `Infini` | 无问芯穹 | 开源模型托管 | 国产 AI 算力平台 |
+| `XiaomaPower` | 小马算力 | 开源模型托管 | GPU 算力平台 |
+
+---
+
+### 国际主流服务商（7 个）
+
+| 编码 | 服务商 | 代表模型 | 特色 |
+|------|-------|---------|------|
+| `OpenAI` | OpenAI ★ | GPT-4o / o3 / o4-mini | 行业标准，函数调用最成熟 |
+| `AzureAI` | Azure OpenAI | GPT-4o 部署 | 企业合规，私有部署 |
+| `Anthropic` | Anthropic Claude ★ | Claude 3.7 Sonnet | 长文本推理，安全对齐 |
+| `Gemini` | Google Gemini | Gemini 2.0 Flash | 多模态，代码执行 |
+| `Bedrock` | AWS Bedrock | Claude / Llama / Nova | 云原生，SigV4 认证 |
+| `XAI` | xAI Grok | Grok-3 / Grok-3 Mini | 马斯克旗下，实时信息 |
+| `Mistral` | Mistral AI | Mistral Large | 欧盟合规，高效模型 |
+
+---
+
+### 国际聚合 / 新兴平台（16 个）
+
+| 编码 | 服务商 | 特色 |
+|------|-------|------|
+| `OpenRouter` ★ | OpenRouter | 统一路由 300+ 模型，价格对比 |
+| `GitHubModels` | GitHub Models | GitHub 内置模型市场 |
+| `HuggingFace` | Hugging Face | 数千种开源模型推理路由 |
+| `NvidiaNIM` | Nvidia NIM | GPU 专用推理微服务，Llama / Nemotron |
+| `Groq` | Groq | 极速推理（LPU 芯片），Llama/Gemma |
+| `Cerebras` | Cerebras | 晶圆级芯片，超高吞吐 |
+| `Perplexity` | Perplexity | 搜索增强推理 |
+| `Cohere` | Cohere | 企业 RAG 优化，Command 系列 |
+| `TogetherAI` | Together AI | 开源模型聚合平台 |
+| `Fireworks` | Fireworks AI | 生产级开源模型托管 |
+| `SambaNova` | SambaNova | RDU 架构，Llama 系列超速推理 |
+| `DeepInfra` | DeepInfra | 经济型开源模型推理 |
+| `Hyperbolic` | Hyperbolic | 去中心化 GPU 推理 |
+| `NovitaAI` | Novita AI | 图像 + 文本多模型平台 |
+| `AI21` | AI21 Labs | Jamba（SSM+Transformer 混合架构）|
+| `CloudflareAI` | Cloudflare AI | Workers AI，边缘推理 |
+
+---
+
+### 本地 / 私有部署（4 个）
+
+| 编码 | 工具 | 特色 |
+|------|-----|------|
+| `Ollama` ★ | Ollama | 一键本地运行 Llama/Qwen/Gemma |
+| `LMStudio` | LM Studio | 桌面端 GUI 管理本地模型 |
+| `vLLM` | vLLM | 高吞吐量生产级推理引擎 |
+| `OneAPI` | OneAPI | 开源 LLM API 管理与分发 |
+
+> ★ 为各类别内最常用服务商。完整服务商列表见 [BuiltinChatClient.cs](NewLife.AI/Clients/BuiltinChatClient.cs)。
 
 ---
 
@@ -68,6 +159,8 @@ var reply2 = await client.ChatAsync([
 | `new DashScopeChatClient(apiKey, model?, endpoint?)` | 阿里百炼 |
 | `new AnthropicChatClient(apiKey, model?, endpoint?)` | Claude |
 | `new GeminiChatClient(apiKey, model?, endpoint?)` | Google Gemini |
+| `new AzureAIChatClient(apiKey, model?, endpoint?)` | Azure OpenAI（部署名称作为 model） |
+| `new BedrockChatClient(accessKeyId, secretAccessKey, model?, region?)` | AWS Bedrock（SigV4 签名认证） |
 | `new OllamaChatClient(apiKey?, model?, endpoint?)` | Ollama（本地部署 apiKey 可为 null）|
 | `new NewLifeAiChatClient(apiKey, model?, endpoint?)` | 级联 NewLife.AI 实例 |
 
@@ -106,7 +199,7 @@ services.AddKeyedOpenAI  ("strong", "sk-xxx", "gpt-4o");
 // 注入：[FromKeyedServices("fast")] IChatClient fastClient
 ```
 
-全部专属 DI 方法：`AddOpenAI` / `AddDashScope` / `AddAnthropic` / `AddGemini` / `AddOllama` / `AddNewLifeAI`，均有对应 `AddKeyed*` 变体（.NET 8+）。
+全部专属 DI 方法：`AddOpenAI` / `AddDashScope` / `AddAnthropic` / `AddGemini` / `AddAzureAI` / `AddBedrock` / `AddOllama` / `AddNewLifeAI`，均有对应 `AddKeyed*` 变体（.NET 8+）。
 
 #### 多模态流式输出（视觉理解）
 
