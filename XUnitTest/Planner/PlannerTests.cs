@@ -22,7 +22,7 @@ public class PlannerTests
 
         public ToolCallingFakeClient(IList<ToolCall> toolCalls) => _toolCalls = toolCalls;
 
-        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
         {
             var resp = new ChatResponse
             {
@@ -39,10 +39,10 @@ public class PlannerTests
                     }
                 ]
             };
-            return Task.FromResult(resp);
+            return Task.FromResult<IChatResponse>(resp);
         }
 
-        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public void Dispose() { }

@@ -4,6 +4,7 @@ using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
+using IChatResponse = NewLife.AI.Models.IChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 
 namespace NewLife.ChatAI.Services;
@@ -58,7 +59,7 @@ public interface IChatPipeline
     /// <param name="context">管道执行上下文（UserId / ConversationId / SkillId）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    Task<ChatResponse> CompleteAsync(
+    Task<IChatResponse> CompleteAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
         ChatPipelineContext context,

@@ -47,7 +47,7 @@ public class GeminiRequest
     /// <summary>从内部统一 ChatRequest 构建 Gemini 协议请求</summary>
     /// <param name="request">内部统一请求</param>
     /// <returns>可直接 ToJson 序列化的 Gemini 协议请求</returns>
-    public static GeminiRequest FromChatRequest(ChatRequest request)
+    public static GeminiRequest FromChatRequest(IChatRequest request)
     {
         var result = new GeminiRequest
         {

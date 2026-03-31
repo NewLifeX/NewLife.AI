@@ -44,7 +44,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(request);
         var body = BuildRequest(request);
@@ -66,7 +66,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
             if (data == "[DONE]") break;
             if (data.Length == 0) continue;
 
-            ChatResponse? chunk = null;
+            IChatResponse? chunk = null;
             try { chunk = ParseChunk(data, request, null); } catch { }
             if (chunk != null)
                 yield return chunk;
@@ -203,18 +203,18 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
 
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
-    protected override String BuildUrl(ChatRequest request) => _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + ChatPath;
+    protected override String BuildUrl(IChatRequest request) => _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + ChatPath;
 
     /// <summary>构建请求体。返回符合 OpenAI 格式的协议请求对象</summary>
     /// <param name="request">请求对象</param>
     /// <returns>ChatCompletionRequest 实例，由 PostAsync 调用 ToJson 序列化</returns>
-    protected override Object BuildRequest(ChatRequest request) => ChatCompletionRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request) => ChatCompletionRequest.FromChatRequest(request);
 
     /// <summary>解析响应 JSON</summary>
     /// <param name="json">JSON 字符串</param>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    protected override ChatResponse ParseResponse(String json, ChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
+    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
 
     /// <summary>解析消息对象</summary>
     /// <param name="dic">字典</param>
@@ -271,7 +271,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <param name="request">HTTP 请求</param>
     /// <param name="chatRequest">对话请求，可为 null</param>
     /// <param name="options">连接选项</param>
-    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);

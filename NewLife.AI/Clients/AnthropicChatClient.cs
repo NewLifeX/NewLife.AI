@@ -43,7 +43,7 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
 
     #region 方法
     /// <summary>流式对话</summary>
-    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var url = BuildUrl(request);
         var body = BuildRequest(request);
@@ -80,7 +80,7 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
 
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
-    protected override String BuildUrl(ChatRequest request)
+    protected override String BuildUrl(IChatRequest request)
     {
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         return $"{endpoint}/v1/messages";
@@ -88,17 +88,17 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
 
     /// <summary>构建 Anthropic 请求体</summary>
     /// <param name="request">请求</param>
-    protected override Object BuildRequest(ChatRequest request) => AnthropicRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request) => AnthropicRequest.FromChatRequest(request);
 
     /// <summary>解析 Anthropic 非流式响应</summary>
-    protected override ChatResponse ParseResponse(String json, ChatRequest request) => json.ToJsonEntity<AnthropicResponse>()!.ToChatResponse(request.Model);
+    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<AnthropicResponse>()!.ToChatResponse(request.Model);
 
     /// <summary>解析 Anthropic 流式 chunk</summary>
-    protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
+    protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
         => data.ToJsonEntity<AnthropicStreamEvent>()?.ToChunkResponse(request.Model);
 
     /// <summary>设置 Anthropic 认证请求头</summary>
-    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Add("x-api-key", options.ApiKey);

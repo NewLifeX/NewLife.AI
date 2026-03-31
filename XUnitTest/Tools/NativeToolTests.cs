@@ -58,7 +58,7 @@ public class NativeToolTests
             _finalReply = finalReply;
         }
 
-        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken ct = default)
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
         {
             _callCount++;
             ChatResponse resp;
@@ -113,10 +113,10 @@ public class NativeToolTests
                 };
             }
 
-            return Task.FromResult(resp);
+            return Task.FromResult<IChatResponse>(resp);
         }
 
-        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken ct = default)
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public void Dispose() { }
@@ -289,7 +289,7 @@ public class NativeToolTests
     [DisplayName("MergeToolOptions 完整保留所有 ChatOptions 扩展属性")]
     public async Task MergeToolOptions_PreservesAllOptions()
     {
-        ChatOptions captured = null;
+        IChatRequest captured = null;
         var capturingClient = new CapturingChatClient(opts => captured = opts, "done");
 
         var registry = new ToolRegistry();
@@ -326,25 +326,25 @@ public class NativeToolTests
     // 测试专用：捕获调用选项的假客户端，不触发工具循环
     private sealed class CapturingChatClient : IChatClient
     {
-        private readonly Action<ChatOptions?> _capture;
+        private readonly Action<IChatRequest?> _capture;
         private readonly String _finalReply;
 
-        public CapturingChatClient(Action<ChatOptions?> capture, String finalReply)
+        public CapturingChatClient(Action<IChatRequest?> capture, String finalReply)
         {
             _capture = capture;
             _finalReply = finalReply;
         }
 
-        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken ct = default)
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
         {
             _capture(request);
-            return Task.FromResult(new ChatResponse
+            return Task.FromResult<IChatResponse>(new ChatResponse
             {
                 Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = _finalReply } }]
             });
         }
 
-        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken ct = default)
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public void Dispose() { }

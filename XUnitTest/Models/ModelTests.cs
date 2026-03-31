@@ -565,15 +565,15 @@ public class ModelTests
         public String ReplyText { get; }
         public FakeClient(String reply = "ok") => ReplyText = reply;
 
-        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
         {
             var resp = new ChatResponse();
             resp.Add(ReplyText);
-            return Task.FromResult(resp);
+            return Task.FromResult<IChatResponse>(resp);
         }
 
-        public async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(
-            ChatRequest request,
+        public async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(
+            IChatRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             yield return await GetResponseAsync(request, cancellationToken).ConfigureAwait(false);

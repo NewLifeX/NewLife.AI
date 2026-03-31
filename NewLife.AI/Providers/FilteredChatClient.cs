@@ -50,7 +50,7 @@ public class FilteredChatClient : DelegatingChatClient
     /// <summary>非流式对话完成。依次执行过滤器链后调用内层客户端</summary>
     /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public override async Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
             return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
@@ -71,7 +71,7 @@ public class FilteredChatClient : DelegatingChatClient
     /// <summary>流式对话完成。执行过滤器链的 before 阶段后委托给内层客户端，流结束后触发 OnStreamCompletedAsync</summary>
     /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public override IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (Filters.Count == 0)
             return InnerClient.GetStreamingResponseAsync(request, cancellationToken);
@@ -97,8 +97,8 @@ public class FilteredChatClient : DelegatingChatClient
         await filter.OnChatAsync(context, (ctx, ct) => ExecuteFilterChainAsync(ctx, index + 1, ct), cancellationToken).ConfigureAwait(false);
     }
 
-    private async IAsyncEnumerable<ChatResponse> RunStreamingWithFiltersAsync(
-        ChatRequest request,
+    private async IAsyncEnumerable<IChatResponse> RunStreamingWithFiltersAsync(
+        IChatRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var context = new ChatFilterContext
@@ -129,13 +129,14 @@ public class FilteredChatClient : DelegatingChatClient
         }
 
         // 流结束后：组装包含完整回复内容的摘要响应，并以"火焰即忘"方式触发 OnStreamCompletedAsync
-        context.Response = new ChatResponse
+        var resp = new ChatResponse
         {
             Model = model,
             Usage = lastUsage,
             //Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = contentBuilder.ToString() } }],
         };
-        context.Response.Add(contentBuilder.ToString());
+        resp.Add(contentBuilder.ToString());
+        context.Response = resp;
 
         var capturedContext = context;
         var capturedFilters = Filters.ToArray();

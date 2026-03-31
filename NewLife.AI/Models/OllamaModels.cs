@@ -352,7 +352,7 @@ public class OllamaChatRequest
     /// <summary>从通用 ChatRequest 构建 Ollama 原生请求</summary>
     /// <param name="request">通用对话请求</param>
     /// <returns>Ollama 原生请求对象</returns>
-    public static OllamaChatRequest FromChatRequest(ChatRequest request)
+    public static OllamaChatRequest FromChatRequest(IChatRequest request)
     {
         var result = new OllamaChatRequest
         {

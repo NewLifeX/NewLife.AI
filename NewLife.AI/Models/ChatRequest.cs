@@ -8,7 +8,7 @@
 /// <item><see cref="ChatRequest"/>：内部统一传输模型，继承 ChatOptions 所有参数，增加 Messages 和 Stream，贯穿过滤器链到协议层</item>
 /// </list>
 /// </remarks>
-public class ChatRequest : ChatOptions
+public class ChatRequest : ChatOptions, IChatRequest
 {
     #region 属性
     /// <summary>消息列表</summary>

@@ -82,7 +82,7 @@ public class ChatCompletionRequest : IExtend
     /// <summary>从内部统一 ChatRequest 构建 OpenAI 协议请求</summary>
     /// <param name="request">内部统一请求</param>
     /// <returns>可直接 ToJson 序列化的 OpenAI 协议请求</returns>
-    public static ChatCompletionRequest FromChatRequest(ChatRequest request)
+    public static ChatCompletionRequest FromChatRequest(IChatRequest request)
     {
         var result = new ChatCompletionRequest
         {
@@ -162,68 +162,6 @@ public class ChatCompletionRequest : IExtend
             }
         }
         return parts;
-    }
-
-    /// <summary>应用对话选项。将 ChatOptions 中的非空字段合并到当前请求</summary>
-    /// <param name="options">对话选项，null 字段不覆盖</param>
-    /// <returns>当前请求实例（支持链式调用）</returns>
-    public ChatCompletionRequest Apply(ChatOptions? options)
-    {
-        if (options == null) return this;
-
-        Model ??= options.Model;
-        Temperature ??= options.Temperature;
-        TopP ??= options.TopP;
-        TopK ??= options.TopK;
-        MaxTokens ??= options.MaxTokens;
-        Stop ??= options.Stop;
-        PresencePenalty ??= options.PresencePenalty;
-        FrequencyPenalty ??= options.FrequencyPenalty;
-        User ??= options.User;
-        EnableThinking ??= options.EnableThinking;
-        ResponseFormat ??= options.ResponseFormat;
-        ParallelToolCalls ??= options.ParallelToolCalls;
-
-        if (options.Tools != null && options.Tools.Count > 0)
-        {
-            Tools ??= [];
-            foreach (var t in options.Tools)
-            {
-                Tools.Add(t);
-            }
-        }
-        ToolChoice ??= options.ToolChoice;
-
-        // 合并扩展数据。选项中的键值对覆盖请求中同名键值
-        if (options.Items != null && options.Items.Count > 0)
-        {
-            if (Items == null || Items.Count == 0)
-                Items = options.Items;
-            else
-            {
-                foreach (var kv in options.Items)
-                {
-                    Items[kv.Key] = kv.Value;
-                }
-            }
-        }
-
-        return this;
-    }
-
-    /// <summary>根据消息列表和可选对话选项创建请求</summary>
-    /// <param name="messages">消息列表</param>
-    /// <param name="options">对话选项</param>
-    /// <param name="stream">是否流式</param>
-    /// <returns>对话请求实例</returns>
-    public static ChatCompletionRequest Create(IList<ChatMessage> messages, ChatOptions? options = null, Boolean stream = false)
-    {
-        var request = new ChatCompletionRequest
-        {
-            Messages = messages,
-            Stream = stream,
-        };
-        return request.Apply(options);
     }
 
     /// <summary>转换为内部统一的 ChatRequest</summary>

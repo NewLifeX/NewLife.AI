@@ -8,6 +8,7 @@ using NewLife.ChatAI.Entity;
 using NewLife.Log;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
+using IChatResponse = NewLife.AI.Models.IChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
 
@@ -102,7 +103,7 @@ public class ChatAIPipeline(GatewayService gatewayService, IEnumerable<IToolProv
     }
 
     /// <inheritdoc/>
-    public async Task<ChatResponse> CompleteAsync(
+    public async Task<IChatResponse> CompleteAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
         ChatPipelineContext context,

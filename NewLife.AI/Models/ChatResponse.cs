@@ -3,7 +3,7 @@
 namespace NewLife.AI.Models;
 
 /// <summary>对话完成响应。内部统一模型，由各协议专用响应类（ChatCompletionResponse / AnthropicResponse / GeminiResponse）转换后输出</summary>
-public class ChatResponse
+public class ChatResponse : IChatResponse
 {
     #region 属性
     /// <summary>响应编号</summary>

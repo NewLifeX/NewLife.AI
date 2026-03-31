@@ -41,7 +41,7 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
 
     #region 方法
     /// <summary>流式对话</summary>
-    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var url = BuildUrl(request);
         var body = BuildRequest(request);
@@ -71,7 +71,7 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
 
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
-    protected override String BuildUrl(ChatRequest request)
+    protected override String BuildUrl(IChatRequest request)
     {
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         if (request.Stream)
@@ -81,10 +81,10 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Gemini 请求体</summary>
-    protected override Object BuildRequest(ChatRequest request) => GeminiRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request) => GeminiRequest.FromChatRequest(request);
 
     /// <summary>解析 Gemini 响应</summary>
-    protected override ChatResponse ParseResponse(String data, ChatRequest request) => data.ToJsonEntity<GeminiResponse>()!.ToChatResponse(request.Model, request.Stream);
+    protected override IChatResponse ParseResponse(String data, IChatRequest request) => data.ToJsonEntity<GeminiResponse>()!.ToChatResponse(request.Model, request.Stream);
 
     #endregion
 }

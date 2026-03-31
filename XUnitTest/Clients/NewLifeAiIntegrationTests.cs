@@ -72,14 +72,14 @@ public class NewLifeAiIntegrationTests
         MaxTokens = maxTokens,
     };
     /// <summary>�����ͻ��˲�ִ�з���ʽ����</summary>
-    private async Task<ChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
+    private async Task<IChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
     {
         using var client = _descriptor.Factory(opts ?? CreateOptions());
         return await client.GetResponseAsync(request);
     }
 
     /// <summary>�����ͻ��˲�ִ����ʽ����</summary>
-    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         using var client = _descriptor.Factory(opts ?? CreateOptions());
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
@@ -271,7 +271,7 @@ public class NewLifeAiIntegrationTests
         request.MaxTokens = 200;
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -361,7 +361,7 @@ public class NewLifeAiIntegrationTests
         var request = CreateSimpleRequest("����һ��Python");
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in CreateNewLifeAiClient().ResponsesStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -400,7 +400,7 @@ public class NewLifeAiIntegrationTests
         var request = CreateSimpleRequest("���ʺ�");
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in CreateNewLifeAiClient().MessagesStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -439,7 +439,7 @@ public class NewLifeAiIntegrationTests
         var request = CreateSimpleRequest("����һ���Լ�");
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in CreateNewLifeAiClient().GeminiStreamAsync(request))
         {
             chunks.Add(chunk);

@@ -128,7 +128,7 @@ public class FunctionCallingPlanner : IPlanner
 
     #region 辅助
 
-    private static IList<PlanStep> ParseSteps(ChatResponse response)
+    private static IList<PlanStep> ParseSteps(IChatResponse response)
     {
         var steps = new List<PlanStep>();
         if (response?.Messages == null) return steps;

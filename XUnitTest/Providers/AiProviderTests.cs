@@ -720,13 +720,13 @@ public class AiProviderTests
 
         public FixedReplyChatClient(String text) => _text = text;
 
-        public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(new ChatResponse
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult<IChatResponse>(new ChatResponse
             {
                 Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = _text } }]
             });
 
-        public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public void Dispose() { }
@@ -740,10 +740,10 @@ internal sealed class ExternalFakeChatClient : IChatClient
 {
     public ExternalFakeChatClient(AiClientOptions options) { }
 
-    public Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
         => throw new NotImplementedException();
 
-    public IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
         => throw new NotImplementedException();
 
     public void Dispose() { }

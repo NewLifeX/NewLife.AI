@@ -61,7 +61,7 @@ public class AnthropicRequest
     /// <summary>从内部统一 ChatRequest 构建 Anthropic 协议请求</summary>
     /// <param name="request">内部统一请求</param>
     /// <returns>可直接 ToJson 序列化的 Anthropic 协议请求</returns>
-    public static AnthropicRequest FromChatRequest(ChatRequest request)
+    public static AnthropicRequest FromChatRequest(IChatRequest request)
     {
         var result = new AnthropicRequest
         {

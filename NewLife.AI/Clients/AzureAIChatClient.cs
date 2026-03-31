@@ -37,7 +37,7 @@ public class AzureAIChatClient(AiClientOptions options) : OpenAIChatClient(optio
 
     #region 辅助
     /// <summary>构建请求地址。Azure OpenAI 使用 deployment 方式的 URL 格式</summary>
-    protected override String BuildUrl(ChatRequest request)
+    protected override String BuildUrl(IChatRequest request)
     {
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var model = request.Model ?? _options.Model;
@@ -45,7 +45,7 @@ public class AzureAIChatClient(AiClientOptions options) : OpenAIChatClient(optio
     }
 
     /// <summary>设置请求头。Azure OpenAI 使用 api-key 请求头认证</summary>
-    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Add("api-key", options.ApiKey);

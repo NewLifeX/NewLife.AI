@@ -40,7 +40,7 @@ public class BedrockRequest
     /// <summary>从内部统一 ChatRequest 构建 Bedrock Converse API 请求</summary>
     /// <param name="request">内部统一请求</param>
     /// <returns>可直接 ToJson 序列化的 Bedrock 请求</returns>
-    public static BedrockRequest FromChatRequest(ChatRequest request)
+    public static BedrockRequest FromChatRequest(IChatRequest request)
     {
         var result = new BedrockRequest { Model = request.Model };
 

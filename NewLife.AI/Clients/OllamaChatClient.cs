@@ -45,7 +45,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(request);
         var body = BuildRequest(request);
@@ -159,14 +159,14 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
 
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
-    protected override String BuildUrl(ChatRequest request)
+    protected override String BuildUrl(IChatRequest request)
     {
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         return endpoint + "/api/chat";
     }
 
     /// <inheritdoc/>
-    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {
         // Ollama 默认不需要 API Key，但如果用户配置了则传递
         if (!String.IsNullOrEmpty(options.ApiKey))
@@ -174,12 +174,12 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Ollama 原生请求体</summary>
-    protected override Object BuildRequest(ChatRequest request) => OllamaChatRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request) => OllamaChatRequest.FromChatRequest(request);
 
     /// <summary>解析 Ollama 非流式响应</summary>
-    protected override ChatResponse ParseResponse(String json, ChatRequest request) => json.ToJsonEntity<OllamaChatResponse>()!.ToChatResponse();
+    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<OllamaChatResponse>()!.ToChatResponse();
 
     /// <summary>解析 Ollama 流式 NDJSON 单行 chunk</summary>
-    protected override ChatResponse? ParseChunk(String json, ChatRequest request, String? lastEvent) => json.ToJsonEntity<OllamaChatResponse>()?.ToStreamChunk();
+    protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent) => json.ToJsonEntity<OllamaChatResponse>()?.ToStreamChunk();
     #endregion
 }

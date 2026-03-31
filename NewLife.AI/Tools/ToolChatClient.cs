@@ -50,7 +50,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     /// <summary>非流式对话完成。注入工具定义并自动处理工具调用回路</summary>
     /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public override async Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
@@ -62,7 +62,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
         var workOptions = MergeToolOptions(request, mergedTools);
         var workMessages = request.Messages.ToList();
 
-        ChatResponse response;
+        IChatResponse response;
         var iterations = 0;
 
         while (true)
@@ -99,8 +99,8 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     /// <summary>流式对话完成。注入工具定义，流式执行多轮工具调用回路，对外透明</summary>
     /// <param name="request">内部对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
-    public override async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(
-        ChatRequest request,
+    public override async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(
+        IChatRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
@@ -240,7 +240,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     }
 
     /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典</summary>
-    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap) GetMergedTools(ChatOptions? options)
+    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap) GetMergedTools(IChatRequest? options)
     {
         var tools = new List<ChatTool>();
         var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
@@ -263,7 +263,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     }
 
     /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>
-    private static ChatOptions MergeToolOptions(ChatOptions? options, List<ChatTool> mergedTools)
+    private static ChatOptions MergeToolOptions(IChatRequest? options, List<ChatTool> mergedTools)
         => new()
         {
             Model = options?.Model,

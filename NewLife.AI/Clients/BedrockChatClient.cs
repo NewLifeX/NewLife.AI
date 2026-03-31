@@ -50,7 +50,7 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
 
     #region 核心方法
     /// <summary>流式对话</summary>
-    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(request);
         var body = BuildRequest(request);
@@ -87,7 +87,7 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
 
     #region 辅助
     /// <summary>构建请求地址</summary>
-    protected override String BuildUrl(ChatRequest request)
+    protected override String BuildUrl(IChatRequest request)
     {
         var endpoint = GetRegionEndpoint();
         var model = request.Model ?? _options.Model;
@@ -108,21 +108,21 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Bedrock Converse API 请求体</summary>
-    protected override Object BuildRequest(ChatRequest request) => BedrockRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request) => BedrockRequest.FromChatRequest(request);
 
     /// <summary>解析 Bedrock Converse API 非流式响应</summary>
-    protected override ChatResponse ParseResponse(String json, ChatRequest request)
+    protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
         var bedrockResp = json.ToJsonEntity<BedrockResponse>();
         return bedrockResp?.ToChatResponse(request.Model) ?? new ChatResponse { Model = request.Model };
     }
 
     /// <summary>解析流式 chunk</summary>
-    protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
+    protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
         => data.ToJsonEntity<BedrockStreamEvent>()?.ToChunkResponse(request.Model);
 
     /// <summary>设置请求头。使用 AWS SigV4 签名认证</summary>
-    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {
         var accessKey = options.ApiKey;
         var secretKey = options.Organization;

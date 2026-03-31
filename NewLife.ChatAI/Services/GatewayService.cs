@@ -6,6 +6,7 @@ using NewLife.Collections;
 using NewLife.ChatAI.Entity;
 using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
+using IChatResponse = NewLife.AI.Models.IChatResponse;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
@@ -198,7 +199,7 @@ public class GatewayService(IServiceProvider serviceProvider, ILog log)
     /// <param name="appKey">应用密钥（可选）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async Task<ChatResponse> ChatAsync(ChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
+    public async Task<IChatResponse> ChatAsync(ChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
     {
         var descriptor = GetDescriptor(config);
         if (descriptor == null)
@@ -207,7 +208,7 @@ public class GatewayService(IServiceProvider serviceProvider, ILog log)
         var options = BuildOptions(config);
 
         using var client = descriptor.Factory(options);
-        ChatResponse? response = null;
+        IChatResponse? response = null;
         for (var i = 0; i <= MaxRetryCount; i++)
         {
             try
@@ -238,7 +239,7 @@ public class GatewayService(IServiceProvider serviceProvider, ILog log)
     /// <param name="appKey">应用密钥（可选）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, ModelConfig config, AppKey? appKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<IChatResponse> ChatStreamAsync(ChatRequest request, ModelConfig config, AppKey? appKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var descriptor = GetDescriptor(config);
         if (descriptor == null)
@@ -247,7 +248,7 @@ public class GatewayService(IServiceProvider serviceProvider, ILog log)
         var options = BuildOptions(config);
 
         using var streamClient = descriptor.Factory(options);
-        IAsyncEnumerable<ChatResponse>? stream = null;
+        IAsyncEnumerable<IChatResponse>? stream = null;
         for (var i = 0; i <= MaxRetryCount; i++)
         {
             try

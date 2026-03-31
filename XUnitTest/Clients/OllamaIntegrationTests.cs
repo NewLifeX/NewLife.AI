@@ -70,14 +70,14 @@ public class OllamaIntegrationTests
         MaxTokens = maxTokens,
     };
     /// <summary>创建客户端并执行非流式请求</summary>
-    private async Task<ChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
+    private async Task<IChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
     {
         using var client = _descriptor.Factory(opts ?? CreateOptions());
         return await client.GetResponseAsync(request);
     }
 
     /// <summary>创建客户端并执行流式请求</summary>
-    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         using var client = _descriptor.Factory(opts ?? CreateOptions());
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
@@ -345,7 +345,7 @@ public class OllamaIntegrationTests
         var request = CreateSimpleRequest("write a bubble sort in C#", 200);
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -421,7 +421,7 @@ public class OllamaIntegrationTests
         request.Stream = true;
 
         using var cts = new CancellationTokenSource();
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
 
         try
         {
@@ -829,7 +829,7 @@ public class OllamaIntegrationTests
         // 流式
         var request2 = CreateSimpleRequest("2+2=? reply number only", 200);
         request2.Stream = true;
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request2, CreateOptions()))
         {
             chunks.Add(chunk);

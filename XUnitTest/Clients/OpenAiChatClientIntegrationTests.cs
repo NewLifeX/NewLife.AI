@@ -68,14 +68,14 @@ public class OpenAiChatClientIntegrationTests
     };
 
     /// <summary>创建客户端并执行非流式请求</summary>
-    private async Task<ChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
+    private async Task<IChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
     {
         using var client = CreateClient(opts);
         return await client.GetResponseAsync(request);
     }
 
     /// <summary>创建客户端并执行流式请求</summary>
-    private async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [EnumeratorCancellation] CancellationToken ct = default)
+    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(ChatRequest request, AiClientOptions? opts = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         using var client = CreateClient(opts);
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
@@ -487,7 +487,7 @@ public class OpenAiChatClientIntegrationTests
         request.MaxTokens = 200;
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -566,7 +566,7 @@ public class OpenAiChatClientIntegrationTests
         request.Stream = true;
 
         using var cts = new CancellationTokenSource();
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
 
         try
         {
@@ -716,7 +716,7 @@ public class OpenAiChatClientIntegrationTests
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -1081,7 +1081,7 @@ public class OpenAiChatClientIntegrationTests
             ],
         };
 
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request))
         {
             chunks.Add(chunk);
@@ -1188,7 +1188,7 @@ public class OpenAiChatClientIntegrationTests
         // 流式
         var request2 = CreateSimpleRequest("qwen-turbo", "2+2=?", 10);
         request2.Stream = true;
-        var chunks = new List<ChatResponse>();
+        var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request2))
         {
             chunks.Add(chunk);

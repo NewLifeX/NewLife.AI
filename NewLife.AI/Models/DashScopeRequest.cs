@@ -34,7 +34,7 @@ public class DashScopeRequest
     /// <param name="request">内部统一请求</param>
     /// <param name="isMultimodal">是否为多模态模型。控制消息内容块格式</param>
     /// <returns>可直接 ToJson 序列化的 DashScope 协议请求</returns>
-    public static DashScopeRequest FromChatRequest(ChatRequest request, Boolean isMultimodal = false)
+    public static DashScopeRequest FromChatRequest(IChatRequest request, Boolean isMultimodal = false)
     {
         var result = new DashScopeRequest
         {

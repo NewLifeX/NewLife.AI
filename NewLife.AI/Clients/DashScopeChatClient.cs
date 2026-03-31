@@ -58,7 +58,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
 
     #region 对话（重写）
     /// <summary>非流式对话。原生协议走 DashScope 格式，兼容模式委托基类</summary>
-    protected override async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    protected override async Task<IChatResponse> ChatAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (!IsNativeProtocol)
             return await base.ChatAsync(request, cancellationToken).ConfigureAwait(false);
@@ -76,7 +76,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <summary>流式对话。原生协议走 DashScope SSE 格式，兼容模式委托基类</summary>
-    protected override async IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (!IsNativeProtocol)
         {
@@ -121,7 +121,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
                 throw new HttpRequestException($"[{Name}] 流式错误 {code}: {message}");
             }
 
-            ChatResponse? chunk = null;
+            IChatResponse? chunk = null;
             try { chunk = ParseChunk(data, request, null); } catch { }
 
             if (chunk != null)
@@ -237,7 +237,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     private const String MultimodalGenerationPath = "/services/aigc/multimodal-generation/generation";
 
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
-    protected override String BuildUrl(ChatRequest request)
+    protected override String BuildUrl(IChatRequest request)
     {
         var path = IsMultimodalModel(request.Model) ? MultimodalGenerationPath : ChatGenerationPath;
 
@@ -268,7 +268,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <summary>解析 DashScope 原生流式 SSE chunk</summary>
-    protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
+    protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
         => data.ToJsonEntity<DashScopeResponse>()?.ToChunkResponse(request.Model);
 
     /// <inheritdoc/>
@@ -287,7 +287,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
 
     /// <inheritdoc/>
-    protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
+    protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
@@ -310,61 +310,3 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     }
     #endregion
 }
-
-/// <summary>DashScope 专属对话选项。扩展 <see cref="ChatOptions"/> 支持 DashScope 高级参数</summary>
-/// <remarks>
-/// 通过 <see cref="DashScopeChatClient"/> 创建对话时可传入此选项以设置 DashScope 专属参数。
-/// <code>
-/// var opts = new DashScopeChatOptions { EnableSearch = true, ThinkingBudget = -1 };
-/// var response = await client.GetResponseAsync(request);
-/// </code>
-/// </remarks>
-public class DashScopeChatOptions : ChatOptions
-{
-    /// <summary>随机种子。固定种子可在相同参数下复现输出，范围 0~2^31-1</summary>
-    public Int32? Seed { get; set; }
-
-    /// <summary>重复惩罚。大于 1 则抑制已出现的 Token，小于 1 则鼓励重复，默认 1.1</summary>
-    public Double? RepetitionPenalty { get; set; }
-
-    /// <summary>返回候选数量。同一输入独立生成 N 条不同输出，默认 1</summary>
-    public Int32? N { get; set; }
-
-    /// <summary>思考预算（Token 数）。0=关闭深度思考，-1=不限制，仅思考模型（QwQ/Qwen3）有效</summary>
-    public Int32? ThinkingBudget { get; set; }
-
-    /// <summary>是否启用代码解释器。qwen3.5 及思考模式模型可在对话中执行代码</summary>
-    public Boolean? EnableCodeInterpreter { get; set; }
-
-    /// <summary>是否返回对数概率。开启后响应携带每个输出 Token 的 logprob 信息</summary>
-    public Boolean? Logprobs { get; set; }
-
-    /// <summary>返回对数概率的 top-K Token 数。需同时设置 Logprobs=true，范围 0~20</summary>
-    public Int32? TopLogprobs { get; set; }
-
-    /// <summary>是否启用高分辨率图像（VL 专属）。开启后 VL 模型以更高分辨率理解图像细节</summary>
-    public Boolean? VlHighResolutionImages { get; set; }
-
-    /// <summary>是否在响应中输出图像宽高（VL 专属）</summary>
-    public Boolean? VlEnableImageHwOutput { get; set; }
-
-    /// <summary>图像最大像素数（VL 专属）。限制输入图像分辨率以控制 Token 消耗</summary>
-    public Int32? MaxPixels { get; set; }
-
-    /// <summary>是否启用联网搜索。开启后模型可实时检索互联网信息以增强回复</summary>
-    public Boolean? EnableSearch { get; set; }
-
-    /// <summary>搜索策略。intelligent（智能，默认）/ force（每次强制搜索）/ prohibited（禁止搜索）</summary>
-    public String? SearchStrategy { get; set; }
-
-    /// <summary>是否在回复中展示来源引用链接</summary>
-    public Boolean? EnableSource { get; set; }
-
-    /// <summary>是否强制搜索，即使模型判断无需搜索时仍执行</summary>
-    public Boolean? ForcedSearch { get; set; }
-}
-
-
-
-
-

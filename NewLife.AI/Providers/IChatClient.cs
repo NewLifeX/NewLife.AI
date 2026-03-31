@@ -20,13 +20,13 @@ public interface IChatClient : IDisposable
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default);
+    Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>IChatClient 扩展方法。提供常用便捷调用方式</summary>
@@ -38,7 +38,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> GetResponseAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> GetResponseAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(ChatRequest.Create(messages, options), cancellationToken);
 
     /// <summary>流式对话（消息列表重载）。将消息列表与选项封装为 <see cref="ChatRequest"/> 后调用接口方法</summary>
@@ -47,7 +47,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(ChatRequest.Create(messages, options, stream: true), cancellationToken);
 
     /// <summary>发送单条文本消息并获取完整响应</summary>
@@ -56,7 +56,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> GetResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> GetResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options), cancellationToken);
 
     /// <summary>发送单条文本消息并获取流式响应</summary>
@@ -65,7 +65,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options, stream: true), cancellationToken);
 
     /// <summary>非流式对话完成。发送请求并一次性返回完整响应</summary>
@@ -73,7 +73,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> ChatAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> ChatAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(request, cancellationToken);
 
     /// <summary>发送单条文本消息并直接返回回复文本。最简单的一行调用方式</summary>
@@ -106,7 +106,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> StreamChatAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(request, cancellationToken);
 
     /// <summary>流式对话（消息列表重载）。将消息列表与选项封装为 <see cref="ChatRequest"/> 后调用接口方法</summary>
@@ -115,7 +115,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> StreamChatAsync(this IChatClient client, IList<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(ChatRequest.Create(messages, options, stream: true), cancellationToken);
 
     /// <summary>发送单条文本消息并获取流式响应</summary>
@@ -124,7 +124,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> StreamChatAsync(this IChatClient client, String prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(ChatRequest.Create([new ChatMessage { Role = "user", Content = prompt }], options, stream: true), cancellationToken);
 
     /// <summary>流式对话（消息列表重载）。将消息列表与选项封装为 <see cref="ChatRequest"/> 后调用接口方法</summary>
@@ -133,7 +133,7 @@ public static class ChatClientExtensions
     /// <param name="options">对话选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> StreamChatAsync(this IChatClient client, (String Role, String Content)[] messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> StreamChatAsync(this IChatClient client, (String Role, String Content)[] messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var chatMessages = new List<ChatMessage>(messages.Length);
         foreach (var (role, content) in messages)
@@ -149,7 +149,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> CompleteChatAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> CompleteChatAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(request, cancellationToken);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
@@ -157,7 +157,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> CompleteChatStreamingAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> CompleteChatStreamingAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(request, cancellationToken);
     #endregion
 
@@ -167,7 +167,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> GetChatMessageContentsAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> GetChatMessageContentsAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(request, cancellationToken);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
@@ -175,7 +175,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> GetStreamingChatMessageContentsAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> GetStreamingChatMessageContentsAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(request, cancellationToken);
     #endregion
 
@@ -185,7 +185,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> GetChatCompletionsAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> GetChatCompletionsAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(request, cancellationToken);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
@@ -193,7 +193,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> GetChatCompletionsStreamingAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> GetChatCompletionsStreamingAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(request, cancellationToken);
     #endregion
 
@@ -203,7 +203,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<ChatResponse> InvokeAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> InvokeAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(request, cancellationToken);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
@@ -211,7 +211,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public static IAsyncEnumerable<ChatResponse> StreamAsync(this IChatClient client, ChatRequest request, CancellationToken cancellationToken = default)
+    public static IAsyncEnumerable<IChatResponse> StreamAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
         => client.GetStreamingResponseAsync(request, cancellationToken);
     #endregion
 

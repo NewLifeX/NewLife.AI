@@ -117,7 +117,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public virtual async Task<ChatResponse> GetResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    public virtual async Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
             throw new ArgumentException("消息列表不能为空", nameof(request));
@@ -149,7 +149,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块的异步枚举</returns>
-    public virtual async IAsyncEnumerable<ChatResponse> GetStreamingResponseAsync(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public virtual async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
             throw new ArgumentException("消息列表不能为空", nameof(request));
@@ -178,7 +178,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    protected virtual async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
+    protected virtual async Task<IChatResponse> ChatAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(request);
         var body = BuildRequest(request);
@@ -191,29 +191,29 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    protected abstract IAsyncEnumerable<ChatResponse> ChatStreamAsync(ChatRequest request, CancellationToken cancellationToken = default);
+    protected abstract IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, CancellationToken cancellationToken = default);
     #endregion
 
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
-    protected abstract String BuildUrl(ChatRequest request);
+    protected abstract String BuildUrl(IChatRequest request);
 
     /// <summary>构建请求体。返回符合协议格式的协议请求对象</summary>
     /// <param name="request">请求对象</param>
     /// <returns>各协议的请求实例，由 PostAsync 调用 ToJson 序列化</returns>
-    protected abstract Object BuildRequest(ChatRequest request);
+    protected abstract Object BuildRequest(IChatRequest request);
 
     /// <summary>解析响应字符串。子类实现此方法将原始 JSON 转换为统一的 ChatResponse</summary>
-    protected abstract ChatResponse ParseResponse(String data, ChatRequest request);
+    protected abstract IChatResponse ParseResponse(String data, IChatRequest request);
 
     /// <summary>解析流式响应字符串</summary>
-    protected virtual ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent) => ParseResponse(data, request);
+    protected virtual IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent) => ParseResponse(data, request);
 
     /// <summary>设置请求头。子类可重写此方法注入认证信息</summary>
     /// <param name="request">HTTP 请求</param>
     /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）覆盖 options 中的默认值</param>
     /// <param name="options">连接选项</param>
-    protected virtual void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options) { }
+    protected virtual void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options) { }
     #endregion
 
     #region Http请求
@@ -223,7 +223,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>响应字符串</returns>
-    protected async Task<String> GetAsync(String url, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<String> GetAsync(String url, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         SetHeaders(req, chatRequest, options);
@@ -256,7 +256,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="options">连接选项</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>响应字符串</returns>
-    protected async Task<String> PostAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<String> PostAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
@@ -298,7 +298,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders / SetStreamingHeaders 以支持运行时参数覆盖</param>
     /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
-    protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
@@ -324,7 +324,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
     /// <returns>响应字节数组</returns>
-    protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, ChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
+    protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
         var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)

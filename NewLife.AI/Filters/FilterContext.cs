@@ -7,10 +7,10 @@ namespace NewLife.AI.Filters;
 public class ChatFilterContext : IExtend
 {
     /// <summary>对话内部请求。过滤器可修改此对象以影响后续处理</summary>
-    public ChatRequest Request { get; set; } = null!;
+    public IChatRequest Request { get; set; } = null!;
 
     /// <summary>对话完成响应。在 After 阶段由过滤器读取或修改</summary>
-    public ChatResponse? Response { get; set; }
+    public IChatResponse? Response { get; set; }
 
     /// <summary>是否流式处理</summary>
     public Boolean IsStreaming { get; set; }
