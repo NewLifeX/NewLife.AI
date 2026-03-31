@@ -60,16 +60,13 @@ public class GeminiResponse : IChatResponse
                 {
                     var (text, toolCalls) = ExtractContent(candidate);
                     var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate.FinishReason);
+                    var chatMsg = new ChatMessage { Role = "assistant", Content = text, ToolCalls = toolCalls };
                     var choice = new ChatChoice
                     {
                         Index = candidate.Index,
                         FinishReason = finishReason,
-                        Message = new ChatMessage
-                        {
-                            Role = "assistant",
-                            Content = text,
-                            ToolCalls = toolCalls,
-                        },
+                        Message = chatMsg,
+                        Delta = chatMsg,  // 同时设置 Delta，兼容流式场景
                     };
                     list.Add(choice);
                 }

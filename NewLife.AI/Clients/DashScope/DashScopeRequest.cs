@@ -1,6 +1,5 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
-using NewLife.Data;
 
 namespace NewLife.AI.Clients.DashScope;
 
@@ -322,7 +321,7 @@ public class DashScopeRequest : IChatRequest
             if (item is TextContent text)
             {
                 parts.Add(isMultimodal
-                    ? (Object)new { text = text.Text }
+                    ? (new { text = text.Text })
                     : new { type = "text", text = text.Text });
             }
             else if (item is ImageContent img)
@@ -334,7 +333,7 @@ public class DashScopeRequest : IChatRequest
                     url = img.Uri ?? "";
 
                 parts.Add(isMultimodal
-                    ? (Object)new { image = url }
+                    ? (new { image = url })
                     : new { type = "image_url", image_url = new { url } });
             }
         }

@@ -67,12 +67,14 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var url = BuildUrl(request);
         var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        var response = json.ToJsonEntity<DashScopeResponse>()!.ToChatResponse(model);
+        var dashResp = json.ToJsonEntity<DashScopeResponse>()!;
+        if (!dashResp.Code.IsNullOrEmpty())
+            throw new HttpRequestException($"[DashScope] 错误 {dashResp.Code}: {dashResp.Message}");
 
         // 原生响应无顶层 model 字段，从请求回填
-        response.Model ??= model;
+        dashResp.Model = model;
 
-        return response;
+        return dashResp;
     }
 
     /// <summary>流式对话。原生协议走 DashScope SSE 格式，兼容模式委托基类</summary>
@@ -267,9 +269,13 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         return false;
     }
 
-    /// <summary>解析 DashScope 原生流式 SSE chunk</summary>
+    /// <summary>解析 DashScope 原生流式 SSE chunk，DashScopeResponse 适配器同时设置 Delta</summary>
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
-        => data.ToJsonEntity<DashScopeResponse>()?.ToChunkResponse(request.Model);
+    {
+        var chunk = data.ToJsonEntity<DashScopeResponse>();
+        if (chunk != null) chunk.Model = request.Model;
+        return chunk;
+    }
 
     /// <inheritdoc/>
     /// <remarks>多模态响应中 content 为数组格式（[{"text":"..."}]），归一化为字符串</remarks>

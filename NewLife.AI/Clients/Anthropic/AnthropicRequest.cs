@@ -224,7 +224,7 @@ public class AnthropicRequest : IChatRequest
                 {
                     ["name"] = tool.Function.Name,
                     ["description"] = tool.Function.Description,
-                    ["input_schema"] = tool.Function.Parameters ?? (Object)new Dictionary<String, Object> { ["type"] = "object" },
+                    ["input_schema"] = tool.Function.Parameters ?? new Dictionary<String, Object> { ["type"] = "object" },
                 });
             }
             result.Tools = tools;

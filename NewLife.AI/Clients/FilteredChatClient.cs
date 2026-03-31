@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Text;
 using NewLife.AI.Filters;
 using NewLife.AI.Models;
 
@@ -116,7 +117,7 @@ public class FilteredChatClient : DelegatingChatClient
         // 流式输出，同时收集最后一个有效用量、模型名和完整回复内容（用于传给 OnStreamCompletedAsync）
         UsageDetails? lastUsage = null;
         String? model = null;
-        var contentBuilder = new System.Text.StringBuilder();
+        var contentBuilder = new StringBuilder();
         await foreach (var chunk in InnerClient.GetStreamingResponseAsync(context.Request, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;

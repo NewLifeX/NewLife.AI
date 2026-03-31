@@ -93,7 +93,12 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
     }
 
     /// <summary>解析 Anthropic 非流式响应</summary>
-    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<AnthropicResponse>()!.ToChatResponse(request.Model);
+    protected override IChatResponse ParseResponse(String json, IChatRequest request)
+    {
+        var resp = json.ToJsonEntity<AnthropicResponse>()!;
+        resp.Model ??= request.Model;
+        return resp;
+    }
 
     /// <summary>解析 Anthropic 流式 chunk</summary>
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)

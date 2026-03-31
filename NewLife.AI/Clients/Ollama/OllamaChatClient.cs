@@ -88,16 +88,15 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>获取模型详细信息</summary>
-    /// <param name="modelName">模型名称</param>
+    /// <param name="model">模型名称</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型详情，服务不可用时返回 null</returns>
-    public virtual async Task<OllamaShowResponse?> ShowModelAsync(String modelName, CancellationToken cancellationToken = default)
+    public virtual async Task<OllamaShowResponse?> ShowModelAsync(String model, CancellationToken cancellationToken = default)
     {
-        if (modelName == null) throw new ArgumentNullException(nameof(modelName));
+        if (model == null) throw new ArgumentNullException(nameof(model));
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/show";
-        var body = new Dictionary<String, Object> { ["model"] = modelName };
-        var json = await TryPostAsync(url, body, _options, cancellationToken).ConfigureAwait(false);
+        var json = await TryPostAsync(url, new { model }, _options, cancellationToken).ConfigureAwait(false);
         return json?.ToJsonEntity<OllamaShowResponse>();
     }
 
@@ -125,32 +124,24 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
         if (request == null) throw new ArgumentNullException(nameof(request));
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/embed";
-        var dic = new Dictionary<String, Object>();
-        if (request.Model != null) dic["model"] = request.Model;
-        if (request.Input != null) dic["input"] = request.Input;
-        if (request.Truncate != null) dic["truncate"] = request.Truncate.Value;
-        if (request.Dimensions != null) dic["dimensions"] = request.Dimensions.Value;
-        if (request.KeepAlive != null) dic["keep_alive"] = request.KeepAlive;
-
-        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
         return json.ToJsonEntity<OllamaEmbedResponse>();
     }
 
     /// <summary>拉取（下载）模型。等待完成后返回最终状态</summary>
-    /// <param name="modelName">模型名称，如 qwen3.5:0.8b</param>
+    /// <param name="model">模型名称，如 qwen3.5:0.8b</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>拉取状态，status 为 "success" 表示成功</returns>
-    public virtual async Task<OllamaPullStatus?> PullModelAsync(String modelName, CancellationToken cancellationToken = default)
+    public virtual async Task<OllamaPullStatus?> PullModelAsync(String model, CancellationToken cancellationToken = default)
     {
-        if (modelName == null) throw new ArgumentNullException(nameof(modelName));
+        if (model == null) throw new ArgumentNullException(nameof(model));
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/pull";
-        var body = new Dictionary<String, Object> { ["model"] = modelName, ["stream"] = false };
 
         // 拉取模型可能耗时数分钟，使用 30 分钟超时
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromMinutes(30));
-        var json = await PostAsync(url, body, null, _options, cts.Token).ConfigureAwait(false);
+        var json = await PostAsync(url, new { model, stream = false }, null, _options, cts.Token).ConfigureAwait(false);
         return json.ToJsonEntity<OllamaPullStatus>();
     }
     #endregion
@@ -172,16 +163,12 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Ollama 原生请求体</summary>
-    protected override Object BuildRequest(IChatRequest request)
-    {
-        if (request is OllamaChatRequest or) return or;
-        return OllamaChatRequest.FromChatRequest(request);
-    }
+    protected override Object BuildRequest(IChatRequest request) => request is OllamaChatRequest or ? or : OllamaChatRequest.FromChatRequest(request);
 
     /// <summary>解析 Ollama 非流式响应</summary>
-    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<OllamaChatResponse>()!.ToChatResponse();
+    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<OllamaChatResponse>()!;
 
-    /// <summary>解析 Ollama 流式 NDJSON 单行 chunk</summary>
-    protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent) => json.ToJsonEntity<OllamaChatResponse>()?.ToStreamChunk();
+    /// <summary>解析 Ollama 流式 NDJSON 单行 chunk，OllamaChatResponse 适配器同时设置 Message/Delta</summary>
+    protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent) => json.ToJsonEntity<OllamaChatResponse>();
     #endregion
 }

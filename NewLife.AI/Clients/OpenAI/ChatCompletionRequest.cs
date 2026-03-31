@@ -1,6 +1,5 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
-using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.OpenAI;
@@ -109,6 +108,8 @@ public class ChatCompletionRequest : IChatRequest
             EnableThinking = request.EnableThinking,
             ResponseFormat = request.ResponseFormat,
             ParallelToolCalls = request.ParallelToolCalls,
+            UserId = request.UserId,
+            ConversationId = request.ConversationId,
         };
 
         if (request.Stream)

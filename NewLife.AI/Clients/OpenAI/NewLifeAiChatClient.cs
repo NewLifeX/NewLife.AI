@@ -1,7 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.Models;
 using NewLife.Remoting;
 using NewLife.Serialization;
 
@@ -84,57 +83,48 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
 
     #region 图像生成（/v1/images/generations）
     /// <summary>图像生成。POST /v1/images/generations</summary>
+    /// <param name="request">图像生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应</returns>
+    public virtual Task<ImageGenerationResponse?> ImageGenerationsAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
+        => TextToImageAsync(request, cancellationToken);
+
+    /// <summary>图像生成（简便重载）。POST /v1/images/generations</summary>
     /// <param name="prompt">图像描述提示词</param>
     /// <param name="model">模型名称，为 null 时使用默认</param>
     /// <param name="size">图像尺寸，如 "1024x1024"，为 null 时使用服务端默认</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应</returns>
-    public virtual async Task<ImageGenerationResponse?> ImageGenerationsAsync(String prompt, String? model, String? size, CancellationToken cancellationToken = default)
-    {
-        if (String.IsNullOrWhiteSpace(prompt)) throw new ArgumentNullException(nameof(prompt));
-
-        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/images/generations";
-        var dic = new Dictionary<String, Object> { ["prompt"] = prompt };
-        if (!String.IsNullOrEmpty(model)) dic["model"] = model;
-        if (!String.IsNullOrEmpty(size)) dic["size"] = size;
-
-        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
-        return json.ToJsonEntity<ImageGenerationResponse>();
-    }
+    public virtual Task<ImageGenerationResponse?> ImageGenerationsAsync(String prompt, String? model = null, String? size = null, CancellationToken cancellationToken = default)
+        => TextToImageAsync(new ImageGenerationRequest { Prompt = prompt, Model = model, Size = size }, cancellationToken);
     #endregion
 
     #region 图像编辑（/v1/images/edits）
     /// <summary>图像编辑。POST /v1/images/edits，multipart/form-data 格式</summary>
-    /// <param name="imageStream">原始图像流（PNG 格式）</param>
-    /// <param name="imageFileName">图像文件名</param>
-    /// <param name="prompt">编辑提示词</param>
-    /// <param name="model">模型名称，为 null 时使用默认</param>
-    /// <param name="size">输出尺寸，为 null 时使用服务端默认</param>
-    /// <param name="maskStream">蒙版图像流（可选，PNG 格式，透明区域为编辑区域）</param>
-    /// <param name="maskFileName">蒙版文件名</param>
+    /// <param name="request">图像编辑请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应</returns>
-    public virtual async Task<ImageGenerationResponse?> ImageEditsAsync(Stream imageStream, String imageFileName, String prompt, String? model, String? size, Stream? maskStream, String? maskFileName, CancellationToken cancellationToken = default)
+    public virtual async Task<ImageGenerationResponse?> ImageEditsAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
     {
-        if (imageStream == null) throw new ArgumentNullException(nameof(imageStream));
-        if (String.IsNullOrWhiteSpace(prompt)) throw new ArgumentNullException(nameof(prompt));
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentNullException(nameof(request));
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/images/edits";
 
         using var form = new MultipartFormDataContent();
-        form.Add(new StringContent(prompt), "prompt");
-        if (!String.IsNullOrEmpty(model)) form.Add(new StringContent(model), "model");
-        if (!String.IsNullOrEmpty(size)) form.Add(new StringContent(size), "size");
+        form.Add(new StringContent(request.Prompt), "prompt");
+        if (!String.IsNullOrEmpty(request.Model)) form.Add(new StringContent(request.Model), "model");
+        if (!String.IsNullOrEmpty(request.Size)) form.Add(new StringContent(request.Size), "size");
 
-        var imageContent = new StreamContent(imageStream);
+        var imageContent = new StreamContent(request.ImageStream);
         imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-        form.Add(imageContent, "image", imageFileName ?? "image.png");
+        form.Add(imageContent, "image", request.ImageFileName);
 
-        if (maskStream != null)
+        if (request.MaskStream != null)
         {
-            var maskContent = new StreamContent(maskStream);
+            var maskContent = new StreamContent(request.MaskStream);
             maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-            form.Add(maskContent, "mask", maskFileName ?? "mask.png");
+            form.Add(maskContent, "mask", request.MaskFileName ?? "mask.png");
         }
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
@@ -145,10 +135,22 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
 
         if (!resp.IsSuccessStatusCode)
             throw new ApiException((Int32)resp.StatusCode, json);
-        //throw new HttpRequestException($"[{Name}] 图像编辑失败 [{(Int32)resp.StatusCode}]: {json}");
 
         return json.ToJsonEntity<ImageGenerationResponse>();
     }
+
+    /// <summary>图像编辑（分参数重载）。POST /v1/images/edits，multipart/form-data 格式</summary>
+    /// <param name="imageStream">原始图像流（PNG 格式）</param>
+    /// <param name="imageFileName">图像文件名</param>
+    /// <param name="prompt">编辑提示词</param>
+    /// <param name="model">模型名称，为 null 时使用默认</param>
+    /// <param name="size">输出尺寸，为 null 时使用服务端默认</param>
+    /// <param name="maskStream">蒙版图像流（可选，PNG 格式，透明区域为编辑区域）</param>
+    /// <param name="maskFileName">蒙版文件名</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应</returns>
+    public virtual Task<ImageGenerationResponse?> ImageEditsAsync(Stream imageStream, String imageFileName, String prompt, String? model, String? size, Stream? maskStream, String? maskFileName, CancellationToken cancellationToken = default)
+        => ImageEditsAsync(new ImageEditsRequest { ImageStream = imageStream, ImageFileName = imageFileName, Prompt = prompt, Model = model, Size = size, MaskStream = maskStream, MaskFileName = maskFileName }, cancellationToken);
     #endregion
 
     #region 辅助

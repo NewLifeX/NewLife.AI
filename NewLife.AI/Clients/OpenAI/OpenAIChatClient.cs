@@ -125,18 +125,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var url = endpoint + "/v1/images/generations";
 
-        var dic = new Dictionary<String, Object?>();
-        if (!String.IsNullOrEmpty(request.Model)) dic["model"] = request.Model;
-        dic["prompt"] = request.Prompt;
-        if (request.N != null) dic["n"] = request.N.Value;
-        if (!String.IsNullOrEmpty(request.Size)) dic["size"] = request.Size;
-        if (!String.IsNullOrEmpty(request.Quality)) dic["quality"] = request.Quality;
-        if (!String.IsNullOrEmpty(request.Style)) dic["style"] = request.Style;
-        if (!String.IsNullOrEmpty(request.ResponseFormat)) dic["response_format"] = request.ResponseFormat;
-        if (!String.IsNullOrEmpty(request.User)) dic["user"] = request.User;
-        if (!String.IsNullOrEmpty(request.NegativePrompt)) dic["negative_prompt"] = request.NegativePrompt;
-
-        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
+        var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseImageGenerationResponse(json);
     }
 
@@ -150,7 +139,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
 
         var resp = new ImageGenerationResponse
         {
-            Created = dic["created"].ToLong(),
+            Created = dic["created"].ToLong().ToDateTime(),
         };
 
         if (dic["data"] is IList<Object> dataList)
@@ -175,6 +164,18 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
 
     #region 语音合成（TTS）
     /// <summary>语音合成（TTS）。兼容 OpenAI /v1/audio/speech 接口，返回音频字节流</summary>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>音频字节流（格式由 request.ResponseFormat 决定，默认 mp3）</returns>
+    public virtual async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
+    {
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = endpoint + "/v1/audio/speech";
+
+        return await PostBinaryAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>语音合成（TTS）。兼容 OpenAI /v1/audio/speech 接口，返回音频字节流</summary>
     /// <param name="input">要合成的文本内容</param>
     /// <param name="voice">音色名称。如 longxiaochun、alloy</param>
     /// <param name="model">TTS 模型编码。如 cosyvoice-v2、tts-1</param>
@@ -182,22 +183,8 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <param name="speed">语速倍率。0.25~4.0，默认 1.0</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>音频字节流（格式由 responseFormat 决定，默认 mp3）</returns>
-    public virtual async Task<Byte[]> SpeechAsync(String input, String voice, String? model = null, String? responseFormat = null, Double? speed = null, CancellationToken cancellationToken = default)
-    {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/v1/audio/speech";
-
-        var dic = new Dictionary<String, Object?>
-        {
-            ["model"] = model ?? "tts-1",
-            ["input"] = input,
-            ["voice"] = voice
-        };
-        if (!String.IsNullOrEmpty(responseFormat)) dic["response_format"] = responseFormat;
-        if (speed != null) dic["speed"] = speed.Value;
-
-        return await PostBinaryAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
-    }
+    public virtual Task<Byte[]> SpeechAsync(String input, String voice, String? model = null, String? responseFormat = null, Double? speed = null, CancellationToken cancellationToken = default)
+        => SpeechAsync(new SpeechRequest { Input = input, Voice = voice, Model = model ?? "tts-1", ResponseFormat = responseFormat, Speed = speed }, cancellationToken);
     #endregion
 
     #region 辅助
@@ -207,17 +194,13 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <summary>构建请求体。返回符合 OpenAI 格式的协议请求对象</summary>
     /// <param name="request">请求对象</param>
     /// <returns>ChatCompletionRequest 实例，由 PostAsync 调用 ToJson 序列化</returns>
-    protected override Object BuildRequest(IChatRequest request)
-    {
-        if (request is ChatCompletionRequest cr) return cr;
-        return ChatCompletionRequest.FromChatRequest(request);
-    }
+    protected override Object BuildRequest(IChatRequest request) => request is ChatCompletionRequest cr ? cr : ChatCompletionRequest.FromChatRequest(request);
 
     /// <summary>解析响应 JSON</summary>
     /// <param name="json">JSON 字符串</param>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
+    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>()!;
 
     /// <summary>解析消息对象</summary>
     /// <param name="dic">字典</param>
@@ -242,7 +225,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
 
                 var tc = new ToolCall
                 {
-                    Index = tcDic["index"] is Object idxVal ? (Int32?)idxVal.ToInt() : null,
+                    Index = tcDic["index"] is Object idxVal ? idxVal.ToInt() : null,
                     Id = tcDic["id"] as String ?? "",
                     Type = tcDic["type"] as String ?? "function",
                 };

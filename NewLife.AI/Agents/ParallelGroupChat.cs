@@ -131,12 +131,12 @@ public sealed class ParallelGroupChat
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // 工作代理超时，降级跳过
-            return (worker, (IList<AgentMessage>)new List<AgentMessage>());
+            return (worker, new List<AgentMessage>());
         }
         catch
         {
             // 工作代理执行失败，降级跳过
-            return (worker, (IList<AgentMessage>)new List<AgentMessage>());
+            return (worker, new List<AgentMessage>());
         }
         finally
         {

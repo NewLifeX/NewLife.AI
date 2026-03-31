@@ -1,6 +1,5 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
-using NewLife.Data;
 
 namespace NewLife.AI.Clients.Gemini;
 

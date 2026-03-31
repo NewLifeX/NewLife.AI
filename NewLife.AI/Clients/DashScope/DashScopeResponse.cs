@@ -120,7 +120,7 @@ public class DashScopeResponse : IChatResponse
     public ChatResponse ToChatResponse(String? model = null)
     {
         if (!String.IsNullOrEmpty(Code))
-            throw new System.Net.Http.HttpRequestException($"[DashScope] 错误 {Code}: {Message}");
+            throw new HttpRequestException($"[DashScope] 错误 {Code}: {Message}");
 
         var response = new ChatResponse
         {
@@ -131,7 +131,7 @@ public class DashScopeResponse : IChatResponse
 
         if (Output?.Choices != null)
         {
-            var choices = new System.Collections.Generic.List<ChatChoice>(Output.Choices.Count);
+            var choices = new List<ChatChoice>(Output.Choices.Count);
             for (var i = 0; i < Output.Choices.Count; i++)
             {
                 var choiceData = Output.Choices[i];
@@ -166,7 +166,7 @@ public class DashScopeResponse : IChatResponse
 
         if (Output?.Choices != null)
         {
-            var choices = new System.Collections.Generic.List<ChatChoice>(Output.Choices.Count);
+            var choices = new List<ChatChoice>(Output.Choices.Count);
             for (var i = 0; i < Output.Choices.Count; i++)
             {
                 var choiceData = Output.Choices[i];
@@ -259,7 +259,7 @@ public class DashScopeMessageData
 
         if (ToolCalls != null && ToolCalls.Count > 0)
         {
-            var toolCalls = new System.Collections.Generic.List<ToolCall>(ToolCalls.Count);
+            var toolCalls = new List<ToolCall>(ToolCalls.Count);
             foreach (var tc in ToolCalls)
             {
                 toolCalls.Add(new ToolCall
