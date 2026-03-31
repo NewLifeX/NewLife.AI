@@ -4,9 +4,9 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using NewLife.AI.Clients;
 using NewLife.AI.Filters;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest.Filters;

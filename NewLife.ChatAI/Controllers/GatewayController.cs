@@ -2,8 +2,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using NewLife.AI.Clients;
+using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;

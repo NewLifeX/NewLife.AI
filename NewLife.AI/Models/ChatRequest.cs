@@ -1,4 +1,7 @@
-﻿namespace NewLife.AI.Models;
+﻿using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
+
+namespace NewLife.AI.Models;
 
 /// <summary>内部对话请求。继承自 ChatOptions，新增消息列表与流式标志，作为内部管道统一传输对象</summary>
 /// <remarks>

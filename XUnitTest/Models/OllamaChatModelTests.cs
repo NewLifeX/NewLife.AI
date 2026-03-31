@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 using Xunit;
+using NewLife.AI.Clients.Ollama;
 
 namespace XUnitTest.Models;
 

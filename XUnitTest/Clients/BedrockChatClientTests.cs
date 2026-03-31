@@ -1,8 +1,9 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.Bedrock;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 using Xunit;

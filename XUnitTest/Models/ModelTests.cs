@@ -1,13 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.Embedding;
+using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Filters;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest.Models;
@@ -621,7 +621,7 @@ public class ModelTests
         var built = new ChatClientBuilder(inner)
             .UseFilters()
             .Build();
-        Assert.IsType<NewLife.AI.Providers.FilteredChatClient>(built);
+        Assert.IsType<NewLife.AI.Clients.FilteredChatClient>(built);
     }
 
     [Fact]
@@ -642,7 +642,7 @@ public class ModelTests
     #region DelegatingChatClient
 
     /// <summary>用于测试的最简 DelegatingChatClient 实现</summary>
-    private sealed class PassThroughClient : NewLife.AI.Providers.DelegatingChatClient
+    private sealed class PassThroughClient : NewLife.AI.Clients.DelegatingChatClient
     {
         public PassThroughClient(IChatClient inner) : base(inner) { }
     }

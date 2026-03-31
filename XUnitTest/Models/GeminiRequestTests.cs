@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 using Xunit;

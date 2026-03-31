@@ -1,5 +1,10 @@
 ﻿using NewLife.AI.Clients;
-using NewLife.AI.Providers;
+using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.Bedrock;
+using NewLife.AI.Clients.DashScope;
+using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.Ollama;
+using NewLife.AI.Clients.OpenAI;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

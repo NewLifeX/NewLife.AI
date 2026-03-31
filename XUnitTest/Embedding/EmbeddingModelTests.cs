@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using NewLife.AI.Clients;
 using NewLife.AI.Embedding;
-using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest.Embedding;

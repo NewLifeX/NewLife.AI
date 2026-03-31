@@ -1,4 +1,4 @@
-﻿using NewLife.AI.Providers;
+﻿using NewLife.AI.Clients;
 
 namespace NewLife.AI.Embedding;
 

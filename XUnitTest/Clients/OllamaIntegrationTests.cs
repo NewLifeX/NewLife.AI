@@ -6,8 +6,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest.Clients;

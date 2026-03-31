@@ -1,7 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using NewLife.AI.Clients;
-using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.Remoting;
 using NewLife.Serialization;

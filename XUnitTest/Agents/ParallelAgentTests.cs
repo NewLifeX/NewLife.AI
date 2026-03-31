@@ -6,8 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Agents;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.AI.Tools;
 using Xunit;
 

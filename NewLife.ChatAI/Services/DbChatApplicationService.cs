@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.AI.Services;
 using NewLife.Collections;
 using NewLife.Cube.Entity;

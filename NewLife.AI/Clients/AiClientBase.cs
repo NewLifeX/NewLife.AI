@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.Reflection;
 using NewLife.Remoting;

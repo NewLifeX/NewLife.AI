@@ -1,12 +1,12 @@
 ﻿using System.Net;
 using System.Runtime.CompilerServices;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.Collections;
 using NewLife.ChatAI.Entity;
 using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
-using IChatResponse = NewLife.AI.Models.IChatResponse;
+using IChatResponse = NewLife.AI.Clients.IChatResponse;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;

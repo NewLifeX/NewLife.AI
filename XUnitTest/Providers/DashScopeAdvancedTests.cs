@@ -1,8 +1,7 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.DashScope;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest.Providers;

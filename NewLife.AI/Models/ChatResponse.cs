@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using NewLife.AI.Clients;
 
 namespace NewLife.AI.Models;
 

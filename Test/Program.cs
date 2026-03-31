@@ -1,5 +1,5 @@
-﻿using NewLife.AI.Models;
-using NewLife.AI.Providers;
+﻿using NewLife.AI.Clients;
+using NewLife.AI.Models;
 using NewLife.Log;
 
 namespace Test;

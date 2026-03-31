@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using System;
 using System.ComponentModel;
+using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 using Xunit;

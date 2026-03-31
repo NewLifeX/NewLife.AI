@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients;
 using NewLife.AI.Embedding;
 using NewLife.AI.Models;
 using NewLife.Collections;

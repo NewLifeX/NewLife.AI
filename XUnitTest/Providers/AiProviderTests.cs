@@ -6,8 +6,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using Xunit;
 
 namespace XUnitTest.Providers;

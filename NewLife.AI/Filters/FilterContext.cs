@@ -1,4 +1,5 @@
-﻿using NewLife.AI.Models;
+﻿using NewLife.AI.Clients;
+using NewLife.AI.Models;
 using NewLife.Data;
 
 namespace NewLife.AI.Filters;

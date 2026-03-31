@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel;
-using NewLife.AI.Providers;
+using NewLife.AI.Clients;
 using NewLife.Common;
 using NewLife.Data;
 using NewLife.Log;

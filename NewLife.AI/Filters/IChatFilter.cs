@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.Filters;
+﻿using NewLife.AI.Clients;
+
+namespace NewLife.AI.Filters;
 
 /// <summary>对话过滤器接口。在 CompleteAsync/CompleteStreamingAsync 前后注入自定义逻辑</summary>
 /// <remarks>
@@ -28,7 +30,7 @@ public interface IChatFilter
 
     /// <summary>流式对话完成后的回调。在所有块流出完毕后异步触发，默认无操作</summary>
     /// <remarks>
-    /// 此方法由 <see cref="Providers.FilteredChatClient"/> 在流式枚举结束后以"火焰即忘"方式调用。
+    /// 此方法由 <see cref="FilteredChatClient"/> 在流式枚举结束后以"火焰即忘"方式调用。
     /// 过滤器可在此处执行不阻塞响应的后处理，例如触发自学习分析。
     /// 调用时 <see cref="ChatFilterContext.Response"/> 包含从流中聚合的摘要（Model、Usage）。
     /// </remarks>

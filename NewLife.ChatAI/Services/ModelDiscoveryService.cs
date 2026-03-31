@@ -1,9 +1,10 @@
 ﻿using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.Log;
 using NewLife.ChatAI.Entity;
 using NewLife.Threading;
+using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Clients.Ollama;
 
 namespace NewLife.ChatAI.Services;
 

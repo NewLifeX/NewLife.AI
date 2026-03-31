@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 

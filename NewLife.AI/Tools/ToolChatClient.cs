@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.AI.Providers;
 using NewLife.Log;
 
 namespace NewLife.AI.Tools;

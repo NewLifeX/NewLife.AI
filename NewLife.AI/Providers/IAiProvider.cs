@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.Log;
 using NewLife.Serialization;
