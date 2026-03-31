@@ -389,6 +389,58 @@ public class BedrockStreamEvent
 
     /// <summary>元数据事件（包含 usage）</summary>
     public BedrockStreamMetadataEvent? Metadata { get; set; }
+
+    /// <summary>将流式事件转换为内部统一 ChatResponse chunk</summary>
+    /// <param name="model">模型编码</param>
+    /// <returns>对应的 ChatResponse，无需转换时返回 null</returns>
+    public ChatResponse? ToChunkResponse(String? model = null)
+    {
+        var response = new ChatResponse
+        {
+            Model = model,
+            Object = "chat.completion.chunk",
+        };
+
+        if (MessageStart?.Message != null)
+        {
+            response.AddDelta(null, null, null);
+            return response;
+        }
+
+        if (ContentBlockDelta?.Delta != null)
+        {
+            var delta = ContentBlockDelta.Delta;
+            if (!String.IsNullOrEmpty(delta.Text))
+            {
+                response.AddDelta(delta.Text, null, null);
+                return response;
+            }
+            if (delta.ReasoningContent != null && !String.IsNullOrEmpty(delta.ReasoningContent.ReasoningText))
+            {
+                response.AddDelta(null, delta.ReasoningContent.ReasoningText, null);
+                return response;
+            }
+        }
+
+        if (MessageStop?.StopReason != null)
+        {
+            response.AddDelta(null, null, BedrockResponse.MapStopReason(MessageStop.StopReason));
+            return response;
+        }
+
+        if (Metadata?.Usage != null)
+        {
+            response.Usage = new UsageDetails
+            {
+                InputTokens = Metadata.Usage.InputTokens,
+                OutputTokens = Metadata.Usage.OutputTokens,
+            };
+            response.AddDelta(null, null, null);
+            return response;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>Bedrock 流式消息开始事件</summary>

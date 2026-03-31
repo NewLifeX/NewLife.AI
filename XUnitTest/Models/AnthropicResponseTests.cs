@@ -230,4 +230,100 @@ public class AnthropicResponseTests
         Assert.Equal(10, result.Usage!.InputTokens);
     }
     #endregion
+
+    #region AnthropicStreamEvent.ToChunkResponse
+
+    [Fact]
+    [DisplayName("ToChunkResponse_message_start事件_返回InputTokens用量")]
+    public void ToChunkResponse_MessageStart_ReturnsInputTokensUsage()
+    {
+        var json = @"{""type"":""message_start"",""message"":{""usage"":{""input_tokens"":25}}}";
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        Assert.NotNull(ev);
+
+        var chunk = ev!.ToChunkResponse("claude-sonnet-4");
+
+        Assert.NotNull(chunk);
+        Assert.Equal("claude-sonnet-4", chunk!.Model);
+        Assert.Equal("chat.completion.chunk", chunk.Object);
+        Assert.NotNull(chunk.Usage);
+        Assert.Equal(25, chunk.Usage!.InputTokens);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_content_block_delta文本增量_返回文本内容")]
+    public void ToChunkResponse_ContentBlockDelta_TextDelta_ReturnsTextChunk()
+    {
+        var json = @"{""type"":""content_block_delta"",""index"":0,""delta"":{""type"":""text_delta"",""text"":""Hello""}}";
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        Assert.NotNull(ev);
+
+        var chunk = ev!.ToChunkResponse("claude-haiku");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Messages);
+        var content = chunk.Messages![0].Delta?.Content as String;
+        Assert.Equal("Hello", content);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_content_block_delta思考增量_返回thinking内容")]
+    public void ToChunkResponse_ContentBlockDelta_ThinkingDelta_ReturnsThinkingChunk()
+    {
+        var json = @"{""type"":""content_block_delta"",""index"":0,""delta"":{""type"":""thinking_delta"",""thinking"":""Let me think...""}}";
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        Assert.NotNull(ev);
+
+        var chunk = ev!.ToChunkResponse("claude-sonnet-4");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Messages);
+        var reasoning = chunk.Messages![0].Delta?.ReasoningContent;
+        Assert.Equal("Let me think...", reasoning);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_message_delta_返回结束原因和OutputTokens")]
+    public void ToChunkResponse_MessageDelta_ReturnsFinishReasonAndOutputTokens()
+    {
+        var json = @"{""type"":""message_delta"",""delta"":{""stop_reason"":""end_turn""},""usage"":{""output_tokens"":42}}";
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        Assert.NotNull(ev);
+
+        var chunk = ev!.ToChunkResponse("claude-sonnet-4");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Messages);
+        Assert.Equal("stop", chunk.Messages![0].FinishReason);
+        Assert.NotNull(chunk.Usage);
+        Assert.Equal(42, chunk.Usage!.OutputTokens);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_message_stop_返回null")]
+    public void ToChunkResponse_MessageStop_ReturnsNull()
+    {
+        var json = @"{""type"":""message_stop""}";
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        Assert.NotNull(ev);
+
+        var chunk = ev!.ToChunkResponse("claude-sonnet-4");
+
+        Assert.Null(chunk);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_未知类型_返回null")]
+    public void ToChunkResponse_UnknownType_ReturnsNull()
+    {
+        var json = @"{""type"":""content_block_start"",""index"":0}";
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        Assert.NotNull(ev);
+
+        var chunk = ev!.ToChunkResponse("claude-sonnet-4");
+
+        Assert.Null(chunk);
+    }
+
+    #endregion
 }

@@ -17,12 +17,15 @@ public class AnthropicRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
+    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>消息列表。role 为 user / assistant</summary>
+    [DataMember(Name = "messages")]
     public IList<AnthropicMessage> Messages { get; set; } = [];
 
     /// <summary>系统提示词。Anthropic 将 system 作为独立顶级字段，转换时放入 messages 首条</summary>
+    [DataMember(Name = "system")]
     public String? System { get; set; }
 
     /// <summary>最大生成令牌数。Anthropic 中为必填字段</summary>
@@ -30,6 +33,7 @@ public class AnthropicRequest
     public Int32? MaxTokens { get; set; }
 
     /// <summary>温度。0~1</summary>
+    [DataMember(Name = "temperature")]
     public Double? Temperature { get; set; }
 
     /// <summary>核采样。0~1，与 Temperature 二选一</summary>
@@ -41,6 +45,7 @@ public class AnthropicRequest
     public Int32? TopK { get; set; }
 
     /// <summary>是否流式输出</summary>
+    [DataMember(Name = "stream")]
     public Boolean Stream { get; set; }
 
     /// <summary>停止序列。对应 OpenAI 的 stop 字段</summary>
@@ -48,6 +53,7 @@ public class AnthropicRequest
     public IList<String>? StopSequences { get; set; }
 
     /// <summary>可用工具列表。Anthropic 格式：name/description/input_schema</summary>
+    [DataMember(Name = "tools")]
     public IList<Object>? Tools { get; set; }
     #endregion
 
@@ -179,8 +185,10 @@ public class AnthropicRequest
 public class AnthropicMessage
 {
     /// <summary>角色。user / assistant</summary>
+    [DataMember(Name = "role")]
     public String Role { get; set; } = "";
 
     /// <summary>消息内容。可以是字符串或内容块数组（text / image_url 等）</summary>
+    [DataMember(Name = "content")]
     public Object? Content { get; set; }
 }

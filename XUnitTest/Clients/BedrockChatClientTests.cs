@@ -215,4 +215,129 @@ public class BedrockChatClientTests
     }
 
     #endregion
+
+    #region BedrockStreamEvent.ToChunkResponse 单元测试
+
+    [Fact]
+    [DisplayName("ToChunkResponse_messageStart事件_返回空增量")]
+    public void ToChunkResponse_MessageStart_ReturnsEmptyDelta()
+    {
+        var json = @"{""messageStart"":{""message"":{""role"":""assistant"",""content"":[]}}}";
+        var streamEvent = json.ToJsonEntity<BedrockStreamEvent>();
+        Assert.NotNull(streamEvent);
+
+        var chunk = streamEvent!.ToChunkResponse("anthropic.claude-v2");
+
+        Assert.NotNull(chunk);
+        Assert.Equal("anthropic.claude-v2", chunk!.Model);
+        Assert.Equal("chat.completion.chunk", chunk.Object);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_contentBlockDelta文本增量_返回文本内容")]
+    public void ToChunkResponse_ContentBlockDelta_TextDelta_ReturnsTextChunk()
+    {
+        var json = @"{""contentBlockDelta"":{""delta"":{""text"":""Hello Bedrock""}}}";
+        var streamEvent = json.ToJsonEntity<BedrockStreamEvent>();
+        Assert.NotNull(streamEvent);
+
+        var chunk = streamEvent!.ToChunkResponse("test-model");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Messages);
+        var content = chunk.Messages![0].Delta?.Content as String;
+        Assert.Equal("Hello Bedrock", content);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_contentBlockDelta推理增量_返回thinking内容")]
+    public void ToChunkResponse_ContentBlockDelta_ReasoningDelta_ReturnsThinkingChunk()
+    {
+        var json = @"{""contentBlockDelta"":{""delta"":{""reasoningContent"":{""reasoningText"":""Thinking deeply...""}}}}";
+        var streamEvent = json.ToJsonEntity<BedrockStreamEvent>();
+        Assert.NotNull(streamEvent);
+
+        var chunk = streamEvent!.ToChunkResponse("test-model");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Messages);
+        var reasoning = chunk.Messages![0].Delta?.ReasoningContent;
+        Assert.Equal("Thinking deeply...", reasoning);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_messageStop_返回结束原因")]
+    public void ToChunkResponse_MessageStop_ReturnsFinishReason()
+    {
+        var json = @"{""messageStop"":{""stopReason"":""end_turn""}}";
+        var streamEvent = json.ToJsonEntity<BedrockStreamEvent>();
+        Assert.NotNull(streamEvent);
+
+        var chunk = streamEvent!.ToChunkResponse("test-model");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Messages);
+        Assert.Equal("stop", chunk.Messages![0].FinishReason);
+    }
+
+    [Fact]
+    [DisplayName("ToChunkResponse_metadata_返回用量统计")]
+    public void ToChunkResponse_Metadata_ReturnsUsage()
+    {
+        var json = @"{""metadata"":{""usage"":{""inputTokens"":100,""outputTokens"":50}}}";
+        var streamEvent = json.ToJsonEntity<BedrockStreamEvent>();
+        Assert.NotNull(streamEvent);
+
+        var chunk = streamEvent!.ToChunkResponse("test-model");
+
+        Assert.NotNull(chunk);
+        Assert.NotNull(chunk!.Usage);
+        Assert.Equal(100, chunk.Usage!.InputTokens);
+        Assert.Equal(50, chunk.Usage.OutputTokens);
+    }
+
+    [Fact]
+    [DisplayName("ParseChunk_通过反射调用_文本增量解析正确")]
+    public void ParseChunk_ViaReflection_TextDeltaParsed()
+    {
+        var client = new BedrockChatClient("AKID", "SECRET", "test-model", "us-east-1");
+        var request = new ChatRequest
+        {
+            Messages = [new ChatMessage { Role = "user", Content = "hello" }],
+            Model = "test-model",
+        };
+
+        var method = typeof(BedrockChatClient).GetMethod("ParseChunk",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        var json = @"{""contentBlockDelta"":{""delta"":{""text"":""Hi there""}}}";
+        var chunk = method!.Invoke(client, [json, request, null]) as ChatResponse;
+
+        Assert.NotNull(chunk);
+        var content = chunk!.Messages![0].Delta?.Content as String;
+        Assert.Equal("Hi there", content);
+    }
+
+    [Fact]
+    [DisplayName("ParseChunk_通过反射调用_messageStop解析结束原因")]
+    public void ParseChunk_ViaReflection_MessageStopParsed()
+    {
+        var client = new BedrockChatClient("AKID", "SECRET", "test-model", "us-east-1");
+        var request = new ChatRequest
+        {
+            Messages = [new ChatMessage { Role = "user", Content = "hello" }],
+            Model = "test-model",
+        };
+
+        var method = typeof(BedrockChatClient).GetMethod("ParseChunk",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        var json = @"{""messageStop"":{""stopReason"":""max_tokens""}}";
+        var chunk = method!.Invoke(client, [json, request, null]) as ChatResponse;
+
+        Assert.NotNull(chunk);
+        Assert.Equal("length", chunk!.Messages![0].FinishReason);
+    }
+
+    #endregion
 }

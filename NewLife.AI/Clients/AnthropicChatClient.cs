@@ -95,65 +95,7 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
 
     /// <summary>解析 Anthropic 流式 chunk</summary>
     protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
-    {
-        var dic = JsonParser.Decode(data);
-        if (dic == null) return null;
-
-        var response = new ChatResponse
-        {
-            Model = request.Model,
-            Object = "chat.completion.chunk",
-        };
-
-        switch (lastEvent)
-        {
-            case "message_start":
-                // 初始事件，包含 usage 的 input_tokens
-                if (dic["message"] is IDictionary<String, Object> msgDic &&
-                    msgDic["usage"] is IDictionary<String, Object> usageDic)
-                {
-                    response.Usage = new UsageDetails { InputTokens = usageDic["input_tokens"].ToInt() };
-                }
-                response.AddDelta(null, null, null);
-                return response;
-
-            case "content_block_delta":
-                if (dic["delta"] is IDictionary<String, Object> deltaDic)
-                {
-                    var deltaType = deltaDic["type"] as String;
-                    if (deltaType == "text_delta")
-                    {
-                        response.AddDelta(deltaDic["text"] as String, null, null);
-                        return response;
-                    }
-                    if (deltaType == "thinking_delta")
-                    {
-                        response.AddDelta(null, deltaDic["thinking"] as String, null);
-                        return response;
-                    }
-                }
-                return null;
-
-            case "message_delta":
-                if (dic["delta"] is IDictionary<String, Object> msgDeltaDic)
-                {
-                    var stopReason = msgDeltaDic["stop_reason"] as String;
-                    var finishReason = AnthropicResponse.MapStopReason(stopReason);
-                    response.AddDelta(null, null, finishReason);
-                }
-                if (dic["usage"] is IDictionary<String, Object> deltaUsageDic)
-                {
-                    response.Usage = new UsageDetails { OutputTokens = deltaUsageDic["output_tokens"].ToInt() };
-                }
-                return response;
-
-            case "message_stop":
-                return null;
-
-            default:
-                return null;
-        }
-    }
+        => data.ToJsonEntity<AnthropicStreamEvent>()?.ToChunkResponse(request.Model);
 
     /// <summary>设置 Anthropic 认证请求头</summary>
     protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)

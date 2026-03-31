@@ -119,56 +119,7 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
 
     /// <summary>解析流式 chunk</summary>
     protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
-    {
-        var streamEvent = data.ToJsonEntity<BedrockStreamEvent>();
-        if (streamEvent == null) return null;
-
-        var response = new ChatResponse
-        {
-            Model = request.Model,
-            Object = "chat.completion.chunk",
-        };
-
-        if (streamEvent.MessageStart?.Message != null)
-        {
-            response.AddDelta(null, null, null);
-            return response;
-        }
-
-        if (streamEvent.ContentBlockDelta?.Delta != null)
-        {
-            var delta = streamEvent.ContentBlockDelta.Delta;
-            if (!String.IsNullOrEmpty(delta.Text))
-            {
-                response.AddDelta(delta.Text, null, null);
-                return response;
-            }
-            if (delta.ReasoningContent != null && !String.IsNullOrEmpty(delta.ReasoningContent.ReasoningText))
-            {
-                response.AddDelta(null, delta.ReasoningContent.ReasoningText, null);
-                return response;
-            }
-        }
-
-        if (streamEvent.MessageStop?.StopReason != null)
-        {
-            response.AddDelta(null, null, MapStopReason(streamEvent.MessageStop.StopReason));
-            return response;
-        }
-
-        if (streamEvent.Metadata?.Usage != null)
-        {
-            response.Usage = new UsageDetails
-            {
-                InputTokens = streamEvent.Metadata.Usage.InputTokens,
-                OutputTokens = streamEvent.Metadata.Usage.OutputTokens,
-            };
-            response.AddDelta(null, null, null);
-            return response;
-        }
-
-        return null;
-    }
+        => data.ToJsonEntity<BedrockStreamEvent>()?.ToChunkResponse(request.Model);
 
     /// <summary>设置请求头。使用 AWS SigV4 签名认证</summary>
     protected override void SetHeaders(HttpRequestMessage request, ChatRequest? chatRequest, AiClientOptions options)
@@ -204,20 +155,6 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
         request.Headers.TryAddWithoutValidation("Authorization", result.Authorization);
         request.Headers.TryAddWithoutValidation("X-Amz-Date", result.Timestamp);
         request.Headers.TryAddWithoutValidation("X-Amz-Content-Sha256", result.ContentHash);
-    }
-
-    /// <summary>映射 Bedrock 停止原因到 OpenAI FinishReason</summary>
-    internal static String? MapStopReason(String? stopReason)
-    {
-        return stopReason switch
-        {
-            "end_turn" => "stop",
-            "stop_sequence" => "stop",
-            "max_tokens" => "length",
-            "tool_use" => "tool_calls",
-            "content_filtered" => "content_filter",
-            _ => stopReason,
-        };
     }
     #endregion
 }
