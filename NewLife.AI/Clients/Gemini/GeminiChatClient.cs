@@ -79,7 +79,11 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Gemini 请求体</summary>
-    protected override Object BuildRequest(IChatRequest request) => GeminiRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request)
+    {
+        if (request is GeminiRequest gr) return gr;
+        return GeminiRequest.FromChatRequest(request);
+    }
 
     /// <summary>解析 Gemini 响应</summary>
     protected override IChatResponse ParseResponse(String data, IChatRequest request) => data.ToJsonEntity<GeminiResponse>()!.ToChatResponse(request.Model, request.Stream);

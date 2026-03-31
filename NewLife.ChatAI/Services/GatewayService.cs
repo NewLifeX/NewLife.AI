@@ -199,7 +199,7 @@ public class GatewayService(IServiceProvider serviceProvider, ILog log)
     /// <param name="appKey">应用密钥（可选）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async Task<IChatResponse> ChatAsync(ChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
+    public async Task<IChatResponse> ChatAsync(IChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
     {
         var descriptor = GetDescriptor(config);
         if (descriptor == null)
@@ -239,7 +239,7 @@ public class GatewayService(IServiceProvider serviceProvider, ILog log)
     /// <param name="appKey">应用密钥（可选）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async IAsyncEnumerable<IChatResponse> ChatStreamAsync(ChatRequest request, ModelConfig config, AppKey? appKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, ModelConfig config, AppKey? appKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var descriptor = GetDescriptor(config);
         if (descriptor == null)

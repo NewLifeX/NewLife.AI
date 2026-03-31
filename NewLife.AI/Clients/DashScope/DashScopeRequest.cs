@@ -1,9 +1,10 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
+using NewLife.Data;
 
 namespace NewLife.AI.Clients.DashScope;
 
-/// <summary>阿里百炼 DashScope 原生协议请求体。兼容 https://help.aliyun.com/zh/model-studio/qwen-api-via-dashscope 协议</summary>
+/// <summary>阿里百炼 DashScope 原生协议请求体。兼容 https://help.aliyun.com/zh/model-studio/qwen-api-via-dashscope 协议，同时实现 IChatRequest 可直接作为统一请求传递</summary>
 /// <remarks>
 /// 与 OpenAI Chat Completions 的主要差异：
 /// <list type="bullet">
@@ -13,7 +14,7 @@ namespace NewLife.AI.Clients.DashScope;
 /// <item>工具定义支持 function/mcp/web_search/code_interpreter 多种类型</item>
 /// </list>
 /// </remarks>
-public class DashScopeRequest
+public class DashScopeRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
@@ -27,6 +28,167 @@ public class DashScopeRequest
     /// <summary>推理参数</summary>
     [DataMember(Name = "parameters")]
     public DashScopeParameters Parameters { get; set; } = new();
+    #endregion
+
+    #region IChatRequest 适配
+    /// <summary>消息列表适配。将 DashScopeMessage 转换为 ChatMessage</summary>
+    [IgnoreDataMember]
+    private IList<ChatMessage>? _chatMessages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatMessage> IChatRequest.Messages
+    {
+        get
+        {
+            if (_chatMessages == null)
+            {
+                var messages = new List<ChatMessage>();
+                foreach (var msg in Input.Messages)
+                {
+                    var cm = new ChatMessage { Role = msg.Role, Content = msg.Content, Name = msg.Name, ToolCallId = msg.ToolCallId };
+                    if (msg.ToolCalls?.Count > 0)
+                    {
+                        var toolCalls = new List<ToolCall>(msg.ToolCalls.Count);
+                        foreach (var tc in msg.ToolCalls)
+                        {
+                            toolCalls.Add(new ToolCall
+                            {
+                                Id = tc.Id,
+                                Type = tc.Type,
+                                Function = tc.Function != null ? new FunctionCall { Name = tc.Function.Name ?? "", Arguments = tc.Function.Arguments } : null,
+                            });
+                        }
+                        cm.ToolCalls = toolCalls;
+                    }
+                    messages.Add(cm);
+                }
+                _chatMessages = messages;
+            }
+            return _chatMessages;
+        }
+        set => _chatMessages = value;
+    }
+
+    /// <summary>是否流式输出</summary>
+    [IgnoreDataMember]
+    Boolean IChatRequest.Stream
+    {
+        get => Parameters.Stream == true;
+        set => Parameters.Stream = value;
+    }
+
+    /// <summary>温度适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.Temperature
+    {
+        get => Parameters.Temperature;
+        set => Parameters.Temperature = value;
+    }
+
+    /// <summary>核采样适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.TopP
+    {
+        get => Parameters.TopP;
+        set => Parameters.TopP = value;
+    }
+
+    /// <summary>Top-K 采样适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.TopK
+    {
+        get => Parameters.TopK;
+        set => Parameters.TopK = value;
+    }
+
+    /// <summary>最大生成令牌数适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.MaxTokens
+    {
+        get => Parameters.MaxTokens;
+        set => Parameters.MaxTokens = value;
+    }
+
+    /// <summary>停止词列表适配</summary>
+    [IgnoreDataMember]
+    IList<String>? IChatRequest.Stop
+    {
+        get => Parameters.Stop;
+        set => Parameters.Stop = value;
+    }
+
+    /// <summary>存在惩罚适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.PresencePenalty
+    {
+        get => Parameters.PresencePenalty;
+        set => Parameters.PresencePenalty = value;
+    }
+
+    /// <summary>频率惩罚适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.FrequencyPenalty
+    {
+        get => Parameters.FrequencyPenalty;
+        set => Parameters.FrequencyPenalty = value;
+    }
+
+    /// <summary>可用工具列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools { get; set; }
+
+    /// <summary>工具选择策略适配</summary>
+    [IgnoreDataMember]
+    Object? IChatRequest.ToolChoice
+    {
+        get => Parameters.ToolChoice;
+        set => Parameters.ToolChoice = value;
+    }
+
+    /// <summary>是否启用思考模式适配</summary>
+    [IgnoreDataMember]
+    Boolean? IChatRequest.EnableThinking
+    {
+        get => Parameters.EnableThinking;
+        set => Parameters.EnableThinking = value;
+    }
+
+    /// <summary>响应格式适配</summary>
+    [IgnoreDataMember]
+    Object? IChatRequest.ResponseFormat
+    {
+        get => Parameters.ResponseFormat;
+        set => Parameters.ResponseFormat = value;
+    }
+
+    /// <summary>是否允许并行工具调用适配</summary>
+    [IgnoreDataMember]
+    Boolean? IChatRequest.ParallelToolCalls
+    {
+        get => Parameters.ParallelToolCalls;
+        set => Parameters.ParallelToolCalls = value;
+    }
+
+    /// <summary>用户标识</summary>
+    [IgnoreDataMember]
+    public String? User { get; set; }
+
+    /// <summary>用户编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? UserId { get; set; }
+
+    /// <summary>会话编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? ConversationId { get; set; }
+
+    /// <summary>扩展数据</summary>
+    [IgnoreDataMember]
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器</summary>
+    [IgnoreDataMember]
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
     #endregion
 
     #region 转换

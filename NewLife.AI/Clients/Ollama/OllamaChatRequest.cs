@@ -1,10 +1,11 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
+using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Ollama;
 
-/// <summary>Ollama /api/chat 对话请求</summary>
+/// <summary>Ollama /api/chat 对话请求，同时实现 IChatRequest 可直接作为统一请求在管道中传递</summary>
 /// <remarks>
 /// 对应 Ollama 原生 POST /api/chat 请求体。
 /// 与 OpenAI ChatCompletionRequest 的差异：
@@ -14,7 +15,7 @@ namespace NewLife.AI.Clients.Ollama;
 /// <item>think 参数控制思考模式（Ollama 原生字段）</item>
 /// </list>
 /// </remarks>
-public class OllamaChatRequest
+public class OllamaChatRequest : IChatRequest
 {
     /// <summary>模型名称</summary>
     public String? Model { get; set; }
@@ -33,6 +34,120 @@ public class OllamaChatRequest
 
     /// <summary>工具定义列表</summary>
     public IList<Object>? Tools { get; set; }
+
+    #region IChatRequest 适配
+    /// <summary>消息列表适配。将 OllamaChatMessage 转换为 ChatMessage</summary>
+    [IgnoreDataMember]
+    private IList<ChatMessage>? _chatMessages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatMessage> IChatRequest.Messages
+    {
+        get
+        {
+            if (_chatMessages == null)
+            {
+                var messages = new List<ChatMessage>();
+                foreach (var msg in Messages)
+                {
+                    messages.Add(msg.ToChatMessage());
+                }
+                _chatMessages = messages;
+            }
+            return _chatMessages;
+        }
+        set => _chatMessages = value;
+    }
+
+    /// <summary>温度适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.Temperature
+    {
+        get => Options?.Temperature;
+        set { Options ??= new OllamaOptions(); Options.Temperature = value ?? 0; }
+    }
+
+    /// <summary>核采样适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.TopP
+    {
+        get => Options?.TopP;
+        set { Options ??= new OllamaOptions(); Options.TopP = value ?? 0; }
+    }
+
+    /// <summary>最大生成令牌数适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.MaxTokens
+    {
+        get => Options?.NumPredict;
+        set { Options ??= new OllamaOptions(); Options.NumPredict = value ?? 0; }
+    }
+
+    /// <summary>停止词列表适配</summary>
+    [IgnoreDataMember]
+    IList<String>? IChatRequest.Stop
+    {
+        get => Options?.Stop;
+        set { Options ??= new OllamaOptions(); Options.Stop = value is List<String> list ? list : value != null ? new List<String>(value) : null; }
+    }
+
+    /// <summary>是否启用思考模式适配。映射到 Think</summary>
+    [IgnoreDataMember]
+    Boolean? IChatRequest.EnableThinking
+    {
+        get => Think;
+        set => Think = value;
+    }
+
+    /// <summary>可用工具列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools { get; set; }
+
+    /// <summary>Top-K 采样</summary>
+    [IgnoreDataMember]
+    public Int32? TopK { get; set; }
+
+    /// <summary>存在惩罚</summary>
+    [IgnoreDataMember]
+    public Double? PresencePenalty { get; set; }
+
+    /// <summary>频率惩罚</summary>
+    [IgnoreDataMember]
+    public Double? FrequencyPenalty { get; set; }
+
+    /// <summary>工具选择策略</summary>
+    [IgnoreDataMember]
+    public Object? ToolChoice { get; set; }
+
+    /// <summary>用户标识</summary>
+    [IgnoreDataMember]
+    public String? User { get; set; }
+
+    /// <summary>响应格式</summary>
+    [IgnoreDataMember]
+    public Object? ResponseFormat { get; set; }
+
+    /// <summary>是否允许并行工具调用</summary>
+    [IgnoreDataMember]
+    public Boolean? ParallelToolCalls { get; set; }
+
+    /// <summary>用户编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? UserId { get; set; }
+
+    /// <summary>会话编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? ConversationId { get; set; }
+
+    /// <summary>扩展数据</summary>
+    [IgnoreDataMember]
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器</summary>
+    [IgnoreDataMember]
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+    #endregion
 
     /// <summary>从通用 ChatRequest 构建 Ollama 原生请求</summary>
     /// <param name="request">通用对话请求</param>

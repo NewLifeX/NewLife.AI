@@ -1,10 +1,11 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
+using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Bedrock;
 
-/// <summary>AWS Bedrock Converse API 请求体。兼容 https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-api.html 协议</summary>
+/// <summary>AWS Bedrock Converse API 请求体。兼容 https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-api.html 协议，同时实现 IChatRequest 可直接作为统一请求传递</summary>
 /// <remarks>
 /// Bedrock Converse API 的主要特点：
 /// <list type="bullet">
@@ -15,7 +16,7 @@ namespace NewLife.AI.Clients.Bedrock;
 /// <item>工具定义通过顶级 toolConfig 字段传递</item>
 /// </list>
 /// </remarks>
-public class BedrockRequest
+public class BedrockRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码（不包括版本号）</summary>
@@ -35,6 +36,132 @@ public class BedrockRequest
     /// <summary>工具配置</summary>
     [DataMember(Name = "toolConfig")]
     public BedrockToolConfig? ToolConfig { get; set; }
+    #endregion
+
+    #region IChatRequest 适配
+    /// <summary>是否流式输出</summary>
+    [IgnoreDataMember]
+    public Boolean Stream { get; set; }
+
+    /// <summary>消息列表适配。合并 System + Messages 转换为 ChatMessage</summary>
+    [IgnoreDataMember]
+    private IList<ChatMessage>? _chatMessages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatMessage> IChatRequest.Messages
+    {
+        get
+        {
+            if (_chatMessages == null)
+            {
+                var messages = new List<ChatMessage>();
+                if (System != null)
+                {
+                    var systemText = String.Join("", System.Select(s => s.Text));
+                    if (!String.IsNullOrEmpty(systemText))
+                        messages.Add(new ChatMessage { Role = "system", Content = systemText });
+                }
+                foreach (var msg in Messages)
+                {
+                    messages.Add(new ChatMessage
+                    {
+                        Role = msg.Role,
+                        Content = msg.Content != null
+                            ? String.Join("", msg.Content.Select(c => c.Text ?? "").Where(t => !String.IsNullOrEmpty(t)))
+                            : null,
+                    });
+                }
+                _chatMessages = messages;
+            }
+            return _chatMessages;
+        }
+        set => _chatMessages = value;
+    }
+
+    /// <summary>温度适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.Temperature
+    {
+        get => InferenceConfig?.Temperature;
+        set { InferenceConfig ??= new BedrockInferenceConfig(); InferenceConfig.Temperature = value; }
+    }
+
+    /// <summary>核采样适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.TopP
+    {
+        get => InferenceConfig?.TopP;
+        set { InferenceConfig ??= new BedrockInferenceConfig(); InferenceConfig.TopP = value; }
+    }
+
+    /// <summary>最大生成令牌数适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.MaxTokens
+    {
+        get => InferenceConfig?.MaxTokens;
+        set { InferenceConfig ??= new BedrockInferenceConfig(); InferenceConfig.MaxTokens = value; }
+    }
+
+    /// <summary>停止词列表适配</summary>
+    [IgnoreDataMember]
+    IList<String>? IChatRequest.Stop
+    {
+        get => InferenceConfig?.StopSequences;
+        set { InferenceConfig ??= new BedrockInferenceConfig(); InferenceConfig.StopSequences = value; }
+    }
+
+    /// <summary>可用工具列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools { get; set; }
+
+    /// <summary>Top-K 采样</summary>
+    [IgnoreDataMember]
+    public Int32? TopK { get; set; }
+
+    /// <summary>存在惩罚</summary>
+    [IgnoreDataMember]
+    public Double? PresencePenalty { get; set; }
+
+    /// <summary>频率惩罚</summary>
+    [IgnoreDataMember]
+    public Double? FrequencyPenalty { get; set; }
+
+    /// <summary>工具选择策略</summary>
+    [IgnoreDataMember]
+    public Object? ToolChoice { get; set; }
+
+    /// <summary>用户标识</summary>
+    [IgnoreDataMember]
+    public String? User { get; set; }
+
+    /// <summary>是否启用思考模式</summary>
+    [IgnoreDataMember]
+    public Boolean? EnableThinking { get; set; }
+
+    /// <summary>响应格式</summary>
+    [IgnoreDataMember]
+    public Object? ResponseFormat { get; set; }
+
+    /// <summary>是否允许并行工具调用</summary>
+    [IgnoreDataMember]
+    public Boolean? ParallelToolCalls { get; set; }
+
+    /// <summary>用户编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? UserId { get; set; }
+
+    /// <summary>会话编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? ConversationId { get; set; }
+
+    /// <summary>扩展数据</summary>
+    [IgnoreDataMember]
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器</summary>
+    [IgnoreDataMember]
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
     #endregion
 
     #region 转换

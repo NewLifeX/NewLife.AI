@@ -14,7 +14,7 @@ namespace NewLife.AI.Clients.DashScope;
 /// <item>错误时在顶级返回 code/message 字段</item>
 /// </list>
 /// </remarks>
-public class DashScopeResponse
+public class DashScopeResponse : IChatResponse
 {
     #region 属性
     /// <summary>请求编号</summary>
@@ -32,6 +32,85 @@ public class DashScopeResponse
 
     /// <summary>令牌用量统计</summary>
     public DashScopeUsageData? Usage { get; set; }
+    #endregion
+
+    #region IChatResponse 适配
+    /// <summary>响应标识。映射到 RequestId</summary>
+    [IgnoreDataMember]
+    String? IChatResponse.Id { get => RequestId; set => RequestId = value; }
+
+    /// <summary>对象类型</summary>
+    [IgnoreDataMember]
+    String? IChatResponse.Object { get; set; }
+
+    /// <summary>创建时间。DashScope 原生不返回此字段</summary>
+    [IgnoreDataMember]
+    public DateTimeOffset Created { get; set; }
+
+    /// <summary>模型编码。DashScope 原生响应无顶级 model 字段</summary>
+    [IgnoreDataMember]
+    public String? Model { get; set; }
+
+    /// <summary>响应消息列表适配。将 Output.Choices 转换为 ChatChoice 列表</summary>
+    [IgnoreDataMember]
+    private IList<ChatChoice>? _messages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatChoice>? IChatResponse.Messages
+    {
+        get
+        {
+            if (_messages == null && Output?.Choices != null)
+            {
+                var list = new List<ChatChoice>(Output.Choices.Count);
+                for (var i = 0; i < Output.Choices.Count; i++)
+                {
+                    var choiceData = Output.Choices[i];
+                    list.Add(new DashScopeChoice
+                    {
+                        Index = i,
+                        FinishReason = choiceData.FinishReason,
+                        Message = choiceData.Message?.ToChatMessage(),
+                        Delta = (choiceData.Delta ?? choiceData.Message)?.ToChatMessage(),
+                        Logprobs = choiceData.Logprobs,
+                    });
+                }
+                _messages = list;
+            }
+            return _messages;
+        }
+        set => _messages = value;
+    }
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    private UsageDetails? _usageDetails;
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    UsageDetails? IChatResponse.Usage
+    {
+        get
+        {
+            if (_usageDetails == null && Usage != null)
+                _usageDetails = Usage.ToUsageDetails();
+            return _usageDetails;
+        }
+        set => _usageDetails = value;
+    }
+
+    /// <summary>首条回复文本</summary>
+    [IgnoreDataMember]
+    public String? Text
+    {
+        get
+        {
+            if (Output?.Choices == null || Output.Choices.Count == 0) return null;
+            var msg = Output.Choices[0].Message ?? Output.Choices[0].Delta;
+            return msg?.ToChatMessage()?.Content as String;
+        }
+    }
     #endregion
 
     #region 转换

@@ -5,8 +5,8 @@ using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.OpenAI;
 
-/// <summary>对话完成请求。兼容 OpenAI ChatCompletion 标准</summary>
-public class ChatCompletionRequest : IExtend
+/// <summary>对话完成请求。兼容 OpenAI ChatCompletion 标准，同时实现 IChatRequest 可直接作为统一请求在管道中传递</summary>
+public class ChatCompletionRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
@@ -77,6 +77,14 @@ public class ChatCompletionRequest : IExtend
     /// <summary>索引器，方便访问扩展数据</summary>
     [IgnoreDataMember]
     public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+
+    /// <summary>用户编号。内部管道传递，不参与序列化</summary>
+    [IgnoreDataMember]
+    public String? UserId { get; set; }
+
+    /// <summary>会话编号。内部管道传递，不参与序列化</summary>
+    [IgnoreDataMember]
+    public String? ConversationId { get; set; }
     #endregion
 
     #region 方法

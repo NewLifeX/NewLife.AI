@@ -86,7 +86,11 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
 
     /// <summary>构建 Anthropic 请求体</summary>
     /// <param name="request">请求</param>
-    protected override Object BuildRequest(IChatRequest request) => AnthropicRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request)
+    {
+        if (request is AnthropicRequest ar) return ar;
+        return AnthropicRequest.FromChatRequest(request);
+    }
 
     /// <summary>解析 Anthropic 非流式响应</summary>
     protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<AnthropicResponse>()!.ToChatResponse(request.Model);

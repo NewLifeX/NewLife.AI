@@ -73,7 +73,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="cancellationToken">取消令牌</param>
     [HttpPost("v1/chat/completions")]
     public async Task ChatCompletionsAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request.ToChatRequest(), cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region OpenAI Response API
@@ -83,7 +83,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <remarks>协议格式与 ChatCompletions 完全兼容，复用同一处理逻辑</remarks>
     [HttpPost("v1/responses")]
     public async Task ResponsesAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request.ToChatRequest(), cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region Anthropic Messages API
@@ -96,7 +96,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// </remarks>
     [HttpPost("v1/messages")]
     public async Task MessagesAsync([FromBody] AnthropicRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request.ToChatRequest(), cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region Google Gemini API
@@ -109,7 +109,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// </remarks>
     [HttpPost("v1/gemini")]
     public async Task GeminiAsync([FromBody] GeminiRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request.ToChatRequest(), cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region 图像生成
@@ -271,9 +271,9 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
 
     #region 辅助
     /// <summary>核心对话处理逻辑。认证、模型路由、流式/非流式响应，由各协议端点共用</summary>
-    /// <param name="request">已转换为内部统一格式的对话请求</param>
+    /// <param name="request">对话请求（可以是各协议原生请求，均实现 IChatRequest）</param>
     /// <param name="cancellationToken">取消令牌</param>
-    private async Task ProcessChatAsync(ChatRequest request, CancellationToken cancellationToken)
+    private async Task ProcessChatAsync(IChatRequest request, CancellationToken cancellationToken)
     {
         // 认证校验
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
@@ -358,7 +358,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="appKey">应用密钥</param>
     /// <param name="config">模型配置</param>
     /// <returns>上下文消息列表</returns>
-    private IList<AiChatMessage> BuildGatewayContextMessages(ChatRequest request, AppKey appKey, ModelConfig config)
+    private IList<AiChatMessage> BuildGatewayContextMessages(IChatRequest request, AppKey appKey, ModelConfig config)
     {
         var messages = new List<AiChatMessage>();
 

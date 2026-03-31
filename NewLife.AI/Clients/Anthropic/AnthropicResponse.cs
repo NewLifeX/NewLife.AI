@@ -4,7 +4,7 @@ using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Anthropic;
 
-/// <summary>Anthropic Messages API 响应。兼容 https://docs.anthropic.com/en/api/messages 协议</summary>
+/// <summary>Anthropic Messages API 响应。兼容 https://docs.anthropic.com/en/api/messages 协议，同时实现 IChatResponse 可直接作为统一响应使用</summary>
 /// <remarks>
 /// 与 OpenAI ChatCompletionResponse 的主要差异：
 /// <list type="bullet">
@@ -14,7 +14,7 @@ namespace NewLife.AI.Clients.Anthropic;
 /// <item>Usage 使用 input_tokens/output_tokens 命名</item>
 /// </list>
 /// </remarks>
-public class AnthropicResponse
+public class AnthropicResponse : IChatResponse
 {
     #region 属性
     /// <summary>响应编号</summary>
@@ -44,6 +44,122 @@ public class AnthropicResponse
     /// <summary>令牌用量统计</summary>
     [DataMember(Name = "usage")]
     public AnthropicUsage? Usage { get; set; }
+    #endregion
+
+    #region IChatResponse 适配
+    /// <summary>对象类型适配</summary>
+    [IgnoreDataMember]
+    String? IChatResponse.Object { get => Type ?? "message"; set { } }
+
+    /// <summary>创建时间适配</summary>
+    [IgnoreDataMember]
+    DateTimeOffset IChatResponse.Created { get; set; }
+
+    /// <summary>消息选择列表。从 Content 块适配为 IList&lt;ChatChoice&gt;</summary>
+    [IgnoreDataMember]
+    private IList<ChatChoice>? _messages;
+
+    /// <summary>消息选择列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatChoice>? IChatResponse.Messages
+    {
+        get
+        {
+            if (_messages == null && Content != null)
+            {
+                String? contentText = null;
+                String? reasoningText = null;
+                List<ToolCall>? toolCalls = null;
+
+                var textParts = new List<String>();
+                var reasoningParts = new List<String>();
+
+                foreach (var block in Content)
+                {
+                    if (block.Type == "text")
+                        textParts.Add(block.Text ?? "");
+                    else if (block.Type == "thinking")
+                        reasoningParts.Add(block.Thinking ?? block.Text ?? "");
+                    else if (block.Type == "tool_use")
+                    {
+                        toolCalls ??= [];
+                        var inputRaw = block.Input;
+                        toolCalls.Add(new ToolCall
+                        {
+                            Id = block.Id ?? "",
+                            Type = "function",
+                            Function = new FunctionCall
+                            {
+                                Name = block.Name ?? "",
+                                Arguments = inputRaw is IDictionary<String, Object> inputDic
+                                    ? inputDic.ToJson()
+                                    : inputRaw as String ?? "{}",
+                            },
+                        });
+                    }
+                }
+
+                contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
+                reasoningText = reasoningParts.Count > 0 ? String.Join("", reasoningParts) : null;
+                var finishReason = MapStopReason(StopReason);
+
+                var choice = new ChatChoice
+                {
+                    Index = 0,
+                    FinishReason = finishReason,
+                    Message = new ChatMessage
+                    {
+                        Role = "assistant",
+                        Content = contentText,
+                        ReasoningContent = reasoningText,
+                        ToolCalls = toolCalls,
+                    },
+                };
+                _messages = [choice];
+            }
+            return _messages;
+        }
+        set => _messages = value;
+    }
+
+    /// <summary>令牌用量统计适配</summary>
+    [IgnoreDataMember]
+    private UsageDetails? _usageDetails;
+
+    /// <summary>令牌用量适配</summary>
+    [IgnoreDataMember]
+    UsageDetails? IChatResponse.Usage
+    {
+        get
+        {
+            if (_usageDetails == null && Usage != null)
+            {
+                _usageDetails = new UsageDetails
+                {
+                    InputTokens = Usage.InputTokens,
+                    OutputTokens = Usage.OutputTokens,
+                    TotalTokens = Usage.InputTokens + Usage.OutputTokens,
+                };
+            }
+            return _usageDetails;
+        }
+        set => _usageDetails = value;
+    }
+
+    /// <summary>获取回复文本</summary>
+    [IgnoreDataMember]
+    public String? Text
+    {
+        get
+        {
+            if (Content == null) return null;
+            foreach (var block in Content)
+            {
+                if (block.Type == "text") return block.Text;
+            }
+            return null;
+        }
+    }
     #endregion
 
     #region 转换

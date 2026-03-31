@@ -1,10 +1,11 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
+using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Anthropic;
 
-/// <summary>Anthropic Messages API 请求体。兼容 https://docs.anthropic.com/en/api/messages 协议（snake_case 格式）</summary>
+/// <summary>Anthropic Messages API 请求体。兼容 https://docs.anthropic.com/en/api/messages 协议（snake_case 格式），同时实现 IChatRequest 可直接作为统一请求在管道中传递</summary>
 /// <remarks>
 /// 与 OpenAI Chat Completions 的主要差异：
 /// <list type="bullet">
@@ -14,7 +15,7 @@ namespace NewLife.AI.Clients.Anthropic;
 /// <item>消息内容可以是字符串或内容块数组（text / image / tool_use / tool_result）</item>
 /// </list>
 /// </remarks>
-public class AnthropicRequest
+public class AnthropicRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
@@ -56,6 +57,84 @@ public class AnthropicRequest
     /// <summary>可用工具列表。Anthropic 格式：name/description/input_schema</summary>
     [DataMember(Name = "tools")]
     public IList<Object>? Tools { get; set; }
+    #endregion
+
+    #region IChatRequest 适配
+    /// <summary>消息列表适配。合并 System 首条系统消息与 AnthropicMessage 列表转换为 ChatMessage</summary>
+    [IgnoreDataMember]
+    private IList<ChatMessage>? _chatMessages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatMessage> IChatRequest.Messages
+    {
+        get
+        {
+            if (_chatMessages == null)
+            {
+                var messages = new List<ChatMessage>();
+                if (!String.IsNullOrEmpty(System))
+                    messages.Add(new ChatMessage { Role = "system", Content = System });
+                foreach (var msg in Messages)
+                    messages.Add(new ChatMessage { Role = msg.Role, Content = msg.Content });
+                _chatMessages = messages;
+            }
+            return _chatMessages;
+        }
+        set => _chatMessages = value;
+    }
+
+    /// <summary>停止词列表适配。委托到 StopSequences</summary>
+    [IgnoreDataMember]
+    IList<String>? IChatRequest.Stop { get => StopSequences; set => StopSequences = value; }
+
+    /// <summary>可用工具列表适配。将 Anthropic 格式工具转换为 ChatTool</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools { get; set; }
+
+    /// <summary>存在惩罚</summary>
+    [IgnoreDataMember]
+    public Double? PresencePenalty { get; set; }
+
+    /// <summary>频率惩罚</summary>
+    [IgnoreDataMember]
+    public Double? FrequencyPenalty { get; set; }
+
+    /// <summary>工具选择策略</summary>
+    [IgnoreDataMember]
+    public Object? ToolChoice { get; set; }
+
+    /// <summary>用户标识</summary>
+    [IgnoreDataMember]
+    public String? User { get; set; }
+
+    /// <summary>是否启用思考模式</summary>
+    [IgnoreDataMember]
+    public Boolean? EnableThinking { get; set; }
+
+    /// <summary>响应格式</summary>
+    [IgnoreDataMember]
+    public Object? ResponseFormat { get; set; }
+
+    /// <summary>是否允许并行工具调用</summary>
+    [IgnoreDataMember]
+    public Boolean? ParallelToolCalls { get; set; }
+
+    /// <summary>用户编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? UserId { get; set; }
+
+    /// <summary>会话编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? ConversationId { get; set; }
+
+    /// <summary>扩展数据</summary>
+    [IgnoreDataMember]
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器</summary>
+    [IgnoreDataMember]
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
     #endregion
 
     #region 转换

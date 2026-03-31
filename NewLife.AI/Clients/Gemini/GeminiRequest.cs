@@ -1,9 +1,10 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
+using NewLife.Data;
 
 namespace NewLife.AI.Clients.Gemini;
 
-/// <summary>Google Gemini generateContent 请求体。兼容 https://ai.google.dev/api/generate-content 协议（camelCase 格式）</summary>
+/// <summary>Google Gemini generateContent 请求体。兼容 https://ai.google.dev/api/generate-content 协议（camelCase 格式），同时实现 IChatRequest 可直接作为统一请求在管道中传递</summary>
 /// <remarks>
 /// 与 OpenAI Chat Completions 的主要差异：
 /// <list type="bullet">
@@ -14,7 +15,7 @@ namespace NewLife.AI.Clients.Gemini;
 /// <item>原生 API 中 stream 通过不同端点区分，此处作为自定义扩展字段</item>
 /// </list>
 /// </remarks>
-public class GeminiRequest
+public class GeminiRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码。Gemini 原生 API 将模型置于 URL 路径，此处作为扩展字段</summary>
@@ -42,6 +43,130 @@ public class GeminiRequest
     /// <summary>工具声明列表。仅用于 FromChatRequest 构建时临时存储，序列化时由 Tools 输出</summary>
     [IgnoreDataMember]
     internal IList<Object>? ToolDeclarations { get => Tools; set => Tools = value; }
+    #endregion
+
+    #region IChatRequest 适配
+    /// <summary>消息列表适配。合并 SystemInstruction 与 Contents 转换为 ChatMessage</summary>
+    [IgnoreDataMember]
+    private IList<ChatMessage>? _chatMessages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatMessage> IChatRequest.Messages
+    {
+        get
+        {
+            if (_chatMessages == null)
+            {
+                var messages = new List<ChatMessage>();
+                if (SystemInstruction?.Parts.Count > 0)
+                {
+                    var sysText = String.Join("\n", SystemInstruction.Parts
+                        .Where(p => !String.IsNullOrEmpty(p.Text))
+                        .Select(p => p.Text!));
+                    if (!String.IsNullOrEmpty(sysText))
+                        messages.Add(new ChatMessage { Role = "system", Content = sysText });
+                }
+                foreach (var content in Contents)
+                {
+                    var role = content.Role == "model" ? "assistant" : (content.Role ?? "user");
+                    var text = String.Join("", content.Parts.Select(p => p.Text ?? ""));
+                    messages.Add(new ChatMessage { Role = role, Content = text });
+                }
+                _chatMessages = messages;
+            }
+            return _chatMessages;
+        }
+        set => _chatMessages = value;
+    }
+
+    /// <summary>温度适配。委托到 GenerationConfig</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.Temperature
+    {
+        get => GenerationConfig?.Temperature;
+        set { GenerationConfig ??= new GeminiGenerationConfig(); GenerationConfig.Temperature = value; }
+    }
+
+    /// <summary>核采样适配</summary>
+    [IgnoreDataMember]
+    Double? IChatRequest.TopP
+    {
+        get => GenerationConfig?.TopP;
+        set { GenerationConfig ??= new GeminiGenerationConfig(); GenerationConfig.TopP = value; }
+    }
+
+    /// <summary>Top-K 采样适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.TopK
+    {
+        get => GenerationConfig?.TopK;
+        set { GenerationConfig ??= new GeminiGenerationConfig(); GenerationConfig.TopK = value; }
+    }
+
+    /// <summary>最大生成令牌数适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.MaxTokens
+    {
+        get => GenerationConfig?.MaxOutputTokens;
+        set { GenerationConfig ??= new GeminiGenerationConfig(); GenerationConfig.MaxOutputTokens = value; }
+    }
+
+    /// <summary>停止词列表适配</summary>
+    [IgnoreDataMember]
+    IList<String>? IChatRequest.Stop
+    {
+        get => GenerationConfig?.StopSequences;
+        set { GenerationConfig ??= new GeminiGenerationConfig(); GenerationConfig.StopSequences = value; }
+    }
+
+    /// <summary>可用工具列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools { get; set; }
+
+    /// <summary>存在惩罚</summary>
+    [IgnoreDataMember]
+    public Double? PresencePenalty { get; set; }
+
+    /// <summary>频率惩罚</summary>
+    [IgnoreDataMember]
+    public Double? FrequencyPenalty { get; set; }
+
+    /// <summary>工具选择策略</summary>
+    [IgnoreDataMember]
+    public Object? ToolChoice { get; set; }
+
+    /// <summary>用户标识</summary>
+    [IgnoreDataMember]
+    public String? User { get; set; }
+
+    /// <summary>是否启用思考模式</summary>
+    [IgnoreDataMember]
+    public Boolean? EnableThinking { get; set; }
+
+    /// <summary>响应格式</summary>
+    [IgnoreDataMember]
+    public Object? ResponseFormat { get; set; }
+
+    /// <summary>是否允许并行工具调用</summary>
+    [IgnoreDataMember]
+    public Boolean? ParallelToolCalls { get; set; }
+
+    /// <summary>用户编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? UserId { get; set; }
+
+    /// <summary>会话编号。内部管道传递</summary>
+    [IgnoreDataMember]
+    public String? ConversationId { get; set; }
+
+    /// <summary>扩展数据</summary>
+    [IgnoreDataMember]
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器</summary>
+    [IgnoreDataMember]
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
     #endregion
 
     #region 转换

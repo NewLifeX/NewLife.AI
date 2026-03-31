@@ -14,7 +14,7 @@ namespace NewLife.AI.Clients.Bedrock;
 /// <item>Usage 使用 inputTokens/outputTokens 命名，位于顶级</item>
 /// </list>
 /// </remarks>
-public class BedrockResponse
+public class BedrockResponse : IChatResponse
 {
     #region 属性
     /// <summary>响应编号</summary>
@@ -32,6 +32,112 @@ public class BedrockResponse
 
     /// <summary>令牌用量统计</summary>
     public BedrockResponseUsage? Usage { get; set; }
+    #endregion
+
+    #region IChatResponse 适配
+    /// <summary>对象类型</summary>
+    [IgnoreDataMember]
+    String? IChatResponse.Object { get; set; }
+
+    /// <summary>创建时间。Bedrock 原生不返回此字段</summary>
+    [IgnoreDataMember]
+    public DateTimeOffset Created { get; set; }
+
+    /// <summary>响应消息列表适配。将 Output 转换为 ChatChoice 列表</summary>
+    [IgnoreDataMember]
+    private IList<ChatChoice>? _messages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatChoice>? IChatResponse.Messages
+    {
+        get
+        {
+            if (_messages == null && Output?.ResponseMessage != null)
+            {
+                var msg = Output.ResponseMessage;
+                String? contentText = null;
+                String? reasoning = null;
+                List<ToolCall>? toolCalls = null;
+
+                if (msg.Content != null)
+                {
+                    var textParts = new List<String>();
+                    var reasoningParts = new List<String>();
+
+                    foreach (var block in msg.Content)
+                    {
+                        if (!String.IsNullOrEmpty(block.Text))
+                            textParts.Add(block.Text);
+                        if (block.ReasoningContent?.ReasoningText != null)
+                            reasoningParts.Add(block.ReasoningContent.ReasoningText);
+                        if (block.ToolUse != null)
+                        {
+                            toolCalls ??= [];
+                            var inputRaw = block.ToolUse.Input;
+                            toolCalls.Add(new ToolCall
+                            {
+                                Id = block.ToolUse.ToolUseId ?? "",
+                                Type = "function",
+                                Function = new FunctionCall
+                                {
+                                    Name = block.ToolUse.Name ?? "",
+                                    Arguments = inputRaw is IDictionary<String, Object> inputDic
+                                        ? inputDic.ToJson()
+                                        : inputRaw as String ?? "{}",
+                                },
+                            });
+                        }
+                    }
+
+                    contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
+                    reasoning = reasoningParts.Count > 0 ? String.Join("", reasoningParts) : null;
+                }
+
+                var finishReason = MapStopReason(msg.StopReason ?? StopReason);
+                var chatMsg = new ChatMessage { Role = "assistant", Content = contentText, ReasoningContent = reasoning, ToolCalls = toolCalls };
+                _messages = [new ChatChoice { Index = 0, Message = chatMsg, FinishReason = finishReason }];
+            }
+            return _messages;
+        }
+        set => _messages = value;
+    }
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    private UsageDetails? _usageDetails;
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    UsageDetails? IChatResponse.Usage
+    {
+        get
+        {
+            if (_usageDetails == null && Usage != null)
+            {
+                _usageDetails = new UsageDetails
+                {
+                    InputTokens = Usage.InputTokens,
+                    OutputTokens = Usage.OutputTokens,
+                    TotalTokens = Usage.InputTokens + Usage.OutputTokens,
+                };
+            }
+            return _usageDetails;
+        }
+        set => _usageDetails = value;
+    }
+
+    /// <summary>首条回复文本</summary>
+    [IgnoreDataMember]
+    public String? Text
+    {
+        get
+        {
+            var content = Output?.ResponseMessage?.Content;
+            if (content == null) return null;
+            return String.Join("", content.Where(c => c.Text != null).Select(c => c.Text));
+        }
+    }
     #endregion
 
     #region 转换

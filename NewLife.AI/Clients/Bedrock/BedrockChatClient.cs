@@ -107,7 +107,11 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Bedrock Converse API 请求体</summary>
-    protected override Object BuildRequest(IChatRequest request) => BedrockRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request)
+    {
+        if (request is BedrockRequest br) return br;
+        return BedrockRequest.FromChatRequest(request);
+    }
 
     /// <summary>解析 Bedrock Converse API 非流式响应</summary>
     protected override IChatResponse ParseResponse(String json, IChatRequest request)

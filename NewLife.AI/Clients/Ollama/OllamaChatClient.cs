@@ -172,7 +172,11 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     }
 
     /// <summary>构建 Ollama 原生请求体</summary>
-    protected override Object BuildRequest(IChatRequest request) => OllamaChatRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request)
+    {
+        if (request is OllamaChatRequest or) return or;
+        return OllamaChatRequest.FromChatRequest(request);
+    }
 
     /// <summary>解析 Ollama 非流式响应</summary>
     protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<OllamaChatResponse>()!.ToChatResponse();

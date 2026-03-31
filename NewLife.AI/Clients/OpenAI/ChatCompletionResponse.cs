@@ -3,7 +3,7 @@ using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients.OpenAI;
 
-/// <summary>OpenAI Chat Completion 响应。兼容 v1/chat/completions 和 v1/responses 协议</summary>
+/// <summary>OpenAI Chat Completion 响应。兼容 v1/chat/completions 和 v1/responses 协议，同时实现 IChatResponse 可直接作为统一响应使用</summary>
 /// <remarks>
 /// 与内部统一 <see cref="ChatResponse"/> 的主要差异：
 /// <list type="bullet">
@@ -12,7 +12,7 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <item>流式块 object 为 chat.completion.chunk，使用 delta 而非 message</item>
 /// </list>
 /// </remarks>
-public class ChatCompletionResponse
+public class ChatCompletionResponse : IChatResponse
 {
     #region 属性
     /// <summary>响应编号</summary>
@@ -32,6 +32,83 @@ public class ChatCompletionResponse
 
     /// <summary>令牌用量统计</summary>
     public CompletionUsage? Usage { get; set; }
+    #endregion
+
+    #region IChatResponse 适配
+    /// <summary>创建时间戳。从 Unix 秒适配为 DateTimeOffset</summary>
+    [IgnoreDataMember]
+    DateTimeOffset IChatResponse.Created
+    {
+        get => Created > 0 ? DateTimeOffset.FromUnixTimeSeconds(Created) : DateTimeOffset.UtcNow;
+        set => Created = value.ToUnixTimeSeconds();
+    }
+
+    /// <summary>消息选择列表。从 Choices 适配为 IList&lt;ChatChoice&gt;</summary>
+    [IgnoreDataMember]
+    private IList<ChatChoice>? _messages;
+
+    /// <summary>消息选择列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatChoice>? IChatResponse.Messages
+    {
+        get
+        {
+            if (_messages == null && Choices != null)
+            {
+                var choices = new List<ChatChoice>(Choices.Count);
+                foreach (var choice in Choices)
+                {
+                    choices.Add(new ChatChoice
+                    {
+                        Index = choice.Index,
+                        Message = choice.Message,
+                        Delta = choice.Delta,
+                        FinishReason = choice.FinishReason,
+                    });
+                }
+                _messages = choices;
+            }
+            return _messages;
+        }
+        set => _messages = value;
+    }
+
+    /// <summary>令牌用量统计。从 CompletionUsage 适配为 UsageDetails</summary>
+    [IgnoreDataMember]
+    private UsageDetails? _usageDetails;
+
+    /// <summary>令牌用量适配</summary>
+    [IgnoreDataMember]
+    UsageDetails? IChatResponse.Usage
+    {
+        get
+        {
+            if (_usageDetails == null && Usage != null)
+            {
+                _usageDetails = new UsageDetails
+                {
+                    InputTokens = Usage.PromptTokens,
+                    OutputTokens = Usage.CompletionTokens,
+                    TotalTokens = Usage.TotalTokens,
+                };
+            }
+            return _usageDetails;
+        }
+        set => _usageDetails = value;
+    }
+
+    /// <summary>获取回复文本</summary>
+    [IgnoreDataMember]
+    public String? Text
+    {
+        get
+        {
+            var choice = Choices?.FirstOrDefault();
+            if (choice == null) return null;
+            var msg = choice.Message ?? choice.Delta;
+            return msg?.Content is String s ? s : msg?.Content?.ToString();
+        }
+    }
     #endregion
 
     #region 转换

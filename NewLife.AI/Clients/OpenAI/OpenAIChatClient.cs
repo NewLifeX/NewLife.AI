@@ -207,7 +207,11 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <summary>构建请求体。返回符合 OpenAI 格式的协议请求对象</summary>
     /// <param name="request">请求对象</param>
     /// <returns>ChatCompletionRequest 实例，由 PostAsync 调用 ToJson 序列化</returns>
-    protected override Object BuildRequest(IChatRequest request) => ChatCompletionRequest.FromChatRequest(request);
+    protected override Object BuildRequest(IChatRequest request)
+    {
+        if (request is ChatCompletionRequest cr) return cr;
+        return ChatCompletionRequest.FromChatRequest(request);
+    }
 
     /// <summary>解析响应 JSON</summary>
     /// <param name="json">JSON 字符串</param>

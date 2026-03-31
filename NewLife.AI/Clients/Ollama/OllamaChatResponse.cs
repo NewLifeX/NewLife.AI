@@ -3,12 +3,12 @@ using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients.Ollama;
 
-/// <summary>Ollama /api/chat 对话响应（非流式和流式共用结构）</summary>
+/// <summary>Ollama /api/chat 对话响应（非流式和流式共用结构），同时实现 IChatResponse 可直接作为统一响应</summary>
 /// <remarks>
 /// 非流式响应包含完整消息和统计信息（done=true）。
 /// 流式响应每帧包含部分消息（done=false），最后一帧包含统计信息（done=true）。
 /// </remarks>
-public class OllamaChatResponse
+public class OllamaChatResponse : IChatResponse
 {
     /// <summary>模型名称</summary>
     public String? Model { get; set; }
@@ -50,6 +50,72 @@ public class OllamaChatResponse
     /// <summary>输出评估耗时（纳秒）</summary>
     [DataMember(Name = "eval_duration")]
     public Int64 EvalDuration { get; set; }
+
+    #region IChatResponse 适配
+    /// <summary>响应标识</summary>
+    [IgnoreDataMember]
+    public String? Id { get; set; }
+
+    /// <summary>对象类型</summary>
+    [IgnoreDataMember]
+    String? IChatResponse.Object { get; set; }
+
+    /// <summary>创建时间适配。从 CreatedAt 解析或使用当前时间</summary>
+    [IgnoreDataMember]
+    DateTimeOffset IChatResponse.Created
+    {
+        get => CreatedAt != null && DateTimeOffset.TryParse(CreatedAt, out var dt) ? dt : DateTimeOffset.UtcNow;
+        set => CreatedAt = value.ToString("O");
+    }
+
+    /// <summary>响应消息列表适配</summary>
+    [IgnoreDataMember]
+    private IList<ChatChoice>? _messages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatChoice>? IChatResponse.Messages
+    {
+        get
+        {
+            if (_messages == null && Message != null)
+            {
+                var msg = Message.ToChatMessage();
+                _messages = [new ChatChoice { Index = 0, Message = msg, Delta = msg, FinishReason = DoneReason }];
+            }
+            return _messages;
+        }
+        set => _messages = value;
+    }
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    private UsageDetails? _usageDetails;
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    UsageDetails? IChatResponse.Usage
+    {
+        get
+        {
+            if (_usageDetails == null && (PromptEvalCount > 0 || EvalCount > 0))
+            {
+                _usageDetails = new UsageDetails
+                {
+                    InputTokens = PromptEvalCount,
+                    OutputTokens = EvalCount,
+                    TotalTokens = PromptEvalCount + EvalCount,
+                };
+            }
+            return _usageDetails;
+        }
+        set => _usageDetails = value;
+    }
+
+    /// <summary>首条回复文本</summary>
+    [IgnoreDataMember]
+    public String? Text => Message?.Content as String;
+    #endregion
 
     /// <summary>转换为通用 ChatResponse（非流式）</summary>
     /// <returns>通用对话响应</returns>

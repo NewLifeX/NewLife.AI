@@ -15,7 +15,7 @@ namespace NewLife.AI.Clients.Gemini;
 /// <item>流式与非流式结构相同，无需 data: [DONE] 结束标记</item>
 /// </list>
 /// </remarks>
-public class GeminiResponse
+public class GeminiResponse : IChatResponse
 {
     #region 属性
     /// <summary>候选回复列表</summary>
@@ -24,6 +24,97 @@ public class GeminiResponse
     /// <summary>令牌用量统计</summary>
     [DataMember(Name = "usageMetadata")]
     public GeminiUsageMetadata? UsageMetadata { get; set; }
+    #endregion
+
+    #region IChatResponse 适配
+    /// <summary>响应标识。Gemini 原生不返回此字段</summary>
+    [IgnoreDataMember]
+    public String? Id { get; set; }
+
+    /// <summary>对象类型</summary>
+    [IgnoreDataMember]
+    String? IChatResponse.Object { get; set; }
+
+    /// <summary>创建时间。Gemini 原生不返回此字段</summary>
+    [IgnoreDataMember]
+    public DateTimeOffset Created { get; set; }
+
+    /// <summary>模型编码</summary>
+    [IgnoreDataMember]
+    public String? Model { get; set; }
+
+    /// <summary>响应消息列表适配。将 Candidates 转换为 ChatChoice 列表</summary>
+    [IgnoreDataMember]
+    private IList<ChatChoice>? _messages;
+
+    /// <summary>消息列表适配</summary>
+    [IgnoreDataMember]
+    IList<ChatChoice>? IChatResponse.Messages
+    {
+        get
+        {
+            if (_messages == null && Candidates != null)
+            {
+                var list = new List<ChatChoice>();
+                foreach (var candidate in Candidates)
+                {
+                    var (text, toolCalls) = ExtractContent(candidate);
+                    var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate.FinishReason);
+                    var choice = new ChatChoice
+                    {
+                        Index = candidate.Index,
+                        FinishReason = finishReason,
+                        Message = new ChatMessage
+                        {
+                            Role = "assistant",
+                            Content = text,
+                            ToolCalls = toolCalls,
+                        },
+                    };
+                    list.Add(choice);
+                }
+                _messages = list;
+            }
+            return _messages;
+        }
+        set => _messages = value;
+    }
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    private UsageDetails? _usageDetails;
+
+    /// <summary>用量统计适配</summary>
+    [IgnoreDataMember]
+    UsageDetails? IChatResponse.Usage
+    {
+        get
+        {
+            if (_usageDetails == null && UsageMetadata != null)
+            {
+                _usageDetails = new UsageDetails
+                {
+                    InputTokens = UsageMetadata.PromptTokenCount,
+                    OutputTokens = UsageMetadata.CandidatesTokenCount,
+                    TotalTokens = UsageMetadata.TotalTokenCount,
+                };
+            }
+            return _usageDetails;
+        }
+        set => _usageDetails = value;
+    }
+
+    /// <summary>首条回复文本</summary>
+    [IgnoreDataMember]
+    public String? Text
+    {
+        get
+        {
+            var parts = Candidates?.FirstOrDefault()?.Content?.Parts;
+            if (parts == null) return null;
+            return String.Join("", parts.Where(p => p.Text != null).Select(p => p.Text));
+        }
+    }
     #endregion
 
     #region 转换
