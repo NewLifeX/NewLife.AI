@@ -65,9 +65,9 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
 
         var model = request.Model ?? _options.Model;
         var url = BuildUrl(request);
-        var body = BuildDashScopeRequestBody(request);
+        var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        var response = ParseDashScopeResponse(json);
+        var response = json.ToJsonEntity<DashScopeResponse>()!.ToChatResponse(model);
 
         // 原生响应无顶层 model 字段，从请求回填
         response.Model ??= model;
@@ -86,7 +86,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         }
 
         var url = BuildUrl(request);
-        var body = BuildDashScopeRequestBody(request);
+        var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -267,286 +267,9 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         return false;
     }
 
-    /// <summary>构建 DashScope 原生请求体</summary>
-    private static Object BuildDashScopeRequestBody(ChatRequest request)
-    {
-        var isMultimodal = IsMultimodalModel(request.Model);
-        var messages = BuildDashScopeMessages(request.Messages, isMultimodal);
-
-        var parameters = new Dictionary<String, Object> { ["result_format"] = "message" };
-        if (request.Temperature != null) parameters["temperature"] = request.Temperature.Value;
-        if (request.TopP != null) parameters["top_p"] = request.TopP.Value;
-        if (request.TopK != null) parameters["top_k"] = request.TopK.Value;
-        if (request.MaxTokens != null) parameters["max_tokens"] = request.MaxTokens.Value;
-        if (request.Stop != null && request.Stop.Count > 0) parameters["stop"] = request.Stop;
-        if (request.PresencePenalty != null) parameters["presence_penalty"] = request.PresencePenalty.Value;
-        if (request.FrequencyPenalty != null) parameters["frequency_penalty"] = request.FrequencyPenalty.Value;
-        if (request.EnableThinking != null) parameters["enable_thinking"] = request.EnableThinking.Value;
-        if (request.ResponseFormat != null) parameters["response_format"] = request.ResponseFormat;
-        if (request.Tools != null && request.Tools.Count > 0)
-            parameters["tools"] = BuildDashScopeTools(request.Tools);
-        if (request.ToolChoice != null) parameters["tool_choice"] = request.ToolChoice;
-        if (request.ParallelToolCalls != null) parameters["parallel_tool_calls"] = request.ParallelToolCalls.Value;
-
-        ApplyDashScopeItems(parameters, request);
-
-        if (request.Stream)
-        {
-            parameters["stream"] = true;
-            parameters["incremental_output"] = true;
-        }
-        else
-        {
-            // 显式传 stream=false，避免多模态端点默认进入流式模式
-            parameters["stream"] = false;
-        }
-
-        return new Dictionary<String, Object>
-        {
-            ["model"] = request.Model ?? "",
-            ["input"] = new Dictionary<String, Object> { ["messages"] = messages },
-            ["parameters"] = parameters,
-        };
-    }
-
-    /// <summary>从 request 扩展项读取 DashScope 专属参数</summary>
-    private static void ApplyDashScopeItems(Dictionary<String, Object> parameters, ChatRequest request)
-    {
-        var seed = request["Seed"] as Int32?;
-        if (seed != null) parameters["seed"] = seed.Value;
-        var repetitionPenalty = request["RepetitionPenalty"] as Double?;
-        if (repetitionPenalty != null) parameters["repetition_penalty"] = repetitionPenalty.Value;
-        var n = request["N"] as Int32?;
-        if (n != null) parameters["n"] = n.Value;
-        var thinkingBudget = request["ThinkingBudget"] as Int32?;
-        if (thinkingBudget != null) parameters["thinking_budget"] = thinkingBudget.Value;
-        var enableCodeInterpreter = request["EnableCodeInterpreter"] as Boolean?;
-        if (enableCodeInterpreter != null) parameters["enable_code_interpreter"] = enableCodeInterpreter.Value;
-        var logprobs = request["Logprobs"] as Boolean?;
-        if (logprobs != null) parameters["logprobs"] = logprobs.Value;
-        var topLogprobs = request["TopLogprobs"] as Int32?;
-        if (topLogprobs != null) parameters["top_logprobs"] = topLogprobs.Value;
-        var enableSearch = request["EnableSearch"] as Boolean?;
-        if (enableSearch != null) parameters["enable_search"] = enableSearch.Value;
-
-        var searchOptions = new Dictionary<String, Object>();
-        var searchStrategy = request["SearchStrategy"] as String;
-        if (!String.IsNullOrEmpty(searchStrategy)) searchOptions["search_strategy"] = searchStrategy;
-        var enableSource = request["EnableSource"] as Boolean?;
-        if (enableSource != null) searchOptions["enable_source"] = enableSource.Value;
-        var forcedSearch = request["ForcedSearch"] as Boolean?;
-        if (forcedSearch != null) searchOptions["forced_search"] = forcedSearch.Value;
-        if (searchOptions.Count > 0) parameters["search_options"] = searchOptions;
-    }
-
-    /// <summary>构建原生协议 messages 数组</summary>
-    private static IList<Object> BuildDashScopeMessages(IList<ChatMessage> messages, Boolean isMultimodal)
-    {
-        var result = new List<Object>(messages.Count);
-        foreach (var msg in messages)
-        {
-            var m = new Dictionary<String, Object?> { ["role"] = msg.Role };
-
-            if (msg.Contents != null && msg.Contents.Count > 0)
-                m["content"] = BuildDashScopeContent(msg.Contents, isMultimodal);
-            else if (isMultimodal)
-                m["content"] = new List<Object> { new { text = msg.Content ?? "" } };
-            else
-                m["content"] = msg.Content;
-
-            if (msg.Name != null) m["name"] = msg.Name;
-            if (msg.ToolCallId != null) m["tool_call_id"] = msg.ToolCallId;
-
-            if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
-            {
-                var toolCalls = new List<Object>(msg.ToolCalls.Count);
-                foreach (var tc in msg.ToolCalls)
-                {
-                    var tcDic = new Dictionary<String, Object?> { ["id"] = tc.Id, ["type"] = tc.Type };
-                    if (tc.Function != null)
-                    {
-                        tcDic["function"] = new Dictionary<String, Object?>
-                        {
-                            ["name"] = tc.Function.Name,
-                            ["arguments"] = String.IsNullOrEmpty(tc.Function.Arguments) ? "{}" : tc.Function.Arguments,
-                        };
-                    }
-                    toolCalls.Add(tcDic);
-                }
-                m["tool_calls"] = toolCalls;
-            }
-
-            result.Add(m);
-        }
-        return result;
-    }
-
-    /// <summary>构建多模态内容数组（DashScope 原生格式）</summary>
-    private static Object BuildDashScopeContent(IList<AIContent> contents, Boolean isMultimodal)
-    {
-        if (!isMultimodal && contents.Count == 1 && contents[0] is TextContent singleText)
-            return singleText.Text;
-
-        var parts = new List<Object>(contents.Count);
-        foreach (var item in contents)
-        {
-            if (item is TextContent text)
-            {
-                parts.Add(isMultimodal
-                    ? (Object)new { text = text.Text }
-                    : new { type = "text", text = text.Text });
-            }
-            else if (item is ImageContent img)
-            {
-                String url;
-                if (img.Data != null && img.Data.Length > 0)
-                    url = $"data:{img.MediaType ?? "image/jpeg"};base64,{Convert.ToBase64String(img.Data)}";
-                else
-                    url = img.Uri ?? "";
-
-                parts.Add(isMultimodal
-                    ? (Object)new { image = url }
-                    : new { type = "image_url", image_url = new { url } });
-            }
-        }
-        return parts;
-    }
-
-    /// <summary>构建原生协议 tools 参数数组，支持 function/mcp/web_search/code_interpreter</summary>
-    private static IList<Object> BuildDashScopeTools(IList<ChatTool> tools)
-    {
-        var result = new List<Object>(tools.Count);
-        foreach (var tool in tools)
-        {
-            var t = new Dictionary<String, Object?> { ["type"] = tool.Type };
-
-            if (tool.Type == "function" && tool.Function != null)
-            {
-                var fn = new Dictionary<String, Object?> { ["name"] = tool.Function.Name };
-                if (tool.Function.Description != null) fn["description"] = tool.Function.Description;
-                if (tool.Function.Parameters != null) fn["parameters"] = tool.Function.Parameters;
-                t["function"] = fn;
-            }
-            else if (tool.Type == "mcp" && tool.Mcp != null)
-            {
-                var mcp = new Dictionary<String, Object>();
-                if (tool.Mcp.ServerUrl != null) mcp["server_url"] = tool.Mcp.ServerUrl;
-                if (tool.Mcp.ServerId != null) mcp["server_id"] = tool.Mcp.ServerId;
-                if (tool.Mcp.AllowedTools != null) mcp["allowed_tools"] = tool.Mcp.AllowedTools;
-                if (tool.Mcp.Authorization != null)
-                {
-                    mcp["authorization"] = new Dictionary<String, Object?>
-                    {
-                        ["type"] = tool.Mcp.Authorization.Type,
-                        ["token"] = tool.Mcp.Authorization.Token,
-                    };
-                }
-                t["mcp"] = mcp;
-            }
-            else if (tool.Config != null)
-                t[tool.Type ?? "config"] = tool.Config;
-
-            result.Add(t);
-        }
-        return result;
-    }
-
-    /// <summary>解析 DashScope 原生非流式响应</summary>
-    private ChatResponse ParseDashScopeResponse(String json)
-    {
-        var dic = JsonParser.Decode(json);
-        if (dic == null) throw new InvalidOperationException("无法解析 DashScope 响应");
-
-        var errCode = dic["code"] as String;
-        var errMsg = dic["message"] as String;
-        if (!String.IsNullOrEmpty(errCode))
-            throw new HttpRequestException($"[{Name}] 错误 {errCode}: {errMsg}");
-
-        var response = new ChatResponse
-        {
-            Object = "chat.completion",
-            Id = dic["request_id"] as String,
-        };
-
-        if (dic["output"] is IDictionary<String, Object> output &&
-            output["choices"] is IList<Object> choicesList)
-        {
-            var choices = new List<ChatChoice>(choicesList.Count);
-            for (var i = 0; i < choicesList.Count; i++)
-            {
-                if (choicesList[i] is not IDictionary<String, Object> choiceDic) continue;
-                choices.Add(new DashScopeChoice
-                {
-                    Index = i,
-                    FinishReason = choiceDic["finish_reason"] as String,
-                    Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),
-                    Logprobs = choiceDic.TryGetValue("logprobs", out var lp) ? lp : null,
-                });
-            }
-            response.Messages = choices;
-        }
-
-        if (dic["usage"] is IDictionary<String, Object> usageDic)
-            response.Usage = ParseDashScopeUsage(usageDic);
-
-        return response;
-    }
-
     /// <summary>解析 DashScope 原生流式 SSE chunk</summary>
     protected override ChatResponse? ParseChunk(String data, ChatRequest request, String? lastEvent)
-    {
-        var dic = JsonParser.Decode(data);
-        if (dic == null) return null;
-
-        var response = new ChatResponse
-        {
-            Object = "chat.completion.chunk",
-            Id = dic["request_id"] as String,
-        };
-
-        if (dic["output"] is IDictionary<String, Object> output &&
-            output["choices"] is IList<Object> choicesList)
-        {
-            var choices = new List<ChatChoice>(choicesList.Count);
-            for (var i = 0; i < choicesList.Count; i++)
-            {
-                if (choicesList[i] is not IDictionary<String, Object> choiceDic) continue;
-                var choice = new DashScopeChoice
-                {
-                    Index = i,
-                    FinishReason = choiceDic["finish_reason"] as String,
-                };
-
-                // incremental_output=true 时，delta/message 含增量文本
-                IDictionary<String, Object>? incrementalField = null;
-                if (choiceDic["delta"] is IDictionary<String, Object> dd)
-                    incrementalField = dd;
-                else if (choiceDic["message"] is IDictionary<String, Object> md)
-                    incrementalField = md;
-                choice.Delta = ParseChatMessage(incrementalField);
-
-                if (choiceDic.TryGetValue("logprobs", out var lp)) choice.Logprobs = lp;
-                choices.Add(choice);
-            }
-            response.Messages = choices;
-        }
-
-        if (dic["usage"] is IDictionary<String, Object> usageDic)
-            response.Usage = ParseDashScopeUsage(usageDic);
-
-        return response;
-    }
-
-    /// <summary>解析 DashScope 原生用量统计</summary>
-    private static DashScopeUsage ParseDashScopeUsage(IDictionary<String, Object> usageDic) => new()
-    {
-        InputTokens = usageDic["input_tokens"].ToInt(),
-        OutputTokens = usageDic["output_tokens"].ToInt(),
-        TotalTokens = usageDic["total_tokens"].ToInt(),
-        ImageTokens = usageDic.TryGetValue("image_tokens", out var img) ? img.ToInt() : 0,
-        VideoTokens = usageDic.TryGetValue("video_tokens", out var vid) ? vid.ToInt() : 0,
-        AudioTokens = usageDic.TryGetValue("audio_tokens", out var aud) ? aud.ToInt() : 0,
-    };
+        => data.ToJsonEntity<DashScopeResponse>()?.ToChunkResponse(request.Model);
 
     /// <inheritdoc/>
     /// <remarks>多模态响应中 content 为数组格式（[{"text":"..."}]），归一化为字符串</remarks>
@@ -641,25 +364,7 @@ public class DashScopeChatOptions : ChatOptions
     public Boolean? ForcedSearch { get; set; }
 }
 
-/// <summary>DashScope 专属选择项。继承 <see cref="ChatChoice"/> 并扩展 logprobs 字段</summary>
-public class DashScopeChoice : ChatChoice
-{
-    /// <summary>对数概率信息。当请求参数 logprobs=true 时返回，包含输出 Token 的概率分布</summary>
-    public Object? Logprobs { get; set; }
-}
 
-/// <summary>DashScope 专属用量统计。继承 <see cref="UsageDetails"/> 并扩展多模态 Token 字段</summary>
-public class DashScopeUsage : UsageDetails
-{
-    /// <summary>图像 Token 数。多模态请求中图像输入消耗的 Token 数</summary>
-    public Int32 ImageTokens { get; set; }
-
-    /// <summary>视频 Token 数。多模态请求中视频输入消耗的 Token 数</summary>
-    public Int32 VideoTokens { get; set; }
-
-    /// <summary>音频 Token 数。多模态请求中音频输入消耗的 Token 数</summary>
-    public Int32 AudioTokens { get; set; }
-}
 
 
 
