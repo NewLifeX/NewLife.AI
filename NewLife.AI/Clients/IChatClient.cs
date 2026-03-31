@@ -1,4 +1,5 @@
-﻿using NewLife.AI.Models;
+﻿using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients;
 
@@ -149,7 +150,7 @@ public static class ChatClientExtensions
     /// <param name="request">内部对话请求，含消息列表与生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    public static Task<IChatResponse> CompleteChatAsync(this IChatClient client, IChatRequest request, CancellationToken cancellationToken = default)
+    public static Task<IChatResponse> CompleteChatAsync(this IChatClient client, ChatCompletionRequest request, CancellationToken cancellationToken = default)
         => client.GetResponseAsync(request, cancellationToken);
 
     /// <summary>流式对话完成。逐块返回生成内容</summary>
