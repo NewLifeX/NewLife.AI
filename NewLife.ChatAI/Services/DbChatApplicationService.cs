@@ -1116,7 +1116,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         if (entity == null)
         {
             // 返回默认设置
-            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty));
+            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false));
         }
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -1146,6 +1146,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         entity.McpEnabled = settings.McpEnabled;
         entity.StreamingSpeed = settings.StreamingSpeed;
         entity.AllowTraining = settings.AllowTraining;
+        entity.DefaultSkill = settings.DefaultSkill;
+        entity.ContentWidth = settings.ContentWidth;
         entity.Save();
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -1408,11 +1410,13 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             entity.DefaultModel,
             entity.DefaultThinkingMode,
             entity.ContextRounds > 0 ? entity.ContextRounds : 10,
-            entity.SystemPrompt ?? String.Empty)
+            entity.SystemPrompt ?? String.Empty,
+            entity.AllowTraining)
         {
             McpEnabled = entity.McpEnabled,
             StreamingSpeed = entity.StreamingSpeed > 0 ? entity.StreamingSpeed : 3,
-            AllowTraining = entity.AllowTraining,
+            DefaultSkill = entity.DefaultSkill ?? "general",
+            ContentWidth = entity.ContentWidth > 0 ? entity.ContentWidth : 960,
         };
 
     /// <summary>将用户消息的附件与文本内容组合为多模态消息。图片读取文件字节后以 base64 data URI 传给 LLM；非图片附件暂忽略</summary>

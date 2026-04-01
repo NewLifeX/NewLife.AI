@@ -32,6 +32,7 @@ public class SystemConfigController : ChatApiControllerBase
         {
             AppName = s.Name,
             SiteTitle = s.SiteTitle,
+            LogoUrl = s.LogoUrl,
             SuggestedQuestions = questions,
         });
     }

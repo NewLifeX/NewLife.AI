@@ -72,7 +72,7 @@ public record MessageSearchResultDto
 public record ShareLinkDto(String Url, DateTime CreateTime, DateTime? ExpireTime);
 
 /// <summary>用户设置</summary>
-public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, Int32 DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String SystemPrompt)
+public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, Int32 DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String SystemPrompt, Boolean AllowTraining)
 {
     /// <summary>是否启用 MCP</summary>
     public Boolean McpEnabled { get; set; } = true;
@@ -80,8 +80,11 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     /// <summary>流式输出速度</summary>
     public Int32 StreamingSpeed { get; set; } = 3;
 
-    /// <summary>允许用于模型训练改进</summary>
-    public Boolean AllowTraining { get; set; }
+    /// <summary>默认技能</summary>
+    public String DefaultSkill { get; set; } = "general";
+
+    /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
+    public Int32 ContentWidth { get; set; } = 960;
 };
 
 /// <summary>用户资料</summary>
@@ -94,6 +97,8 @@ public class SystemConfigDto
     public String AppName { get; set; }
     /// <summary>站点标题，显示在浏览器标签和 /chat 页面</summary>
     public String SiteTitle { get; set; }
+    /// <summary>Logo地址。欢迎页自定义Logo图片URL</summary>
+    public String LogoUrl { get; set; }
     /// <summary>欢迎页推荐问题列表</summary>
     public SuggestedQuestionDto[] SuggestedQuestions { get; set; }
 }

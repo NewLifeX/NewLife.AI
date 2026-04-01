@@ -25,6 +25,11 @@ public class ChatSetting : Config<ChatSetting>
     [Description("站点标题。显示在浏览器标签页和 /chat 页面顶部")]
     public String SiteTitle { get; set; } = "智能助手";
 
+    /// <summary>Logo地址。欢迎页自定义Logo图片URL，为空时使用默认图标</summary>
+    [Category("基本配置")]
+    [Description("Logo地址。欢迎页自定义Logo图片URL，为空时使用默认图标")]
+    public String LogoUrl { get; set; }
+
     /// <summary>推荐问题。新会话页展示的推荐问题，多个用竖线分隔</summary>
     [Category("基本配置")]
     [Description("推荐问题。新会话页展示的推荐问题，多个用竖线分隔")]
