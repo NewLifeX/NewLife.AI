@@ -40,7 +40,7 @@ public class OpenAiChatClientTests
 
         var choice = response.Messages[0];
         Assert.Equal(0, choice.Index);
-        Assert.Equal("stop", choice.FinishReason);
+        Assert.Equal(FinishReason.Stop, choice.FinishReason);
     }
 
     [Fact]

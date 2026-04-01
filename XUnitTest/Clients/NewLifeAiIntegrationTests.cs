@@ -209,7 +209,7 @@ public class NewLifeAiIntegrationTests
         Assert.NotNull(response);
         var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
-        Assert.True(finishReason == "stop" || finishReason == "length",
+        Assert.True(finishReason == FinishReason.Stop || finishReason == FinishReason.Length,
             $"FinishReason ӦΪ stop �� length��ʵ��Ϊ: {finishReason}");
     }
 

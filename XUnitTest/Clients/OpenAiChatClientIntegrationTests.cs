@@ -368,7 +368,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
-        Assert.True(finishReason == "stop" || finishReason == "length",
+        Assert.True(finishReason == FinishReason.Stop || finishReason == FinishReason.Length,
             $"FinishReason should be stop or length, actual: {finishReason}");
     }
 
@@ -384,7 +384,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response);
         var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
-        Assert.True(finishReason == "length" || finishReason == "stop",
+        Assert.True(finishReason == FinishReason.Length || finishReason == FinishReason.Stop,
             $"Expected length or stop, actual: {finishReason}");
     }
 
@@ -666,7 +666,7 @@ public class OpenAiChatClientIntegrationTests
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
-        String? lastFinishReason = null;
+        FinishReason? lastFinishReason = null;
         await foreach (var chunk in ChatStreamAsync(request))
         {
             if (chunk.Messages != null)
@@ -680,7 +680,7 @@ public class OpenAiChatClientIntegrationTests
         }
 
         Assert.NotNull(lastFinishReason);
-        Assert.True(lastFinishReason == "stop" || lastFinishReason == "length",
+        Assert.True(lastFinishReason == FinishReason.Stop || lastFinishReason == FinishReason.Length,
             $"stream final FinishReason should be stop or length, actual: {lastFinishReason}");
     }
 
@@ -903,7 +903,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var choice = response.Messages[0];
-        if (choice.FinishReason == "tool_calls")
+        if (choice.FinishReason == FinishReason.ToolCalls)
         {
             Assert.NotNull(choice.Message?.ToolCalls);
             Assert.NotEmpty(choice.Message.ToolCalls);
@@ -998,7 +998,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotNull(response1?.Messages);
 
         var choice1 = response1.Messages[0];
-        if (choice1.FinishReason != "tool_calls" || choice1.Message?.ToolCalls == null)
+        if (choice1.FinishReason != FinishReason.ToolCalls || choice1.Message?.ToolCalls == null)
             return; // 模型选择直接回答，跳过第二轮
 
         var toolCall = choice1.Message.ToolCalls[0];

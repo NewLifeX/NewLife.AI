@@ -106,7 +106,7 @@ public class GeminiResponseTests
         Assert.Equal("gemini-2.5-flash", result.Model);
         Assert.NotNull(result.Messages);
         Assert.Single(result.Messages!);
-        Assert.Equal("stop", result.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result.Messages![0].FinishReason);
         Assert.NotNull(result.Usage);
         Assert.Equal(10, result.Usage!.InputTokens);
         Assert.Equal(5, result.Usage.OutputTokens);
@@ -175,7 +175,7 @@ public class GeminiResponseTests
 
         var result = gr.ToChatResponse("gemini-2.5-flash", false);
 
-        Assert.Equal("stop", result.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result.Messages![0].FinishReason);
     }
     #endregion
 }

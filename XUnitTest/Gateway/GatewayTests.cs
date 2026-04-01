@@ -229,7 +229,7 @@ public class GatewayTests
                 {
                     Index = 0,
                     Message = new ChatMessage { Role = "assistant", Content = "Hello!" },
-                    FinishReason = "stop",
+                    FinishReason = FinishReason.Stop,
                 }
             ],
             Usage = new UsageDetails

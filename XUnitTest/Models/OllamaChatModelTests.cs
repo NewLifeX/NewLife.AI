@@ -316,7 +316,7 @@ public class OllamaChatModelTests
         Assert.Equal("qwen3:8b", result.Model);
         Assert.NotNull(result.Messages);
         Assert.Single(result.Messages!);
-        Assert.Equal("stop", result.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result.Messages![0].FinishReason);
         Assert.NotNull(result.Messages[0].Message);
         Assert.Equal("Hello!", result.Messages[0].Message!.Content?.ToString());
         Assert.NotNull(result.Usage);
@@ -449,7 +449,7 @@ public class OllamaChatModelTests
         var result = resp.ToStreamChunk();
 
         Assert.NotNull(result);
-        Assert.Equal("stop", result!.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result!.Messages![0].FinishReason);
         Assert.NotNull(result.Usage);
         Assert.Equal(20, result.Usage!.InputTokens);
         Assert.Equal(100, result.Usage.OutputTokens);
@@ -472,7 +472,7 @@ public class OllamaChatModelTests
         Assert.NotNull(result!.Messages);
         Assert.NotNull(result.Messages![0].Delta);
         Assert.Equal("assistant", result.Messages[0].Delta!.Role);
-        Assert.Equal("stop", result.Messages[0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result.Messages[0].FinishReason);
     }
     #endregion
 
@@ -604,7 +604,7 @@ public class OllamaChatModelTests
         Assert.NotNull(msg);
         Assert.Equal("Hello!", msg!.Content?.ToString());
         Assert.Equal("Analyzing...", msg.ReasoningContent);
-        Assert.Equal("stop", chatResp.Messages[0].FinishReason);
+        Assert.Equal(FinishReason.Stop, chatResp.Messages[0].FinishReason);
         Assert.Equal(10, chatResp.Usage!.InputTokens);
         Assert.Equal(5, chatResp.Usage.OutputTokens);
     }

@@ -132,7 +132,7 @@ public class AnthropicResponseTests
         Assert.Equal("msg_123", result.Id);
         Assert.NotNull(result.Messages);
         Assert.Single(result.Messages!);
-        Assert.Equal("stop", result.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result.Messages![0].FinishReason);
         Assert.NotNull(result.Usage);
         Assert.Equal(10, result.Usage!.InputTokens);
         Assert.Equal(5, result.Usage.OutputTokens);
@@ -200,9 +200,9 @@ public class AnthropicResponseTests
     [DisplayName("MapStopReason—stop_reason 到 finish_reason 映射")]
     public void MapStopReason_Mapping()
     {
-        Assert.Equal("stop", AnthropicResponse.MapStopReason("end_turn"));
-        Assert.Equal("length", AnthropicResponse.MapStopReason("max_tokens"));
-        Assert.Equal("tool_calls", AnthropicResponse.MapStopReason("tool_use"));
+        Assert.Equal(FinishReason.Stop, AnthropicResponse.MapStopReason("end_turn"));
+        Assert.Equal(FinishReason.Length, AnthropicResponse.MapStopReason("max_tokens"));
+        Assert.Equal(FinishReason.ToolCalls, AnthropicResponse.MapStopReason("tool_use"));
         Assert.Null(AnthropicResponse.MapStopReason(null));
     }
     #endregion
@@ -217,7 +217,7 @@ public class AnthropicResponseTests
             Id = "resp-1",
             Model = "claude-sonnet-4-20250514",
         };
-        response.Add("Hello from Claude", null, "stop");
+        response.Add("Hello from Claude", null, FinishReason.Stop);
         response.Usage = new UsageDetails { InputTokens = 10, OutputTokens = 5 };
 
         var result = AnthropicResponse.From(response);
@@ -295,7 +295,7 @@ public class AnthropicResponseTests
 
         Assert.NotNull(chunk);
         Assert.NotNull(chunk!.Messages);
-        Assert.Equal("stop", chunk.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, chunk.Messages![0].FinishReason);
         Assert.NotNull(chunk.Usage);
         Assert.Equal(42, chunk.Usage!.OutputTokens);
     }

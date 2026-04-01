@@ -41,7 +41,7 @@ public class BedrockChatClientTests
         Assert.Single(response.Messages);
 
         var choice = response.Messages[0];
-        Assert.Equal("stop", choice.FinishReason);
+        Assert.Equal(FinishReason.Stop, choice.FinishReason);
         Assert.NotNull(choice.Message);
         Assert.Equal("assistant", choice.Message.Role);
         Assert.Equal("Hello! How can I help you today?", choice.Message.Content as String);
@@ -84,7 +84,7 @@ public class BedrockChatClientTests
 
         Assert.NotNull(response);
         var choice = response.Messages![0];
-        Assert.Equal("tool_calls", choice.FinishReason);
+        Assert.Equal(FinishReason.ToolCalls, choice.FinishReason);
 
         var msg = choice.Message!;
         Assert.NotNull(msg.ToolCalls);
@@ -212,7 +212,7 @@ public class BedrockChatClientTests
     public void MapStopReason_BedrockReasons_MappedCorrectly(String? input, String? expected)
     {
         var result = BedrockResponse.MapStopReason(input);
-        Assert.Equal(expected, result);
+        Assert.Equal(FinishReasonHelper.Parse(expected), result);
     }
 
     #endregion
@@ -278,7 +278,7 @@ public class BedrockChatClientTests
 
         Assert.NotNull(chunk);
         Assert.NotNull(chunk!.Messages);
-        Assert.Equal("stop", chunk.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Stop, chunk.Messages![0].FinishReason);
     }
 
     [Fact]
@@ -337,7 +337,7 @@ public class BedrockChatClientTests
         var chunk = method!.Invoke(client, [json, request, null]) as ChatResponse;
 
         Assert.NotNull(chunk);
-        Assert.Equal("length", chunk!.Messages![0].FinishReason);
+        Assert.Equal(FinishReason.Length, chunk!.Messages![0].FinishReason);
     }
 
     #endregion

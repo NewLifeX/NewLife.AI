@@ -245,7 +245,7 @@ public class OllamaIntegrationTests
         Assert.NotNull(response);
         var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
-        Assert.True(finishReason == "stop" || finishReason == "length",
+        Assert.True(finishReason == FinishReason.Stop || finishReason == FinishReason.Length,
             $"FinishReason 应为 stop 或 length，实际为: {finishReason}");
     }
 
@@ -521,7 +521,7 @@ public class OllamaIntegrationTests
         var request = CreateSimpleRequest("hi", 200);
         request.Stream = true;
 
-        String? lastFinishReason = null;
+        FinishReason? lastFinishReason = null;
         await foreach (var chunk in ChatStreamAsync(request))
         {
             if (chunk.Messages != null)
@@ -535,7 +535,7 @@ public class OllamaIntegrationTests
         }
 
         Assert.NotNull(lastFinishReason);
-        Assert.True(lastFinishReason == "stop" || lastFinishReason == "length",
+        Assert.True(lastFinishReason == FinishReason.Stop || lastFinishReason == FinishReason.Length,
             $"最后一个 chunk 的 FinishReason 应为 stop 或 length，实际为: {lastFinishReason}");
     }
 
@@ -698,7 +698,7 @@ public class OllamaIntegrationTests
 
         // qwen3:0.6b 可能处理工具调用，也可能直接回答
         var choice = response.Messages[0];
-        if (choice.FinishReason == "tool_calls")
+        if (choice.FinishReason == FinishReason.ToolCalls)
         {
             Assert.NotNull(choice.Message?.ToolCalls);
             Assert.NotEmpty(choice.Message.ToolCalls);

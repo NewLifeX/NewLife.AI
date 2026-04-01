@@ -169,7 +169,7 @@ public class ChatCompletionResponseTests
         Assert.NotNull(result.Messages);
         Assert.Single(result.Messages!);
         Assert.Equal("Hi", result.Messages![0].Message?.Content?.ToString());
-        Assert.Equal("stop", result.Messages[0].FinishReason);
+        Assert.Equal(FinishReason.Stop, result.Messages[0].FinishReason);
         Assert.NotNull(result.Usage);
         Assert.Equal(10, result.Usage!.InputTokens);
         Assert.Equal(5, result.Usage.OutputTokens);
@@ -215,7 +215,7 @@ public class ChatCompletionResponseTests
             Object = "chat.completion",
             Model = "gpt-4o",
         };
-        response.Add("Hello world", null, "stop");
+        response.Add("Hello world", null, FinishReason.Stop);
         response.Usage = new UsageDetails { InputTokens = 10, OutputTokens = 5, TotalTokens = 15 };
 
         var result = ChatCompletionResponse.From(response);

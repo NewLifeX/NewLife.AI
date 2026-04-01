@@ -324,8 +324,8 @@ public class ModelTests
     public void ChatResponse_Add_WithFinishReason()
     {
         var resp = new ChatResponse();
-        var choice = resp.Add("done", finishReeason: "stop");
-        Assert.Equal("stop", choice.FinishReason);
+        var choice = resp.Add("done", finishReason: FinishReason.Stop);
+        Assert.Equal(FinishReason.Stop, choice.FinishReason);
     }
 
     [Fact]

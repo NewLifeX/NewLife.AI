@@ -398,7 +398,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
                 chunk.AddDelta(null, evt.Content);
                 return chunk;
             case "message_done":
-                chunk.AddDelta(null, finishReeason: "stop");
+                chunk.AddDelta(null, finishReason: FinishReason.Stop);
                 if (evt.Usage != null) chunk.Usage = evt.Usage;
                 return chunk;
             default:
