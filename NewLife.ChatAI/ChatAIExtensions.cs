@@ -51,6 +51,11 @@ public static class ChatAIExtensions
         services.AddHostedService<ModelDiscoveryService>();
         services.AddHttpClient("McpClient");
 
+        // 技能与记忆服务
+        services.AddSingleton<SkillService>();
+        services.AddSingleton<MemoryService>();
+        services.AddScoped<ConversationAnalysisService>();
+
         // 消息频率限制器
         services.AddSingleton<MessageRateLimiter>();
 

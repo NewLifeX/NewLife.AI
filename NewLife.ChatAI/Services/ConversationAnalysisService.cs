@@ -73,6 +73,33 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
             log?.Error("用户 {0} 记忆提取失败: {1}", userId, ex.Message);
         }
     }
+
+    /// <summary>从数据库加载对话消息并分析提取记忆。适用于流式对话完成后的异步后处理</summary>
+    /// <param name="userId">用户ID</param>
+    /// <param name="conversationId">会话ID</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public virtual async Task AnalyzeFromDbAsync(Int32 userId, Int64 conversationId, CancellationToken cancellationToken = default)
+    {
+        var history = Entity.ChatMessage.FindAllByConversationIdOrdered(conversationId);
+        if (history.Count == 0) return;
+
+        var messages = history.Select(m => new AiChatMessage
+        {
+            Role = m.Role!,
+            Content = m.Content,
+        }).ToList();
+
+        // 取最后一条 assistant 消息作为 response 的代替
+        var lastAssistant = history.LastOrDefault(m => m.Role == "assistant");
+        if (lastAssistant == null) return;
+
+        var response = new ChatResponse
+        {
+            Messages = [new ChatChoice { Message = new AiChatMessage { Role = "assistant", Content = lastAssistant.Content } }],
+        };
+
+        await AnalyzeAsync(userId, conversationId, messages, response, cancellationToken).ConfigureAwait(false);
+    }
     #endregion
 
     #region 辅助

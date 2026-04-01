@@ -34,7 +34,7 @@ namespace NewLife.ChatAI.Services;
 /// <param name="backgroundService">后台生成服务</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatewayService, BackgroundGenerationService? backgroundService, ITracer tracer, ILog log)
+public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatewayService, BackgroundGenerationService? backgroundService, SkillService? skillService, MemoryService? memoryService, ConversationAnalysisService? conversationAnalysisService, ITracer tracer, ILog log)
 {
     #region 属性
     /// <summary>附件存储根目录</summary>
@@ -558,6 +558,23 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中）
         var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig);
 
+        // 注入技能提示词和工具列表
+        ISet<String> selectedTools = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        if (skillService != null)
+        {
+            var skillId = conversation.SkillId;
+            var skillPrompt = skillService.BuildSkillPrompt(skillId, request.Content, selectedTools);
+            if (!skillPrompt.IsNullOrEmpty())
+            {
+                // 在系统消息之后插入技能提示词
+                var insertIdx = contextMessages.Count > 0 && contextMessages[0].Role == "system" ? 1 : 0;
+                contextMessages.Insert(insertIdx, new AiChatMessage { Role = "system", Content = skillPrompt });
+            }
+
+            // 记录技能使用
+            if (skillId > 0) skillService.RecordUsage(userId, skillId);
+        }
+
         // 预分配AI回复消息编号
         var assistantMsg = new ChatMessage
         {
@@ -580,6 +597,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         var toolCallsCollector = new List<ToolCallDto>();
 
         var msgPipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = conversationId + "" };
+        foreach (var t in selectedTools) msgPipelineCtx.SelectedTools.Add(t);
         if (request.Options != null) msgPipelineCtx.Items = request.Options;
         var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, request.ThinkingMode, msgPipelineCtx, cancellationToken);
         await foreach (var ev in DrainPipelineAsync(pipelineStream, contentBuilder, thinkingBuilder, toolCallsCollector,
@@ -622,6 +640,22 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                 span2?.SetError(ex);
                 log?.Error("异步生成标题失败: {0}", ex.Message);
             }
+        }
+
+        // 异步提取用户记忆（对话完成后，由 ConversationAnalysisService 分析提取）
+        if (!hasError && conversationAnalysisService != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await conversationAnalysisService.AnalyzeFromDbAsync(userId, conversationId, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    log?.Error("自动提取用户记忆失败: {0}", ex.Message);
+                }
+            });
         }
 
         // message_done（含 MessageId、Usage、Title）
@@ -1312,6 +1346,13 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         // 2. 模型级系统提示词
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
             parts.Add(modelConfig.SystemPrompt.Trim());
+
+        // 3. 用户记忆上下文
+        if (userId > 0 && memoryService != null)
+        {
+            var memoryContext = memoryService.BuildContextForUser(userId);
+            if (!memoryContext.IsNullOrEmpty()) parts.Add(memoryContext);
+        }
 
         if (parts.Count == 0) return null;
         if (span != null) span.Value = parts.Count;

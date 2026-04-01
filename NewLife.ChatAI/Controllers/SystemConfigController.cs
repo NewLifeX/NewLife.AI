@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 
@@ -15,7 +16,23 @@ public class SystemConfigController : ChatApiControllerBase
     public ActionResult<SystemConfigDto> GetConfig()
     {
         var s = ChatSetting.Current;
-        var questions = s.SuggestedQuestions.Split('|', StringSplitOptions.RemoveEmptyEntries);
-        return Ok(new SystemConfigDto(s.Name, s.SiteTitle, questions));
+
+        // 从推荐问题表读取启用的问题，按排序号排列
+        var questions = SuggestedQuestion.FindAllCachedEnabled()
+            .OrderBy(q => q.SortOrder)
+            .Select(q => new SuggestedQuestionDto
+            {
+                Question = q.Question,
+                Icon = q.Icon,
+                Color = q.Color,
+            })
+            .ToArray();
+
+        return Ok(new SystemConfigDto
+        {
+            AppName = s.Name,
+            SiteTitle = s.SiteTitle,
+            SuggestedQuestions = questions,
+        });
     }
 }
