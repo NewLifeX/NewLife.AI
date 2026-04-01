@@ -77,6 +77,10 @@ export function ChatPage({
     fileInputRef.current?.click()
   }, [])
 
+  const handlePasteFile = useCallback((file: File) => {
+    onAttachmentAdd?.(file)
+  }, [onAttachmentAdd])
+
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files) {
@@ -281,6 +285,7 @@ export function ChatPage({
           attachments={attachments}
           onAttachmentRemove={onAttachmentRemove}
           onAttachmentAdd={handleAttachClick}
+          onFilePaste={handlePasteFile}
           sendShortcut={sendShortcut}
         />
       </div>

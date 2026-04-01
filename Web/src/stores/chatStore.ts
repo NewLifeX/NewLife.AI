@@ -176,19 +176,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addAttachment: async (file) => {
+    // 图片文件先生成本地预览 URL（立即显示缩略图，无需等待上传完成）
+    const isImage = file.type.startsWith('image/')
+    const localPreview = isImage ? URL.createObjectURL(file) : undefined
     try {
       const result = await uploadAttachment(file)
       const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
       const imgExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']
-      const type = imgExts.includes(ext) ? 'image' as const : ext === 'pdf' ? 'pdf' as const : 'file' as const
+      // 剪贴板粘贴的截图 file.name 往往为 'image'（无扩展名），需同时检查 MIME type
+      const type = (imgExts.includes(ext) || isImage) ? 'image' as const
+        : (ext === 'pdf' || file.type === 'application/pdf') ? 'pdf' as const
+        : 'file' as const
       const att: Attachment = {
         id: result.id,
         name: result.fileName,
         size: result.size,
         type,
+        previewUrl: type === 'image' ? (result.url || localPreview) : undefined,
       }
       set((s) => ({ pendingAttachments: [...s.pendingAttachments, att] }))
-    } catch { /* 静默 */ }
+    } catch (err) {
+      console.error('[addAttachment] upload failed:', err)
+      if (localPreview) URL.revokeObjectURL(localPreview)
+    }
   },
 
   removeAttachment: (id) => {

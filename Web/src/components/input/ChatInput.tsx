@@ -1,4 +1,4 @@
-import { useState, useCallback, type KeyboardEvent } from 'react'
+import { useState, useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
@@ -6,6 +6,7 @@ import { Textarea } from '@/components/atoms/Textarea'
 import { IconButton } from '@/components/atoms/IconButton'
 import { AttachmentChip } from './AttachmentChip'
 import { ThinkingModeToggle, type ThinkingMode } from './ThinkingModeToggle'
+import { extractImagesFromClipboard, extractFilesFromDrop } from '@/lib/clipboard'
 import type { Attachment } from '@/types'
 
 interface ChatInputProps {
@@ -15,6 +16,7 @@ interface ChatInputProps {
   attachments?: Attachment[]
   onAttachmentRemove?: (id: string) => void
   onAttachmentAdd?: () => void
+  onFilePaste?: (file: File) => void
   thinkingMode?: ThinkingMode
   onThinkingModeChange?: (mode: ThinkingMode) => void
   showThinkingToggle?: boolean
@@ -29,6 +31,7 @@ export function ChatInput({
   attachments = [],
   onAttachmentRemove,
   onAttachmentAdd,
+  onFilePaste,
   thinkingMode = 'auto',
   onThinkingModeChange,
   showThinkingToggle = false,
@@ -40,6 +43,45 @@ export function ChatInput({
 
   const MAX_LENGTH = 6000
   const isOverLimit = value.length > MAX_LENGTH
+
+  // 粘贴图片 + 拖拽上传：使用原生 DOM 事件，直接挂载到 textarea 元素，
+  // 绕过 React 合成事件层，确保在各种浏览器/扩展环境下可靠触发。
+  const inputAreaRef = useRef<HTMLDivElement>(null)
+  const onFilePasteRef = useRef(onFilePaste)
+  onFilePasteRef.current = onFilePaste
+
+  useEffect(() => {
+    const el = inputAreaRef.current?.querySelector('textarea')
+    if (!el) return
+
+    const handleNativePaste = (e: ClipboardEvent) => {
+      const images = extractImagesFromClipboard(e.clipboardData)
+      if (images.length > 0) {
+        e.preventDefault()
+        images.forEach((f) => onFilePasteRef.current?.(f))
+      }
+    }
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+    }
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const files = extractFilesFromDrop(e.dataTransfer)
+      files.forEach((f) => onFilePasteRef.current?.(f))
+    }
+
+    el.addEventListener('paste', handleNativePaste)
+    el.addEventListener('dragover', handleDragOver)
+    el.addEventListener('drop', handleDrop)
+    return () => {
+      el.removeEventListener('paste', handleNativePaste)
+      el.removeEventListener('dragover', handleDragOver)
+      el.removeEventListener('drop', handleDrop)
+    }
+  }, [])
 
   const handleSend = useCallback(() => {
     const trimmed = value.trim()
@@ -84,7 +126,7 @@ export function ChatInput({
             </div>
           )}
 
-          <div className="flex items-start">
+          <div ref={inputAreaRef} className="flex items-start">
             <Textarea
               value={value}
               onChange={setValue}
