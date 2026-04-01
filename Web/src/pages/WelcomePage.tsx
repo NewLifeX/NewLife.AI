@@ -4,11 +4,12 @@ import { Icon } from '@/components/common/Icon'
 import { ChatInput } from '@/components/input/ChatInput'
 import { useSettingsStore } from '@/stores'
 import type { Attachment } from '@/types'
+import type { SuggestedQuestion } from '@/lib/api'
 
 interface WelcomePageProps {
   onSend: (message: string) => void
   siteTitle?: string
-  suggestedQuestions?: string[]
+  suggestedQuestions?: SuggestedQuestion[]
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
   onAttachmentRemove?: (id: string) => void
@@ -67,12 +68,12 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
             {hasQuestions
               ? suggestedQuestions!.map((q) => (
                   <button
-                    key={q}
-                    onClick={() => onSend(q)}
+                    key={q.question}
+                    onClick={() => onSend(q.question)}
                     className="flex items-start space-x-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 text-sm text-left text-gray-700 dark:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
-                    <Icon name="chat_bubble_outline" className="text-primary flex-shrink-0 mt-0.5" />
-                    <span className="line-clamp-2">{q}</span>
+                    <Icon name={q.icon || 'chat_bubble_outline'} className={q.color ? `text-${q.color}-500` : 'text-primary'} style={q.color ? { color: q.color } : undefined} />
+                    <span className="line-clamp-2">{q.question}</span>
                   </button>
                 ))
               : defaultSuggestions.map((s) => (

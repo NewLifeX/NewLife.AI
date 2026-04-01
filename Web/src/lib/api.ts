@@ -620,13 +620,105 @@ export async function fetchModelUsage(): Promise<ModelUsage[]> {
 
 // ── System Config ──
 
+export interface SuggestedQuestion {
+  question: string
+  icon?: string
+  color?: string
+}
+
 export interface SystemConfig {
+  appName: string
   siteTitle: string
-  suggestedQuestions: string[]
+  suggestedQuestions: SuggestedQuestion[]
 }
 
 export async function fetchSystemConfig(): Promise<SystemConfig> {
   return request<SystemConfig>('/api/system/config')
+}
+
+// ── Skills ──
+
+export interface Skill {
+  id: number
+  code: string
+  name: string
+  icon?: string
+  category?: string
+  description?: string
+  isSystem: boolean
+}
+
+export async function fetchAllSkills(category?: string): Promise<Skill[]> {
+  const params = category ? `?category=${encodeURIComponent(category)}` : ''
+  return request<Skill[]>(`/api/skills${params}`)
+}
+
+export async function fetchUserSkills(): Promise<Skill[]> {
+  return request<Skill[]>('/api/user/skills')
+}
+
+export async function fetchSkillCategories(): Promise<Record<string, string>> {
+  return request<Record<string, string>>('/api/skills/categories')
+}
+
+export async function fetchMentionSkills(keyword?: string, limit = 20): Promise<Skill[]> {
+  const params = new URLSearchParams()
+  if (keyword) params.set('keyword', keyword)
+  if (limit !== 20) params.set('limit', String(limit))
+  const qs = params.toString()
+  return request<Skill[]>(`/api/skills/mention${qs ? '?' + qs : ''}`)
+}
+
+export async function setConversationSkill(conversationId: string, skillId: number): Promise<void> {
+  await request<void>(`/api/conversations/${conversationId}/skill`, {
+    method: 'PUT',
+    body: JSON.stringify({ skillId }),
+  })
+}
+
+// ── Memory ──
+
+export interface MemoryItem {
+  id: string
+  category: string
+  key: string
+  value: string
+  confidence: number
+  createTime: string
+  updateTime: string
+}
+
+export interface MemoryList {
+  total: number
+  page: number
+  pageSize: number
+  items: MemoryItem[]
+}
+
+export async function fetchMemories(category?: string, page = 1, pageSize = 20): Promise<MemoryList> {
+  const params = new URLSearchParams()
+  if (category) params.set('category', category)
+  params.set('page', String(page))
+  params.set('pageSize', String(pageSize))
+  return request<MemoryList>(`/api/memory?${params}`)
+}
+
+export async function addMemory(data: { category?: string; key: string; value: string; confidence?: number }): Promise<{ success: boolean; id: string }> {
+  return request(`/api/memory`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateMemory(id: string, data: { value?: string; confidence?: number; category?: string }): Promise<void> {
+  await request<void>(`/api/memory/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteMemory(id: string): Promise<void> {
+  await request<void>(`/api/memory/${id}`, { method: 'DELETE' })
 }
 
 // ── Image Editing ──

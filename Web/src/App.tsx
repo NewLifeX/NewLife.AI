@@ -7,7 +7,7 @@ import { SharePage } from '@/pages/SharePage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
-import { fetchUserProfile, fetchSystemConfig } from '@/lib/api'
+import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
 import { ToastContainer } from '@/components/common/Toast'
 
@@ -51,7 +51,7 @@ function ChatApp() {
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
   const [appReady, setAppReady] = useState(false)
   const [siteTitle, setSiteTitle] = useState('智能助手')
-  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([])
+  const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
 
   const handleNewChat = useCallback(() => {
     newChat()

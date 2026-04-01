@@ -74,4 +74,6 @@ export interface UserSettings {
   mcpEnabled: boolean
   streamingSpeed: number
   allowTraining: boolean
+  defaultSkill?: string
+  contentWidth?: number
 }
