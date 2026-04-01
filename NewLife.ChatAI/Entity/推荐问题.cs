@@ -220,7 +220,7 @@ public partial class SuggestedQuestion
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -236,7 +236,7 @@ public partial class SuggestedQuestion
         if (sortOrder < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.SortOrder == sortOrder);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.SortOrder == sortOrder);
 
         return FindAll(_.SortOrder == sortOrder);
     }

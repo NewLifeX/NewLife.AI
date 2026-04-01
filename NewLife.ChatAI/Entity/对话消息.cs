@@ -74,7 +74,7 @@ public partial class ChatMessage
     /// <summary>附件列表。存储魔方附件ID数组</summary>
     [DisplayName("附件列表")]
     [Description("附件列表。存储魔方附件ID数组")]
-    [DataObjectField(false, false, true, 50)]
+    [DataObjectField(false, false, true, 500)]
     [BindColumn("Attachments", "附件列表。存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
     public String Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
 

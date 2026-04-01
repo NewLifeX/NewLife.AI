@@ -83,7 +83,7 @@
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。Markdown格式文本" />
         <Column Name="ThinkingContent" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。思考模式下的推理过程" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.Models.ThinkingMode" />
-        <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Description="附件列表。存储魔方附件ID数组" />
+        <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="附件列表。存储魔方附件ID数组" />
         <Column Name="ToolCalls" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="工具调用。JSON格式，存储tool_call链路记录" />
         <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
         <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />
@@ -258,7 +258,7 @@
         <Column Name="Question" DataType="String" Master="True" Length="200" Description="问题。推荐问题文本" />
         <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
         <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
-        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@ModelName" Description="模型。生成缓存响应时使用的模型" />
+        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
         <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
         <Column Name="SortOrder" DataType="Int32" Description="排序。越小越靠前" />
