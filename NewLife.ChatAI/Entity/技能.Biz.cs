@@ -117,6 +117,41 @@ public partial class Skill : Entity<Skill>
     //{
     //    return base.OnDelete();
     //}
+
+    /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected override void InitData()
+    {
+        if (Meta.Session.Count > 0) return;
+
+        if (XTrace.Debug) XTrace.WriteLine("开始初始化Skill[技能]数据……");
+
+        Add("general", "通用助手", "smart_toy", "通用", "通用AI对话助手", "你是一个知识渊博、乐于助人的AI助手。请用简洁清晰的语言回答用户的问题。", 100, false);
+        Add("coder", "编程助手", "code", "开发", "专业编程开发助手", "你是一个专业的编程助手。请提供准确、高质量的代码和技术解答。注意代码的可读性、性能和最佳实践。", 90, false);
+        Add("translator", "翻译助手", "translate", "通用", "多语言翻译助手", "你是一个专业翻译助手。请准确翻译用户提供的文本，保持原文语义和风格。如果用户输入中文，翻译为英文；如果输入英文或其他语言，翻译为中文。", 80, false);
+        Add("writer", "写作助手", "edit_note", "创作", "文案与内容创作助手", "你是一个专业的写作助手。请帮助用户完善文案、撰写文章、优化表达。注意逻辑清晰、语言流畅、风格得体。", 70, false);
+        Add("analyst", "数据分析", "analytics", "分析", "数据分析与洞察助手", "你是一个数据分析专家。请帮助用户分析数据、发现规律、提供洞察和建议。用清晰的逻辑和可视化描述呈现分析结果。", 60, false);
+        Add("researcher", "深度研究", "travel_explore", "分析", "复杂问题的深度调研与多角度分析", "你是一个专业的研究助手。请对复杂问题进行深度调研，提供多角度的分析，引用可靠来源，给出有据可查的结论和建议。", 50, false);
+
+        if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
+    }
+
+    private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort, Boolean isSystem)
+    {
+        var entity = new Skill
+        {
+            Code = code,
+            Name = name,
+            Icon = icon,
+            Category = category,
+            Description = description,
+            Content = content,
+            Sort = sort,
+            Enable = true,
+            IsSystem = isSystem,
+        };
+        entity.Insert();
+    }
     #endregion
 
     #region 扩展属性
@@ -133,8 +168,32 @@ public partial class Skill : Entity<Skill>
     /// <summary>获取分类列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     /// <returns></returns>
     public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>查找所有启用的技能，按排序降序、编号升序排列</summary>
+    /// <returns>启用的技能列表</returns>
+    public static IList<Skill> FindAllEnabled()
+        => FindAll(_.Enable == true, _.Sort.Desc() & _.Id.Asc(), null, 0, 0);
+
+    /// <summary>按名称查找技能（走实体缓存，忽略大小写）</summary>
+    /// <param name="name">技能名称</param>
+    /// <returns>匹配的技能，未找到返回 null</returns>
+    public static Skill FindByName(String name)
+    {
+        if (name.IsNullOrEmpty()) return null;
+
+        return FindAllWithCache().FirstOrDefault(e => e.Name.EqualIgnoreCase(name));
+    }
     #endregion
 
     #region 业务操作
+    /// <summary>获取系统技能列表</summary>
+    /// <returns>系统技能列表</returns>
+    public static IList<Skill> GetSystemSkills()
+    {
+        if (Meta.Count < MaxCacheCount)
+            return FindAllWithCache().Where(e => e.IsSystem && e.Enable).OrderByDescending(e => e.Sort).ToList();
+
+        return FindAll(_.IsSystem == true & _.Enable == true, _.Sort.Desc(), null, 0, 0);
+    }
     #endregion
 }

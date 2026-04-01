@@ -112,6 +112,44 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     //{
     //    return base.OnDelete();
     //}
+
+    /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected override void InitData()
+    {
+        if (Meta.Session.Count > 0) return;
+
+        if (XTrace.Debug) XTrace.WriteLine("开始初始化SuggestedQuestion[推荐问题]数据……");
+
+        var items = new[]
+        {
+            new { Question = "帮我写一封邮件", Icon = "edit_note", Color = "text-green-500" },
+            new { Question = "解释量子计算", Icon = "science", Color = "text-purple-500" },
+            new { Question = "用C#写一个排序算法", Icon = "code", Color = "text-blue-500" },
+            new { Question = "帮我翻译一段英文", Icon = "translate", Color = "text-cyan-500" },
+            new { Question = "推荐几本好书", Icon = "menu_book", Color = "text-orange-500" },
+            new { Question = "如何提高工作效率？", Icon = "bolt", Color = "text-yellow-500" },
+            new { Question = "写一首关于春天的诗", Icon = "brush", Color = "text-pink-500" },
+            new { Question = "解析一段JSON数据", Icon = "data_object", Color = "text-teal-500" },
+            new { Question = "制定一份健身计划", Icon = "fitness_center", Color = "text-red-500" },
+        };
+
+        for (var i = 0; i < items.Length; i++)
+        {
+            var item = items[i];
+            var entity = new SuggestedQuestion
+            {
+                Question = item.Question,
+                Icon = item.Icon,
+                Color = item.Color,
+                SortOrder = i + 1,
+                Enable = true,
+            };
+            entity.Insert();
+        }
+
+        if (XTrace.Debug) XTrace.WriteLine("完成初始化SuggestedQuestion[推荐问题]数据！");
+    }
     #endregion
 
     #region 扩展属性
@@ -128,6 +166,23 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     ///// <returns></returns>
     //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>从实体缓存中获取所有启用的推荐问题</summary>
+    /// <returns>启用的推荐问题列表</returns>
+    public static IList<SuggestedQuestion> FindAllCachedEnabled()
+        => Meta.Cache.FindAll(q => q.Enable);
+
+    /// <summary>从实体缓存中查找今日匹配指定问题且已缓存回答的推荐问题。用于命中缓存时直接返回</summary>
+    /// <param name="question">问题内容</param>
+    /// <returns>匹配的推荐问题，未命中返回 null</returns>
+    public static SuggestedQuestion FindCachedTodayByQuestion(String question)
+        => Meta.Cache.FindAll(q => q.Enable && q.Question == question && !q.Response.IsNullOrEmpty() && q.UpdateTime.Date == DateTime.Today).FirstOrDefault();
+
+    /// <summary>从实体缓存中查找启用且匹配指定问题的推荐问题。用于回写缓存时定位目标记录</summary>
+    /// <param name="question">问题内容</param>
+    /// <returns>匹配的推荐问题，未命中返回 null</returns>
+    public static SuggestedQuestion FindCachedByQuestion(String question)
+        => Meta.Cache.FindAll(q => q.Enable && q.Question == question).FirstOrDefault();
     #endregion
 
     #region 业务操作

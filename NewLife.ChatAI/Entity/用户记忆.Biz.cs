@@ -54,9 +54,8 @@ public partial class UserMemory : Entity<UserMemory>
         // 建议先调用基类方法，基类方法会做一些统一处理
         if (!base.Valid(method)) return false;
 
-        // 在新插入数据或者修改了指定字段时进行修正
-        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateTime)]) CreateTime = DateTime.Now;
-        //if (!Dirtys[nameof(UpdateTime)]) UpdateTime = DateTime.Now;
+        // 新插入时默认激活
+        if (method == DataMethod.Insert && !Dirtys[nameof(IsActive)]) IsActive = true;
 
         return true;
     }
@@ -121,8 +120,38 @@ public partial class UserMemory : Entity<UserMemory>
     ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     ///// <returns></returns>
     //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>获取用户有效记忆，按置信度降序</summary>
+    /// <param name="userId">用户</param>
+    /// <returns>实体列表</returns>
+    public static IList<UserMemory> FindActiveByUserId(Int32 userId)
+    {
+        if (userId <= 0) return [];
+
+        return FindAll(_.UserId == userId & _.IsActive == true, _.Confidence.Desc(), null, 0, 0);
+    }
+
+    /// <summary>根据用户和分类查找记忆</summary>
+    /// <param name="userId">用户</param>
+    /// <param name="category">分类</param>
+    /// <returns>实体列表</returns>
+    public static IList<UserMemory> FindAllByUserIdAndCategory(Int32 userId, String category)
+    {
+        if (userId <= 0) return [];
+
+        var exp = _.UserId == userId & _.IsActive == true;
+        if (!category.IsNullOrEmpty()) exp &= _.Category == category;
+
+        return FindAll(exp, _.Confidence.Desc(), null, 0, 0);
+    }
     #endregion
 
     #region 业务操作
+    /// <summary>将记忆标记为无效</summary>
+    public void Deactivate()
+    {
+        IsActive = false;
+        Update();
+    }
     #endregion
 }

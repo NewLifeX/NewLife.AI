@@ -142,6 +142,10 @@ public partial class NativeTool : Entity<NativeTool>
     ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     ///// <returns></returns>
     //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>查找所有启用的内置工具</summary>
+    /// <returns>启用的内置工具列表</returns>
+    public static IList<NativeTool> FindAllEnabled() => FindAll(_.Enable == true);
     #endregion
 
     #region 业务操作

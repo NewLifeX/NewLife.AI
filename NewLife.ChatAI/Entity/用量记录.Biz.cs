@@ -130,6 +130,16 @@ public partial class UsageRecord : Entity<UsageRecord>
     ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     ///// <returns></returns>
     //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>根据会话编号集合批量查找用量记录</summary>
+    /// <param name="convIds">会话编号集合</param>
+    /// <returns>用量记录列表</returns>
+    public static IList<UsageRecord> FindAllByConversationIds(Int64[] convIds)
+    {
+        if (convIds == null || convIds.Length == 0) return [];
+
+        return FindAll(_.ConversationId.In(convIds));
+    }
     #endregion
 
     #region 业务操作
