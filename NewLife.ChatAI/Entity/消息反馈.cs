@@ -56,13 +56,13 @@ public partial class MessageFeedback
     [BindColumn("UserId", "用户。反馈用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
-    private AI.Models.FeedbackType _FeedbackType;
+    private NewLife.AI.Models.FeedbackType _FeedbackType;
     /// <summary>反馈类型。Like=1点赞, Dislike=2点踩</summary>
     [DisplayName("反馈类型")]
     [Description("反馈类型。Like=1点赞, Dislike=2点踩")]
     [DataObjectField(false, false, false, 0)]
     [BindColumn("FeedbackType", "反馈类型。Like=1点赞, Dislike=2点踩", "")]
-    public AI.Models.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
+    public NewLife.AI.Models.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
 
     private String _Reason;
     /// <summary>原因。点踩原因</summary>
@@ -166,7 +166,7 @@ public partial class MessageFeedback
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "FeedbackType": _FeedbackType = (AI.Models.FeedbackType)value.ToInt(); break;
+                case "FeedbackType": _FeedbackType = (NewLife.AI.Models.FeedbackType)value.ToInt(); break;
                 case "Reason": _Reason = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -268,7 +268,7 @@ public partial class MessageFeedback
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<MessageFeedback> Search(Int64 conversationId, Int64 messageId, Int32 userId, AI.Models.FeedbackType feedbackType, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<MessageFeedback> Search(Int64 conversationId, Int64 messageId, Int32 userId, NewLife.AI.Models.FeedbackType feedbackType, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 

@@ -7,16 +7,16 @@ using NewLife.Cube.ViewModels;
 using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.UserSetting;
+using static NewLife.ChatAI.Entity.SuggestedQuestion;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
-/// <summary>用户设置。用户的个性化配置</summary>
-[Menu(10, true, Icon = "fa-table")]
+/// <summary>推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验</summary>
+[Menu(50, true, Icon = "fa-table")]
 [ChatAIArea]
-public class UserSettingController : EntityController<UserSetting>
+public class SuggestedQuestionController : EntityController<SuggestedQuestion>
 {
-    static UserSettingController()
+    static SuggestedQuestionController()
     {
         //LogOnChange = true;
 
@@ -32,19 +32,19 @@ public class UserSettingController : EntityController<UserSetting>
         //    var df = ListFields.AddListField("devices", null, "Onlines");
         //    df.DisplayName = "查看设备";
         //    df.Url = "Device?groupId={Id}";
-        //    df.DataVisible = e => (e as UserSetting).Devices > 0;
+        //    df.DataVisible = e => (e as SuggestedQuestion).Devices > 0;
         //    df.Target = "_frame";
         //}
         //{
         //    var df = ListFields.GetField("Kind") as ListField;
-        //    df.GetValue = e => ((Int32)(e as UserSetting).Kind).ToString("X4");
+        //    df.GetValue = e => ((Int32)(e as SuggestedQuestion).Kind).ToString("X4");
         //}
         //ListFields.TraceUrl("TraceId");
     }
 
     //private readonly ITracer _tracer;
 
-    //public UserSettingController(ITracer tracer)
+    //public SuggestedQuestionController(ITracer tracer)
     //{
     //    _tracer = tracer;
     //}
@@ -52,16 +52,15 @@ public class UserSettingController : EntityController<UserSetting>
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>
     /// <returns></returns>
-    protected override IEnumerable<UserSetting> Search(Pager p)
+    protected override IEnumerable<SuggestedQuestion> Search(Pager p)
     {
-        var userId = p["userId"].ToInt(-1);
-        var defaultThinkingMode = (AI.Models.ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
-        var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
-        var allowTraining = p["allowTraining"]?.ToBoolean();
+        var sortOrder = p["sortOrder"].ToInt(-1);
+        var enable = p["enable"]?.ToBoolean();
+        var modelId = p["modelId"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, defaultThinkingMode, mcpEnabled, allowTraining, start, end, p["Q"], p);
+        return SuggestedQuestion.Search(sortOrder, enable, modelId, start, end, p["Q"], p);
     }
 }

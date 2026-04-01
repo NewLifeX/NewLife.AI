@@ -118,6 +118,22 @@ public partial class UserSetting
     [BindColumn("StreamingSpeed", "流式速度。流式输出速度等级，1~5，默认3", "")]
     public Int32 StreamingSpeed { get => _StreamingSpeed; set { if (OnPropertyChanging("StreamingSpeed", value)) { _StreamingSpeed = value; OnPropertyChanged("StreamingSpeed"); } } }
 
+    private String _DefaultSkill;
+    /// <summary>默认技能。新会话的默认技能编码</summary>
+    [DisplayName("默认技能")]
+    [Description("默认技能。新会话的默认技能编码")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("DefaultSkill", "默认技能。新会话的默认技能编码", "")]
+    public String DefaultSkill { get => _DefaultSkill; set { if (OnPropertyChanging("DefaultSkill", value)) { _DefaultSkill = value; OnPropertyChanged("DefaultSkill"); } } }
+
+    private Int32 _ContentWidth;
+    /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
+    [DisplayName("内容区宽度")]
+    [Description("内容区宽度。标准960/宽屏1200/自适应0")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ContentWidth", "内容区宽度。标准960/宽屏1200/自适应0", "")]
+    public Int32 ContentWidth { get => _ContentWidth; set { if (OnPropertyChanging("ContentWidth", value)) { _ContentWidth = value; OnPropertyChanged("ContentWidth"); } } }
+
     private Boolean _AllowTraining;
     /// <summary>允许训练。是否允许对话数据用于模型改进</summary>
     [DisplayName("允许训练")]
@@ -201,6 +217,8 @@ public partial class UserSetting
             "SystemPrompt" => _SystemPrompt,
             "McpEnabled" => _McpEnabled,
             "StreamingSpeed" => _StreamingSpeed,
+            "DefaultSkill" => _DefaultSkill,
+            "ContentWidth" => _ContentWidth,
             "AllowTraining" => _AllowTraining,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -226,6 +244,8 @@ public partial class UserSetting
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
                 case "StreamingSpeed": _StreamingSpeed = value.ToInt(); break;
+                case "DefaultSkill": _DefaultSkill = Convert.ToString(value); break;
+                case "ContentWidth": _ContentWidth = value.ToInt(); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -278,18 +298,20 @@ public partial class UserSetting
     /// <param name="userId">用户。设置所属用户</param>
     /// <param name="defaultThinkingMode">默认思考模式。Auto=0, Think=1, Fast=2</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
+    /// <param name="allowTraining">允许训练。是否允许对话数据用于模型改进</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, Boolean? mcpEnabled, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, Boolean? mcpEnabled, Boolean? allowTraining, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (defaultThinkingMode >= 0) exp &= _.DefaultThinkingMode == defaultThinkingMode;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
+        if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -336,6 +358,12 @@ public partial class UserSetting
 
         /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
         public static readonly Field StreamingSpeed = FindByName("StreamingSpeed");
+
+        /// <summary>默认技能。新会话的默认技能编码</summary>
+        public static readonly Field DefaultSkill = FindByName("DefaultSkill");
+
+        /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
+        public static readonly Field ContentWidth = FindByName("ContentWidth");
 
         /// <summary>允许训练。是否允许对话数据用于模型改进</summary>
         public static readonly Field AllowTraining = FindByName("AllowTraining");
@@ -399,6 +427,15 @@ public partial class UserSetting
 
         /// <summary>流式速度。流式输出速度等级，1~5，默认3</summary>
         public const String StreamingSpeed = "StreamingSpeed";
+
+        /// <summary>默认技能。新会话的默认技能编码</summary>
+        public const String DefaultSkill = "DefaultSkill";
+
+        /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
+        public const String ContentWidth = "ContentWidth";
+
+        /// <summary>允许训练。是否允许对话数据用于模型改进</summary>
+        public const String AllowTraining = "AllowTraining";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

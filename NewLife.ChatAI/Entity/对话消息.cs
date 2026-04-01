@@ -59,7 +59,7 @@ public partial class ChatMessage
     [DisplayName("思考内容")]
     [Description("思考内容。思考模式下的推理过程")]
     [DataObjectField(false, false, true, -1)]
-    [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ShowIn = "Auto,-List,-Search")]
+    [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
 
     private NewLife.AI.Models.ThinkingMode _ThinkingMode;

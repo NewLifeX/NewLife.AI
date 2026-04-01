@@ -19,6 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("会话。一次完整的多轮对话上下文")]
 [BindIndex("IX_Conversation_UserId_Id", false, "UserId,Id")]
 [BindIndex("IX_Conversation_UserId_IsPinned_Id", false, "UserId,IsPinned,Id")]
+[BindIndex("IX_Conversation_Source", false, "Source")]
 [BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class Conversation
 {
@@ -70,6 +71,22 @@ public partial class Conversation
     [DataObjectField(false, false, true, 50)]
     [BindColumn("ModelName", "模型名称。冗余存储模型名称，方便历史数据检索", "")]
     public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
+
+    private Int32 _SkillId;
+    /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+    [DisplayName("技能")]
+    [Description("技能。当前会话使用的技能，引用Skill.Id")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SkillId", "技能。当前会话使用的技能，引用Skill.Id", "")]
+    public Int32 SkillId { get => _SkillId; set { if (OnPropertyChanging("SkillId", value)) { _SkillId = value; OnPropertyChanged("SkillId"); } } }
+
+    private String _SkillName;
+    /// <summary>技能名称。冗余存储技能名称，方便历史数据检索</summary>
+    [DisplayName("技能名称")]
+    [Description("技能名称。冗余存储技能名称，方便历史数据检索")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("SkillName", "技能名称。冗余存储技能名称，方便历史数据检索", "")]
+    public String SkillName { get => _SkillName; set { if (OnPropertyChanging("SkillName", value)) { _SkillName = value; OnPropertyChanged("SkillName"); } } }
 
     private NewLife.AI.Models.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
@@ -134,6 +151,14 @@ public partial class Conversation
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ElapsedMs", "耗时。毫秒", "")]
     public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
+
+    private String _Source;
+    /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
+    [DisplayName("来源")]
+    [Description("来源。Web/Gateway/Channel等，标识对话入口")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Source", "来源。Web/Gateway/Channel等，标识对话入口", "")]
+    public String Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
 
     private String _TraceId;
     /// <summary>链路。方便问题排查</summary>
@@ -222,6 +247,8 @@ public partial class Conversation
             "Title" => _Title,
             "ModelId" => _ModelId,
             "ModelName" => _ModelName,
+            "SkillId" => _SkillId,
+            "SkillName" => _SkillName,
             "ThinkingMode" => _ThinkingMode,
             "IsPinned" => _IsPinned,
             "MessageCount" => _MessageCount,
@@ -230,6 +257,7 @@ public partial class Conversation
             "TotalCompletionTokens" => _TotalCompletionTokens,
             "TotalTokens" => _TotalTokens,
             "ElapsedMs" => _ElapsedMs,
+            "Source" => _Source,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -250,6 +278,8 @@ public partial class Conversation
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
                 case "ModelName": _ModelName = Convert.ToString(value); break;
+                case "SkillId": _SkillId = value.ToInt(); break;
+                case "SkillName": _SkillName = Convert.ToString(value); break;
                 case "ThinkingMode": _ThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
@@ -258,6 +288,7 @@ public partial class Conversation
                 case "TotalCompletionTokens": _TotalCompletionTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
+                case "Source": _Source = Convert.ToString(value); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -276,6 +307,10 @@ public partial class Conversation
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public ModelConfig Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
+
+    /// <summary>技能</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Skill Skill => Extends.Get(nameof(Skill), k => Skill.FindById(SkillId));
 
     #endregion
 
@@ -299,26 +334,40 @@ public partial class Conversation
 
         return FindAll(_.UserId == userId);
     }
+
+    /// <summary>根据来源查找</summary>
+    /// <param name="source">来源</param>
+    /// <returns>实体列表</returns>
+    public static IList<Conversation> FindAllBySource(String source)
+    {
+        if (source.IsNullOrEmpty()) return [];
+
+        return FindAll(_.Source == source);
+    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。会话所属用户</param>
     /// <param name="isPinned">置顶。是否置顶显示</param>
+    /// <param name="source">来源。Web/Gateway/Channel等，标识对话入口</param>
     /// <param name="modelId">模型。当前使用的模型Id，引用ModelConfig.Id</param>
+    /// <param name="skillId">技能。当前会话使用的技能，引用Skill.Id</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, Int32 modelId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (isPinned != null) exp &= _.IsPinned == isPinned;
+        if (!source.IsNullOrEmpty()) exp &= _.Source == source;
         if (modelId >= 0) exp &= _.ModelId == modelId;
+        if (skillId >= 0) exp &= _.SkillId == skillId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -361,6 +410,12 @@ public partial class Conversation
         /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
         public static readonly Field ModelName = FindByName("ModelName");
 
+        /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+        public static readonly Field SkillId = FindByName("SkillId");
+
+        /// <summary>技能名称。冗余存储技能名称，方便历史数据检索</summary>
+        public static readonly Field SkillName = FindByName("SkillName");
+
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
 
@@ -384,6 +439,9 @@ public partial class Conversation
 
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
+
+        /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
+        public static readonly Field Source = FindByName("Source");
 
         /// <summary>链路。方便问题排查</summary>
         public static readonly Field TraceId = FindByName("TraceId");
@@ -433,6 +491,12 @@ public partial class Conversation
         /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
         public const String ModelName = "ModelName";
 
+        /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
+        public const String SkillId = "SkillId";
+
+        /// <summary>技能名称。冗余存储技能名称，方便历史数据检索</summary>
+        public const String SkillName = "SkillName";
+
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";
 
@@ -456,6 +520,9 @@ public partial class Conversation
 
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";
+
+        /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
+        public const String Source = "Source";
 
         /// <summary>链路。方便问题排查</summary>
         public const String TraceId = "TraceId";

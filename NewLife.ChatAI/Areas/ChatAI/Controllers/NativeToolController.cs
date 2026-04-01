@@ -7,16 +7,16 @@ using NewLife.Cube.ViewModels;
 using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.UserSetting;
+using static NewLife.ChatAI.Entity.NativeTool;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
-/// <summary>用户设置。用户的个性化配置</summary>
-[Menu(10, true, Icon = "fa-table")]
+/// <summary>内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理</summary>
+[Menu(40, true, Icon = "fa-table")]
 [ChatAIArea]
-public class UserSettingController : EntityController<UserSetting>
+public class NativeToolController : EntityController<NativeTool>
 {
-    static UserSettingController()
+    static NativeToolController()
     {
         //LogOnChange = true;
 
@@ -32,19 +32,19 @@ public class UserSettingController : EntityController<UserSetting>
         //    var df = ListFields.AddListField("devices", null, "Onlines");
         //    df.DisplayName = "查看设备";
         //    df.Url = "Device?groupId={Id}";
-        //    df.DataVisible = e => (e as UserSetting).Devices > 0;
+        //    df.DataVisible = e => (e as NativeTool).Devices > 0;
         //    df.Target = "_frame";
         //}
         //{
         //    var df = ListFields.GetField("Kind") as ListField;
-        //    df.GetValue = e => ((Int32)(e as UserSetting).Kind).ToString("X4");
+        //    df.GetValue = e => ((Int32)(e as NativeTool).Kind).ToString("X4");
         //}
         //ListFields.TraceUrl("TraceId");
     }
 
     //private readonly ITracer _tracer;
 
-    //public UserSettingController(ITracer tracer)
+    //public NativeToolController(ITracer tracer)
     //{
     //    _tracer = tracer;
     //}
@@ -52,16 +52,15 @@ public class UserSettingController : EntityController<UserSetting>
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>
     /// <returns></returns>
-    protected override IEnumerable<UserSetting> Search(Pager p)
+    protected override IEnumerable<NativeTool> Search(Pager p)
     {
-        var userId = p["userId"].ToInt(-1);
-        var defaultThinkingMode = (AI.Models.ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
-        var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
-        var allowTraining = p["allowTraining"]?.ToBoolean();
+        var enable = p["enable"]?.ToBoolean();
+        var isSystem = p["isSystem"]?.ToBoolean();
+        var isLocked = p["isLocked"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, defaultThinkingMode, mcpEnabled, allowTraining, start, end, p["Q"], p);
+        return NativeTool.Search(enable, isSystem, isLocked, start, end, p["Q"], p);
     }
 }
