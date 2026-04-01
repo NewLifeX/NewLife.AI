@@ -58,9 +58,9 @@ public class GeminiResponse : IChatResponse
                 var list = new List<ChatChoice>();
                 foreach (var candidate in Candidates)
                 {
-                    var (text, toolCalls) = ExtractContent(candidate);
+                    var (text, reasoning, toolCalls) = ExtractContent(candidate);
                     var finishReason = toolCalls?.Count > 0 ? FinishReason.ToolCalls : MapGeminiFinishReason(candidate.FinishReason);
-                    var chatMsg = new ChatMessage { Role = "assistant", Content = text, ToolCalls = toolCalls };
+                    var chatMsg = new ChatMessage { Role = "assistant", Content = text, ReasoningContent = reasoning, ToolCalls = toolCalls };
                     var choice = new ChatChoice
                     {
                         Index = candidate.Index,
@@ -131,14 +131,14 @@ public class GeminiResponse : IChatResponse
         {
             foreach (var candidate in Candidates)
             {
-                var (text, toolCalls) = ExtractContent(candidate);
+                var (text, reasoning, toolCalls) = ExtractContent(candidate);
                 var finishReason = toolCalls?.Count > 0 ? FinishReason.ToolCalls : MapGeminiFinishReason(candidate.FinishReason);
 
                 ChatChoice choice;
                 if (streaming)
-                    choice = response.AddDelta(text, null, finishReason);
+                    choice = response.AddDelta(text, reasoning, finishReason);
                 else
-                    choice = response.Add(text, null, finishReason);
+                    choice = response.Add(text, reasoning, finishReason);
 
                 if (toolCalls?.Count > 0)
                 {
@@ -205,18 +205,22 @@ public class GeminiResponse : IChatResponse
 
     #region 辅助
     /// <summary>提取候选回复中的文本内容和工具调用</summary>
-    private static (String text, List<ToolCall>? toolCalls) ExtractContent(GeminiCandidate candidate)
+    private static (String text, String? reasoning, List<ToolCall>? toolCalls) ExtractContent(GeminiCandidate candidate)
     {
-        if (candidate.Content?.Parts == null) return ("", null);
+        if (candidate.Content?.Parts == null) return ("", null, null);
 
         var sb = Pool.StringBuilder.Get();
+        var reasoningSb = Pool.StringBuilder.Get();
         List<ToolCall>? toolCalls = null;
 
         foreach (var part in candidate.Content.Parts)
         {
             if (part.Text != null)
             {
-                sb.Append(part.Text);
+                if (part.Thought == true)
+                    reasoningSb.Append(part.Text);
+                else
+                    sb.Append(part.Text);
             }
             else if (part.FunctionCall != null)
             {
@@ -237,7 +241,8 @@ public class GeminiResponse : IChatResponse
             }
         }
 
-        return (sb.Return(true), toolCalls);
+        var reasoning = reasoningSb.Return(true);
+        return (sb.Return(true), reasoning.Length > 0 ? reasoning : null, toolCalls);
     }
 
     /// <summary>映射 Gemini finishReason 到标准 finish_reason</summary>
@@ -291,6 +296,9 @@ public class GeminiResponsePart
 {
     /// <summary>文本内容</summary>
     public String? Text { get; set; }
+
+    /// <summary>是否为思考内容。Gemini 2.5 模型 thinking 部分返回 thought=true</summary>
+    public Boolean? Thought { get; set; }
 
     /// <summary>函数调用</summary>
     [DataMember(Name = "functionCall")]

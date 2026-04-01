@@ -69,6 +69,24 @@ public class ChatResponse : IChatResponse
         return choice;
     }
 
+    /// <summary>从 IChatResponse 转换为 ChatResponse。若已是 ChatResponse 则直接返回，否则从接口属性构建新实例</summary>
+    /// <param name="response">任意协议的响应对象</param>
+    /// <returns>ChatResponse 实例</returns>
+    public static ChatResponse From(IChatResponse response)
+    {
+        if (response is ChatResponse cr) return cr;
+
+        return new ChatResponse
+        {
+            Id = response.Id,
+            Object = response.Object,
+            Created = response.Created,
+            Model = response.Model,
+            Messages = response.Messages,
+            Usage = response.Usage,
+        };
+    }
+
     /// <summary>添加增量消息项。返回新添加的项，便于后续修改</summary>
     public ChatChoice AddDelta(Object? content, String? reasoning = null, FinishReason? finishReason = null)
     {

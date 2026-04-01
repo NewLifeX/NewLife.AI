@@ -225,6 +225,10 @@ public class DashScopeMessageData
     /// <summary>消息内容。纯文本时为字符串；多模态响应时可能为数组</summary>
     public Object? Content { get; set; }
 
+    /// <summary>思考内容。Qwen 推理模型返回的推理过程（reasoning_content）</summary>
+    [DataMember(Name = "reasoning_content")]
+    public String? ReasoningContent { get; set; }
+
     /// <summary>工具调用列表</summary>
     [DataMember(Name = "tool_calls")]
     public IList<DashScopeResponseToolCall>? ToolCalls { get; set; }
@@ -237,7 +241,7 @@ public class DashScopeMessageData
     /// <returns>等效的 ChatMessage 实例</returns>
     public ChatMessage ToChatMessage()
     {
-        var msg = new ChatMessage { Role = Role };
+        var msg = new ChatMessage { Role = Role, ReasoningContent = ReasoningContent };
 
         // 多模态响应：content 为 [{text: "..."}] 数组，归一化为字符串
         if (Content is IList<Object> contentList)
