@@ -6,7 +6,7 @@ import { Textarea } from '@/components/atoms/Textarea'
 import { IconButton } from '@/components/atoms/IconButton'
 import { AttachmentChip } from './AttachmentChip'
 import { ThinkingModeToggle, type ThinkingMode } from './ThinkingModeToggle'
-import { extractImagesFromClipboard, extractFilesFromDrop } from '@/lib/clipboard'
+import { extractImagesFromClipboard } from '@/lib/clipboard'
 import type { Attachment } from '@/types'
 
 interface ChatInputProps {
@@ -62,24 +62,9 @@ export function ChatInput({
       }
     }
 
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault()
-    }
-
-    const handleDrop = (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      const files = extractFilesFromDrop(e.dataTransfer)
-      files.forEach((f) => onFilePasteRef.current?.(f))
-    }
-
     el.addEventListener('paste', handleNativePaste)
-    el.addEventListener('dragover', handleDragOver)
-    el.addEventListener('drop', handleDrop)
     return () => {
       el.removeEventListener('paste', handleNativePaste)
-      el.removeEventListener('dragover', handleDragOver)
-      el.removeEventListener('drop', handleDrop)
     }
   }, [])
 

@@ -237,6 +237,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       content,
       createdAt: new Date().toISOString(),
       status: 'done',
+      attachments: attachmentIds.length ? JSON.stringify(attachmentIds) : undefined,
     }
 
     const abortController = new AbortController()

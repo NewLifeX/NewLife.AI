@@ -68,10 +68,8 @@ export function ChatPage({
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
-  const dragCounterRef = useRef(0)
 
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -113,48 +111,10 @@ export function ChatPage({
     }
   }, [messages, scrollToBottom])
 
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounterRef.current++
-    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounterRef.current--
-    if (dragCounterRef.current === 0) setIsDragOver(false)
-  }, [])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounterRef.current = 0
-    setIsDragOver(false)
-    const files = e.dataTransfer.files
-    if (files) {
-      Array.from(files).forEach((f) => onAttachmentAdd?.(f))
-    }
-  }, [onAttachmentAdd])
-
   return (
     <div
       className="relative flex flex-col flex-1 min-h-0"
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
-      {isDragOver && (
-        <div className="absolute inset-0 z-50 bg-primary/10 dark:bg-primary/20 border-2 border-dashed border-primary rounded-xl flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-2 text-primary">
-            <Icon name="upload_file" size="xl" />
-            <span className="text-sm font-medium">{t('chat.dropToUpload')}</span>
-          </div>
-        </div>
-      )}
       <div
         ref={scrollRef}
         onScroll={handleScroll}

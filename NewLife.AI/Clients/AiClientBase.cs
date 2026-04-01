@@ -132,7 +132,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             if (response.Usage != null)
             {
                 response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
-                span?.Value = response.Usage.TotalTokens;
+                if (span != null) span.Value = response.Usage.TotalTokens;
             }
             return response;
         }
@@ -170,7 +170,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             yield return chunk;
         }
 
-        if (lastUsage != null) span?.Value = lastUsage.TotalTokens;
+        if (lastUsage != null && span != null) span.Value = lastUsage.TotalTokens;
     }
 
     /// <summary>非流式对话</summary>

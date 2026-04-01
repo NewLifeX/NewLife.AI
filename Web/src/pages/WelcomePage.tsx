@@ -104,6 +104,7 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
           attachments={attachments}
           onAttachmentAdd={handleAttachClick}
           onAttachmentRemove={onAttachmentRemove}
+          onFilePaste={onAttachmentAdd}
         />
       </div>
     </>

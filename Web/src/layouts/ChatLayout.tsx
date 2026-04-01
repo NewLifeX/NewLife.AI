@@ -1,4 +1,5 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { Sidebar } from '@/components/sidebar/Sidebar'
@@ -22,6 +23,7 @@ interface ChatLayoutProps {
   sidebarCollapsed?: boolean
   onSidebarToggle?: () => void
   onLoadMore?: () => void
+  onFileDrop?: (file: File) => void
   userName?: string
   userAvatar?: string
   className?: string
@@ -42,10 +44,14 @@ export function ChatLayout({
   sidebarCollapsed = false,
   onSidebarToggle,
   onLoadMore,
+  onFileDrop,
   userName,
   userAvatar,
   className,
 }: ChatLayoutProps) {
+  const { t } = useTranslation()
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounterRef = useRef(0)
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT,
   )
@@ -72,10 +78,52 @@ export function ChatLayout({
     }
   }, [onConversationSelect, isMobile, sidebarCollapsed, onSidebarToggle])
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current++
+    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) setIsDragOver(false)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current = 0
+    setIsDragOver(false)
+    const files = e.dataTransfer.files
+    if (files && onFileDrop) {
+      Array.from(files).forEach((f) => onFileDrop(f))
+    }
+  }, [onFileDrop])
+
   const showSidebar = !sidebarCollapsed
 
   return (
-    <div className={cn('h-screen flex overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100', className)}>
+    <div
+      className={cn('h-screen flex overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100', className)}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {isDragOver && (
+        <div className="fixed inset-0 z-[100] p-2.5 pointer-events-none">
+          <div className="w-full h-full border-2 border-dashed border-primary/40 dark:border-primary/30 rounded-2xl bg-white/80 dark:bg-background-dark/80 backdrop-blur-sm flex items-center justify-center transition-colors">
+            <div className="flex flex-col items-center gap-3 text-primary/70 dark:text-primary/50">
+              <Icon name="upload_file" size="xl" />
+              <span className="text-sm font-medium">{t('chat.dropToUpload')}</span>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 移动端遮罩 */}
       {isMobile && showSidebar && (
         <div

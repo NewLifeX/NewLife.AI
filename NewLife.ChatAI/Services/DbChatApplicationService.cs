@@ -38,7 +38,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
 {
     #region 属性
     /// <summary>附件存储根目录</summary>
-    private readonly String _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
+    private static readonly String _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
     #endregion
 
     #region 会话管理
@@ -1072,6 +1072,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             FilePath = Path.Combine(datePath, storedName),
             ContentType = contentType,
             Size = size,
+            Enable = true,
         };
         entity.Insert();
 
@@ -1436,9 +1437,12 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                 try
                 {
                     var att = Attachment.FindById(id);
-                    if (att == null || !att.Enable) continue;
+                    if (att == null) continue;
 
+                    // 优先使用框架 GetFilePath()，若无效则基于 _attachmentRoot 拼接
                     var filePath = att.GetFilePath();
+                    if (filePath.IsNullOrEmpty() || !File.Exists(filePath))
+                        filePath = Path.Combine(_attachmentRoot, att.FilePath);
                     if (filePath.IsNullOrEmpty() || !File.Exists(filePath)) continue;
 
                     if (!att.ContentType.IsNullOrEmpty() && att.ContentType.StartsWithIgnoreCase("image/"))

@@ -45,6 +45,8 @@ stop_service() {
         local pid
         pid=$(cat "$pidfile")
         if kill -0 "$pid" 2>/dev/null; then
+            # 先杀子进程（dotnet run 会 fork 实际应用进程）
+            pkill -P "$pid" 2>/dev/null
             kill "$pid" 2>/dev/null
             # 等待进程退出，最多 5 秒
             for i in $(seq 1 10); do
@@ -52,7 +54,10 @@ stop_service() {
                 sleep 0.5
             done
             # 还没退出就强制杀
-            kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
+            if kill -0 "$pid" 2>/dev/null; then
+                pkill -9 -P "$pid" 2>/dev/null
+                kill -9 "$pid" 2>/dev/null
+            fi
             echo "[$name] 已停止 (PID: $pid)"
         else
             echo "[$name] 进程不存在"
@@ -60,6 +65,20 @@ stop_service() {
         rm -f "$pidfile"
     else
         echo "[$name] 未在运行"
+    fi
+
+    # 安全兜底：如果端口仍被占用，强制释放
+    if [ "$name" = "backend" ]; then
+        local port_pids
+        port_pids=$(lsof -ti :5080 2>/dev/null | grep -v "^$")
+        if [ -n "$port_pids" ]; then
+            echo "[$name] 清理残留端口占用 ..."
+            echo "$port_pids" | xargs kill 2>/dev/null
+            sleep 1
+            # 仍有残留则强制杀
+            port_pids=$(lsof -ti :5080 2>/dev/null | grep -v "^$")
+            [ -n "$port_pids" ] && echo "$port_pids" | xargs kill -9 2>/dev/null
+        fi
     fi
 }
 

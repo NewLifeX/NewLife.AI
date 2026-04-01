@@ -155,6 +155,7 @@ function ChatApp() {
         sidebarCollapsed={sidebarCollapsed}
         onSidebarToggle={toggleSidebar}
         onLoadMore={() => useChatStore.getState().loadMoreConversations()}
+        onFileDrop={addAttachment}
         conversationTitle={activeConv?.title}
         userName={userName}
         userAvatar={userAvatar}
