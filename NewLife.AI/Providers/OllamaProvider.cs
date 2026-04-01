@@ -301,7 +301,7 @@ public class OllamaProvider : OpenAiProvider
         {
             var msg = ParseOllamaMessage(msgObj as IDictionary<String, Object>);
             var doneReason = dic["done_reason"] as String;
-            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = doneReason, }];
+            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = FinishReasonHelper.Parse(doneReason), }];
         }
 
         // 解析 usage：prompt_eval_count = 输入 token，eval_count = 输出 token
@@ -336,9 +336,9 @@ public class OllamaProvider : OpenAiProvider
             Model = dic["model"] as String,
         };
 
-        String? finishReason = null;
+        FinishReason? finishReason = null;
         if (isDone)
-            finishReason = dic["done_reason"] as String ?? "stop";
+            finishReason = FinishReasonHelper.Parse(dic["done_reason"] as String) ?? FinishReason.Stop;
 
         // 每个 chunk 都有 message 字段（含增量内容）
         var msgObj = dic["message"];

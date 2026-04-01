@@ -236,13 +236,12 @@ public class AnthropicResponse : IChatResponse
     }
 
     /// <summary>映射 Anthropic stop_reason 到标准 finish_reason</summary>
-    internal static String? MapStopReason(String? stopReason) => stopReason switch
+    internal static FinishReason? MapStopReason(String? stopReason) => stopReason switch
     {
-        "end_turn" => "stop",
-        "max_tokens" => "length",
-        "tool_use" => "tool_calls",
-        null => null,
-        _ => stopReason,
+        "end_turn" => FinishReason.Stop,
+        "max_tokens" => FinishReason.Length,
+        "tool_use" => FinishReason.ToolCalls,
+        _ => null,
     };
 
     /// <summary>从内部统一响应转换为 Anthropic 非流式响应</summary>
@@ -369,11 +368,11 @@ public class AnthropicResponse : IChatResponse
     /// <summary>将内部 finish_reason 映射为 Anthropic stop_reason</summary>
     /// <param name="reason">内部结束原因</param>
     /// <returns>Anthropic 停止原因</returns>
-    private static String MapFinishReason(String? reason) => reason switch
+    private static String MapFinishReason(FinishReason? reason) => reason switch
     {
-        "stop" => "end_turn",
-        "length" => "max_tokens",
-        "tool_calls" => "tool_use",
+        FinishReason.Stop => "end_turn",
+        FinishReason.Length => "max_tokens",
+        FinishReason.ToolCalls => "tool_use",
         _ => "end_turn",
     };
     #endregion

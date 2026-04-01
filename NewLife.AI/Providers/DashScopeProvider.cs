@@ -694,7 +694,7 @@ public class DashScopeProvider : OpenAiProvider
                 var choice = new DashScopeChoice
                 {
                     Index = i,
-                    FinishReason = choiceDic["finish_reason"] as String,
+                    FinishReason = FinishReasonHelper.Parse(choiceDic["finish_reason"] as String),
                     Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),
                     Logprobs = choiceDic.TryGetValue("logprobs", out var lp) ? lp : null,
                 };
@@ -732,7 +732,7 @@ public class DashScopeProvider : OpenAiProvider
                 var choice = new DashScopeChoice
                 {
                     Index = i,
-                    FinishReason = choiceDic["finish_reason"] as String,
+                    FinishReason = FinishReasonHelper.Parse(choiceDic["finish_reason"] as String),
                 };
 
                 // DashScope incremental_output=true 时，content 是增量文本，语义同 OpenAI delta

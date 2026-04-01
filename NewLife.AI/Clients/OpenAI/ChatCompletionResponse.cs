@@ -63,7 +63,7 @@ public class ChatCompletionResponse : IChatResponse
                         Index = choice.Index,
                         Message = choice.Message,
                         Delta = choice.Delta,
-                        FinishReason = choice.FinishReason,
+                        FinishReason = FinishReasonHelper.Parse(choice.FinishReason),
                     });
                 }
                 _messages = choices;
@@ -134,7 +134,7 @@ public class ChatCompletionResponse : IChatResponse
                     Index = choice.Index,
                     Message = choice.Message,
                     Delta = choice.Delta,
-                    FinishReason = choice.FinishReason,
+                    FinishReason = FinishReasonHelper.Parse(choice.FinishReason),
                 });
             }
             response.Messages = choices;
@@ -175,7 +175,7 @@ public class ChatCompletionResponse : IChatResponse
                 {
                     Index = choice.Index,
                     Message = choice.Message,
-                    FinishReason = choice.FinishReason,
+                    FinishReason = choice.FinishReason?.ToApiString(),
                 });
             }
             result.Choices = choices;
@@ -209,7 +209,7 @@ public class ChatCompletionResponse : IChatResponse
                 {
                     Index = choice.Index,
                     Delta = choice.Delta,
-                    FinishReason = choice.FinishReason,
+                    FinishReason = choice.FinishReason?.ToApiString(),
                 });
             }
             result.Choices = choices;

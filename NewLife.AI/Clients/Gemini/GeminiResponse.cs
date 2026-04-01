@@ -59,7 +59,7 @@ public class GeminiResponse : IChatResponse
                 foreach (var candidate in Candidates)
                 {
                     var (text, toolCalls) = ExtractContent(candidate);
-                    var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate.FinishReason);
+                    var finishReason = toolCalls?.Count > 0 ? FinishReason.ToolCalls : MapGeminiFinishReason(candidate.FinishReason);
                     var chatMsg = new ChatMessage { Role = "assistant", Content = text, ToolCalls = toolCalls };
                     var choice = new ChatChoice
                     {
@@ -132,7 +132,7 @@ public class GeminiResponse : IChatResponse
             foreach (var candidate in Candidates)
             {
                 var (text, toolCalls) = ExtractContent(candidate);
-                var finishReason = toolCalls?.Count > 0 ? "tool_calls" : MapGeminiFinishReason(candidate.FinishReason);
+                var finishReason = toolCalls?.Count > 0 ? FinishReason.ToolCalls : MapGeminiFinishReason(candidate.FinishReason);
 
                 ChatChoice choice;
                 if (streaming)
@@ -241,23 +241,22 @@ public class GeminiResponse : IChatResponse
     }
 
     /// <summary>映射 Gemini finishReason 到标准 finish_reason</summary>
-    internal static String? MapGeminiFinishReason(String? finishReason) => finishReason switch
+    internal static FinishReason? MapGeminiFinishReason(String? finishReason) => finishReason switch
     {
-        "STOP" => "stop",
-        "MAX_TOKENS" => "length",
-        "SAFETY" or "RECITATION" => "content_filter",
-        null => null,
-        _ => finishReason.ToLower(),
+        "STOP" => FinishReason.Stop,
+        "MAX_TOKENS" => FinishReason.Length,
+        "SAFETY" or "RECITATION" => FinishReason.ContentFilter,
+        _ => null,
     };
 
     /// <summary>将内部 finish_reason 映射为 Gemini finishReason</summary>
     /// <param name="reason">内部结束原因</param>
     /// <returns>Gemini 结束原因</returns>
-    private static String MapFinishReason(String? reason) => reason switch
+    private static String MapFinishReason(FinishReason? reason) => reason switch
     {
-        "stop" => "STOP",
-        "length" => "MAX_TOKENS",
-        "content_filter" => "SAFETY",
+        FinishReason.Stop => "STOP",
+        FinishReason.Length => "MAX_TOKENS",
+        FinishReason.ContentFilter => "SAFETY",
         _ => "STOP",
     };
     #endregion

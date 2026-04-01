@@ -70,7 +70,7 @@ public class DashScopeResponse : IChatResponse
                     list.Add(new DashScopeChoice
                     {
                         Index = i,
-                        FinishReason = choiceData.FinishReason,
+                        FinishReason = FinishReasonHelper.Parse(choiceData.FinishReason),
                         Message = choiceData.Message?.ToChatMessage(),
                         Delta = (choiceData.Delta ?? choiceData.Message)?.ToChatMessage(),
                         Logprobs = choiceData.Logprobs,
@@ -138,7 +138,7 @@ public class DashScopeResponse : IChatResponse
                 choices.Add(new DashScopeChoice
                 {
                     Index = i,
-                    FinishReason = choiceData.FinishReason,
+                    FinishReason = FinishReasonHelper.Parse(choiceData.FinishReason),
                     Message = choiceData.Message?.ToChatMessage(),
                     Logprobs = choiceData.Logprobs,
                 });
@@ -173,7 +173,7 @@ public class DashScopeResponse : IChatResponse
                 var choice = new DashScopeChoice
                 {
                     Index = i,
-                    FinishReason = choiceData.FinishReason,
+                    FinishReason = FinishReasonHelper.Parse(choiceData.FinishReason),
                     Logprobs = choiceData.Logprobs,
                 };
                 // 流式 chunk 优先用 Delta，无 Delta 则降级用 Message

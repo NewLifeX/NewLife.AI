@@ -129,7 +129,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
                 var choice = chunk.Messages?.FirstOrDefault();
                 if (choice != null)
                 {
-                    finishReason = choice.FinishReason ?? finishReason;
+                    finishReason = choice.FinishReason?.ToApiString() ?? finishReason;
                     var delta = choice.Delta;
                     if (delta != null)
                     {

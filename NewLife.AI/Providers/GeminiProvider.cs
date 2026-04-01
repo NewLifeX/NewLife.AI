@@ -309,13 +309,12 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <summary>映射 Gemini 的 finishReason 到 OpenAI 格式</summary>
     /// <param name="finishReason">Gemini 结束原因</param>
     /// <returns></returns>
-    private static String? MapGeminiFinishReason(String? finishReason) => finishReason switch
+    private static FinishReason? MapGeminiFinishReason(String? finishReason) => finishReason switch
     {
-        "STOP" => "stop",
-        "MAX_TOKENS" => "length",
-        "SAFETY" => "content_filter",
-        "RECITATION" => "content_filter",
-        _ => finishReason?.ToLower(),
+        "STOP" => FinishReason.Stop,
+        "MAX_TOKENS" => FinishReason.Length,
+        "SAFETY" or "RECITATION" => FinishReason.ContentFilter,
+        _ => null,
     };
     #endregion
 }

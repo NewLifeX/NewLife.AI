@@ -299,12 +299,12 @@ public class AnthropicProvider : AiProviderBase, IAiProvider, IAiChatProtocol
     /// <summary>映射 Anthropic 的 stop_reason 到 OpenAI 的 finish_reason</summary>
     /// <param name="stopReason">Anthropic 停止原因</param>
     /// <returns></returns>
-    private static String? MapStopReason(String? stopReason) => stopReason switch
+    private static FinishReason? MapStopReason(String? stopReason) => stopReason switch
     {
-        "end_turn" => "stop",
-        "max_tokens" => "length",
-        "tool_use" => "tool_calls",
-        _ => stopReason,
+        "end_turn" => FinishReason.Stop,
+        "max_tokens" => FinishReason.Length,
+        "tool_use" => FinishReason.ToolCalls,
+        _ => null,
     };
 
     /// <summary>设置请求头</summary>

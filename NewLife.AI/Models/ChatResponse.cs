@@ -52,14 +52,14 @@ public class ChatResponse : IChatResponse
 
     #region 方法
     /// <summary>添加消息项。返回新添加的项，便于后续修改</summary>
-    public ChatChoice Add(Object? content, String? reasoning = null, String? finishReeason = null)
+    public ChatChoice Add(Object? content, String? reasoning = null, FinishReason? finishReason = null)
     {
         var msgs = Messages ??= [];
 
         var choice = new ChatChoice
         {
             Index = msgs.Count,
-            FinishReason = finishReeason
+            FinishReason = finishReason
         };
         if (content != null || !reasoning.IsNullOrEmpty())
             choice.Message = new ChatMessage { Content = content, ReasoningContent = reasoning, };
@@ -70,14 +70,14 @@ public class ChatResponse : IChatResponse
     }
 
     /// <summary>添加增量消息项。返回新添加的项，便于后续修改</summary>
-    public ChatChoice AddDelta(Object? content, String? reasoning = null, String? finishReeason = null)
+    public ChatChoice AddDelta(Object? content, String? reasoning = null, FinishReason? finishReason = null)
     {
         var msgs = Messages ??= [];
 
         var choice = new ChatChoice
         {
             Index = msgs.Count,
-            FinishReason = finishReeason
+            FinishReason = finishReason
         };
         if (content != null || !reasoning.IsNullOrEmpty())
             choice.Delta = new ChatMessage { Content = content, ReasoningContent = reasoning, };
@@ -101,8 +101,8 @@ public class ChatChoice
     /// <summary>增量内容（流式）</summary>
     public ChatMessage? Delta { get; set; }
 
-    /// <summary>结束原因。stop/length/tool_calls/content_filter</summary>
-    public String? FinishReason { get; set; }
+    /// <summary>结束原因</summary>
+    public FinishReason? FinishReason { get; set; }
 }
 
 /// <summary>令牌用量统计</summary>

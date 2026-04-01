@@ -81,7 +81,7 @@ public class OllamaChatResponse : IChatResponse
             if (_messages == null && Message != null)
             {
                 var msg = Message.ToChatMessage();
-                _messages = [new ChatChoice { Index = 0, Message = msg, Delta = msg, FinishReason = DoneReason }];
+                _messages = [new ChatChoice { Index = 0, Message = msg, Delta = msg, FinishReason = FinishReasonHelper.Parse(DoneReason) }];
             }
             return _messages;
         }
@@ -131,7 +131,7 @@ public class OllamaChatResponse : IChatResponse
         if (Message != null)
         {
             var msg = Message.ToChatMessage();
-            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = DoneReason }];
+            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = FinishReasonHelper.Parse(DoneReason) }];
         }
 
         if (PromptEvalCount > 0 || EvalCount > 0)
@@ -158,8 +158,8 @@ public class OllamaChatResponse : IChatResponse
             Model = Model,
         };
 
-        String? finishReason = null;
-        if (Done) finishReason = DoneReason ?? "stop";
+        FinishReason? finishReason = null;
+        if (Done) finishReason = FinishReasonHelper.Parse(DoneReason) ?? FinishReason.Stop;
 
         if (Message != null)
         {

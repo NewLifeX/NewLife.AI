@@ -385,7 +385,7 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
                 var choice = new ChatChoice
                 {
                     Index = choiceDic["index"].ToInt(),
-                    FinishReason = choiceDic["finish_reason"] as String,
+                    FinishReason = FinishReasonHelper.Parse(choiceDic["finish_reason"] as String),
 
                     // 非流式：message
                     Message = ParseChatMessage(choiceDic["message"] as IDictionary<String, Object>),

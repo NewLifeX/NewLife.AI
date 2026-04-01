@@ -156,7 +156,7 @@ public class BedrockResponse : IChatResponse
         String? contentText = null;
         String? reasoning = null;
         List<ToolCall>? toolCalls = null;
-        String? finishReason = null;
+        FinishReason? finishReason = null;
 
         if (Output?.ResponseMessage != null)
         {
@@ -228,15 +228,14 @@ public class BedrockResponse : IChatResponse
     }
 
     /// <summary>映射 Bedrock stopReason 到标准 finish_reason</summary>
-    internal static String? MapStopReason(String? stopReason) => stopReason switch
+    internal static FinishReason? MapStopReason(String? stopReason) => stopReason switch
     {
-        "end_turn" => "stop",
-        "stop_sequence" => "stop",
-        "max_tokens" => "length",
-        "tool_use" => "tool_calls",
-        "content_filtered" => "content_filter",
-        null => null,
-        _ => stopReason,
+        "end_turn" => FinishReason.Stop,
+        "stop_sequence" => FinishReason.Stop,
+        "max_tokens" => FinishReason.Length,
+        "tool_use" => FinishReason.ToolCalls,
+        "content_filtered" => FinishReason.ContentFilter,
+        _ => null,
     };
 
     /// <summary>从内部统一响应转换为 Bedrock 非流式响应</summary>
@@ -387,11 +386,11 @@ public class BedrockResponse : IChatResponse
 
     #region 辅助
     /// <summary>将内部 finish_reason 映射为 Bedrock stopReason</summary>
-    private static String MapFinishReason(String? reason) => reason switch
+    private static String MapFinishReason(FinishReason? reason) => reason switch
     {
-        "stop" => "end_turn",
-        "length" => "max_tokens",
-        "tool_calls" => "tool_use",
+        FinishReason.Stop => "end_turn",
+        FinishReason.Length => "max_tokens",
+        FinishReason.ToolCalls => "tool_use",
         _ => "end_turn",
     };
     #endregion
