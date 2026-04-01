@@ -456,6 +456,11 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
 
         foreach (var msg in beforeMessages)
         {
+            if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
+            {
+                contextMessages.Add(BuildMultimodalUserMessage(msg.Attachments, msg.Content));
+                continue;
+            }
             contextMessages.Add(new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content });
         }
 
@@ -1252,6 +1257,11 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                     continue;
                 }
             }
+            if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
+            {
+                messages.Add(BuildMultimodalUserMessage(msg.Attachments, msg.Content));
+                continue;
+            }
             messages.Add(new AiChatMessage
             {
                 Role = msg.Role!,
@@ -1363,5 +1373,64 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             StreamingSpeed = entity.StreamingSpeed > 0 ? entity.StreamingSpeed : 3,
             AllowTraining = entity.AllowTraining,
         };
+
+    /// <summary>将用户消息的附件与文本内容组合为多模态消息。图片读取文件字节后以 base64 data URI 传给 LLM；非图片附件暂忽略</summary>
+    /// <param name="attachmentsJson">附件ID列表 JSON（Int64/String 数组）</param>
+    /// <param name="textContent">文本内容</param>
+    /// <returns>多模态 AiChatMessage，无有效附件时退化为纯文本消息</returns>
+    private static AiChatMessage BuildMultimodalUserMessage(String attachmentsJson, String? textContent)
+    {
+        var contents = new List<AIContent>();
+
+        // 前端发送的 attachmentIds 为字符串数组 ["123","456"]，兼容 Int64 数组 [123,456]
+        var ids = ParseAttachmentIds(attachmentsJson);
+        if (ids != null)
+        {
+            foreach (var id in ids)
+            {
+                try
+                {
+                    var att = Attachment.FindById(id);
+                    if (att == null || !att.Enable) continue;
+
+                    var filePath = att.GetFilePath();
+                    if (filePath.IsNullOrEmpty() || !File.Exists(filePath)) continue;
+
+                    if (!att.ContentType.IsNullOrEmpty() && att.ContentType.StartsWithIgnoreCase("image/"))
+                        contents.Add(new ImageContent { Data = File.ReadAllBytes(filePath), MediaType = att.ContentType });
+                }
+                catch (Exception ex)
+                {
+                    XTrace.WriteException(ex);
+                }
+            }
+        }
+
+        if (!textContent.IsNullOrEmpty())
+            contents.Add(new TextContent(textContent));
+
+        // 无图片附件时退化为纯文本
+        if (contents.Count == 0 || (contents.Count == 1 && contents[0] is TextContent))
+            return new AiChatMessage { Role = "user", Content = textContent };
+
+        return new AiChatMessage { Role = "user", Contents = contents };
+    }
+
+    /// <summary>解析附件ID列表 JSON。兼容字符串数组和整数数组两种格式</summary>
+    /// <param name="json">附件ID列表 JSON</param>
+    /// <returns>ID 列表，解析失败返回 null</returns>
+    private static IList<Int64>? ParseAttachmentIds(String json)
+    {
+        // 优先尝试 Int64 数组
+        var ids = json.ToJsonEntity<List<Int64>>();
+        if (ids != null && ids.Count > 0 && ids[0] != 0) return ids;
+
+        // 前端 attachmentIds.map(String) 产生字符串数组 ["123","456"]
+        var strIds = json.ToJsonEntity<List<String>>();
+        if (strIds != null && strIds.Count > 0)
+            return strIds.Select(s => s.ToLong()).Where(v => v > 0).ToList();
+
+        return null;
+    }
     #endregion
 }

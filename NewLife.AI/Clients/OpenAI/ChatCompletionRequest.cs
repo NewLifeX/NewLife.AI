@@ -198,7 +198,7 @@ public class ChatCompletionRequest : IChatRequest
                     else if (msg.Content != null)
                     {
                         // Content 可能是 OpenAI 格式的多模态数组（IList/JsonElement 等）
-                        var contents = ParseMultimodalContent(msg.Content);
+                        var contents = ChatMessage.ParseMultimodalContent(msg.Content);
                         if (contents != null && contents.Count > 0)
                             cm.Contents = contents;
                         else
@@ -234,60 +234,6 @@ public class ChatCompletionRequest : IChatRequest
         return req;
     }
 
-    /// <summary>尝试将 OpenAI 格式的多模态内容数组解析为 AIContent 列表</summary>
-    /// <param name="content">Content 值，可能是 IList（SystemJson 转换后）或 JsonElement 等</param>
-    /// <returns>解析成功返回 AIContent 列表，否则返回 null</returns>
-    private static IList<AIContent>? ParseMultimodalContent(Object content)
-    {
-        IList<Object>? items = null;
 
-        // NewLife SystemJson 转换器将 JSON 数组转为 IList<Object>
-        if (content is IList<Object> list)
-        {
-            items = list;
-        }
-        else
-        {
-            // 可能是 JsonElement 等类型，通过 ToString() 获取 JSON 再解析
-            var json = content.ToString();
-            if (json == null || !json.StartsWith("[")) return null;
-
-            try
-            {
-                // 包装为对象以便 JsonParser.Decode 解析
-                var wrapper = JsonParser.Decode("{\"items\":" + json + "}");
-                items = wrapper?["items"] as IList<Object>;
-            }
-            catch { return null; }
-        }
-
-        if (items == null || items.Count == 0) return null;
-
-        var result = new List<AIContent>();
-        foreach (var item in items)
-        {
-            if (item is not IDictionary<String, Object> dic) continue;
-
-            var type = dic.TryGetValue("type", out var t) ? t + "" : null;
-            if (type == "text")
-            {
-                var text = dic.TryGetValue("text", out var v) ? v + "" : "";
-                result.Add(new TextContent(text));
-            }
-            else if (type == "image_url")
-            {
-                if (dic.TryGetValue("image_url", out var imgObj) && imgObj is IDictionary<String, Object> imgDic)
-                {
-                    var url = imgDic.TryGetValue("url", out var u) ? u + "" : null;
-                    var img = new ImageContent { Uri = url };
-                    if (imgDic.TryGetValue("detail", out var d))
-                        img.Detail = d + "";
-                    result.Add(img);
-                }
-            }
-        }
-
-        return result.Count > 0 ? result : null;
-    }
     #endregion
 }

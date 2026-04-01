@@ -271,6 +271,9 @@ public class DashScopeRequest : IChatRequest
         var result = new List<DashScopeMessage>(messages.Count);
         foreach (var msg in messages)
         {
+            // Content 可能是反序列化后的复杂对象（如网关转发 OpenAI 多模态请求），需先还原 Contents
+            msg.ResolveContents();
+
             var m = new DashScopeMessage { Role = msg.Role };
 
             if (msg.Contents != null && msg.Contents.Count > 0)
