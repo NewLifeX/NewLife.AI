@@ -41,7 +41,7 @@
     <CubeOutput>../Areas/ChatAI/</CubeOutput>
   </Option>
   <Tables>
-    <Table Name="Conversation" Description="会话。一次完整的多轮对话上下文">
+    <Table Name="Conversation" Description="会话。一次完整的多轮对话上下文" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户。会话所属用户" />
@@ -75,7 +75,7 @@
         <Index Columns="Source" />
       </Indexes>
     </Table>
-    <Table Name="ChatMessage" Description="对话消息。会话中的单条发言，包括用户消息和AI回复">
+    <Table Name="ChatMessage" Description="对话消息。会话中的单条发言，包括用户消息和AI回复" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="ConversationId" DataType="Int64" Description="会话。所属会话" />
@@ -98,7 +98,7 @@
         <Index Columns="ConversationId,Id" />
       </Indexes>
     </Table>
-    <Table Name="MessageFeedback" Description="消息反馈。用户对AI回复的点赞或点踩">
+    <Table Name="MessageFeedback" Description="消息反馈。用户对AI回复的点赞或点踩" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="ConversationId" DataType="Int64" Description="会话。被反馈的会话" />
@@ -120,7 +120,7 @@
         <Index Columns="ConversationId" />
       </Indexes>
     </Table>
-    <Table Name="SharedConversation" Description="共享会话。通过链接分享的对话快照">
+    <Table Name="SharedConversation" Description="共享会话。通过链接分享的对话快照" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="ConversationId" DataType="Int64" Description="会话。被分享的会话" />
@@ -142,7 +142,31 @@
         <Index Columns="CreateUserID,Id" />
       </Indexes>
     </Table>
-    <Table Name="ProviderConfig" Description="提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例">
+    <Table Name="UsageRecord" Description="用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计" InsertOnly="True" Output="消息对话">
+      <Columns>
+        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
+        <Column Name="ConversationId" DataType="Int64" Description="会话" />
+        <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
+        <Column Name="ModelId" DataType="Int32" Description="模型。引用ModelConfig.Id" />
+        <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
+        <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
+        <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />
+        <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
+        <Column Name="Source" DataType="String" Description="请求来源。Chat=对话/Gateway=网关" />
+        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,Id" />
+        <Index Columns="AppKeyId,Id" />
+        <Index Columns="ModelId,Id" />
+        <Index Columns="ConversationId" />
+      </Indexes>
+    </Table>
+    <Table Name="ProviderConfig" Description="提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="Code" DataType="String" Description="编码。提供商实例唯一标识，如my-openai" />
@@ -170,7 +194,7 @@
         <Index Columns="Provider" />
       </Indexes>
     </Table>
-    <Table Name="ModelConfig" Description="模型配置。后端接入的大语言模型，关联到具体的提供商实例">
+    <Table Name="ModelConfig" Description="模型配置。后端接入的大语言模型，关联到具体的提供商实例" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="ProviderId" DataType="Int32" Map="ProviderConfig@Id@Name" Description="提供商。关联的提供商实例ID" />
@@ -199,7 +223,7 @@
         <Index Columns="ProviderId,Code" Unique="True" />
       </Indexes>
     </Table>
-    <Table Name="AppKey" Description="应用密钥。API网关访问凭证，用于外部系统调用模型服务">
+    <Table Name="AppKey" Description="应用密钥。API网关访问凭证，用于外部系统调用模型服务" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户。密钥所属用户" />
@@ -224,7 +248,7 @@
         <Index Columns="UserId" />
       </Indexes>
     </Table>
-    <Table Name="UserSetting" Description="用户设置。用户的个性化配置">
+    <Table Name="UserSetting" Description="用户设置。用户的个性化配置" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户。设置所属用户" />
@@ -252,30 +276,7 @@
         <Index Columns="UserId" Unique="True" />
       </Indexes>
     </Table>
-    <Table Name="SuggestedQuestion" Description="推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验">
-      <Columns>
-        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="Question" DataType="String" Master="True" Length="200" Description="问题。推荐问题文本" />
-        <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
-        <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
-        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
-        <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
-        <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
-        <Column Name="SortOrder" DataType="Int32" Description="排序。越小越靠前" />
-        <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
-      </Columns>
-      <Indexes>
-        <Index Columns="SortOrder" />
-        <Index Columns="Enable,SortOrder" />
-      </Indexes>
-    </Table>
-    <Table Name="NativeTool" Description="内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理">
+    <Table Name="NativeTool" Description="内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。工具唯一标识（snake_case），如get_current_time" />
@@ -304,7 +305,30 @@
         <Index Columns="Enable" />
       </Indexes>
     </Table>
-    <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本">
+    <Table Name="SuggestedQuestion" Description="推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验" Output="知识进化">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Question" DataType="String" Master="True" Length="200" Description="问题。推荐问题文本" />
+        <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
+        <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
+        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
+        <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
+        <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
+        <Column Name="SortOrder" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="SortOrder" />
+        <Index Columns="Enable,SortOrder" />
+      </Indexes>
+    </Table>
+    <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="Code" DataType="String" Description="编码。英文标识，唯一，如coder、translator" />
@@ -332,31 +356,7 @@
         <Index Columns="Category" />
       </Indexes>
     </Table>
-    <Table Name="UsageRecord" Description="用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计" InsertOnly="True">
-      <Columns>
-        <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="UserId" DataType="Int32" Description="用户" />
-        <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
-        <Column Name="ConversationId" DataType="Int64" Description="会话" />
-        <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
-        <Column Name="ModelId" DataType="Int32" Description="模型。引用ModelConfig.Id" />
-        <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
-        <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
-        <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />
-        <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
-        <Column Name="Source" DataType="String" Description="请求来源。Chat=对话/Gateway=网关" />
-        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-      </Columns>
-      <Indexes>
-        <Index Columns="UserId,Id" />
-        <Index Columns="AppKeyId,Id" />
-        <Index Columns="ModelId,Id" />
-        <Index Columns="ConversationId" />
-      </Indexes>
-    </Table>
-    <Table Name="UserMemory" Description="用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取">
+    <Table Name="UserMemory" Description="用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户" />
