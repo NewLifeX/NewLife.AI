@@ -84,6 +84,8 @@
         <Column Name="ThinkingContent" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。思考模式下的推理过程" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.Models.ThinkingMode" />
         <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="附件列表。存储魔方附件ID数组" />
+        <Column Name="SkillNames" DataType="String" Length="200" Description="技能列表。本轮激活的技能名称，多个逗号分隔" />
+        <Column Name="ToolNames" DataType="String" Length="500" Description="工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔" />
         <Column Name="ToolCalls" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="工具调用。JSON格式，存储tool_call链路记录" />
         <Column Name="PromptTokens" DataType="Int32" Description="提示Token数" />
         <Column Name="CompletionTokens" DataType="Int32" Description="回复Token数" />

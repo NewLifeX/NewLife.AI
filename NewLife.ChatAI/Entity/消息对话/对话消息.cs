@@ -78,6 +78,22 @@ public partial class ChatMessage
     [BindColumn("Attachments", "附件列表。存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
     public String? Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
 
+    private String? _SkillNames;
+    /// <summary>技能列表。本轮激活的技能名称，多个逗号分隔</summary>
+    [DisplayName("技能列表")]
+    [Description("技能列表。本轮激活的技能名称，多个逗号分隔")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("SkillNames", "技能列表。本轮激活的技能名称，多个逗号分隔", "")]
+    public String? SkillNames { get => _SkillNames; set { if (OnPropertyChanging("SkillNames", value)) { _SkillNames = value; OnPropertyChanged("SkillNames"); } } }
+
+    private String? _ToolNames;
+    /// <summary>工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔</summary>
+    [DisplayName("工具列表")]
+    [Description("工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("ToolNames", "工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔", "")]
+    public String? ToolNames { get => _ToolNames; set { if (OnPropertyChanging("ToolNames", value)) { _ToolNames = value; OnPropertyChanged("ToolNames"); } } }
+
     private String? _ToolCalls;
     /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
     [DisplayName("工具调用")]
@@ -170,6 +186,8 @@ public partial class ChatMessage
             "ThinkingContent" => _ThinkingContent,
             "ThinkingMode" => _ThinkingMode,
             "Attachments" => _Attachments,
+            "SkillNames" => _SkillNames,
+            "ToolNames" => _ToolNames,
             "ToolCalls" => _ToolCalls,
             "PromptTokens" => _PromptTokens,
             "CompletionTokens" => _CompletionTokens,
@@ -192,6 +210,8 @@ public partial class ChatMessage
                 case "ThinkingContent": _ThinkingContent = Convert.ToString(value); break;
                 case "ThinkingMode": _ThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "Attachments": _Attachments = Convert.ToString(value); break;
+                case "SkillNames": _SkillNames = Convert.ToString(value); break;
+                case "ToolNames": _ToolNames = Convert.ToString(value); break;
                 case "ToolCalls": _ToolCalls = Convert.ToString(value); break;
                 case "PromptTokens": _PromptTokens = value.ToInt(); break;
                 case "CompletionTokens": _CompletionTokens = value.ToInt(); break;
@@ -291,6 +311,12 @@ public partial class ChatMessage
         /// <summary>附件列表。存储魔方附件ID数组</summary>
         public static readonly Field Attachments = FindByName("Attachments");
 
+        /// <summary>技能列表。本轮激活的技能名称，多个逗号分隔</summary>
+        public static readonly Field SkillNames = FindByName("SkillNames");
+
+        /// <summary>工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔</summary>
+        public static readonly Field ToolNames = FindByName("ToolNames");
+
         /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
         public static readonly Field ToolCalls = FindByName("ToolCalls");
 
@@ -344,6 +370,12 @@ public partial class ChatMessage
 
         /// <summary>附件列表。存储魔方附件ID数组</summary>
         public const String Attachments = "Attachments";
+
+        /// <summary>技能列表。本轮激活的技能名称，多个逗号分隔</summary>
+        public const String SkillNames = "SkillNames";
+
+        /// <summary>工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔</summary>
+        public const String ToolNames = "ToolNames";
 
         /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
         public const String ToolCalls = "ToolCalls";
