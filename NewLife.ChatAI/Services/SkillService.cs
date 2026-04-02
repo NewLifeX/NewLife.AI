@@ -1,8 +1,7 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using NewLife.ChatAI.Entity;
 using NewLife.Log;
-using XCode;
 
 namespace NewLife.ChatAI.Services;
 
@@ -53,7 +52,7 @@ public class SkillService(ILog log)
     /// <summary>获取全部启用的技能列表</summary>
     /// <param name="category">分类筛选（可选）</param>
     /// <returns></returns>
-    public IList<Skill> GetAllSkills(String category = null)
+    public IList<Skill> GetAllSkills(String? category = null)
     {
         if (!String.IsNullOrEmpty(category))
             return Skill.FindAllByCategory(category).Where(e => e.Enable).OrderByDescending(e => e.Sort).ToList();
@@ -66,7 +65,7 @@ public class SkillService(ILog log)
     /// <param name="keyword">搜索关键词（可选），按Code/Name模糊匹配</param>
     /// <param name="maxCount">最大返回数量，默认20</param>
     /// <returns></returns>
-    public IList<Skill> GetMentionSkills(Int32 userId, String keyword = null, Int32 maxCount = 20)
+    public IList<Skill> GetMentionSkills(Int32 userId, String? keyword = null, Int32 maxCount = 20)
     {
         // 获取所有启用的技能
         var allSkills = GetAllSkills();
@@ -127,7 +126,7 @@ public class SkillService(ILog log)
     /// <param name="messageContent">用户消息内容（用于解析@引用）</param>
     /// <param name="selectedTools">用于收集消息中 @ToolName 引用的工具名称集合；为 null 时就是不收集</param>
     /// <returns>拼接后的技能提示词，无技能时返回 null</returns>
-    public String BuildSkillPrompt(Int32 conversationSkillId, String messageContent, ISet<String> selectedTools = null)
+    public String? BuildSkillPrompt(Int32 conversationSkillId, String? messageContent, ISet<String>? selectedTools = null)
     {
         var parts = new List<String>();
 
@@ -170,7 +169,7 @@ public class SkillService(ILog log)
     /// <param name="content">消息内容</param>
     /// <param name="selectedTools">收集工具引用的集合；为 null 时不收集</param>
     /// <returns></returns>
-    private List<String> ResolveMessageReferences(String content, ISet<String> selectedTools = null)
+    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null)
     {
         // 匹配 @技能名 格式，技能名可以是中英文数字下划线
         var matches = Regex.Matches(content, @"@([\w\u4e00-\u9fff]+)");
@@ -240,6 +239,7 @@ public class SkillService(ILog log)
 
         return sb.ToString();
     }
+
     #endregion
 
     #region 数据访问（可被测试覆盖）
@@ -250,7 +250,7 @@ public class SkillService(ILog log)
     /// <summary>根据编号获取技能</summary>
     /// <param name="id">技能编号</param>
     /// <returns></returns>
-    protected virtual Skill GetSkillById(Int32 id) => Skill.FindById(id);
+    protected virtual Skill? GetSkillById(Int32 id) => Skill.FindById(id);
 
     /// <summary>获取用户最近使用的技能ID列表，按最近使用排序</summary>
     /// <param name="userId">用户编号</param>
@@ -266,14 +266,17 @@ public class SkillService(ILog log)
     /// <summary>按名称或编码查找技能</summary>
     /// <param name="name">技能名称或编码</param>
     /// <returns></returns>
-    protected virtual Skill FindSkillByName(String name)
+    protected virtual Skill? FindSkillByName(String name)
     {
         // 先按编码精确匹配
         var skill = Skill.FindByCode(name);
         if (skill != null) return skill;
 
         // 再按名称匹配（实体缓存）
-        return Skill.FindByName(name);
+        if (Skill.Meta.Session.Count < 1000)
+            return Skill.Meta.Cache.Find(e => e.Name == name);
+
+        return Skill.Find(Skill._.Name == name);
     }
     #endregion
 }

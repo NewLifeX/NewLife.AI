@@ -4,7 +4,6 @@ using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
-using IChatResponse = NewLife.AI.Clients.IChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 
 namespace NewLife.ChatAI.Services;
@@ -18,8 +17,14 @@ public class ChatPipelineContext : IExtend
     /// <summary>会话编号</summary>
     public String? ConversationId { get; set; }
 
+    /// <summary>当前激活技能编号（0 表示无技能）</summary>
+    public Int32 SkillId { get; set; }
+
     /// <summary>消息中 @ToolName 显式引用的工具名称集合。由 SkillService 解析消息后填充，DbToolProvider 据此过滤非系统工具</summary>
     public ISet<String> SelectedTools { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>本轮实际注入给模型的工具名称列表。由管道在构建工具提供者后填充，用于记录到用户消息的 ToolNames 字段</summary>
+    public IList<String> AvailableToolNames { get; } = [];
 
     /// <summary>请求级扩展参数。由 <see cref="SendMessageRequest.Options"/> 传入，最终通过 ChatOptions.Items 注入服务商。
     /// 支持 DashScope 专属参数，如 EnableSearch / SearchStrategy / ThinkingBudget / TopK 等</summary>
@@ -34,7 +39,7 @@ public class ChatPipelineContext : IExtend
 /// 典型实现在外部（DI 注册时）组装好三层能力，内核层 <see cref="ChatApplicationService"/> 通过本接口驱动执行，无需感知各层细节。
 /// <code>
 /// // DI 注册（ChatAIExtensions.cs）
-/// services.AddSingleton&lt;IChatPipeline, ChatAIPipeline&gt;();
+/// services.AddSingleton&lt;IChatPipeline, StarChatPipeline&gt;();
 /// </code>
 /// </remarks>
 public interface IChatPipeline
@@ -59,7 +64,7 @@ public interface IChatPipeline
     /// <param name="context">管道执行上下文（UserId / ConversationId / SkillId）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
-    Task<IChatResponse> CompleteAsync(
+    Task<ChatResponse> CompleteAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
         ChatPipelineContext context,

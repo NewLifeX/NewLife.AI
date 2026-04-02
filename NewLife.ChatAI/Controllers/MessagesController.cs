@@ -6,7 +6,6 @@ using NewLife.AI.Services;
 using NewLife.Log;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
-using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -14,12 +13,20 @@ namespace NewLife.ChatAI.Controllers;
 [Route("api")]
 public class MessagesController(ChatApplicationService chatService, MessageRateLimiter rateLimiter, ITracer tracer) : ChatApiControllerBase
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+
+    /// <summary>全文搜索消息内容。在当前用户的所有会话中按关键词检索</summary>
+    /// <param name="keyword">搜索关键词</param>
+    /// <param name="page">页码</param>
+    /// <param name="pageSize">每页数量</param>
+    /// <returns></returns>
+    [HttpGet("messages/search")]
+    public ActionResult<PagedResultDto<MessageSearchResultDto>> SearchAsync([FromQuery] String keyword, [FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new SafeInt64Converter() },
-    };
+        if (keyword.IsNullOrWhiteSpace())
+            return Ok(new PagedResultDto<MessageSearchResultDto>([], 0, page, pageSize));
+        var result = chatService.SearchMessages(GetCurrentUserId(), keyword, page, pageSize);
+        return Ok(result);
+    }
 
     /// <summary>获取会话消息列表</summary>
     /// <param name="conversationId">会话编号</param>
@@ -29,23 +36,6 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     public async Task<ActionResult<IReadOnlyList<MessageDto>>> QueryAsync([FromRoute] Int64 conversationId, CancellationToken cancellationToken)
     {
         var result = await chatService.GetMessagesAsync(conversationId, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
-        return Ok(result);
-    }
-
-    /// <summary>全文搜索消息内容。在当前用户所有会话中按关键词搜索</summary>
-    /// <param name="keyword">搜索关键词</param>
-    /// <param name="page">页码</param>
-    /// <param name="pageSize">每页数量</param>
-    /// <returns></returns>
-    [HttpGet("messages/search")]
-    public ActionResult<PagedResultDto<MessageSearchResultDto>> SearchAsync([FromQuery] String keyword, [FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20)
-    {
-        if (String.IsNullOrWhiteSpace(keyword))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "keyword 不能为空" });
-        if (keyword.Length > 200)
-            return BadRequest(new { code = "INVALID_REQUEST", message = "搜索关键词过长" });
-
-        var result = chatService.SearchMessages(GetCurrentUserId(), keyword, page, pageSize);
         return Ok(result);
     }
 
@@ -67,7 +57,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
             return;
         }
 
-        using var span = tracer?.NewSpan("chat:StreamSend", new { request.ModelId, request.ThinkingMode });
+        using var span = tracer?.NewSpan("ai:StreamSend", new { request.ModelId, request.SkillCode, request.ThinkingMode });
         span?.AppendTag(request.Content);
         SetSseHeaders();
         await StreamEventsAsync(chatService.StreamMessageAsync(conversationId, request, userId, cancellationToken), cancellationToken, "MODEL_UNAVAILABLE", ex => span?.SetError(ex)).ConfigureAwait(false);
@@ -94,7 +84,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     [HttpPost("messages/{id:long}/edit-and-resend")]
     public async Task EditAndResendStreamAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
     {
-        using var span = tracer?.NewSpan("chat:ResendStream", new { id, request.Content });
+        using var span = tracer?.NewSpan("ai:ResendStream", new { id, request.Content });
         SetSseHeaders();
         await StreamEventsAsync(chatService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
     }
@@ -106,6 +96,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     [HttpPost("messages/{id:long}/regenerate")]
     public async Task<ActionResult<MessageDto>> RegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
+        using var span = tracer?.NewSpan("ai:Regenerate", id);
         var result = await chatService.RegenerateMessageAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (result == null) return NotFound();
         return Ok(result);
@@ -118,7 +109,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     [HttpPost("messages/{id:long}/regenerate/stream")]
     public async Task StreamRegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
-        using var span = tracer?.NewSpan("chat:StreamRegenerate", id);
+        using var span = tracer?.NewSpan("ai:StreamRegenerate", id);
         SetSseHeaders();
         await StreamEventsAsync(chatService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
     }
@@ -134,62 +125,4 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
         return Accepted();
     }
 
-    /// <summary>删除单条消息</summary>
-    /// <param name="id">消息编号</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    [HttpDelete("messages/{id:long}")]
-    public async Task<IActionResult> DeleteAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
-    {
-        var ok = await chatService.DeleteMessageAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
-        if (!ok) return NotFound();
-        return NoContent();
-    }
-
-    #region 辅助
-    /// <summary>设置 SSE 响应头</summary>
-    private void SetSseHeaders()
-    {
-        Response.Headers.Append("Content-Type", "text/event-stream");
-        Response.Headers.Append("Cache-Control", "no-cache");
-        Response.Headers.Append("Connection", "keep-alive");
-        Response.Headers.Append("X-Accel-Buffering", "no");  // 告知 Nginx 等反向代理禁用响应缓冲，保证 SSE 实时推送
-    }
-
-    /// <summary>流式写入 SSE 事件序列，统一处理取消与异常</summary>
-    /// <param name="events">事件异步序列</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="errorCode">异常时向客户端推送的错误码</param>
-    /// <param name="onError">异常回调，可用于埋点等副作用</param>
-    private async Task StreamEventsAsync(IAsyncEnumerable<ChatStreamEvent> events, CancellationToken cancellationToken, String errorCode = "STREAM_ERROR", Action<Exception>? onError = null)
-    {
-        try
-        {
-            await foreach (var ev in events.ConfigureAwait(false))
-            {
-                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // 用户取消，不需要额外处理
-        }
-        catch (Exception ex)
-        {
-            DefaultSpan.Current?.SetError(ex);
-            onError?.Invoke(ex);
-            await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(errorCode, ex.Message), CancellationToken.None).ConfigureAwait(false);
-        }
-    }
-
-    /// <summary>写入 SSE 事件</summary>
-    /// <param name="ev">事件对象</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    private async Task WriteSseEventAsync(ChatStreamEvent ev, CancellationToken cancellationToken)
-    {
-        var json = JsonSerializer.Serialize(ev, _jsonOptions);
-        await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
-        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
-    }
-    #endregion
 }

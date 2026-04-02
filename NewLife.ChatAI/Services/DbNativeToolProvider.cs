@@ -1,5 +1,7 @@
 ﻿using NewLife.AI.Models;
 using NewLife.AI.Tools;
+using NewLife.Serialization;
+using NewLife.ChatAI.Entity;
 
 namespace NewLife.ChatAI.Services;
 
@@ -12,28 +14,11 @@ namespace NewLife.ChatAI.Services;
 /// </list>
 /// MCP 工具由独立的 <c>McpClientService</c> 实现，不在本类负责范围内。
 /// </remarks>
-public class DbToolProvider : IToolProvider
+/// <remarks>初始化 DB 工具提供者</remarks>
+/// <param name="registry">原生工具注册表（持有全部 .NET 工具实现）</param>
+public class DbToolProvider(ToolRegistry registry) : IToolProvider
 {
-    #region 属性
-
-    private readonly ToolRegistry _registry;
-
-    #endregion
-
-    #region 构造
-
-    /// <summary>初始化 DB 工具提供者</summary>
-    /// <param name="registry">原生工具注册表（持有全部 .NET 工具实现）</param>
-    public DbToolProvider(ToolRegistry registry)
-    {
-        if (registry == null) throw new ArgumentNullException(nameof(registry));
-        _registry = registry;
-    }
-
-    #endregion
-
     #region IToolProvider
-
     /// <summary>从 DB 读取已启用工具的定义列表</summary>
     /// <returns>工具定义列表；<see cref="ChatSetting.EnableFunctionCalling"/> 为 false 时返回空列表</returns>
     public IList<ChatTool> GetTools() => GetFilteredTools(null);
@@ -46,7 +31,32 @@ public class DbToolProvider : IToolProvider
         if (!ChatSetting.Current.EnableFunctionCalling) return [];
 
         var tools = new List<ChatTool>();
+        var dbTools = NativeTool.FindAllEnabled();
+        foreach (var nt in dbTools)
+        {
+            if (nt.Name.IsNullOrEmpty()) continue;
 
+            // 系统工具始终携带；非系统工具仅在 @引用 时携带
+            if (!nt.IsSystem && (selectedTools == null || !selectedTools.Contains(nt.Name!))) continue;
+
+            Object? parameters = null;
+            if (!nt.Parameters.IsNullOrEmpty())
+            {
+                try { parameters = new JsonParser(nt.Parameters!).Decode(); }
+                catch { parameters = null; }
+            }
+
+            tools.Add(new ChatTool
+            {
+                Type = "function",
+                Function = new FunctionDefinition
+                {
+                    Name = nt.Name!,
+                    Description = nt.Description,
+                    Parameters = parameters,
+                },
+            });
+        }
         return tools;
     }
 
@@ -56,7 +66,7 @@ public class DbToolProvider : IToolProvider
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>执行结果文本；工具不在 Registry 中时抛 <see cref="KeyNotFoundException"/></returns>
     public Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default)
-        => _registry.InvokeAsync(toolName, argumentsJson, cancellationToken);
+        => registry.InvokeAsync(toolName, argumentsJson, cancellationToken);
 
     #endregion
 }

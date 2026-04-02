@@ -25,15 +25,10 @@ public class ChatSetting : Config<ChatSetting>
     [Description("站点标题。显示在浏览器标签页和 /chat 页面顶部")]
     public String SiteTitle { get; set; } = "智能助手";
 
-    /// <summary>Logo地址。欢迎页自定义Logo图片URL，为空时使用默认图标</summary>
+    /// <summary>Logo地址。欢迎页自定义Logo图片URL，为空时显示默认图标</summary>
     [Category("基本配置")]
-    [Description("Logo地址。欢迎页自定义Logo图片URL，为空时使用默认图标")]
-    public String LogoUrl { get; set; }
-
-    /// <summary>推荐问题。新会话页展示的推荐问题，多个用竖线分隔</summary>
-    [Category("基本配置")]
-    [Description("推荐问题。新会话页展示的推荐问题，多个用竖线分隔")]
-    public String SuggestedQuestions { get; set; } = "帮我写一封邮件|解释量子计算|用C#写一个排序算法|帮我翻译一段英文";
+    [Description("Logo地址。欢迎页自定义Logo图片URL，为空时显示默认图标")]
+    public String LogoUrl { get; set; } = "";
 
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     [Category("基本配置")]
@@ -90,17 +85,61 @@ public class ChatSetting : Config<ChatSetting>
     public Int32 ShareExpireDays { get; set; } = 30;
     #endregion
 
-    #region 功能开关
+    #region API 网关
+    /// <summary>启用 API 网关</summary>
+    [Category("API 网关")]
+    [Description("启用 API 网关")]
+    public Boolean EnableGateway { get; set; } = true;
+
+    /// <summary>API网关管道增强。API网关请求是否走完整能力扩展管道（技能/工具/提示词注入等），关闭后退回到直接代理转发</summary>
+    [Category("API 网关")]
+    [Description("API网关管道增强。API网关请求是否走完整能力扩展管道（技能/工具/提示词注入等），关闭后退回到直接代理转发")]
+    public Boolean EnableGatewayPipeline { get; set; } = true;
+
+    /// <summary>网关限流。每分钟每用户最大请求次数</summary>
+    [Category("API 网关")]
+    [Description("网关限流。每分钟每用户最大请求次数")]
+    public Int32 GatewayRateLimit { get; set; } = 60;
+
+    /// <summary>上游重试次数。模型返回 429 时最大重试</summary>
+    [Category("API 网关")]
+    [Description("上游重试次数。模型返回 429 时最大重试")]
+    public Int32 UpstreamRetryCount { get; set; } = 5;
+
+    /// <summary>网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析和知识进化</summary>
+    [Category("API 网关")]
+    [Description("网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析和知识进化")]
+    public Boolean EnableGatewayRecording { get; set; } = false;
+    #endregion
+
+    #region 工具与能力
     /// <summary>启用函数调用</summary>
-    [Category("功能开关")]
+    [Category("工具与能力")]
     [Description("启用函数调用")]
     public Boolean EnableFunctionCalling { get; set; } = true;
 
     /// <summary>启用 MCP 工具调用</summary>
-    [Category("功能开关")]
+    [Category("工具与能力")]
     [Description("启用 MCP 工具调用")]
     public Boolean EnableMcp { get; set; } = true;
 
+    /// <summary>推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型</summary>
+    [Category("工具与能力")]
+    [Description("推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型")]
+    public Boolean EnableSuggestedQuestionCache { get; set; } = false;
+
+    /// <summary>流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容，不做延迟</summary>
+    [Category("工具与能力")]
+    [Description("流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容，不做延迟")]
+    public Int32 StreamingSpeed { get; set; } = 3;
+
+    /// <summary>工具渐进式发现阈值。工具总数超过此值时切换为Advertise模式，仅向模型展示工具摘要而非完整Schema，模型按需加载，默认15</summary>
+    [Category("工具与能力")]
+    [Description("工具渐进式发现阈值。工具总数超过此值时切换为Advertise模式，仅向模型展示工具摘要而非完整Schema，模型按需加载，默认15")]
+    public Int32 ToolAdvertiseThreshold { get; set; } = 15;
+    #endregion
+
+    #region 功能开关
     /// <summary>启用用量统计</summary>
     [Category("功能开关")]
     [Description("启用用量统计")]
@@ -111,55 +150,10 @@ public class ChatSetting : Config<ChatSetting>
     [Description("后台继续生成。浏览器关闭后模型继续生成")]
     public Boolean BackgroundGeneration { get; set; } = true;
 
-    /// <summary>启用 API 网关</summary>
-    [Category("功能开关")]
-    [Description("启用 API 网关")]
-    public Boolean EnableGateway { get; set; } = true;
-
-    /// <summary>API网关管道增强。API网关请求是否走完整能力扩展管道（技能/工具/提示词注入等），关闭后退回到直接代理转发</summary>
-    [Category("功能开关")]
-    [Description("API网关管道增强。API网关请求是否走完整能力扩展管道（技能/工具/提示词注入等），关闭后退回到直接代理转发")]
-    public Boolean EnableGatewayPipeline { get; set; } = true;
-
     /// <summary>聊天消息限流。每用户每分钟最大消息发送次数，0 表示不限制</summary>
     [Category("功能开关")]
     [Description("聊天消息限流。每用户每分钟最大消息发送次数，0 表示不限制")]
     public Int32 MaxMessagesPerMinute { get; set; } = 20;
 
-    /// <summary>网关限流。每分钟每用户最大请求次数</summary>
-    [Category("功能开关")]
-    [Description("网关限流。每分钟每用户最大请求次数")]
-    public Int32 GatewayRateLimit { get; set; } = 60;
-
-    /// <summary>上游重试次数。模型返回 429 时最大重试</summary>
-    [Category("功能开关")]
-    [Description("上游重试次数。模型返回 429 时最大重试")]
-    public Int32 UpstreamRetryCount { get; set; } = 5;
-
-    /// <summary>启用定时对话作业</summary>
-    [Category("功能开关")]
-    [Description("启用定时对话作业")]
-    public Boolean EnableScheduledJobs { get; set; } = true;
-
-    /// <summary>每用户最大作业数。防止滥用，默认 10</summary>
-    [Category("功能开关")]
-    [Description("每用户最大作业数。防止滥用，默认 10")]
-    public Int32 MaxJobsPerUser { get; set; } = 10;
-
-    /// <summary>作业连续失败禁用次数。连续失败达到此数后自动禁用作业，默认 3</summary>
-    [Category("功能开关")]
-    [Description("作业连续失败禁用次数。连续失败达到此数后自动禁用作业，默认 3")]
-    public Int32 JobFailDisableCount { get; set; } = 3;
-
-    /// <summary>启用消息渠道集成。支持钉钉、企业微信、飞书等</summary>
-    [Category("功能开关")]
-    [Description("启用消息渠道集成。支持钉钉、企业微信、飞书等")]
-    public Boolean EnableChannels { get; set; } = true;
-
-    /// <summary>启用工具调用审批。桌面客户端中敏感工具调用需用户确认</summary>
-    [Category("功能开关")]
-    [Description("启用工具调用审批。桌面客户端中敏感工具调用需用户确认")]
-    public Boolean EnableToolApproval { get; set; } = false;
     #endregion
-
 }

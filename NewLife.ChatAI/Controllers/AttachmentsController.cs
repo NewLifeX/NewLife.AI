@@ -33,38 +33,23 @@ public class AttachmentsController : ChatApiControllerBase
         return Ok(new UploadAttachmentResult(att.Id, att.FileName, BuildUrl(att), att.Size));
     }
 
-    /// <summary>重定向到 Cube 文件路由（兼容旧 URL）</summary>
-    /// <param name="id">附件编号</param>
-    /// <returns></returns>
-    [HttpGet("{id}")]
-    public IActionResult GetAsync([FromRoute] Int64 id)
-    {
-        var entity = Attachment.FindById(id);
-        if (entity == null) return NotFound();
-
-        return Redirect(BuildUrl(entity));
-    }
-
     /// <summary>批量获取附件元信息</summary>
     /// <param name="ids">附件编号列表，逗号分隔</param>
     /// <returns></returns>
     [HttpGet("info")]
-    public ActionResult<AttachmentInfoDto[]> GetInfos([FromQuery] String ids)
+    public ActionResult<IEnumerable<AttachmentInfoResult>> GetInfoAsync([FromQuery] String ids)
     {
-        if (ids.IsNullOrEmpty()) return Ok(Array.Empty<AttachmentInfoDto>());
+        if (ids.IsNullOrEmpty()) return Ok(Array.Empty<AttachmentInfoResult>());
 
-        var idParts = ids.Split(',');
-        if (idParts.Length > 100) return BadRequest("一次最多查询100个附件");
-
-        var list = idParts
+        var results = ids.Split(',')
             .Select(s => s.Trim().ToLong())
             .Where(id => id > 0)
             .Select(id => Attachment.FindById(id))
             .Where(att => att != null)
-            .Select(att => new AttachmentInfoDto(att!.Id, att.FileName, att.Size, BuildUrl(att), att.ContentType.StartsWithIgnoreCase("image/")))
-            .ToArray();
+            .Select(att => new AttachmentInfoResult(att!.Id, att.FileName, att.Size, BuildUrl(att), att.ContentType.StartsWithIgnoreCase("image/")))
+            .ToList();
 
-        return Ok(list);
+        return Ok(results);
     }
 
     private static String BuildUrl(Attachment att)
@@ -75,4 +60,3 @@ public class AttachmentsController : ChatApiControllerBase
         return $"/cube/file?id={att.Id}{att.Extension}";
     }
 }
-

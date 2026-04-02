@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
+using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
 using NewLife.Cube.Extensions;
 
@@ -19,12 +20,15 @@ namespace NewLife.ChatAI;
 public static class ChatAIExtensions
 {
     #region 服务注册
+
     /// <summary>注册 ChatAI 所需的全部服务</summary>
     /// <param name="services">服务集合</param>
     /// <returns></returns>
     public static IServiceCollection AddChatAI(this IServiceCollection services)
     {
         services.AddScoped<ChatApplicationService>();
+        services.AddSingleton<SkillService>();
+        services.AddSingleton<UsageService>();
         services.AddSingleton<GatewayService>();
 
         // 对话执行管道：将能力扩展层（工具调用、技能注入）与知识进化层（记忆注入、自学习、事件智能体）装配为统一执行入口
@@ -45,16 +49,15 @@ public static class ChatAIExtensions
             return registry;
         });
 
+        services.AddSingleton<McpClientService>();
+        services.AddSingleton<IToolProvider>(p => p.GetRequiredService<McpClientService>());
         services.AddSingleton<IToolProvider, DbToolProvider>();
 
         services.AddSingleton<BackgroundGenerationService>();
-        services.AddHostedService<ModelDiscoveryService>();
-        services.AddHttpClient("McpClient");
-
-        // 技能与记忆服务
-        services.AddSingleton<SkillService>();
         services.AddSingleton<MemoryService>();
-        services.AddScoped<ConversationAnalysisService>();
+        services.AddHostedService<ModelDiscoveryService>();
+        services.AddHostedService<NativeToolSyncService>();
+        services.AddHttpClient("McpClient");
 
         // 消息频率限制器
         services.AddSingleton<MessageRateLimiter>();
@@ -117,27 +120,108 @@ public static class ChatAIExtensions
     {
         const String url = "https://ai.newlifex.com";
 
+        // 从 NativeTool 表读取配置，首次启动表为空时使用硬编码默认值
+        var toolMap = LoadToolConfigFromDb();
+
+        var ipTool = toolMap.GetValueOrDefault("get_ip_location");
+        var ipProviders = ipTool?.Providers ?? "pconline,ipapi";
+
+        var weatherTool = toolMap.GetValueOrDefault("get_weather");
+        var weatherProviders = weatherTool?.Providers ?? "nmc,wttr";
+
+        var translateTool = toolMap.GetValueOrDefault("translate");
+        var translateProviders = translateTool?.Providers ?? "mymemory";
+
+        var searchTool = toolMap.GetValueOrDefault("web_search");
+        var searchProviders = searchTool?.Providers ?? "bing,duckduckgo";
+        var searchKey = searchTool?.ApiKey ?? "";
+        var searchRemoteUrl = searchTool?.Endpoint ?? url;
+
+        var fetchTool = toolMap.GetValueOrDefault("web_fetch");
+        var fetchProviders = fetchTool?.Providers ?? "direct";
+        var fetchRemoteUrl = fetchTool?.Endpoint ?? url;
+
         // IP 归属地
-        services.AddSingleton<IIpLocationService, IpLocationPconlineService>();
-        services.AddSingleton<IIpLocationService, IpLocationIpApiService>();
-        services.AddSingleton<IIpLocationService>(sp => new IpLocationRemoteService(url));
+        foreach (var name in SplitProviders(ipProviders))
+        {
+            switch (name)
+            {
+                case "pconline": services.AddSingleton<IIpLocationService, IpLocationPconlineService>(); break;
+                case "ipapi": services.AddSingleton<IIpLocationService, IpLocationIpApiService>(); break;
+                case "newlife":
+                    var ipRemote = ipTool?.Endpoint ?? url;
+                    services.AddSingleton<IIpLocationService>(sp => new IpLocationRemoteService(ipRemote)); break;
+            }
+        }
 
         // 天气
-        services.AddSingleton<IWeatherService, WeatherNmcService>();
-        services.AddSingleton<IWeatherService, WeatherWttrService>();
-        services.AddSingleton<IWeatherService>(sp => new WeatherRemoteService(url));
+        foreach (var name in SplitProviders(weatherProviders))
+        {
+            switch (name)
+            {
+                case "nmc": services.AddSingleton<IWeatherService, WeatherNmcService>(); break;
+                case "wttr": services.AddSingleton<IWeatherService, WeatherWttrService>(); break;
+                case "newlife":
+                    var weatherRemote = weatherTool?.Endpoint ?? url;
+                    services.AddSingleton<IWeatherService>(sp => new WeatherRemoteService(weatherRemote)); break;
+            }
+        }
 
         // 翻译
-        services.AddSingleton<ITranslateService, TranslateMyMemoryService>();
-        services.AddSingleton<ITranslateService>(sp => new TranslateRemoteService(url));
+        foreach (var name in SplitProviders(translateProviders))
+        {
+            switch (name)
+            {
+                case "mymemory": services.AddSingleton<ITranslateService, TranslateMyMemoryService>(); break;
+                case "newlife":
+                    var translateRemote = translateTool?.Endpoint ?? url;
+                    services.AddSingleton<ITranslateService>(sp => new TranslateRemoteService(translateRemote)); break;
+            }
+        }
 
         // 搜索
-        services.AddSingleton<ISearchService, SearchDuckDuckGoService>();
-        services.AddSingleton<ISearchService>(sp => new SearchRemoteService(url));
+        foreach (var name in SplitProviders(searchProviders))
+        {
+            switch (name)
+            {
+                case "bing": services.AddSingleton<ISearchService>(sp => new SearchBingService(searchKey)); break;
+                case "serper": services.AddSingleton<ISearchService>(sp => new SearchSerperService(searchKey)); break;
+                case "duckduckgo": services.AddSingleton<ISearchService, SearchDuckDuckGoService>(); break;
+                case "newlife": services.AddSingleton<ISearchService>(sp => new SearchRemoteService(searchRemoteUrl)); break;
+            }
+        }
 
         // 网页抓取
-        services.AddSingleton<IWebFetchService, WebFetchDirectService>();
-        services.AddSingleton<IWebFetchService>(sp => new WebFetchRemoteService(url));
+        foreach (var name in SplitProviders(fetchProviders))
+        {
+            switch (name)
+            {
+                case "direct": services.AddSingleton<IWebFetchService, WebFetchDirectService>(); break;
+                case "newlife": services.AddSingleton<IWebFetchService>(sp => new WebFetchRemoteService(fetchRemoteUrl)); break;
+            }
+        }
     }
+
+    /// <summary>从 NativeTool 表加载工具配置，首次启动为空时返回空字典（供调用方使用默认值）</summary>
+    private static Dictionary<String, NativeTool> LoadToolConfigFromDb()
+    {
+        try
+        {
+            var list = NativeTool.FindAll();
+            return list.ToDictionary(t => t.Name!, StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            // 数据库未就绪（首次启动）时，默认返回空字典，使用硬编码默认值
+            return [];
+        }
+    }
+
+    /// <summary>将逗号分隔的提供者列表拆分为数组，去除空白</summary>
+    private static String[] SplitProviders(String? providers) =>
+        String.IsNullOrWhiteSpace(providers)
+            ? []
+            : providers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
     #endregion
 }

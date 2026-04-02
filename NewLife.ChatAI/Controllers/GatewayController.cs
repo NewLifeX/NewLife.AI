@@ -1,15 +1,12 @@
 ﻿using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
-using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
-using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
 
 namespace NewLife.ChatAI.Controllers;
@@ -22,13 +19,6 @@ namespace NewLife.ChatAI.Controllers;
 [ApiController]
 public class GatewayController(GatewayService gatewayService, IChatPipeline pipeline) : ControllerBase
 {
-    /// <summary>snake_case 序列化选项。用于写出符合 OpenAI / Anthropic 协议的响应体；请求体的反序列化已由 GatewayJsonInputFormatter 接管</summary>
-    private static readonly JsonSerializerOptions _snakeCaseOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
     #region 模型列表
     /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
     /// <param name="cancellationToken">取消令牌</param>
@@ -63,7 +53,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
             ["data"] = data,
         };
 
-        return Content(JsonSerializer.Serialize(result, _snakeCaseOptions), "application/json");
+        return Content(JsonSerializer.Serialize(result, GatewayService.SnakeCaseOptions), "application/json");
     }
     #endregion
 
@@ -73,7 +63,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="cancellationToken">取消令牌</param>
     [HttpPost("v1/chat/completions")]
     public async Task ChatCompletionsAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, GatewayProtocol.OpenAI, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region OpenAI Response API
@@ -83,7 +73,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <remarks>协议格式与 ChatCompletions 完全兼容，复用同一处理逻辑</remarks>
     [HttpPost("v1/responses")]
     public async Task ResponsesAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, GatewayProtocol.OpenAI, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region Anthropic Messages API
@@ -96,7 +86,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// </remarks>
     [HttpPost("v1/messages")]
     public async Task MessagesAsync([FromBody] AnthropicRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, GatewayProtocol.Anthropic, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region Google Gemini API
@@ -109,7 +99,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// </remarks>
     [HttpPost("v1/gemini")]
     public async Task GeminiAsync([FromBody] GeminiRequest request, CancellationToken cancellationToken)
-        => await ProcessChatAsync(request, cancellationToken).ConfigureAwait(false);
+        => await ProcessChatAsync(request, GatewayProtocol.Gemini, cancellationToken).ConfigureAwait(false);
     #endregion
 
     #region 图像生成
@@ -270,10 +260,11 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     #endregion
 
     #region 辅助
-    /// <summary>核心对话处理逻辑。认证、模型路由、流式/非流式响应，由各协议端点共用</summary>
+    /// <summary>核心对话处理逻辑。认证、模型路由、根据协议格式化流式/非流式响应，由各协议端点共用</summary>
     /// <param name="request">对话请求（可以是各协议原生请求，均实现 IChatRequest）</param>
+    /// <param name="protocol">目标响应协议（OpenAI / Anthropic / Gemini）</param>
     /// <param name="cancellationToken">取消令牌</param>
-    private async Task ProcessChatAsync(IChatRequest request, CancellationToken cancellationToken)
+    private async Task ProcessChatAsync(IChatRequest request, GatewayProtocol protocol, CancellationToken cancellationToken)
     {
         // 认证校验
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
@@ -296,8 +287,21 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
             return;
         }
 
+        // 网关对话记录：收集流式输出内容
+        var enableRecording = ChatSetting.Current.EnableGatewayRecording;
+        var contentBuilder = enableRecording ? new StringBuilder() : null;
+        var thinkingBuilder = enableRecording ? new StringBuilder() : null;
+        UsageDetails? lastUsage = null;
+
         try
         {
+            // 开启对话记录时预创建会话，确保 UsageRecord 可关联到对应会话
+            if (enableRecording)
+            {
+                var conversationId = gatewayService.CreateGatewayConversation(request, config, appKey);
+                if (conversationId > 0) request.ConversationId = conversationId.ToString();
+            }
+
             if (request.Stream)
             {
                 Response.Headers.Append("Content-Type", "text/event-stream");
@@ -305,41 +309,84 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
                 Response.Headers.Append("Connection", "keep-alive");
                 Response.Headers.Append("X-Accel-Buffering", "no");  // 告知 Nginx 等反向代理禁用响应缓冲，保证 SSE 实时推送
 
+                // 输出流式开始事件（Anthropic 需要 message_start + content_block_start）
+                foreach (var sseEvent in GatewayService.FormatStreamStart(request.Model ?? config.Code, protocol))
+                {
+                    await Response.WriteAsync(sseEvent, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+                    await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+                }
+
                 if (ChatSetting.Current.EnableGatewayPipeline)
                 {
                     // 完整能力管道路径：技能注入 + 工具调用 + 提示词管理
-                    var contextMessages = BuildGatewayContextMessages(request, appKey, config);
-                    var pipelineContext = new ChatPipelineContext { UserId = appKey.UserId.ToString() };
+                    var contextMessages = gatewayService.BuildContextMessages(request, appKey, config);
+                    var pipelineContext = new ChatPipelineContext { UserId = appKey.UserId.ToString(), ConversationId = request.ConversationId };
 
                     await foreach (var evt in pipeline.StreamAsync(contextMessages, config, ThinkingMode.Auto, pipelineContext, cancellationToken).ConfigureAwait(false))
                     {
-                        var evtChunk = ConvertEventToChunk(evt, request.Model ?? config.Code);
-                        if (evtChunk != null)
+                        // 收集内容用于网关对话记录
+                        if (enableRecording)
                         {
-                            var json = JsonSerializer.Serialize(evtChunk, _snakeCaseOptions);
-                            await Response.WriteAsync($"data: {json}\n\n", Encoding.UTF8, cancellationToken).ConfigureAwait(false);
-                            await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+                            if (evt.Type == "content_delta")
+                                contentBuilder!.Append(evt.Content);
+                            else if (evt.Type == "thinking_delta")
+                                thinkingBuilder!.Append(evt.Content);
                         }
+
+                        // 收集最后一次用量
+                        if (evt.Usage != null) lastUsage = evt.Usage;
+
+                        var evtChunk = GatewayService.ConvertEventToChunk(evt, request.Model ?? config.Code);
+                        if (evtChunk != null)
+                            await WriteStreamChunkAsync(evtChunk, protocol, cancellationToken).ConfigureAwait(false);
                     }
+
+                    // 管道路径：在此写入用量记录（非管道路径由 ChatStreamAsync 内部写入）
+                    if (enableRecording)
+                        gatewayService.RecordUsage(appKey, config.Id, request.ConversationId.ToLong(), lastUsage);
                 }
                 else
                 {
                     await foreach (var chunk in gatewayService.ChatStreamAsync(request, config, appKey, cancellationToken).ConfigureAwait(false))
                     {
-                        var json = JsonSerializer.Serialize(chunk, _snakeCaseOptions);
-                        await Response.WriteAsync($"data: {json}\n\n", Encoding.UTF8, cancellationToken).ConfigureAwait(false);
-                        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+                        // 收集内容用于网关对话记录
+                        if (enableRecording)
+                        {
+                            var text = chunk.Text;
+                            if (text != null) contentBuilder!.Append(text);
+                            var thinking = chunk.Messages?.FirstOrDefault()?.Delta?.ReasoningContent;
+                            if (thinking != null) thinkingBuilder!.Append(thinking);
+                        }
+
+                        // 收集最后一次用量
+                        if (chunk.Usage != null) lastUsage = chunk.Usage;
+
+                        await WriteStreamChunkAsync(chunk, protocol, cancellationToken).ConfigureAwait(false);
                     }
                 }
 
-                await Response.WriteAsync("data: [DONE]\n\n", Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+                // 输出流式结束标记
+                var endMarker = GatewayService.FormatStreamEnd(protocol);
+                if (endMarker != null)
+                    await Response.WriteAsync(endMarker, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
                 await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+                // 网关对话记录
+                if (enableRecording)
+                    gatewayService.RecordGatewayConversation(request, config, appKey, contentBuilder!.ToString(), thinkingBuilder!.ToString(), lastUsage);
             }
             else
             {
                 var result = await gatewayService.ChatAsync(request, config, appKey, cancellationToken).ConfigureAwait(false);
                 Response.ContentType = "application/json";
-                await Response.WriteAsync(JsonSerializer.Serialize(result, _snakeCaseOptions), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+                await Response.WriteAsync(GatewayService.FormatResponse(result, protocol), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+
+                // 网关对话记录
+                if (enableRecording)
+                {
+                    var thinking = result.Messages?.FirstOrDefault()?.Message?.ReasoningContent;
+                    gatewayService.RecordGatewayConversation(request, config, appKey, result.Text, thinking, result.Usage);
+                }
             }
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("限流"))
@@ -351,58 +398,23 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
             var statusCode = (Int32?)ex.StatusCode ?? 502;
             await WriteErrorAsync(statusCode, "MODEL_UNAVAILABLE", ex.Message).ConfigureAwait(false);
         }
-    }
-
-    /// <summary>为网关请求构建上下文消息列表。注入系统提示词（用户信息+UserSetting+ModelConfig），过滤请求中原有系统消息</summary>
-    /// <param name="request">网关请求</param>
-    /// <param name="appKey">应用密钥</param>
-    /// <param name="config">模型配置</param>
-    /// <returns>上下文消息列表</returns>
-    private IList<AiChatMessage> BuildGatewayContextMessages(IChatRequest request, AppKey appKey, ModelConfig config)
-    {
-        var messages = new List<AiChatMessage>();
-
-        // 构建系统消息（包含用户信息 + UserSetting + ModelConfig SystemPrompt）
-        var sysMsg = gatewayService.BuildSystemMessage(appKey, config);
-        if (sysMsg != null) messages.Add(sysMsg);
-
-        // 添加请求中的对话消息（跳过系统消息，已由管道注入）
-        foreach (var msg in request.Messages ?? [])
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            if (msg.Role?.Equals("system", StringComparison.OrdinalIgnoreCase) == true) continue;
-            messages.Add(msg);
+            // 兜底：捕获来自后端的 ApiException 等非 HttpRequestException 异常，统一返回 502
+            await WriteErrorAsync(502, "MODEL_UNAVAILABLE", ex.Message).ConfigureAwait(false);
         }
-
-        return messages;
     }
 
-    /// <summary>将 ChatStreamEvent 转换为 OpenAI 兼容的 ChatResponse 流式块</summary>
-    /// <param name="evt">管道事件</param>
-    /// <param name="model">模型编码</param>
-    /// <returns>ChatResponse；不需要输出的事件返回 null</returns>
-    private static ChatResponse? ConvertEventToChunk(ChatStreamEvent evt, String? model)
+    /// <summary>将流式块按协议格式写入 SSE 响应</summary>
+    /// <param name="chunk">内部统一流式块</param>
+    /// <param name="protocol">目标协议</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private async Task WriteStreamChunkAsync(ChatResponse chunk, GatewayProtocol protocol, CancellationToken cancellationToken)
     {
-        var chunk = new ChatResponse
+        foreach (var sseEvent in GatewayService.FormatStreamEvents(chunk, protocol))
         {
-            Object = "chat.completion.chunk",
-            Model = model,
-            Created = DateTimeOffset.UtcNow,
-        };
-
-        switch (evt.Type)
-        {
-            case "content_delta":
-                chunk.AddDelta(evt.Content);
-                return chunk;
-            case "thinking_delta":
-                chunk.AddDelta(null, evt.Content);
-                return chunk;
-            case "message_done":
-                chunk.AddDelta(null, finishReason: FinishReason.Stop);
-                if (evt.Usage != null) chunk.Usage = evt.Usage;
-                return chunk;
-            default:
-                return null;
+            await Response.WriteAsync(sseEvent, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+            await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -424,7 +436,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
         if (!String.IsNullOrEmpty(traceId))
             error["traceId"] = traceId;
 
-        await Response.WriteAsync(JsonSerializer.Serialize(error, _snakeCaseOptions), Encoding.UTF8).ConfigureAwait(false);
+        await Response.WriteAsync(JsonSerializer.Serialize(error, GatewayService.SnakeCaseOptions), Encoding.UTF8).ConfigureAwait(false);
     }
     #endregion
 }

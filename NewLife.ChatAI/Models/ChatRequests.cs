@@ -11,6 +11,9 @@ public record UpdateConversationRequest(String? Title, Int32 ModelId);
 /// <summary>发送消息请求</summary>
 public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IReadOnlyList<String>? AttachmentIds)
 {
+    /// <summary>技能编码。激活对应技能的系统提示词</summary>
+    public String? SkillCode { get; init; }
+
     /// <summary>模型编号。当会话未绑定模型时，使用此字段指定的模型</summary>
     public Int32 ModelId { get; init; }
 
@@ -35,3 +38,6 @@ public record CreateShareRequest(Int32? ExpireHours);
 
 /// <summary>上传附件结果</summary>
 public record UploadAttachmentResult(Int64 Id, String FileName, String Url, Int64 Size);
+
+/// <summary>附件元信息</summary>
+public record AttachmentInfoResult(Int64 Id, String FileName, Int64 Size, String Url, Boolean IsImage);

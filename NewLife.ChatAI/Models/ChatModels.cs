@@ -46,28 +46,6 @@ public record AttachmentInfoDto(Int64 Id, String FileName, Int64 Size, String Ur
 /// <summary>分页结果</summary>
 public record PagedResultDto<T>(IReadOnlyList<T> Items, Int32 Total, Int32 Page, Int32 PageSize);
 
-/// <summary>消息搜索结果</summary>
-public record MessageSearchResultDto
-{
-    /// <summary>消息编号</summary>
-    public String Id { get; set; } = null!;
-
-    /// <summary>会话编号</summary>
-    public String ConversationId { get; set; } = null!;
-
-    /// <summary>会话标题</summary>
-    public String ConversationTitle { get; set; } = "";
-
-    /// <summary>角色</summary>
-    public String Role { get; set; } = "user";
-
-    /// <summary>消息内容</summary>
-    public String Content { get; set; } = "";
-
-    /// <summary>创建时间</summary>
-    public String CreateTime { get; set; } = "";
-}
-
 /// <summary>分享链接</summary>
 public record ShareLinkDto(String Url, DateTime CreateTime, DateTime? ExpireTime);
 
@@ -77,11 +55,17 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     /// <summary>是否启用 MCP</summary>
     public Boolean McpEnabled { get; set; } = true;
 
-    /// <summary>流式输出速度</summary>
-    public Int32 StreamingSpeed { get; set; } = 3;
-
     /// <summary>默认技能</summary>
     public String DefaultSkill { get; set; } = "general";
+
+    /// <summary>启用个人学习。用户级自学习开关，全局开关开启后此项生效</summary>
+    public Boolean EnableLearning { get; set; } = true;
+
+    /// <summary>学习模型。用户自选的记忆提取模型，为空则使用系统配置</summary>
+    public String LearningModel { get; set; } = String.Empty;
+
+    /// <summary>记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置</summary>
+    public Int32 MemoryInjectNum { get; set; } = 0;
 
     /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
     public Int32 ContentWidth { get; set; } = 960;
@@ -94,86 +78,49 @@ public record UserProfileDto(String Nickname, String Account, String? Avatar);
 public class SystemConfigDto
 {
     /// <summary>应用名称，显示在侧边栏左上角</summary>
-    public String AppName { get; set; }
+    public String AppName { get; set; } = "";
+
     /// <summary>站点标题，显示在浏览器标签和 /chat 页面</summary>
-    public String SiteTitle { get; set; }
+    public String SiteTitle { get; set; } = "";
+
     /// <summary>Logo地址。欢迎页自定义Logo图片URL</summary>
-    public String LogoUrl { get; set; }
+    public String? LogoUrl { get; set; }
+
     /// <summary>欢迎页推荐问题列表</summary>
-    public SuggestedQuestionDto[] SuggestedQuestions { get; set; }
+    public SuggestedQuestionDto[] SuggestedQuestions { get; set; } = [];
 }
 
-/// <summary>推荐问题DTO</summary>
+/// <summary>推荐问题信息</summary>
 public class SuggestedQuestionDto
 {
-    /// <summary>问题内容</summary>
-    public String Question { get; set; }
-    /// <summary>图标</summary>
-    public String Icon { get; set; }
-    /// <summary>颜色</summary>
-    public String Color { get; set; }
+    /// <summary>问题文本</summary>
+    public String Question { get; set; } = "";
+
+    /// <summary>Material 图标名称</summary>
+    public String? Icon { get; set; }
+
+    /// <summary>Tailwind 颜色类名</summary>
+    public String? Color { get; set; }
 }
 
-/// <summary>用量汇总</summary>
-public class UsageSummaryDto
+/// <summary>消息搜索结果</summary>
+public record MessageSearchResultDto
 {
-    /// <summary>会话数</summary>
-    public Int32 Conversations { get; set; }
-    /// <summary>消息数</summary>
-    public Int32 Messages { get; set; }
-    /// <summary>提示Token数</summary>
-    public Int64 PromptTokens { get; set; }
-    /// <summary>回复Token数</summary>
-    public Int64 CompletionTokens { get; set; }
-    /// <summary>总Token数</summary>
-    public Int64 TotalTokens { get; set; }
-    /// <summary>最后活跃时间</summary>
-    public DateTime? LastActiveTime { get; set; }
-}
+    /// <summary>消息编号</summary>
+    public Int64 Id { get; set; }
 
-/// <summary>每日用量</summary>
-public class DailyUsageDto
-{
-    /// <summary>日期（yyyy-MM-dd）</summary>
-    public String Date { get; set; } = String.Empty;
-    /// <summary>调用次数</summary>
-    public Int32 Calls { get; set; }
-    /// <summary>提示Token数</summary>
-    public Int64 PromptTokens { get; set; }
-    /// <summary>回复Token数</summary>
-    public Int64 CompletionTokens { get; set; }
-    /// <summary>总Token数</summary>
-    public Int64 TotalTokens { get; set; }
-}
+    /// <summary>所属会话编号</summary>
+    public Int64 ConversationId { get; set; }
 
-/// <summary>模型使用分布</summary>
-public class ModelUsageDto
-{
-    /// <summary>模型编号</summary>
-    public Int32 ModelId { get; set; }
-    /// <summary>调用次数</summary>
-    public Int32 Calls { get; set; }
-    /// <summary>总Token数</summary>
-    public Int64 TotalTokens { get; set; }
-}
+    /// <summary>所属会话标题</summary>
+    public String ConversationTitle { get; set; } = "";
 
-/// <summary>MCP 服务器信息</summary>
-public class McpServerDto
-{
-    /// <summary>编号</summary>
-    public Int32 Id { get; set; }
-    /// <summary>名称</summary>
-    public String Name { get; set; } = String.Empty;
-    /// <summary>服务端点</summary>
-    public String Endpoint { get; set; } = String.Empty;
-    /// <summary>传输类型（sse/stdio）</summary>
-    public String TransportType { get; set; } = String.Empty;
-    /// <summary>认证类型</summary>
-    public String AuthType { get; set; } = String.Empty;
-    /// <summary>是否启用</summary>
-    public Boolean Enable { get; set; }
-    /// <summary>排序</summary>
-    public Int32 Sort { get; set; }
-    /// <summary>备注</summary>
-    public String? Remark { get; set; }
+    /// <summary>消息角色</summary>
+    public String Role { get; set; } = "user";
+
+    /// <summary>消息内容</summary>
+    public String Content { get; set; } = "";
+
+    /// <summary>创建时间</summary>
+    public DateTime CreateTime { get; set; }
 }

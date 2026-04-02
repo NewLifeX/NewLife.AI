@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NewLife.Data;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 using XCode.Membership;
@@ -14,16 +15,16 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
     public async Task<ActionResult<ConversationSummaryDto>> CreateAsync([FromBody] CreateConversationRequest request, CancellationToken cancellationToken)
     {
         var user = ManageProvider.User;
-        var result = await chatService.CreateConversationAsync(request, user, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.CreateConversationAsync(request, user!, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 
     /// <summary>分页查询当前用户会话列表</summary>
     [HttpGet]
-    public async Task<ActionResult<PagedResultDto<ConversationSummaryDto>>> QueryAsync([FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20, [FromQuery] String? keyword = null, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<PagedResultDto<ConversationSummaryDto>>> QueryAsync([FromQuery] String? keyword = null, [FromQuery] PageParameter? page = null, CancellationToken cancellationToken = default)
     {
-        if (keyword != null && keyword.Length > 200) return BadRequest("搜索关键词过长");
-        var result = await chatService.GetConversationsAsync(GetCurrentUserId(), page, pageSize, keyword, cancellationToken).ConfigureAwait(false);
+        if (keyword?.Length > 200) return BadRequest("keyword 过长");
+        var result = await chatService.GetConversationsAsync(GetCurrentUserId(), keyword, page, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
 

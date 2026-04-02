@@ -1,10 +1,9 @@
 ﻿using NewLife.AI.Clients;
-using NewLife.AI.Models;
+using NewLife.AI.Clients.Ollama;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.Log;
 using NewLife.ChatAI.Entity;
 using NewLife.Threading;
-using NewLife.AI.Clients.OpenAI;
-using NewLife.AI.Clients.Ollama;
 
 namespace NewLife.ChatAI.Services;
 
@@ -200,7 +199,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
         }
     }
 
-    /// <summary>通用 OpenAI 兼容模型发现。通过创建 OpenAiChatClient 调用 ListModelsAsync 获取并同步模型列表</summary>
+    /// <summary>通用 OpenAI 兼容模型发现。通过创建 OpenAIChatClient 调用 ListModelsAsync 获取并同步模型列表</summary>
     /// <param name="providerConfig">提供商配置</param>
     private async Task DiscoverByProviderAsync(ProviderConfig providerConfig)
     {

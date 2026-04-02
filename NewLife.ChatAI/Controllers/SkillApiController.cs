@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
 
@@ -13,7 +13,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
     /// <param name="isSystem">是否系统技能（可选）；true=仅系统技能，false=仅用户技能，不传=全部</param>
     /// <returns></returns>
     [HttpGet]
-    public ActionResult<IList<SkillDto>> GetAll([FromQuery] String category, [FromQuery] Boolean? isSystem)
+    public ActionResult<IList<SkillDto>> GetAll([FromQuery] String? category, [FromQuery] Boolean? isSystem)
     {
         var list = skillService.GetAllSkills(category);
         if (isSystem.HasValue) list = list.Where(s => s.IsSystem == isSystem.Value).ToList();
@@ -54,7 +54,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
     /// <param name="limit">最大返回数量，默认20</param>
     /// <returns></returns>
     [HttpGet("mention")]
-    public ActionResult<IList<SkillDto>> GetMentionSkills([FromQuery] String keyword, [FromQuery] Int32 limit = 20)
+    public ActionResult<IList<SkillDto>> GetMentionSkills([FromQuery] String? keyword, [FromQuery] Int32 limit = 20)
     {
         var userId = GetCurrentUserId();
         if (limit <= 0 || limit > 50) limit = 20;
@@ -111,19 +111,19 @@ public class SkillDto
     public Int32 Id { get; set; }
 
     /// <summary>编码</summary>
-    public String Code { get; set; }
+    public String? Code { get; set; }
 
     /// <summary>名称</summary>
-    public String Name { get; set; }
+    public String? Name { get; set; }
 
     /// <summary>图标</summary>
-    public String Icon { get; set; }
+    public String? Icon { get; set; }
 
     /// <summary>分类</summary>
-    public String Category { get; set; }
+    public String? Category { get; set; }
 
     /// <summary>描述</summary>
-    public String Description { get; set; }
+    public String? Description { get; set; }
 
     /// <summary>系统内置</summary>
     public Boolean IsSystem { get; set; }

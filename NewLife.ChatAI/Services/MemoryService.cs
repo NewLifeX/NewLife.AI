@@ -1,5 +1,6 @@
-using System.Text;
+﻿using System.Text;
 using NewLife.ChatAI.Entity;
+using NewLife.ChatAI.Models;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Services;
@@ -26,30 +27,37 @@ public class MemoryService(ITracer tracer, ILog log)
     /// <param name="value">值</param>
     /// <param name="confidence">置信度（0-100）</param>
     /// <param name="conversationId">来源会话ID</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns>保存后的记忆实体</returns>
-    public UserMemory UpsertMemory(
+    public async Task<UserMemory> UpsertMemoryAsync(
         Int32 userId,
         String category,
         String key,
         String value,
         Int32 confidence,
-        Int64 conversationId = 0)
+        Int64 conversationId,
+        CancellationToken cancellationToken = default)
     {
-        var existing = UserMemory.FindActiveByUserId(userId).FirstOrDefault(e => e.Key.EqualIgnoreCase(key));
+        await Task.Yield(); // 允许调用方继续（实体操作为同步，保持异步接口一致性）
+
+        var existing = UserMemory.FindAllByUserId(userId).FirstOrDefault(e => e.Key.EqualIgnoreCase(key));
         if (existing != null)
         {
             // 只有置信度更高或内容变化时才更新
             if (existing.Confidence < confidence || !existing.Value.EqualIgnoreCase(value))
             {
+                var oldValue = existing.Value;
                 existing.Value = value;
                 existing.Confidence = confidence;
                 existing.ConversationId = conversationId;
                 existing.IsActive = true;
+                existing.Version++;
                 existing.Update();
             }
             return existing;
         }
 
+        // 新记忆：根据信任等级决定是否需要审核
         var memory = new UserMemory
         {
             UserId = userId,
@@ -58,6 +66,9 @@ public class MemoryService(ITracer tracer, ILog log)
             Value = value,
             Confidence = confidence,
             ConversationId = conversationId,
+            Scope = "user",
+            Status = 1,
+            Version = 1,
             IsActive = true,
         };
         memory.Insert();
@@ -109,13 +120,44 @@ public class MemoryService(ITracer tracer, ILog log)
 
         return UserMemory.FindAllByUserIdAndCategory(userId, category);
     }
+
+    /// <summary>获取用户有效记忆的分页列表</summary>
+    /// <param name="userId">用户ID</param>
+    /// <param name="category">分类过滤（可选）</param>
+    /// <param name="page">页码（从1开始）</param>
+    /// <param name="pageSize">每页条数</param>
+    /// <returns>分页记忆列表</returns>
+    public MemoryListDto GetActiveMemoriesPaged(Int32 userId, String? category, Int32 page, Int32 pageSize)
+    {
+        var memories = category.IsNullOrEmpty()
+            ? GetActiveMemories(userId)
+            : GetMemoriesByCategory(userId, category!);
+
+        var total = memories.Count;
+        var items = memories
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(m => new MemoryItemDto
+            {
+                Id = m.Id,
+                Category = m.Category,
+                Key = m.Key,
+                Value = m.Value,
+                Confidence = m.Confidence,
+                CreateTime = m.CreateTime,
+                UpdateTime = m.UpdateTime,
+            })
+            .ToList();
+
+        return new MemoryListDto { Total = total, Items = items, Page = page, PageSize = pageSize };
+    }
     #endregion
 
     #region 上下文构建
     /// <summary>为用户构建记忆上下文字符串，用于注入系统提示词</summary>
     /// <param name="userId">用户ID</param>
     /// <returns>格式化的记忆上下文；无有效记忆时返回 null</returns>
-    public virtual String BuildContextForUser(Int32 userId)
+    public virtual String? BuildContextForUser(Int32 userId)
     {
         if (userId <= 0) return null;
 
