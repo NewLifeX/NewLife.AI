@@ -122,6 +122,14 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers));
 
+    /// <summary>添加工具中间件，并指定工具结果最大字符数。超过此长度时自动截断</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
+    /// <param name="providers">工具提供者列表</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxResultLength, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers) { MaxResultLength = maxResultLength });
+
     // ── MEAI 风格 Use*() 工厂方法 ─────────────────────────────────────────
 
     /// <summary>使用 OpenAI 兼容协议客户端作为内层客户端</summary>

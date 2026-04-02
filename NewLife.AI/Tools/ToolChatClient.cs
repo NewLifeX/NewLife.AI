@@ -31,6 +31,9 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 
     /// <summary>最大工具调用循环次数，防止无限递归。默认 10</summary>
     public Int32 MaxIterations { get; set; } = 10;
+
+    /// <summary>工具结果最大字符数。超过此长度时自动截断并追加省略提示，0表示不限制</summary>
+    public Int32 MaxResultLength { get; set; }
     #endregion
 
     #region 构造
@@ -196,9 +199,18 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     /// <param name="cancellationToken">取消令牌</param>
     private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, CancellationToken cancellationToken)
     {
-        if (toolMap.TryGetValue(toolName, out var provider))
-            return await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
-        throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
+        if (!toolMap.TryGetValue(toolName, out var provider))
+            throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
+
+        var result = await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+
+        // 结果超长时截断并追加省略提示
+        if (MaxResultLength > 0 && result != null && result.Length > MaxResultLength)
+        {
+            result = result.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {MaxResultLength} 字符]";
+        }
+
+        return result;
     }
 
     /// <summary>合并流式 tool_call 增量到收集列表。OpenAI 流式协议中 tool_calls 分块到达</summary>
