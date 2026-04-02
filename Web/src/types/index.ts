@@ -55,7 +55,7 @@ export interface ModelInfo {
 }
 
 export interface Attachment {
-  id: string
+  id: number
   name: string
   size: number
   type: 'pdf' | 'image' | 'file'

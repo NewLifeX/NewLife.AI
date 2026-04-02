@@ -23,7 +23,7 @@ public class InMemoryChatApplicationService
     private readonly ConcurrentDictionary<Int64, ConversationSummaryDto> _conversations = new();
     private readonly ConcurrentDictionary<Int64, List<MessageDto>> _messages = new();
     private readonly ConcurrentDictionary<String, (Int64 ConversationId, DateTime CreateTime, DateTime? ExpireTime)> _shares = new();
-    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty);
+    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false);
     private Int64 _conversationSeed = 1000;
     private Int64 _messageSeed = 5000;
 
@@ -337,15 +337,6 @@ public class InMemoryChatApplicationService
     }
 
     public Task<Boolean> RevokeShareLinkAsync(String token, CancellationToken cancellationToken) => Task.FromResult(_shares.TryRemove(token, out _));
-
-    public async Task<UploadAttachmentResult> UploadAttachmentAsync(String fileName, Int64 size, Stream stream, CancellationToken cancellationToken)
-    {
-        using var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
-
-        var id = Guid.NewGuid().ToString("N");
-        return new UploadAttachmentResult(id, fileName, $"/api/attachments/{id}", size);
-    }
 
     public Task<ModelInfoDto[]> GetModelsAsync(Int32[] roleIds, Int32 departmentId, CancellationToken cancellationToken)
     {

@@ -31,7 +31,7 @@ interface ChatPageProps {
   supportsThinking?: boolean
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
-  onAttachmentRemove?: (id: string) => void
+  onAttachmentRemove?: (id: number) => void
   sendShortcut?: 'Enter' | 'Ctrl+Enter'
 }
 

@@ -55,7 +55,7 @@ interface ChatState {
   stopGenerating: () => void
   setThinkingMode: (mode: ThinkingModeKey) => void
   addAttachment: (file: File) => Promise<void>
-  removeAttachment: (id: string) => void
+  removeAttachment: (id: number) => void
   regenerateMsg: (id: string) => Promise<void>
   editMsg: (id: string, content: string) => Promise<void>
   editMsgOnly: (id: string, content: string) => Promise<void>
@@ -401,7 +401,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break
           }
         }
-      }, abortController.signal, attachmentIds.length ? attachmentIds : undefined, currentModelId || undefined)
+      }, abortController.signal, attachmentIds.length ? attachmentIds.map(String) : undefined, currentModelId || undefined)
     } catch {
       // 网络错误或中断
       set((s) => ({

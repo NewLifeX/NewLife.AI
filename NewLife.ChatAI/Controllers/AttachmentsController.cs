@@ -1,17 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.Cube.Entity;
-using NewLife.ChatAI.Services;
 using NewLife.ChatAI.Models;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>附件控制器</summary>
 [Route("api/attachments")]
-public class AttachmentsController(ChatApplicationService chatService) : ChatApiControllerBase
+public class AttachmentsController : ChatApiControllerBase
 {
-    /// <summary>附件存储根目录</summary>
-    private static readonly String _attachmentRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Attachments");
-
     /// <summary>上传附件</summary>
     /// <param name="file">文件</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -22,32 +18,31 @@ public class AttachmentsController(ChatApplicationService chatService) : ChatApi
     {
         if (file == null || file.Length <= 0) return BadRequest("无有效文件");
 
-        await using var stream = file.OpenReadStream();
-        var result = await chatService.UploadAttachmentAsync(file.FileName, file.Length, stream, cancellationToken).ConfigureAwait(false);
-        return Ok(result);
+        var att = new Attachment
+        {
+            Category = "ChatAI",
+            ContentType = file.ContentType,
+            Size = file.Length,
+            Enable = true,
+            UploadTime = DateTime.Now,
+        };
+
+        var ok = await att.SaveFile(file.OpenReadStream(), null, file.FileName);
+        if (!ok) return StatusCode(500, "附件保存失败");
+
+        return Ok(new UploadAttachmentResult(att.Id, att.FileName, BuildUrl(att), att.Size));
     }
 
-    /// <summary>下载/预览附件</summary>
+    /// <summary>重定向到 Cube 文件路由（兼容旧 URL）</summary>
     /// <param name="id">附件编号</param>
     /// <returns></returns>
     [HttpGet("{id}")]
-    public IActionResult GetAsync([FromRoute] String id)
+    public IActionResult GetAsync([FromRoute] Int64 id)
     {
-        var attachId = id.ToLong();
-        if (attachId <= 0) return NotFound();
-
-        var entity = Attachment.FindById(attachId);
+        var entity = Attachment.FindById(id);
         if (entity == null) return NotFound();
 
-        var filePath = Path.Combine(_attachmentRoot, entity.FilePath);
-        // 安全检查：确保解析后的路径仍在附件目录内，防止路径遍历
-        if (!Path.GetFullPath(filePath).StartsWith(Path.GetFullPath(_attachmentRoot))) return BadRequest();
-        if (!System.IO.File.Exists(filePath)) return NotFound();
-
-        var contentType = entity.ContentType;
-        if (String.IsNullOrWhiteSpace(contentType)) contentType = "application/octet-stream";
-
-        return PhysicalFile(filePath, contentType, entity.FileName);
+        return Redirect(BuildUrl(entity));
     }
 
     /// <summary>批量获取附件元信息</summary>
@@ -56,26 +51,28 @@ public class AttachmentsController(ChatApplicationService chatService) : ChatApi
     [HttpGet("info")]
     public ActionResult<AttachmentInfoDto[]> GetInfos([FromQuery] String ids)
     {
-        if (String.IsNullOrWhiteSpace(ids)) return Ok(Array.Empty<AttachmentInfoDto>());
+        if (ids.IsNullOrEmpty()) return Ok(Array.Empty<AttachmentInfoDto>());
 
         var idParts = ids.Split(',');
         if (idParts.Length > 100) return BadRequest("一次最多查询100个附件");
 
-        var imageExts = new HashSet<String>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg" };
-        var list = new List<AttachmentInfoDto>();
-        foreach (var idStr in idParts)
-        {
-            var attachId = idStr.Trim().ToLong();
-            if (attachId <= 0) continue;
+        var list = idParts
+            .Select(s => s.Trim().ToLong())
+            .Where(id => id > 0)
+            .Select(id => Attachment.FindById(id))
+            .Where(att => att != null)
+            .Select(att => new AttachmentInfoDto(att!.Id, att.FileName, att.Size, BuildUrl(att), att.ContentType.StartsWithIgnoreCase("image/")))
+            .ToArray();
 
-            var entity = Attachment.FindById(attachId);
-            if (entity == null) continue;
+        return Ok(list);
+    }
 
-            var ext = Path.GetExtension(entity.FileName);
-            var isImage = imageExts.Contains(ext);
-            list.Add(new AttachmentInfoDto(entity.Id, entity.FileName, entity.Size, $"/api/attachments/{entity.Id}", isImage));
-        }
+    private static String BuildUrl(Attachment att)
+    {
+        if (!att.ContentType.IsNullOrEmpty() && att.ContentType.StartsWithIgnoreCase("image/"))
+            return $"/cube/image?id={att.Id}{att.Extension}";
 
-        return Ok(list.ToArray());
+        return $"/cube/file?id={att.Id}{att.Extension}";
     }
 }
+

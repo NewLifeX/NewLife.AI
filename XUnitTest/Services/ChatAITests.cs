@@ -380,7 +380,7 @@ public class ChatAITests
         Assert.Equal(0, settings.DefaultModel);
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "You are helpful"),
+            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "You are helpful", false),
             CancellationToken.None);
         Assert.Equal("en", updated.Language);
         Assert.Equal("dark", updated.Theme);
@@ -586,7 +586,7 @@ public class ChatAITests
     [Fact]
     public void UserSettingsDtoHasAllFields()
     {
-        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "You are helpful");
+        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "You are helpful", false);
 
         Assert.Equal("zh-CN", dto.Language);
         Assert.Equal("dark", dto.Theme);
@@ -871,7 +871,7 @@ public class ChatAITests
         var service = new InMemoryChatApplicationService();
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Be concise"),
+            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Be concise", false),
             CancellationToken.None);
 
         Assert.Equal("en", updated.Language);

@@ -505,7 +505,7 @@ export async function fetchSharedConversation(token: string): Promise<SharedConv
 
 export async function uploadAttachment(
   file: File,
-): Promise<{ id: string; fileName: string; url: string; size: number }> {
+): Promise<{ id: number; fileName: string; url: string; size: number }> {
   const formData = new FormData()
   formData.append('file', file)
   const res = await fetch(`${BASE_URL}/api/attachments`, {
@@ -524,7 +524,7 @@ export interface AttachmentInfo {
   isImage: boolean
 }
 
-export async function fetchAttachmentInfos(ids: string[]): Promise<AttachmentInfo[]> {
+export async function fetchAttachmentInfos(ids: number[]): Promise<AttachmentInfo[]> {
   if (ids.length === 0) return []
   return request<AttachmentInfo[]>(`/api/attachments/info?ids=${ids.join(',')}`)
 }

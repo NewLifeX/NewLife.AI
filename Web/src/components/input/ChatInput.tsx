@@ -14,7 +14,7 @@ interface ChatInputProps {
   onStop?: () => void
   isGenerating?: boolean
   attachments?: Attachment[]
-  onAttachmentRemove?: (id: string) => void
+  onAttachmentRemove?: (id: number) => void
   onAttachmentAdd?: () => void
   onFilePaste?: (file: File) => void
   thinkingMode?: ThinkingMode

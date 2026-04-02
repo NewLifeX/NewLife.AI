@@ -12,7 +12,7 @@ interface WelcomePageProps {
   suggestedQuestions?: SuggestedQuestion[]
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
-  onAttachmentRemove?: (id: string) => void
+  onAttachmentRemove?: (id: number) => void
 }
 
 export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove }: WelcomePageProps) {
@@ -72,7 +72,9 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
                     onClick={() => onSend(q.question)}
                     className="flex items-start space-x-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-200 text-sm text-left text-gray-700 dark:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
-                    <Icon name={q.icon || 'chat_bubble_outline'} className={q.color ? `text-${q.color}-500` : 'text-primary'} style={q.color ? { color: q.color } : undefined} />
+                    <span style={q.color ? { color: q.color } : undefined}>
+                      <Icon name={q.icon || 'chat_bubble_outline'} className={q.color ? undefined : 'text-primary'} />
+                    </span>
                     <span className="line-clamp-2">{q.question}</span>
                   </button>
                 ))

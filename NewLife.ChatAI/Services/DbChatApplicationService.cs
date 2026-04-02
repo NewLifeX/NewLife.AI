@@ -1023,63 +1023,6 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     }
     #endregion
 
-    #region 附件
-    /// <summary>上传附件</summary>
-    /// <param name="fileName">文件名</param>
-    /// <param name="size">文件大小</param>
-    /// <param name="stream">文件流</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public async Task<UploadAttachmentResult> UploadAttachmentAsync(String fileName, Int64 size, Stream stream, CancellationToken cancellationToken)
-    {
-        // 确保目录存在
-        if (!Directory.Exists(_attachmentRoot))
-            Directory.CreateDirectory(_attachmentRoot);
-
-        // 生成唯一文件路径
-        var datePath = DateTime.Now.ToString("yyyyMMdd");
-        var dir = Path.Combine(_attachmentRoot, datePath);
-        if (!Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-
-        var ext = Path.GetExtension(fileName);
-        var storedName = Guid.NewGuid().ToString("N") + ext;
-        var filePath = Path.Combine(dir, storedName);
-
-        // 写入磁盘
-        using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-        await stream.CopyToAsync(fs, cancellationToken).ConfigureAwait(false);
-
-        // 推断 ContentType
-        var contentType = ext?.ToLower() switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".webp" => "image/webp",
-            ".pdf" => "application/pdf",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".txt" => "text/plain",
-            ".md" => "text/markdown",
-            ".csv" => "text/csv",
-            _ => "application/octet-stream",
-        };
-
-        // 保存附件记录
-        var entity = new Attachment
-        {
-            FileName = fileName,
-            FilePath = Path.Combine(datePath, storedName),
-            ContentType = contentType,
-            Size = size,
-            Enable = true,
-        };
-        entity.Insert();
-
-        return new UploadAttachmentResult(entity.Id.ToString(), entity.FileName, $"/api/attachments/{entity.Id}", entity.Size);
-    }
-    #endregion
-
     #region 模型
     /// <summary>获取可用模型列表</summary>
     /// <param name="roleIds">角色组</param>

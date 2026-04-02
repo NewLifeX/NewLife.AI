@@ -72,7 +72,7 @@ export function MessageBubble({
 
   const attachmentIds = useMemo(() => {
     if (!attachments) return []
-    try { return (JSON.parse(attachments) as string[]).filter(Boolean) } catch { return [] }
+    try { return (JSON.parse(attachments) as unknown[]).map(Number).filter(Boolean) } catch { return [] }
   }, [attachments])
 
   const [attachInfos, setAttachInfos] = useState<AttachmentInfo[]>([])
