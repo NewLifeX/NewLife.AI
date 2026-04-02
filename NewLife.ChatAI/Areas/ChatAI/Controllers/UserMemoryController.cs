@@ -11,10 +11,10 @@ using static NewLife.ChatAI.Entity.UserMemory;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
-/// <summary>用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取</summary>
-[Menu(10, true, Icon = "fa-table")]
+/// <summary>用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据</summary>
+[Menu(40, true, Icon = "fa-table")]
 [ChatAIArea]
-public class UserMemoryController : EntityController<UserMemory>
+public class UserMemoryController : ChatEntityController<UserMemory>
 {
     static UserMemoryController()
     {

@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.Skill;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>技能。可复用的AI行为指令，Markdown格式的结构化提示文本</summary>
-[Menu(30, true, Icon = "fa-table")]
+[Menu(60, true, Icon = "fa-table")]
 [ChatAIArea]
 public class SkillController : EntityController<Skill>
 {

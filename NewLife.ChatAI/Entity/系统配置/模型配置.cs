@@ -38,21 +38,21 @@ public partial class ModelConfig
     [BindColumn("ProviderId", "提供商。关联的提供商实例ID", "")]
     public Int32 ProviderId { get => _ProviderId; set { if (OnPropertyChanging("ProviderId", value)) { _ProviderId = value; OnPropertyChanged("ProviderId"); } } }
 
-    private String _Code;
+    private String? _Code;
     /// <summary>编码。模型唯一标识</summary>
     [DisplayName("编码")]
     [Description("编码。模型唯一标识")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Code", "编码。模型唯一标识", "")]
-    public String Code { get => _Code; set { if (OnPropertyChanging("Code", value)) { _Code = value; OnPropertyChanged("Code"); } } }
+    public String? Code { get => _Code; set { if (OnPropertyChanging("Code", value)) { _Code = value; OnPropertyChanged("Code"); } } }
 
-    private String _Name;
+    private String? _Name;
     /// <summary>名称。显示名称</summary>
     [DisplayName("名称")]
     [Description("名称。显示名称")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Name", "名称。显示名称", "", Master = true)]
-    public String Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
+    public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
     private Int32 _MaxTokens;
     /// <summary>最大令牌数</summary>
@@ -94,29 +94,29 @@ public partial class ModelConfig
     [BindColumn("SupportFunctionCalling", "函数调用。是否支持Function Calling", "")]
     public Boolean SupportFunctionCalling { get => _SupportFunctionCalling; set { if (OnPropertyChanging("SupportFunctionCalling", value)) { _SupportFunctionCalling = value; OnPropertyChanged("SupportFunctionCalling"); } } }
 
-    private String _SystemPrompt;
+    private String? _SystemPrompt;
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     [DisplayName("系统提示词")]
     [Description("系统提示词。模型级System Prompt，发送给上游的系统消息")]
     [DataObjectField(false, false, true, 2000)]
-    [BindColumn("SystemPrompt", "系统提示词。模型级System Prompt，发送给上游的系统消息", "", ShowIn = "Auto,-List,-Search")]
-    public String SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
+    [BindColumn("SystemPrompt", "系统提示词。模型级System Prompt，发送给上游的系统消息", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
+    public String? SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
 
-    private String _RoleIds;
+    private String? _RoleIds;
     /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
     [DisplayName("角色组")]
     [Description("角色组。逗号分隔的角色ID列表，为空时不限制")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("RoleIds", "角色组。逗号分隔的角色ID列表，为空时不限制", "")]
-    public String RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
+    public String? RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
 
-    private String _DepartmentIds;
+    private String? _DepartmentIds;
     /// <summary>部门组。逗号分隔的部门ID列表，为空时不限制</summary>
     [DisplayName("部门组")]
     [Description("部门组。逗号分隔的部门ID列表，为空时不限制")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("DepartmentIds", "部门组。逗号分隔的部门ID列表，为空时不限制", "")]
-    public String DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
+    public String? DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
 
     private DateTime _ModelTime;
     /// <summary>模型时间。提供商侧的模型创建或最后更新时间</summary>
@@ -151,14 +151,14 @@ public partial class ModelConfig
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -178,14 +178,14 @@ public partial class ModelConfig
     [BindColumn("UpdateUserID", "更新用户", "")]
     public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
 
-    private String _UpdateIP;
+    private String? _UpdateIP;
     /// <summary>更新地址</summary>
     [Category("扩展")]
     [DisplayName("更新地址")]
     [Description("更新地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
 
     private DateTime _UpdateTime;
     /// <summary>更新时间</summary>
@@ -196,21 +196,21 @@ public partial class ModelConfig
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
 
-    private String _Remark;
+    private String? _Remark;
     /// <summary>备注</summary>
     [Category("扩展")]
     [DisplayName("备注")]
     [Description("备注")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
-    public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -273,11 +273,11 @@ public partial class ModelConfig
     #region 关联映射
     /// <summary>提供商</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public ProviderConfig Provider => Extends.Get(nameof(Provider), k => ProviderConfig.FindById(ProviderId));
+    public ProviderConfig? Provider => Extends.Get(nameof(Provider), k => ProviderConfig.FindById(ProviderId));
 
     /// <summary>提供商</summary>
     [Map(nameof(ProviderId), typeof(ProviderConfig), "Id")]
-    public String ProviderName => Provider?.Name;
+    public String? ProviderName => Provider?.Name;
 
     #endregion
 
@@ -285,7 +285,7 @@ public partial class ModelConfig
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static ModelConfig FindById(Int32 id)
+    public static ModelConfig? FindById(Int32 id)
     {
         if (id < 0) return null;
 
@@ -302,10 +302,10 @@ public partial class ModelConfig
     /// <param name="providerId">提供商</param>
     /// <param name="code">编码</param>
     /// <returns>实体对象</returns>
-    public static ModelConfig FindByProviderIdAndCode(Int32 providerId, String code)
+    public static ModelConfig? FindByProviderIdAndCode(Int32 providerId, String? code)
     {
         if (providerId < 0) return null;
-        if (code.IsNullOrEmpty()) return null;
+        if (code == null) return null;
 
         // 实体缓存
         if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.ProviderId == providerId && e.Code.EqualIgnoreCase(code));
@@ -341,7 +341,7 @@ public partial class ModelConfig
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -429,7 +429,7 @@ public partial class ModelConfig
         /// <summary>备注</summary>
         public static readonly Field Remark = FindByName("Remark");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得模型配置字段名称的快捷方式</summary>

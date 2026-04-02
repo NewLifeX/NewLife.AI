@@ -13,14 +13,13 @@ using XCode.DataAccessLayer;
 
 namespace NewLife.ChatAI.Entity;
 
-/// <summary>推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验</summary>
+/// <summary>MCP服务配置。MCP Server列表及工具发现信息</summary>
 [Serializable]
 [DataObject]
-[Description("推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验")]
-[BindIndex("IX_SuggestedQuestion_SortOrder", false, "SortOrder")]
-[BindIndex("IX_SuggestedQuestion_Enable_SortOrder", false, "Enable,SortOrder")]
-[BindTable("SuggestedQuestion", Description = "推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class SuggestedQuestion
+[Description("MCP服务配置。MCP Server列表及工具发现信息")]
+[BindIndex("IU_McpServerConfig_Name", true, "Name")]
+[BindTable("McpServerConfig", Description = "MCP服务配置。MCP Server列表及工具发现信息", ConnName = "ChatAI", DbType = DatabaseType.None)]
+public partial class McpServerConfig
 {
     #region 属性
     private Int32 _Id;
@@ -31,61 +30,53 @@ public partial class SuggestedQuestion
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
-    private String? _Question;
-    /// <summary>问题。推荐问题文本</summary>
-    [DisplayName("问题")]
-    [Description("问题。推荐问题文本")]
+    private String? _Name;
+    /// <summary>名称。服务名称</summary>
+    [DisplayName("名称")]
+    [Description("名称。服务名称")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Name", "名称。服务名称", "", Master = true)]
+    public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
+
+    private String? _Endpoint;
+    /// <summary>接口地址。MCP Server地址</summary>
+    [DisplayName("接口地址")]
+    [Description("接口地址。MCP Server地址")]
     [DataObjectField(false, false, true, 200)]
-    [BindColumn("Question", "问题。推荐问题文本", "", Master = true)]
-    public String? Question { get => _Question; set { if (OnPropertyChanging("Question", value)) { _Question = value; OnPropertyChanged("Question"); } } }
+    [BindColumn("Endpoint", "接口地址。MCP Server地址", "", ItemType = "url")]
+    public String? Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
 
-    private String? _Response;
-    /// <summary>响应。缓存的AI回复内容，Markdown格式</summary>
-    [DisplayName("响应")]
-    [Description("响应。缓存的AI回复内容，Markdown格式")]
-    [DataObjectField(false, false, true, -1)]
-    [BindColumn("Response", "响应。缓存的AI回复内容，Markdown格式", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
-    public String? Response { get => _Response; set { if (OnPropertyChanging("Response", value)) { _Response = value; OnPropertyChanged("Response"); } } }
-
-    private String? _ThinkingResponse;
-    /// <summary>推理响应。缓存的思考过程内容</summary>
-    [DisplayName("推理响应")]
-    [Description("推理响应。缓存的思考过程内容")]
-    [DataObjectField(false, false, true, -1)]
-    [BindColumn("ThinkingResponse", "推理响应。缓存的思考过程内容", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
-    public String? ThinkingResponse { get => _ThinkingResponse; set { if (OnPropertyChanging("ThinkingResponse", value)) { _ThinkingResponse = value; OnPropertyChanged("ThinkingResponse"); } } }
-
-    private Int32 _ModelId;
-    /// <summary>模型。生成缓存响应时使用的模型</summary>
-    [DisplayName("模型")]
-    [Description("模型。生成缓存响应时使用的模型")]
+    private NewLife.AI.Models.McpTransportType _TransportType;
+    /// <summary>传输类型。Http/Sse/Stdio</summary>
+    [DisplayName("传输类型")]
+    [Description("传输类型。Http/Sse/Stdio")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ModelId", "模型。生成缓存响应时使用的模型", "")]
-    public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
+    [BindColumn("TransportType", "传输类型。Http/Sse/Stdio", "")]
+    public NewLife.AI.Models.McpTransportType TransportType { get => _TransportType; set { if (OnPropertyChanging("TransportType", value)) { _TransportType = value; OnPropertyChanged("TransportType"); } } }
 
-    private String? _Icon;
-    /// <summary>图标。Material Icon名称，如chat_bubble_outline</summary>
-    [DisplayName("图标")]
-    [Description("图标。Material Icon名称，如chat_bubble_outline")]
+    private String? _AuthType;
+    /// <summary>认证类型。None/Bearer/ApiKey</summary>
+    [DisplayName("认证类型")]
+    [Description("认证类型。None/Bearer/ApiKey")]
     [DataObjectField(false, false, true, 50)]
-    [BindColumn("Icon", "图标。Material Icon名称，如chat_bubble_outline", "")]
-    public String? Icon { get => _Icon; set { if (OnPropertyChanging("Icon", value)) { _Icon = value; OnPropertyChanged("Icon"); } } }
+    [BindColumn("AuthType", "认证类型。None/Bearer/ApiKey", "")]
+    public String? AuthType { get => _AuthType; set { if (OnPropertyChanging("AuthType", value)) { _AuthType = value; OnPropertyChanged("AuthType"); } } }
 
-    private String? _Color;
-    /// <summary>颜色。图标CSS颜色类，如text-blue-500</summary>
-    [DisplayName("颜色")]
-    [Description("颜色。图标CSS颜色类，如text-blue-500")]
-    [DataObjectField(false, false, true, 50)]
-    [BindColumn("Color", "颜色。图标CSS颜色类，如text-blue-500", "")]
-    public String? Color { get => _Color; set { if (OnPropertyChanging("Color", value)) { _Color = value; OnPropertyChanged("Color"); } } }
+    private String? _AuthToken;
+    /// <summary>认证令牌</summary>
+    [DisplayName("认证令牌")]
+    [Description("认证令牌")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("AuthToken", "认证令牌", "", ShowIn = "Auto,-List,-Search")]
+    public String? AuthToken { get => _AuthToken; set { if (OnPropertyChanging("AuthToken", value)) { _AuthToken = value; OnPropertyChanged("AuthToken"); } } }
 
-    private Int32 _SortOrder;
-    /// <summary>排序。越小越靠前</summary>
-    [DisplayName("排序")]
-    [Description("排序。越小越靠前")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("SortOrder", "排序。越小越靠前", "")]
-    public Int32 SortOrder { get => _SortOrder; set { if (OnPropertyChanging("SortOrder", value)) { _SortOrder = value; OnPropertyChanged("SortOrder"); } } }
+    private String? _AvailableTools;
+    /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
+    [DisplayName("可用工具")]
+    [Description("可用工具。已发现的工具列表，JSON格式")]
+    [DataObjectField(false, false, true, -1)]
+    [BindColumn("AvailableTools", "可用工具。已发现的工具列表，JSON格式", "", ShowIn = "Auto,-List,-Search")]
+    public String? AvailableTools { get => _AvailableTools; set { if (OnPropertyChanging("AvailableTools", value)) { _AvailableTools = value; OnPropertyChanged("AvailableTools"); } } }
 
     private Boolean _Enable;
     /// <summary>启用</summary>
@@ -94,6 +85,14 @@ public partial class SuggestedQuestion
     [DataObjectField(false, false, false, 0)]
     [BindColumn("Enable", "启用", "")]
     public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
+
+    private Int32 _Sort;
+    /// <summary>排序。越小越靠前</summary>
+    [DisplayName("排序")]
+    [Description("排序。越小越靠前")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Sort", "排序。越小越靠前", "")]
+    public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -148,6 +147,15 @@ public partial class SuggestedQuestion
     [DataObjectField(false, false, true, 0)]
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
+
+    private String? _Remark;
+    /// <summary>备注</summary>
+    [Category("扩展")]
+    [DisplayName("备注")]
+    [Description("备注")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Remark", "备注", "")]
+    public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
     #region 获取/设置 字段值
@@ -159,20 +167,21 @@ public partial class SuggestedQuestion
         get => name switch
         {
             "Id" => _Id,
-            "Question" => _Question,
-            "Response" => _Response,
-            "ThinkingResponse" => _ThinkingResponse,
-            "ModelId" => _ModelId,
-            "Icon" => _Icon,
-            "Color" => _Color,
-            "SortOrder" => _SortOrder,
+            "Name" => _Name,
+            "Endpoint" => _Endpoint,
+            "TransportType" => _TransportType,
+            "AuthType" => _AuthType,
+            "AuthToken" => _AuthToken,
+            "AvailableTools" => _AvailableTools,
             "Enable" => _Enable,
+            "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
             "UpdateUserID" => _UpdateUserID,
             "UpdateIP" => _UpdateIP,
             "UpdateTime" => _UpdateTime,
+            "Remark" => _Remark,
             _ => base[name]
         };
         set
@@ -180,20 +189,21 @@ public partial class SuggestedQuestion
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
-                case "Question": _Question = Convert.ToString(value); break;
-                case "Response": _Response = Convert.ToString(value); break;
-                case "ThinkingResponse": _ThinkingResponse = Convert.ToString(value); break;
-                case "ModelId": _ModelId = value.ToInt(); break;
-                case "Icon": _Icon = Convert.ToString(value); break;
-                case "Color": _Color = Convert.ToString(value); break;
-                case "SortOrder": _SortOrder = value.ToInt(); break;
+                case "Name": _Name = Convert.ToString(value); break;
+                case "Endpoint": _Endpoint = Convert.ToString(value); break;
+                case "TransportType": _TransportType = (NewLife.AI.Models.McpTransportType)value.ToInt(); break;
+                case "AuthType": _AuthType = Convert.ToString(value); break;
+                case "AuthToken": _AuthToken = Convert.ToString(value); break;
+                case "AvailableTools": _AvailableTools = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
+                case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
                 case "UpdateUserID": _UpdateUserID = value.ToInt(); break;
                 case "UpdateIP": _UpdateIP = Convert.ToString(value); break;
                 case "UpdateTime": _UpdateTime = value.ToDateTime(); break;
+                case "Remark": _Remark = Convert.ToString(value); break;
                 default: base[name] = value; break;
             }
         }
@@ -201,21 +211,13 @@ public partial class SuggestedQuestion
     #endregion
 
     #region 关联映射
-    /// <summary>模型</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public ModelConfig? Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
-
-    /// <summary>模型</summary>
-    [Map(nameof(ModelId), typeof(ModelConfig), "Id")]
-    public String? ModelName => Model?.Name;
-
     #endregion
 
     #region 扩展查询
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static SuggestedQuestion? FindById(Int32 id)
+    public static McpServerConfig? FindById(Int32 id)
     {
         if (id < 0) return null;
 
@@ -228,37 +230,38 @@ public partial class SuggestedQuestion
         //return Find(_.Id == id);
     }
 
-    /// <summary>根据排序查找</summary>
-    /// <param name="sortOrder">排序</param>
-    /// <returns>实体列表</returns>
-    public static IList<SuggestedQuestion> FindAllBySortOrder(Int32 sortOrder)
+    /// <summary>根据名称查找</summary>
+    /// <param name="name">名称</param>
+    /// <returns>实体对象</returns>
+    public static McpServerConfig? FindByName(String? name)
     {
-        if (sortOrder < 0) return [];
+        if (name == null) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.SortOrder == sortOrder);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Name.EqualIgnoreCase(name));
 
-        return FindAll(_.SortOrder == sortOrder);
+        // 单对象缓存
+        return Meta.SingleCache.GetItemWithSlaveKey(name) as McpServerConfig;
+
+        //return Find(_.Name == name);
     }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
-    /// <param name="sortOrder">排序。越小越靠前</param>
+    /// <param name="transportType">传输类型。Http/Sse/Stdio</param>
     /// <param name="enable">启用</param>
-    /// <param name="modelId">模型。生成缓存响应时使用的模型</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<SuggestedQuestion> Search(Int32 sortOrder, Boolean? enable, Int32 modelId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<McpServerConfig> Search(NewLife.AI.Models.McpTransportType transportType, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
-        if (sortOrder >= 0) exp &= _.SortOrder == sortOrder;
+        if (transportType >= 0) exp &= _.TransportType == transportType;
         if (enable != null) exp &= _.Enable == enable;
-        if (modelId >= 0) exp &= _.ModelId == modelId;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -267,35 +270,35 @@ public partial class SuggestedQuestion
     #endregion
 
     #region 字段名
-    /// <summary>取得推荐问题字段信息的快捷方式</summary>
+    /// <summary>取得MCP服务配置字段信息的快捷方式</summary>
     public partial class _
     {
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
 
-        /// <summary>问题。推荐问题文本</summary>
-        public static readonly Field Question = FindByName("Question");
+        /// <summary>名称。服务名称</summary>
+        public static readonly Field Name = FindByName("Name");
 
-        /// <summary>响应。缓存的AI回复内容，Markdown格式</summary>
-        public static readonly Field Response = FindByName("Response");
+        /// <summary>接口地址。MCP Server地址</summary>
+        public static readonly Field Endpoint = FindByName("Endpoint");
 
-        /// <summary>推理响应。缓存的思考过程内容</summary>
-        public static readonly Field ThinkingResponse = FindByName("ThinkingResponse");
+        /// <summary>传输类型。Http/Sse/Stdio</summary>
+        public static readonly Field TransportType = FindByName("TransportType");
 
-        /// <summary>模型。生成缓存响应时使用的模型</summary>
-        public static readonly Field ModelId = FindByName("ModelId");
+        /// <summary>认证类型。None/Bearer/ApiKey</summary>
+        public static readonly Field AuthType = FindByName("AuthType");
 
-        /// <summary>图标。Material Icon名称，如chat_bubble_outline</summary>
-        public static readonly Field Icon = FindByName("Icon");
+        /// <summary>认证令牌</summary>
+        public static readonly Field AuthToken = FindByName("AuthToken");
 
-        /// <summary>颜色。图标CSS颜色类，如text-blue-500</summary>
-        public static readonly Field Color = FindByName("Color");
-
-        /// <summary>排序。越小越靠前</summary>
-        public static readonly Field SortOrder = FindByName("SortOrder");
+        /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
+        public static readonly Field AvailableTools = FindByName("AvailableTools");
 
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
+
+        /// <summary>排序。越小越靠前</summary>
+        public static readonly Field Sort = FindByName("Sort");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -315,38 +318,41 @@ public partial class SuggestedQuestion
         /// <summary>更新时间</summary>
         public static readonly Field UpdateTime = FindByName("UpdateTime");
 
+        /// <summary>备注</summary>
+        public static readonly Field Remark = FindByName("Remark");
+
         static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
-    /// <summary>取得推荐问题字段名称的快捷方式</summary>
+    /// <summary>取得MCP服务配置字段名称的快捷方式</summary>
     public partial class __
     {
         /// <summary>编号</summary>
         public const String Id = "Id";
 
-        /// <summary>问题。推荐问题文本</summary>
-        public const String Question = "Question";
+        /// <summary>名称。服务名称</summary>
+        public const String Name = "Name";
 
-        /// <summary>响应。缓存的AI回复内容，Markdown格式</summary>
-        public const String Response = "Response";
+        /// <summary>接口地址。MCP Server地址</summary>
+        public const String Endpoint = "Endpoint";
 
-        /// <summary>推理响应。缓存的思考过程内容</summary>
-        public const String ThinkingResponse = "ThinkingResponse";
+        /// <summary>传输类型。Http/Sse/Stdio</summary>
+        public const String TransportType = "TransportType";
 
-        /// <summary>模型。生成缓存响应时使用的模型</summary>
-        public const String ModelId = "ModelId";
+        /// <summary>认证类型。None/Bearer/ApiKey</summary>
+        public const String AuthType = "AuthType";
 
-        /// <summary>图标。Material Icon名称，如chat_bubble_outline</summary>
-        public const String Icon = "Icon";
+        /// <summary>认证令牌</summary>
+        public const String AuthToken = "AuthToken";
 
-        /// <summary>颜色。图标CSS颜色类，如text-blue-500</summary>
-        public const String Color = "Color";
-
-        /// <summary>排序。越小越靠前</summary>
-        public const String SortOrder = "SortOrder";
+        /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
+        public const String AvailableTools = "AvailableTools";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";
+
+        /// <summary>排序。越小越靠前</summary>
+        public const String Sort = "Sort";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";
@@ -365,6 +371,9 @@ public partial class SuggestedQuestion
 
         /// <summary>更新时间</summary>
         public const String UpdateTime = "UpdateTime";
+
+        /// <summary>备注</summary>
+        public const String Remark = "Remark";
     }
     #endregion
 }

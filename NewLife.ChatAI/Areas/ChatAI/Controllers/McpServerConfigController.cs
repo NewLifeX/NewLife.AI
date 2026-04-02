@@ -7,16 +7,17 @@ using NewLife.Cube.ViewModels;
 using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.AppKey;
+using static NewLife.ChatAI.Entity.McpServerConfig;
+using NewLife.AI.Models;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
-/// <summary>应用密钥。API网关访问凭证，用于外部系统调用模型服务</summary>
-[Menu(90, true, Icon = "fa-table")]
+/// <summary>MCP服务配置。MCP Server列表及工具发现信息</summary>
+[Menu(70, true, Icon = "fa-table")]
 [ChatAIArea]
-public class AppKeyController : EntityController<AppKey>
+public class McpServerConfigController : EntityController<McpServerConfig>
 {
-    static AppKeyController()
+    static McpServerConfigController()
     {
         //LogOnChange = true;
 
@@ -32,19 +33,19 @@ public class AppKeyController : EntityController<AppKey>
         //    var df = ListFields.AddListField("devices", null, "Onlines");
         //    df.DisplayName = "查看设备";
         //    df.Url = "Device?groupId={Id}";
-        //    df.DataVisible = e => (e as AppKey).Devices > 0;
+        //    df.DataVisible = e => (e as McpServerConfig).Devices > 0;
         //    df.Target = "_frame";
         //}
         //{
         //    var df = ListFields.GetField("Kind") as ListField;
-        //    df.GetValue = e => ((Int32)(e as AppKey).Kind).ToString("X4");
+        //    df.GetValue = e => ((Int32)(e as McpServerConfig).Kind).ToString("X4");
         //}
         //ListFields.TraceUrl("TraceId");
     }
 
     //private readonly ITracer _tracer;
 
-    //public AppKeyController(ITracer tracer)
+    //public McpServerConfigController(ITracer tracer)
     //{
     //    _tracer = tracer;
     //}
@@ -52,14 +53,14 @@ public class AppKeyController : EntityController<AppKey>
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>
     /// <returns></returns>
-    protected override IEnumerable<AppKey> Search(Pager p)
+    protected override IEnumerable<McpServerConfig> Search(Pager p)
     {
-        var userId = p["userId"].ToInt(-1);
+        var transportType = (McpTransportType)p["transportType"].ToInt(-1);
         var enable = p["enable"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return AppKey.Search(userId, enable, start, end, p["Q"], p);
+        return McpServerConfig.Search(transportType, enable, start, end, p["Q"], p);
     }
 }

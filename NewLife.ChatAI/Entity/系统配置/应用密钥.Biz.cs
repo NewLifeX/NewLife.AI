@@ -1,28 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Script.Serialization;
-using System.Xml.Serialization;
-using NewLife;
-using NewLife.Data;
+﻿using System.ComponentModel;
 using NewLife.Log;
-using NewLife.Model;
-using NewLife.Reflection;
-using NewLife.Threading;
-using NewLife.Web;
 using XCode;
-using XCode.Cache;
-using XCode.Configuration;
-using XCode.DataAccessLayer;
-using XCode.Membership;
-using XCode.Shards;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -61,34 +39,48 @@ public partial class AppKey : Entity<AppKey>
 
         // 在新插入数据或者修改了指定字段时进行修正
 
+        // 处理当前已登录用户信息，可以由UserInterceptor拦截器代劳
+        /*var user = ManageProvider.User;
+        if (user != null)
+        {
+            if (method == DataMethod.Insert && !Dirtys[nameof(CreateUserID)]) CreateUserID = user.ID;
+            if (!Dirtys[nameof(UpdateUserID)]) UpdateUserID = user.ID;
+        }*/
+        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateTime)]) CreateTime = DateTime.Now;
+        //if (!Dirtys[nameof(UpdateTime)]) UpdateTime = DateTime.Now;
+        //if (method == DataMethod.Insert && !Dirtys[nameof(CreateIP)]) CreateIP = ManageProvider.UserHost;
+        //if (!Dirtys[nameof(UpdateIP)]) UpdateIP = ManageProvider.UserHost;
+
+        // 检查唯一索引
+        // CheckExist(method == DataMethod.Insert, nameof(Secret));
+
         // 模型列表有变化时清空缓存
         if (Dirtys[nameof(Models)]) _allowedModels = null;
 
         return true;
     }
 
-    ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
+    /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected override void InitData()
+    {
+        // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
+        if (Meta.Session.Count > 0) return;
 
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化AppKey[应用密钥]数据……");
+        if (XTrace.Debug) XTrace.WriteLine("开始初始化AppKey[应用密钥]数据……");
 
-    //    var entity = new AppKey();
-    //    entity.UserId = 0;
-    //    entity.Name = "abc";
-    //    entity.Secret = "abc";
-    //    entity.Enable = true;
-    //    entity.ExpireTime = DateTime.Now;
-    //    entity.LastCallTime = DateTime.Now;
-    //    entity.Calls = 0;
-    //    entity.TotalTokens = 0;
-    //    entity.Insert();
+        var entity = new AppKey
+        {
+            UserId = 0,
+            Name = "NewLifeTest",
+            Secret = "sk-NewLifeAI2026",
+            Enable = true,
+            ExpireTime = new DateTime(2027, 1, 1),
+        };
+        entity.Insert();
 
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化AppKey[应用密钥]数据！");
-    //}
+        if (XTrace.Debug) XTrace.WriteLine("完成初始化AppKey[应用密钥]数据！");
+    }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
     ///// <returns></returns>
@@ -130,7 +122,7 @@ public partial class AppKey : Entity<AppKey>
         if (String.IsNullOrWhiteSpace(models)) return String.Empty;
 
         var set = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
-        var items = models.Split(new Char[] { ',', '，', ';', '；', '\r', '\n', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var items = models.Split([',', '，', ';', '；', '\r', '\n', '\t', ' '], StringSplitOptions.RemoveEmptyEntries);
         foreach (var item in items)
         {
             var value = item.Trim();

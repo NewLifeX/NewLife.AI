@@ -1,18 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using NewLife.AI.Models;
 using NewLife.ChatAI.Entity;
-using NewLife;
 using NewLife.Cube;
-using NewLife.Cube.Extensions;
-using NewLife.Cube.ViewModels;
-using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.UserSetting;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>用户设置。用户的个性化配置</summary>
-[Menu(10, true, Icon = "fa-table")]
+[Menu(100, true, Icon = "fa-table")]
 [ChatAIArea]
 public class UserSettingController : EntityController<UserSetting>
 {
@@ -55,13 +50,14 @@ public class UserSettingController : EntityController<UserSetting>
     protected override IEnumerable<UserSetting> Search(Pager p)
     {
         var userId = p["userId"].ToInt(-1);
-        var defaultThinkingMode = (AI.Models.ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
-        var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
+        var defaultThinkingMode = (ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
+        var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
+        var enableLearning = p["enableLearning"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, defaultThinkingMode, mcpEnabled, allowTraining, start, end, p["Q"], p);
+        return UserSetting.Search(userId, defaultThinkingMode, allowTraining, mcpEnabled, enableLearning, start, end, p["Q"], p);
     }
 }

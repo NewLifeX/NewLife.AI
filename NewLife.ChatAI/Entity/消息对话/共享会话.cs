@@ -40,21 +40,21 @@ public partial class SharedConversation
     [BindColumn("ConversationId", "会话。被分享的会话", "")]
     public Int64 ConversationId { get => _ConversationId; set { if (OnPropertyChanging("ConversationId", value)) { _ConversationId = value; OnPropertyChanged("ConversationId"); } } }
 
-    private String _ShareToken;
+    private String? _ShareToken;
     /// <summary>分享令牌。唯一标识，用于生成分享URL</summary>
     [DisplayName("分享令牌")]
     [Description("分享令牌。唯一标识，用于生成分享URL")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("ShareToken", "分享令牌。唯一标识，用于生成分享URL", "")]
-    public String ShareToken { get => _ShareToken; set { if (OnPropertyChanging("ShareToken", value)) { _ShareToken = value; OnPropertyChanged("ShareToken"); } } }
+    public String? ShareToken { get => _ShareToken; set { if (OnPropertyChanging("ShareToken", value)) { _ShareToken = value; OnPropertyChanged("ShareToken"); } } }
 
-    private String _SnapshotTitle;
+    private String? _SnapshotTitle;
     /// <summary>快照标题</summary>
     [DisplayName("快照标题")]
     [Description("快照标题")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("SnapshotTitle", "快照标题", "")]
-    public String SnapshotTitle { get => _SnapshotTitle; set { if (OnPropertyChanging("SnapshotTitle", value)) { _SnapshotTitle = value; OnPropertyChanged("SnapshotTitle"); } } }
+    public String? SnapshotTitle { get => _SnapshotTitle; set { if (OnPropertyChanging("SnapshotTitle", value)) { _SnapshotTitle = value; OnPropertyChanged("SnapshotTitle"); } } }
 
     private Int64 _SnapshotMessageId;
     /// <summary>快照消息。截止到的最后一条消息编号</summary>
@@ -72,14 +72,14 @@ public partial class SharedConversation
     [BindColumn("ExpireTime", "过期时间。null表示永不过期", "")]
     public DateTime ExpireTime { get => _ExpireTime; set { if (OnPropertyChanging("ExpireTime", value)) { _ExpireTime = value; OnPropertyChanged("ExpireTime"); } } }
 
-    private String _CreateUser;
+    private String? _CreateUser;
     /// <summary>创建者</summary>
     [Category("扩展")]
     [DisplayName("创建者")]
     [Description("创建者")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateUser", "创建者", "")]
-    public String CreateUser { get => _CreateUser; set { if (OnPropertyChanging("CreateUser", value)) { _CreateUser = value; OnPropertyChanged("CreateUser"); } } }
+    public String? CreateUser { get => _CreateUser; set { if (OnPropertyChanging("CreateUser", value)) { _CreateUser = value; OnPropertyChanged("CreateUser"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -90,14 +90,14 @@ public partial class SharedConversation
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -117,14 +117,14 @@ public partial class SharedConversation
     [BindColumn("UpdateUserID", "更新用户", "")]
     public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
 
-    private String _UpdateIP;
+    private String? _UpdateIP;
     /// <summary>更新地址</summary>
     [Category("扩展")]
     [DisplayName("更新地址")]
     [Description("更新地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
 
     private DateTime _UpdateTime;
     /// <summary>更新时间</summary>
@@ -140,7 +140,7 @@ public partial class SharedConversation
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -189,7 +189,7 @@ public partial class SharedConversation
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static SharedConversation FindById(Int64 id)
+    public static SharedConversation? FindById(Int64 id)
     {
         if (id < 0) return null;
 
@@ -199,9 +199,9 @@ public partial class SharedConversation
     /// <summary>根据分享令牌查找</summary>
     /// <param name="shareToken">分享令牌</param>
     /// <returns>实体对象</returns>
-    public static SharedConversation FindByShareToken(String shareToken)
+    public static SharedConversation? FindByShareToken(String? shareToken)
     {
-        if (shareToken.IsNullOrEmpty()) return null;
+        if (shareToken == null) return null;
 
         return Find(_.ShareToken == shareToken);
     }
@@ -237,7 +237,7 @@ public partial class SharedConversation
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<SharedConversation> Search(Int64 conversationId, String shareToken, Int32 createUserId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<SharedConversation> Search(Int64 conversationId, String? shareToken, Int32 createUserId, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -306,7 +306,7 @@ public partial class SharedConversation
         /// <summary>更新时间</summary>
         public static readonly Field UpdateTime = FindByName("UpdateTime");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得共享会话字段名称的快捷方式</summary>

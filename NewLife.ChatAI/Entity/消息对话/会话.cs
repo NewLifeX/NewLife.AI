@@ -40,21 +40,21 @@ public partial class Conversation
     [BindColumn("UserId", "用户。会话所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
-    private String _UserName;
+    private String? _UserName;
     /// <summary>用户名</summary>
     [DisplayName("用户名")]
     [Description("用户名")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UserName", "用户名", "")]
-    public String UserName { get => _UserName; set { if (OnPropertyChanging("UserName", value)) { _UserName = value; OnPropertyChanged("UserName"); } } }
+    public String? UserName { get => _UserName; set { if (OnPropertyChanging("UserName", value)) { _UserName = value; OnPropertyChanged("UserName"); } } }
 
-    private String _Title;
+    private String? _Title;
     /// <summary>标题。会话标题，显示在侧边栏</summary>
     [DisplayName("标题")]
     [Description("标题。会话标题，显示在侧边栏")]
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Title", "标题。会话标题，显示在侧边栏", "", Master = true)]
-    public String Title { get => _Title; set { if (OnPropertyChanging("Title", value)) { _Title = value; OnPropertyChanged("Title"); } } }
+    public String? Title { get => _Title; set { if (OnPropertyChanging("Title", value)) { _Title = value; OnPropertyChanged("Title"); } } }
 
     private Int32 _ModelId;
     /// <summary>模型。当前使用的模型Id，引用ModelConfig.Id</summary>
@@ -64,13 +64,13 @@ public partial class Conversation
     [BindColumn("ModelId", "模型。当前使用的模型Id，引用ModelConfig.Id", "")]
     public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
 
-    private String _ModelName;
+    private String? _ModelName;
     /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
     [DisplayName("模型名称")]
     [Description("模型名称。冗余存储模型名称，方便历史数据检索")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("ModelName", "模型名称。冗余存储模型名称，方便历史数据检索", "")]
-    public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
+    public String? ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
 
     private Int32 _SkillId;
     /// <summary>技能。当前会话使用的技能，引用Skill.Id</summary>
@@ -80,13 +80,13 @@ public partial class Conversation
     [BindColumn("SkillId", "技能。当前会话使用的技能，引用Skill.Id", "")]
     public Int32 SkillId { get => _SkillId; set { if (OnPropertyChanging("SkillId", value)) { _SkillId = value; OnPropertyChanged("SkillId"); } } }
 
-    private String _SkillName;
+    private String? _SkillName;
     /// <summary>技能名称。冗余存储技能名称，方便历史数据检索</summary>
     [DisplayName("技能名称")]
     [Description("技能名称。冗余存储技能名称，方便历史数据检索")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("SkillName", "技能名称。冗余存储技能名称，方便历史数据检索", "")]
-    public String SkillName { get => _SkillName; set { if (OnPropertyChanging("SkillName", value)) { _SkillName = value; OnPropertyChanged("SkillName"); } } }
+    public String? SkillName { get => _SkillName; set { if (OnPropertyChanging("SkillName", value)) { _SkillName = value; OnPropertyChanged("SkillName"); } } }
 
     private NewLife.AI.Models.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
@@ -152,22 +152,22 @@ public partial class Conversation
     [BindColumn("ElapsedMs", "耗时。毫秒", "")]
     public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
 
-    private String _Source;
+    private String? _Source;
     /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
     [DisplayName("来源")]
     [Description("来源。Web/Gateway/Channel等，标识对话入口")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Source", "来源。Web/Gateway/Channel等，标识对话入口", "")]
-    public String Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
+    public String? Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
 
-    private String _TraceId;
+    private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
     [DisplayName("链路")]
     [Description("链路。方便问题排查")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("TraceId", "链路。方便问题排查", "")]
-    public String TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
+    public String? TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -178,14 +178,14 @@ public partial class Conversation
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -205,14 +205,14 @@ public partial class Conversation
     [BindColumn("UpdateUserID", "更新用户", "")]
     public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
 
-    private String _UpdateIP;
+    private String? _UpdateIP;
     /// <summary>更新地址</summary>
     [Category("扩展")]
     [DisplayName("更新地址")]
     [Description("更新地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
 
     private DateTime _UpdateTime;
     /// <summary>更新时间</summary>
@@ -223,21 +223,21 @@ public partial class Conversation
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
 
-    private String _Remark;
+    private String? _Remark;
     /// <summary>备注</summary>
     [Category("扩展")]
     [DisplayName("备注")]
     [Description("备注")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
-    public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -306,11 +306,11 @@ public partial class Conversation
     #region 关联映射
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public ModelConfig Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
+    public ModelConfig? Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
 
     /// <summary>技能</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Skill Skill => Extends.Get(nameof(Skill), k => Skill.FindById(SkillId));
+    public Skill? Skill => Extends.Get(nameof(Skill), k => Skill.FindById(SkillId));
 
     #endregion
 
@@ -318,7 +318,7 @@ public partial class Conversation
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static Conversation FindById(Int64 id)
+    public static Conversation? FindById(Int64 id)
     {
         if (id < 0) return null;
 
@@ -338,9 +338,9 @@ public partial class Conversation
     /// <summary>根据来源查找</summary>
     /// <param name="source">来源</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> FindAllBySource(String source)
+    public static IList<Conversation> FindAllBySource(String? source)
     {
-        if (source.IsNullOrEmpty()) return [];
+        if (source == null) return [];
 
         return FindAll(_.Source == source);
     }
@@ -359,7 +359,7 @@ public partial class Conversation
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -467,7 +467,7 @@ public partial class Conversation
         /// <summary>备注</summary>
         public static readonly Field Remark = FindByName("Remark");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得会话字段名称的快捷方式</summary>

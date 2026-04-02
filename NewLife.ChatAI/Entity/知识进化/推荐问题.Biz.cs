@@ -76,43 +76,6 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
         return true;
     }
 
-    ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
-
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化SuggestedQuestion[推荐问题]数据……");
-
-    //    var entity = new SuggestedQuestion();
-    //    entity.Question = "abc";
-    //    entity.Response = "abc";
-    //    entity.ThinkingResponse = "abc";
-    //    entity.ModelId = 0;
-    //    entity.Icon = "abc";
-    //    entity.Color = "abc";
-    //    entity.SortOrder = 0;
-    //    entity.Enable = true;
-    //    entity.Insert();
-
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化SuggestedQuestion[推荐问题]数据！");
-    //}
-
-    ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
-    ///// <returns></returns>
-    //public override Int32 Insert()
-    //{
-    //    return base.Insert();
-    //}
-
-    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
-    ///// <returns></returns>
-    //protected override Int32 OnDelete()
-    //{
-    //    return base.OnDelete();
-    //}
-
     /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
@@ -150,6 +113,20 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
 
         if (XTrace.Debug) XTrace.WriteLine("完成初始化SuggestedQuestion[推荐问题]数据！");
     }
+
+    ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
+    ///// <returns></returns>
+    //public override Int32 Insert()
+    //{
+    //    return base.Insert();
+    //}
+
+    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
+    ///// <returns></returns>
+    //protected override Int32 OnDelete()
+    //{
+    //    return base.OnDelete();
+    //}
     #endregion
 
     #region 扩展属性
@@ -175,13 +152,13 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     /// <summary>从实体缓存中查找今日匹配指定问题且已缓存回答的推荐问题。用于命中缓存时直接返回</summary>
     /// <param name="question">问题内容</param>
     /// <returns>匹配的推荐问题，未命中返回 null</returns>
-    public static SuggestedQuestion FindCachedTodayByQuestion(String question)
+    public static SuggestedQuestion? FindCachedTodayByQuestion(String question)
         => Meta.Cache.FindAll(q => q.Enable && q.Question == question && !q.Response.IsNullOrEmpty() && q.UpdateTime.Date == DateTime.Today).FirstOrDefault();
 
     /// <summary>从实体缓存中查找启用且匹配指定问题的推荐问题。用于回写缓存时定位目标记录</summary>
     /// <param name="question">问题内容</param>
     /// <returns>匹配的推荐问题，未命中返回 null</returns>
-    public static SuggestedQuestion FindCachedByQuestion(String question)
+    public static SuggestedQuestion? FindCachedByQuestion(String question)
         => Meta.Cache.FindAll(q => q.Enable && q.Question == question).FirstOrDefault();
     #endregion
 

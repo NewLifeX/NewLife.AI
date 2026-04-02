@@ -29,6 +29,9 @@ namespace NewLife.ChatAI.Entity;
 public partial class UsageRecord : Entity<UsageRecord>
 {
     #region 对象操作
+    // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存
+    private static Int32 MaxCacheCount = 1000;
+
     static UsageRecord()
     {
         Meta.Table.DataTable.InsertOnly = true;
@@ -71,13 +74,11 @@ public partial class UsageRecord : Entity<UsageRecord>
     //    if (XTrace.Debug) XTrace.WriteLine("开始初始化UsageRecord[用量记录]数据……");
 
     //    var entity = new UsageRecord();
-    //    entity.Id = 0;
     //    entity.UserId = 0;
     //    entity.AppKeyId = 0;
     //    entity.ConversationId = 0;
     //    entity.MessageId = 0;
-    //    entity.ModelId = 0;
-    //    entity.ModelName = "abc";
+    //    entity.ModelCode = "abc";
     //    entity.PromptTokens = 0;
     //    entity.CompletionTokens = 0;
     //    entity.TotalTokens = 0;
@@ -121,15 +122,15 @@ public partial class UsageRecord : Entity<UsageRecord>
 
     #region 高级查询
 
-    // Select Count(Id) as Id,Category From UsageRecord Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
-    //static readonly FieldCache<UsageRecord> _CategoryCache = new(nameof(Category))
-    //{
-    //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
-    //};
+    // Select Count(Id) as Id,ModelId From UsageRecord Where CreateTime>'2020-01-24 00:00:00' Group By ModelId Order By Id Desc limit 20
+    static readonly FieldCache<UsageRecord> _ModelIdCache = new(nameof(ModelId))
+    {
+        //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
+    };
 
-    ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
-    ///// <returns></returns>
-    //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+    /// <summary>获取模型列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
+    /// <returns></returns>
+    public static IDictionary<String, String> GetModelIdList() => _ModelIdCache.FindAllName();
 
     /// <summary>根据会话编号集合批量查找用量记录</summary>
     /// <param name="convIds">会话编号集合</param>

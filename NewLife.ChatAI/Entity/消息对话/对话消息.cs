@@ -38,29 +38,29 @@ public partial class ChatMessage
     [BindColumn("ConversationId", "会话。所属会话", "")]
     public Int64 ConversationId { get => _ConversationId; set { if (OnPropertyChanging("ConversationId", value)) { _ConversationId = value; OnPropertyChanged("ConversationId"); } } }
 
-    private String _Role;
+    private String? _Role;
     /// <summary>角色。User=用户, Assistant=AI助手</summary>
     [DisplayName("角色")]
     [Description("角色。User=用户, Assistant=AI助手")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Role", "角色。User=用户, Assistant=AI助手", "")]
-    public String Role { get => _Role; set { if (OnPropertyChanging("Role", value)) { _Role = value; OnPropertyChanged("Role"); } } }
+    public String? Role { get => _Role; set { if (OnPropertyChanging("Role", value)) { _Role = value; OnPropertyChanged("Role"); } } }
 
-    private String _Content;
+    private String? _Content;
     /// <summary>内容。Markdown格式文本</summary>
     [DisplayName("内容")]
     [Description("内容。Markdown格式文本")]
     [DataObjectField(false, false, true, -1)]
     [BindColumn("Content", "内容。Markdown格式文本", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
-    public String Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
+    public String? Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
 
-    private String _ThinkingContent;
+    private String? _ThinkingContent;
     /// <summary>思考内容。思考模式下的推理过程</summary>
     [DisplayName("思考内容")]
     [Description("思考内容。思考模式下的推理过程")]
     [DataObjectField(false, false, true, -1)]
     [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
-    public String ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
+    public String? ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
 
     private NewLife.AI.Models.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
@@ -70,21 +70,21 @@ public partial class ChatMessage
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
     public NewLife.AI.Models.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
-    private String _Attachments;
+    private String? _Attachments;
     /// <summary>附件列表。存储魔方附件ID数组</summary>
     [DisplayName("附件列表")]
     [Description("附件列表。存储魔方附件ID数组")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Attachments", "附件列表。存储魔方附件ID数组", "", ShowIn = "Auto,-List,-Search")]
-    public String Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
+    public String? Attachments { get => _Attachments; set { if (OnPropertyChanging("Attachments", value)) { _Attachments = value; OnPropertyChanged("Attachments"); } } }
 
-    private String _ToolCalls;
+    private String? _ToolCalls;
     /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
     [DisplayName("工具调用")]
     [Description("工具调用。JSON格式，存储tool_call链路记录")]
     [DataObjectField(false, false, true, -1)]
     [BindColumn("ToolCalls", "工具调用。JSON格式，存储tool_call链路记录", "", ShowIn = "Auto,-List,-Search")]
-    public String ToolCalls { get => _ToolCalls; set { if (OnPropertyChanging("ToolCalls", value)) { _ToolCalls = value; OnPropertyChanged("ToolCalls"); } } }
+    public String? ToolCalls { get => _ToolCalls; set { if (OnPropertyChanging("ToolCalls", value)) { _ToolCalls = value; OnPropertyChanged("ToolCalls"); } } }
 
     private Int32 _PromptTokens;
     /// <summary>提示Token数</summary>
@@ -118,14 +118,14 @@ public partial class ChatMessage
     [BindColumn("ElapsedMs", "耗时。毫秒", "")]
     public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
 
-    private String _TraceId;
+    private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
     [DisplayName("链路")]
     [Description("链路。方便问题排查")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("TraceId", "链路。方便问题排查", "")]
-    public String TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
+    public String? TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -136,14 +136,14 @@ public partial class ChatMessage
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -159,7 +159,7 @@ public partial class ChatMessage
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -214,7 +214,7 @@ public partial class ChatMessage
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static ChatMessage FindById(Int64 id)
+    public static ChatMessage? FindById(Int64 id)
     {
         if (id < 0) return null;
 
@@ -318,7 +318,7 @@ public partial class ChatMessage
         /// <summary>创建时间</summary>
         public static readonly Field CreateTime = FindByName("CreateTime");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得对话消息字段名称的快捷方式</summary>

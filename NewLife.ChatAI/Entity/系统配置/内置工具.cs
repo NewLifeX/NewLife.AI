@@ -31,53 +31,53 @@ public partial class NativeTool
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
-    private String _Name;
+    private String? _Name;
     /// <summary>名称。工具唯一标识（snake_case），如get_current_time</summary>
     [DisplayName("名称")]
     [Description("名称。工具唯一标识（snake_case），如get_current_time")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Name", "名称。工具唯一标识（snake_case），如get_current_time", "", Master = true)]
-    public String Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
+    public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
-    private String _DisplayName;
+    private String? _DisplayName;
     /// <summary>显示名称。工具的中文名称，用于后台展示</summary>
     [DisplayName("显示名称")]
     [Description("显示名称。工具的中文名称，用于后台展示")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("DisplayName", "显示名称。工具的中文名称，用于后台展示", "")]
-    public String DisplayName { get => _DisplayName; set { if (OnPropertyChanging("DisplayName", value)) { _DisplayName = value; OnPropertyChanged("DisplayName"); } } }
+    public String? DisplayName { get => _DisplayName; set { if (OnPropertyChanging("DisplayName", value)) { _DisplayName = value; OnPropertyChanged("DisplayName"); } } }
 
-    private String _ClassName;
+    private String? _ClassName;
     /// <summary>类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService</summary>
     [DisplayName("类名")]
     [Description("类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("ClassName", "类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService", "")]
-    public String ClassName { get => _ClassName; set { if (OnPropertyChanging("ClassName", value)) { _ClassName = value; OnPropertyChanged("ClassName"); } } }
+    public String? ClassName { get => _ClassName; set { if (OnPropertyChanging("ClassName", value)) { _ClassName = value; OnPropertyChanged("ClassName"); } } }
 
-    private String _MethodName;
+    private String? _MethodName;
     /// <summary>方法名。工具对应的C#方法名，如GetCurrentTime</summary>
     [DisplayName("方法名")]
     [Description("方法名。工具对应的C#方法名，如GetCurrentTime")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("MethodName", "方法名。工具对应的C#方法名，如GetCurrentTime", "")]
-    public String MethodName { get => _MethodName; set { if (OnPropertyChanging("MethodName", value)) { _MethodName = value; OnPropertyChanged("MethodName"); } } }
+    public String? MethodName { get => _MethodName; set { if (OnPropertyChanging("MethodName", value)) { _MethodName = value; OnPropertyChanged("MethodName"); } } }
 
-    private String _Description;
+    private String? _Description;
     /// <summary>描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖</summary>
     [DisplayName("描述")]
     [Description("描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖")]
     [DataObjectField(false, false, true, 2000)]
     [BindColumn("Description", "描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖", "", ItemType = "markdown")]
-    public String Description { get => _Description; set { if (OnPropertyChanging("Description", value)) { _Description = value; OnPropertyChanged("Description"); } } }
+    public String? Description { get => _Description; set { if (OnPropertyChanging("Description", value)) { _Description = value; OnPropertyChanged("Description"); } } }
 
-    private String _Parameters;
+    private String? _Parameters;
     /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>
     [DisplayName("参数Schema")]
     [Description("参数Schema。JSON格式的函数参数定义，锁定后不再覆盖")]
     [DataObjectField(false, false, true, -1)]
     [BindColumn("Parameters", "参数Schema。JSON格式的函数参数定义，锁定后不再覆盖", "", ItemType = "json", ShowIn = "Auto,-List,-Search")]
-    public String Parameters { get => _Parameters; set { if (OnPropertyChanging("Parameters", value)) { _Parameters = value; OnPropertyChanged("Parameters"); } } }
+    public String? Parameters { get => _Parameters; set { if (OnPropertyChanging("Parameters", value)) { _Parameters = value; OnPropertyChanged("Parameters"); } } }
 
     private Boolean _Enable;
     /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
@@ -103,29 +103,29 @@ public partial class NativeTool
     [BindColumn("IsLocked", "锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整", "")]
     public Boolean IsLocked { get => _IsLocked; set { if (OnPropertyChanging("IsLocked", value)) { _IsLocked = value; OnPropertyChanged("IsLocked"); } } }
 
-    private String _Providers;
+    private String? _Providers;
     /// <summary>服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo</summary>
     [DisplayName("服务提供者")]
     [Description("服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Providers", "服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo", "")]
-    public String Providers { get => _Providers; set { if (OnPropertyChanging("Providers", value)) { _Providers = value; OnPropertyChanged("Providers"); } } }
+    public String? Providers { get => _Providers; set { if (OnPropertyChanging("Providers", value)) { _Providers = value; OnPropertyChanged("Providers"); } } }
 
-    private String _Endpoint;
+    private String? _Endpoint;
     /// <summary>远程地址。工具依赖的远程服务地址，如https://ai.newlifex.com</summary>
     [DisplayName("远程地址")]
     [Description("远程地址。工具依赖的远程服务地址，如https://ai.newlifex.com")]
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Endpoint", "远程地址。工具依赖的远程服务地址，如https://ai.newlifex.com", "", ItemType = "url")]
-    public String Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
+    public String? Endpoint { get => _Endpoint; set { if (OnPropertyChanging("Endpoint", value)) { _Endpoint = value; OnPropertyChanged("Endpoint"); } } }
 
-    private String _ApiKey;
+    private String? _ApiKey;
     /// <summary>API密钥。调用远程服务所需的访问密钥</summary>
     [DisplayName("API密钥")]
     [Description("API密钥。调用远程服务所需的访问密钥")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("ApiKey", "API密钥。调用远程服务所需的访问密钥", "", ShowIn = "Auto,-List,-Search")]
-    public String ApiKey { get => _ApiKey; set { if (OnPropertyChanging("ApiKey", value)) { _ApiKey = value; OnPropertyChanged("ApiKey"); } } }
+    public String? ApiKey { get => _ApiKey; set { if (OnPropertyChanging("ApiKey", value)) { _ApiKey = value; OnPropertyChanged("ApiKey"); } } }
 
     private Int32 _Sort;
     /// <summary>排序。越小越靠前</summary>
@@ -144,14 +144,14 @@ public partial class NativeTool
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -171,14 +171,14 @@ public partial class NativeTool
     [BindColumn("UpdateUserID", "更新用户", "")]
     public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
 
-    private String _UpdateIP;
+    private String? _UpdateIP;
     /// <summary>更新地址</summary>
     [Category("扩展")]
     [DisplayName("更新地址")]
     [Description("更新地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
 
     private DateTime _UpdateTime;
     /// <summary>更新时间</summary>
@@ -189,21 +189,21 @@ public partial class NativeTool
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
 
-    private String _Remark;
+    private String? _Remark;
     /// <summary>备注</summary>
     [Category("扩展")]
     [DisplayName("备注")]
     [Description("备注")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
-    public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -268,7 +268,7 @@ public partial class NativeTool
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static NativeTool FindById(Int32 id)
+    public static NativeTool? FindById(Int32 id)
     {
         if (id < 0) return null;
 
@@ -284,9 +284,9 @@ public partial class NativeTool
     /// <summary>根据名称查找</summary>
     /// <param name="name">名称</param>
     /// <returns>实体对象</returns>
-    public static NativeTool FindByName(String name)
+    public static NativeTool? FindByName(String? name)
     {
-        if (name.IsNullOrEmpty()) return null;
+        if (name == null) return null;
 
         // 实体缓存
         if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Name.EqualIgnoreCase(name));
@@ -389,7 +389,7 @@ public partial class NativeTool
         /// <summary>备注</summary>
         public static readonly Field Remark = FindByName("Remark");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得内置工具字段名称的快捷方式</summary>

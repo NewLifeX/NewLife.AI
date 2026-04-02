@@ -39,29 +39,29 @@ public partial class AppKey
     [BindColumn("UserId", "用户。密钥所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
-    private String _Name;
+    private String? _Name;
     /// <summary>名称。用户自定义标识，如业务系统A</summary>
     [DisplayName("名称")]
     [Description("名称。用户自定义标识，如业务系统A")]
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Name", "名称。用户自定义标识，如业务系统A", "", Master = true)]
-    public String Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
+    public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
-    private String _Secret;
+    private String? _Secret;
     /// <summary>密钥。sk-前缀的随机字符串，创建时仅展示一次</summary>
     [DisplayName("密钥")]
     [Description("密钥。sk-前缀的随机字符串，创建时仅展示一次")]
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Secret", "密钥。sk-前缀的随机字符串，创建时仅展示一次", "", ShowIn = "Auto,-List,-Search")]
-    public String Secret { get => _Secret; set { if (OnPropertyChanging("Secret", value)) { _Secret = value; OnPropertyChanged("Secret"); } } }
+    public String? Secret { get => _Secret; set { if (OnPropertyChanging("Secret", value)) { _Secret = value; OnPropertyChanged("Secret"); } } }
 
-    private String _Models;
+    private String? _Models;
     /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
     [DisplayName("可用模型")]
     [Description("可用模型。逗号分隔的模型名称或编码，为空时不限制")]
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Models", "可用模型。逗号分隔的模型名称或编码，为空时不限制", "")]
-    public String Models { get => _Models; set { if (OnPropertyChanging("Models", value)) { _Models = value; OnPropertyChanged("Models"); } } }
+    public String? Models { get => _Models; set { if (OnPropertyChanging("Models", value)) { _Models = value; OnPropertyChanged("Models"); } } }
 
     private Boolean _Enable;
     /// <summary>启用</summary>
@@ -112,14 +112,14 @@ public partial class AppKey
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -139,14 +139,14 @@ public partial class AppKey
     [BindColumn("UpdateUserID", "更新用户", "")]
     public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
 
-    private String _UpdateIP;
+    private String? _UpdateIP;
     /// <summary>更新地址</summary>
     [Category("扩展")]
     [DisplayName("更新地址")]
     [Description("更新地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
 
     private DateTime _UpdateTime;
     /// <summary>更新时间</summary>
@@ -157,21 +157,21 @@ public partial class AppKey
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
 
-    private String _Remark;
+    private String? _Remark;
     /// <summary>备注</summary>
     [Category("扩展")]
     [DisplayName("备注")]
     [Description("备注")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
-    public String Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -228,7 +228,7 @@ public partial class AppKey
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static AppKey FindById(Int32 id)
+    public static AppKey? FindById(Int32 id)
     {
         if (id < 0) return null;
 
@@ -244,9 +244,9 @@ public partial class AppKey
     /// <summary>根据密钥查找</summary>
     /// <param name="secret">密钥</param>
     /// <returns>实体对象</returns>
-    public static AppKey FindBySecret(String secret)
+    public static AppKey? FindBySecret(String? secret)
     {
-        if (secret.IsNullOrEmpty()) return null;
+        if (secret == null) return null;
 
         // 实体缓存
         if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Secret.EqualIgnoreCase(secret));
@@ -345,7 +345,7 @@ public partial class AppKey
         /// <summary>备注</summary>
         public static readonly Field Remark = FindByName("Remark");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得应用密钥字段名称的快捷方式</summary>

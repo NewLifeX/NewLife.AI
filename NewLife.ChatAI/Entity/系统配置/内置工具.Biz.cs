@@ -102,10 +102,9 @@ public partial class NativeTool : Entity<NativeTool>
     //    entity.Description = "abc";
     //    entity.Parameters = "abc";
     //    entity.Enable = true;
-    //    entity.IsSystem = true;
     //    entity.IsLocked = true;
     //    entity.Providers = "abc";
-    //    entity.Endpoint = "abc";
+    //    entity.ApiEndpoint = "abc";
     //    entity.ApiKey = "abc";
     //    entity.Sort = 0;
     //    entity.Insert();

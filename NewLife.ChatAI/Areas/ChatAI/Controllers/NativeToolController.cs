@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.NativeTool;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理</summary>
-[Menu(40, true, Icon = "fa-table")]
+[Menu(100, true, Icon = "fa-table")]
 [ChatAIArea]
 public class NativeToolController : EntityController<NativeTool>
 {

@@ -7,11 +7,9 @@ using NewLife.AI.Clients;
 using NewLife.Common;
 using NewLife.Data;
 using NewLife.Log;
-using NewLife.Reflection;
 using NewLife.Web;
 using XCode;
 using XCode.Cache;
-using XCode.Configuration;
 using XCode.Membership;
 
 namespace NewLife.ChatAI.Entity;
@@ -52,6 +50,7 @@ public partial class ModelConfig : Entity<ModelConfig>
         // 在新插入数据或者修改了指定字段时进行修正
 
         if (Code.IsNullOrEmpty() && !Name.IsNullOrEmpty()) Code = PinYin.Get(Name);
+        if (Name.IsNullOrEmpty()) Name = Code;
 
         return true;
     }
@@ -148,23 +147,6 @@ public partial class ModelConfig : Entity<ModelConfig>
 
     #region 高级查询
 
-    /// <summary>获取所有启用的模型配置，按排序升序</summary>
-    /// <returns>模型配置列表</returns>
-    public static IList<ModelConfig> FindAllEnabled()
-    {
-        return FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
-    }
-
-    /// <summary>根据编码查找启用的模型配置</summary>
-    /// <param name="code">模型编码</param>
-    /// <returns>模型配置，未找到返回null</returns>
-    public static ModelConfig FindByCode(String code)
-    {
-        if (code.IsNullOrEmpty()) return null;
-
-        return FindAllWithCache().FirstOrDefault(e => e.Enable && e.Code.EqualIgnoreCase(code));
-    }
-
     // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
     static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))
     {
@@ -235,6 +217,23 @@ public partial class ModelConfig : Entity<ModelConfig>
         return false;
     }
 
+    /// <summary>获取所有启用的模型配置，按排序升序</summary>
+    /// <returns>模型配置列表</returns>
+    public static IList<ModelConfig> FindAllEnabled()
+    {
+        return FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
+    }
+
+    /// <summary>根据编码查找启用的模型配置</summary>
+    /// <param name="code">模型编码</param>
+    /// <returns>模型配置，未找到返回null</returns>
+    public static ModelConfig FindByCode(String code)
+    {
+        if (code.IsNullOrEmpty()) return null;
+
+        return FindAllWithCache().FirstOrDefault(e => e.Enable && e.Code.EqualIgnoreCase(code));
+    }
+
     /// <summary>获取用户可用的模型列表</summary>
     /// <param name="roleIds">用户角色组</param>
     /// <param name="departmentId">用户部门编号</param>
@@ -245,8 +244,8 @@ public partial class ModelConfig : Entity<ModelConfig>
         var list = FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
         if (list.Count == 0) return list;
 
-        // 过滤有权限的模型
-        return list.Where(e => e.CheckPermission(roleIds, departmentId)).ToList();
+        // 过滤有权限的模型，同时检查提供商级别权限
+        return list.Where(e => e.CheckPermission(roleIds, departmentId) && (e.ProviderInfo == null || e.ProviderInfo.CheckPermission(roleIds, departmentId))).ToList();
     }
 
     /// <summary>高级搜索。用于魔方前台列表页</summary>

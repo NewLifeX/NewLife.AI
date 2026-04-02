@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.SuggestedQuestion;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验</summary>
-[Menu(50, true, Icon = "fa-table")]
+[Menu(180, true, Icon = "fa-table")]
 [ChatAIArea]
 public class SuggestedQuestionController : EntityController<SuggestedQuestion>
 {

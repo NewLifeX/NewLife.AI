@@ -73,13 +73,13 @@ public partial class UsageRecord
     [BindColumn("ModelId", "模型。引用ModelConfig.Id", "")]
     public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
 
-    private String _ModelName;
+    private String? _ModelName;
     /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
     [DisplayName("模型名称")]
     [Description("模型名称。冗余存储模型名称，方便历史数据检索")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("ModelName", "模型名称。冗余存储模型名称，方便历史数据检索", "")]
-    public String ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
+    public String? ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
 
     private Int32 _PromptTokens;
     /// <summary>提示Token数</summary>
@@ -105,22 +105,22 @@ public partial class UsageRecord
     [BindColumn("TotalTokens", "总Token数", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
-    private String _Source;
+    private String? _Source;
     /// <summary>请求来源。Chat=对话/Gateway=网关</summary>
     [DisplayName("请求来源")]
     [Description("请求来源。Chat=对话/Gateway=网关")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Source", "请求来源。Chat=对话/Gateway=网关", "")]
-    public String Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
+    public String? Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
 
-    private String _TraceId;
+    private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
     [DisplayName("链路")]
     [Description("链路。方便问题排查")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("TraceId", "链路。方便问题排查", "")]
-    public String TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
+    public String? TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -131,21 +131,21 @@ public partial class UsageRecord
     [BindColumn("CreateTime", "创建时间", "")]
     public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
     #endregion
 
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -196,7 +196,7 @@ public partial class UsageRecord
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static UsageRecord FindById(Int64 id)
+    public static UsageRecord? FindById(Int64 id)
     {
         if (id < 0) return null;
 
@@ -328,7 +328,7 @@ public partial class UsageRecord
         /// <summary>创建地址</summary>
         public static readonly Field CreateIP = FindByName("CreateIP");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得用量记录字段名称的快捷方式</summary>

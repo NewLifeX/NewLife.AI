@@ -20,7 +20,7 @@
     <!--带有索引器。实现IModel接口-->
     <HasIModel>False</HasIModel>
     <!--可为null上下文。生成String?等-->
-    <Nullable>False</Nullable>
+    <Nullable>True</Nullable>
     <!--数据库连接名-->
     <ConnName>ChatAI</ConnName>
     <!--模型类模版。设置后生成模型类，用于接口数据传输，例如{name}Model-->
@@ -205,7 +205,7 @@
         <Column Name="SupportVision" DataType="Boolean" Description="视觉。是否支持图片输入" />
         <Column Name="SupportImageGeneration" DataType="Boolean" Description="图像。是否支持文生图" />
         <Column Name="SupportFunctionCalling" DataType="Boolean" Description="函数调用。是否支持Function Calling" />
-        <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
+        <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
         <Column Name="ModelTime" DataType="DateTime" Description="模型时间。提供商侧的模型创建或最后更新时间" />
@@ -259,12 +259,15 @@
         <Column Name="DefaultModel" DataType="Int32" Description="默认模型。新会话的默认模型配置Id" />
         <Column Name="DefaultThinkingMode" DataType="Int32" Description="默认思考模式。Auto=0, Think=1, Fast=2" Type="NewLife.AI.Models.ThinkingMode" />
         <Column Name="ContextRounds" DataType="Int32" Description="上下文轮数。每次请求携带的历史对话轮数，默认10" />
-        <Column Name="SystemPrompt" DataType="String" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。全局System Prompt" />
+        <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。全局System Prompt" />
+        <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许反馈数据用于模型改进" />
         <Column Name="McpEnabled" DataType="Boolean" Description="启用MCP。是否启用MCP工具调用" />
-        <Column Name="StreamingSpeed" DataType="Int32" Description="流式速度。流式输出速度等级，1~5，默认3" />
         <Column Name="DefaultSkill" DataType="String" Description="默认技能。新会话的默认技能编码" />
+        <Column Name="StreamingSpeed" DataType="Int32" Description="流式速度。流式输出速度等级，1~5，默认3" />
+        <Column Name="EnableLearning" DataType="Boolean" DefaultValue="true" Description="启用个人学习。用户级自学习开关，全局开关开启后此项生效" />
+        <Column Name="LearningModel" DataType="String" Description="学习模型。用户自选的记忆提取模型，为空则使用系统配置" />
+        <Column Name="MemoryInjectNum" DataType="Int32" Description="记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置" />
         <Column Name="ContentWidth" DataType="Int32" Description="内容区宽度。标准960/宽屏1200/自适应0" />
-        <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许对话数据用于模型改进" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -274,6 +277,29 @@
       </Columns>
       <Indexes>
         <Index Columns="UserId" Unique="True" />
+      </Indexes>
+    </Table>
+    <Table Name="McpServerConfig" Description="MCP服务配置。MCP Server列表及工具发现信息" Output="系统配置">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Name" DataType="String" Master="True" Description="名称。服务名称" />
+        <Column Name="Endpoint" DataType="String" ItemType="url" Length="200" Description="接口地址。MCP Server地址" />
+        <Column Name="TransportType" DataType="Int32" Description="传输类型。Http/Sse/Stdio" Type="NewLife.AI.Models.McpTransportType" />
+        <Column Name="AuthType" DataType="String" Description="认证类型。None/Bearer/ApiKey" />
+        <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
+        <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="Name" Unique="True" />
       </Indexes>
     </Table>
     <Table Name="NativeTool" Description="内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理" Output="系统配置">
@@ -356,7 +382,7 @@
         <Index Columns="Category" />
       </Indexes>
     </Table>
-    <Table Name="UserMemory" Description="用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取" Output="知识进化">
+    <Table Name="UserMemory" Description="用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户" />
@@ -365,6 +391,12 @@
         <Column Name="Key" DataType="String" Master="True" Length="200" Description="主题。记忆的关键词/主题，如编程语言、工作行业" />
         <Column Name="Value" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。提取到的具体信息" />
         <Column Name="Confidence" DataType="Int32" Description="置信度。0~100，越高越可信" />
+        <Column Name="Scope" DataType="String" Description="作用域。user=用户级/team=团队级/global=全局" />
+        <Column Name="Status" DataType="Int32" Description="状态。0=待审核/1=已生效/2=已拒绝/3=已废弃" />
+        <Column Name="ReviewUserId" DataType="Int32" Description="审核人" />
+        <Column Name="ReviewTime" DataType="DateTime" Description="审核时间" />
+        <Column Name="Version" DataType="Int32" Description="版本号。每次修改递增" />
+        <Column Name="ParentId" DataType="Int64" Description="父记忆。融合来源，0表示原始提取" />
         <Column Name="IsActive" DataType="Boolean" Description="有效。是否仍然有效，可被覆盖或废弃" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />

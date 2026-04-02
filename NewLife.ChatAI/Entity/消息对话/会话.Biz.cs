@@ -42,6 +42,7 @@ public partial class Conversation : Entity<Conversation>
         Meta.Interceptors.Add(new UserInterceptor { AllowEmpty = false });
         Meta.Interceptors.Add<TimeInterceptor>();
         Meta.Interceptors.Add(new IPInterceptor { AllowEmpty = false });
+        Meta.Interceptors.Add<TraceInterceptor>();
 
         // 实体缓存
         // var ec = Meta.Cache;
@@ -114,6 +115,9 @@ public partial class Conversation : Entity<Conversation>
     #endregion
 
     #region 扩展属性
+    ///// <summary>技能</summary>
+    //[XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    //public Skill? Skill => Extends.Get(nameof(Skill), k => Skill.FindById(SkillId));
     #endregion
 
     #region 高级查询
@@ -127,6 +131,28 @@ public partial class Conversation : Entity<Conversation>
     ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     ///// <returns></returns>
     //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>分页搜索用户会话列表。按置顶降序、最后消息时间降序排列</summary>
+    /// <param name="userId">用户编号</param>
+    /// <param name="keyword">标题关键字，为空时不过滤</param>
+    /// <param name="page">分页参数</param>
+    /// <returns>会话列表</returns>
+    public static IList<Conversation> Search(Int32 userId, String? keyword, PageParameter page)
+    {
+        page.Sort = _.IsPinned.Desc() + "," + _.LastMessageTime.Desc();
+
+        var exp = new WhereExpression();
+        exp &= _.UserId == userId;
+        if (!keyword.IsNullOrEmpty()) exp &= _.Title.Contains(keyword.Trim());
+
+        return FindAll(exp, page);
+    }
+
+    /// <summary>根据用户编号查找所有会话编号（仅取 Id 列，用于 IN 子查询）</summary>
+    /// <param name="userId">用户编号</param>
+    /// <returns>会话编号数组</returns>
+    public static Int64[] FindIdsByUserId(Int32 userId)
+        => FindAll(_.UserId == userId, null, _.Id, 0, 0).Select(e => e.Id).ToArray();
     #endregion
 
     #region 业务操作

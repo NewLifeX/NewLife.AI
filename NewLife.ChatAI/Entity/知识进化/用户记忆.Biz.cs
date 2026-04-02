@@ -29,29 +29,18 @@ namespace NewLife.ChatAI.Entity;
 public partial class UserMemory : Entity<UserMemory>
 {
     #region 对象操作
+    private static Int32 MaxCacheCount = 1000;
+
     static UserMemory()
     {
-        // 累加字段，生成 Update xx Set Count=Count+1234 Where xxx
-        //var df = Meta.Factory.AdditionalFields;
-        //df.Add(nameof(UserId));
-
-        // 拦截器 UserInterceptor、TimeInterceptor、IPInterceptor
         Meta.Interceptors.Add<TimeInterceptor>();
-
-        // 实体缓存
-        // var ec = Meta.Cache;
-        // ec.Expire = 60;
     }
 
     /// <summary>验证并修补数据，返回验证结果，或者通过抛出异常的方式提示验证失败。</summary>
     /// <param name="method">添删改方法</param>
     public override Boolean Valid(DataMethod method)
     {
-        //if (method == DataMethod.Delete) return true;
-        // 如果没有脏数据，则不需要进行任何处理
         if (!HasDirty) return true;
-
-        // 建议先调用基类方法，基类方法会做一些统一处理
         if (!base.Valid(method)) return false;
 
         // 新插入时默认激活
@@ -59,44 +48,6 @@ public partial class UserMemory : Entity<UserMemory>
 
         return true;
     }
-
-    ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
-
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化UserMemory[用户记忆]数据……");
-
-    //    var entity = new UserMemory();
-    //    entity.Id = 0;
-    //    entity.UserId = 0;
-    //    entity.ConversationId = 0;
-    //    entity.Category = "abc";
-    //    entity.Key = "abc";
-    //    entity.Value = "abc";
-    //    entity.Confidence = 0;
-    //    entity.IsActive = true;
-    //    entity.ExpireTime = DateTime.Now;
-    //    entity.Insert();
-
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化UserMemory[用户记忆]数据！");
-    //}
-
-    ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
-    ///// <returns></returns>
-    //public override Int32 Insert()
-    //{
-    //    return base.Insert();
-    //}
-
-    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
-    ///// <returns></returns>
-    //protected override Int32 OnDelete()
-    //{
-    //    return base.OnDelete();
-    //}
     #endregion
 
     #region 扩展属性
@@ -109,18 +60,7 @@ public partial class UserMemory : Entity<UserMemory>
     public String ConversationTitle => Conversation?.Title;
     #endregion
 
-    #region 高级查询
-
-    // Select Count(Id) as Id,Category From UserMemory Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
-    //static readonly FieldCache<UserMemory> _CategoryCache = new(nameof(Category))
-    //{
-    //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
-    //};
-
-    ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
-    ///// <returns></returns>
-    //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
-
+    #region 扩展查询
     /// <summary>获取用户有效记忆，按置信度降序</summary>
     /// <param name="userId">用户</param>
     /// <returns>实体列表</returns>
@@ -144,6 +84,24 @@ public partial class UserMemory : Entity<UserMemory>
 
         return FindAll(exp, _.Confidence.Desc(), null, 0, 0);
     }
+
+    /// <summary>获取指定范围的有效记忆</summary>
+    /// <param name="userId">用户</param>
+    /// <param name="scope">范围。user/team/global</param>
+    /// <returns>实体列表</returns>
+    public static IList<UserMemory> FindActiveByScope(Int32 userId, String scope)
+    {
+        var exp = _.IsActive == true & _.Status == 1;
+        if (userId > 0) exp &= _.UserId == userId;
+        if (!scope.IsNullOrEmpty()) exp &= _.Scope == scope;
+
+        return FindAll(exp, _.Confidence.Desc(), null, 0, 0);
+    }
+
+    /// <summary>获取待审核的记忆</summary>
+    /// <param name="count">最大返回数</param>
+    /// <returns></returns>
+    public static IList<UserMemory> FindPendingReview(Int32 count = 50) => FindAll(_.Status == 0 & _.IsActive == true, _.Id.Asc(), null, 0, count);
     #endregion
 
     #region 业务操作
@@ -153,5 +111,44 @@ public partial class UserMemory : Entity<UserMemory>
         IsActive = false;
         Update();
     }
+
+    /// <summary>批准记忆</summary>
+    /// <param name="reviewUserId">审核人</param>
+    public void Approve(Int32 reviewUserId)
+    {
+        Status = 1;
+        ReviewUserId = reviewUserId;
+        ReviewTime = DateTime.Now;
+        Update();
+    }
+
+    /// <summary>拒绝记忆</summary>
+    /// <param name="reviewUserId">审核人</param>
+    public void Reject(Int32 reviewUserId)
+    {
+        Status = 2;
+        ReviewUserId = reviewUserId;
+        ReviewTime = DateTime.Now;
+        Update();
+    }
+
+    /// <summary>标记为已弃用</summary>
+    public void Deprecate()
+    {
+        Status = 3;
+        IsActive = false;
+        Update();
+    }
+    #endregion
+
+    #region 日志
+    private static Log.ILog _log;
+    /// <summary>日志对象</summary>
+    public static Log.ILog Log { get => _log ??= LogProvider.Provider?.AsLog(typeof(UserMemory).Name) ?? Logger.Null; set => _log = value; }
+
+    /// <summary>写日志</summary>
+    /// <param name="format">格式</param>
+    /// <param name="args">参数</param>
+    public static void WriteLog(String format, params Object[] args) => Log?.Info(format, args);
     #endregion
 }

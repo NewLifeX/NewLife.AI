@@ -111,13 +111,6 @@ public partial class Skill : Entity<Skill>
     //    return base.Insert();
     //}
 
-    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
-    ///// <returns></returns>
-    //protected override Int32 OnDelete()
-    //{
-    //    return base.OnDelete();
-    //}
-
     /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
@@ -177,7 +170,7 @@ public partial class Skill : Entity<Skill>
     /// <summary>按名称查找技能（走实体缓存，忽略大小写）</summary>
     /// <param name="name">技能名称</param>
     /// <returns>匹配的技能，未找到返回 null</returns>
-    public static Skill FindByName(String name)
+    public static Skill? FindByName(String name)
     {
         if (name.IsNullOrEmpty()) return null;
 
@@ -186,8 +179,6 @@ public partial class Skill : Entity<Skill>
     #endregion
 
     #region 业务操作
-    /// <summary>获取系统技能列表</summary>
-    /// <returns>系统技能列表</returns>
     public static IList<Skill> GetSystemSkills()
     {
         if (Meta.Count < MaxCacheCount)

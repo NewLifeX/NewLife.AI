@@ -1,12 +1,14 @@
 ﻿using System.ComponentModel;
+using System.Runtime.Serialization;
+using System.Web.Script.Serialization;
+using System.Xml.Serialization;
 using NewLife.AI.Clients;
 using NewLife.Common;
-using NewLife.Data;
 using NewLife.Log;
 using NewLife.Web;
 using XCode;
 using XCode.Cache;
-using XCode.Configuration;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -35,11 +37,14 @@ public partial class ProviderConfig : Entity<ProviderConfig>
         // 如果没有脏数据，则不需要进行任何处理
         if (!HasDirty) return true;
 
+        if (ModelLimit == 0) ModelLimit = 10;
+
         // 建议先调用基类方法，基类方法会做一些统一处理
         if (!base.Valid(method)) return false;
 
         // 在新插入数据或者修改了指定字段时进行修正
         if (Code.IsNullOrEmpty() && !Name.IsNullOrEmpty()) Code = PinYin.Get(Name);
+        if (Name.IsNullOrEmpty()) Name = Code;
 
         return true;
     }
@@ -79,6 +84,15 @@ public partial class ProviderConfig : Entity<ProviderConfig>
     #endregion
 
     #region 扩展属性
+    /// <summary>角色组名</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    [Map(__.RoleIds)]
+    public virtual String? RoleNames => Extends.Get(nameof(RoleNames), k => RoleIds.SplitAsInt().Select(e => Role.FindByID(e)).Join(",", e => e.Name));
+
+    /// <summary>部门组名</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    [Map(__.DepartmentIds)]
+    public virtual String? DepartmentNames => Extends.Get(nameof(DepartmentNames), k => DepartmentIds.SplitAsInt().Select(e => Department.FindByID(e)).Join(",", e => e.Name));
     #endregion
 
     #region 高级查询
@@ -104,35 +118,24 @@ public partial class ProviderConfig : Entity<ProviderConfig>
         return Find(_.Code == code);
     }
 
+    /// <summary>根据提供商类型全名查找</summary>
+    /// <param name="provider">提供商类型全名</param>
+    /// <returns>实体对象</returns>
+    public static ProviderConfig FindByProvider(String? provider)
+    {
+        if (provider.IsNullOrEmpty()) return null;
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Provider == provider);
+
+        return Find(_.Provider == provider);
+    }
+
     /// <summary>获取所有启用的提供商配置</summary>
     /// <returns></returns>
     public static IList<ProviderConfig> FindAllEnabled()
     {
         return FindAll(_.Enable == true, _.Sort.Asc(), null, 0, 0);
-    }
-
-    /// <summary>高级搜索。用于魔方前台列表页</summary>
-    /// <param name="code">编码</param>
-    /// <param name="provider">协议</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">创建时间开始</param>
-    /// <param name="end">创建时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数</param>
-    /// <returns></returns>
-    public static IList<ProviderConfig> Search(String code, String provider, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
-    {
-        var exp = new WhereExpression();
-
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
-        if (enable != null) exp &= _.Enable == enable.Value;
-
-        exp &= _.CreateTime.Between(start, end);
-
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
-
-        return FindAll(exp, page);
     }
 
     /// <summary>查找或初始化提供商配置，已存在则更新基本信息（不覆盖用户配置的 Endpoint/ApiKey）</summary>
@@ -176,6 +179,69 @@ public partial class ProviderConfig : Entity<ProviderConfig>
         entity.Remark = remark;
 
         return entity;
+    }
+
+    /// <summary>高级搜索。用于魔方前台列表页</summary>
+    /// <param name="code">编码</param>
+    /// <param name="provider">协议</param>
+    /// <param name="enable">启用</param>
+    /// <param name="start">创建时间开始</param>
+    /// <param name="end">创建时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数</param>
+    /// <returns></returns>
+    public static IList<ProviderConfig> Search(String code, String provider, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
+    {
+        var exp = new WhereExpression();
+
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+        if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
+        if (enable != null) exp &= _.Enable == enable.Value;
+
+        exp &= _.CreateTime.Between(start, end);
+
+        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+
+        return FindAll(exp, page);
+    }
+
+    /// <summary>检查用户是否有权限使用此提供商</summary>
+    /// <param name="roleIds">用户角色组</param>
+    /// <param name="departmentId">用户部门编号</param>
+    /// <returns>true表示有权限，false表示无权限</returns>
+    public Boolean CheckPermission(Int32[] roleIds, Int32 departmentId)
+    {
+        // 未设置角色组和部门组，不限制
+        if (RoleIds.IsNullOrEmpty() && DepartmentIds.IsNullOrEmpty()) return true;
+
+        // 检查角色权限
+        if (!RoleIds.IsNullOrEmpty() && roleIds != null && roleIds.Length > 0)
+        {
+            var roleArray = RoleIds.SplitAsInt();
+            if (roleArray.Intersect(roleIds).Any()) return true;
+        }
+
+        // 检查部门权限
+        if (!DepartmentIds.IsNullOrEmpty())
+        {
+            var deptArray = DepartmentIds.SplitAsInt();
+            if (deptArray.Contains(departmentId)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>获取用户可用的提供商列表</summary>
+    /// <param name="roleIds">用户角色组</param>
+    /// <param name="departmentId">用户部门编号</param>
+    /// <returns></returns>
+    public static IList<ProviderConfig> FindAllByPermission(Int32[] roleIds, Int32 departmentId)
+    {
+        var list = FindAllEnabled();
+        if (list.Count == 0) return list;
+
+        // 过滤有权限的提供商
+        return list.Where(e => e.CheckPermission(roleIds, departmentId)).ToList();
     }
     #endregion
 }

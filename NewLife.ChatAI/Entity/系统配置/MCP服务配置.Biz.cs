@@ -26,17 +26,17 @@ using XCode.Shards;
 
 namespace NewLife.ChatAI.Entity;
 
-public partial class MessageFeedback : Entity<MessageFeedback>
+public partial class McpServerConfig : Entity<McpServerConfig>
 {
     #region 对象操作
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存
     private static Int32 MaxCacheCount = 1000;
 
-    static MessageFeedback()
+    static McpServerConfig()
     {
         // 累加字段，生成 Update xx Set Count=Count+1234 Where xxx
         //var df = Meta.Factory.AdditionalFields;
-        //df.Add(nameof(MessageId));
+        //df.Add(nameof(Sort));
 
         // 拦截器 UserInterceptor、TimeInterceptor、IPInterceptor
         Meta.Interceptors.Add(new UserInterceptor { AllowEmpty = false });
@@ -46,6 +46,12 @@ public partial class MessageFeedback : Entity<MessageFeedback>
         // 实体缓存
         // var ec = Meta.Cache;
         // ec.Expire = 60;
+
+        // 单对象缓存
+        var sc = Meta.SingleCache;
+        // sc.Expire = 60;
+        sc.FindSlaveKeyMethod = k => Find(_.Name == k);
+        sc.GetSlaveKeyMethod = e => e.Name;
     }
 
     /// <summary>验证并修补数据，返回验证结果，或者通过抛出异常的方式提示验证失败。</summary>
@@ -74,7 +80,7 @@ public partial class MessageFeedback : Entity<MessageFeedback>
         //if (!Dirtys[nameof(UpdateIP)]) UpdateIP = ManageProvider.UserHost;
 
         // 检查唯一索引
-        // CheckExist(method == DataMethod.Insert, nameof(MessageId), nameof(UserId));
+        // CheckExist(method == DataMethod.Insert, nameof(Name));
 
         return true;
     }
@@ -86,17 +92,20 @@ public partial class MessageFeedback : Entity<MessageFeedback>
     //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
     //    if (Meta.Session.Count > 0) return;
 
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化MessageFeedback[消息反馈]数据……");
+    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化McpServerConfig[MCP服务配置]数据……");
 
-    //    var entity = new MessageFeedback();
-    //    entity.MessageId = 0;
-    //    entity.UserId = 0;
-    //    entity.FeedbackType = 0;
-    //    entity.Reason = "abc";
-    //    entity.AllowTraining = true;
+    //    var entity = new McpServerConfig();
+    //    entity.Name = "abc";
+    //    entity.Endpoint = "abc";
+    //    entity.TransportType = "abc";
+    //    entity.AuthType = "abc";
+    //    entity.AuthToken = "abc";
+    //    entity.AvailableTools = "abc";
+    //    entity.Enable = true;
+    //    entity.Sort = 0;
     //    entity.Insert();
 
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化MessageFeedback[消息反馈]数据！");
+    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化McpServerConfig[MCP服务配置]数据！");
     //}
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
@@ -115,38 +124,19 @@ public partial class MessageFeedback : Entity<MessageFeedback>
     #endregion
 
     #region 扩展属性
-    /// <summary>会话</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
-
-    /// <summary>会话</summary>
-    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
-    public String? ConversationTitle => Conversation?.Title;
     #endregion
 
     #region 高级查询
-    /// <summary>根据多个消息编号批量查找</summary>
-    /// <param name="messageIds">消息编号集合</param>
-    /// <returns>实体列表</returns>
-    public static IList<MessageFeedback> FindAllByMessageIds(IEnumerable<Int64> messageIds)
-    {
-        var ids = messageIds?.ToArray();
-        if (ids == null || ids.Length == 0) return [];
 
-        return FindAll(_.MessageId.In(ids));
-    }
+    // Select Count(Id) as Id,Category From McpServerConfig Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
+    //static readonly FieldCache<McpServerConfig> _CategoryCache = new(nameof(Category))
+    //{
+    //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
+    //};
 
-    /// <summary>根据多个消息编号和用户批量查找</summary>
-    /// <param name="messageIds">消息编号集合</param>
-    /// <param name="userId">用户编号</param>
-    /// <returns>实体列表</returns>
-    public static IList<MessageFeedback> FindAllByMessageIdsAndUserId(IEnumerable<Int64> messageIds, Int32 userId)
-    {
-        var ids = messageIds?.ToArray();
-        if (ids == null || ids.Length == 0) return [];
-
-        return FindAll(_.MessageId.In(ids) & _.UserId == userId);
-    }
+    ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
+    ///// <returns></returns>
+    //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
     #endregion
 
     #region 业务操作

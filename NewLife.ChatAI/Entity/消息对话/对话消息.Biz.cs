@@ -42,6 +42,7 @@ public partial class ChatMessage : Entity<ChatMessage>
         Meta.Interceptors.Add(new UserInterceptor { AllowEmpty = false });
         Meta.Interceptors.Add<TimeInterceptor>();
         Meta.Interceptors.Add(new IPInterceptor { AllowEmpty = false });
+        Meta.Interceptors.Add<TraceInterceptor>();
 
         // 实体缓存
         // var ec = Meta.Cache;
@@ -199,6 +200,34 @@ public partial class ChatMessage : Entity<ChatMessage>
     ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     ///// <returns></returns>
     //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+
+    /// <summary>在指定会话集合中按关键词全文搜索消息内容，按消息编号降序分页</summary>
+    /// <param name="convIds">会话编号集合</param>
+    /// <param name="key">搜索关键词</param>
+    /// <param name="page">分页参数</param>
+    /// <returns>消息列表</returns>
+    public static IList<ChatMessage> Search(Int64[] convIds, String key, PageParameter page)
+    {
+        if (convIds == null || convIds.Length == 0) return [];
+
+        page.Sort = _.Id.Desc();
+
+        var exp = new WhereExpression();
+        exp &= _.ConversationId.In(convIds);
+        if (!key.IsNullOrEmpty()) exp &= _.Content.Contains(key.Trim());
+
+        return FindAll(exp, page);
+    }
+
+    /// <summary>根据会话编号集合批量查找消息</summary>
+    /// <param name="convIds">会话编号集合</param>
+    /// <returns>消息列表</returns>
+    public static IList<ChatMessage> FindAllByConversationIds(Int64[] convIds)
+    {
+        if (convIds == null || convIds.Length == 0) return [];
+
+        return FindAll(_.ConversationId.In(convIds));
+    }
     #endregion
 
     #region 业务操作

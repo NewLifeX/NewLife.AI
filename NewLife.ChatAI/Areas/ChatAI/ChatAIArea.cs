@@ -1,15 +1,16 @@
 ﻿using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc.Filters;
-using NewLife;
 using NewLife.Cube;
 using NewLife.Cube.ViewModels;
 using XCode;
 
 namespace NewLife.ChatAI.Areas.ChatAI;
 
+/// <summary>AI对话魏方区域</summary>
 [DisplayName("AI对话")]
 public class ChatAIArea : AreaBase
 {
+    /// <summary>初始化</summary>
     public ChatAIArea() : base(nameof(ChatAIArea).TrimEnd("Area")) { }
 }
 

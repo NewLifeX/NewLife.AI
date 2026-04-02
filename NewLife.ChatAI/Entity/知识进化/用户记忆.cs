@@ -13,15 +13,15 @@ using XCode.DataAccessLayer;
 
 namespace NewLife.ChatAI.Entity;
 
-/// <summary>用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取</summary>
+/// <summary>用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据</summary>
 [Serializable]
 [DataObject]
-[Description("用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取")]
+[Description("用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据")]
 [BindIndex("IX_UserMemory_UserId_Category_Key", false, "UserId,Category,Key")]
 [BindIndex("IX_UserMemory_UserId_Key", false, "UserId,Key")]
 [BindIndex("IX_UserMemory_UserId_IsActive_Id", false, "UserId,IsActive,Id")]
 [BindIndex("IX_UserMemory_ConversationId", false, "ConversationId")]
-[BindTable("UserMemory", Description = "用户记忆。AI从对话中提取的用户信息碎片，支持手动维护和自动提取", ConnName = "ChatAI", DbType = DatabaseType.None)]
+[BindTable("UserMemory", Description = "用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class UserMemory
 {
     #region 属性
@@ -49,29 +49,29 @@ public partial class UserMemory
     [BindColumn("ConversationId", "来源会话。提取该记忆的会话编号", "")]
     public Int64 ConversationId { get => _ConversationId; set { if (OnPropertyChanging("ConversationId", value)) { _ConversationId = value; OnPropertyChanged("ConversationId"); } } }
 
-    private String _Category;
+    private String? _Category;
     /// <summary>分类。preference=偏好/habit=习惯/interest=兴趣/background=背景</summary>
     [DisplayName("分类")]
     [Description("分类。preference=偏好/habit=习惯/interest=兴趣/background=背景")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Category", "分类。preference=偏好/habit=习惯/interest=兴趣/background=背景", "")]
-    public String Category { get => _Category; set { if (OnPropertyChanging("Category", value)) { _Category = value; OnPropertyChanged("Category"); } } }
+    public String? Category { get => _Category; set { if (OnPropertyChanging("Category", value)) { _Category = value; OnPropertyChanged("Category"); } } }
 
-    private String _Key;
+    private String? _Key;
     /// <summary>主题。记忆的关键词/主题，如编程语言、工作行业</summary>
     [DisplayName("主题")]
     [Description("主题。记忆的关键词/主题，如编程语言、工作行业")]
     [DataObjectField(false, false, true, 200)]
     [BindColumn("Key", "主题。记忆的关键词/主题，如编程语言、工作行业", "", Master = true)]
-    public String Key { get => _Key; set { if (OnPropertyChanging("Key", value)) { _Key = value; OnPropertyChanged("Key"); } } }
+    public String? Key { get => _Key; set { if (OnPropertyChanging("Key", value)) { _Key = value; OnPropertyChanged("Key"); } } }
 
-    private String _Value;
+    private String? _Value;
     /// <summary>内容。提取到的具体信息</summary>
     [DisplayName("内容")]
     [Description("内容。提取到的具体信息")]
     [DataObjectField(false, false, true, -1)]
     [BindColumn("Value", "内容。提取到的具体信息", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
-    public String Value { get => _Value; set { if (OnPropertyChanging("Value", value)) { _Value = value; OnPropertyChanged("Value"); } } }
+    public String? Value { get => _Value; set { if (OnPropertyChanging("Value", value)) { _Value = value; OnPropertyChanged("Value"); } } }
 
     private Int32 _Confidence;
     /// <summary>置信度。0~100，越高越可信</summary>
@@ -80,6 +80,54 @@ public partial class UserMemory
     [DataObjectField(false, false, false, 0)]
     [BindColumn("Confidence", "置信度。0~100，越高越可信", "")]
     public Int32 Confidence { get => _Confidence; set { if (OnPropertyChanging("Confidence", value)) { _Confidence = value; OnPropertyChanged("Confidence"); } } }
+
+    private String? _Scope;
+    /// <summary>作用域。user=用户级/team=团队级/global=全局</summary>
+    [DisplayName("作用域")]
+    [Description("作用域。user=用户级/team=团队级/global=全局")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Scope", "作用域。user=用户级/team=团队级/global=全局", "")]
+    public String? Scope { get => _Scope; set { if (OnPropertyChanging("Scope", value)) { _Scope = value; OnPropertyChanged("Scope"); } } }
+
+    private Int32 _Status;
+    /// <summary>状态。0=待审核/1=已生效/2=已拒绝/3=已废弃</summary>
+    [DisplayName("状态")]
+    [Description("状态。0=待审核/1=已生效/2=已拒绝/3=已废弃")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Status", "状态。0=待审核/1=已生效/2=已拒绝/3=已废弃", "")]
+    public Int32 Status { get => _Status; set { if (OnPropertyChanging("Status", value)) { _Status = value; OnPropertyChanged("Status"); } } }
+
+    private Int32 _ReviewUserId;
+    /// <summary>审核人</summary>
+    [DisplayName("审核人")]
+    [Description("审核人")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ReviewUserId", "审核人", "")]
+    public Int32 ReviewUserId { get => _ReviewUserId; set { if (OnPropertyChanging("ReviewUserId", value)) { _ReviewUserId = value; OnPropertyChanged("ReviewUserId"); } } }
+
+    private DateTime _ReviewTime;
+    /// <summary>审核时间</summary>
+    [DisplayName("审核时间")]
+    [Description("审核时间")]
+    [DataObjectField(false, false, true, 0)]
+    [BindColumn("ReviewTime", "审核时间", "")]
+    public DateTime ReviewTime { get => _ReviewTime; set { if (OnPropertyChanging("ReviewTime", value)) { _ReviewTime = value; OnPropertyChanged("ReviewTime"); } } }
+
+    private Int32 _Version;
+    /// <summary>版本号。每次修改递增</summary>
+    [DisplayName("版本号")]
+    [Description("版本号。每次修改递增")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Version", "版本号。每次修改递增", "")]
+    public Int32 Version { get => _Version; set { if (OnPropertyChanging("Version", value)) { _Version = value; OnPropertyChanged("Version"); } } }
+
+    private Int64 _ParentId;
+    /// <summary>父记忆。融合来源，0表示原始提取</summary>
+    [DisplayName("父记忆")]
+    [Description("父记忆。融合来源，0表示原始提取")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ParentId", "父记忆。融合来源，0表示原始提取", "")]
+    public Int64 ParentId { get => _ParentId; set { if (OnPropertyChanging("ParentId", value)) { _ParentId = value; OnPropertyChanged("ParentId"); } } }
 
     private Boolean _IsActive;
     /// <summary>有效。是否仍然有效，可被覆盖或废弃</summary>
@@ -120,7 +168,7 @@ public partial class UserMemory
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -131,6 +179,12 @@ public partial class UserMemory
             "Key" => _Key,
             "Value" => _Value,
             "Confidence" => _Confidence,
+            "Scope" => _Scope,
+            "Status" => _Status,
+            "ReviewUserId" => _ReviewUserId,
+            "ReviewTime" => _ReviewTime,
+            "Version" => _Version,
+            "ParentId" => _ParentId,
             "IsActive" => _IsActive,
             "ExpireTime" => _ExpireTime,
             "CreateTime" => _CreateTime,
@@ -148,6 +202,12 @@ public partial class UserMemory
                 case "Key": _Key = Convert.ToString(value); break;
                 case "Value": _Value = Convert.ToString(value); break;
                 case "Confidence": _Confidence = value.ToInt(); break;
+                case "Scope": _Scope = Convert.ToString(value); break;
+                case "Status": _Status = value.ToInt(); break;
+                case "ReviewUserId": _ReviewUserId = value.ToInt(); break;
+                case "ReviewTime": _ReviewTime = value.ToDateTime(); break;
+                case "Version": _Version = value.ToInt(); break;
+                case "ParentId": _ParentId = value.ToLong(); break;
                 case "IsActive": _IsActive = value.ToBoolean(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -165,7 +225,7 @@ public partial class UserMemory
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static UserMemory FindById(Int64 id)
+    public static UserMemory? FindById(Int64 id)
     {
         if (id < 0) return null;
 
@@ -177,11 +237,11 @@ public partial class UserMemory
     /// <param name="category">分类</param>
     /// <param name="key">主题</param>
     /// <returns>实体列表</returns>
-    public static IList<UserMemory> FindAllByUserIdAndCategoryAndKey(Int32 userId, String category, String key)
+    public static IList<UserMemory> FindAllByUserIdAndCategoryAndKey(Int32 userId, String? category, String? key)
     {
         if (userId < 0) return [];
-        if (category.IsNullOrEmpty()) return [];
-        if (key.IsNullOrEmpty()) return [];
+        if (category == null) return [];
+        if (key == null) return [];
 
         return FindAll(_.UserId == userId & _.Category == category & _.Key == key);
     }
@@ -190,10 +250,10 @@ public partial class UserMemory
     /// <param name="userId">用户</param>
     /// <param name="key">主题</param>
     /// <returns>实体列表</returns>
-    public static IList<UserMemory> FindAllByUserIdAndKey(Int32 userId, String key)
+    public static IList<UserMemory> FindAllByUserIdAndKey(Int32 userId, String? key)
     {
         if (userId < 0) return [];
-        if (key.IsNullOrEmpty()) return [];
+        if (key == null) return [];
 
         return FindAll(_.UserId == userId & _.Key == key);
     }
@@ -230,7 +290,7 @@ public partial class UserMemory
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserMemory> Search(Int32 userId, Int64 conversationId, String category, Boolean? isActive, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserMemory> Search(Int32 userId, Int64 conversationId, String? category, Boolean? isActive, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -282,6 +342,24 @@ public partial class UserMemory
         /// <summary>置信度。0~100，越高越可信</summary>
         public static readonly Field Confidence = FindByName("Confidence");
 
+        /// <summary>作用域。user=用户级/team=团队级/global=全局</summary>
+        public static readonly Field Scope = FindByName("Scope");
+
+        /// <summary>状态。0=待审核/1=已生效/2=已拒绝/3=已废弃</summary>
+        public static readonly Field Status = FindByName("Status");
+
+        /// <summary>审核人</summary>
+        public static readonly Field ReviewUserId = FindByName("ReviewUserId");
+
+        /// <summary>审核时间</summary>
+        public static readonly Field ReviewTime = FindByName("ReviewTime");
+
+        /// <summary>版本号。每次修改递增</summary>
+        public static readonly Field Version = FindByName("Version");
+
+        /// <summary>父记忆。融合来源，0表示原始提取</summary>
+        public static readonly Field ParentId = FindByName("ParentId");
+
         /// <summary>有效。是否仍然有效，可被覆盖或废弃</summary>
         public static readonly Field IsActive = FindByName("IsActive");
 
@@ -294,7 +372,7 @@ public partial class UserMemory
         /// <summary>更新时间</summary>
         public static readonly Field UpdateTime = FindByName("UpdateTime");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得用户记忆字段名称的快捷方式</summary>
@@ -320,6 +398,24 @@ public partial class UserMemory
 
         /// <summary>置信度。0~100，越高越可信</summary>
         public const String Confidence = "Confidence";
+
+        /// <summary>作用域。user=用户级/team=团队级/global=全局</summary>
+        public const String Scope = "Scope";
+
+        /// <summary>状态。0=待审核/1=已生效/2=已拒绝/3=已废弃</summary>
+        public const String Status = "Status";
+
+        /// <summary>审核人</summary>
+        public const String ReviewUserId = "ReviewUserId";
+
+        /// <summary>审核时间</summary>
+        public const String ReviewTime = "ReviewTime";
+
+        /// <summary>版本号。每次修改递增</summary>
+        public const String Version = "Version";
+
+        /// <summary>父记忆。融合来源，0表示原始提取</summary>
+        public const String ParentId = "ParentId";
 
         /// <summary>有效。是否仍然有效，可被覆盖或废弃</summary>
         public const String IsActive = "IsActive";

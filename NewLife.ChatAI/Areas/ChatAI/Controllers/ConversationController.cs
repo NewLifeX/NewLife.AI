@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using NewLife.AI.Models;
-using NewLife.ChatAI.Entity;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
+using NewLife.ChatAI.Entity;
 using NewLife.Web;
 using XCode.Membership;
 
@@ -18,7 +18,7 @@ public class ConversationController : ChatEntityController<Conversation>
     {
         //LogOnChange = true;
 
-        ListFields.RemoveField("UserId");
+        ListFields.RemoveField("UserId", "SkillId");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{
@@ -67,14 +67,13 @@ public class ConversationController : ChatEntityController<Conversation>
     {
         var userId = p["userId"].ToInt(-1);
         var isPinned = p["isPinned"]?.ToBoolean();
-        var source = p["source"];
+        var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
         var modelId = p["modelId"].ToInt(-1);
         var skillId = p["skillId"].ToInt(-1);
-        var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Conversation.Search(userId, isPinned, source, modelId, skillId, thinkingMode, start, end, p["Q"], p);
+        return Conversation.Search(userId, isPinned, p["source"], modelId, skillId, thinkingMode, start, end, p["Q"], p);
     }
 }

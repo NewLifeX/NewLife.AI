@@ -64,13 +64,13 @@ public partial class MessageFeedback
     [BindColumn("FeedbackType", "反馈类型。Like=1点赞, Dislike=2点踩", "")]
     public NewLife.AI.Models.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
 
-    private String _Reason;
+    private String? _Reason;
     /// <summary>原因。点踩原因</summary>
     [DisplayName("原因")]
     [Description("原因。点踩原因")]
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Reason", "原因。点踩原因", "")]
-    public String Reason { get => _Reason; set { if (OnPropertyChanging("Reason", value)) { _Reason = value; OnPropertyChanged("Reason"); } } }
+    public String? Reason { get => _Reason; set { if (OnPropertyChanging("Reason", value)) { _Reason = value; OnPropertyChanged("Reason"); } } }
 
     private Boolean _AllowTraining;
     /// <summary>允许训练。是否允许用于模型学习训练</summary>
@@ -89,14 +89,14 @@ public partial class MessageFeedback
     [BindColumn("CreateUserID", "创建用户", "")]
     public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
 
-    private String _CreateIP;
+    private String? _CreateIP;
     /// <summary>创建地址</summary>
     [Category("扩展")]
     [DisplayName("创建地址")]
     [Description("创建地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
-    public String CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -116,14 +116,14 @@ public partial class MessageFeedback
     [BindColumn("UpdateUserID", "更新用户", "")]
     public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
 
-    private String _UpdateIP;
+    private String? _UpdateIP;
     /// <summary>更新地址</summary>
     [Category("扩展")]
     [DisplayName("更新地址")]
     [Description("更新地址")]
     [DataObjectField(false, false, true, 50)]
     [BindColumn("UpdateIP", "更新地址", "")]
-    public String UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
 
     private DateTime _UpdateTime;
     /// <summary>更新时间</summary>
@@ -139,7 +139,7 @@ public partial class MessageFeedback
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
     /// <returns></returns>
-    public override Object this[String name]
+    public override Object? this[String name]
     {
         get => name switch
         {
@@ -188,7 +188,7 @@ public partial class MessageFeedback
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static MessageFeedback FindById(Int32 id)
+    public static MessageFeedback? FindById(Int32 id)
     {
         if (id < 0) return null;
 
@@ -205,7 +205,7 @@ public partial class MessageFeedback
     /// <param name="messageId">消息</param>
     /// <param name="userId">用户</param>
     /// <returns>实体对象</returns>
-    public static MessageFeedback FindByMessageIdAndUserId(Int64 messageId, Int32 userId)
+    public static MessageFeedback? FindByMessageIdAndUserId(Int64 messageId, Int32 userId)
     {
         if (messageId < 0) return null;
         if (userId < 0) return null;
@@ -327,7 +327,7 @@ public partial class MessageFeedback
         /// <summary>更新时间</summary>
         public static readonly Field UpdateTime = FindByName("UpdateTime");
 
-        static Field FindByName(String name) => Meta.Table.FindByName(name);
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
     /// <summary>取得消息反馈字段名称的快捷方式</summary>
