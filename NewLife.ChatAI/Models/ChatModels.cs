@@ -67,8 +67,8 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     /// <summary>记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置</summary>
     public Int32 MemoryInjectNum { get; set; } = 0;
 
-    /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
-    public Int32 ContentWidth { get; set; } = 960;
+    /// <summary>内容区宽度。小屏800/标准960/宽屏1200，按范围匹配：&lt;960 小屏，&gt;=1200 宽屏，其余标准。0表示未设置，等效标准屏</summary>
+    public Int32 ContentWidth { get; set; } = 0;
 };
 
 /// <summary>用户资料</summary>

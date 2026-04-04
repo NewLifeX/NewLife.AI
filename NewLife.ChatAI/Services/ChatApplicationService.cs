@@ -621,27 +621,14 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         assistantMsg.Insert();
 
         // message_start（含完整字段）
-        using var span = tracer?.NewSpan("ai:Stream", modelConfig.Code);
+        using var span = tracer?.NewSpan($"ai:Stream:{modelConfig.Code}", request.Content);
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code ?? String.Empty, request.ThinkingMode);
 
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         // 标题只需要用户问题文本，无需等待 AI 回复完成
         if (conversation.MessageCount == 0 && ChatSetting.Current.AutoGenerateTitle)
         {
-            _ = Task.Run(async () =>
-            {
-                using var span2 = tracer?.NewSpan("ai:GenerateTitle");
-                try
-                {
-                    var title = await GenerateTitleAsync(conversationId, request.Content, CancellationToken.None).ConfigureAwait(false);
-                    span2?.AppendTag(title!);
-                }
-                catch (Exception ex)
-                {
-                    span2?.SetError(ex);
-                    log?.Error("后台生成标题失败: {0}", ex.Message);
-                }
-            });
+            _ = Task.Run(() => GenerateTitleAsync(conversationId, request.Content, CancellationToken.None));
         }
 
         // 委托管道流式执行（能力扩展层 + 知识进化层由管道内部处理）
@@ -858,6 +845,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         if (conversation == null) return null;
 
         var setting = ChatSetting.Current;
+        using var span = tracer?.NewSpan("ai:GenerateTitle");
 
         // 尝试通过模型生成标题
         var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
@@ -884,6 +872,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                         // 清理标题：去除引号和多余空白
                         title = title.Trim().Trim('"', '"', '"', '\'', '「', '」');
                         if (title.Length > 30) title = title.Substring(0, 30);
+                        span?.AppendTag(title!);
 
                         conversation.Title = title;
                         conversation.Update();
@@ -892,6 +881,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                 }
                 catch (Exception ex)
                 {
+                    span?.SetError(ex);
                     log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
                 }
             }
@@ -1447,8 +1437,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     /// <returns>(每块字符数, 块间延迟毫秒数)</returns>
     private static (Int32 ChunkSize, Int32 DelayMs) GetCachedStreamingParams(Int32 speed) => speed switch
     {
-        1 => (4,  60),   // ~67 字/秒
-        2 => (6,  30),   // ~200 字/秒
+        1 => (4, 60),   // ~67 字/秒
+        2 => (6, 30),   // ~200 字/秒
         4 => (14, 16),   // ~875 字/秒
         5 => (24, 10),   // ~2400 字/秒
         _ => (10, 20),   // 速度3（默认）：~500 字/秒，约一屏/秒
@@ -1462,7 +1452,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     private static async IAsyncEnumerable<String> ThrottleTextAsync(String text, Int32 chunkSize, Int32 delayMs, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (text.IsNullOrEmpty()) yield break;
-            
+
         var enumerator = StringInfo.GetTextElementEnumerator(text);
         var buf = new StringBuilder(chunkSize * 4);
         var count = 0;

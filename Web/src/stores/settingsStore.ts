@@ -45,6 +45,7 @@ const defaults: UserSettings = {
   mcpEnabled: true,
   streamingSpeed: 3,
   allowTraining: false,
+  contentWidth: 960,
 }
 
 export const useSettingsStore = create<SettingsState>()(

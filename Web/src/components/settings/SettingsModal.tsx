@@ -102,6 +102,8 @@ export function SettingsModal({
             onThemeChange={(v) => update({ theme: v })}
             fontSize={settings.fontSize}
             onFontSizeChange={(v) => update({ fontSize: v })}
+            contentWidth={settings.contentWidth ?? 960}
+            onContentWidthChange={(v) => update({ contentWidth: v })}
           />
         )}
         {activeTab === 'chat' && (

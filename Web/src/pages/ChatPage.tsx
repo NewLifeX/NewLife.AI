@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSettingsStore } from '@/stores'
 import { Icon } from '@/components/common/Icon'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/input/ChatInput'
@@ -67,6 +68,7 @@ export function ChatPage({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
+  const contentWidth = useSettingsStore((s) => s.contentWidth) ?? 960
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
@@ -120,7 +122,7 @@ export function ChatPage({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0"
       >
-        <div className="max-w-3xl mx-auto w-full pt-8 pb-32">
+        <div className={`${contentWidth >= 1200 ? 'max-w-5xl' : contentWidth < 960 ? 'max-w-2xl' : 'max-w-3xl'} mx-auto w-full pt-8 pb-32`}>
           {isLoadingMessages && messages.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />

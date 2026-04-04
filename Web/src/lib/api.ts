@@ -418,6 +418,7 @@ interface UserSettingsDto {
   allowTraining: boolean
   mcpEnabled: boolean
   streamingSpeed: number
+  contentWidth: number
 }
 
 function toUserSettings(dto: UserSettingsDto): UserSettings {
@@ -433,6 +434,7 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     mcpEnabled: dto.mcpEnabled,
     streamingSpeed: dto.streamingSpeed,
     allowTraining: dto.allowTraining,
+    contentWidth: dto.contentWidth || 960,
   }
 }
 
@@ -456,6 +458,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       allowTraining: settings.allowTraining ?? false,
       mcpEnabled: settings.mcpEnabled,
       streamingSpeed: settings.streamingSpeed,
+      contentWidth: settings.contentWidth ?? 960,
     }),
   })
   return toUserSettings(dto)

@@ -13,6 +13,8 @@ interface GeneralSettingsProps {
   onThemeChange: (theme: Theme) => void
   fontSize: number
   onFontSizeChange: (size: number) => void
+  contentWidth: number
+  onContentWidthChange: (w: number) => void
 }
 
 const languageOptions = [
@@ -60,6 +62,8 @@ export function GeneralSettings({
   onThemeChange,
   fontSize,
   onFontSizeChange,
+  contentWidth,
+  onContentWidthChange,
 }: GeneralSettingsProps) {
   const { t } = useTranslation()
   return (
@@ -122,6 +126,50 @@ export function GeneralSettings({
             <span className="text-xs text-gray-400">A</span>
             <Slider value={fontSize} onChange={onFontSizeChange} min={12} max={24} />
             <span className="text-lg text-gray-400">A</span>
+          </div>
+        </div>
+
+        <div className="border-b border-gray-100 dark:border-gray-800" />
+
+        <div>
+          <div className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">{t('settings.contentWidth')}</div>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => onContentWidthChange(800)}
+              className={cn(
+                'flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer',
+                contentWidth < 960
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300',
+              )}
+            >
+              <Icon name="density_small" />
+              {t('settings.contentWidthNarrow')}
+            </button>
+            <button
+              onClick={() => onContentWidthChange(960)}
+              className={cn(
+                'flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer',
+                contentWidth >= 960 && contentWidth < 1200
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300',
+              )}
+            >
+              <Icon name="width_normal" />
+              {t('settings.contentWidthStandard')}
+            </button>
+            <button
+              onClick={() => onContentWidthChange(1200)}
+              className={cn(
+                'flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer',
+                contentWidth >= 1200
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300',
+              )}
+            >
+              <Icon name="width_wide" />
+              {t('settings.contentWidthWide')}
+            </button>
           </div>
         </div>
       </div>
