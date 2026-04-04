@@ -65,9 +65,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Cube.Core" Version="6.9.2026.326-beta0728" />
-    <PackageReference Include="NewLife.MySql" Version="1.0.2026.302" />
-    <PackageReference Include="NewLife.XCode" Version="11.25.2026.326-beta1217" />
+    <PackageReference Include="NewLife.Cube.Core" Version="6.10.2026.404" />
+    <PackageReference Include="NewLife.MySql" Version="1.0.2026.402" />
+    <PackageReference Include="NewLife.XCode" Version="11.25.2026.403" />
     <PackageReference Include="XCode.SQLite" Version="*" />
   </ItemGroup>
 

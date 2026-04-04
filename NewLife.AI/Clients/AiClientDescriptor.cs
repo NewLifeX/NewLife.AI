@@ -74,6 +74,35 @@ public class AiClientDescriptor
     /// <remarks>每次调用均创建新实例，调用方负责释放（using）</remarks>
     public Func<AiClientOptions, IChatClient> Factory { get; set; } = _ => throw new InvalidOperationException("未配置 Factory");
 
+    /// <summary>按模型 ID 查找已注册的模型能力信息</summary>
+    /// <remarks>
+    /// 优先精确匹配（大小写不敏感），未命中时尝试前缀匹配以覆盖带日期版本后缀的变体（如 qwen3-max-2025-01-01 → qwen3-max）
+    /// </remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>匹配的能力信息，未找到返回 null</returns>
+    public AiProviderCapabilities? FindModelCapabilities(String? modelId)
+    {
+        if (String.IsNullOrEmpty(modelId) || Models.Length == 0) return null;
+
+        // 精确匹配
+        foreach (var m in Models)
+        {
+            if (String.Equals(m.Model, modelId, StringComparison.OrdinalIgnoreCase))
+                return m.Capabilities;
+        }
+
+        // 前缀匹配：已注册模型作为前缀匹配远端返回的带版本后缀变体
+        foreach (var m in Models)
+        {
+            if (modelId.StartsWith(m.Model, StringComparison.OrdinalIgnoreCase) &&
+                modelId.Length > m.Model.Length &&
+                (modelId[m.Model.Length] == '-' || modelId[m.Model.Length] == ':'))
+                return m.Capabilities;
+        }
+
+        return null;
+    }
+
     /// <inheritdoc/>
     public override String ToString() => $"{Code} ({DisplayName})";
 }

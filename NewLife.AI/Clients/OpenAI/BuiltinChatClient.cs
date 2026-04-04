@@ -8,10 +8,13 @@
     Description = "字节跳动火山方舟平台，支持豆包等大模型", ChatPath = "/chat/completions", Order = 4)]
 [AiClientModel("doubao-1.5-pro-32k", "豆包 1.5 Pro", Code = "VolcEngine", Thinking = true, Vision = true)]
 [AiClientModel("doubao-1.5-lite-32k", "豆包 1.5 Lite", Code = "VolcEngine", FunctionCalling = false)]
+[AiClientModel("doubao-1.5-vision-pro-32k", "豆包 1.5 Vision Pro", Code = "VolcEngine", Vision = true)]
 [AiClient("Zhipu", "智谱AI", "https://open.bigmodel.cn/api/paas/v4",
     Description = "智谱 AI，支持 GLM-4/CogView 系列模型", ChatPath = "/chat/completions", Order = 5)]
 [AiClientModel("glm-4", "GLM-4", Code = "Zhipu", Thinking = true, Vision = true)]
 [AiClientModel("glm-4-flash", "GLM-4 Flash", Code = "Zhipu", FunctionCalling = false)]
+[AiClientModel("glm-4v-plus", "GLM-4V Plus", Code = "Zhipu", Vision = true, FunctionCalling = true)]
+[AiClientModel("glm-4-alltools", "GLM-4 AllTools", Code = "Zhipu", FunctionCalling = true)]
 [AiClientModel("cogview-3", "CogView-3", Code = "Zhipu", ImageGeneration = true, FunctionCalling = false)]
 [AiClient("Moonshot", "月之暗面Kimi", "https://api.moonshot.cn",
     Description = "月之暗面 Kimi 系列，支持超长上下文和推理思考", Order = 6)]
@@ -21,9 +24,11 @@
     Description = "腾讯混元大模型", Order = 7)]
 [AiClientModel("hunyuan-t1", "混元 T1", Code = "Hunyuan", Thinking = true, Vision = true)]
 [AiClientModel("hunyuan-pro", "混元 Pro", Code = "Hunyuan", Vision = true)]
+[AiClientModel("hunyuan-lite", "混元 Lite", Code = "Hunyuan")]
 [AiClient("Qianfan", "百度文心", "https://qianfan.baidubce.com/v2",
     Description = "百度千帆大模型平台，支持文心一言系列", ChatPath = "/chat/completions", Order = 8)]
 [AiClientModel("ernie-4.5-turbo", "ERNIE 4.5 Turbo", Code = "Qianfan", Thinking = true, Vision = true)]
+[AiClientModel("ernie-4.0-turbo", "ERNIE 4.0 Turbo", Code = "Qianfan", Thinking = true, Vision = true)]
 [AiClientModel("ernie-speed", "ERNIE Speed", Code = "Qianfan", FunctionCalling = false)]
 [AiClient("Spark", "讯飞星火", "https://spark-api-open.xf-yun.com",
     Description = "讯飞星火认知大模型", Order = 9)]
@@ -41,8 +46,9 @@
     Description = "小马算力 GPU 算力平台", Order = 14)]
 [AiClient("XAI", "xAI Grok", "https://api.x.ai",
     Description = "xAI Grok 系列大模型", Order = 15)]
-[AiClientModel("grok-3", "Grok-3", Code = "XAI", FunctionCalling = true)]
+[AiClientModel("grok-3", "Grok-3", Code = "XAI", FunctionCalling = true, Vision = true)]
 [AiClientModel("grok-3-mini", "Grok-3 Mini", Code = "XAI", FunctionCalling = true, Thinking = true)]
+[AiClientModel("grok-2-vision", "Grok-2 Vision", Code = "XAI", Vision = true, FunctionCalling = true)]
 [AiClient("GitHubModels", "GitHub Models", "https://models.github.ai/inference",
     Description = "GitHub 模型市场，提供商用 AI 模型体验", Order = 16)]
 [AiClient("OpenRouter", "OpenRouter", "https://openrouter.ai/api",
@@ -63,6 +69,7 @@
     Description = "Groq 高速推理平台", Order = 21)]
 [AiClientModel("llama-3.3-70b-versatile", "Llama 3.3 70B", Code = "Groq", FunctionCalling = true)]
 [AiClientModel("gemma2-9b-it", "Gemma2 9B", Code = "Groq")]
+[AiClientModel("deepseek-r1-distill-llama-70b", "DeepSeek R1 Distill 70B", Code = "Groq", Thinking = true)]
 [AiClient("Cerebras", "Cerebras", "https://api.cerebras.ai",
     Description = "Cerebras AI 推理平台", Order = 22)]
 [AiClient("TogetherAI", "Together AI", "https://api.together.xyz",

@@ -1,8 +1,8 @@
 ﻿using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
-using NewLife.Log;
 using NewLife.ChatAI.Entity;
+using NewLife.Log;
 using NewLife.Threading;
 
 namespace NewLife.ChatAI.Services;
@@ -132,7 +132,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
         }
         if (tags?.Models == null || tags.Models.Length == 0) return;
 
-        SyncModelsToConfig(tags, providerConfig);
+        SyncModelsToConfig(tags, providerConfig, client);
     }
 
     /// <summary>探测云端 Ollama 并同步模型到数据库</summary>
@@ -151,15 +151,19 @@ public class ModelDiscoveryService(ILog log) : IHostedService
         var tags = await client.ListModelsAsync().ConfigureAwait(false);
         if (tags?.Models == null || tags.Models.Length == 0) return;
 
-        SyncModelsToConfig(tags, providerConfig);
+        SyncModelsToConfig(tags, providerConfig, client);
     }
 
     /// <summary>将 Ollama 模型同步到提供商配置和模型配置</summary>
     /// <param name="tags">Ollama 模型标签列表</param>
     /// <param name="providerConfig">提供商配置</param>
-    private void SyncModelsToConfig(OllamaTagsResponse tags, ProviderConfig providerConfig)
+    /// <param name="client">Ollama 客户端，用于推断模型能力</param>
+    private void SyncModelsToConfig(OllamaTagsResponse tags, ProviderConfig providerConfig, OllamaChatClient? client = null)
     {
         if (tags.Models == null || tags.Models.Length == 0) return;
+
+        // 查找 Ollama 描述符，用于已知模型精确匹配
+        var descriptor = AiClientRegistry.Default.GetDescriptor("Ollama");
 
         // 同步每个模型
         var synced = 0;
@@ -190,6 +194,19 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             };
             config.Name = name;
             if (model.ModifiedAt > DateTime.MinValue) config.ModelTime = model.ModifiedAt;
+
+            // 推断模型能力：仅当四个能力字段全为 false 时才自动填充
+            if (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration && !config.SupportFunctionCalling)
+            {
+                var caps = descriptor?.FindModelCapabilities(modelCode) ?? client?.InferModelCapabilities(modelCode, model.Details);
+                if (caps != null)
+                {
+                    config.SupportThinking = caps.SupportThinking;
+                    config.SupportVision = caps.SupportVision;
+                    config.SupportImageGeneration = caps.SupportImageGeneration;
+                    config.SupportFunctionCalling = caps.SupportFunctionCalling;
+                }
+            }
 
             if (config.Save() > 0)
             {
@@ -227,13 +244,15 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             log?.Info("{0} 服务提供者已自动启用，发现 {1} 个可用模型", providerConfig.Name, modelList.Data.Length);
         }
 
-        SyncModelsFromList(providerConfig, modelList);
+        SyncModelsFromList(providerConfig, modelList, descriptor, openAiClient);
     }
 
     /// <summary>将 OpenAI 兼容模型列表同步到模型配置表</summary>
     /// <param name="providerConfig">提供商配置</param>
     /// <param name="modelList">远端模型列表</param>
-    private void SyncModelsFromList(ProviderConfig providerConfig, OpenAiModelListResponse modelList)
+    /// <param name="descriptor">服务商描述符，用于查找已知模型能力</param>
+    /// <param name="client">协议客户端，用于按命名规律推断模型能力</param>
+    private void SyncModelsFromList(ProviderConfig providerConfig, OpenAiModelListResponse modelList, AiClientDescriptor? descriptor = null, OpenAIChatClient? client = null)
     {
         if (modelList.Data == null) return;
 
@@ -268,6 +287,19 @@ public class ModelDiscoveryService(ILog log) : IHostedService
 
             if (!model.Name.IsNullOrEmpty()) config.Name = model.Name;
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
+
+            // 推断模型能力：仅当四个能力字段全为 false 时才自动填充（保护用户手动配置）
+            if (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration && !config.SupportFunctionCalling)
+            {
+                var caps = descriptor?.FindModelCapabilities(model.Id) ?? client?.InferModelCapabilities(model.Id);
+                if (caps != null)
+                {
+                    config.SupportThinking = caps.SupportThinking;
+                    config.SupportVision = caps.SupportVision;
+                    config.SupportImageGeneration = caps.SupportImageGeneration;
+                    config.SupportFunctionCalling = caps.SupportFunctionCalling;
+                }
+            }
 
             if (config.Save() > 0)
                 log?.Info("同步 {0} 模型：{1}", providerConfig.Name, model.Id);

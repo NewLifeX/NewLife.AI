@@ -18,7 +18,11 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClient("OpenAI", "OpenAI", "https://api.openai.com", Description = "OpenAI GPT 系列模型", Order = 1)]
 [AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true)]
 [AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true)]
+[AiClientModel("gpt-4o-mini", "GPT-4o Mini", Code = "OpenAI", Vision = true, FunctionCalling = true)]
 [AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true)]
+[AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true)]
+[AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true)]
+[AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false)]
 public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(options)
 {
     #region 属性
@@ -270,5 +274,51 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <param name="contents">AIContent 列表</param>
     /// <returns>字符串（单一文本）或内容数组（多模态）</returns>
     protected static Object BuildContent(IList<AIContent> contents) => ChatCompletionRequest.BuildContent(contents);
+
+    /// <summary>根据模型 ID 命名规律推断模型能力。子类可重写以实现服务商特定的推断逻辑</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断出的能力信息，无法推断时返回 null</returns>
+    public virtual AiProviderCapabilities? InferModelCapabilities(String? modelId)
+    {
+        if (String.IsNullOrEmpty(modelId)) return null;
+
+        // 非对话模型：嵌入、语音合成、语音识别等
+        if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, false, false, false);
+
+        var thinking = false;
+        var vision = false;
+        var imageGen = false;
+        var funcCall = true;
+
+        // 视觉能力：含 -vl / -vision / 含 vision
+        if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("vision", StringComparison.OrdinalIgnoreCase))
+            vision = true;
+
+        // 思考/推理能力
+        if (modelId.Contains("-reasoner", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("-thinking", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
+        // OpenAI o 系列推理模型
+        if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
+        // 文生图
+        if (modelId.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("image-gen", StringComparison.OrdinalIgnoreCase))
+        {
+            imageGen = true;
+            funcCall = false;
+        }
+
+        return new AiProviderCapabilities(thinking, vision, imageGen, funcCall);
+    }
     #endregion
 }

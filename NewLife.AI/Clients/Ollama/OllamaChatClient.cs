@@ -19,9 +19,12 @@ namespace NewLife.AI.Clients.Ollama;
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("Ollama", "本地Ollama", "http://localhost:11434", Protocol = "Ollama", Description = "本地运行开源大模型，支持 Llama/Qwen/Gemma 等")]
 [AiClientModel("qwen3.5:0.8b", "Qwen 3.5 0.8B", Thinking = true)]
+[AiClientModel("qwen3:8b", "Qwen3 8B", Thinking = true)]
 [AiClientModel("llama3.3", "Llama 3.3")]
 [AiClientModel("deepseek-r1", "DeepSeek R1", Thinking = true, FunctionCalling = false)]
 [AiClientModel("phi4", "Phi-4")]
+[AiClientModel("llava", "LLaVA", Vision = true, FunctionCalling = false)]
+[AiClientModel("gemma3", "Gemma 3", Vision = true)]
 public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
 {
     #region 属性
@@ -170,5 +173,67 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
 
     /// <summary>解析 Ollama 流式 NDJSON 单行 chunk，OllamaChatResponse 适配器同时设置 Message/Delta</summary>
     protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent) => json.ToJsonEntity<OllamaChatResponse>();
+
+    /// <summary>根据 Ollama 模型 ID 和详情推断模型能力</summary>
+    /// <remarks>
+    /// 推断规则：
+    /// <list type="bullet">
+    /// <item>details.Families 含 clip / mllama → 视觉能力（视觉编码器）</item>
+    /// <item>模型名含 -vl / vision / llava → 视觉能力</item>
+    /// <item>模型名含 deepseek-r1 / qwq / qvq → 思考能力</item>
+    /// <item>qwen3 系列 → 支持函数调用和思考</item>
+    /// <item>gemma3 → 支持视觉</item>
+    /// <item>Ollama 大部分模型默认不支持函数调用</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <param name="details">Ollama 模型详情（含 Family/Families 等），可为 null</param>
+    /// <returns>推断出的能力信息</returns>
+    public AiProviderCapabilities InferModelCapabilities(String? modelId, OllamaModelDetails? details)
+    {
+        if (String.IsNullOrEmpty(modelId))
+            return new AiProviderCapabilities(false, false, false, false);
+
+        var thinking = false;
+        var vision = false;
+        var funcCall = false;
+
+        // 从 Families 探测视觉编码器
+        if (details?.Families != null)
+        {
+            foreach (var f in details.Families)
+            {
+                if (f != null && (f.Contains("clip", StringComparison.OrdinalIgnoreCase) ||
+                    f.Contains("mllama", StringComparison.OrdinalIgnoreCase)))
+                {
+                    vision = true;
+                    break;
+                }
+            }
+        }
+
+        // 模型名模式匹配 — 视觉
+        if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("vision", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("llava", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("gemma3", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qvq", StringComparison.OrdinalIgnoreCase))
+            vision = true;
+
+        // 模型名模式匹配 — 思考/推理
+        if (modelId.Contains("deepseek-r1", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qwq", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qvq", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
+        // qwen3 系列支持函数调用和思考
+        if (modelId.StartsWith("qwen3", StringComparison.OrdinalIgnoreCase))
+        {
+            funcCall = true;
+            thinking = true;
+        }
+
+        return new AiProviderCapabilities(thinking, vision, false, funcCall);
+    }
     #endregion
 }

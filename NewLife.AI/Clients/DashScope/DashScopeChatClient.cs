@@ -24,6 +24,10 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
+[AiClientModel("qwen3-plus", "Qwen3 Plus", Thinking = true)]
+[AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
+[AiClientModel("qwen3-coder", "Qwen3 Coder")]
+[AiClientModel("wanx2.1-t2i-turbo", "Wanx 文生图", ImageGeneration = true, FunctionCalling = false)]
 public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(options)
 {
     #region 属性
@@ -313,6 +317,73 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         //else
         request.Headers.TryAddWithoutValidation("X-DashScope-SSE", "enable");
+    }
+
+    /// <summary>根据千问模型 ID 命名规律推断模型能力</summary>
+    /// <remarks>
+    /// 阿里百炼模型命名规律：
+    /// <list type="bullet">
+    /// <item>qwen*-vl* / qvq-*：视觉能力</item>
+    /// <item>qwen3.5-*：全系列内置多模态（视觉）</item>
+    /// <item>qwq-* / 含 max/plus 的高端系列：思考能力</item>
+    /// <item>wanx* / flux*：文生图能力</item>
+    /// <item>embed*/rerank*/paraformer*/cosyvoice*：非对话模型</item>
+    /// <item>farui* / qwen-mt*：专用模型，不支持函数调用</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断出的能力信息，无法推断时返回 null</returns>
+    public override AiProviderCapabilities? InferModelCapabilities(String? modelId)
+    {
+        if (String.IsNullOrEmpty(modelId)) return null;
+
+        // 非对话模型：嵌入、重排序、语音识别、语音合成
+        if (modelId.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("paraformer", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("sambert", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, false, false, false);
+
+        var thinking = false;
+        var vision = false;
+        var imageGen = false;
+        var funcCall = true;
+
+        // 文生图：wanx / flux 系列
+        if (modelId.StartsWith("wanx", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("flux", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, false, true, false);
+
+        // 视觉能力
+        if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qwen3.5-", StringComparison.OrdinalIgnoreCase))
+            vision = true;
+
+        // 思考/推理能力
+        if (modelId.StartsWith("qwq-", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
+        // 高端系列（max/plus）默认支持思考
+        if (modelId.Contains("-max", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("-plus", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
+        // qwen3 全系列支持思考
+        if (modelId.StartsWith("qwen3-", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qwen3.", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
+        // 专用模型不支持函数调用
+        if (modelId.StartsWith("farui", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qwen-mt", StringComparison.OrdinalIgnoreCase))
+            funcCall = false;
+
+        return new AiProviderCapabilities(thinking, vision, imageGen, funcCall);
     }
     #endregion
 }
