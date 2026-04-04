@@ -162,7 +162,7 @@ var reply2 = await client.ChatAsync([
 | `new AzureAIChatClient(apiKey, model?, endpoint?)` | Azure OpenAI（部署名称作为 model） |
 | `new BedrockChatClient(accessKeyId, secretAccessKey, model?, region?)` | AWS Bedrock（SigV4 签名认证） |
 | `new OllamaChatClient(apiKey?, model?, endpoint?)` | Ollama（本地部署 apiKey 可为 null）|
-| `new NewLifeAiChatClient(apiKey, model?, endpoint?)` | 级联 NewLife.AI 实例 |
+| `new NewLifeAIChatClient(apiKey, model?, endpoint?)` | 级联 NewLife.AI 实例 |
 
 #### 模式二：AiClientRegistry（配置驱动 / 动态切换服务商）
 
@@ -181,7 +181,7 @@ var client2 = AiClientRegistry.Default.CreateClient(opts.Code!, opts);
 // MEAI 风格：先设置服务商，再链式叠加中间件
 var client = new ChatClientBuilder()
     .UseDashScope("your-api-key", "qwen-plus")   // UseOpenAI / UseAnthropic / UseGemini / UseOllama / UseNewLifeAI
-    .UseFilters(new LoggingFilter())               // 日志 / 审计 / 速率限制
+    .UseFilters(new MyAuditFilter())               // 日志 / 审计 / 速率限制（IChatFilter 实现）
     .UseTools(toolRegistry)                        // 自动多轮 Function Calling
     .Build();
 ```
@@ -214,8 +214,8 @@ var message = new ChatMessage
 };
 await foreach (var chunk in client.GetStreamingResponseAsync([message]))
 {
-    var delta = chunk.Choices?.FirstOrDefault()?.Delta;
-    if (delta?.Content is String text && !String.IsNullOrEmpty(text))
+    var text = chunk.Text;
+    if (!String.IsNullOrEmpty(text))
         Console.Write(text);
 }
 ```
@@ -223,9 +223,10 @@ await foreach (var chunk in client.GetStreamingResponseAsync([message]))
 #### 自定义工具（原生 .NET 方法）
 
 ```csharp
-public class WeatherService : IToolProvider
+// 用 [ToolDescription] 标注工具方法，ToolRegistry 通过反射自动扫描注册
+public class WeatherService
 {
-    [ToolDescription("获取城市实时天气")]
+    [ToolDescription("get_weather")]
     public async Task<String> GetWeatherAsync(
         [Description("城市名称")] String city)
     {
@@ -233,19 +234,38 @@ public class WeatherService : IToolProvider
     }
 }
 
-services.AddSingleton<IToolProvider, WeatherService>();
+// 非 DI 场景：直接构建
+var toolRegistry = new ToolRegistry();
+toolRegistry.AddTools(new WeatherService());
+
+// DI 场景：注册为 IToolProvider
+services.AddSingleton<IToolProvider>(_ =>
+{
+    var registry = new ToolRegistry();
+    registry.AddTools(new WeatherService());
+    return registry;
+});
 ```
 
 #### MultiAgent 协作
 
 ```csharp
-var researcher = new ConversableAgent("researcher", researchClient)
-    .AddTools(searchTool);
+var toolRegistry = new ToolRegistry();
+toolRegistry.AddTools(new WebSearchService());
 
+var researcher = new ConversableAgent("researcher", researchClient)
+{
+    Tools = [..toolRegistry.Tools],
+};
 var writer = new ConversableAgent("writer", writingClient);
 
-var groupChat = new GroupChat([researcher, writer], orchestratorClient);
-var result = await groupChat.RunAsync("分析人工智能行业趋势并写一篇报告");
+// 默认使用 RoundRobinSelector 轮询调度
+var groupChat = new GroupChat([researcher, writer]);
+await foreach (var msg in groupChat.RunAsync(new TextMessage { Content = "分析人工智能行业趋势并写一篇报告" }))
+{
+    if (msg is TextMessage text)
+        Console.WriteLine($"[{msg.Source}] {text.Content}");
+}
 ```
 
 ---
@@ -309,12 +329,6 @@ dotnet NewLife.ChatAI.dll
 
 应用启动后访问 `http://localhost:5000`。首次启动通过魔方管理后台（`/Admin`）配置服务商与模型。
 
-#### Docker
-
-```bash
-docker run -d -p 5000:80 -v ./data:/app/Data newlife/chatai:latest
-```
-
 ### API 网关端点
 
 | 端点 | 协议 | 说明 |
@@ -349,11 +363,18 @@ public class MyAiChatClient : DelegatingChatClient
 ```csharp
 public class ContentAuditFilter : IChatFilter
 {
-    public async Task OnRequestAsync(FilterContext ctx)
+    // 洋葱圈模式：调用 next 前后分别处理请求和响应
+    public async Task OnChatAsync(ChatFilterContext ctx,
+        Func<ChatFilterContext, CancellationToken, Task> next,
+        CancellationToken ct)
     {
-        // 内容检测、敏感词过滤
+        // before — 内容检测、敏感词过滤（可修改 ctx.Request）
+        await next(ctx, ct);
+        // after — 读取 ctx.Response，写审计日志
     }
-    public async Task OnStreamCompletedAsync(FilterContext ctx)
+
+    // 流式结束后回调，可触发自学习分析
+    public async Task OnStreamCompletedAsync(ChatFilterContext ctx, CancellationToken ct)
     {
         // 审计日志、学习触发
     }
