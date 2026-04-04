@@ -509,6 +509,14 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
                 if (img.Detail != null) imgDic["detail"] = img.Detail;
                 parts.Add(new Dictionary<String, Object> { ["type"] = "image_url", ["image_url"] = imgDic });
             }
+            else if (item is FileContent fileCnt)
+            {
+                // OpenAI / DashScope 兼容格式：{"type":"file","file_id":"..."} 或 {"type":"file","file_url":"..."}
+                if (!String.IsNullOrEmpty(fileCnt.FileId))
+                    parts.Add(new Dictionary<String, Object> { ["type"] = "file", ["file_id"] = fileCnt.FileId! });
+                else if (!String.IsNullOrEmpty(fileCnt.FileUrl))
+                    parts.Add(new Dictionary<String, Object> { ["type"] = "file", ["file_url"] = fileCnt.FileUrl! });
+            }
         }
         return parts;
     }

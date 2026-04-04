@@ -75,3 +75,18 @@ public class DataContent(Byte[] data, String mediaType) : AIContent
     /// <summary>媒体类型。如 audio/wav、application/pdf</summary>
     public String MediaType { get; set; } = mediaType;
 }
+
+/// <summary>文件引用内容片段。通过 DashScope Files API 上传后的 file_id 或公网 URL 引用文档</summary>
+/// <remarks>
+/// DashScope 兼容模式文件接口端点：POST /compatible-mode/v1/files（multipart/form-data，purpose=file-extract）<br/>
+/// 上传成功后返回 file_id（格式 "file-xxxxx"），可在消息 content 中以 {"type":"file","file_id":"file-xxxxx"} 引用；<br/>
+/// 也可直接用公网 URL 以 {"type":"file","file_url":"https://..."} 引用，无需上传。
+/// </remarks>
+public class FileContent : AIContent
+{
+    /// <summary>文件 ID。通过 DashScope Files API 上传后获得，格式 "file-xxxxx"</summary>
+    public String? FileId { get; set; }
+
+    /// <summary>文件公网 URL。直接引用可公开访问的文档地址，与 FileId 二选一</summary>
+    public String? FileUrl { get; set; }
+}

@@ -270,6 +270,106 @@ public class DashScopeProvider : OpenAiProvider
     }
     #endregion
 
+    #region 文件上传（Files API）
+    /// <summary>上传文件到 DashScope Files API，返回 file_id</summary>
+    /// <remarks>
+    /// 端点：POST /compatible-mode/v1/files（multipart/form-data）<br/>
+    /// 字段：file（二进制内容）+ purpose=file-extract<br/>
+    /// 响应：{"id":"file-xxxxx","object":"file","bytes":N,"created_at":N,"filename":"...","purpose":"file-extract"}<br/>
+    /// 支持格式：txt / pdf / docx / doc / xlsx / xls / pptx / ppt / csv / md 等文档类<br/>
+    /// 上传后可在消息 content 中以 FileContent.FileId 引用，无需将文档内容嵌入 prompt。
+    /// </remarks>
+    /// <param name="filePath">本地文件路径</param>
+    /// <param name="fileName">文件名（含扩展名），为空则取路径文件名</param>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>file_id 字符串（如 "file-fe109bf8-xxxx"）</returns>
+    public async Task<String> UploadFileAsync(String filePath, String? fileName, AiProviderOptions options, CancellationToken cancellationToken = default)
+    {
+        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/files";
+        fileName ??= Path.GetFileName(filePath);
+        var fileBytes = File.ReadAllBytes(filePath);
+        return await UploadFileBytesAsync(fileBytes, fileName, options, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>上传文件字节到 DashScope Files API，返回 file_id</summary>
+    /// <param name="fileBytes">文件二进制内容</param>
+    /// <param name="fileName">文件名（含扩展名）</param>
+    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>file_id 字符串（如 "file-fe109bf8-xxxx"）</returns>
+    public async Task<String> UploadFileBytesAsync(Byte[] fileBytes, String fileName, AiProviderOptions options, CancellationToken cancellationToken = default)
+    {
+        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/files";
+
+        using var form = new MultipartFormDataContent();
+        var filePartContent = new ByteArrayContent(fileBytes);
+        // 推断 Content-Type，DashScope 以文件名扩展名识别文档类型
+        var mediaType = GetMediaTypeByFileName(fileName);
+        filePartContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType);
+        form.Add(filePartContent, "file", fileName);
+        form.Add(new StringContent("file-extract"), "purpose");
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
+        SetHeaders(req, options);
+
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+            throw new HttpRequestException($"[{Name}] 文件上传失败 {(Int32)resp.StatusCode}: {json}");
+
+        var dic = JsonParser.Decode(json);
+        if (dic == null) throw new InvalidOperationException("无法解析文件上传响应");
+
+        var fileId = dic["id"] as String;
+        if (String.IsNullOrEmpty(fileId))
+            throw new InvalidOperationException($"文件上传响应中未找到 id 字段: {json}");
+
+        return fileId;
+    }
+
+    /// <summary>删除已上传的文件。文件使用完毕后建议及时删除以释放配额</summary>
+    /// <param name="fileId">file_id（如 "file-fe109bf8-xxxx"）</param>
+    /// <param name="options">连接选项</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public async Task DeleteFileAsync(String fileId, AiProviderOptions options, CancellationToken cancellationToken = default)
+    {
+        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/files/" + fileId;
+
+        using var req = new HttpRequestMessage(HttpMethod.Delete, url);
+        SetHeaders(req, options);
+
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            throw new HttpRequestException($"[{Name}] 文件删除失败 {(Int32)resp.StatusCode}: {body}");
+        }
+    }
+
+    /// <summary>根据文件名推断 MIME 类型</summary>
+    private static String GetMediaTypeByFileName(String fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf"  => "application/pdf",
+            ".doc"  => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls"  => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".ppt"  => "application/vnd.ms-powerpoint",
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".csv"  => "text/csv",
+            ".md"   => "text/markdown",
+            ".txt"  => "text/plain",
+            ".html" => "text/html",
+            _       => "application/octet-stream",
+        };
+    }
+    #endregion
+
     #region 重排序（Rerank）
     /// <summary>文档重排序。对 RAG 检索召回的候选文档按与查询的语义相关度重新排序</summary>
     /// <remarks>
@@ -660,6 +760,26 @@ public class DashScopeProvider : OpenAiProvider
                 else
                     // 其他二进制（如 PDF 文档）作为 file 类型传递
                     parts.Add(new { file = dataUri });
+            }
+            else if (item is FileContent fileCnt)
+            {
+                if (isMultimodal)
+                {
+                    // DashScope 原生多模态格式
+                    // file_id 使用 fileid:// 前缀；file_url 直接传 URL
+                    if (!String.IsNullOrEmpty(fileCnt.FileId))
+                        parts.Add(new { file = $"fileid://{fileCnt.FileId}" });
+                    else if (!String.IsNullOrEmpty(fileCnt.FileUrl))
+                        parts.Add(new { file = fileCnt.FileUrl });
+                }
+                else
+                {
+                    // OpenAI 兼容格式：{"type":"file","file_id":"..."} 或 {"type":"file","file_url":"..."}
+                    if (!String.IsNullOrEmpty(fileCnt.FileId))
+                        parts.Add(new { type = "file", file_id = fileCnt.FileId });
+                    else if (!String.IsNullOrEmpty(fileCnt.FileUrl))
+                        parts.Add(new { type = "file", file_url = fileCnt.FileUrl });
+                }
             }
         }
         return parts;
