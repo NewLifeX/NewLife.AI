@@ -276,7 +276,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyReturnsNullForEmptyHeader()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         Assert.Null(service.ValidateAppKey(null));
         Assert.Null(service.ValidateAppKey(""));
@@ -286,7 +286,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyParsesBearer()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         // 当数据库没有该数据时，FindBySecret 会返回 null
         var result = service.ValidateAppKey("Bearer sk-test-nonexistent");
@@ -296,7 +296,7 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyHandlesNoBearerPrefix()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         // 直接传密钥，没有 Bearer 前缀，也应当可以尝试
         var result = service.ValidateAppKey("sk-direct-key");
@@ -308,7 +308,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForEmpty()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         Assert.Null(service.ResolveModel(0));
         Assert.Null(service.ResolveModel(-1));
@@ -317,7 +317,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForNonExistent()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
 
         // 数据库无数据时返回 null
         Assert.Null(service.ResolveModel(99999));
@@ -326,7 +326,7 @@ public class GatewayTests
     [Fact]
     public void IsModelAllowedReturnsTrueWhenNoFilter()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
         var appKey = new AppKey { Models = null };
         var model = new ModelConfig { Code = "gpt-4o", Name = "GPT-4o" };
 
@@ -336,7 +336,7 @@ public class GatewayTests
     [Fact]
     public void IsModelAllowedMatchesByCodeOrName()
     {
-        var service = new GatewayService(null, null);
+        var service = new GatewayService(null, null, null);
         var appKey = new AppKey { Models = "qwen-max, GPT-4o" };
 
         Assert.True(service.IsModelAllowed(appKey, new ModelConfig { Code = "qwen-max", Name = "Qwen Max" }));
