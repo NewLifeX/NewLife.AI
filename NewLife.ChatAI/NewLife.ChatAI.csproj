@@ -3,7 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
-    <AssemblyTitle>多模型对话交互式 AI 系统</AssemblyTitle>
+    <AssemblyName>ChatAI</AssemblyName>
+    <AssemblyTitle>多模态AI对话与网关</AssemblyTitle>
     <Description>集对话前端、统一 AI 网关、Agent 平台于一身的完整 AI 应用。支持多轮对话、流式输出、函数调用、图像生成、会话管理与使用量统计</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 NewLife</Copyright>
@@ -14,6 +15,7 @@
     <AssemblyVersion>$(VersionPrefix).*</AssemblyVersion>
     <Deterministic>false</Deterministic>
     <OutputPath>..\Bin\Web</OutputPath>
+    <!--<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>-->
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -50,9 +52,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- wwwroot 文件将作为嵌入资源包含在 DLL 中 -->
     <EmbeddedResource Include="wwwroot\**\*" />
   </ItemGroup>
+
+  <!-- wwwroot 已嵌入 DLL，移除 NuGet 包中的 staticwebassets/ 目录
+       单目标框架走 IncludeStaticWebAssetsPackItems，多目标框架走 CrossTargetingIncludeStaticWebAssets，需同时挂两个目标 -->
+  <Target Name="ClearStaticWebAssetsFromPack"
+    AfterTargets="IncludeStaticWebAssetsPackItems;CrossTargetingIncludeStaticWebAssets">
+    <ItemGroup>
+      <Content Remove="@(_StaticWebAssetsFilesToPack)" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
@@ -68,7 +78,6 @@
     <PackageReference Include="NewLife.Cube.Core" Version="6.10.2026.404" />
     <PackageReference Include="NewLife.MySql" Version="1.0.2026.402" />
     <PackageReference Include="NewLife.XCode" Version="11.25.2026.403" />
-    <PackageReference Include="XCode.SQLite" Version="*" />
   </ItemGroup>
 
   <ItemGroup>
@@ -79,6 +88,13 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 从所有可能的项集中移除临时目录 -->
+    <Content Remove="Entity\Config\**\*" />
+    <None Remove="Entity\Config\**\*" />
+    <EmbeddedResource Remove="Entity\Config\**\*" />
   </ItemGroup>
 
 </Project>
