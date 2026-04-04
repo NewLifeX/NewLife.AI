@@ -35,7 +35,7 @@ public class CurrentUserTool(IServiceProvider serviceProvider)
             if (dept != null) sb.AppendLine($"department: {dept.Name}");
         }
 
-        return sb.Put(true).TrimEnd();
+        return sb.Return(true).TrimEnd();
     }
 
     #endregion

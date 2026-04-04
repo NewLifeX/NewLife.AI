@@ -1354,7 +1354,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                     var dept = Department.FindByID(iuser.DepartmentID);
                     if (dept != null) sb.Append($"，部门：{dept.Name}");
                 }
-                parts.Add(sb.Put(true));
+                parts.Add(sb.Return(true));
             }
         }
 
@@ -1478,6 +1478,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     private static AiChatMessage BuildMultimodalUserMessage(String attachmentsJson, String? textContent)
     {
         var contents = new List<AIContent>();
+        var docParts = new List<String>();
 
         // 前端发送的 attachmentIds 为字符串数组 ["123","456"]，兼容 Int64 数组 [123,456]
         var ids = ParseAttachmentIds(attachmentsJson);
@@ -1495,12 +1496,26 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
 
                     if (!att.ContentType.IsNullOrEmpty() && att.ContentType.StartsWithIgnoreCase("image/"))
                         contents.Add(new ImageContent { Data = File.ReadAllBytes(filePath), MediaType = att.ContentType });
+                    else
+                    {
+                        // 非图片文件：用 NewLife.Office 提取文本，作为上下文注入消息
+                        var docText = ExtractDocumentAsMarkdown(filePath!, att.FileName);
+                        if (!docText.IsNullOrEmpty())
+                            docParts.Add($"【附件：{att.FileName}】\n{docText}");
+                    }
                 }
                 catch (Exception ex)
                 {
                     XTrace.WriteException(ex);
                 }
             }
+        }
+
+        // 将文档内容前置注入到用户文本
+        if (docParts.Count > 0)
+        {
+            var docContext = String.Join("\n\n---\n\n", docParts);
+            textContent = docContext + (textContent.IsNullOrEmpty() ? String.Empty : $"\n\n---\n\n{textContent}");
         }
 
         if (!textContent.IsNullOrEmpty())
@@ -1511,6 +1526,100 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             return new AiChatMessage { Role = "user", Content = textContent };
 
         return new AiChatMessage { Role = "user", Contents = contents };
+    }
+
+    /// <summary>使用 NewLife.Office 将文档文件提取为 Markdown 文本。支持 docx/doc/pdf/xlsx/xls/pptx/ppt/txt/csv/md</summary>
+    /// <param name="filePath">文件在磁盘上的完整路径</param>
+    /// <param name="fileName">原始文件名（用于按扩展名路由及错误提示）</param>
+    /// <returns>提取的 markdown 文本，无法识别格式时返回 null</returns>
+    private static String? ExtractDocumentAsMarkdown(String filePath, String? fileName)
+    {
+        var ext = Path.GetExtension(fileName ?? filePath).ToLowerInvariant();
+        try
+        {
+            switch (ext)
+            {
+                case ".docx":
+                case ".doc":
+                {
+                    using var reader = new NewLife.Office.WordReader(filePath);
+                    var sb = Pool.StringBuilder.Get();
+                    foreach (var para in reader.ReadParagraphs())
+                    {
+                        sb.AppendLine(para);
+                    }
+                    // 将表格格式化为 markdown
+                    foreach (var table in reader.ReadTables())
+                    {
+                        if (table.Length == 0) continue;
+                        sb.AppendLine();
+                        foreach (var row in table)
+                        {
+                            sb.Append("| ");
+                            sb.Append(String.Join(" | ", row.Select(c => (c ?? String.Empty).Replace("|", "\\|"))));
+                            sb.AppendLine(" |");
+                        }
+                        sb.AppendLine();
+                    }
+                    return sb.Return(true);
+                }
+                case ".pdf":
+                {
+                    using var reader = new NewLife.Office.PdfReader(filePath);
+                    return reader.ExtractText();
+                }
+                case ".xlsx":
+                case ".xls":
+                {
+                    using var reader = new NewLife.Office.ExcelReader(filePath);
+                    var sb = Pool.StringBuilder.Get();
+                    var sheets = reader.Sheets;
+                    if (sheets != null)
+                    {
+                        foreach (var sheet in sheets)
+                        {
+                            sb.AppendLine($"## {sheet}");
+                            sb.AppendLine();
+                            var rows = reader.ReadRows(sheet).ToList();
+                            for (var i = 0; i < rows.Count; i++)
+                            {
+                                var row = rows[i];
+                                var cells = row.Select(c => Convert.ToString(c) ?? String.Empty);
+                                sb.Append("| ");
+                                sb.Append(String.Join(" | ", cells.Select(c => c.Replace("|", "\\|"))));
+                                sb.AppendLine(" |");
+                                // 首行后插入分隔线
+                                if (i == 0)
+                                {
+                                    sb.Append("| ");
+                                    sb.Append(String.Join(" | ", row.Select(_ => "---")));
+                                    sb.AppendLine(" |");
+                                }
+                            }
+                            sb.AppendLine();
+                        }
+                    }
+                    return sb.Return(true);
+                }
+                case ".pptx":
+                case ".ppt":
+                {
+                    using var reader = new NewLife.Office.PptxReader(filePath);
+                    return reader.ReadAllText();
+                }
+                case ".txt":
+                case ".csv":
+                case ".md":
+                    return File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+                default:
+                    return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            XTrace.WriteException(ex);
+            return null;
+        }
     }
 
     /// <summary>解析附件ID列表 JSON。兼容字符串数组和整数数组两种格式</summary>

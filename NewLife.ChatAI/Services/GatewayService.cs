@@ -243,7 +243,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
                     var dept = Department.FindByID(iuser.DepartmentID);
                     if (dept != null) sb.Append($"，部门：{dept.Name}");
                 }
-                parts.Add(sb.Put(true));
+                parts.Add(sb.Return(true));
             }
         }
 
