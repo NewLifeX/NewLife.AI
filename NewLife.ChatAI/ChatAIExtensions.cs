@@ -45,7 +45,7 @@ public static class ChatAIExtensions
             var registry = new ToolRegistry();
             registry.AddTools(new BuiltinToolService());
             registry.AddTools(new NetworkToolService(sp));
-            registry.AddTools(new CurrentUserTool(sp));
+            registry.AddTools(new CurrentUserTool());
             return registry;
         });
 
