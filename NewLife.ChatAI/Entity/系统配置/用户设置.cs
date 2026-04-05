@@ -118,6 +118,14 @@ public partial class UserSetting
     [BindColumn("McpEnabled", "启用MCP。是否启用MCP工具调用", "")]
     public Boolean McpEnabled { get => _McpEnabled; set { if (OnPropertyChanging("McpEnabled", value)) { _McpEnabled = value; OnPropertyChanged("McpEnabled"); } } }
 
+    private Boolean _ShowToolCalls;
+    /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
+    [DisplayName("显示工具调用")]
+    [Description("显示工具调用。是否在对话中显示工具调用的入参和出参详情")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ShowToolCalls", "显示工具调用。是否在对话中显示工具调用的入参和出参详情", "")]
+    public Boolean ShowToolCalls { get => _ShowToolCalls; set { if (OnPropertyChanging("ShowToolCalls", value)) { _ShowToolCalls = value; OnPropertyChanged("ShowToolCalls"); } } }
+
     private String? _DefaultSkill;
     /// <summary>默认技能。新会话的默认技能编码</summary>
     [DisplayName("默认技能")]
@@ -241,6 +249,7 @@ public partial class UserSetting
             "SystemPrompt" => _SystemPrompt,
             "AllowTraining" => _AllowTraining,
             "McpEnabled" => _McpEnabled,
+            "ShowToolCalls" => _ShowToolCalls,
             "DefaultSkill" => _DefaultSkill,
             "StreamingSpeed" => _StreamingSpeed,
             "EnableLearning" => _EnableLearning,
@@ -271,6 +280,7 @@ public partial class UserSetting
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
+                case "ShowToolCalls": _ShowToolCalls = value.ToBoolean(); break;
                 case "DefaultSkill": _DefaultSkill = Convert.ToString(value); break;
                 case "StreamingSpeed": _StreamingSpeed = value.ToInt(); break;
                 case "EnableLearning": _EnableLearning = value.ToBoolean(); break;
@@ -329,13 +339,14 @@ public partial class UserSetting
     /// <param name="defaultThinkingMode">默认思考模式。Auto=0, Think=1, Fast=2</param>
     /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
+    /// <param name="showToolCalls">显示工具调用。是否在对话中显示工具调用的入参和出参详情</param>
     /// <param name="enableLearning">启用个人学习。用户级自学习开关，全局开关开启后此项生效</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -343,6 +354,7 @@ public partial class UserSetting
         if (defaultThinkingMode >= 0) exp &= _.DefaultThinkingMode == defaultThinkingMode;
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
+        if (showToolCalls != null) exp &= _.ShowToolCalls == showToolCalls;
         if (enableLearning != null) exp &= _.EnableLearning == enableLearning;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -390,6 +402,9 @@ public partial class UserSetting
 
         /// <summary>启用MCP。是否启用MCP工具调用</summary>
         public static readonly Field McpEnabled = FindByName("McpEnabled");
+
+        /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
+        public static readonly Field ShowToolCalls = FindByName("ShowToolCalls");
 
         /// <summary>默认技能。新会话的默认技能编码</summary>
         public static readonly Field DefaultSkill = FindByName("DefaultSkill");
@@ -468,6 +483,9 @@ public partial class UserSetting
 
         /// <summary>启用MCP。是否启用MCP工具调用</summary>
         public const String McpEnabled = "McpEnabled";
+
+        /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
+        public const String ShowToolCalls = "ShowToolCalls";
 
         /// <summary>默认技能。新会话的默认技能编码</summary>
         public const String DefaultSkill = "DefaultSkill";

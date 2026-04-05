@@ -1085,6 +1085,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         entity.SystemPrompt = settings.SystemPrompt;
         entity.AllowTraining = settings.AllowTraining;
         entity.McpEnabled = settings.McpEnabled;
+        entity.ShowToolCalls = settings.ShowToolCalls;
         entity.DefaultSkill = settings.DefaultSkill;
         entity.EnableLearning = settings.EnableLearning;
         entity.LearningModel = settings.LearningModel;
@@ -1338,20 +1339,19 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         // 0. 当前用户基础信息
         if (userId > 0)
         {
-            var iuser = ManageProvider.Provider?.FindByID(userId) as IUser;
-            if (iuser != null)
+            if (ManageProvider.Provider?.FindByID(userId) is IUser user)
             {
                 var sb = Pool.StringBuilder.Get();
-                sb.Append($"当前用户：{iuser.DisplayName}（{iuser.Name}）");
-                var roleIds = iuser.RoleIds?.SplitAsInt();
+                sb.Append($"当前用户：{user.DisplayName}（{user.Name}）");
+                var roleIds = user.RoleIds?.SplitAsInt();
                 if (roleIds?.Length > 0)
                 {
                     var roleNames = roleIds.Select(id => Role.FindByID(id)?.Name).Where(n => !n.IsNullOrEmpty()).Join(",");
                     if (!roleNames.IsNullOrEmpty()) sb.Append($"，角色：{roleNames}");
                 }
-                if (iuser.DepartmentID > 0)
+                if (user.DepartmentID > 0)
                 {
-                    var dept = Department.FindByID(iuser.DepartmentID);
+                    var dept = Department.FindByID(user.DepartmentID);
                     if (dept != null) sb.Append($"，部门：{dept.Name}");
                 }
                 parts.Add(sb.Return(true));
@@ -1425,6 +1425,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             entity.AllowTraining)
         {
             McpEnabled = entity.McpEnabled,
+            ShowToolCalls = entity.ShowToolCalls,
             DefaultSkill = entity.DefaultSkill ?? "general",
             EnableLearning = entity.EnableLearning,
             LearningModel = entity.LearningModel ?? String.Empty,

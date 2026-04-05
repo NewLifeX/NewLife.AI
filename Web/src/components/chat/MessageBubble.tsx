@@ -10,6 +10,7 @@ import { ActionSheet, type ActionSheetItem } from '@/components/common/ActionShe
 import { useLongPress } from '@/hooks/useLongPress'
 import { fetchAttachmentInfos, type AttachmentInfo } from '@/lib/api'
 import type { ToolCall, TokenUsage } from '@/types'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant'
@@ -67,6 +68,7 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
+  const showToolCalls = useSettingsStore((s) => s.showToolCalls)
   const [editValue, setEditValue] = useState(rawContent ?? '')
   const editRef = useRef<HTMLTextAreaElement>(null)
 
@@ -271,7 +273,7 @@ export function MessageBubble({
           {toolCalls && toolCalls.length > 0 && (
             <div className="flex items-center flex-wrap gap-2 mb-4">
               {toolCalls.map((tc) => (
-                <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} />
+                <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />
               ))}
             </div>
           )}

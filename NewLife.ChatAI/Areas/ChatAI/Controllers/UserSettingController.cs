@@ -53,11 +53,12 @@ public class UserSettingController : EntityController<UserSetting>
         var defaultThinkingMode = (ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
         var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
+        var showToolCalls = p["showToolCalls"]?.ToBoolean();
         var enableLearning = p["enableLearning"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, defaultThinkingMode, allowTraining, mcpEnabled, enableLearning, start, end, p["Q"], p);
+        return UserSetting.Search(userId, defaultThinkingMode, allowTraining, mcpEnabled, showToolCalls, enableLearning, start, end, p["Q"], p);
     }
 }

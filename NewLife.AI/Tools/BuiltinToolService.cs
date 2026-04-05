@@ -11,7 +11,7 @@ public class BuiltinToolService
 
     /// <summary>获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等</summary>
     /// <param name="timezone">时区名称，如 Asia/Shanghai、America/New_York。默认使用服务器本地时区</param>
-    [ToolDescription("get_current_time")]
+    [ToolDescription("get_current_time", IsSystem = true)]
     public String GetCurrentTime(String? timezone = null)
     {
         DateTimeOffset now;

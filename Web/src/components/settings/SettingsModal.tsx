@@ -120,6 +120,8 @@ export function SettingsModal({
             onSystemPromptChange={(v) => update({ systemPrompt: v })}
             mcpEnabled={settings.mcpEnabled}
             onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
+            showToolCalls={settings.showToolCalls}
+            onShowToolCallsChange={(v) => update({ showToolCalls: v })}
             streamingSpeed={settings.streamingSpeed}
             onStreamingSpeedChange={(v) => update({ streamingSpeed: v })}
             models={models}

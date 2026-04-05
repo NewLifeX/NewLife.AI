@@ -110,6 +110,8 @@ export default {
     systemPromptPlaceholder: '输入系统提示词...',
     enableMcp: '启用 MCP 工具集',
     enableMcpDesc: '允许 AI 助手调用本地工具、访问文件及执行复杂任务。',
+    showToolCalls: '显示工具调用详情',
+    showToolCallsDesc: '开启后可查看工具调用的入参和出参，便于调试智能体应用。',
     streamingSpeed: '流式输出速度',
     speedSlow: '慢速',
     speedStandard: '标准',

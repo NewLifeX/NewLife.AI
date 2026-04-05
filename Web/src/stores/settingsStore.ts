@@ -43,6 +43,7 @@ const defaults: UserSettings = {
   contextRounds: 10,
   systemPrompt: '',
   mcpEnabled: true,
+  showToolCalls: false,
   streamingSpeed: 3,
   allowTraining: false,
   contentWidth: 960,

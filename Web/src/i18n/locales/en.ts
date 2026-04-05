@@ -110,6 +110,8 @@ export default {
     systemPromptPlaceholder: 'Enter system prompt...',
     enableMcp: 'Enable MCP Toolset',
     enableMcpDesc: 'Allow AI to invoke local tools, access files and perform complex tasks.',
+    showToolCalls: 'Show Tool Call Details',
+    showToolCallsDesc: 'Show input/output parameters of tool calls for debugging agent applications.',
     streamingSpeed: 'Streaming Speed',
     speedSlow: 'Slow',
     speedStandard: 'Standard',

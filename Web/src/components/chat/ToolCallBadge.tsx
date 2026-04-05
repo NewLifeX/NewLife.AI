@@ -7,12 +7,13 @@ interface ToolCallBadgeProps {
   status: 'calling' | 'done' | 'error'
   arguments?: string
   result?: string
+  showDetails?: boolean
   className?: string
 }
 
-export function ToolCallBadge({ name, status, arguments: args, result, className }: ToolCallBadgeProps) {
+export function ToolCallBadge({ name, status, arguments: args, result, showDetails, className }: ToolCallBadgeProps) {
   const [expanded, setExpanded] = useState(false)
-  const hasDetails = Boolean(args || result)
+  const hasDetails = showDetails && Boolean(args || result)
 
   return (
     <div className={cn('w-full', className)}>

@@ -55,6 +55,9 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     /// <summary>是否启用 MCP</summary>
     public Boolean McpEnabled { get; set; } = true;
 
+    /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
+    public Boolean ShowToolCalls { get; set; }
+
     /// <summary>默认技能</summary>
     public String DefaultSkill { get; set; } = "general";
 
