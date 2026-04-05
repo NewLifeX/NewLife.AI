@@ -10,32 +10,11 @@ public class BuiltinToolService
     #region 时间工具
 
     /// <summary>获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等</summary>
-    /// <param name="timezone">时区名称，如 Asia/Shanghai、America/New_York。默认使用服务器本地时区</param>
     [ToolDescription("get_current_time", IsSystem = true)]
-    public String GetCurrentTime(String? timezone = null)
+    public String GetCurrentTime()
     {
-        DateTimeOffset now;
-        String tzName;
-
-        if (!String.IsNullOrEmpty(timezone))
-        {
-            try
-            {
-                var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
-                now = TimeZoneInfo.ConvertTime(DateTimeOffset.Now, tz);
-                tzName = tz.DisplayName;
-            }
-            catch (TimeZoneNotFoundException)
-            {
-                now = DateTimeOffset.Now;
-                tzName = TimeZoneInfo.Local.DisplayName;
-            }
-        }
-        else
-        {
-            now = DateTimeOffset.Now;
-            tzName = TimeZoneInfo.Local.DisplayName;
-        }
+        var now = DateTimeOffset.Now;
+        var tzName = TimeZoneInfo.Local.DisplayName;
 
         var sb = Pool.StringBuilder.Get();
         sb.AppendLine($"datetime: {now:yyyy-MM-dd HH:mm:ss}");

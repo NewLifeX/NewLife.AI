@@ -1,37 +1,31 @@
-﻿using System.Globalization;
-using NewLife.AI.Tools;
+﻿using NewLife.AI.Tools;
 using NewLife.Collections;
 using NewLife.Holiday;
 
 namespace NewLife.ChatAI.Services;
 
-/// <summary>增强版时间工具服务。集成 NewLife.Holiday 组件，在基础时间信息之上提供农历、24节气、工作日状态等中国特色日历信息</summary>
-/// <remarks>
-/// 通过 ToolRegistry 先于 <see cref="BuiltinToolService"/> 注册，以同名工具 get_current_time 覆盖原版，
-/// 无需修改核心库即可为 ChatAI 提供带节假日信息的增强版时间工具。
-/// </remarks>
+/// <summary>日期信息工具服务。集成 NewLife.Holiday 组件，按指定日期查询农历、24节气、工作日状态等中国特色日历信息</summary>
 public class HolidayToolService
 {
-    #region 时间工具
+    #region 日期查询工具
 
-    /// <summary>获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳、农历、生肖、天干地支、工作日状态（工作/放假/调休）、最近节气等</summary>
-    [ToolDescription("get_current_time", IsSystem = true)]
-    public String GetCurrentTime()
+    /// <summary>查询指定日期的农历、节气及工作日状态（工作/放假/调休）</summary>
+    /// <param name="date">要查询的日期，格式 yyyy-MM-dd。不传则默认今天</param>
+    [ToolDescription("query_date_info", IsSystem = true)]
+    public Object QueryDateInfo(String? date = null)
     {
-        var now = DateTimeOffset.Now;
-        var tzName = TimeZoneInfo.Local.DisplayName;
+        DateTime dt;
+        if (String.IsNullOrWhiteSpace(date))
+            dt = DateTime.Today;
+        else if (!DateTime.TryParse(date, out dt))
+            return new { error = $"无效的日期格式：{date}，请使用 yyyy-MM-dd" };
+
         var sb = Pool.StringBuilder.Get();
-        sb.AppendLine($"datetime: {now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"date: {now:yyyy-MM-dd}");
-        sb.AppendLine($"time: {now:HH:mm:ss}");
-        sb.AppendLine($"dayOfWeek: {now.DayOfWeek} ({GetChineseDayOfWeek(now.DayOfWeek)})");
-        sb.AppendLine($"weekOfYear: {CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(now.DateTime, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday)}");
-        sb.AppendLine($"timezone: {tzName}");
-        sb.AppendLine($"utcOffset: {now.Offset}");
-        sb.AppendLine($"unixTimestamp: {now.ToUnixTimeSeconds()}");
-        AppendLunarInfo(sb, now.DateTime);
-        AppendWorkdayStatus(sb, now.DateTime);
-        AppendSolarTermInfo(sb, now.DateTime);
+        sb.AppendLine($"date: {dt:yyyy-MM-dd}");
+        sb.AppendLine($"dayOfWeek: {dt.DayOfWeek} ({GetChineseDayOfWeek(dt.DayOfWeek)})");
+        AppendWorkdayStatus(sb, dt);
+        AppendLunarInfo(sb, dt);
+        AppendSolarTermInfo(sb, dt);
         while (sb.Length > 0 && sb[^1] is '\r' or '\n') sb.Length--;
         return sb.Return(true);
     }
