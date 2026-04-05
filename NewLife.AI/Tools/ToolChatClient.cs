@@ -170,18 +170,37 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             foreach (var tc in toolCallCollector)
             {
                 if (tc.Function == null) continue;
-                using var span = Tracer?.NewSpan($"tool:{tc.Function.Name}", tc.Function.Arguments);
+
+                // 通知调用方：工具调用开始
+                yield return new ChatResponse
+                {
+                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
+                };
+
+                // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
+                ToolCallEventInfo resultEvent;
+                var span = Tracer?.NewSpan($"tool:{tc.Function.Name}", tc.Function.Arguments);
                 try
                 {
                     var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
                     workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = toolResult });
-                    if (span != null) span.Value = toolResult?.Length ?? 0;
+                    span?.Value = toolResult?.Length ?? 0;
+                    resultEvent = new ToolCallEventInfo("done", tc.Id, tc.Function.Name, toolResult);
                 }
                 catch (Exception ex)
                 {
                     span?.SetError(ex, null);
-                    throw;
+                    // 将错误作为工具结果反馈给模型，让模型有机会修正，不中断流
+                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = $"Error: {ex.Message}" });
+                    resultEvent = new ToolCallEventInfo("error", tc.Id, tc.Function.Name, ex.Message);
                 }
+                finally
+                {
+                    span?.Dispose();
+                }
+
+                // 通知调用方：工具调用结果
+                yield return new ChatResponse { ToolCallEvents = [resultEvent] };
             }
             // 继续下一轮（下一轮流的 chunk 透传给调用方）
         }

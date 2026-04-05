@@ -103,6 +103,27 @@ public class ChatAIPipeline(
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
 
+            // 处理 ToolChatClient 注入的工具调用事件
+            if (chunk is ChatResponse cr && cr.ToolCallEvents is { Count: > 0 } events)
+            {
+                foreach (var evt in events)
+                {
+                    switch (evt.Type)
+                    {
+                        case "start":
+                            yield return ChatStreamEvent.ToolCallStart(evt.ToolCallId, evt.Name, evt.Value);
+                            break;
+                        case "done":
+                            yield return ChatStreamEvent.ToolCallDone(evt.ToolCallId, evt.Value, true);
+                            break;
+                        case "error":
+                            yield return ChatStreamEvent.ToolCallError(evt.ToolCallId, evt.Value ?? String.Empty);
+                            break;
+                    }
+                }
+                continue;
+            }
+
             var choice = chunk.Messages?.FirstOrDefault();
             if (choice == null) continue;
 

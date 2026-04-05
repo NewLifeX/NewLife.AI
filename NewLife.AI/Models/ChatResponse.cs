@@ -22,6 +22,9 @@ public class ChatResponse : IChatResponse
     /// <summary>消息选择列表</summary>
     public IList<ChatChoice>? Messages { get; set; }
 
+    /// <summary>工具调用事件列表。由 ToolChatClient 在工具执行前后注入，供管道层转换为 SSE 事件</summary>
+    public IList<ToolCallEventInfo>? ToolCallEvents { get; set; }
+
     /// <summary>令牌用量统计</summary>
     public UsageDetails? Usage { get; set; }
     #endregion
@@ -156,3 +159,10 @@ public class UsageDetails
     /// <summary>耗时。本次LLM调用的端到端毫秒数</summary>
     public Int32 ElapsedMs { get; set; }
 }
+
+/// <summary>工具调用事件信息。由 ToolChatClient 在工具执行前后注入到 ChatResponse.ToolCallEvents</summary>
+/// <param name="Type">事件类型。start/done/error</param>
+/// <param name="ToolCallId">工具调用编号</param>
+/// <param name="Name">工具名称</param>
+/// <param name="Value">事件值。start 时为 Arguments，done 时为 Result，error 时为错误信息</param>
+public record ToolCallEventInfo(String Type, String ToolCallId, String Name, String? Value);

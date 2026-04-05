@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients;
 
@@ -24,6 +24,9 @@ public interface IChatResponse
 
     /// <summary>消息选择列表</summary>
     IList<ChatChoice>? Messages { get; set; }
+
+    /// <summary>工具调用事件列表。由 ToolChatClient 在工具执行前后注入，供管道层转换为 SSE 事件</summary>
+    IList<ToolCallEventInfo>? ToolCallEvents { get; set; }
 
     /// <summary>令牌用量统计</summary>
     UsageDetails? Usage { get; set; }

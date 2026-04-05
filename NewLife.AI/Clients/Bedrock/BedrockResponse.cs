@@ -205,8 +205,8 @@ public class BedrockResponse : IChatResponse
         // 设置消息角色
         if (choice.Message == null && (toolCalls != null || contentText != null || reasoning != null))
             choice.Message = new ChatMessage { Role = "assistant" };
-        else if (choice.Message != null)
-            choice.Message.Role = "assistant";
+        else
+            choice.Message?.Role = "assistant";
 
         if (toolCalls != null && toolCalls.Count > 0)
         {
