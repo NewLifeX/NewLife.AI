@@ -64,6 +64,7 @@ public class NativeToolSyncService : IHostedService
         try
         {
             var count = 0;
+            count += SyncType(typeof(HolidayToolService));
             count += SyncType(typeof(BuiltinToolService));
             count += SyncType(typeof(NetworkToolService));
             count += SyncType(typeof(CurrentUserTool));

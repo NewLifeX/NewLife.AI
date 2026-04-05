@@ -43,6 +43,7 @@ public static class ChatAIExtensions
         services.AddSingleton(sp =>
         {
             var registry = new ToolRegistry();
+            registry.AddTools(new HolidayToolService());
             registry.AddTools(new BuiltinToolService());
             registry.AddTools(new NetworkToolService(sp));
             registry.AddTools(new CurrentUserTool());

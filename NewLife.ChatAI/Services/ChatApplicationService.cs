@@ -859,8 +859,10 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                     var prompt = setting.TitlePrompt;
                     var options = GatewayService.BuildOptions(modelConfig);
                     using var titleClient = descriptor.Factory(options);
+                    // 标题生成超时取普通请求超时的 3 倍，避免网络波动误杀
+                    var clientTimeout = (titleClient as AiClientBase)?.Timeout ?? TimeSpan.FromSeconds(30);
                     using var titleCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    titleCts.CancelAfter(TimeSpan.FromSeconds(10));
+                    titleCts.CancelAfter(clientTimeout * 3);
                     var response = await titleClient.GetResponseAsync(
                         [new AiChatMessage { Role = "user", Content = $"{prompt}\n{userMessage}" }],
                         new ChatOptions { Model = modelConfig.Code, MaxTokens = 30 },
