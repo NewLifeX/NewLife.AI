@@ -34,8 +34,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         set => _defaultEndpoint = value;
     }
 
-    /// <summary>HTTP 请求超时时间。默认 30 秒</summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+    /// <summary>HTTP 请求超时时间。默认 120 秒</summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(120);
 
     /// <summary>对话完成路径。为空时子类使用自身默认值；平台注册时可由注册表覆盖（如将 /v1/chat/completions 改为 /chat/completions）</summary>
     public virtual String ChatPath { get; set; } = "";
@@ -89,6 +89,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         Name = GetType().Name.TrimEnd("ChatClient", "Client");
         _options = options ?? throw new ArgumentNullException(nameof(options));
         JsonHost = _host;
+
+        if (options.Timeout.HasValue) Timeout = options.Timeout.Value;
     }
 
     /// <summary>创建 HttpClient 实例。子类可重写此方法自定义 HttpClient 行为</summary>

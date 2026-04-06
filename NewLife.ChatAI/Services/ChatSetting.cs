@@ -156,4 +156,17 @@ public class ChatSetting : Config<ChatSetting>
     public Int32 MaxMessagesPerMinute { get; set; } = 20;
 
     #endregion
+
+    #region 自学习
+    /// <summary>启用自动学习。开启后对话结束时自动提取用户记忆</summary>
+    [Category("自学习")]
+    [Description("启用自动学习。开启后对话结束时自动提取用户记忆")]
+    public Boolean EnableAutoLearning { get; set; }
+
+    /// <summary>学习分析模型。用于记忆提取的模型编码，为空时自动选择轻量模型（mini/flash/lite）</summary>
+    [Category("自学习")]
+    [Description("学习分析模型。用于记忆提取的模型编码，为空时自动选择轻量模型（mini/flash/lite）")]
+    public String LearningModel { get; set; } = "";
+
+    #endregion
 }

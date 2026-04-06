@@ -39,6 +39,9 @@ public class AiClientOptions
     /// <summary>协议覆盖。DashScope 等双协议服务商可通过此字段切换"DashScope"原生协议或"ChatCompletions"兼容协议</summary>
     public String? Protocol { get; set; }
 
+    /// <summary>HTTP 请求超时时间。为空时使用 AiClientBase 默认值（120秒）</summary>
+    public TimeSpan? Timeout { get; set; }
+
     /// <summary>获取实际使用的 API 地址</summary>
     /// <param name="defaultEndpoint">默认地址</param>
     /// <returns></returns>

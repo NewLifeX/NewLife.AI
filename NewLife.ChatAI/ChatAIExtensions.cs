@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.FileProviders;
+using NewLife.AI.Filters;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using NewLife.ChatAI.Entity;
+using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
 using NewLife.Cube.Extensions;
 
@@ -56,6 +58,8 @@ public static class ChatAIExtensions
 
         services.AddSingleton<BackgroundGenerationService>();
         services.AddSingleton<MemoryService>();
+        services.AddSingleton<ConversationAnalysisService>();
+        services.AddSingleton<IChatFilter, LearningFilter>();
         services.AddHostedService<ModelDiscoveryService>();
         services.AddHostedService<NativeToolSyncService>();
         services.AddHttpClient("McpClient");
