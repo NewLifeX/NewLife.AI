@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.AppKey;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>应用密钥。API网关访问凭证，用于外部系统调用模型服务</summary>
-[Menu(90, false, Icon = "fa-table")]
+[Menu(90, false, Icon = "fa-table", LastUpdate = "20260406")]
 [ChatAIArea]
 public class AppKeyController : ChatEntityController<AppKey>
 {

@@ -21,7 +21,7 @@ public class UserSettingController : ChatEntityController<UserSetting>
 
         {
             var df = ListFields.GetField("UserName") as ListField;
-            df.Url = "/StarChat/UserSetting?userId={UserId}";
+            df.Url = "/ChatAI/UserSetting?userId={UserId}";
             df.Target = "_blank";
         }
         //{

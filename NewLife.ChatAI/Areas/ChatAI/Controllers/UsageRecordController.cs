@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.UsageRecord;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计</summary>
-[Menu(80, false, Icon = "fa-table")]
+[Menu(80, false, Icon = "fa-table", LastUpdate = "20260406")]
 [ChatAIArea]
 public class UsageRecordController : ChatEntityController<UsageRecord>
 {
@@ -20,7 +20,7 @@ public class UsageRecordController : ChatEntityController<UsageRecord>
     {
         //LogOnChange = true;
 
-        //ListFields.RemoveField("Id", "Creator");
+        ListFields.RemoveField("Id", "MessageId", "ModelId");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{
