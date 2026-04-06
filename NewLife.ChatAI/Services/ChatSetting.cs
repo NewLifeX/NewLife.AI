@@ -168,5 +168,10 @@ public class ChatSetting : Config<ChatSetting>
     [Description("学习分析模型。用于记忆提取的模型编码，为空时自动选择轻量模型（mini/flash/lite）")]
     public String LearningModel { get; set; } = "";
 
+    /// <summary>学习最低字数。用户消息总字数低于该值且仅 1 轮时跳过记忆提取</summary>
+    [Category("自学习")]
+    [Description("学习最低字数。用户消息总字数低于该值且仅 1 轮时跳过记忆提取")]
+    public Int32 MinLearningContentLength { get; set; } = 50;
+
     #endregion
 }

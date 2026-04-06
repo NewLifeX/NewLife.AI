@@ -37,9 +37,6 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         {"memories": [{"category": "preference", "key": "favorite_language", "value": "C#", "confidence": 90}]}
         """;
 
-    /// <summary>用户消息最低总字数（低于此值且仅 1 轮时跳过提取）</summary>
-    private const Int32 MinContentLength = 50;
-
     #region 分析
     /// <summary>对话分析入口。提取记忆并通过日志记录结果</summary>
     /// <param name="userId">用户ID</param>
@@ -56,7 +53,8 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         String triggerReason = "Chat",
         CancellationToken cancellationToken = default)
     {
-        // 智能触发条件：用户消息总字数 < 50 且轮数 < 2 时跳过
+        // 智能触发条件：用户消息总字数低于配置阈值且轮数 < 2 时跳过
+        var minContentLength = ChatSetting.Current.MinLearningContentLength;
         var userMessages = messages.Where(m => m.Role == "user").ToList();
         var totalChars = 0;
         foreach (var msg in userMessages)
@@ -64,7 +62,7 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
             totalChars += (msg.Content as String)?.Length ?? 0;
         }
 
-        if (totalChars < MinContentLength && userMessages.Count < 2)
+        if (totalChars < minContentLength && userMessages.Count < 2)
         {
             log?.Debug("用户 {0} 消息不足（{1}轮/{2}字），跳过记忆提取", userId, userMessages.Count, totalChars);
             return;
