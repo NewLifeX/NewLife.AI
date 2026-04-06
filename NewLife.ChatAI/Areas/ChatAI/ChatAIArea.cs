@@ -25,9 +25,15 @@ public abstract class ChatEntityController<T> : EntityController<T> where T : En
         base.OnActionExecuting(filterContext);
 
         var conversationId = GetRequest("conversationId").ToLong(-1);
+        var userId = GetRequest("userId").ToInt(-1);
         if (conversationId > 0)
         {
             PageSetting.NavView = "_Conversation_Nav";
+            PageSetting.EnableNavbar = false;
+        }
+        else if (userId > 0)
+        {
+            PageSetting.NavView = "_User_Nav";
             PageSetting.EnableNavbar = false;
         }
     }
@@ -39,7 +45,11 @@ public abstract class ChatEntityController<T> : EntityController<T> where T : En
         if (kind == ViewKinds.List)
         {
             var conversationId = GetRequest("conversationId").ToLong(-1);
-            if (conversationId > 0) fields.RemoveField("ConversationId", "ConversationTitle");
+            var userId = GetRequest("userId").ToInt(-1);
+            if (conversationId > 0)
+                fields.RemoveField("ConversationId", "ConversationTitle");
+            else if (userId > 0)
+                fields.RemoveField("UserId", "UserName");
         }
 
         return fields;

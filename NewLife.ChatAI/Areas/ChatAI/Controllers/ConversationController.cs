@@ -10,7 +10,7 @@ using XCode.Membership;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>会话。一次完整的多轮对话上下文</summary>
-[Menu(160, true, Icon = "fa-table")]
+[Menu(160, false, Icon = "fa-table")]
 [ChatAIArea]
 public class ConversationController : ChatEntityController<Conversation>
 {

@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.UserMemory;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据</summary>
-[Menu(40, true, Icon = "fa-table")]
+[Menu(40, false, Icon = "fa-table")]
 [ChatAIArea]
 public class UserMemoryController : ChatEntityController<UserMemory>
 {

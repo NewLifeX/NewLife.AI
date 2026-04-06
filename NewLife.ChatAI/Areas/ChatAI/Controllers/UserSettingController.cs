@@ -1,6 +1,7 @@
 ﻿using NewLife.AI.Models;
 using NewLife.ChatAI.Entity;
 using NewLife.Cube;
+using NewLife.Cube.ViewModels;
 using NewLife.Web;
 using XCode.Membership;
 
@@ -9,7 +10,7 @@ namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 /// <summary>用户设置。用户的个性化配置</summary>
 [Menu(100, true, Icon = "fa-table")]
 [ChatAIArea]
-public class UserSettingController : EntityController<UserSetting>
+public class UserSettingController : ChatEntityController<UserSetting>
 {
     static UserSettingController()
     {
@@ -18,11 +19,11 @@ public class UserSettingController : EntityController<UserSetting>
         //ListFields.RemoveField("Id", "Creator");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
-        //{
-        //    var df = ListFields.GetField("Code") as ListField;
-        //    df.Url = "?code={Code}";
-        //    df.Target = "_blank";
-        //}
+        {
+            var df = ListFields.GetField("UserName") as ListField;
+            df.Url = "/StarChat/UserSetting?userId={UserId}";
+            df.Target = "_blank";
+        }
         //{
         //    var df = ListFields.AddListField("devices", null, "Onlines");
         //    df.DisplayName = "查看设备";

@@ -300,6 +300,14 @@ public partial class UserSetting
     #endregion
 
     #region 关联映射
+    /// <summary>用户</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
+
+    /// <summary>用户</summary>
+    [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
+    public String? UserName => User?.ToString();
+
     #endregion
 
     #region 扩展查询

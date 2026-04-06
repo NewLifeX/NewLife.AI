@@ -105,7 +105,7 @@
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="ConversationId" DataType="Int64" Description="会话。被反馈的会话" />
         <Column Name="MessageId" DataType="Int64" Description="消息。被反馈的消息" />
-        <Column Name="UserId" DataType="Int32" Description="用户。反馈用户" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。反馈用户" />
         <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" Type="NewLife.AI.Models.FeedbackType" />
         <Column Name="Reason" DataType="String" Length="500" Description="原因。点踩原因" />
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许用于模型学习训练" />
@@ -147,7 +147,7 @@
     <Table Name="UsageRecord" Description="用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计" InsertOnly="True" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
         <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
         <Column Name="ConversationId" DataType="Int64" Description="会话" />
         <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
@@ -228,7 +228,7 @@
     <Table Name="AppKey" Description="应用密钥。API网关访问凭证，用于外部系统调用模型服务" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="UserId" DataType="Int32" Description="用户。密钥所属用户" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。密钥所属用户" />
         <Column Name="Name" DataType="String" Master="True" Length="200" Description="名称。用户自定义标识，如业务系统A" />
         <Column Name="Secret" DataType="String" ShowIn="Auto,-List,-Search" Length="200" Description="密钥。sk-前缀的随机字符串，创建时仅展示一次" />
         <Column Name="Models" DataType="String" Length="200" Description="可用模型。逗号分隔的模型名称或编码，为空时不限制" />
@@ -253,7 +253,7 @@
     <Table Name="UserSetting" Description="用户设置。用户的个性化配置" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="UserId" DataType="Int32" Description="用户。设置所属用户" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。设置所属用户" />
         <Column Name="Language" DataType="String" Description="语言。zh-CN/zh-TW/en" />
         <Column Name="Theme" DataType="String" Description="主题。light/dark/system" />
         <Column Name="FontSize" DataType="Int32" Description="字体大小。14~20，默认16" />
@@ -388,7 +388,7 @@
     <Table Name="UserMemory" Description="用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="UserId" DataType="Int32" Description="用户" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
         <Column Name="ConversationId" DataType="Int64" Description="来源会话。提取该记忆的会话编号" />
         <Column Name="Category" DataType="String" Description="分类。preference=偏好/habit=习惯/interest=兴趣/background=背景" />
         <Column Name="Key" DataType="String" Master="True" Length="200" Description="主题。记忆的关键词/主题，如编程语言、工作行业" />

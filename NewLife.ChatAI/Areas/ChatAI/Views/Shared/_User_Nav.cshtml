@@ -1,0 +1,49 @@
+@using NewLife
+@using NewLife.Web
+@using XCode.Membership
+
+@{
+    var path = Context.Request.Path + "";
+    var userId = Context.Request.Query["userId"].ToInt(-1);
+    var user = ManageProvider.Provider?.FindByID(userId);
+    var userName = user?.Name ?? $"用户#{userId}";
+
+    var dic = new Dictionary<String, Object>
+    {
+        [userName] = $"/ChatAI/UserSetting?userId={userId}",
+        ["会话列表"] = $"/ChatAI/Conversation?userId={userId}",
+        ["应用密钥"] = $"/ChatAI/AppKey?userId={userId}",
+        ["用量记录"] = $"/ChatAI/UsageRecord?userId={userId}",
+        ["消息反馈"] = $"/ChatAI/MessageFeedback?userId={userId}",
+        ["用户记忆"] = $"/ChatAI/UserMemory?userId={userId}",
+    };
+}
+<div class="navbar-collapse text-center">
+    <ul class="nav nav-pills" style="margin-bottom: 10px; display: inline-block;float: none;">
+        @foreach (var item in dic)
+        {
+            if (item.Value is IDictionary<String, Object> childs)
+            {
+                <li role="presentation" class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">@item.Key <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        @foreach (var elm in childs)
+                        {
+                            var url = elm.Value + "";
+                            var p = url.IndexOf('?');
+                            var v = p > 0 ? url.Substring(0, p) : url;
+                            <li role="presentation" class="@(path.EqualIgnoreCase(v) ? "active" : "")"><a href="@url">@elm.Key</a></li>
+                        }
+                    </ul>
+                </li>
+            }
+            else
+            {
+                var url = item.Value + "";
+                var p = url.IndexOf('?');
+                var v = p > 0 ? url.Substring(0, p) : url;
+                <li role="presentation" class="@(path.EqualIgnoreCase(v) ? "active" : "")"><a href="@url">@item.Key</a></li>
+            }
+        }
+    </ul>
+</div>
