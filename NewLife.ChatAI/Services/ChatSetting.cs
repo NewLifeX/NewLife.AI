@@ -34,11 +34,6 @@ public class ChatSetting : Config<ChatSetting>
     [Category("基本配置")]
     [Description("自动生成标题。首条消息后是否自动生成会话标题")]
     public Boolean AutoGenerateTitle { get; set; } = true;
-
-    /// <summary>标题生成提示词模板</summary>
-    [Category("基本配置")]
-    [Description("标题生成提示词模板")]
-    public String TitlePrompt { get; set; } = "请用10个字以内为以下对话生成一个简短标题，只输出标题文字，不要加任何标点和引号：";
     #endregion
 
     #region 对话默认

@@ -856,7 +856,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             {
                 try
                 {
-                    var prompt = setting.TitlePrompt;
+                    var prompt = "请用16个字以内为以下对话生成一个简短标题，只输出标题文字，不要加任何标点和引号：";
                     var options = GatewayService.BuildOptions(modelConfig);
                     using var titleClient = descriptor.Factory(options);
                     // 标题生成超时取普通请求超时的 3 倍，避免网络波动误杀
@@ -873,7 +873,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                     {
                         // 清理标题：去除引号和多余空白
                         title = title.Trim().Trim('"', '"', '"', '\'', '「', '」');
-                        if (title.Length > 30) title = title.Substring(0, 30);
+                        if (title.Length > 30) title = title[..30];
                         span?.AppendTag(title!);
 
                         conversation.Title = title;
@@ -889,8 +889,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             }
         }
 
-        // 回退：截取前30个字符
-        var fallbackTitle = userMessage.Length > 30 ? userMessage[..30] : userMessage;
+        // 回退：截取前16个字符
+        var fallbackTitle = userMessage.Length > 16 ? userMessage[..16] : userMessage;
         fallbackTitle = fallbackTitle.Replace("\n", " ").Replace("\r", "").Trim();
 
         if (!String.IsNullOrWhiteSpace(fallbackTitle) && fallbackTitle != conversation.Title)
