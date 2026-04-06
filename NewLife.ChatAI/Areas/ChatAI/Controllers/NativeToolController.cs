@@ -18,9 +18,9 @@ public class NativeToolController : EntityController<NativeTool>
 {
     static NativeToolController()
     {
-        //LogOnChange = true;
+        LogOnChange = true;
 
-        //ListFields.RemoveField("Id", "Creator");
+        ListFields.RemoveField("ClassName");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{

@@ -18,7 +18,7 @@ public class ConversationController : ChatEntityController<Conversation>
     {
         //LogOnChange = true;
 
-        ListFields.RemoveField("UserId", "SkillId");
+        ListFields.RemoveField("Id", "UserId", "ModelId", "SkillId");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{

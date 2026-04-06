@@ -889,8 +889,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             }
         }
 
-        // 回退：截取前10个字符
-        var fallbackTitle = userMessage.Length > 10 ? userMessage.Substring(0, 10) : userMessage;
+        // 回退：截取前30个字符
+        var fallbackTitle = userMessage.Length > 30 ? userMessage[..30] : userMessage;
         fallbackTitle = fallbackTitle.Replace("\n", " ").Replace("\r", "").Trim();
 
         if (!String.IsNullOrWhiteSpace(fallbackTitle) && fallbackTitle != conversation.Title)
