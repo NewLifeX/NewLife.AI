@@ -331,6 +331,7 @@ dotnet NewLife.ChatAI.dll
 
 ```bash
 git clone https://github.com/NewLifeX/NewLife.AI.git
+cd NewLife.AI
 cd Web
 pnpm install
 pnpm build
