@@ -217,21 +217,21 @@ public partial class ModelConfig : Entity<ModelConfig>
         return false;
     }
 
-    /// <summary>获取所有启用的模型配置，按排序升序</summary>
+    /// <summary>获取所有启用的模型配置，按排序升序。模型自身已启用且关联提供商未禁用时才认为可用</summary>
     /// <returns>模型配置列表</returns>
     public static IList<ModelConfig> FindAllEnabled()
     {
-        return FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
+        return FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderBy(e => e.Sort).ToList();
     }
 
-    /// <summary>根据编码查找启用的模型配置</summary>
+    /// <summary>根据编码查找启用的模型配置。模型自身已启用且关联提供商未禁用时才认为可用</summary>
     /// <param name="code">模型编码</param>
     /// <returns>模型配置，未找到返回null</returns>
     public static ModelConfig FindByCode(String code)
     {
         if (code.IsNullOrEmpty()) return null;
 
-        return FindAllWithCache().FirstOrDefault(e => e.Enable && e.Code.EqualIgnoreCase(code));
+        return FindAllWithCache().FirstOrDefault(e => e.Enable && e.Code.EqualIgnoreCase(code) && e.ProviderInfo?.Enable == true);
     }
 
     /// <summary>获取用户可用的模型列表</summary>
@@ -241,7 +241,7 @@ public partial class ModelConfig : Entity<ModelConfig>
     public static IList<ModelConfig> FindAllByPermission(Int32[] roleIds, Int32 departmentId)
     {
         //var list = FindAll(_.Enable == true, _.Sort.Asc(), null, 0, 0);
-        var list = FindAllWithCache().Where(e => e.Enable).OrderBy(e => e.Sort).ToList();
+        var list = FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderBy(e => e.Sort).ToList();
         if (list.Count == 0) return list;
 
         // 过滤有权限的模型，同时检查提供商级别权限
