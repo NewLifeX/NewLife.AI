@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.Cube.Entity;
 using NewLife.ChatAI.Models;
+using NewLife.ChatAI.Services;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -13,10 +14,26 @@ public class AttachmentsController : ChatApiControllerBase
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     [HttpPost]
-    [RequestSizeLimit(20 * 1024 * 1024)]
+    [RequestSizeLimit(500 * 1024 * 1024)]
     public async Task<ActionResult<UploadAttachmentResult>> UploadAsync(IFormFile file, CancellationToken cancellationToken)
     {
         if (file == null || file.Length <= 0) return BadRequest("无有效文件");
+
+        var setting = ChatSetting.Current;
+
+        // 文件大小限制
+        var maxBytes = setting.MaxAttachmentSize * 1024L * 1024L;
+        if (file.Length > maxBytes)
+            return BadRequest($"文件大小超出限制，最大允许 {setting.MaxAttachmentSize}MB");
+
+        // 文件类型限制
+        if (!setting.AllowedExtensions.IsNullOrEmpty())
+        {
+            var ext = Path.GetExtension(file.FileName);
+            var allowed = setting.AllowedExtensions.Split(',');
+            if (!allowed.Any(e => e.Trim().EqualIgnoreCase(ext)))
+                return BadRequest($"不支持的文件类型 {ext}，允许的类型：{setting.AllowedExtensions}");
+        }
 
         var att = new Attachment
         {
