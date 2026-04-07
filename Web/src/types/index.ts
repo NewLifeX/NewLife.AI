@@ -48,6 +48,7 @@ export interface ModelInfo {
   id: number
   code: string
   name: string
+  provider?: string
   supportThinking?: boolean
   supportVision?: boolean
   supportImageGeneration?: boolean

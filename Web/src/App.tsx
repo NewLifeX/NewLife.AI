@@ -163,6 +163,7 @@ function ChatApp() {
           <ModelSelector
             models={models}
             currentModel={currentModel}
+            defaultModelId={settings.defaultModel || undefined}
             onModelChange={(modelId) => {
               if (activeConversationId != null) {
                 switchModel(modelId)

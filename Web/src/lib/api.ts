@@ -385,6 +385,7 @@ interface ModelInfoDto {
   id: number
   code: string
   name: string
+  provider?: string
   supportThinking: boolean
   supportVision: boolean
   supportImageGeneration: boolean
@@ -397,6 +398,7 @@ export async function fetchModels(): Promise<ModelInfo[]> {
     id: d.id,
     code: d.code,
     name: d.name,
+    provider: d.provider || undefined,
     supportThinking: d.supportThinking,
     supportVision: d.supportVision,
     supportImageGeneration: d.supportImageGeneration,
