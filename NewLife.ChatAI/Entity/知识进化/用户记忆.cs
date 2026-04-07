@@ -50,11 +50,11 @@ public partial class UserMemory
     public Int64 ConversationId { get => _ConversationId; set { if (OnPropertyChanging("ConversationId", value)) { _ConversationId = value; OnPropertyChanged("ConversationId"); } } }
 
     private String? _Category;
-    /// <summary>分类。preference=偏好/habit=习惯/interest=兴趣/background=背景</summary>
+    /// <summary>分类。偏好/习惯/兴趣/背景</summary>
     [DisplayName("分类")]
-    [Description("分类。preference=偏好/habit=习惯/interest=兴趣/background=背景")]
+    [Description("分类。偏好/习惯/兴趣/背景")]
     [DataObjectField(false, false, true, 50)]
-    [BindColumn("Category", "分类。preference=偏好/habit=习惯/interest=兴趣/background=背景", "")]
+    [BindColumn("Category", "分类。偏好/习惯/兴趣/背景", "")]
     public String? Category { get => _Category; set { if (OnPropertyChanging("Category", value)) { _Category = value; OnPropertyChanged("Category"); } } }
 
     private String? _Key;
@@ -291,7 +291,7 @@ public partial class UserMemory
     /// <summary>高级查询</summary>
     /// <param name="userId">用户</param>
     /// <param name="conversationId">来源会话。提取该记忆的会话编号</param>
-    /// <param name="category">分类。preference=偏好/habit=习惯/interest=兴趣/background=背景</param>
+    /// <param name="category">分类。偏好/习惯/兴趣/背景</param>
     /// <param name="isActive">有效。是否仍然有效，可被覆盖或废弃</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
@@ -338,7 +338,7 @@ public partial class UserMemory
         /// <summary>来源会话。提取该记忆的会话编号</summary>
         public static readonly Field ConversationId = FindByName("ConversationId");
 
-        /// <summary>分类。preference=偏好/habit=习惯/interest=兴趣/background=背景</summary>
+        /// <summary>分类。偏好/习惯/兴趣/背景</summary>
         public static readonly Field Category = FindByName("Category");
 
         /// <summary>主题。记忆的关键词/主题，如编程语言、工作行业</summary>
@@ -395,7 +395,7 @@ public partial class UserMemory
         /// <summary>来源会话。提取该记忆的会话编号</summary>
         public const String ConversationId = "ConversationId";
 
-        /// <summary>分类。preference=偏好/habit=习惯/interest=兴趣/background=背景</summary>
+        /// <summary>分类。偏好/习惯/兴趣/背景</summary>
         public const String Category = "Category";
 
         /// <summary>主题。记忆的关键词/主题，如编程语言、工作行业</summary>

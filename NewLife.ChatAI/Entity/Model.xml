@@ -390,7 +390,7 @@
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
         <Column Name="ConversationId" DataType="Int64" Description="来源会话。提取该记忆的会话编号" />
-        <Column Name="Category" DataType="String" Description="分类。preference=偏好/habit=习惯/interest=兴趣/background=背景" />
+        <Column Name="Category" DataType="String" Description="分类。偏好/习惯/兴趣/背景" />
         <Column Name="Key" DataType="String" Master="True" Length="200" Description="主题。记忆的关键词/主题，如编程语言、工作行业" />
         <Column Name="Value" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。提取到的具体信息" />
         <Column Name="Confidence" DataType="Int32" Description="置信度。0~100，越高越可信" />

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using NewLife.Log;
 using NewLife.Serialization;
 using NewLife.ChatAI.Entity;
@@ -29,12 +29,12 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         你是一个用户记忆提取助手。分析以下对话内容，提取用户的个人偏好、习惯、兴趣和背景信息。
         
         请以 JSON 格式返回，其中：
-        - memories：记忆条目列表，每条包含 category（preference/habit/interest/background）、key（简短标识）、value（具体内容）、confidence（0-100置信度）
+        - memories：记忆条目列表，每条包含 category（偏好/习惯/兴趣/背景）、key（简短标识）、value（具体内容）、confidence（0-100置信度）
         
         只提取能明确从对话中推断的信息，无法确定的不要猜测。如果没有可提取的信息，返回空列表。
         
         返回格式：
-        {"memories": [{"category": "preference", "key": "favorite_language", "value": "C#", "confidence": 90}]}
+        {"memories": [{"category": "偏好", "key": "最喜欢的语言", "value": "C#", "confidence": 90}]}
         """;
 
     #region 分析

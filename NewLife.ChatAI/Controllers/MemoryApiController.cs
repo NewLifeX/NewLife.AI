@@ -11,7 +11,7 @@ public class MemoryApiController(MemoryService memoryService) : ChatApiControlle
 {
     #region 记忆接口
     /// <summary>获取当前用户的有效记忆列表</summary>
-    /// <param name="category">分类过滤（可选）：preference/habit/interest/background</param>
+    /// <param name="category">分类过滤（可选）：偏好/习惯/兴趣/背景</param>
     /// <param name="page">页码（从1开始）</param>
     /// <param name="pageSize">每页条数</param>
     /// <returns></returns>
