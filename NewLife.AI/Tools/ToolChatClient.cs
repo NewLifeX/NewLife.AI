@@ -34,6 +34,9 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 
     /// <summary>工具结果最大字符数。超过此长度时自动截断并追加省略提示，0表示不限制</summary>
     public Int32 MaxResultLength { get; set; }
+
+    /// <summary>工具审批提供者。设置后在每次工具执行前请求审批，未设置时直接执行</summary>
+    public IToolApprovalProvider? ApprovalProvider { get; set; }
     #endregion
 
     #region 构造
@@ -220,6 +223,14 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     {
         if (!toolMap.TryGetValue(toolName, out var provider))
             throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
+
+        // 审批拦截：设置了 ApprovalProvider 时在执行前请求用户确认
+        if (ApprovalProvider != null)
+        {
+            var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+            if (!approval.Approved)
+                return $"工具调用被用户拒绝: {toolName}";
+        }
 
         var result = await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
 
