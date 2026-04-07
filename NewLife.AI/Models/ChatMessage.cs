@@ -8,12 +8,15 @@ public class ChatMessage
 {
     #region 属性
     /// <summary>角色。system/user/assistant/tool</summary>
+    [DataMember(Name = "role")]
     public String Role { get; set; } = null!;
 
     /// <summary>内容。文本内容或多模态内容数组</summary>
+    [DataMember(Name = "content")]
     public Object? Content { get; set; }
 
     /// <summary>名称。函数调用时的函数名</summary>
+    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>工具调用列表。assistant 角色发起的工具调用</summary>

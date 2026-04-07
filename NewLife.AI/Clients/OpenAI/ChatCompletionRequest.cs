@@ -9,12 +9,15 @@ public class ChatCompletionRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
+    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>消息列表</summary>
+    [DataMember(Name = "messages")]
     public IList<ChatMessage> Messages { get; set; } = [];
 
     /// <summary>温度。0~2，越高越随机，默认1</summary>
+    [DataMember(Name = "temperature")]
     public Double? Temperature { get; set; }
 
     /// <summary>核采样。0~1，与Temperature二选一</summary>
@@ -30,6 +33,7 @@ public class ChatCompletionRequest : IChatRequest
     public Int32? MaxTokens { get; set; }
 
     /// <summary>是否流式输出</summary>
+    [DataMember(Name = "stream")]
     public Boolean Stream { get; set; }
 
     /// <summary>流式选项。Stream=true 时附带，请求包含用量统计</summary>
@@ -37,6 +41,7 @@ public class ChatCompletionRequest : IChatRequest
     public IDictionary<String, Object>? StreamOptions { get; set; }
 
     /// <summary>停止词列表</summary>
+    [DataMember(Name = "stop")]
     public IList<String>? Stop { get; set; }
 
     /// <summary>存在惩罚。-2~2</summary>
@@ -48,6 +53,7 @@ public class ChatCompletionRequest : IChatRequest
     public Double? FrequencyPenalty { get; set; }
 
     /// <summary>可用工具列表。用于函数调用</summary>
+    [DataMember(Name = "tools")]
     public IList<ChatTool>? Tools { get; set; }
 
     /// <summary>工具选择策略。auto/none/required 或指定工具名</summary>
@@ -55,6 +61,7 @@ public class ChatCompletionRequest : IChatRequest
     public Object? ToolChoice { get; set; }
 
     /// <summary>用户标识。用于追踪和限流</summary>
+    [DataMember(Name = "user")]
     public String? User { get; set; }
 
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>

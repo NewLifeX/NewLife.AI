@@ -6,15 +6,19 @@ namespace NewLife.AI.Models;
 public class ChatTool
 {
     /// <summary>类型。function / mcp / web_search / code_interpreter</summary>
+    [DataMember(Name = "type")]
     public String Type { get; set; } = "function";
 
     /// <summary>函数定义。Type=function 时填写</summary>
+    [DataMember(Name = "function")]
     public FunctionDefinition? Function { get; set; }
 
     /// <summary>MCP 工具配置。Type=mcp 时填写</summary>
+    [DataMember(Name = "mcp")]
     public McpToolConfig? Mcp { get; set; }
 
     /// <summary>通用扩展配置。web_search 等内置工具类型的具体参数字典。DashScope 专用</summary>
+    [DataMember(Name = "config")]
     public Object? Config { get; set; }
 }
 
@@ -22,12 +26,15 @@ public class ChatTool
 public class FunctionDefinition
 {
     /// <summary>名称</summary>
+    [DataMember(Name = "name")]
     public String Name { get; set; } = null!;
 
     /// <summary>描述</summary>
+    [DataMember(Name = "description")]
     public String? Description { get; set; }
 
     /// <summary>参数。JSON Schema 格式</summary>
+    [DataMember(Name = "parameters")]
     public Object? Parameters { get; set; }
 }
 
