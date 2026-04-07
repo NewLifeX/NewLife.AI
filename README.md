@@ -327,6 +327,18 @@ dotnet NewLife.ChatAI.dll
 ./NewLife.ChatAI
 ```
 
+#### 从源码运行
+
+```bash
+git clone https://github.com/NewLifeX/NewLife.AI.git
+cd Web
+pnpm install
+pnpm build
+cd ../NewLife.ChatAI
+dotnet build
+dotnet run --framework net8.0
+```
+
 应用启动后访问 `http://localhost:5000`。首次启动通过魔方管理后台（`/Admin`）配置服务商与模型。
 
 ### API 网关端点
