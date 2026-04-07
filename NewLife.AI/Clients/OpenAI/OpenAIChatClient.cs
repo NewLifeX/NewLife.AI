@@ -195,6 +195,10 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
     protected override String BuildUrl(IChatRequest request) => _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + ChatPath;
 
+    ///// <summary>构建请求体。返回符合 OpenAI 格式的字典，仅包含非空字段，避免部分模型拒绝 null 值</summary>
+    ///// <param name="request">请求对象</param>
+    ///// <returns>过滤 null 后的字典，由 PostAsync 序列化为 JSON</returns>
+    //protected override Object BuildRequest(IChatRequest request) => ChatCompletionRequest.BuildBody(request);
     /// <summary>构建请求体。返回符合 OpenAI 格式的协议请求对象</summary>
     /// <param name="request">请求对象</param>
     /// <returns>ChatCompletionRequest 实例，由 PostAsync 调用 ToJson 序列化</returns>

@@ -1,6 +1,9 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
@@ -65,6 +68,69 @@ public class OpenAiChatClientTests
         Assert.Equal(12, response.Usage.InputTokens);
         Assert.Equal(65, response.Usage.OutputTokens);
         Assert.Equal(77, response.Usage.TotalTokens);
+    }
+
+    #endregion
+
+    #region BuildBody 序列化验证
+
+    [Fact]
+    [DisplayName("BuildRequest_非流式请求_生产路径不含stream_options")]
+    public void BuildRequest_NonStreamRequest_NoStreamOptionsField()
+    {
+        var request = new ChatRequest
+        {
+            Model = "qwen-max",
+            Messages = [new ChatMessage { Role = "user", Content = "hi" }],
+        };
+        // Stream 默认为 false，序列化后不应写入 stream 和 stream_options
+        var body = ChatCompletionRequest.FromChatRequest(request);
+
+        var options = new AiClientOptions();
+        var client = new OpenAIChatClient(options);
+
+        // 与生产代码 AiClientBase.PostAsync 完全一致：传入 JsonHost.Options
+        //var json = client.JsonHost.Write(body, client.JsonHost.Options);
+        var json = client.JsonHost.Write(body, false, false, false);
+        var dic = JsonParser.Decode(json);
+
+        Assert.False(dic.ContainsKey("stream_options"), $"非流式请求不应包含 stream_options, json={json}");
+        Assert.False(dic.ContainsKey("stream"), $"非流式请求不应包含 stream, json={json}");
+    }
+
+    [Fact]
+    [DisplayName("BuildBody_非流式请求_不含stream_options字段")]
+    public void BuildBody_NonStreamRequest_NoStreamOptionsField()
+    {
+        var request = new ChatRequest
+        {
+            Model = "qwen-max",
+            Messages = [new ChatMessage { Role = "user", Content = "hi" }],
+        };
+        // Stream 默认为 false，BuildBody 不应写入 stream 和 stream_options
+        var body = ChatCompletionRequest.BuildBody(request);
+
+        Assert.False(body.ContainsKey("stream_options"), "非流式请求不应包含 stream_options");
+        Assert.False(body.ContainsKey("stream"), "非流式请求不应包含 stream");
+    }
+
+    [Fact]
+    [DisplayName("BuildBody_流式请求_包含stream和stream_options字段")]
+    public void BuildBody_StreamRequest_HasStreamOptionsField()
+    {
+        var request = new ChatRequest
+        {
+            Model = "qwen-plus",
+            Messages = [new ChatMessage { Role = "user", Content = "hi" }],
+            Stream = true,
+        };
+        var body = ChatCompletionRequest.BuildBody(request);
+
+        Assert.True(body.ContainsKey("stream"), "流式请求应包含 stream 字段");
+        Assert.True(body.ContainsKey("stream_options"), "流式请求应包含 stream_options");
+        var streamOptions = body["stream_options"] as IDictionary<String, Object>;
+        Assert.NotNull(streamOptions);
+        Assert.True(streamOptions.ContainsKey("include_usage"));
     }
 
     #endregion

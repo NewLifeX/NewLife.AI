@@ -259,7 +259,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串</returns>
     protected async Task<String> PostAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -281,7 +281,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串，服务不可用时返回 null</returns>
     protected async Task<String?> TryPostAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -301,7 +301,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
     protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -327,7 +327,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字节数组</returns>
     protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),

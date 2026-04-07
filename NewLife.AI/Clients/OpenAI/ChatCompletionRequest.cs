@@ -150,6 +150,90 @@ public class ChatCompletionRequest : IChatRequest
         return result;
     }
 
+    /// <summary>构建 OpenAI 格式的请求体字典。仅包含非空字段，避免部分模型（如 qwen-max）拒绝 null 值</summary>
+    /// <param name="request">统一请求接口</param>
+    /// <returns>可直接序列化为 JSON 的字典，不含 null 条目</returns>
+    public static IDictionary<String, Object> BuildBody(IChatRequest request)
+    {
+        var dic = new Dictionary<String, Object>();
+
+        if (!request.Model.IsNullOrEmpty()) dic["model"] = request.Model!;
+
+        // 构建消息列表
+        var messages = new List<Object>(request.Messages.Count);
+        foreach (var msg in request.Messages)
+        {
+            var m = new Dictionary<String, Object> { ["role"] = msg.Role };
+
+            // 多模态内容（Contents）优先于原始 Content 字段
+            if (msg.Contents != null && msg.Contents.Count > 0)
+                m["content"] = BuildContent(msg.Contents);
+            else if (msg.Content != null)
+                m["content"] = msg.Content;
+
+            if (!msg.Name.IsNullOrEmpty()) m["name"] = msg.Name!;
+            if (!msg.ToolCallId.IsNullOrEmpty()) m["tool_call_id"] = msg.ToolCallId!;
+
+            if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
+            {
+                var toolCalls = new List<Object>(msg.ToolCalls.Count);
+                foreach (var tc in msg.ToolCalls)
+                {
+                    var tcDic = new Dictionary<String, Object> { ["id"] = tc.Id!, ["type"] = tc.Type! };
+                    if (tc.Function != null)
+                    {
+                        var args = String.IsNullOrEmpty(tc.Function.Arguments) ? "{}" : tc.Function.Arguments;
+                        tcDic["function"] = new Dictionary<String, Object?> { ["name"] = tc.Function.Name, ["arguments"] = args };
+                    }
+                    toolCalls.Add(tcDic);
+                }
+                m["tool_calls"] = toolCalls;
+            }
+            messages.Add(m);
+        }
+        dic["messages"] = messages;
+
+        // stream 与 stream_options 仅在 stream=true 时写入；非流式请求不含这两个字段，避免 qwen-max 等模型的严格校验
+        if (request.Stream)
+        {
+            dic["stream"] = true;
+            dic["stream_options"] = new Dictionary<String, Object> { ["include_usage"] = true };
+        }
+
+        if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
+        if (request.TopP != null) dic["top_p"] = request.TopP.Value;
+        if (request.TopK != null) dic["top_k"] = request.TopK.Value;
+        if (request.MaxTokens != null) dic["max_tokens"] = request.MaxTokens.Value;
+        if (request.Stop != null && request.Stop.Count > 0) dic["stop"] = request.Stop;
+        if (request.PresencePenalty != null) dic["presence_penalty"] = request.PresencePenalty.Value;
+        if (request.FrequencyPenalty != null) dic["frequency_penalty"] = request.FrequencyPenalty.Value;
+        if (request.User != null) dic["user"] = request.User;
+
+        if (request.Tools != null && request.Tools.Count > 0)
+        {
+            var tools = new List<Object>(request.Tools.Count);
+            foreach (var tool in request.Tools)
+            {
+                var t = new Dictionary<String, Object> { ["type"] = tool.Type };
+                if (tool.Function != null)
+                {
+                    var fn = new Dictionary<String, Object?> { ["name"] = tool.Function.Name };
+                    if (tool.Function.Description != null) fn["description"] = tool.Function.Description;
+                    if (tool.Function.Parameters != null) fn["parameters"] = tool.Function.Parameters;
+                    t["function"] = fn;
+                }
+                tools.Add(t);
+            }
+            dic["tools"] = tools;
+        }
+        if (request.ToolChoice != null) dic["tool_choice"] = request.ToolChoice;
+        if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
+        if (request.ResponseFormat != null) dic["response_format"] = request.ResponseFormat;
+        if (request.ParallelToolCalls != null) dic["parallel_tool_calls"] = request.ParallelToolCalls.Value;
+
+        return dic;
+    }
+
     /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段值</summary>
     /// <param name="contents">AIContent 列表</param>
     /// <returns>字符串（单一文本）或内容数组（多模态）</returns>

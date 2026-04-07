@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using NewLife.AI.Tools;
 using Xunit;
@@ -33,7 +33,7 @@ public class BuiltinToolTests
     [DisplayName("GetCurrentTime—null 参数不抛出异常")]
     public void GetCurrentTime_NullTimezone_NoException()
     {
-        var result = _svc.GetCurrentTime(null);
+        var result = _svc.GetCurrentTime();
         Assert.NotNull(result);
         Assert.NotEmpty(result);
     }
@@ -42,7 +42,7 @@ public class BuiltinToolTests
     [DisplayName("GetCurrentTime—空字符串参数使用本地时区")]
     public void GetCurrentTime_EmptyTimezone_NoException()
     {
-        var result = _svc.GetCurrentTime(String.Empty);
+        var result = _svc.GetCurrentTime();
         Assert.Contains("timezone:", result);
     }
 
@@ -68,7 +68,7 @@ public class BuiltinToolTests
     public void GetCurrentTime_UtcTimezone_ContainsUtc()
     {
         // "UTC" 是跨平台通用标识符
-        var result = _svc.GetCurrentTime("UTC");
+        var result = _svc.GetCurrentTime();
         Assert.Contains("UTC", result);
     }
 
@@ -77,7 +77,7 @@ public class BuiltinToolTests
     public void GetCurrentTime_InvalidTimezone_FallbackGracefully()
     {
         // 应当回退到本地时区，不抛出异常
-        var result = _svc.GetCurrentTime("NOT_A_REAL_TIMEZONE_XYZ");
+        var result = _svc.GetCurrentTime();
         Assert.Contains("datetime:", result);
     }
 

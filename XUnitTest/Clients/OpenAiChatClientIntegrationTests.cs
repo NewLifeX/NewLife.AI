@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.Remoting;
 using Xunit;
 
 namespace XUnitTest.Clients;
@@ -24,6 +25,7 @@ namespace XUnitTest.Clients;
 /// 阿里百炼兼容模式端点：https://dashscope.aliyuncs.com/compatible-mode
 /// ChatPath 默认为 /v1/chat/completions，完整 URL 即标准 OpenAI 格式。
 /// </remarks>
+[TestCaseOrderer("NewLife.UnitTest.DefaultOrderer", "NewLife.UnitTest")]
 public class OpenAiChatClientIntegrationTests
 {
     private const String Endpoint = "https://dashscope.aliyuncs.com/compatible-mode";
@@ -740,7 +742,7 @@ public class OpenAiChatClientIntegrationTests
     #region 错误处理 - HTTP 层
 
     [Fact]
-    [DisplayName("错误_无ApiKey_ChatAsync抛出HttpRequestException")]
+    [DisplayName("错误_无ApiKey_ChatAsync抛出ApiException")]
     public async Task ChatAsync_NoApiKey_ThrowsException()
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
@@ -750,16 +752,16 @@ public class OpenAiChatClientIntegrationTests
             ApiKey = "",
         };
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
             await ChatAsync(request, options);
         });
 
-        Assert.Contains("OpenAI", ex.Message);
+        Assert.Contains("api", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    [DisplayName("错误_无效ApiKey_抛出HttpRequestException")]
+    [DisplayName("错误_无效ApiKey_抛出ApiException")]
     public async Task ChatAsync_InvalidApiKey_ThrowsException()
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
@@ -769,28 +771,28 @@ public class OpenAiChatClientIntegrationTests
             ApiKey = "sk-invalid-key-12345",
         };
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
             await ChatAsync(request, options);
         });
 
-        Assert.Contains("OpenAI", ex.Message);
+        Assert.Contains("api_key", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    [DisplayName("错误_不存在的模型_抛出HttpRequestException")]
+    [DisplayName("错误_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
             await ChatAsync(request);
         });
 
-        Assert.Contains("OpenAI", ex.Message);
+        Assert.Contains("model", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -811,7 +813,7 @@ public class OpenAiChatClientIntegrationTests
     }
 
     [Fact]
-    [DisplayName("错误_流式无效ApiKey_抛出HttpRequestException")]
+    [DisplayName("错误_流式无效ApiKey_抛出ApiException")]
     public async Task ChatStreamAsync_InvalidApiKey_ThrowsException()
     {
         var request = CreateSimpleRequest("qwen-plus", "hi");
@@ -822,18 +824,18 @@ public class OpenAiChatClientIntegrationTests
             ApiKey = "sk-invalid-key-12345",
         };
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
             await foreach (var _ in ChatStreamAsync(request, options))
             {
             }
         });
 
-        Assert.Contains("OpenAI", ex.Message);
+        Assert.Contains("api_key", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    [DisplayName("错误_流式不存在的模型_抛出HttpRequestException")]
+    [DisplayName("错误_流式不存在的模型_抛出ApiException")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {
         if (!HasApiKey()) return;
@@ -841,14 +843,14 @@ public class OpenAiChatClientIntegrationTests
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
         request.Stream = true;
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
             await foreach (var _ in ChatStreamAsync(request))
             {
             }
         });
 
-        Assert.Contains("OpenAI", ex.Message);
+        Assert.Contains("model", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
