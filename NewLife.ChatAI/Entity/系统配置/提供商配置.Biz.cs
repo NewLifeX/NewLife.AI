@@ -68,6 +68,14 @@ public partial class ProviderConfig : Entity<ProviderConfig>
             // 向后兼容：oldFullName 用于 Provider 字段（GatewayService.GetDescriptor 支持按 Code 或旧全名查找）
             var oldFullName = $"NewLife.AI.Providers.{descriptor.Code}Provider";
             var entity = FindOrCreate(list, descriptor.Code, oldFullName, descriptor.DisplayName, descriptor.Code, descriptor.DefaultEndpoint, descriptor.Protocol, descriptor.Description ?? "", ref sort);
+
+            // NewLifeAI 默认启用并设置演示密钥，方便首次使用开箱即用
+            if (descriptor.Code == "NewLifeAI")
+            {
+                if (entity.Id == 0) entity.Enable = true;
+                if (entity.ApiKey.IsNullOrEmpty()) entity.ApiKey = "sk-NewLifeAI2026";
+            }
+
             count += entity.Save();
 
             // Ollama 额外生成一条云端 Ollama 配置条目（默认禁用）

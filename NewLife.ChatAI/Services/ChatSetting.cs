@@ -67,7 +67,7 @@ public class ChatSetting : Config<ChatSetting>
     /// <summary>允许的文件扩展名</summary>
     [Category("上传与分享")]
     [Description("允许的文件扩展名")]
-    public String AllowedExtensions { get; set; } = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.txt,.md,.csv";
+    public String AllowedExtensions { get; set; } = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.doc,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv";
 
     /// <summary>图像生成默认尺寸</summary>
     [Category("上传与分享")]
@@ -121,7 +121,7 @@ public class ChatSetting : Config<ChatSetting>
     /// <summary>推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型</summary>
     [Category("工具与能力")]
     [Description("推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型")]
-    public Boolean EnableSuggestedQuestionCache { get; set; } = false;
+    public Boolean EnableSuggestedQuestionCache { get; set; } = true;
 
     /// <summary>流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容，不做延迟</summary>
     [Category("工具与能力")]
@@ -156,7 +156,7 @@ public class ChatSetting : Config<ChatSetting>
     /// <summary>启用自动学习。开启后对话结束时自动提取用户记忆</summary>
     [Category("自学习")]
     [Description("启用自动学习。开启后对话结束时自动提取用户记忆")]
-    public Boolean EnableAutoLearning { get; set; }
+    public Boolean EnableAutoLearning { get; set; } = true;
 
     /// <summary>学习分析模型。用于记忆提取的模型编码，为空时自动选择轻量模型（mini/flash/lite）</summary>
     [Category("自学习")]
