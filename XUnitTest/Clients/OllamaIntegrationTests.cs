@@ -58,6 +58,7 @@ public class OllamaIntegrationTests
         Model = Model,
         Messages = [new ChatMessage { Role = "user", Content = prompt }],
         MaxTokens = maxTokens,
+        EnableThinking = false,
     };
 
     /// <summary>构建含系统提示词的请求</summary>
@@ -70,6 +71,7 @@ public class OllamaIntegrationTests
             new ChatMessage { Role = "user", Content = userPrompt },
         ],
         MaxTokens = maxTokens,
+        EnableThinking = false,
     };
     /// <summary>创建客户端并执行非流式对话</summary>
     private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
@@ -138,6 +140,7 @@ public class OllamaIntegrationTests
                 new ChatMessage { Role = "user", Content = "What is my name? Reply with only the name." },
             ],
             MaxTokens = 200,
+            EnableThinking = false,
         };
 
         var response = await ChatAsync(request);
@@ -578,6 +581,7 @@ public class OllamaIntegrationTests
             Model = "nonexistent-model-xyz-99999",
             Messages = [new ChatMessage { Role = "user", Content = "hi" }],
             MaxTokens = 200,
+            EnableThinking = false,
         };
 
         await Assert.ThrowsAsync<ApiException>(async () =>
@@ -614,6 +618,7 @@ public class OllamaIntegrationTests
             Messages = [new ChatMessage { Role = "user", Content = "hi" }],
             MaxTokens = 200,
             Stream = true,
+            EnableThinking = false,
         };
 
         await Assert.ThrowsAsync<ApiException>(async () =>
@@ -635,6 +640,7 @@ public class OllamaIntegrationTests
             Model = Model,
             Messages = [],
             MaxTokens = 200,
+            EnableThinking = false,
         };
 
         await Assert.ThrowsAnyAsync<Exception>(async () =>
@@ -686,6 +692,7 @@ public class OllamaIntegrationTests
                     },
                 },
             ],
+            EnableThinking = false,
         };
 
         var response = await ChatAsync(request);

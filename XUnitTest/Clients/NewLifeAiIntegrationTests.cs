@@ -66,21 +66,23 @@ public class NewLifeAiIntegrationTests
     /// <summary>构建简单的用户消息请求</summary>
     private static ChatRequest CreateSimpleRequest(String prompt, Int32 maxTokens = 200) => new()
     {
-        Model = "qwen3.5",
+        Model = "qwen3.5-flash",
         Messages = [new ChatMessage { Role = "user", Content = prompt }],
         MaxTokens = maxTokens,
+        EnableThinking = false,
     };
 
     /// <summary>构建含系统提示词的请求</summary>
     private static ChatRequest CreateRequestWithSystem(String systemPrompt, String userPrompt, Int32 maxTokens = 100) => new()
     {
-        Model = "qwen3.5",
+        Model = "qwen3.5-flash",
         Messages =
         [
             new ChatMessage { Role = "system", Content = systemPrompt },
             new ChatMessage { Role = "user", Content = userPrompt },
         ],
         MaxTokens = maxTokens,
+        EnableThinking = false,
     };
     /// <summary>创建客户端并执行非流式对话</summary>
     private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
@@ -190,7 +192,7 @@ public class NewLifeAiIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen3.5",
+            Model = "qwen3.5-flash",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "我的名字叫小明，请记住" },
@@ -198,6 +200,7 @@ public class NewLifeAiIntegrationTests
                 new ChatMessage { Role = "user", Content = "我叫什么名字？只回答名字" },
             ],
             MaxTokens = 200,
+            EnableThinking = false,
         };
 
         var response = await ChatAsync(request);
@@ -260,6 +263,7 @@ public class NewLifeAiIntegrationTests
         if (!HasApiKey()) return;
 
         var request = CreateSimpleRequest("写一篇关于代码的长文", 10);
+        request.EnableThinking = false;
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
@@ -474,7 +478,7 @@ public class NewLifeAiIntegrationTests
         {
             response = await CreateNewLifeAiClient().ImageGenerationsAsync(
                 "A cute robot reading a book",
-                "qwen3.5",
+                "qwen3.5-flash",
                 "1024x1024");
         }
         catch (ApiException ex)

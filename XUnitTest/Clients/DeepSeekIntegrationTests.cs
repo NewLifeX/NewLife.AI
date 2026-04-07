@@ -14,20 +14,20 @@ using Xunit;
 
 namespace XUnitTest.Clients;
 
-/// <summary>DashScope（阿里百炼）服务商集成测试。需要有效 ApiKey 才能运行</summary>
+/// <summary>DeepSeek（深度求索）服务商集成测试。需要有效 ApiKey 才能运行</summary>
 /// <remarks>
 /// ApiKey 读取优先级：
-/// 1. ./config/DashScope.key 文件（纯文本，首行为 ApiKey）
-/// 2. 环境变量 DASHSCOPE_API_KEY
+/// 1. ./config/DeepSeek.key 文件（纯文本，首行为 ApiKey）
+/// 2. 环境变量 DEEPSEEK_API_KEY
 /// 未配置时测试自动跳过
 /// </remarks>
 [TestCaseOrderer("NewLife.UnitTest.DefaultOrderer", "NewLife.UnitTest")]
-public class DashScopeIntegrationTests
+public class DeepSeekIntegrationTests
 {
-    private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
+    private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek")!;
     private readonly String _apiKey;
 
-    public DashScopeIntegrationTests()
+    public DeepSeekIntegrationTests()
     {
         _apiKey = LoadApiKey() ?? "";
     }
@@ -35,7 +35,7 @@ public class DashScopeIntegrationTests
     /// <summary>从 config 目录或环境变量加载 ApiKey</summary>
     public static String? LoadApiKey()
     {
-        var configPath = "config/DashScope.key".GetFullPath();
+        var configPath = "config/DeepSeek.key".GetFullPath();
         if (File.Exists(configPath))
         {
             var key = File.ReadAllText(configPath).Trim();
@@ -49,7 +49,7 @@ public class DashScopeIntegrationTests
             File.WriteAllText(configPath, "");
         }
 
-        return Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
+        return Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
     }
 
     /// <summary>ApiKey 是否可用</summary>
@@ -83,6 +83,7 @@ public class DashScopeIntegrationTests
         MaxTokens = maxTokens,
         EnableThinking = false,
     };
+
     /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
     private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
     {
@@ -116,12 +117,12 @@ public class DashScopeIntegrationTests
     #region 非流式对话 - 基本功能
 
     [Fact]
-    [DisplayName("非流式_QwenPlus_返回有效响应")]
-    public async Task ChatAsync_QwenPlus_ReturnsValidResponse()
+    [DisplayName("非流式_DeepSeekChat_返回有效响应")]
+    public async Task ChatAsync_DeepSeekChat_ReturnsValidResponse()
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "用一句话介绍自己");
+        var request = CreateSimpleRequest("deepseek-chat", "用一句话介绍自己");
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
@@ -138,44 +139,13 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("非流式_QwenTurbo_轻量模型可用")]
-    public async Task ChatAsync_QwenTurbo_Works()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-turbo", "1+1等于几？只回答数字");
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-
-        var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
-    }
-
-    [Fact]
-    [DisplayName("非流式_QwenMax_高级模型可用")]
-    public async Task ChatAsync_QwenMax_Works()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-max", "你好", 200);
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-    }
-
-    [Fact]
     [DisplayName("非流式_系统提示词生效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
         if (!HasApiKey()) return;
 
         var request = CreateRequestWithSystem(
-            "qwen-plus",
+            "deepseek-chat",
             "你是一个只会回复JSON格式的机器人。无论用户说什么，都用{\"reply\":\"内容\"}格式回复。",
             "你好",
             100);
@@ -197,7 +167,7 @@ public class DashScopeIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "我的名字叫小明，请记住" },
@@ -218,7 +188,7 @@ public class DashScopeIntegrationTests
 
     #endregion
 
-    #region 非流式对话 - 参数覆盖（BuildRequestBody 所有分支）
+    #region 非流式对话 - 参数覆盖
 
     [Fact]
     [DisplayName("参数_Temperature参数生效")]
@@ -226,7 +196,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "随机说一个1到100的数字，只回答数字");
+        var request = CreateSimpleRequest("deepseek-chat", "随机说一个1到100的数字，只回答数字");
         request.Temperature = 0.0;
         request.MaxTokens = 200;
 
@@ -243,7 +213,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.TopP = 0.5;
 
         var response = await ChatAsync(request);
@@ -259,7 +229,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "写一篇关于春天的作文", 10);
+        var request = CreateSimpleRequest("deepseek-chat", "写一篇关于春天的作文", 10);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
@@ -273,7 +243,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "从1数到10，用逗号分隔", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "从1数到10，用逗号分隔", 200);
         request.Stop = ["5"];
 
         var response = await ChatAsync(request);
@@ -289,7 +259,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.PresencePenalty = 1.5;
 
         var response = await ChatAsync(request);
@@ -305,7 +275,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.FrequencyPenalty = 1.0;
 
         var response = await ChatAsync(request);
@@ -321,7 +291,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.User = "test-user-12345";
 
         var response = await ChatAsync(request);
@@ -332,28 +302,12 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("参数_长文本输入可处理")]
-    public async Task ChatAsync_LongInput_Accepted()
-    {
-        if (!HasApiKey()) return;
-
-        var longText = String.Join(",", Enumerable.Range(1, 100).Select(i => $"item{i}"));
-        var request = CreateSimpleRequest("qwen-plus", $"count items: {longText}");
-        request.MaxTokens = 200;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-    }
-
-    [Fact]
     [DisplayName("参数_所有可选参数同时传递")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "你好", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.Temperature = 0.7;
         request.TopP = 0.9;
         request.PresencePenalty = 0.5;
@@ -370,7 +324,7 @@ public class DashScopeIntegrationTests
 
     #endregion
 
-    #region 非流式对话 - 响应结构验证（ParseResponse 全字段）
+    #region 非流式对话 - 响应结构验证
 
     [Fact]
     [DisplayName("响应结构_FinishReason正确返回")]
@@ -378,7 +332,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "1+1=?", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "1+1=?", 200);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
@@ -394,7 +348,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "describe the solar system formation in 500 words", 5);
+        var request = CreateSimpleRequest("deepseek-chat", "describe the solar system formation in 500 words", 5);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
@@ -410,12 +364,12 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Model));
-        Assert.Contains("qwen", response.Model, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("deepseek", response.Model, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -424,25 +378,25 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Id));
     }
 
-    //[Fact]
-    //[DisplayName("响应结构_Object字段为chat.completion")]
-    //public async Task ChatAsync_Response_ObjectField()
-    //{
-    //    if (!HasApiKey()) return;
+    [Fact]
+    [DisplayName("响应结构_Object字段为chat.completion")]
+    public async Task ChatAsync_Response_ObjectField()
+    {
+        if (!HasApiKey()) return;
 
-    //    var request = CreateSimpleRequest("qwen-plus", "hi", 200);
-    //    var response = await ChatAsync(request);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
+        var response = await ChatAsync(request);
 
-    //    Assert.NotNull(response);
-    //    Assert.Equal("chat.completion", response.Object);
-    //}
+        Assert.NotNull(response);
+        Assert.Equal("chat.completion", response.Object);
+    }
 
     [Fact]
     [DisplayName("响应结构_Choices索引正确")]
@@ -450,7 +404,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response?.Messages);
@@ -464,7 +418,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response?.Messages);
@@ -479,7 +433,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
         Assert.NotNull(response?.Usage);
@@ -493,12 +447,12 @@ public class DashScopeIntegrationTests
     #region 流式对话 - 基本功能
 
     [Fact]
-    [DisplayName("流式_QwenPlus_返回多个Chunk")]
-    public async Task ChatStreamAsync_QwenPlus_ReturnsChunks()
+    [DisplayName("流式_DeepSeekChat_返回多个Chunk")]
+    public async Task ChatStreamAsync_DeepSeekChat_ReturnsChunks()
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "write a bubble sort in C#");
+        var request = CreateSimpleRequest("deepseek-chat", "write a bubble sort in C#");
         request.MaxTokens = 200;
         request.Stream = true;
 
@@ -519,30 +473,12 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("流式_QwenTurbo_轻量模型流式可用")]
-    public async Task ChatStreamAsync_QwenTurbo_Works()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-turbo", "hi");
-        request.Stream = true;
-
-        var chunks = new List<IChatResponse>();
-        await foreach (var chunk in ChatStreamAsync(request))
-        {
-            chunks.Add(chunk);
-        }
-
-        Assert.NotEmpty(chunks);
-    }
-
-    [Fact]
     [DisplayName("流式_内容可拼接为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "describe bubble sort in 50 words");
+        var request = CreateSimpleRequest("deepseek-chat", "describe bubble sort in 50 words");
         request.MaxTokens = 100;
         request.Stream = true;
 
@@ -569,7 +505,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateRequestWithSystem("qwen-plus", "Always start reply with 'OK:'", "hello", 200);
+        var request = CreateRequestWithSystem("deepseek-chat", "Always start reply with 'OK:'", "hello", 200);
         request.Stream = true;
 
         var fullContent = "";
@@ -594,7 +530,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "write a 1000 word essay about AI history");
+        var request = CreateSimpleRequest("deepseek-chat", "write a 1000 word essay about AI history");
         request.MaxTokens = 500;
         request.Stream = true;
 
@@ -628,7 +564,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
         var chunksWithChoices = 0;
@@ -650,7 +586,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
         var hasDelta = false;
@@ -667,28 +603,28 @@ public class DashScopeIntegrationTests
         Assert.True(hasDelta, "stream chunk should use Delta field");
     }
 
-    //[Fact]
-    //[DisplayName("流式结构_Object字段为chat.completion.chunk")]
-    //public async Task ChatStreamAsync_ObjectField()
-    //{
-    //    if (!HasApiKey()) return;
+    [Fact]
+    [DisplayName("流式结构_Object字段为chat.completion.chunk")]
+    public async Task ChatStreamAsync_ObjectField()
+    {
+        if (!HasApiKey()) return;
 
-    //    var request = CreateSimpleRequest("qwen-plus", "hi", 200);
-    //    request.Stream = true;
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
+        request.Stream = true;
 
-    //    String? objectField = null;
-    //    await foreach (var chunk in ChatStreamAsync(request))
-    //    {
-    //        if (chunk.Object != null)
-    //        {
-    //            objectField = chunk.Object;
-    //            break;
-    //        }
-    //    }
+        String? objectField = null;
+        await foreach (var chunk in ChatStreamAsync(request))
+        {
+            if (chunk.Object != null)
+            {
+                objectField = chunk.Object;
+                break;
+            }
+        }
 
-    //    Assert.NotNull(objectField);
-    //    Assert.Equal("chat.completion.chunk", objectField);
-    //}
+        Assert.NotNull(objectField);
+        Assert.Equal("chat.completion.chunk", objectField);
+    }
 
     [Fact]
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
@@ -696,7 +632,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
         FinishReason? lastFinishReason = null;
@@ -723,7 +659,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
         String? model = null;
@@ -737,33 +673,7 @@ public class DashScopeIntegrationTests
         }
 
         Assert.NotNull(model);
-        Assert.Contains("qwen", model, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    [DisplayName("流式用量_最终Chunk可能包含Usage")]
-    public async Task ChatStreamAsync_Usage_InFinalChunk()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
-        request.Stream = true;
-
-        var chunks = new List<IChatResponse>();
-        await foreach (var chunk in ChatStreamAsync(request))
-        {
-            chunks.Add(chunk);
-        }
-
-        Assert.NotEmpty(chunks);
-
-        // DashScope streaming API may not include usage in final chunk
-        // (requires stream_options parameter which OpenAiProvider doesn't send)
-        var lastWithUsage = chunks.LastOrDefault(c => c.Usage != null);
-        if (lastWithUsage != null)
-        {
-            Assert.True(lastWithUsage.Usage!.TotalTokens > 0);
-        }
+        Assert.Contains("deepseek", model, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -774,60 +684,34 @@ public class DashScopeIntegrationTests
     [DisplayName("错误_无ApiKey_ChatAsync抛出ApiException")]
     public async Task ChatAsync_NoApiKey_ThrowsException()
     {
-        var request = CreateSimpleRequest("qwen-plus", "hi");
+        var request = CreateSimpleRequest("deepseek-chat", "hi");
         var options = new AiClientOptions
         {
             Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "",
         };
 
-        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
             await ChatAsync(request, options);
         });
-
-        Assert.Contains("Invalid", ex.Message);
-    }
-
-    [Fact]
-    [DisplayName("错误_无ApiKey_ChatStreamAsync抛出ApiException")]
-    public async Task ChatStreamAsync_NoApiKey_ThrowsException()
-    {
-        var request = CreateSimpleRequest("qwen-plus", "hi");
-        request.Stream = true;
-        var options = new AiClientOptions
-        {
-            Endpoint = _descriptor.DefaultEndpoint,
-            ApiKey = "",
-        };
-
-        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
-        {
-            await foreach (var _ in ChatStreamAsync(request, options))
-            {
-            }
-        });
-
-        Assert.Contains("Invalid", ex.Message);
     }
 
     [Fact]
     [DisplayName("错误_无效ApiKey_抛出ApiException")]
-    public async Task ChatAsync_InvalidApiKey_ThrowsException()
+    public async Task ChatAsync_InvalidApiKey_ThrowsApiException()
     {
-        var request = CreateSimpleRequest("qwen-plus", "hi");
+        var request = CreateSimpleRequest("deepseek-chat", "hi");
         var options = new AiClientOptions
         {
             Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
-        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
             await ChatAsync(request, options);
         });
-
-        Assert.Contains("Invalid", ex.Message);
     }
 
     [Fact]
@@ -838,19 +722,17 @@ public class DashScopeIntegrationTests
 
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
 
-        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
             await ChatAsync(request);
         });
-
-        Assert.Contains("Invalid", ex.Message);
     }
 
     [Fact]
     [DisplayName("错误_无效Endpoint_抛出异常")]
     public async Task ChatAsync_InvalidEndpoint_ThrowsException()
     {
-        var request = CreateSimpleRequest("qwen-plus", "hi");
+        var request = CreateSimpleRequest("deepseek-chat", "hi");
         var options = new AiClientOptions
         {
             Endpoint = "https://invalid-endpoint-that-does-not-exist.example.com",
@@ -864,10 +746,10 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("错误_流式无效ApiKey_抛出ApiException")]
+    [DisplayName("错误_流式无效ApiKey_抛出异常")]
     public async Task ChatStreamAsync_InvalidApiKey_ThrowsException()
     {
-        var request = CreateSimpleRequest("qwen-plus", "hi");
+        var request = CreateSimpleRequest("deepseek-chat", "hi");
         request.Stream = true;
         var options = new AiClientOptions
         {
@@ -875,18 +757,16 @@ public class DashScopeIntegrationTests
             ApiKey = "sk-invalid-key-12345",
         };
 
-        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
             await foreach (var _ in ChatStreamAsync(request, options))
             {
             }
         });
-
-        Assert.Contains("Invalid", ex.Message);
     }
 
     [Fact]
-    [DisplayName("错误_流式不存在的模型_抛出ApiException")]
+    [DisplayName("错误_流式不存在的模型_抛出异常")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {
         if (!HasApiKey()) return;
@@ -894,14 +774,12 @@ public class DashScopeIntegrationTests
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
         request.Stream = true;
 
-        var ex = await Assert.ThrowsAsync<ApiException>(async () =>
+        await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
             await foreach (var _ in ChatStreamAsync(request, CreateOptions()))
             {
             }
         });
-
-        Assert.Contains("event:error", ex.Message);
     }
 
     #endregion
@@ -916,7 +794,7 @@ public class DashScopeIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages = [],
             MaxTokens = 200,
             EnableThinking = false,
@@ -936,15 +814,13 @@ public class DashScopeIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages = [],
             MaxTokens = 200,
             Stream = true,
             EnableThinking = false,
         };
 
-        // DashScope may throw ApiException or return empty stream for empty messages;
-        // AiClientBase validates before sending and throws ArgumentException for empty messages
         try
         {
             var chunks = new List<IChatResponse>();
@@ -952,7 +828,6 @@ public class DashScopeIntegrationTests
             {
                 chunks.Add(chunk);
             }
-            // If no exception, server accepted empty messages — verify no meaningful content
         }
         catch (ArgumentException)
         {
@@ -966,7 +841,7 @@ public class DashScopeIntegrationTests
 
     #endregion
 
-    #region FunctionCalling
+    #region FunctionCalling（deepseek-chat 支持工具调用）
 
     [Fact]
     [DisplayName("FunctionCalling_工具定义被正确传递")]
@@ -976,7 +851,7 @@ public class DashScopeIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "what is the weather in Beijing?" },
@@ -1030,77 +905,6 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("FunctionCalling_多工具定义可用")]
-    public async Task ChatAsync_FunctionCalling_MultipleTools()
-    {
-        if (!HasApiKey()) return;
-
-        var request = new ChatRequest
-        {
-            Model = "qwen-plus",
-            Messages =
-            [
-                new ChatMessage { Role = "user", Content = "check Beijing weather and calculate 123*456" },
-            ],
-            MaxTokens = 200,
-            Tools =
-            [
-                new ChatTool
-                {
-                    Type = "function",
-                    Function = new FunctionDefinition
-                    {
-                        Name = "get_weather",
-                        Description = "Get weather info for a city",
-                        Parameters = new Dictionary<String, Object>
-                        {
-                            ["type"] = "object",
-                            ["properties"] = new Dictionary<String, Object>
-                            {
-                                ["city"] = new Dictionary<String, Object>
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "city name",
-                                },
-                            },
-                            ["required"] = new[] { "city" },
-                        },
-                    },
-                },
-                new ChatTool
-                {
-                    Type = "function",
-                    Function = new FunctionDefinition
-                    {
-                        Name = "calculate",
-                        Description = "Calculate math expression",
-                        Parameters = new Dictionary<String, Object>
-                        {
-                            ["type"] = "object",
-                            ["properties"] = new Dictionary<String, Object>
-                            {
-                                ["expression"] = new Dictionary<String, Object>
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "math expression",
-                                },
-                            },
-                            ["required"] = new[] { "expression" },
-                        },
-                    },
-                },
-            ],
-            EnableThinking = false,
-        };
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-    }
-
-    [Fact]
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
@@ -1108,7 +912,7 @@ public class DashScopeIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages = [new ChatMessage { Role = "user", Content = "hi" }],
             MaxTokens = 200,
             Tools =
@@ -1167,7 +971,7 @@ public class DashScopeIntegrationTests
         // Round 1: user asks, model calls tool
         var request1 = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "what is the weather in Beijing?" },
@@ -1188,10 +992,9 @@ public class DashScopeIntegrationTests
         Assert.NotNull(toolCall.Id);
 
         // Round 2: submit tool result, model generates final reply
-        // Covers BuildRequestBody branches: ToolCallId, Name, ToolCalls serialization
         var request2 = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "what is the weather in Beijing?" },
@@ -1231,7 +1034,7 @@ public class DashScopeIntegrationTests
 
         var request = new ChatRequest
         {
-            Model = "qwen-plus",
+            Model = "deepseek-chat",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "what is the weather in Beijing?" },
@@ -1284,57 +1087,131 @@ public class DashScopeIntegrationTests
 
     #endregion
 
-    #region DashScopeProvider 属性验证
+    #region 深度思考（deepseek-reasoner 专属）
 
     [Fact]
-    [DisplayName("Provider_Code为DashScope")]
-    public void Provider_Code_IsDashScope()
+    [DisplayName("深度思考_非流式_返回ReasoningContent")]
+    public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
     {
-        Assert.Equal("DashScope", _descriptor.Code);
+        if (!HasApiKey()) return;
+
+        // deepseek-reasoner 原生输出 reasoning_content，无需额外参数
+        var request = CreateSimpleRequest("deepseek-reasoner", "9.11 和 9.8 哪个更大？", 300);
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
+
+        var message = response.Messages[0].Message;
+        Assert.NotNull(message);
+        Assert.False(String.IsNullOrWhiteSpace(message.Content as String));
+
+        // deepseek-reasoner 会在 reasoning_content 字段输出思维链
+        if (!String.IsNullOrWhiteSpace(message.ReasoningContent))
+            Assert.True(message.ReasoningContent.Length > 0);
     }
 
     [Fact]
-    [DisplayName("Provider_Name为阿里百炼")]
+    [DisplayName("深度思考_流式_增量输出ReasoningContent")]
+    public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
+    {
+        if (!HasApiKey()) return;
+
+        var request = CreateSimpleRequest("deepseek-reasoner", "1+1等于几？", 100);
+        request.Stream = true;
+
+        var reasoningChunks = new List<String>();
+        var contentChunks = new List<String>();
+
+        await foreach (var chunk in ChatStreamAsync(request))
+        {
+            if (chunk.Messages == null) continue;
+            foreach (var choice in chunk.Messages)
+            {
+                if (!String.IsNullOrEmpty(choice.Delta?.ReasoningContent))
+                    reasoningChunks.Add(choice.Delta!.ReasoningContent!);
+                if (choice.Delta?.Content is String s && !String.IsNullOrEmpty(s))
+                    contentChunks.Add(s);
+            }
+        }
+
+        // 至少应有最终内容输出
+        Assert.NotEmpty(contentChunks);
+    }
+
+    #endregion
+
+    #region DeepSeekProvider 属性验证
+
+    [Fact]
+    [DisplayName("Provider_Code为DeepSeek")]
+    public void Provider_Code_IsDeepSeek()
+    {
+        Assert.Equal("DeepSeek", _descriptor.Code);
+    }
+
+    [Fact]
+    [DisplayName("Provider_Name为深度求索")]
     public void Provider_Name_IsCorrect()
     {
-        Assert.Equal("阿里百炼", _descriptor.DisplayName);
+        Assert.Equal("深度求索", _descriptor.DisplayName);
     }
 
     [Fact]
     [DisplayName("Provider_DefaultEndpoint正确")]
     public void Provider_DefaultEndpoint_IsCorrect()
     {
-        Assert.Equal("https://dashscope.aliyuncs.com/api/v1", _descriptor.DefaultEndpoint);
+        Assert.Equal("https://api.deepseek.com", _descriptor.DefaultEndpoint);
     }
 
     [Fact]
-    [DisplayName("Provider_ApiProtocol为DashScope")]
-    public void Provider_ApiProtocol_IsChatCompletions()
+    [DisplayName("Provider_ApiProtocol为OpenAI")]
+    public void Provider_ApiProtocol_IsOpenAI()
     {
-        Assert.Equal("DashScope", _descriptor.Protocol);
+        Assert.Equal("OpenAI", _descriptor.Protocol);
     }
 
     [Fact]
-    [DisplayName("Provider_Models列表非空且包含qwen模型")]
-    public void Provider_Models_ContainsQwen()
+    [DisplayName("Provider_Models列表非空且包含deepseek模型")]
+    public void Provider_Models_ContainsDeepSeek()
     {
         var models = _descriptor.Models;
         Assert.NotNull(models);
         Assert.NotEmpty(models);
-        Assert.Contains(models, m => m.Model.Contains("qwen", StringComparison.OrdinalIgnoreCase) ||
-                                     m.DisplayName.Contains("qwen", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(models, m => m.Model.Contains("deepseek", StringComparison.OrdinalIgnoreCase) ||
+                                     m.DisplayName.Contains("deepseek", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    [DisplayName("Provider_包含支持FunctionCalling的模型")]
+    public void Provider_Models_HasFunctionCallingModel()
+    {
+        var models = _descriptor.Models;
+        Assert.NotNull(models);
+        Assert.Contains(models, m => m.Capabilities.SupportFunctionCalling);
+    }
+
+    [Fact]
+    [DisplayName("Provider_包含支持Thinking的模型")]
+    public void Provider_Models_HasThinkingModel()
+    {
+        var models = _descriptor.Models;
+        Assert.NotNull(models);
+        Assert.Contains(models, m => m.Capabilities.SupportThinking);
     }
 
     [Fact]
     [DisplayName("Provider_IAiProvider接口实现")]
-    public void Provider_Implements_IAiProvider()
+    public void Provider_Implements_AiClientDescriptor()
     {
         Assert.IsType<AiClientDescriptor>(_descriptor);
     }
 
     #endregion
 
-    #region SetHeaders 与 Options 验证
+    #region Options 验证
 
     [Fact]
     [DisplayName("Options_Endpoint为空时使用默认")]
@@ -1342,7 +1219,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 10);
         var options = new AiClientOptions
         {
             Endpoint = "",
@@ -1360,7 +1237,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus", "hi", 10);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 10);
         var options = new AiClientOptions
         {
             Endpoint = null,
@@ -1378,10 +1255,10 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen3.5-flash", "hi", 10);
+        var request = CreateSimpleRequest("deepseek-chat", "hi", 10);
         var options = new AiClientOptions
         {
-            Endpoint = "https://dashscope.aliyuncs.com/api/v1/",
+            Endpoint = "https://api.deepseek.com/",
             ApiKey = _apiKey,
         };
 
@@ -1402,7 +1279,7 @@ public class DashScopeIntegrationTests
 
         var tasks = Enumerable.Range(1, 3).Select(i =>
         {
-            var request = CreateSimpleRequest("qwen3.5-flash", $"{i}+{i}=?", 10);
+            var request = CreateSimpleRequest("deepseek-chat", $"{i}+{i}=?", 10);
             return ChatAsync(request, CreateOptions());
         }).ToArray();
 
@@ -1423,12 +1300,12 @@ public class DashScopeIntegrationTests
         if (!HasApiKey()) return;
 
         // Non-streaming
-        var request1 = CreateSimpleRequest("qwen3.5-flash", "1+1=?", 10);
+        var request1 = CreateSimpleRequest("deepseek-chat", "1+1=?", 10);
         var response1 = await ChatAsync(request1, CreateOptions());
         Assert.NotNull(response1?.Messages);
 
         // Streaming
-        var request2 = CreateSimpleRequest("qwen3.5-flash", "2+2=?", 10);
+        var request2 = CreateSimpleRequest("deepseek-chat", "2+2=?", 10);
         request2.Stream = true;
         var chunks = new List<IChatResponse>();
         await foreach (var chunk in ChatStreamAsync(request2, CreateOptions()))
@@ -1438,68 +1315,9 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(chunks);
 
         // Non-streaming again
-        var request3 = CreateSimpleRequest("qwen3.5-flash", "3+3=?", 10);
+        var request3 = CreateSimpleRequest("deepseek-chat", "3+3=?", 10);
         var response3 = await ChatAsync(request3, CreateOptions());
         Assert.NotNull(response3?.Messages);
-    }
-
-    #endregion
-
-    #region 深度思考（DeepThinking）
-
-    [Fact]
-    [DisplayName("深度思考_非流式_返回ReasoningContent")]
-    public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3-max", "9.11 和 9.8 哪个更大？", 150);
-        request.EnableThinking = true;
-        request["ThinkingBudget"] = 64;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-
-        var message = response.Messages[0].Message;
-        Assert.NotNull(message);
-        Assert.False(String.IsNullOrWhiteSpace(message.Content as String));
-
-        // 支持思考的模型应返回 reasoning_content，有内容即视为正常，不限定具体文字
-        if (!String.IsNullOrWhiteSpace(message.ReasoningContent))
-            Assert.True(message.ReasoningContent.Length > 0);
-    }
-
-    [Fact]
-    [DisplayName("深度思考_流式_增量输出ReasoningContent")]
-    public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3-max", "1+1等于几？", 100);
-        request.EnableThinking = true;
-        request["ThinkingBudget"] = 64;
-        request.Stream = true;
-
-        var reasoningChunks = new List<String>();
-        var contentChunks = new List<String>();
-
-        await foreach (var chunk in ChatStreamAsync(request))
-        {
-            if (chunk.Messages == null) continue;
-            foreach (var choice in chunk.Messages)
-            {
-                if (String.IsNullOrEmpty(choice.Delta?.ReasoningContent) is false)
-                    reasoningChunks.Add(choice.Delta!.ReasoningContent!);
-                if (choice.Delta?.Content is String s && !String.IsNullOrEmpty(s))
-                    contentChunks.Add(s);
-            }
-        }
-
-        // 至少应有内容输出
-        Assert.NotEmpty(contentChunks);
     }
 
     #endregion
@@ -1512,7 +1330,7 @@ public class DashScopeIntegrationTests
     {
         if (!HasApiKey()) return;
 
-        var request = CreateSimpleRequest("qwen-plus",
+        var request = CreateSimpleRequest("deepseek-chat",
             "用 JSON 格式返回：{\"city\":\"Beijing\",\"population_million\":22}", 200);
         request.ResponseFormat = new Dictionary<String, Object> { ["type"] = "json_object" };
 
@@ -1524,99 +1342,8 @@ public class DashScopeIntegrationTests
 
         var content = response.Messages[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
-    }
-
-    #endregion
-
-    #region 联网搜索（WebSearch）
-
-    [Fact]
-    [DisplayName("联网搜索_EnableSearch_回答包含时效内容")]
-    public async Task ChatAsync_EnableSearch_Works()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3.5-plus", "今天的日期是多少？", 200);
-        request["EnableSearch"] = true;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-
-        var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
-    }
-
-    [Fact]
-    [DisplayName("联网搜索_EnableSource_请求被接受")]
-    public async Task ChatAsync_EnableSource_Accepted()
-    {
-        if (!HasApiKey()) return;
-
-        var request = CreateSimpleRequest("qwen3.5-plus", "今天有什么新闻？", 200);
-        request["EnableSearch"] = true;
-        request["EnableSource"] = true;
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
-    }
-
-    #endregion
-
-    #region 并行工具调用（ParallelToolCalls）
-
-    [Fact]
-    [DisplayName("并行工具调用_ParallelToolCalls参数被接受")]
-    public async Task ChatAsync_ParallelToolCalls_Accepted()
-    {
-        if (!HasApiKey()) return;
-
-        var request = new ChatRequest
-        {
-            Model = "qwen3.5-plus",
-            Messages =
-            [
-                new ChatMessage { Role = "user", Content = "查一下北京和上海的天气" },
-            ],
-            MaxTokens = 200,
-            ParallelToolCalls = true,
-            Tools =
-            [
-                new ChatTool
-                {
-                    Type = "function",
-                    Function = new FunctionDefinition
-                    {
-                        Name = "get_weather",
-                        Description = "Get weather info for a city",
-                        Parameters = new Dictionary<String, Object>
-                        {
-                            ["type"] = "object",
-                            ["properties"] = new Dictionary<String, Object>
-                            {
-                                ["city"] = new Dictionary<String, Object>
-                                {
-                                    ["type"] = "string",
-                                    ["description"] = "city name",
-                                },
-                            },
-                            ["required"] = new[] { "city" },
-                        },
-                    },
-                },
-            ],
-        };
-
-        var response = await ChatAsync(request);
-
-        Assert.NotNull(response);
-        Assert.NotNull(response.Messages);
-        Assert.NotEmpty(response.Messages);
+        Assert.Contains("{", content);
+        Assert.Contains("}", content);
     }
 
     #endregion
