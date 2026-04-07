@@ -33,7 +33,7 @@ public class BedrockChatClientTests
         // 通过反射调用 protected ParseResponse
         var method = typeof(BedrockChatClient).GetMethod("ParseResponse",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var response = method!.Invoke(client, [ConverseResponseJson, request]) as ChatResponse;
+        var response = method!.Invoke(client, [ConverseResponseJson, request]) as IChatResponse;
 
         Assert.NotNull(response);
         Assert.Equal("anthropic.claude-v2", response.Model);
@@ -60,7 +60,7 @@ public class BedrockChatClientTests
 
         var method = typeof(BedrockChatClient).GetMethod("ParseResponse",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var response = method!.Invoke(client, [ConverseResponseJson, request]) as ChatResponse;
+        var response = method!.Invoke(client, [ConverseResponseJson, request]) as IChatResponse;
 
         Assert.NotNull(response?.Usage);
         Assert.Equal(10, response.Usage.InputTokens);
@@ -80,7 +80,7 @@ public class BedrockChatClientTests
 
         var method = typeof(BedrockChatClient).GetMethod("ParseResponse",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var response = method!.Invoke(client, [ToolUseResponseJson, request]) as ChatResponse;
+        var response = method!.Invoke(client, [ToolUseResponseJson, request]) as IChatResponse;
 
         Assert.NotNull(response);
         var choice = response.Messages![0];
