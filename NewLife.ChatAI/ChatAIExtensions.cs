@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.FileProviders;
+﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.FileProviders;
 using NewLife.AI.Filters;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
@@ -41,14 +42,22 @@ public static class ChatAIExtensions
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);
 
-        // 原生 .NET 工具注册
-        services.AddSingleton(sp =>
+        // 原生 .NET 工具注册（通过配置器模式，支持外部项目追加工具）
+        services.ConfigureToolRegistry((sp, registry) =>
         {
-            var registry = new ToolRegistry();
             registry.AddTools(new HolidayToolService());
             registry.AddTools(new BuiltinToolService());
             registry.AddTools(new NetworkToolService(sp));
             registry.AddTools(new CurrentUserTool());
+        });
+
+        services.TryAddSingleton(sp =>
+        {
+            var registry = new ToolRegistry();
+            foreach (var cfg in sp.GetServices<ToolRegistryConfigurator>())
+            {
+                cfg.Configure(sp, registry);
+            }
             return registry;
         });
 
@@ -68,6 +77,16 @@ public static class ChatAIExtensions
         // 消息频率限制器
         services.AddSingleton<MessageRateLimiter>();
 
+        return services;
+    }
+
+    /// <summary>向 ToolRegistry 追加注册自定义工具。可多次调用，所有配置器按注册顺序执行</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="configure">配置动作，接收服务提供者和 ToolRegistry 实例</param>
+    /// <returns></returns>
+    public static IServiceCollection ConfigureToolRegistry(this IServiceCollection services, Action<IServiceProvider, ToolRegistry> configure)
+    {
+        services.AddSingleton(new ToolRegistryConfigurator(configure));
         return services;
     }
 

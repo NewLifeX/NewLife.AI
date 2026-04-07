@@ -16,7 +16,9 @@ namespace NewLife.ChatAI.Services;
 /// <item>已存在且 IsLocked=true  → 只 UPDATE ClassName、MethodName（手工调整内容受保护）</item>
 /// </list>
 /// </remarks>
-public class NativeToolSyncService : IHostedService
+/// <remarks>实例化内置工具同步服务</remarks>
+/// <param name="registry">工具注册表，包含所有已注册工具的类型信息</param>
+public class NativeToolSyncService(ToolRegistry registry) : IHostedService
 {
     #region 种子配置
 
@@ -64,10 +66,10 @@ public class NativeToolSyncService : IHostedService
         try
         {
             var count = 0;
-            count += SyncType(typeof(HolidayToolService));
-            count += SyncType(typeof(BuiltinToolService));
-            count += SyncType(typeof(NetworkToolService));
-            count += SyncType(typeof(CurrentUserTool));
+            foreach (var type in registry.RegisteredTypes)
+            {
+                count += SyncType(type);
+            }
             if (count > 0)
                 XTrace.WriteLine("内置工具同步完成，处理 {0} 个工具", count);
         }

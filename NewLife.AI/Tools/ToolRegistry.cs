@@ -20,7 +20,11 @@ public class ToolRegistry : IToolProvider
     /// <summary>已注册工具的 ChatTool 定义列表，可直接注入到 ChatCompletionRequest.Tools</summary>
     public IReadOnlyList<ChatTool> Tools => _tools.AsReadOnly();
 
+    /// <summary>已注册工具服务的类型列表，供 NativeToolSyncService 等外部服务扫描工具元信息</summary>
+    public IReadOnlyList<Type> RegisteredTypes => _registeredTypes.AsReadOnly();
+
     private readonly List<ChatTool> _tools = [];
+    private readonly List<Type> _registeredTypes = [];
     private readonly Dictionary<String, Func<String?, CancellationToken, Task<String>>> _handlers
         = new(StringComparer.OrdinalIgnoreCase);
 
@@ -137,6 +141,9 @@ public class ToolRegistry : IToolProvider
 
     private void AddToolsFromInstance(Type type, Object instance)
     {
+        if (!_registeredTypes.Contains(type))
+            _registeredTypes.Add(type);
+
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null);
         foreach (var method in methods)
