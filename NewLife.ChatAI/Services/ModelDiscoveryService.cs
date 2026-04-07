@@ -34,6 +34,24 @@ public class ModelDiscoveryService(ILog log) : IHostedService
         return Task.CompletedTask;
     }
 
+    /// <summary>探测指定提供商的模型列表并同步到数据库。支持 Ollama 和 OpenAI 兼容协议</summary>
+    /// <param name="providerConfig">提供商配置</param>
+    /// <returns>发现的模型数量及名称描述</returns>
+    public async Task<String> DiscoverAsync(ProviderConfig providerConfig)
+    {
+        String[] models;
+        if (providerConfig.Code == "Ollama")
+            models = await DiscoverLocalOllamaAsync().ConfigureAwait(false);
+        else if (providerConfig.Code == "OllamaCloud")
+            models = await DiscoverCloudOllamaAsync().ConfigureAwait(false);
+        else
+            models = await DiscoverByProviderAsync(providerConfig).ConfigureAwait(false);
+
+        return models.Length == 0
+            ? $"{providerConfig.Name} 未发现任何模型"
+            : $"{providerConfig.Name} 发现 {models.Length} 个模型：{models.Join("、")}";
+    }
+
     private async Task DoDiscover(Object? state)
     {
         // 遍历所有已启用的提供商配置，尝试通过 OpenAI（/v1/models）发现模型
@@ -84,13 +102,13 @@ public class ModelDiscoveryService(ILog log) : IHostedService
     }
 
     /// <summary>探测本地 Ollama 实例并同步模型到数据库</summary>
-    private async Task DiscoverLocalOllamaAsync()
+    private async Task<String[]> DiscoverLocalOllamaAsync()
     {
         var providerConfig = ProviderConfig.FindByCode("Ollama");
-        if (providerConfig == null) return;
+        if (providerConfig == null) return [];
 
         // 未启用时，仅当创建时间不足10分钟才忽略启用开关（快速激活窗口）
-        if (!providerConfig.Enable && (DateTime.Now - providerConfig.CreateTime).TotalMinutes >= 10) return;
+        if (!providerConfig.Enable && (DateTime.Now - providerConfig.CreateTime).TotalMinutes >= 10) return [];
 
         var opts = new AiClientOptions
         {
@@ -100,7 +118,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
 
         // 检查 Ollama 是否在线
         var version = await client.GetVersionAsync().ConfigureAwait(false);
-        if (version == null) return;
+        if (version == null) return [];
 
         // 如果配置未启用但刚创建，Ollama 在线则自动启用
         if (!providerConfig.Enable)
@@ -130,16 +148,16 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             // 拉取后重新获取列表
             tags = await client.ListModelsAsync().ConfigureAwait(false);
         }
-        if (tags?.Models == null || tags.Models.Length == 0) return;
+        if (tags?.Models == null || tags.Models.Length == 0) return [];
 
-        SyncModelsToConfig(tags, providerConfig, client);
+        return SyncModelsToConfig(tags, providerConfig, client);
     }
 
     /// <summary>探测云端 Ollama 并同步模型到数据库</summary>
-    private async Task DiscoverCloudOllamaAsync()
+    private async Task<String[]> DiscoverCloudOllamaAsync()
     {
         var providerConfig = ProviderConfig.FindByCode("OllamaCloud");
-        if (providerConfig == null || !providerConfig.Enable || providerConfig.ApiKey.IsNullOrEmpty()) return;
+        if (providerConfig == null || !providerConfig.Enable || providerConfig.ApiKey.IsNullOrEmpty()) return [];
 
         var opts = new AiClientOptions
         {
@@ -149,23 +167,24 @@ public class ModelDiscoveryService(ILog log) : IHostedService
         using var client = new OllamaChatClient(opts);
 
         var tags = await client.ListModelsAsync().ConfigureAwait(false);
-        if (tags?.Models == null || tags.Models.Length == 0) return;
+        if (tags?.Models == null || tags.Models.Length == 0) return [];
 
-        SyncModelsToConfig(tags, providerConfig, client);
+        return SyncModelsToConfig(tags, providerConfig, client);
     }
 
     /// <summary>将 Ollama 模型同步到提供商配置和模型配置</summary>
     /// <param name="tags">Ollama 模型标签列表</param>
     /// <param name="providerConfig">提供商配置</param>
     /// <param name="client">Ollama 客户端，用于推断模型能力</param>
-    private void SyncModelsToConfig(OllamaTagsResponse tags, ProviderConfig providerConfig, OllamaChatClient? client = null)
+    private String[] SyncModelsToConfig(OllamaTagsResponse tags, ProviderConfig providerConfig, OllamaChatClient? client = null)
     {
-        if (tags.Models == null || tags.Models.Length == 0) return;
+        if (tags.Models == null || tags.Models.Length == 0) return [];
 
         // 查找 Ollama 描述符，用于已知模型精确匹配
         var descriptor = AiClientRegistry.Default.GetDescriptor("Ollama");
 
         // 同步每个模型
+        var codes = new List<String>();
         var synced = 0;
         foreach (var model in tags.Models)
         {
@@ -175,6 +194,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             if (providerConfig.ModelLimit > 0 && synced >= providerConfig.ModelLimit) break;
 
             var modelCode = model.Model;
+            codes.Add(modelCode);
             var config = ModelConfig.FindByProviderIdAndCode(providerConfig.Id, modelCode);
             //if (config != null) continue;
 
@@ -214,11 +234,12 @@ public class ModelDiscoveryService(ILog log) : IHostedService
                 log?.Info("同步 {0} 模型：{1}", providerConfig.Name, modelCode);
             }
         }
+        return [..codes];
     }
 
     /// <summary>通用 OpenAI 兼容模型发现。通过创建 OpenAIChatClient 调用 ListModelsAsync 获取并同步模型列表</summary>
     /// <param name="providerConfig">提供商配置</param>
-    private async Task DiscoverByProviderAsync(ProviderConfig providerConfig)
+    private async Task<String[]> DiscoverByProviderAsync(ProviderConfig providerConfig)
     {
         // 按编码查找描述符，调用描述符点指的工厕创建客户端
         var descriptor = AiClientRegistry.Default.GetDescriptor(providerConfig.Provider)
@@ -231,10 +252,10 @@ public class ModelDiscoveryService(ILog log) : IHostedService
         };
 
         using var client = descriptor?.Factory(opts) ?? new OpenAIChatClient(opts);
-        if (client is not OpenAIChatClient openAiClient) return;
+        if (client is not OpenAIChatClient openAiClient) return [];
 
         var modelList = await openAiClient.ListModelsAsync().ConfigureAwait(false);
-        if (modelList?.Data == null || modelList.Data.Length == 0) return;
+        if (modelList?.Data == null || modelList.Data.Length == 0) return [];
 
         // 如果配置未启用但刚创建，发现可用模型则自动启用
         if (!providerConfig.Enable)
@@ -244,7 +265,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             log?.Info("{0} 服务提供者已自动启用，发现 {1} 个可用模型", providerConfig.Name, modelList.Data.Length);
         }
 
-        SyncModelsFromList(providerConfig, modelList, descriptor, openAiClient);
+        return SyncModelsFromList(providerConfig, modelList, descriptor, openAiClient);
     }
 
     /// <summary>将 OpenAI 兼容模型列表同步到模型配置表</summary>
@@ -252,11 +273,12 @@ public class ModelDiscoveryService(ILog log) : IHostedService
     /// <param name="modelList">远端模型列表</param>
     /// <param name="descriptor">服务商描述符，用于查找已知模型能力</param>
     /// <param name="client">协议客户端，用于按命名规律推断模型能力</param>
-    private void SyncModelsFromList(ProviderConfig providerConfig, OpenAiModelListResponse modelList, AiClientDescriptor? descriptor = null, OpenAIChatClient? client = null)
+    private String[] SyncModelsFromList(ProviderConfig providerConfig, OpenAiModelListResponse modelList, AiClientDescriptor? descriptor = null, OpenAIChatClient? client = null)
     {
-        if (modelList.Data == null) return;
+        if (modelList.Data == null) return [];
 
         var models = modelList.Data.AsEnumerable();
+        var codes = new List<String>();
 
         // 按 ModelFilter 过滤：逗号分隔的关键词，任一匹配则保留（大小写不敏感）
         if (!providerConfig.ModelFilter.IsNullOrEmpty())
@@ -276,6 +298,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             var config = ModelConfig.FindByProviderIdAndCode(providerConfig.Id, model.Id!);
             //if (config != null) continue;
 
+            codes.Add(model.Id!);
             config ??= new ModelConfig
             {
                 ProviderId = providerConfig.Id,
@@ -304,5 +327,6 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             if (config.Save() > 0)
                 log?.Info("同步 {0} 模型：{1}", providerConfig.Name, model.Id);
         }
+        return [..codes];
     }
 }

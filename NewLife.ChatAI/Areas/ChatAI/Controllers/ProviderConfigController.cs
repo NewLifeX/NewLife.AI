@@ -1,13 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
-using NewLife;
+using NewLife.ChatAI.Services;
 using NewLife.Cube;
-using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
-using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.ProviderConfig;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -16,6 +13,8 @@ namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 [ChatAIArea]
 public class ProviderConfigController : EntityController<ProviderConfig>
 {
+    private readonly ModelDiscoveryService _discoveryService;
+
     static ProviderConfigController()
     {
         //LogOnChange = true;
@@ -49,6 +48,10 @@ public class ProviderConfigController : EntityController<ProviderConfig>
     //    _tracer = tracer;
     //}
 
+    /// <summary>实例化提供商配置控制器</summary>
+    /// <param name="discoveryService">模型发现服务</param>
+    public ProviderConfigController(ModelDiscoveryService discoveryService) => _discoveryService = discoveryService;
+
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>
     /// <returns></returns>
@@ -62,5 +65,33 @@ public class ProviderConfigController : EntityController<ProviderConfig>
         var end = p["dtEnd"].ToDateTime();
 
         return ProviderConfig.Search(code, provider, enable, start, end, p["Q"], p);
+    }
+
+    /// <summary>批量更新模型列表。对选中的提供商执行模型发现，同步远端模型到本地配置</summary>
+    /// <returns></returns>
+    [EntityAuthorize(PermissionFlags.Update)]
+    public async Task<ActionResult> DiscoverModels()
+    {
+        var ids = SelectKeys;
+        if (ids == null || ids.Length == 0) return JsonRefresh("请先选择提供商！");
+
+        var results = new List<String>();
+        foreach (var id in ids)
+        {
+            var config = ProviderConfig.FindById(id.ToInt());
+            if (config == null) continue;
+
+            try
+            {
+                var msg = await _discoveryService.DiscoverAsync(config).ConfigureAwait(false);
+                results.Add(msg);
+            }
+            catch (Exception ex)
+            {
+                results.Add($"{config.Name} 发现失败：{ex.Message}");
+            }
+        }
+
+        return JsonRefresh(results.Count > 0 ? results.Join("；") : "未找到有效提供商");
     }
 }
