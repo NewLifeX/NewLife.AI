@@ -90,11 +90,24 @@ public class GeminiChatClient : AiClientBase
     /// <summary>构建 Gemini 请求体</summary>
     protected override Object BuildRequest(IChatRequest request) => request is GeminiRequest gr ? gr : GeminiRequest.FromChatRequest(request);
 
-    /// <summary>解析 Gemini 响应</summary>
+    /// <summary>解析 Gemini 非流式响应</summary>
     protected override IChatResponse ParseResponse(String data, IChatRequest request)
     {
         var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions)!;
         resp.Model = request.Model;
+        if (String.IsNullOrEmpty(((IChatResponse)resp).Object)) ((IChatResponse)resp).Object = "chat.completion";
+        return resp;
+    }
+
+    /// <summary>解析 Gemini 流式 SSE 单行 chunk</summary>
+    protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
+    {
+        var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions);
+        if (resp != null)
+        {
+            resp.Model = request.Model;
+            if (String.IsNullOrEmpty(((IChatResponse)resp).Object)) ((IChatResponse)resp).Object = "chat.completion.chunk";
+        }
         return resp;
     }
 

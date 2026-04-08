@@ -126,8 +126,9 @@ public class BedrockChatClient : AiClientBase
     protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
         var bedrockResp = json.ToJsonEntity<BedrockResponse>(JsonOptions);
-        if (bedrockResp == null) return new ChatResponse { Model = request.Model };
+        if (bedrockResp == null) return new ChatResponse { Model = request.Model, Object = "chat.completion" };
         bedrockResp.Model ??= request.Model;
+        if (String.IsNullOrEmpty(((IChatResponse)bedrockResp).Object)) ((IChatResponse)bedrockResp).Object = "chat.completion";
         return bedrockResp;
     }
 

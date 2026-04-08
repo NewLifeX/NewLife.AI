@@ -286,7 +286,11 @@ public class DashScopeChatClient : OpenAIChatClient
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
     {
         var chunk = data.ToJsonEntity<DashScopeResponse>(JsonOptions);
-        chunk?.Model = request.Model;
+        if (chunk != null)
+        {
+            chunk.Model = request.Model;
+            if (String.IsNullOrEmpty(((IChatResponse)chunk).Object)) ((IChatResponse)chunk).Object = "chat.completion.chunk";
+        }
         return chunk;
     }
 

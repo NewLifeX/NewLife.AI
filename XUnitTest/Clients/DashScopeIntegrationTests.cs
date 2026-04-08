@@ -392,18 +392,16 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(response.Id));
     }
 
-    //[Fact]
-    //[DisplayName("响应结构_Object字段为chat.completion")]
-    //public async Task ChatAsync_Response_ObjectField()
-    //{
-    //    if (!HasApiKey()) return;
+    [Fact]
+    [DisplayName("响应结构_Object字段为chat.completion")]
+    public async Task ChatAsync_Response_ObjectField()
+    {
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        var response = await ChatAsync(request);
 
-    //    var request = CreateSimpleRequest("qwen-plus", "hi", 200);
-    //    var response = await ChatAsync(request);
-
-    //    Assert.NotNull(response);
-    //    Assert.Equal("chat.completion", response.Object);
-    //}
+        Assert.NotNull(response);
+        Assert.Equal("chat.completion", response.Object);
+    }
 
     [Fact]
     [DisplayName("响应结构_Choices索引正确")]
@@ -608,28 +606,26 @@ public class DashScopeIntegrationTests
         Assert.True(hasDelta, "stream chunk should use Delta field");
     }
 
-    //[Fact]
-    //[DisplayName("流式结构_Object字段为chat.completion.chunk")]
-    //public async Task ChatStreamAsync_ObjectField()
-    //{
-    //    if (!HasApiKey()) return;
+    [Fact]
+    [DisplayName("流式结构_Object字段为chat.completion.chunk")]
+    public async Task ChatStreamAsync_ObjectField()
+    {
+        var request = CreateSimpleRequest("qwen-plus", "hi", 200);
+        request.Stream = true;
 
-    //    var request = CreateSimpleRequest("qwen-plus", "hi", 200);
-    //    request.Stream = true;
+        String? objectField = null;
+        await foreach (var chunk in ChatStreamAsync(request))
+        {
+            if (chunk.Object != null)
+            {
+                objectField = chunk.Object;
+                break;
+            }
+        }
 
-    //    String? objectField = null;
-    //    await foreach (var chunk in ChatStreamAsync(request))
-    //    {
-    //        if (chunk.Object != null)
-    //        {
-    //            objectField = chunk.Object;
-    //            break;
-    //        }
-    //    }
-
-    //    Assert.NotNull(objectField);
-    //    Assert.Equal("chat.completion.chunk", objectField);
-    //}
+        Assert.NotNull(objectField);
+        Assert.Equal("chat.completion.chunk", objectField);
+    }
 
     [Fact]
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
