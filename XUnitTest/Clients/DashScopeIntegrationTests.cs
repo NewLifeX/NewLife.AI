@@ -52,9 +52,6 @@ public class DashScopeIntegrationTests
         return Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
     }
 
-    /// <summary>ApiKey 是否可用</summary>
-    private Boolean HasApiKey() => !String.IsNullOrWhiteSpace(_apiKey);
-
     /// <summary>构建默认连接选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
@@ -119,8 +116,6 @@ public class DashScopeIntegrationTests
     [DisplayName("非流式_QwenPlus_返回有效响应")]
     public async Task ChatAsync_QwenPlus_ReturnsValidResponse()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "用一句话介绍自己");
         var response = await ChatAsync(request);
 
@@ -141,8 +136,6 @@ public class DashScopeIntegrationTests
     [DisplayName("非流式_QwenTurbo_轻量模型可用")]
     public async Task ChatAsync_QwenTurbo_Works()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-turbo", "1+1等于几？只回答数字");
         var response = await ChatAsync(request);
 
@@ -158,8 +151,6 @@ public class DashScopeIntegrationTests
     [DisplayName("非流式_QwenMax_高级模型可用")]
     public async Task ChatAsync_QwenMax_Works()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-max", "你好", 200);
         var response = await ChatAsync(request);
 
@@ -172,8 +163,6 @@ public class DashScopeIntegrationTests
     [DisplayName("非流式_系统提示词生效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateRequestWithSystem(
             "qwen-plus",
             "你是一个只会回复JSON格式的机器人。无论用户说什么，都用{\"reply\":\"内容\"}格式回复。",
@@ -193,8 +182,6 @@ public class DashScopeIntegrationTests
     [DisplayName("非流式_多轮对话上下文保持")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -224,8 +211,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_Temperature参数生效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "随机说一个1到100的数字，只回答数字");
         request.Temperature = 0.0;
         request.MaxTokens = 200;
@@ -241,8 +226,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_TopP参数生效")]
     public async Task ChatAsync_TopP_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.TopP = 0.5;
 
@@ -257,8 +240,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_MaxTokens限制生效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "写一篇关于春天的作文", 10);
         var response = await ChatAsync(request);
 
@@ -271,8 +252,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_Stop停止词生效")]
     public async Task ChatAsync_Stop_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "从1数到10，用逗号分隔", 200);
         request.Stop = ["5"];
 
@@ -287,8 +266,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_PresencePenalty被接受")]
     public async Task ChatAsync_PresencePenalty_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.PresencePenalty = 1.5;
 
@@ -303,8 +280,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_FrequencyPenalty被接受")]
     public async Task ChatAsync_FrequencyPenalty_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.FrequencyPenalty = 1.0;
 
@@ -319,8 +294,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_User标识被接受")]
     public async Task ChatAsync_User_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.User = "test-user-12345";
 
@@ -335,8 +308,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_长文本输入可处理")]
     public async Task ChatAsync_LongInput_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var longText = String.Join(",", Enumerable.Range(1, 100).Select(i => $"item{i}"));
         var request = CreateSimpleRequest("qwen-plus", $"count items: {longText}");
         request.MaxTokens = 200;
@@ -351,8 +322,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_所有可选参数同时传递")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "你好", 200);
         request.Temperature = 0.7;
         request.TopP = 0.9;
@@ -376,8 +345,6 @@ public class DashScopeIntegrationTests
     [DisplayName("响应结构_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "1+1=?", 200);
         var response = await ChatAsync(request);
 
@@ -392,8 +359,6 @@ public class DashScopeIntegrationTests
     [DisplayName("响应结构_FinishReason_MaxTokens截断返回length")]
     public async Task ChatAsync_FinishReason_Length_WhenTruncated()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "describe the solar system formation in 500 words", 5);
         var response = await ChatAsync(request);
 
@@ -408,8 +373,6 @@ public class DashScopeIntegrationTests
     [DisplayName("响应结构_包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -422,8 +385,6 @@ public class DashScopeIntegrationTests
     [DisplayName("响应结构_包含响应Id")]
     public async Task ChatAsync_Response_ContainsId()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -448,8 +409,6 @@ public class DashScopeIntegrationTests
     [DisplayName("响应结构_Choices索引正确")]
     public async Task ChatAsync_Response_ChoiceIndex()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -462,8 +421,6 @@ public class DashScopeIntegrationTests
     [DisplayName("响应结构_Message角色为assistant")]
     public async Task ChatAsync_Response_MessageRole()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -477,8 +434,6 @@ public class DashScopeIntegrationTests
     [DisplayName("用量_非流式响应包含完整Usage")]
     public async Task ChatAsync_Usage_Complete()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -496,8 +451,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式_QwenPlus_返回多个Chunk")]
     public async Task ChatStreamAsync_QwenPlus_ReturnsChunks()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "write a bubble sort in C#");
         request.MaxTokens = 200;
         request.Stream = true;
@@ -522,8 +475,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式_QwenTurbo_轻量模型流式可用")]
     public async Task ChatStreamAsync_QwenTurbo_Works()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-turbo", "hi");
         request.Stream = true;
 
@@ -540,8 +491,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式_内容可拼接为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "describe bubble sort in 50 words");
         request.MaxTokens = 100;
         request.Stream = true;
@@ -567,8 +516,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式_系统提示词生效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateRequestWithSystem("qwen-plus", "Always start reply with 'OK:'", "hello", 200);
         request.Stream = true;
 
@@ -592,8 +539,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式_CancellationToken_可中断")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "write a 1000 word essay about AI history");
         request.MaxTokens = 500;
         request.Stream = true;
@@ -626,8 +571,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式结构_每个Chunk包含Choices")]
     public async Task ChatStreamAsync_EachChunk_HasChoices()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
@@ -648,8 +591,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式结构_Chunk使用Delta而非Message")]
     public async Task ChatStreamAsync_Chunk_UsesDelta()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
@@ -694,8 +635,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
     public async Task ChatStreamAsync_LastChunk_HasFinishReason()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
@@ -721,8 +660,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式结构_包含模型标识")]
     public async Task ChatStreamAsync_ContainsModel()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
@@ -744,8 +681,6 @@ public class DashScopeIntegrationTests
     [DisplayName("流式用量_最终Chunk可能包含Usage")]
     public async Task ChatStreamAsync_Usage_InFinalChunk()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 200);
         request.Stream = true;
 
@@ -834,8 +769,6 @@ public class DashScopeIntegrationTests
     [DisplayName("错误_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
 
         var ex = await Assert.ThrowsAsync<ApiException>(async () =>
@@ -889,8 +822,6 @@ public class DashScopeIntegrationTests
     [DisplayName("错误_流式不存在的模型_抛出ApiException")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
         request.Stream = true;
 
@@ -912,8 +843,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_空消息列表_抛出异常")]
     public async Task ChatAsync_EmptyMessages_ThrowsException()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -932,8 +861,6 @@ public class DashScopeIntegrationTests
     [DisplayName("参数_流式空消息列表_抛出异常或返回空")]
     public async Task ChatStreamAsync_EmptyMessages_ThrowsOrEmpty()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -972,8 +899,6 @@ public class DashScopeIntegrationTests
     [DisplayName("FunctionCalling_工具定义被正确传递")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -1033,8 +958,6 @@ public class DashScopeIntegrationTests
     [DisplayName("FunctionCalling_多工具定义可用")]
     public async Task ChatAsync_FunctionCalling_MultipleTools()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -1104,8 +1027,6 @@ public class DashScopeIntegrationTests
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -1139,8 +1060,6 @@ public class DashScopeIntegrationTests
     [DisplayName("FunctionCalling_完整工具调用轮次")]
     public async Task ChatAsync_FunctionCalling_FullRoundTrip()
     {
-        if (!HasApiKey()) return;
-
         var weatherTool = new ChatTool
         {
             Type = "function",
@@ -1227,8 +1146,6 @@ public class DashScopeIntegrationTests
     [DisplayName("FunctionCalling_流式工具调用返回ToolCalls")]
     public async Task ChatStreamAsync_FunctionCalling_ReturnsToolCalls()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen-plus",
@@ -1340,8 +1257,6 @@ public class DashScopeIntegrationTests
     [DisplayName("Options_Endpoint为空时使用默认")]
     public async Task Options_EmptyEndpoint_UsesDefault()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 10);
         var options = new AiClientOptions
         {
@@ -1358,8 +1273,6 @@ public class DashScopeIntegrationTests
     [DisplayName("Options_Endpoint为null时使用默认")]
     public async Task Options_NullEndpoint_UsesDefault()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus", "hi", 10);
         var options = new AiClientOptions
         {
@@ -1376,8 +1289,6 @@ public class DashScopeIntegrationTests
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen3.5-flash", "hi", 10);
         var options = new AiClientOptions
         {
@@ -1398,8 +1309,6 @@ public class DashScopeIntegrationTests
     [DisplayName("并发_多个请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
-        if (!HasApiKey()) return;
-
         var tasks = Enumerable.Range(1, 3).Select(i =>
         {
             var request = CreateSimpleRequest("qwen3.5-flash", $"{i}+{i}=?", 10);
@@ -1420,8 +1329,6 @@ public class DashScopeIntegrationTests
     [DisplayName("稳定性_非流式与流式交替调用")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {
-        if (!HasApiKey()) return;
-
         // Non-streaming
         var request1 = CreateSimpleRequest("qwen3.5-flash", "1+1=?", 10);
         var response1 = await ChatAsync(request1, CreateOptions());
@@ -1451,8 +1358,6 @@ public class DashScopeIntegrationTests
     [DisplayName("深度思考_非流式_返回ReasoningContent")]
     public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen3-max", "9.11 和 9.8 哪个更大？", 150);
         request.EnableThinking = true;
         request["ThinkingBudget"] = 64;
@@ -1476,8 +1381,6 @@ public class DashScopeIntegrationTests
     [DisplayName("深度思考_流式_增量输出ReasoningContent")]
     public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen3-max", "1+1等于几？", 100);
         request.EnableThinking = true;
         request["ThinkingBudget"] = 64;
@@ -1510,8 +1413,6 @@ public class DashScopeIntegrationTests
     [DisplayName("结构化输出_JsonObject模式返回有效JSON")]
     public async Task ChatAsync_StructuredOutput_JsonObject_ReturnsValidJson()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen-plus",
             "用 JSON 格式返回：{\"city\":\"Beijing\",\"population_million\":22}", 200);
         request.ResponseFormat = new Dictionary<String, Object> { ["type"] = "json_object" };
@@ -1534,8 +1435,6 @@ public class DashScopeIntegrationTests
     [DisplayName("联网搜索_EnableSearch_回答包含时效内容")]
     public async Task ChatAsync_EnableSearch_Works()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen3.5-plus", "今天的日期是多少？", 200);
         request["EnableSearch"] = true;
 
@@ -1553,8 +1452,6 @@ public class DashScopeIntegrationTests
     [DisplayName("联网搜索_EnableSource_请求被接受")]
     public async Task ChatAsync_EnableSource_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("qwen3.5-plus", "今天有什么新闻？", 200);
         request["EnableSearch"] = true;
         request["EnableSource"] = true;
@@ -1574,8 +1471,6 @@ public class DashScopeIntegrationTests
     [DisplayName("并行工具调用_ParallelToolCalls参数被接受")]
     public async Task ChatAsync_ParallelToolCalls_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen3.5-plus",

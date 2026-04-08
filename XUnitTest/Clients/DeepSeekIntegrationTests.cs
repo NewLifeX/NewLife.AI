@@ -52,9 +52,6 @@ public class DeepSeekIntegrationTests
         return Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
     }
 
-    /// <summary>ApiKey 是否可用</summary>
-    private Boolean HasApiKey() => !String.IsNullOrWhiteSpace(_apiKey);
-
     /// <summary>构建默认连接选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
@@ -84,8 +81,8 @@ public class DeepSeekIntegrationTests
         EnableThinking = false,
     };
 
-    /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次，余额不足时返回 null</summary>
-    private async Task<IChatResponse?> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
+    /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
+    private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
     {
         var retries = 2;
         while (true)
@@ -99,11 +96,6 @@ public class DeepSeekIntegrationTests
             {
                 await Task.Delay(2000);
             }
-            catch (ApiException ex) when (ex.Message.Contains("Insufficient Balance") || ex.Message.Contains("insufficient_quota"))
-            {
-                // 余额不足 → 视为凭据不可用，调用方检查 null 后跳过
-                return null;
-            }
         }
     }
 
@@ -111,30 +103,12 @@ public class DeepSeekIntegrationTests
     private static Boolean IsTransientNetworkError(HttpRequestException ex) =>
         ex.InnerException is System.Net.Sockets.SocketException or IOException;
 
-    /// <summary>创建客户端并执行流式请求。余额不足时返回空序列</summary>
+    /// <summary>创建客户端并执行流式请求</summary>
     private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         using var client = _descriptor.Factory(opts ?? CreateOptions());
-
-        var enumerable = client.GetStreamingResponseAsync(request, ct);
-        IChatResponse? current = null;
-        var hasMore = true;
-
-        await using var enumerator = enumerable.GetAsyncEnumerator(ct);
-        while (hasMore)
-        {
-            try
-            {
-                hasMore = await enumerator.MoveNextAsync();
-                if (hasMore) current = enumerator.Current;
-            }
-            catch (ApiException ex) when (ex.Message.Contains("Insufficient Balance") || ex.Message.Contains("insufficient_quota"))
-            {
-                yield break;
-            }
-
-            if (hasMore && current != null) yield return current;
-        }
+        await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
+            yield return chunk;
     }
 
     #region 非流式对话 - 基本功能
@@ -143,12 +117,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("非流式_DeepSeekChat_返回有效响应")]
     public async Task ChatAsync_DeepSeekChat_ReturnsValidResponse()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "用一句话介绍自己");
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
 
@@ -165,8 +136,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("非流式_系统提示词生效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateRequestWithSystem(
             "deepseek-chat",
             "你是一个只会回复JSON格式的机器人。无论用户说什么，都用{\"reply\":\"内容\"}格式回复。",
@@ -175,7 +144,6 @@ public class DeepSeekIntegrationTests
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
         Assert.Contains("{", content);
@@ -186,8 +154,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("非流式_多轮对话上下文保持")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "deepseek-chat",
@@ -203,7 +169,6 @@ public class DeepSeekIntegrationTests
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
         Assert.Contains("小明", content);
@@ -217,15 +182,12 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_Temperature参数生效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "随机说一个1到100的数字，只回答数字");
         request.Temperature = 0.0;
         request.MaxTokens = 200;
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrWhiteSpace(content));
     }
@@ -234,14 +196,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_TopP参数生效")]
     public async Task ChatAsync_TopP_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.TopP = 0.5;
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
     }
@@ -250,12 +209,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_MaxTokens限制生效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "写一篇关于春天的作文", 10);
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.OutputTokens <= 15, $"CompletionTokens={response.Usage.OutputTokens} 应受 MaxTokens 限制");
     }
@@ -264,14 +220,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_Stop停止词生效")]
     public async Task ChatAsync_Stop_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "从1数到10，用逗号分隔", 200);
         request.Stop = ["5"];
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         var content = response.Messages?[0].Message?.Content as String;
         Assert.NotNull(content);
     }
@@ -280,14 +233,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_PresencePenalty被接受")]
     public async Task ChatAsync_PresencePenalty_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.PresencePenalty = 1.5;
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
     }
@@ -296,14 +246,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_FrequencyPenalty被接受")]
     public async Task ChatAsync_FrequencyPenalty_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.FrequencyPenalty = 1.0;
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
     }
@@ -312,14 +259,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_User标识被接受")]
     public async Task ChatAsync_User_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.User = "test-user-12345";
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
     }
@@ -328,8 +272,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_所有可选参数同时传递")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "你好", 200);
         request.Temperature = 0.7;
         request.TopP = 0.9;
@@ -340,7 +282,6 @@ public class DeepSeekIntegrationTests
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
     }
@@ -353,12 +294,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "1+1=?", 200);
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
         Assert.True(finishReason == FinishReason.Stop || finishReason == FinishReason.Length,
@@ -369,12 +307,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_FinishReason_MaxTokens截断返回length")]
     public async Task ChatAsync_FinishReason_Length_WhenTruncated()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "describe the solar system formation in 500 words", 5);
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         var finishReason = response.Messages?[0].FinishReason;
         Assert.NotNull(finishReason);
         Assert.True(finishReason == FinishReason.Length || finishReason == FinishReason.Stop,
@@ -385,12 +320,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.False(String.IsNullOrWhiteSpace(response.Model));
         Assert.Contains("deepseek", response.Model, StringComparison.OrdinalIgnoreCase);
     }
@@ -399,12 +331,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_包含响应Id")]
     public async Task ChatAsync_Response_ContainsId()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.False(String.IsNullOrWhiteSpace(response.Id));
     }
 
@@ -412,12 +341,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_Object字段为chat.completion")]
     public async Task ChatAsync_Response_ObjectField()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.Equal("chat.completion", response.Object);
     }
 
@@ -425,8 +351,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_Choices索引正确")]
     public async Task ChatAsync_Response_ChoiceIndex()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -439,8 +363,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("响应结构_Message角色为assistant")]
     public async Task ChatAsync_Response_MessageRole()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -454,8 +376,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("用量_非流式响应包含完整Usage")]
     public async Task ChatAsync_Usage_Complete()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
@@ -473,8 +393,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式_DeepSeekChat_返回多个Chunk")]
     public async Task ChatStreamAsync_DeepSeekChat_ReturnsChunks()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "write a bubble sort in C#");
         request.MaxTokens = 200;
         request.Stream = true;
@@ -485,7 +403,7 @@ public class DeepSeekIntegrationTests
             chunks.Add(chunk);
         }
 
-        if (chunks.Count == 0) return; // 余额不足跳过
+        Assert.NotEmpty(chunks);
 
         var hasContent = chunks.Any(c => c.Messages?.Any(ch =>
         {
@@ -499,8 +417,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式_内容可拼接为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "describe bubble sort in 50 words");
         request.MaxTokens = 100;
         request.Stream = true;
@@ -518,7 +434,7 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        if (String.IsNullOrWhiteSpace(fullContent)) return; // 余额不足跳过
+        Assert.False(String.IsNullOrWhiteSpace(fullContent));
         Assert.True(fullContent.Length > 5, $"concatenated content too short: {fullContent}");
     }
 
@@ -526,8 +442,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式_系统提示词生效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateRequestWithSystem("deepseek-chat", "Always start reply with 'OK:'", "hello", 200);
         request.Stream = true;
 
@@ -544,15 +458,13 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        if (String.IsNullOrWhiteSpace(fullContent)) return; // 余额不足跳过
+        Assert.False(String.IsNullOrWhiteSpace(fullContent));
     }
 
     [Fact]
     [DisplayName("流式_CancellationToken_可中断")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "write a 1000 word essay about AI history");
         request.MaxTokens = 500;
         request.Stream = true;
@@ -585,8 +497,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式结构_每个Chunk包含Choices")]
     public async Task ChatStreamAsync_EachChunk_HasChoices()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
@@ -599,7 +509,7 @@ public class DeepSeekIntegrationTests
                 chunksWithChoices++;
         }
 
-        if (totalChunks == 0) return; // 余额不足跳过
+        Assert.True(totalChunks > 0);
         Assert.True(chunksWithChoices > 0);
     }
 
@@ -607,8 +517,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式结构_Chunk使用Delta而非Message")]
     public async Task ChatStreamAsync_Chunk_UsesDelta()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
@@ -623,15 +531,13 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        if (!hasDelta) return; // 余额不足时无流式数据跳过
+        Assert.True(hasDelta, "stream chunk should use Delta field");
     }
 
     [Fact]
     [DisplayName("流式结构_Object字段为chat.completion.chunk")]
     public async Task ChatStreamAsync_ObjectField()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
@@ -645,7 +551,7 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        if (objectField == null) return; // 余额不足跳过
+        Assert.NotNull(objectField);
         Assert.Equal("chat.completion.chunk", objectField);
     }
 
@@ -653,8 +559,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
     public async Task ChatStreamAsync_LastChunk_HasFinishReason()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
@@ -671,7 +575,7 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        if (lastFinishReason == null) return; // 余额不足跳过
+        Assert.NotNull(lastFinishReason);
         Assert.True(lastFinishReason == FinishReason.Stop || lastFinishReason == FinishReason.Length,
             $"stream final FinishReason should be stop or length, actual: {lastFinishReason}");
     }
@@ -680,8 +584,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("流式结构_包含模型标识")]
     public async Task ChatStreamAsync_ContainsModel()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
@@ -695,7 +597,7 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        if (model == null) return; // 余额不足跳过
+        Assert.NotNull(model);
         Assert.Contains("deepseek", model, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -741,14 +643,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("错误_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
 
         try
         {
             var response = await ChatAsync(request);
-            if (response == null) return; // 余额不足跳过
             Assert.Fail("非法模型应抛出异常");
         }
         catch (Exception)
@@ -798,8 +697,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("错误_流式不存在的模型_抛出异常")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("nonexistent-model-xyz-99999", "hi");
         request.Stream = true;
 
@@ -810,7 +707,6 @@ public class DeepSeekIntegrationTests
             {
                 hasChunks = true;
             }
-            // 无异常且无数据 → 余额不足跳过；有数据 → 不该发生
             if (hasChunks) Assert.Fail("非法模型不应返回有效流式数据");
         }
         catch (Exception)
@@ -827,8 +723,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_空消息列表_抛出异常")]
     public async Task ChatAsync_EmptyMessages_ThrowsException()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "deepseek-chat",
@@ -840,7 +734,6 @@ public class DeepSeekIntegrationTests
         try
         {
             var response = await ChatAsync(request);
-            if (response == null) return; // 余额不足跳过
             Assert.Fail("空消息应抛出异常");
         }
         catch (Exception)
@@ -853,8 +746,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("参数_流式空消息列表_抛出异常或返回空")]
     public async Task ChatStreamAsync_EmptyMessages_ThrowsOrEmpty()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "deepseek-chat",
@@ -890,8 +781,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("FunctionCalling_工具定义被正确传递")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "deepseek-chat",
@@ -930,7 +819,6 @@ public class DeepSeekIntegrationTests
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
 
@@ -951,8 +839,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "deepseek-chat",
@@ -977,7 +863,6 @@ public class DeepSeekIntegrationTests
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
     }
@@ -986,8 +871,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("FunctionCalling_完整工具调用轮次")]
     public async Task ChatAsync_FunctionCalling_FullRoundTrip()
     {
-        if (!HasApiKey()) return;
-
         var weatherTool = new ChatTool
         {
             Type = "function",
@@ -1073,8 +956,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("FunctionCalling_流式工具调用返回ToolCalls")]
     public async Task ChatStreamAsync_FunctionCalling_ReturnsToolCalls()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "deepseek-chat",
@@ -1118,7 +999,7 @@ public class DeepSeekIntegrationTests
             chunks.Add(chunk);
         }
 
-        if (chunks.Count == 0) return; // 余额不足跳过
+        Assert.NotEmpty(chunks);
 
         var hasToolCalls = chunks.Any(c => c.Messages?.Any(ch =>
             ch.Delta?.ToolCalls != null && ch.Delta.ToolCalls.Count > 0) == true);
@@ -1136,14 +1017,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("深度思考_非流式_返回ReasoningContent")]
     public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
     {
-        if (!HasApiKey()) return;
-
         // deepseek-reasoner 原生输出 reasoning_content，无需额外参数
         var request = CreateSimpleRequest("deepseek-reasoner", "9.11 和 9.8 哪个更大？", 300);
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
 
@@ -1160,8 +1038,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("深度思考_流式_增量输出ReasoningContent")]
     public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-reasoner", "1+1等于几？", 100);
         request.Stream = true;
 
@@ -1180,8 +1056,6 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        // 至少应有最终内容输出；余额不足时 contentChunks 为空
-        if (contentChunks.Count == 0 && reasoningChunks.Count == 0) return; // 余额不足跳过
         Assert.NotEmpty(contentChunks);
     }
 
@@ -1261,8 +1135,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("Options_Endpoint为空时使用默认")]
     public async Task Options_EmptyEndpoint_UsesDefault()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 10);
         var options = new AiClientOptions
         {
@@ -1271,7 +1143,6 @@ public class DeepSeekIntegrationTests
         };
 
         var response = await ChatAsync(request, options);
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
     }
 
@@ -1279,8 +1150,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("Options_Endpoint为null时使用默认")]
     public async Task Options_NullEndpoint_UsesDefault()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 10);
         var options = new AiClientOptions
         {
@@ -1289,7 +1158,6 @@ public class DeepSeekIntegrationTests
         };
 
         var response = await ChatAsync(request, options);
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
     }
 
@@ -1297,8 +1165,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat", "hi", 10);
         var options = new AiClientOptions
         {
@@ -1307,7 +1173,6 @@ public class DeepSeekIntegrationTests
         };
 
         var response = await ChatAsync(request, options);
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
     }
 
@@ -1319,8 +1184,6 @@ public class DeepSeekIntegrationTests
     [DisplayName("并发_多个请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
-        if (!HasApiKey()) return;
-
         var tasks = Enumerable.Range(1, 3).Select(i =>
         {
             var request = CreateSimpleRequest("deepseek-chat", $"{i}+{i}=?", 10);
@@ -1331,7 +1194,6 @@ public class DeepSeekIntegrationTests
 
         foreach (var response in responses)
         {
-            if (response == null) return; // 余额不足跳过
             Assert.NotNull(response.Messages);
             Assert.NotEmpty(response.Messages);
         }
@@ -1341,12 +1203,9 @@ public class DeepSeekIntegrationTests
     [DisplayName("稳定性_非流式与流式交替调用")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {
-        if (!HasApiKey()) return;
-
         // Non-streaming
         var request1 = CreateSimpleRequest("deepseek-chat", "1+1=?", 10);
         var response1 = await ChatAsync(request1, CreateOptions());
-        if (response1 == null) return; // 余额不足跳过
         Assert.NotNull(response1.Messages);
 
         // Streaming
@@ -1357,12 +1216,11 @@ public class DeepSeekIntegrationTests
         {
             chunks.Add(chunk);
         }
-        if (chunks.Count == 0) return; // 余额不足跳过
+        Assert.NotEmpty(chunks);
 
         // Non-streaming again
         var request3 = CreateSimpleRequest("deepseek-chat", "3+3=?", 10);
         var response3 = await ChatAsync(request3, CreateOptions());
-        if (response3 == null) return; // 余额不足跳过
         Assert.NotNull(response3.Messages);
     }
 
@@ -1374,15 +1232,12 @@ public class DeepSeekIntegrationTests
     [DisplayName("结构化输出_JsonObject模式返回有效JSON")]
     public async Task ChatAsync_StructuredOutput_JsonObject_ReturnsValidJson()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("deepseek-chat",
             "用 JSON 格式返回：{\"city\":\"Beijing\",\"population_million\":22}", 200);
         request.ResponseFormat = new Dictionary<String, Object> { ["type"] = "json_object" };
 
         var response = await ChatAsync(request);
 
-        if (response == null) return; // 余额不足跳过
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
 

@@ -28,26 +28,6 @@ public class OllamaIntegrationTests
     private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("Ollama")!;
     private const String Model = "qwen3.5:0.8b";
 
-    private static readonly Boolean _ollamaAvailable = CheckOllamaAvailable();
-
-    /// <summary>尝试连接本地 Ollama 服务判断是否可用</summary>
-    private static Boolean CheckOllamaAvailable()
-    {
-        try
-        {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-            var response = client.GetAsync("http://localhost:11434").GetAwaiter().GetResult();
-            return (Int32)response.StatusCode < 500;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>Ollama 服务是否可用</summary>
-    private static Boolean HasOllama() => _ollamaAvailable;
-
     /// <summary>创建默认客户端选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
@@ -96,8 +76,6 @@ public class OllamaIntegrationTests
     [DisplayName("非流式_返回有效响应")]
     public async Task ChatAsync_ReturnsValidResponse()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("说一句话介绍自己");
         var response = await ChatAsync(request);
 
@@ -113,8 +91,6 @@ public class OllamaIntegrationTests
     [DisplayName("非流式_系统提示词有效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
-        if (!HasOllama()) return;
-
         var request = CreateRequestWithSystem(
             "You are a calculator. Only reply with the numeric result.",
             "1+1");
@@ -130,8 +106,6 @@ public class OllamaIntegrationTests
     [DisplayName("非流式_多轮对话上下文保留")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
-        if (!HasOllama()) return;
-
         var request = new ChatRequest
         {
             Model = Model,
@@ -167,8 +141,6 @@ public class OllamaIntegrationTests
     [DisplayName("参数_Temperature设置有效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("say hi", 200);
         request.Temperature = 0.0;
 
@@ -183,8 +155,6 @@ public class OllamaIntegrationTests
     [DisplayName("参数_TopP设置有效")]
     public async Task ChatAsync_TopP_Accepted()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("say hi", 200);
         request.TopP = 0.5;
 
@@ -199,8 +169,6 @@ public class OllamaIntegrationTests
     [DisplayName("参数_MaxTokens设置有效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("write a story about a robot", 5);
         var response = await ChatAsync(request);
 
@@ -212,8 +180,6 @@ public class OllamaIntegrationTests
     [DisplayName("参数_Stop停止词有效")]
     public async Task ChatAsync_Stop_Accepted()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("count from 1 to 10, comma separated", 200);
         request.Stop = ["5"];
 
@@ -228,8 +194,6 @@ public class OllamaIntegrationTests
     [DisplayName("参数_所有可选参数同时设置")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("say hi", 200);
         request.Temperature = 0.7;
         request.TopP = 0.9;
@@ -250,8 +214,6 @@ public class OllamaIntegrationTests
     [DisplayName("响应结构_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("1+1=?", 200);
         var response = await ChatAsync(request);
 
@@ -266,8 +228,6 @@ public class OllamaIntegrationTests
     [DisplayName("响应结构_包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var response = await ChatAsync(request);
 
@@ -279,8 +239,6 @@ public class OllamaIntegrationTests
     [DisplayName("响应结构_包含响应Id")]
     public async Task ChatAsync_Response_ContainsId()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var response = await ChatAsync(request);
 
@@ -292,8 +250,6 @@ public class OllamaIntegrationTests
     [DisplayName("响应结构_Object字段为chat.completion")]
     public async Task ChatAsync_Response_ObjectField()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var response = await ChatAsync(request);
 
@@ -305,8 +261,6 @@ public class OllamaIntegrationTests
     [DisplayName("响应结构_Choices索引正确")]
     public async Task ChatAsync_Response_ChoiceIndex()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var response = await ChatAsync(request);
 
@@ -319,8 +273,6 @@ public class OllamaIntegrationTests
     [DisplayName("响应结构_Message角色为assistant")]
     public async Task ChatAsync_Response_MessageRole()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var response = await ChatAsync(request);
 
@@ -334,8 +286,6 @@ public class OllamaIntegrationTests
     [DisplayName("验证_非流式响应包含Usage")]
     public async Task ChatAsync_Usage_Returned()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var response = await ChatAsync(request);
 
@@ -359,8 +309,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式_返回多个Chunk")]
     public async Task ChatStreamAsync_ReturnsChunks()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("write a bubble sort in C#", 200);
         request.Stream = true;
 
@@ -384,8 +332,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式_内容可拼合为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("say hello in English", 200);
         request.Stream = true;
 
@@ -409,8 +355,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式_系统提示词有效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
-        if (!HasOllama()) return;
-
         var request = CreateRequestWithSystem("Always reply with only one word.", "hello", 200);
         request.Stream = true;
 
@@ -434,8 +378,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式_CancellationToken_可取消")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("write a 500 word essay about AI", 300);
         request.Stream = true;
 
@@ -467,8 +409,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式结构_每个Chunk包含Choices")]
     public async Task ChatStreamAsync_EachChunk_HasChoices()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         request.Stream = true;
 
@@ -489,8 +429,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式结构_Chunk使用Delta而非Message")]
     public async Task ChatStreamAsync_Chunk_UsesDelta()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         request.Stream = true;
 
@@ -512,8 +450,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式结构_Object字段为chat.completion.chunk")]
     public async Task ChatStreamAsync_ObjectField()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         request.Stream = true;
 
@@ -535,8 +471,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
     public async Task ChatStreamAsync_LastChunk_HasFinishReason()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         request.Stream = true;
 
@@ -562,8 +496,6 @@ public class OllamaIntegrationTests
     [DisplayName("流式结构_包含模型标识")]
     public async Task ChatStreamAsync_ContainsModel()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         request.Stream = true;
 
@@ -588,8 +520,6 @@ public class OllamaIntegrationTests
     [DisplayName("异常_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
-        if (!HasOllama()) return;
-
         var request = new ChatRequest
         {
             Model = "nonexistent-model-xyz-99999",
@@ -624,8 +554,6 @@ public class OllamaIntegrationTests
     [DisplayName("异常_流式不存在的模型_抛出ApiException")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {
-        if (!HasOllama()) return;
-
         var request = new ChatRequest
         {
             Model = "nonexistent-model-xyz-99999",
@@ -647,8 +575,6 @@ public class OllamaIntegrationTests
     [DisplayName("异常_空消息列表_抛出异常")]
     public async Task ChatAsync_EmptyMessages_ThrowsException()
     {
-        if (!HasOllama()) return;
-
         var request = new ChatRequest
         {
             Model = Model,
@@ -671,8 +597,6 @@ public class OllamaIntegrationTests
     [DisplayName("FunctionCalling_工具定义被正确接受")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
-        if (!HasOllama()) return;
-
         var request = new ChatRequest
         {
             Model = Model,
@@ -784,8 +708,6 @@ public class OllamaIntegrationTests
     [DisplayName("Options_Endpoint为空时使用默认")]
     public async Task Options_EmptyEndpoint_UsesDefault()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var options = new AiClientOptions { Endpoint = "" };
 
@@ -798,8 +720,6 @@ public class OllamaIntegrationTests
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
-        if (!HasOllama()) return;
-
         var request = CreateSimpleRequest("hi", 200);
         var options = new AiClientOptions { Endpoint = "http://localhost:11434/" };
 
@@ -816,8 +736,6 @@ public class OllamaIntegrationTests
     [DisplayName("稳定性_多请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
-        if (!HasOllama()) return;
-
         var tasks = Enumerable.Range(1, 3).Select(i =>
         {
             var request = CreateSimpleRequest($"{i}+{i}=? reply with only the number", 200);
@@ -838,8 +756,6 @@ public class OllamaIntegrationTests
     [DisplayName("稳定性_非流式和流式交替请求")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {
-        if (!HasOllama()) return;
-
         // 非流式
         var request1 = CreateSimpleRequest("1+1=? reply number only", 200);
         var response1 = await ChatAsync(request1, CreateOptions());

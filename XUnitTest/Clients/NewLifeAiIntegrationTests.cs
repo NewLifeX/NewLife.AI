@@ -53,9 +53,6 @@ public class NewLifeAiIntegrationTests
         return Environment.GetEnvironmentVariable("NEWLIFEAI_API_KEY");
     }
 
-    /// <summary>AppKey 是否有效</summary>
-    private Boolean HasApiKey() => !String.IsNullOrWhiteSpace(_apiKey);
-
     /// <summary>创建默认客户端选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
@@ -149,8 +146,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_Qwen3.5_返回有效响应")]
     public async Task ChatAsync_ReturnsValidResponse()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("说一句话介绍自己");
         var response = await ChatAsync(request);
 
@@ -169,8 +164,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_系统提示词有效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateRequestWithSystem(
             "你是一个只用JSON格式回答的助手，回答格式为：{\"reply\":\"内容\"}",
             "你好",
@@ -188,8 +181,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_多轮对话上下文保留")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
-        if (!HasApiKey()) return;
-
         var request = new ChatRequest
         {
             Model = "qwen3.5-flash",
@@ -215,8 +206,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("1+1=?", 200);
         var response = await ChatAsync(request);
 
@@ -231,8 +220,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_响应包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("hi", 100);
         var response = await ChatAsync(request);
 
@@ -244,8 +231,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_Temperature参数有效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("写一个随机的句子", 100);
         request.Temperature = 0.0;
 
@@ -260,8 +245,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("非流式_MaxTokens参数有效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("写一篇关于代码的长文", 10);
         request.EnableThinking = false;
         var response = await ChatAsync(request);
@@ -280,8 +263,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("流式_返回多个Chunk")]
     public async Task ChatStreamAsync_ReturnsChunks()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("简单解释一下C#代码");
         request.MaxTokens = 200;
         request.Stream = true;
@@ -306,8 +287,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("流式_内容可拼合为完整响应")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("1+1等于几，只回答数字");
         request.Stream = true;
 
@@ -326,8 +305,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("流式_取消令牌可以终止")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
-        if (!HasApiKey()) return;
-
         using var cts = new CancellationTokenSource();
         var request = CreateSimpleRequest("列出从1到100，每行一个数字");
         request.MaxTokens = 500;
@@ -354,8 +331,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("ResponsesAPI_非流式_返回有效响应")]
     public async Task ResponsesAsync_ReturnsValidResponse()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("说一句话介绍自己");
         var response = await CreateNewLifeAiClient().ResponsesAsync(request);
 
@@ -371,8 +346,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("ResponsesAPI_流式_返回多个Chunk")]
     public async Task ResponsesStreamAsync_ReturnsChunks()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("写一段Python代码");
         request.Stream = true;
 
@@ -393,8 +366,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("MessagesAPI_非流式_返回有效响应")]
     public async Task MessagesAsync_ReturnsValidResponse()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("你好，简单回答");
         var response = await CreateNewLifeAiClient().MessagesAsync(request);
 
@@ -410,8 +381,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("MessagesAPI_流式_返回多个Chunk")]
     public async Task MessagesStreamAsync_ReturnsChunks()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("说声你好");
         request.Stream = true;
 
@@ -432,8 +401,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("GeminiAPI_非流式_返回有效响应")]
     public async Task GeminiAsync_ReturnsValidResponse()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("打声招呼");
         var response = await CreateNewLifeAiClient().GeminiAsync(request);
 
@@ -449,8 +416,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("GeminiAPI_流式_返回多个Chunk")]
     public async Task GeminiStreamAsync_ReturnsChunks()
     {
-        if (!HasApiKey()) return;
-
         var request = CreateSimpleRequest("写一段自我介绍");
         request.Stream = true;
 
@@ -471,8 +436,6 @@ public class NewLifeAiIntegrationTests
     [DisplayName("图像生成_有效提示词_返回响应")]
     public async Task ImageGenerationsAsync_ReturnsResponse()
     {
-        if (!HasApiKey()) return;
-
         ImageGenerationResponse? response = null;
         try
         {
