@@ -93,9 +93,9 @@ public class GeminiChatClient : AiClientBase
     /// <summary>解析 Gemini 非流式响应</summary>
     protected override IChatResponse ParseResponse(String data, IChatRequest request)
     {
-        var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions)!;
+        var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions) ?? new GeminiResponse();
         resp.Model = request.Model;
-        if (String.IsNullOrEmpty(((IChatResponse)resp).Object)) ((IChatResponse)resp).Object = "chat.completion";
+        if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
         return resp;
     }
 
@@ -103,11 +103,8 @@ public class GeminiChatClient : AiClientBase
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
     {
         var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions);
-        if (resp != null)
-        {
-            resp.Model = request.Model;
-            if (String.IsNullOrEmpty(((IChatResponse)resp).Object)) ((IChatResponse)resp).Object = "chat.completion.chunk";
-        }
+        resp?.Model = request.Model;
+        if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion.chunk";
         return resp;
     }
 

@@ -217,7 +217,13 @@ public partial class OpenAIChatClient : AiClientBase
     /// <param name="json">JSON 字符串</param>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>(JsonOptions)!;
+    protected override IChatResponse ParseResponse(String json, IChatRequest request)
+    {
+        var resp = json.ToJsonEntity<ChatCompletionResponse>(JsonOptions) ?? new ChatCompletionResponse();
+        resp.Model = request.Model;
+        if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
+        return resp;
+    }
 
     /// <summary>解析消息对象</summary>
     /// <param name="dic">字典</param>

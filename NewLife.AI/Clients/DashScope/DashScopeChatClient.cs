@@ -86,6 +86,7 @@ public class DashScopeChatClient : OpenAIChatClient
 
         // 原生响应无顶层 model 字段，从请求回填
         dashResp.Model = model;
+        if (dashResp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
 
         return dashResp;
     }
@@ -286,11 +287,8 @@ public class DashScopeChatClient : OpenAIChatClient
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
     {
         var chunk = data.ToJsonEntity<DashScopeResponse>(JsonOptions);
-        if (chunk != null)
-        {
-            chunk.Model = request.Model;
-            if (String.IsNullOrEmpty(((IChatResponse)chunk).Object)) ((IChatResponse)chunk).Object = "chat.completion.chunk";
-        }
+        chunk?.Model = request.Model;
+        if (chunk is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion.chunk";
         return chunk;
     }
 

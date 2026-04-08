@@ -181,7 +181,7 @@ public class OllamaChatClient : AiClientBase
     protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
         var resp = json.ToJsonEntity<OllamaChatResponse>(JsonOptions)!;
-        if (String.IsNullOrEmpty(((IChatResponse)resp).Object)) ((IChatResponse)resp).Object = "chat.completion";
+        if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
         return resp;
     }
 
@@ -189,7 +189,7 @@ public class OllamaChatClient : AiClientBase
     protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent)
     {
         var resp = json.ToJsonEntity<OllamaChatResponse>(JsonOptions);
-        if (resp != null && String.IsNullOrEmpty(((IChatResponse)resp).Object)) ((IChatResponse)resp).Object = "chat.completion.chunk";
+        if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion.chunk";
         return resp;
     }
 

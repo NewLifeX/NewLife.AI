@@ -125,10 +125,9 @@ public class BedrockChatClient : AiClientBase
     /// <summary>解析 Bedrock Converse API 非流式响应</summary>
     protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
-        var bedrockResp = json.ToJsonEntity<BedrockResponse>(JsonOptions);
-        if (bedrockResp == null) return new ChatResponse { Model = request.Model, Object = "chat.completion" };
+        var bedrockResp = json.ToJsonEntity<BedrockResponse>(JsonOptions) ?? new BedrockResponse();
         bedrockResp.Model ??= request.Model;
-        if (String.IsNullOrEmpty(((IChatResponse)bedrockResp).Object)) ((IChatResponse)bedrockResp).Object = "chat.completion";
+        if (bedrockResp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
         return bedrockResp;
     }
 
