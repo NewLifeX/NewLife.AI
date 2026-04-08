@@ -18,31 +18,24 @@ public class AnthropicResponse : IChatResponse
 {
     #region 属性
     /// <summary>响应编号</summary>
-    [DataMember(Name = "id")]
     public String? Id { get; set; }
 
     /// <summary>对象类型。固定 "message"</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>角色。固定 "assistant"</summary>
-    [DataMember(Name = "role")]
     public String? Role { get; set; }
 
     /// <summary>模型编码</summary>
-    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>内容块列表。[{type:"text", text:"..."}]</summary>
-    [DataMember(Name = "content")]
     public IList<AnthropicContentBlock>? Content { get; set; }
 
     /// <summary>停止原因。end_turn/max_tokens/tool_use</summary>
-    [DataMember(Name = "stop_reason")]
     public String? StopReason { get; set; }
 
     /// <summary>令牌用量统计</summary>
-    [DataMember(Name = "usage")]
     public AnthropicUsage? Usage { get; set; }
     #endregion
 
@@ -382,27 +375,21 @@ public class AnthropicResponse : IChatResponse
 public class AnthropicContentBlock
 {
     /// <summary>类型。text/image/tool_use/tool_result/thinking</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>文本内容（text 类型使用）</summary>
-    [DataMember(Name = "text")]
     public String? Text { get; set; }
 
     /// <summary>思考内容（thinking 类型使用）</summary>
-    [DataMember(Name = "thinking")]
     public String? Thinking { get; set; }
 
     /// <summary>工具调用编号（tool_use 类型使用）</summary>
-    [DataMember(Name = "id")]
     public String? Id { get; set; }
 
     /// <summary>工具名称（tool_use 类型使用）</summary>
-    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>工具调用参数（tool_use 类型使用）。反序列化后为 IDictionary</summary>
-    [DataMember(Name = "input")]
     public Object? Input { get; set; }
 }
 
@@ -410,11 +397,9 @@ public class AnthropicContentBlock
 public class AnthropicUsage
 {
     /// <summary>输入令牌数</summary>
-    [DataMember(Name = "input_tokens")]
     public Int32 InputTokens { get; set; }
 
     /// <summary>输出令牌数</summary>
-    [DataMember(Name = "output_tokens")]
     public Int32 OutputTokens { get; set; }
 
     /// <summary>从内部用量统计转换</summary>
@@ -435,27 +420,21 @@ public class AnthropicStreamEvent
     public String? EventName { get; set; }
 
     /// <summary>事件类型</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>内容块索引</summary>
-    [DataMember(Name = "index")]
     public Int32? Index { get; set; }
 
     /// <summary>消息体（message_start 事件使用）</summary>
-    [DataMember(Name = "message")]
     public AnthropicResponse? Message { get; set; }
 
     /// <summary>内容块（content_block_start 事件使用）</summary>
-    [DataMember(Name = "content_block")]
     public AnthropicContentBlock? ContentBlock { get; set; }
 
     /// <summary>增量数据（content_block_delta / message_delta 事件使用）</summary>
-    [DataMember(Name = "delta")]
     public AnthropicDelta? Delta { get; set; }
 
     /// <summary>用量统计（message_delta 事件可携带）</summary>
-    [DataMember(Name = "usage")]
     public AnthropicUsage? Usage { get; set; }
 
     /// <summary>将流式事件转换为内部统一 ChatResponse chunk</summary>
@@ -510,18 +489,14 @@ public class AnthropicStreamEvent
 public class AnthropicDelta
 {
     /// <summary>类型。text_delta（内容增量时使用）</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>文本内容（text_delta 时使用）</summary>
-    [DataMember(Name = "text")]
     public String? Text { get; set; }
 
     /// <summary>思考内容（thinking_delta 时使用）</summary>
-    [DataMember(Name = "thinking")]
     public String? Thinking { get; set; }
 
     /// <summary>停止原因（message_delta 时使用）</summary>
-    [DataMember(Name = "stop_reason")]
     public String? StopReason { get; set; }
 }

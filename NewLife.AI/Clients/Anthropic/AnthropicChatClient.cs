@@ -15,12 +15,11 @@ namespace NewLife.AI.Clients.Anthropic;
 /// </list>
 /// </remarks>
 /// <remarks>用连接选项初始化 Anthropic 客户端</remarks>
-/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("Anthropic", "Anthropic", "https://api.anthropic.com", Protocol = "AnthropicMessages", Description = "Anthropic Claude 系列模型")]
 [AiClientModel("claude-opus-4-6", "Claude Opus 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-sonnet-4-6", "Claude Sonnet 4.6", Thinking = true, Vision = true)]
 [AiClientModel("claude-haiku-4-5", "Claude Haiku 4.5", Thinking = true, Vision = true)]
-public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options)
+public class AnthropicChatClient : AiClientBase
 {
     #region 属性
     /// <inheritdoc/>
@@ -28,9 +27,19 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
 
     /// <summary>Anthropic API 版本</summary>
     protected virtual String ApiVersion => "2023-06-01";
+
+    /// <summary>默认Json序列化选项</summary>
+    public static JsonOptions DefaultJsonOptions = new()
+    {
+        PropertyNaming = PropertyNaming.SnakeCaseLower,
+        IgnoreNullValues = true,
+    };
     #endregion
 
     #region 构造
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+    public AnthropicChatClient(AiClientOptions options) : base(options) => JsonOptions = DefaultJsonOptions;
+
     /// <summary>以 API 密钥和可选模型快速创建 Anthropic 客户端</summary>
     /// <param name="apiKey">API 密钥</param>
     /// <param name="model">默认模型编码，为空时由每次请求指定</param>
@@ -95,14 +104,14 @@ public class AnthropicChatClient(AiClientOptions options) : AiClientBase(options
     /// <summary>解析 Anthropic 非流式响应</summary>
     protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
-        var resp = json.ToJsonEntity<AnthropicResponse>()!;
+        var resp = json.ToJsonEntity<AnthropicResponse>(JsonOptions)!;
         resp.Model ??= request.Model;
         return resp;
     }
 
     /// <summary>解析 Anthropic 流式 chunk</summary>
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
-        => data.ToJsonEntity<AnthropicStreamEvent>()?.ToChunkResponse(request.Model);
+        => data.ToJsonEntity<AnthropicStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model);
 
     /// <summary>设置 Anthropic 认证请求头</summary>
     protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)

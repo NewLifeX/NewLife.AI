@@ -23,7 +23,7 @@ public class OpenAiChatClientTests
     [DisplayName("ParseResponse_通义千问响应_基础字段正确解析")]
     public void ParseResponse_QwenPlusResponse_BasicFieldsParsed()
     {
-        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
+        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions)!.ToChatResponse();
 
         Assert.NotNull(response);
         Assert.Equal("chatcmpl-131cb128-bba5-939a-b206-48807913b636", response.Id);
@@ -36,7 +36,7 @@ public class OpenAiChatClientTests
     [DisplayName("ParseResponse_通义千问响应_Choices解析正确")]
     public void ParseResponse_QwenPlusResponse_ChoicesParsed()
     {
-        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
+        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions)!.ToChatResponse();
 
         Assert.NotNull(response.Messages);
         Assert.Single(response.Messages);
@@ -50,7 +50,7 @@ public class OpenAiChatClientTests
     [DisplayName("ParseResponse_通义千问响应_Message内容正确")]
     public void ParseResponse_QwenPlusResponse_MessageContentCorrect()
     {
-        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
+        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions)!.ToChatResponse();
 
         var msg = response.Messages![0].Message;
         Assert.NotNull(msg);
@@ -62,7 +62,7 @@ public class OpenAiChatClientTests
     [DisplayName("ParseResponse_通义千问响应_Usage用量正确解析")]
     public void ParseResponse_QwenPlusResponse_UsageParsed()
     {
-        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>()!.ToChatResponse();
+        var response = QwenJson.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions)!.ToChatResponse();
 
         Assert.NotNull(response.Usage);
         Assert.Equal(12, response.Usage.InputTokens);

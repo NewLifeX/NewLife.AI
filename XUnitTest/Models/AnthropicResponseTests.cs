@@ -32,7 +32,7 @@ public class AnthropicResponseTests
             }
         }";
 
-        var result = json.ToJsonEntity<AnthropicResponse>();
+        var result = json.ToJsonEntity<AnthropicResponse>(AnthropicChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         Assert.Equal("msg_123", result!.Id);
@@ -239,7 +239,7 @@ public class AnthropicResponseTests
     public void ToChunkResponse_MessageStart_ReturnsInputTokensUsage()
     {
         var json = @"{""type"":""message_start"",""message"":{""usage"":{""input_tokens"":25}}}";
-        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>(AnthropicChatClient.DefaultJsonOptions);
         Assert.NotNull(ev);
 
         var chunk = ev!.ToChunkResponse("claude-sonnet-4");
@@ -288,7 +288,7 @@ public class AnthropicResponseTests
     public void ToChunkResponse_MessageDelta_ReturnsFinishReasonAndOutputTokens()
     {
         var json = @"{""type"":""message_delta"",""delta"":{""stop_reason"":""end_turn""},""usage"":{""output_tokens"":42}}";
-        var ev = json.ToJsonEntity<AnthropicStreamEvent>();
+        var ev = json.ToJsonEntity<AnthropicStreamEvent>(AnthropicChatClient.DefaultJsonOptions);
         Assert.NotNull(ev);
 
         var chunk = ev!.ToChunkResponse("claude-sonnet-4");
