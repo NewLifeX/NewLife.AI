@@ -22,7 +22,7 @@ public class MemoryService(ITracer tracer, ILog log)
     #region 写入记忆
     /// <summary>保存或更新一条记忆条目（key 相同则更新，否则新增）</summary>
     /// <param name="userId">用户ID</param>
-    /// <param name="category">分类（preference/habit/interest/background）</param>
+    /// <param name="category">分类（偏好/习惯/兴趣/背景）</param>
     /// <param name="key">键</param>
     /// <param name="value">值</param>
     /// <param name="confidence">置信度（0-100）</param>
@@ -179,14 +179,7 @@ public class MemoryService(ITracer tracer, ILog log)
 
         foreach (var group in grouped)
         {
-            var label = group.Key switch
-            {
-                "preference" => "偏好",
-                "habit" => "习惯",
-                "interest" => "兴趣",
-                "background" => "背景",
-                _ => group.Key
-            };
+            var label = group.Key;
             sb.Append("**").Append(label).AppendLine("：**");
             foreach (var m in group.Take(MaxMemoriesPerCategory))
             {
