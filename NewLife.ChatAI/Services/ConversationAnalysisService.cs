@@ -24,17 +24,64 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
     /// <summary>记忆服务（同时对外暴露给 LearningFilter 注入上下文）</summary>
     public MemoryService MemoryService { get; } = memoryService;
 
-    /// <summary>记忆提取系统提示词</summary>
+    /// <summary>有效的记忆分类集合（用于校验 AI 返回的 category 值）</summary>
+    internal static readonly HashSet<String> ValidCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "identity", "preference", "habit", "interest", "background",
+        "profession", "goal", "relationship", "skill", "instruction",
+        // 兼容中文分类名
+        "身份信息", "偏好", "习惯", "兴趣", "背景",
+        "职业", "目标", "人际关系", "技能", "交互指令",
+    };
+
+    /// <summary>中文分类名到英文枚举值的映射</summary>
+    internal static readonly Dictionary<String, String> CategoryMapping = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["身份信息"] = "identity",
+        ["偏好"] = "preference",
+        ["习惯"] = "habit",
+        ["兴趣"] = "interest",
+        ["背景"] = "background",
+        ["职业"] = "profession",
+        ["目标"] = "goal",
+        ["人际关系"] = "relationship",
+        ["技能"] = "skill",
+        ["交互指令"] = "instruction",
+        ["技能专长"] = "skill",
+        ["目标计划"] = "goal",
+        ["背景信息"] = "background",
+        ["职业信息"] = "profession",
+        ["兴趣爱好"] = "interest",
+        ["行为习惯"] = "habit",
+    };
+
+    /// <summary>记忆提取系统提示词（10 类分类体系，对标 Mem0/ChatGPT/Claude）</summary>
     private static readonly String ExtractionSystemPrompt = """
-        你是一个用户记忆提取助手。分析以下对话内容，提取用户的个人偏好、习惯、兴趣和背景信息。
-        
+        你是一个用户记忆提取助手。分析以下对话内容，从中提取 10 类结构化用户记忆和用户标签。
+
+        ## 记忆分类（category 必须使用以下英文枚举值）
+        - identity：身份信息（姓名、昵称、年龄、所在地、语言、时区）
+        - preference：偏好（喜好/厌恶、回答格式/风格/长度、饮食/娱乐偏好）
+        - habit：行为习惯（使用模式、活跃时段、工作流程、行为规律）
+        - interest：兴趣爱好（关注领域、娱乐偏好、学习方向、收藏的书/电影）
+        - background：背景信息（教育经历、生活环境、个人经历、健康相关）
+        - profession：职业信息（职位/角色、公司/团队、行业、技术栈）
+        - goal：目标计划（短期/长期目标、待办事项、即将发生的事件、学习计划）
+        - relationship：人际关系（家人、同事、朋友、宠物、所属组织/社区）
+        - skill：技能专长（编程语言熟练度、工具/框架掌握、专业能力评级）
+        - instruction：交互指令（用户对 AI 行为的明确要求和持久化指令）
+
+        ## 输出格式
         请以 JSON 格式返回，其中：
-        - memories：记忆条目列表，每条包含 category（偏好/习惯/兴趣/背景）、key（简短标识）、value（具体内容）、confidence（0-100置信度）
-        
-        只提取能明确从对话中推断的信息，无法确定的不要猜测。如果没有可提取的信息，返回空列表。
-        
-        返回格式：
-        {"memories": [{"category": "偏好", "key": "最喜欢的语言", "value": "C#", "confidence": 90}]}
+        - memories：记忆条目列表，每条包含 category（上述英文枚举值）、key（简短标识）、value（具体内容）、confidence（0-100 置信度）
+
+        ## 规则
+        - 只提取能明确从对话中推断的信息，无法确定的不要猜测
+        - category 必须使用上述 10 个英文枚举值之一
+        - 如果没有可提取的信息，返回空列表
+
+        返回格式示例：
+        {"memories": [{"category": "preference", "key": "回答语言", "value": "中文", "confidence": 95}, {"category": "profession", "key": "职位", "value": "后端开发", "confidence": 85}]}
         """;
 
     #region 分析
@@ -190,21 +237,38 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         foreach (var m in parsed.Memories)
         {
             if (m.Key.IsNullOrEmpty() || m.Value.IsNullOrEmpty()) continue;
-            await MemoryService.UpsertMemoryAsync(userId, m.Category ?? "general", m.Key!, m.Value!, m.Confidence, conversationId, cancellationToken).ConfigureAwait(false);
+            var category = NormalizeCategory(m.Category);
+            await MemoryService.UpsertMemoryAsync(userId, category, m.Key!, m.Value!, m.Confidence, conversationId, cancellationToken).ConfigureAwait(false);
             count++;
         }
 
         return count;
     }
+
+    /// <summary>规范化分类名，中文映射为英文枚举值，无效值回退为 general</summary>
+    internal static String NormalizeCategory(String? category)
+    {
+        if (category.IsNullOrWhiteSpace()) return "general";
+
+        // 优先查找中文名/别名映射
+        if (CategoryMapping.TryGetValue(category!, out var mapped))
+            return mapped;
+
+        // 再检查是否已经是合法英文枚举值
+        if (ValidCategories.Contains(category!))
+            return category!.ToLower();
+
+        return "general";
+    }
     #endregion
 
     #region 内部模型
-    private class ExtractionResult
+    internal class ExtractionResult
     {
         public IList<MemoryItem>? Memories { get; set; }
     }
 
-    private class MemoryItem
+    internal class MemoryItem
     {
         public String? Category { get; set; }
         public String? Key { get; set; }
