@@ -1,6 +1,8 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.Gemini;
 using NewLife.Remoting;
 using NewLife.Serialization;
 
@@ -54,15 +56,50 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<IChatResponse> MessagesAsync(IChatRequest request, CancellationToken cancellationToken = default)
-        => ChatViaPathAsync(request, "/v1/messages", cancellationToken);
+    public virtual async Task<IChatResponse> MessagesAsync(IChatRequest request, CancellationToken cancellationToken = default)
+    {
+        request.Stream = false;
+        var body = request is AnthropicRequest ar ? ar : AnthropicRequest.FromChatRequest(request);
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/messages";
+
+        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        var resp = responseText.ToJsonEntity<AnthropicResponse>()!;
+        resp.Model ??= request.Model;
+        return resp;
+    }
 
     /// <summary>Anthropic Messages API 流式。路径 /v1/messages</summary>
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<IChatResponse> MessagesStreamAsync(IChatRequest request, CancellationToken cancellationToken = default)
-        => ChatStreamViaPathAsync(request, "/v1/messages", cancellationToken);
+    public virtual async IAsyncEnumerable<IChatResponse> MessagesStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        request.Stream = true;
+        var body = request is AnthropicRequest ar ? ar : AnthropicRequest.FromChatRequest(request);
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/messages";
+
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            if (line == null) break;
+
+            if (!line.StartsWith("data: ")) continue;
+
+            var data = line.Substring(6).Trim();
+            if (data == "[DONE]") break;
+            if (data.Length == 0) continue;
+
+            IChatResponse? chunk = null;
+            try { chunk = data.ToJsonEntity<AnthropicStreamEvent>()?.ToChunkResponse(request.Model); } catch { }
+            if (chunk != null) yield return chunk;
+        }
+    }
     #endregion
 
     #region Google Gemini API（/v1/gemini）
@@ -70,15 +107,55 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对话响应</returns>
-    public virtual Task<IChatResponse> GeminiAsync(IChatRequest request, CancellationToken cancellationToken = default)
-        => ChatViaPathAsync(request, "/v1/gemini", cancellationToken);
+    public virtual async Task<IChatResponse> GeminiAsync(IChatRequest request, CancellationToken cancellationToken = default)
+    {
+        request.Stream = false;
+        var body = request is GeminiRequest gr ? gr : GeminiRequest.FromChatRequest(request);
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/gemini";
+
+        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        var resp = responseText.ToJsonEntity<GeminiResponse>()!;
+        resp.Model = request.Model;
+        return resp;
+    }
 
     /// <summary>Google Gemini API 流式。路径 /v1/gemini</summary>
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>流式响应块序列</returns>
-    public virtual IAsyncEnumerable<IChatResponse> GeminiStreamAsync(IChatRequest request, CancellationToken cancellationToken = default)
-        => ChatStreamViaPathAsync(request, "/v1/gemini", cancellationToken);
+    public virtual async IAsyncEnumerable<IChatResponse> GeminiStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        request.Stream = true;
+        var body = request is GeminiRequest gr ? gr : GeminiRequest.FromChatRequest(request);
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/gemini";
+
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            if (line == null) break;
+
+            if (!line.StartsWith("data: ")) continue;
+
+            var data = line.Substring(6).Trim();
+            if (data == "[DONE]") break;
+            if (data.Length == 0) continue;
+
+            IChatResponse? chunk = null;
+            try
+            {
+                var resp = data.ToJsonEntity<GeminiResponse>();
+                if (resp != null) { resp.Model = request.Model; chunk = resp; }
+            }
+            catch { }
+            if (chunk != null) yield return chunk;
+        }
+    }
     #endregion
 
     #region 图像生成（/v1/images/generations）

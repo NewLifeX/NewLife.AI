@@ -411,7 +411,8 @@ public class GatewayIntegrationTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var doc = JsonNode.Parse(await resp.Content.ReadAsStringAsync());
-        Assert.NotNull(doc?["choices"]);
+        // Anthropic 响应使用 content 数组而非 choices
+        Assert.NotNull(doc?["content"]);
     }
 
     #endregion

@@ -87,6 +87,20 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     [HttpPost("v1/messages")]
     public async Task MessagesAsync([FromBody] AnthropicRequest request, CancellationToken cancellationToken)
         => await ProcessChatAsync(request, GatewayProtocol.Anthropic, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>获取认证密钥。优先从 Authorization 头获取，回退到 x-api-key 头（Anthropic 协议兼容）</summary>
+    /// <returns>认证字符串</returns>
+    private String? GetAuthKey()
+    {
+        var auth = Request.Headers.Authorization.ToString();
+        if (!String.IsNullOrWhiteSpace(auth)) return auth;
+
+        // Anthropic 协议使用 x-api-key 头
+        var xApiKey = Request.Headers["x-api-key"].ToString();
+        if (!String.IsNullOrWhiteSpace(xApiKey)) return xApiKey;
+
+        return null;
+    }
     #endregion
 
     #region Google Gemini API
@@ -266,8 +280,8 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="cancellationToken">取消令牌</param>
     private async Task ProcessChatAsync(IChatRequest request, GatewayProtocol protocol, CancellationToken cancellationToken)
     {
-        // 认证校验
-        var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
+        // 认证校验（支持 Authorization: Bearer 和 x-api-key 两种方式）
+        var appKey = gatewayService.ValidateAppKey(GetAuthKey());
         if (appKey == null)
         {
             await WriteErrorAsync(401, "INVALID_API_KEY", "AppKey 无效或已禁用").ConfigureAwait(false);

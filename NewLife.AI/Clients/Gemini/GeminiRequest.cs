@@ -17,8 +17,8 @@ namespace NewLife.AI.Clients.Gemini;
 public class GeminiRequest : IChatRequest
 {
     #region 属性
-    /// <summary>模型编码。Gemini 原生 API 将模型置于 URL 路径，此处作为扩展字段</summary>
-    [IgnoreDataMember]
+    /// <summary>模型编码。Gemini 原生 API 将模型置于 URL 路径，网关场景通过请求体传递</summary>
+    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>对话内容列表。role 为 user / model</summary>

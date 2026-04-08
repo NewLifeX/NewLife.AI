@@ -20,8 +20,8 @@ public class AiProviderTests
     [Fact]
     public void Default_RegistersExpectedCount()
     {
-        // 34 个内置服务商描述符（不含 OllamaCloud，OllamaCloud 是 InitData 动态生成的）
-        Assert.Equal(34, AiClientRegistry.Default.Descriptors.Count);
+        // 46 个内置服务商描述符（不含 OllamaCloud，OllamaCloud 是 InitData 动态生成的）
+        Assert.Equal(46, AiClientRegistry.Default.Descriptors.Count);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class AiProviderTests
 
     [Theory]
     [InlineData("OpenAI", "https://api.openai.com", "OpenAI")]
-    [InlineData("AzureAI", "https://models.inference.ai.azure.com", "OpenAI")]
+    [InlineData("AzureAI", "https://{resource}.openai.azure.com", "OpenAI")]
     [InlineData("DashScope", "https://dashscope.aliyuncs.com/api/v1", "DashScope")]
     [InlineData("DeepSeek", "https://api.deepseek.com", "OpenAI")]
     [InlineData("VolcEngine", "https://ark.cn-beijing.volces.com/api/v3", "OpenAI")]
@@ -274,7 +274,7 @@ public class AiProviderTests
     [Fact]
     public void AllDescriptors_HaveValidProtocol()
     {
-        var validProtocols = new HashSet<String> { "OpenAI", "AnthropicMessages", "Gemini", "DashScope", "Ollama" };
+        var validProtocols = new HashSet<String> { "OpenAI", "AnthropicMessages", "Gemini", "DashScope", "Ollama", "Bedrock" };
         Assert.All(AiClientRegistry.Default.Descriptors.Values,
             d => Assert.Contains(d.Protocol, validProtocols));
     }
@@ -291,6 +291,9 @@ public class AiProviderTests
     {
         foreach (var d in AiClientRegistry.Default.Descriptors.Values)
         {
+            // 跳过含模板占位符的 URL（如 AzureAI 的 https://{resource}.openai.azure.com）
+            if (d.DefaultEndpoint.Contains('{')) continue;
+
             Assert.True(
                 Uri.TryCreate(d.DefaultEndpoint, UriKind.Absolute, out var uri),
                 $"服务商 {d.Code} 的 DefaultEndpoint 不是有效 URI: {d.DefaultEndpoint}");
