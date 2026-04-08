@@ -14,7 +14,6 @@ public class OllamaChatResponse : IChatResponse
     public String? Model { get; set; }
 
     /// <summary>创建时间</summary>
-    [DataMember(Name = "created_at")]
     public String? CreatedAt { get; set; }
 
     /// <summary>消息对象</summary>
@@ -24,41 +23,44 @@ public class OllamaChatResponse : IChatResponse
     public Boolean Done { get; set; }
 
     /// <summary>完成原因</summary>
-    [DataMember(Name = "done_reason")]
     public String? DoneReason { get; set; }
 
     /// <summary>总耗时（纳秒）</summary>
-    [DataMember(Name = "total_duration")]
     public Int64 TotalDuration { get; set; }
 
     /// <summary>模型加载耗时（纳秒）</summary>
-    [DataMember(Name = "load_duration")]
     public Int64 LoadDuration { get; set; }
 
     /// <summary>输入 token 数</summary>
-    [DataMember(Name = "prompt_eval_count")]
     public Int32 PromptEvalCount { get; set; }
 
     /// <summary>输入评估耗时（纳秒）</summary>
-    [DataMember(Name = "prompt_eval_duration")]
     public Int64 PromptEvalDuration { get; set; }
 
     /// <summary>输出 token 数</summary>
-    [DataMember(Name = "eval_count")]
     public Int32 EvalCount { get; set; }
 
     /// <summary>输出评估耗时（纳秒）</summary>
-    [DataMember(Name = "eval_duration")]
     public Int64 EvalDuration { get; set; }
 
     #region IChatResponse 适配
-    /// <summary>响应标识</summary>
+    /// <summary>响应标识。未由 Ollama 返回时自动生成</summary>
     [IgnoreDataMember]
-    public String? Id { get; set; }
+    public String? Id
+    {
+        get => _id ??= CreatedAt != null ? $"ollama-{CreatedAt}" : $"ollama-{DateTime.UtcNow.Ticks}";
+        set => _id = value;
+    }
+    private String? _id;
 
-    /// <summary>对象类型</summary>
+    /// <summary>对象类型。非流式为 chat.completion，流式为 chat.completion.chunk</summary>
     [IgnoreDataMember]
-    String? IChatResponse.Object { get; set; }
+    String? IChatResponse.Object
+    {
+        get => _object ??= Done ? "chat.completion" : "chat.completion.chunk";
+        set => _object = value;
+    }
+    private String? _object;
 
     /// <summary>创建时间适配。从 CreatedAt 解析或使用当前时间</summary>
     [IgnoreDataMember]
@@ -81,7 +83,9 @@ public class OllamaChatResponse : IChatResponse
             if (_messages == null && Message != null)
             {
                 var msg = Message.ToChatMessage();
-                _messages = [new ChatChoice { Index = 0, Message = msg, Delta = msg, FinishReason = FinishReasonHelper.Parse(DoneReason) }];
+                var fr = FinishReasonHelper.Parse(DoneReason);
+                if (fr == null && Done) fr = FinishReason.Stop;
+                _messages = [new ChatChoice { Index = 0, Message = msg, Delta = msg, FinishReason = fr }];
             }
             return _messages;
         }

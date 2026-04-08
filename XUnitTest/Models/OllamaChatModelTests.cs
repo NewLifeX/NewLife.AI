@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 using Xunit;
@@ -203,7 +204,7 @@ public class OllamaChatModelTests
             ""eval_duration"": 700000000
         }";
 
-        var result = json.ToJsonEntity<OllamaChatResponse>();
+        var result = json.ToJsonEntity<OllamaChatResponse>(OllamaChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         Assert.Equal("qwen3:8b", result!.Model);
@@ -263,7 +264,7 @@ public class OllamaChatModelTests
             ""done_reason"": ""stop""
         }";
 
-        var result = json.ToJsonEntity<OllamaChatResponse>();
+        var result = json.ToJsonEntity<OllamaChatResponse>(OllamaChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         Assert.NotNull(result!.Message!.ToolCalls);
@@ -291,6 +292,53 @@ public class OllamaChatModelTests
         Assert.NotNull(result);
         Assert.False(result!.Done);
         Assert.Equal("He", result.Message!.Content?.ToString());
+    }
+
+    [Fact]
+    [DisplayName("JSON 序列化—OllamaChatRequest 字段名正确")]
+    public void JsonSerialize_OllamaChatRequest_FieldNames()
+    {
+        var req = OllamaChatRequest.FromChatRequest(new ChatRequest
+        {
+            Model = "qwen3.5:0.8b",
+            Messages = [new ChatMessage { Role = "user", Content = "hi" }],
+            MaxTokens = 100,
+            EnableThinking = false,
+        });
+
+        // 使用 OllamaChatClient.JsonOptions（SnakeCaseLower + IgnoreNullValues=false）序列化，与 PostAsync 保持一致
+        using var client = new OllamaChatClient("", "qwen3.5:0.8b");
+        var json = client.JsonHost.Write(req, client.JsonOptions!)!;
+        // Ollama 要求 stream/model/messages 等为小写 snake_case
+        Assert.Contains("\"model\"", json);
+        Assert.Contains("\"stream\"", json);
+        Assert.Contains("\"messages\"", json);
+        Assert.Contains("\"think\"", json);
+        // 不能是 PascalCase
+        Assert.DoesNotContain("\"Model\"", json);
+        Assert.DoesNotContain("\"Stream\"", json);
+        Assert.DoesNotContain("\"Messages\"", json);
+    }
+
+    [Fact]
+    [DisplayName("JSON 反序列化—IChatResponse 适配器正确映射")]
+    public void JsonDeserialize_IChatResponseAdapter()
+    {
+        var json = @"{""model"":""qwen3.5:0.8b"",""created_at"":""2026-04-08T02:04:02Z"",""message"":{""role"":""assistant"",""content"":""2""},""done"":true,""done_reason"":""stop"",""prompt_eval_count"":11,""eval_count"":5}";
+
+        var result = json.ToJsonEntity<OllamaChatResponse>(OllamaChatClient.DefaultJsonOptions);
+        Assert.NotNull(result);
+        Assert.True(result!.Done, $"Done 应为 true，DoneReason={result.DoneReason}");
+        Assert.Equal("stop", result.DoneReason);
+
+        // 通过 IChatResponse 接口隐式访问
+        IChatResponse resp = result;
+        Assert.NotNull(resp.Messages);
+        Assert.NotEmpty(resp.Messages!);
+        Assert.Equal(FinishReason.Stop, resp.Messages[0].FinishReason);
+        Assert.NotNull(resp.Usage);
+        Assert.True(resp.Usage!.InputTokens > 0);
+        Assert.True(resp.Usage.OutputTokens > 0);
     }
     #endregion
 
@@ -591,7 +639,7 @@ public class OllamaChatModelTests
             ""total_duration"": 1000000000
         }";
 
-        var ollamaResp = json.ToJsonEntity<OllamaChatResponse>();
+        var ollamaResp = json.ToJsonEntity<OllamaChatResponse>(OllamaChatClient.DefaultJsonOptions);
         Assert.NotNull(ollamaResp);
 
         var chatResp = ollamaResp!.ToChatResponse();
@@ -632,7 +680,7 @@ public class OllamaChatModelTests
             ""done_reason"": ""stop""
         }";
 
-        var ollamaResp = json.ToJsonEntity<OllamaChatResponse>();
+        var ollamaResp = json.ToJsonEntity<OllamaChatResponse>(OllamaChatClient.DefaultJsonOptions);
         var chatResp = ollamaResp!.ToChatResponse();
 
         var msg = chatResp.Messages![0].Message;

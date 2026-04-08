@@ -15,8 +15,6 @@ namespace NewLife.AI.Clients.Ollama;
 /// </list>
 /// 官方文档：https://github.com/ollama/ollama/blob/main/docs/api.md
 /// </remarks>
-/// <remarks>用连接选项初始化 Ollama 客户端</remarks>
-/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("Ollama", "本地Ollama", "http://localhost:11434", Protocol = "Ollama", Description = "本地运行开源大模型，支持 Llama/Qwen/Gemma 等")]
 [AiClientModel("qwen3.5:0.8b", "Qwen 3.5 0.8B", Thinking = true)]
 [AiClientModel("qwen3:8b", "Qwen3 8B", Thinking = true)]
@@ -25,14 +23,25 @@ namespace NewLife.AI.Clients.Ollama;
 [AiClientModel("phi4", "Phi-4")]
 [AiClientModel("llava", "LLaVA", Vision = true, FunctionCalling = false)]
 [AiClientModel("gemma3", "Gemma 3", Vision = true)]
-public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
+public class OllamaChatClient : AiClientBase
 {
     #region 属性
     /// <inheritdoc/>
     public override String Name { get; set; } = "本地Ollama";
+
+    /// <summary>默认Json序列化选项</summary>
+    public static JsonOptions DefaultJsonOptions = new()
+    {
+        PropertyNaming = PropertyNaming.SnakeCaseLower,
+        IgnoreNullValues = false,
+    };
     #endregion
 
     #region 构造
+    /// <summary>以连接选项初始化 Ollama 客户端</summary>
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+    public OllamaChatClient(AiClientOptions options) : base(options) => JsonOptions = DefaultJsonOptions;
+
     /// <summary>以 API 密钥和可选模型快速创建 Ollama 客户端</summary>
     /// <param name="apiKey">API 密钥；本地部署可传 null 或空串</param>
     /// <param name="model">默认模型编码，为空时由每次请求指定</param>
@@ -77,7 +86,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     {
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/tags";
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
-        return json?.ToJsonEntity<OllamaTagsResponse>();
+        return json?.ToJsonEntity<OllamaTagsResponse>(JsonOptions);
     }
 
     /// <summary>获取运行中的模型列表</summary>
@@ -87,7 +96,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     {
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/ps";
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
-        return json?.ToJsonEntity<OllamaPsResponse>();
+        return json?.ToJsonEntity<OllamaPsResponse>(JsonOptions);
     }
 
     /// <summary>获取模型详细信息</summary>
@@ -100,7 +109,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/show";
         var json = await TryPostAsync(url, new { model }, _options, cancellationToken).ConfigureAwait(false);
-        return json?.ToJsonEntity<OllamaShowResponse>();
+        return json?.ToJsonEntity<OllamaShowResponse>(JsonOptions);
     }
 
     /// <summary>获取 Ollama 版本信息</summary>
@@ -128,7 +137,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/embed";
         var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
-        return json.ToJsonEntity<OllamaEmbedResponse>();
+        return json.ToJsonEntity<OllamaEmbedResponse>(JsonOptions);
     }
 
     /// <summary>拉取（下载）模型。等待完成后返回最终状态</summary>
@@ -145,7 +154,7 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromMinutes(30));
         var json = await PostAsync(url, new { model, stream = false }, null, _options, cts.Token).ConfigureAwait(false);
-        return json.ToJsonEntity<OllamaPullStatus>();
+        return json.ToJsonEntity<OllamaPullStatus>(JsonOptions);
     }
     #endregion
 
@@ -169,10 +178,20 @@ public class OllamaChatClient(AiClientOptions options) : AiClientBase(options)
     protected override Object BuildRequest(IChatRequest request) => request is OllamaChatRequest or ? or : OllamaChatRequest.FromChatRequest(request);
 
     /// <summary>解析 Ollama 非流式响应</summary>
-    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<OllamaChatResponse>()!;
+    protected override IChatResponse ParseResponse(String json, IChatRequest request)
+    {
+        var resp = json.ToJsonEntity<OllamaChatResponse>(JsonOptions)!;
+        ((IChatResponse)resp).Object = "chat.completion";
+        return resp;
+    }
 
     /// <summary>解析 Ollama 流式 NDJSON 单行 chunk，OllamaChatResponse 适配器同时设置 Message/Delta</summary>
-    protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent) => json.ToJsonEntity<OllamaChatResponse>();
+    protected override IChatResponse? ParseChunk(String json, IChatRequest request, String? lastEvent)
+    {
+        var resp = json.ToJsonEntity<OllamaChatResponse>(JsonOptions);
+        if (resp != null) ((IChatResponse)resp).Object = "chat.completion.chunk";
+        return resp;
+    }
 
     /// <summary>根据 Ollama 模型 ID 和详情推断模型能力</summary>
     /// <remarks>

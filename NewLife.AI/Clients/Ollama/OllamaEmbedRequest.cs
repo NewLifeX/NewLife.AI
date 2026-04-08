@@ -18,7 +18,6 @@ public class OllamaEmbedRequest
     public Int32? Dimensions { get; set; }
 
     /// <summary>保持模型加载的时长</summary>
-    [DataMember(Name = "keep_alive")]
     public String? KeepAlive { get; set; }
 
     /// <summary>模型参数选项</summary>

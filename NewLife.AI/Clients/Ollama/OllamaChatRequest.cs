@@ -261,7 +261,6 @@ public class OllamaChatMessage
     public String? Thinking { get; set; }
 
     /// <summary>工具调用列表</summary>
-    [DataMember(Name = "tool_calls")]
     public IList<OllamaToolCall>? ToolCalls { get; set; }
 
     /// <summary>转换为通用 ChatMessage</summary>

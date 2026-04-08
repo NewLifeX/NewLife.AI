@@ -52,6 +52,9 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <summary>JSON 处理器。默认使用 SystemJson，映射到 System.Text.Json </summary>
     public IJsonHost JsonHost { get; set; }
 
+    /// <summary>JSON 选项。子类可根据此属性调整序列化行为（如是否使用驼峰命名）</summary>
+    public JsonOptions? JsonOptions { get; set; }
+
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options;
 
@@ -86,7 +89,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <summary>默认构造</summary>
     public AiClientBase(AiClientOptions options)
     {
-        Name = GetType().Name.TrimEnd("ChatClient", "Client");
+        Name = GetType().Name.TrimSuffix("ChatClient", "Client");
         _options = options ?? throw new ArgumentNullException(nameof(options));
         JsonHost = _host;
 
@@ -259,7 +262,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串</returns>
     protected async Task<String> PostAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -281,7 +284,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串，服务不可用时返回 null</returns>
     protected async Task<String?> TryPostAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -301,7 +304,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
     protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -327,7 +330,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字节数组</returns>
     protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, false, false, false) ?? "";
+        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
