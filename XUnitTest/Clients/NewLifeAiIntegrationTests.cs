@@ -56,7 +56,11 @@ public class NewLifeAiIntegrationTests
     /// <summary>创建默认客户端选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
+#if DEBUG
+        Endpoint = "http://localhost:5080",
+#else
         Endpoint = _descriptor.DefaultEndpoint,
+#endif
         ApiKey = _apiKey,
     };
 
@@ -248,7 +252,7 @@ public class NewLifeAiIntegrationTests
         var request = CreateSimpleRequest("写一篇关于代码的长文", 10);
         request.EnableThinking = false;
         var response = await ChatAsync(request);
-
+        Assert.Null(response);
         Assert.NotNull(response);
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.OutputTokens <= 15,

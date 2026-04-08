@@ -49,16 +49,26 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
     /// <summary>snake_case 序列化选项。用于写出符合 OpenAI / Anthropic 协议的响应体</summary>
     public static readonly JsonSerializerOptions SnakeCaseOptions;
 
+    /// <summary>camelCase 序列化选项。用于写出符合 Gemini 协议的响应体</summary>
+    public static readonly JsonSerializerOptions CamelCaseOptions;
+
     static GatewayService()
     {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        var snake = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
-        SystemJson.Apply(options, true);
+        SystemJson.Apply(snake, true);
+        SnakeCaseOptions = snake;
 
-        SnakeCaseOptions = options;
+        var camel = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        };
+        SystemJson.Apply(camel, true);
+        CamelCaseOptions = camel;
     }
     #endregion
 
@@ -429,7 +439,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
             case GatewayProtocol.Gemini:
                 {
                     var geminiChunk = GeminiResponse.FromChunk(chunk);
-                    events.Add($"data: {JsonSerializer.Serialize(geminiChunk, SnakeCaseOptions)}\n\n");
+                    events.Add($"data: {JsonSerializer.Serialize(geminiChunk, CamelCaseOptions)}\n\n");
                     break;
                 }
             default:
@@ -483,13 +493,15 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
     /// <returns>JSON 字符串</returns>
     public static String FormatResponse(ChatResponse result, GatewayProtocol protocol)
     {
-        Object response = protocol switch
+        switch (protocol)
         {
-            GatewayProtocol.Anthropic => AnthropicResponse.From(result),
-            GatewayProtocol.Gemini => GeminiResponse.From(result),
-            _ => ChatCompletionResponse.From(result),
-        };
-        return JsonSerializer.Serialize(response, SnakeCaseOptions);
+            case GatewayProtocol.Anthropic:
+                return JsonSerializer.Serialize(AnthropicResponse.From(result), SnakeCaseOptions);
+            case GatewayProtocol.Gemini:
+                return JsonSerializer.Serialize(GeminiResponse.From(result), CamelCaseOptions);
+            default:
+                return JsonSerializer.Serialize(ChatCompletionResponse.From(result), SnakeCaseOptions);
+        }
     }
     #endregion
 

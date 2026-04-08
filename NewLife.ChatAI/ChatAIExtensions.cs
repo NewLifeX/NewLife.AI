@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using NewLife.AI.Filters;
 using NewLife.AI.Services;
@@ -76,6 +79,17 @@ public static class ChatAIExtensions
 
         // 消息频率限制器
         services.AddSingleton<MessageRateLimiter>();
+
+        // 注册网关 JSON 输入格式化器，根据 Action 标记属性选择 snake_case / camelCase 反序列化
+        services.Configure<MvcOptions>(options =>
+        {
+            var defaultJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            };
+            NewLife.Serialization.SystemJson.Apply(defaultJsonOptions, true);
+            options.InputFormatters.Insert(0, new GatewayJsonInputFormatter(defaultJsonOptions));
+        });
 
         return services;
     }

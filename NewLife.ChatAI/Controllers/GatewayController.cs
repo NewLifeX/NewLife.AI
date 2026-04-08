@@ -6,6 +6,7 @@ using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
 
@@ -62,6 +63,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="request">对话请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     [HttpPost("v1/chat/completions")]
+    [SnakeCaseBody]
     public async Task ChatCompletionsAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
         => await ProcessChatAsync(request, GatewayProtocol.OpenAI, cancellationToken).ConfigureAwait(false);
     #endregion
@@ -72,6 +74,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="cancellationToken">取消令牌</param>
     /// <remarks>协议格式与 ChatCompletions 完全兼容，复用同一处理逻辑</remarks>
     [HttpPost("v1/responses")]
+    [SnakeCaseBody]
     public async Task ResponsesAsync([FromBody] ChatCompletionRequest request, CancellationToken cancellationToken)
         => await ProcessChatAsync(request, GatewayProtocol.OpenAI, cancellationToken).ConfigureAwait(false);
     #endregion
@@ -85,6 +88,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// 认证头 x-api-key 与 Bearer Token 均被支持，由 ValidateAppKey 统一处理。
     /// </remarks>
     [HttpPost("v1/messages")]
+    [SnakeCaseBody]
     public async Task MessagesAsync([FromBody] AnthropicRequest request, CancellationToken cancellationToken)
         => await ProcessChatAsync(request, GatewayProtocol.Anthropic, cancellationToken).ConfigureAwait(false);
 
@@ -112,6 +116,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// Gemini 原生字段名为 camelCase，由 CamelCaseBodyAttribute 指示 GatewayJsonInputFormatter 使用对应选项。
     /// </remarks>
     [HttpPost("v1/gemini")]
+    [CamelCaseBody]
     public async Task GeminiAsync([FromBody] GeminiRequest request, CancellationToken cancellationToken)
         => await ProcessChatAsync(request, GatewayProtocol.Gemini, cancellationToken).ConfigureAwait(false);
     #endregion
@@ -122,6 +127,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     [HttpPost("v1/images/generations")]
+    [SnakeCaseBody]
     public async Task<IActionResult> ImageGenerationsAsync([FromBody] IDictionary<String, Object> body, CancellationToken cancellationToken)
     {
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
