@@ -27,7 +27,6 @@ public class BedrockResponse : IChatResponse
     public BedrockResponseOutput? Output { get; set; }
 
     /// <summary>停止原因的两个位置之一（某些情况直接在顶级）</summary>
-    [DataMember(Name = "stopReason")]
     public String? StopReason { get; set; }
 
     /// <summary>令牌用量统计</summary>
@@ -53,9 +52,9 @@ public class BedrockResponse : IChatResponse
     {
         get
         {
-            if (_messages == null && Output?.ResponseMessage != null)
+            if (_messages == null && Output?.Message != null)
             {
-                var msg = Output.ResponseMessage;
+                var msg = Output.Message;
                 String? contentText = null;
                 String? reasoning = null;
                 List<ToolCall>? toolCalls = null;
@@ -133,7 +132,7 @@ public class BedrockResponse : IChatResponse
     {
         get
         {
-            var content = Output?.ResponseMessage?.Content;
+            var content = Output?.Message?.Content;
             if (content == null) return null;
             return String.Join("", content.Where(c => c.Text != null).Select(c => c.Text));
         }
@@ -158,9 +157,9 @@ public class BedrockResponse : IChatResponse
         List<ToolCall>? toolCalls = null;
         FinishReason? finishReason = null;
 
-        if (Output?.ResponseMessage != null)
+        if (Output?.Message != null)
         {
-            var msg = Output.ResponseMessage;
+            var msg = Output.Message;
             finishReason = MapStopReason(msg.StopReason ?? StopReason);
 
             if (msg.Content != null)
@@ -277,7 +276,7 @@ public class BedrockResponse : IChatResponse
             Model = response.Model,
             Output = new BedrockResponseOutput
             {
-                ResponseMessage = new BedrockResponseMessage
+                Message = new BedrockResponseMessage
                 {
                     Role = "assistant",
                     Content = content,
@@ -400,23 +399,19 @@ public class BedrockResponse : IChatResponse
 public class BedrockResponseOutput
 {
     /// <summary>实际消息内容</summary>
-    [DataMember(Name = "message")]
-    public BedrockResponseMessage? ResponseMessage { get; set; }
+    public BedrockResponseMessage? Message { get; set; }
 }
 
 /// <summary>Bedrock 响应消息</summary>
 public class BedrockResponseMessage
 {
     /// <summary>角色。固定 "assistant"</summary>
-    [DataMember(Name = "role")]
     public String? Role { get; set; }
 
     /// <summary>内容块列表</summary>
-    [DataMember(Name = "content")]
     public IList<BedrockResponseContentBlock>? Content { get; set; }
 
     /// <summary>停止原因</summary>
-    [DataMember(Name = "stopReason")]
     public String? StopReason { get; set; }
 }
 
@@ -424,15 +419,12 @@ public class BedrockResponseMessage
 public class BedrockResponseContentBlock
 {
     /// <summary>文本内容</summary>
-    [DataMember(Name = "text")]
     public String? Text { get; set; }
 
     /// <summary>工具调用内容</summary>
-    [DataMember(Name = "toolUse")]
     public BedrockResponseToolUseBlock? ToolUse { get; set; }
 
     /// <summary>推理内容</summary>
-    [DataMember(Name = "reasoningContent")]
     public BedrockResponseReasoningContent? ReasoningContent { get; set; }
 }
 
@@ -440,15 +432,12 @@ public class BedrockResponseContentBlock
 public class BedrockResponseToolUseBlock
 {
     /// <summary>工具调用编号</summary>
-    [DataMember(Name = "toolUseId")]
     public String? ToolUseId { get; set; }
 
     /// <summary>工具名称</summary>
-    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>工具输入参数。通常为 IDictionary</summary>
-    [DataMember(Name = "input")]
     public Object? Input { get; set; }
 }
 
@@ -456,7 +445,6 @@ public class BedrockResponseToolUseBlock
 public class BedrockResponseReasoningContent
 {
     /// <summary>推理文本</summary>
-    [DataMember(Name = "reasoningText")]
     public String? ReasoningText { get; set; }
 }
 
@@ -464,11 +452,9 @@ public class BedrockResponseReasoningContent
 public class BedrockResponseUsage
 {
     /// <summary>输入令牌数</summary>
-    [DataMember(Name = "inputTokens")]
     public Int32 InputTokens { get; set; }
 
     /// <summary>输出令牌数</summary>
-    [DataMember(Name = "outputTokens")]
     public Int32 OutputTokens { get; set; }
 
     /// <summary>从内部用量统计转换</summary>
@@ -580,7 +566,6 @@ public class BedrockStreamContentBlockDelta
     public String? Text { get; set; }
 
     /// <summary>推理内容增量</summary>
-    [DataMember(Name = "reasoningContent")]
     public BedrockResponseReasoningContent? ReasoningContent { get; set; }
 }
 
@@ -588,7 +573,6 @@ public class BedrockStreamContentBlockDelta
 public class BedrockStreamMessageStopEvent
 {
     /// <summary>停止原因</summary>
-    [DataMember(Name = "stopReason")]
     public String? StopReason { get; set; }
 }
 

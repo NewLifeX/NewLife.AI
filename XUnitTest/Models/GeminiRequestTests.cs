@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using NewLife.AI.Clients;
 using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 using Xunit;
@@ -124,6 +126,22 @@ public class GeminiRequestTests
 
         Assert.Equal("user", restored.Messages[0].Role);
         Assert.Equal("测试", restored.Messages[0].Content?.ToString());
+    }
+
+    [Fact]
+    [DisplayName("JSON序列化—Model字段正确输出")]
+    public void JsonSerialization_ModelField()
+    {
+        var request = new ChatRequest { Model = "qwen3.5-flash" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var gemini = GeminiRequest.FromChatRequest(request);
+        Assert.Equal("qwen3.5-flash", gemini.Model);
+
+        var client = new OpenAIChatClient(new AiClientOptions());
+        var json = client.JsonHost.Write(gemini, client.JsonOptions)!;
+        Assert.Contains("\"model\"", json);
+        Assert.Contains("qwen3.5-flash", json);
     }
     #endregion
 }

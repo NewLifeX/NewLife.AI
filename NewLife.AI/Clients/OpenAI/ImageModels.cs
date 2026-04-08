@@ -10,39 +10,30 @@ namespace NewLife.AI.Clients.OpenAI;
 public class ImageGenerationRequest
 {
     /// <summary>模型编码。如 wanx3.0-t2i-turbo、wanx3.0-t2i-plus、dall-e-3</summary>
-    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>图像提示词（正向描述）</summary>
-    [DataMember(Name = "prompt")]
     public String Prompt { get; set; } = null!;
 
     /// <summary>负向提示词。描述不希望出现的内容。部分服务商专有（如 Wanx）</summary>
-    [DataMember(Name = "negative_prompt")]
     public String? NegativePrompt { get; set; }
 
     /// <summary>生成图像数量。1~10，默认 1</summary>
-    [DataMember(Name = "n")]
     public Int32? N { get; set; }
 
     /// <summary>图像尺寸。如 1024x1024、1024x1792、1792x1024</summary>
-    [DataMember(Name = "size")]
     public String? Size { get; set; }
 
     /// <summary>图像质量。standard（默认）或 hd（高清，DALL·E 3 专有）</summary>
-    [DataMember(Name = "quality")]
     public String? Quality { get; set; }
 
     /// <summary>画面风格。vivid（鲜明，DALL·E 3）/ realistic（写实）/ anime（动漫）。依服务商而异</summary>
-    [DataMember(Name = "style")]
     public String? Style { get; set; }
 
     /// <summary>响应格式。url（默认，返回图片链接）或 b64_json（返回 Base64）</summary>
-    [DataMember(Name = "response_format")]
     public String? ResponseFormat { get; set; }
 
     /// <summary>用户标识。用于追踪和限流</summary>
-    [DataMember(Name = "user")]
     public String? User { get; set; }
 }
 
@@ -50,23 +41,18 @@ public class ImageGenerationRequest
 public class SpeechRequest
 {
     /// <summary>TTS 模型编码。如 tts-1、cosyvoice-v2</summary>
-    [DataMember(Name = "model")]
     public String Model { get; set; } = "tts-1";
 
     /// <summary>要合成的文本内容</summary>
-    [DataMember(Name = "input")]
     public String Input { get; set; } = null!;
 
     /// <summary>音色名称。如 longxiaochun、alloy</summary>
-    [DataMember(Name = "voice")]
     public String Voice { get; set; } = null!;
 
     /// <summary>音频格式。mp3（默认）/ wav / opus / flac / pcm</summary>
-    [DataMember(Name = "response_format")]
     public String? ResponseFormat { get; set; }
 
     /// <summary>语速倍率。0.25~4.0，默认 1.0</summary>
-    [DataMember(Name = "speed")]
     public Double? Speed { get; set; }
 }
 

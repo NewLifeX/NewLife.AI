@@ -22,7 +22,6 @@ public class GeminiResponse : IChatResponse
     public IList<GeminiCandidate>? Candidates { get; set; }
 
     /// <summary>令牌用量统计</summary>
-    [DataMember(Name = "usageMetadata")]
     public GeminiUsageMetadata? UsageMetadata { get; set; }
     #endregion
 
@@ -274,7 +273,6 @@ public class GeminiCandidate
     public GeminiResponseContent? Content { get; set; }
 
     /// <summary>结束原因。STOP/MAX_TOKENS/SAFETY</summary>
-    [DataMember(Name = "finishReason")]
     public String? FinishReason { get; set; }
 
     /// <summary>序号</summary>
@@ -301,7 +299,6 @@ public class GeminiResponsePart
     public Boolean? Thought { get; set; }
 
     /// <summary>函数调用</summary>
-    [DataMember(Name = "functionCall")]
     public GeminiFunctionCall? FunctionCall { get; set; }
 }
 
@@ -319,15 +316,12 @@ public class GeminiFunctionCall
 public class GeminiUsageMetadata
 {
     /// <summary>提示令牌数</summary>
-    [DataMember(Name = "promptTokenCount")]
     public Int32 PromptTokenCount { get; set; }
 
     /// <summary>候选回复令牌数</summary>
-    [DataMember(Name = "candidatesTokenCount")]
     public Int32 CandidatesTokenCount { get; set; }
 
     /// <summary>总令牌数</summary>
-    [DataMember(Name = "totalTokenCount")]
     public Int32 TotalTokenCount { get; set; }
 
     /// <summary>从内部用量统计转换</summary>

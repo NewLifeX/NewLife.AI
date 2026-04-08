@@ -18,7 +18,6 @@ public class DashScopeResponse : IChatResponse
 {
     #region 属性
     /// <summary>请求编号</summary>
-    [DataMember(Name = "request_id")]
     public String? RequestId { get; set; }
 
     /// <summary>错误码。非空时表示请求失败</summary>
@@ -203,7 +202,6 @@ public class DashScopeOutput
 public class DashScopeChoiceData
 {
     /// <summary>结束原因。stop/length/tool_calls/null</summary>
-    [DataMember(Name = "finish_reason")]
     public String? FinishReason { get; set; }
 
     /// <summary>消息内容（非流式）</summary>
@@ -226,15 +224,12 @@ public class DashScopeMessageData
     public Object? Content { get; set; }
 
     /// <summary>思考内容。Qwen 推理模型返回的推理过程（reasoning_content）</summary>
-    [DataMember(Name = "reasoning_content")]
     public String? ReasoningContent { get; set; }
 
     /// <summary>工具调用列表</summary>
-    [DataMember(Name = "tool_calls")]
     public IList<DashScopeResponseToolCall>? ToolCalls { get; set; }
 
     /// <summary>工具调用 ID（角色为 tool 时使用）</summary>
-    [DataMember(Name = "tool_call_id")]
     public String? ToolCallId { get; set; }
 
     /// <summary>转换为内部统一 ChatMessage</summary>
@@ -333,27 +328,21 @@ public class DashScopeUsage : UsageDetails
 public class DashScopeUsageData
 {
     /// <summary>输入令牌数</summary>
-    [DataMember(Name = "input_tokens")]
     public Int32 InputTokens { get; set; }
 
     /// <summary>输出令牌数</summary>
-    [DataMember(Name = "output_tokens")]
     public Int32 OutputTokens { get; set; }
 
     /// <summary>总令牌数</summary>
-    [DataMember(Name = "total_tokens")]
     public Int32 TotalTokens { get; set; }
 
     /// <summary>图像 Token 数。多模态请求中图像消耗的 Token 数</summary>
-    [DataMember(Name = "image_tokens")]
     public Int32 ImageTokens { get; set; }
 
     /// <summary>视频 Token 数</summary>
-    [DataMember(Name = "video_tokens")]
     public Int32 VideoTokens { get; set; }
 
     /// <summary>音频 Token 数</summary>
-    [DataMember(Name = "audio_tokens")]
     public Int32 AudioTokens { get; set; }
 
     /// <summary>转换为内部统一 UsageDetails</summary>

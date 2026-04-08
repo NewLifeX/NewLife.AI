@@ -17,15 +17,12 @@ public class DashScopeRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
-    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>输入容器。包含 messages 列表</summary>
-    [DataMember(Name = "input")]
     public DashScopeInput Input { get; set; } = new();
 
     /// <summary>推理参数</summary>
-    [DataMember(Name = "parameters")]
     public DashScopeParameters Parameters { get; set; } = new();
     #endregion
 
@@ -391,7 +388,6 @@ public class DashScopeRequest : IChatRequest
 public class DashScopeInput
 {
     /// <summary>消息列表</summary>
-    [DataMember(Name = "messages")]
     public IList<DashScopeMessage> Messages { get; set; } = [];
 }
 
@@ -399,101 +395,77 @@ public class DashScopeInput
 public class DashScopeParameters
 {
     /// <summary>结果格式。固定 "message"</summary>
-    [DataMember(Name = "result_format")]
     public String ResultFormat { get; set; } = "message";
 
     /// <summary>温度。0~2，控制随机性</summary>
-    [DataMember(Name = "temperature")]
     public Double? Temperature { get; set; }
 
     /// <summary>核采样。0~1，与 Temperature 搭配使用</summary>
-    [DataMember(Name = "top_p")]
     public Double? TopP { get; set; }
 
     /// <summary>Top-K 采样</summary>
-    [DataMember(Name = "top_k")]
     public Int32? TopK { get; set; }
 
     /// <summary>最大生成令牌数</summary>
-    [DataMember(Name = "max_tokens")]
     public Int32? MaxTokens { get; set; }
 
     /// <summary>停止序列</summary>
-    [DataMember(Name = "stop")]
     public IList<String>? Stop { get; set; }
 
     /// <summary>话题新鲜度惩罚</summary>
-    [DataMember(Name = "presence_penalty")]
     public Double? PresencePenalty { get; set; }
 
     /// <summary>频率惩罚</summary>
-    [DataMember(Name = "frequency_penalty")]
     public Double? FrequencyPenalty { get; set; }
 
     /// <summary>是否启用深度思考</summary>
-    [DataMember(Name = "enable_thinking")]
     public Boolean? EnableThinking { get; set; }
 
     /// <summary>响应格式。如 {"type":"json_object"}</summary>
-    [DataMember(Name = "response_format")]
     public Object? ResponseFormat { get; set; }
 
     /// <summary>工具列表</summary>
-    [DataMember(Name = "tools")]
     public IList<DashScopeTool>? Tools { get; set; }
 
     /// <summary>工具选择策略。"auto"/"none"/"required" 或指定工具名</summary>
-    [DataMember(Name = "tool_choice")]
     public Object? ToolChoice { get; set; }
 
     /// <summary>是否并行工具调用</summary>
-    [DataMember(Name = "parallel_tool_calls")]
     public Boolean? ParallelToolCalls { get; set; }
 
     /// <summary>是否流式输出</summary>
-    [DataMember(Name = "stream")]
     public Boolean? Stream { get; set; }
 
     /// <summary>是否增量输出。流式时配合使用，每个 chunk 只含本次新增内容</summary>
-    [DataMember(Name = "incremental_output")]
     public Boolean? IncrementalOutput { get; set; }
 
     // DashScope 专属参数
 
     /// <summary>随机种子。固定种子可在相同参数下复现输出</summary>
-    [DataMember(Name = "seed")]
     public Int32? Seed { get; set; }
 
     /// <summary>重复惩罚。大于 1 则抑制已出现的 Token，默认 1.1</summary>
-    [DataMember(Name = "repetition_penalty")]
     public Double? RepetitionPenalty { get; set; }
 
     /// <summary>返回候选数量。同一输入独立生成 N 条不同输出，默认 1</summary>
-    [DataMember(Name = "n")]
     public Int32? N { get; set; }
 
     /// <summary>思考预算（Token 数）。0=关闭深度思考，-1=不限制</summary>
-    [DataMember(Name = "thinking_budget")]
     public Int32? ThinkingBudget { get; set; }
 
     /// <summary>是否启用代码解释器</summary>
-    [DataMember(Name = "enable_code_interpreter")]
     public Boolean? EnableCodeInterpreter { get; set; }
 
     /// <summary>是否返回对数概率</summary>
-    [DataMember(Name = "logprobs")]
     public Boolean? Logprobs { get; set; }
 
     /// <summary>返回对数概率的 top-K Token 数。需同时设置 Logprobs=true</summary>
-    [DataMember(Name = "top_logprobs")]
     public Int32? TopLogprobs { get; set; }
 
     /// <summary>是否启用联网搜索</summary>
-    [DataMember(Name = "enable_search")]
     public Boolean? EnableSearch { get; set; }
 
     /// <summary>联网搜索选项。包含 search_strategy/enable_source/forced_search 等</summary>
-    [DataMember(Name = "search_options")]
     public IDictionary<String, Object>? SearchOptions { get; set; }
 }
 
@@ -501,23 +473,18 @@ public class DashScopeParameters
 public class DashScopeMessage
 {
     /// <summary>角色。user/assistant/system/tool</summary>
-    [DataMember(Name = "role")]
     public String Role { get; set; } = "";
 
     /// <summary>消息内容。纯文本时为字符串；多模态或多内容块时为对象数组</summary>
-    [DataMember(Name = "content")]
     public Object? Content { get; set; }
 
     /// <summary>消息名称。可选，用于标识对话角色</summary>
-    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>工具调用 ID。角色为 tool 时使用，标识响应哪个工具调用</summary>
-    [DataMember(Name = "tool_call_id")]
     public String? ToolCallId { get; set; }
 
     /// <summary>工具调用列表。角色为 assistant 且有工具调用时填充</summary>
-    [DataMember(Name = "tool_calls")]
     public IList<DashScopeToolCall>? ToolCalls { get; set; }
 }
 
@@ -525,19 +492,15 @@ public class DashScopeMessage
 public class DashScopeTool
 {
     /// <summary>工具类型。function/mcp/web_search/code_interpreter</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>函数工具定义。type="function" 时使用</summary>
-    [DataMember(Name = "function")]
     public DashScopeToolFunction? Function { get; set; }
 
     /// <summary>MCP 工具定义。type="mcp" 时使用</summary>
-    [DataMember(Name = "mcp")]
     public DashScopeMcpTool? Mcp { get; set; }
 
     /// <summary>其他类型工具配置（如 web_search/code_interpreter）</summary>
-    [DataMember(Name = "config")]
     public Object? Config { get; set; }
 }
 
@@ -545,15 +508,12 @@ public class DashScopeTool
 public class DashScopeToolFunction
 {
     /// <summary>函数名称</summary>
-    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>函数描述</summary>
-    [DataMember(Name = "description")]
     public String? Description { get; set; }
 
     /// <summary>参数 JSON Schema</summary>
-    [DataMember(Name = "parameters")]
     public Object? Parameters { get; set; }
 }
 
@@ -561,19 +521,15 @@ public class DashScopeToolFunction
 public class DashScopeMcpTool
 {
     /// <summary>MCP 服务地址</summary>
-    [DataMember(Name = "server_url")]
     public String? ServerUrl { get; set; }
 
     /// <summary>MCP 服务 ID</summary>
-    [DataMember(Name = "server_id")]
     public String? ServerId { get; set; }
 
     /// <summary>允许调用的工具列表。为空则允许全部</summary>
-    [DataMember(Name = "allowed_tools")]
     public IList<String>? AllowedTools { get; set; }
 
     /// <summary>授权配置</summary>
-    [DataMember(Name = "authorization")]
     public DashScopeToolAuthorization? Authorization { get; set; }
 }
 
@@ -581,11 +537,9 @@ public class DashScopeMcpTool
 public class DashScopeToolAuthorization
 {
     /// <summary>授权类型</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>授权 Token</summary>
-    [DataMember(Name = "token")]
     public String? Token { get; set; }
 }
 
@@ -593,15 +547,12 @@ public class DashScopeToolAuthorization
 public class DashScopeToolCall
 {
     /// <summary>工具调用编号</summary>
-    [DataMember(Name = "id")]
     public String? Id { get; set; }
 
     /// <summary>工具类型。固定 "function"</summary>
-    [DataMember(Name = "type")]
     public String? Type { get; set; }
 
     /// <summary>函数调用信息</summary>
-    [DataMember(Name = "function")]
     public DashScopeToolCallFunction? Function { get; set; }
 }
 
@@ -609,10 +560,8 @@ public class DashScopeToolCall
 public class DashScopeToolCallFunction
 {
     /// <summary>函数名称</summary>
-    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>函数参数（JSON 字符串）</summary>
-    [DataMember(Name = "arguments")]
     public String? Arguments { get; set; }
 }

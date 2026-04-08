@@ -8,27 +8,21 @@ public class ChatMessage
 {
     #region 属性
     /// <summary>角色。system/user/assistant/tool</summary>
-    [DataMember(Name = "role")]
     public String Role { get; set; } = null!;
 
     /// <summary>内容。文本内容或多模态内容数组</summary>
-    [DataMember(Name = "content")]
     public Object? Content { get; set; }
 
     /// <summary>名称。函数调用时的函数名</summary>
-    [DataMember(Name = "name")]
     public String? Name { get; set; }
 
     /// <summary>工具调用列表。assistant 角色发起的工具调用</summary>
-    [DataMember(Name = "tool_calls")]
     public IList<ToolCall>? ToolCalls { get; set; }
 
     /// <summary>工具调用编号。tool 角色回传时关联的调用编号</summary>
-    [DataMember(Name = "tool_call_id")]
     public String? ToolCallId { get; set; }
 
     /// <summary>思考内容。部分模型返回的推理链路（reasoning_content）</summary>
-    [DataMember(Name = "reasoning_content")]
     public String? ReasoningContent { get; set; }
 
     /// <summary>类型化内容片段列表（MEAI 兼容）。非空时优先于 <see cref="Content"/> 使用，支持多模态消息</summary>

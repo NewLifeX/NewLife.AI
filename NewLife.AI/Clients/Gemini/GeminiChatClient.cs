@@ -16,19 +16,28 @@ namespace NewLife.AI.Clients.Gemini;
 /// </list>
 /// </remarks>
 /// <remarks>用连接选项初始化 Gemini 客户端</remarks>
-/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("Gemini", "谷歌Gemini", "https://generativelanguage.googleapis.com", Protocol = "Gemini", Description = "谷歌 Gemini 系列多模态大模型，支持超长上下文")]
 [AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true)]
 [AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("imagen-3.0-generate-001", "Imagen 3", ImageGeneration = true, FunctionCalling = false)]
-public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
+public class GeminiChatClient : AiClientBase
 {
     #region 属性
     /// <inheritdoc/>
     public override String Name { get; set; } = "谷歌Gemini";
+
+    /// <summary>默认Json序列化选项</summary>
+    public static JsonOptions DefaultJsonOptions = new()
+    {
+        PropertyNaming = PropertyNaming.CamelCase,
+        IgnoreNullValues = true,
+    };
     #endregion
 
     #region 构造
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+    public GeminiChatClient(AiClientOptions options) : base(options) => JsonOptions = DefaultJsonOptions;
+
     /// <summary>以 API 密钥和可选模型快速创建 Gemini 客户端</summary>
     /// <param name="apiKey">API 密钥</param>
     /// <param name="model">默认模型编码，为空时由每次请求指定</param>
@@ -84,7 +93,7 @@ public class GeminiChatClient(AiClientOptions options) : AiClientBase(options)
     /// <summary>解析 Gemini 响应</summary>
     protected override IChatResponse ParseResponse(String data, IChatRequest request)
     {
-        var resp = data.ToJsonEntity<GeminiResponse>()!;
+        var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions)!;
         resp.Model = request.Model;
         return resp;
     }

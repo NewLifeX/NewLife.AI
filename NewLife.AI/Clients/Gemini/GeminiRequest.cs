@@ -18,18 +18,15 @@ public class GeminiRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码。Gemini 原生 API 将模型置于 URL 路径，网关场景通过请求体传递</summary>
-    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>对话内容列表。role 为 user / model</summary>
     public IList<GeminiContent> Contents { get; set; } = [];
 
     /// <summary>系统指令</summary>
-    [DataMember(Name = "systemInstruction")]
     public GeminiContent? SystemInstruction { get; set; }
 
     /// <summary>生成配置</summary>
-    [DataMember(Name = "generationConfig")]
     public GeminiGenerationConfig? GenerationConfig { get; set; }
 
     /// <summary>是否流式输出。Gemini 原生通过不同端点区分，此处作为扩展字段</summary>
@@ -294,7 +291,6 @@ public class GeminiPart
 public class GeminiGenerationConfig
 {
     /// <summary>最大输出令牌数。对应 OpenAI 的 max_tokens</summary>
-    [DataMember(Name = "maxOutputTokens")]
     public Int32? MaxOutputTokens { get; set; }
 
     /// <summary>温度</summary>
@@ -307,6 +303,5 @@ public class GeminiGenerationConfig
     public Int32? TopK { get; set; }
 
     /// <summary>停止序列</summary>
-    [DataMember(Name = "stopSequences")]
     public IList<String>? StopSequences { get; set; }
 }

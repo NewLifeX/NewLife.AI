@@ -18,7 +18,6 @@ namespace NewLife.AI.Clients.DashScope;
 /// 官方文档：https://help.aliyun.com/zh/model-studio/qwen-api-via-dashscope
 /// </remarks>
 /// <remarks>用连接选项初始化 DashScope 客户端</remarks>
-/// <param name="options">连接选项（Endpoint、ApiKey、Model、Protocol 等）</param>
 [AiClient("DashScope", "阿里百炼", "https://dashscope.aliyuncs.com/api/v1", Protocol = "DashScope", Description = "阿里云百炼大模型平台，支持 Qwen/通义千问全系列商业版模型")]
 [AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true)]
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
@@ -28,7 +27,7 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
 [AiClientModel("qwen3-coder", "Qwen3 Coder")]
 [AiClientModel("wanx2.1-t2i-turbo", "Wanx 文生图", ImageGeneration = true, FunctionCalling = false)]
-public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(options)
+public class DashScopeChatClient : OpenAIChatClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -49,9 +48,19 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
 
     /// <summary>是否使用 DashScope 原生协议。Protocol 为空或 "DashScope" 时为原生模式</summary>
     protected Boolean IsNativeProtocol => _options.Protocol.IsNullOrEmpty() || _options.Protocol == "DashScope";
+
+    /// <summary>默认Json序列化选项</summary>
+    public static JsonOptions DashScopeDefaultJsonOptions = new()
+    {
+        PropertyNaming = PropertyNaming.SnakeCaseLower,
+        IgnoreNullValues = true,
+    };
     #endregion
 
     #region 构造
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model、Protocol 等）</param>
+    public DashScopeChatClient(AiClientOptions options) : base(options) => JsonOptions = DashScopeDefaultJsonOptions;
+
     /// <summary>以 API 密钥和可选模型快速创建阿里百炼客户端</summary>
     /// <param name="apiKey">阿里云 API Key</param>
     /// <param name="model">默认模型编码，为空时由每次请求指定</param>
@@ -71,7 +80,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var url = BuildUrl(request);
         var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        var dashResp = json.ToJsonEntity<DashScopeResponse>()!;
+        var dashResp = json.ToJsonEntity<DashScopeResponse>(JsonOptions)!;
         if (!dashResp.Code.IsNullOrEmpty())
             throw new HttpRequestException($"[DashScope] 错误 {dashResp.Code}: {dashResp.Message}");
 
@@ -276,7 +285,7 @@ public class DashScopeChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <summary>解析 DashScope 原生流式 SSE chunk，DashScopeResponse 适配器同时设置 Delta</summary>
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
     {
-        var chunk = data.ToJsonEntity<DashScopeResponse>();
+        var chunk = data.ToJsonEntity<DashScopeResponse>(JsonOptions);
         chunk?.Model = request.Model;
         return chunk;
     }

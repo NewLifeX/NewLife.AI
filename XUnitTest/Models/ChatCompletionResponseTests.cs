@@ -92,7 +92,7 @@ public class ChatCompletionResponseTests
         }
         """;
 
-        var result = json.ToJsonEntity<ChatCompletionResponse>();
+        var result = json.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         Assert.NotNull(result!.Choices);
@@ -128,7 +128,7 @@ public class ChatCompletionResponseTests
         }
         """;
 
-        var result = json.ToJsonEntity<ChatCompletionResponse>();
+        var result = json.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         var msg = result!.Choices![0].Message;

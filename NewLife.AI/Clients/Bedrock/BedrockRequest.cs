@@ -29,11 +29,9 @@ public class BedrockRequest : IChatRequest
     public IList<BedrockMessage> Messages { get; set; } = [];
 
     /// <summary>推理配置</summary>
-    [DataMember(Name = "inferenceConfig")]
     public BedrockInferenceConfig? InferenceConfig { get; set; }
 
     /// <summary>工具配置</summary>
-    [DataMember(Name = "toolConfig")]
     public BedrockToolConfig? ToolConfig { get; set; }
     #endregion
 
@@ -367,7 +365,6 @@ public class BedrockContentBlock
 public class BedrockToolUse
 {
     /// <summary>工具调用编号</summary>
-    [DataMember(Name = "toolUseId")]
     public String? ToolUseId { get; set; }
 
     /// <summary>工具名称</summary>
@@ -381,7 +378,6 @@ public class BedrockToolUse
 public class BedrockToolResult
 {
     /// <summary>关联的工具调用编号</summary>
-    [DataMember(Name = "toolUseId")]
     public String? ToolUseId { get; set; }
 
     /// <summary>工具结果内容</summary>
@@ -392,18 +388,15 @@ public class BedrockToolResult
 public class BedrockInferenceConfig
 {
     /// <summary>最大生成令牌数</summary>
-    [DataMember(Name = "maxTokens")]
     public Int32? MaxTokens { get; set; }
 
     /// <summary>温度。0~1</summary>
     public Double? Temperature { get; set; }
 
     /// <summary>核采样。0~1</summary>
-    [DataMember(Name = "topP")]
     public Double? TopP { get; set; }
 
     /// <summary>停止序列</summary>
-    [DataMember(Name = "stopSequences")]
     public IList<String>? StopSequences { get; set; }
 
     /// <summary>判断配置是否为空</summary>

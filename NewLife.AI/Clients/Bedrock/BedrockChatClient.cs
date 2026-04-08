@@ -17,7 +17,6 @@ namespace NewLife.AI.Clients.Bedrock;
 /// 凭证通过 AiClientOptions 传递：ApiKey=AccessKeyId, Organization=SecretAccessKey。
 /// 区域通过 AiClientOptions.Protocol 字段传递，默认 us-east-1。
 /// </remarks>
-/// <param name="options">连接选项</param>
 [AiClient("Bedrock", "AWS Bedrock", "https://bedrock-runtime.us-east-1.amazonaws.com",
     Protocol = "Bedrock", Description = "Amazon Bedrock 托管模型服务，支持 Claude/Llama/Mistral 等", Order = 41)]
 [AiClientModel("anthropic.claude-sonnet-4-20250514-v1:0", "Claude Sonnet 4 (Bedrock)", Code = "Bedrock", Vision = true, Thinking = true)]
@@ -25,7 +24,7 @@ namespace NewLife.AI.Clients.Bedrock;
 [AiClientModel("meta.llama3-3-70b-instruct-v1:0", "Llama 3.3 70B (Bedrock)", Code = "Bedrock", FunctionCalling = true)]
 [AiClientModel("mistral.mistral-large-2407-v1:0", "Mistral Large (Bedrock)", Code = "Bedrock", FunctionCalling = true)]
 [AiClientModel("amazon.nova-pro-v1:0", "Amazon Nova Pro", Code = "Bedrock", Vision = true, FunctionCalling = true)]
-public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
+public class BedrockChatClient : AiClientBase
 {
     #region 属性
     /// <inheritdoc/>
@@ -35,9 +34,19 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
     public String Region => _options.Protocol.IsNullOrEmpty() ? "us-east-1" : _options.Protocol;
 
     private const String ServiceName = "bedrock";
+
+    /// <summary>默认Json序列化选项</summary>
+    public static JsonOptions DefaultJsonOptions = new()
+    {
+        PropertyNaming = PropertyNaming.CamelCase,
+        IgnoreNullValues = true,
+    };
     #endregion
 
     #region 构造
+    /// <param name="options">连接选项</param>
+    public BedrockChatClient(AiClientOptions options) : base(options) => JsonOptions = DefaultJsonOptions;
+
     /// <summary>以 AWS 凭证快速创建 Bedrock 客户端</summary>
     /// <param name="accessKeyId">AWS Access Key ID</param>
     /// <param name="secretAccessKey">AWS Secret Access Key</param>
@@ -116,7 +125,7 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
     /// <summary>解析 Bedrock Converse API 非流式响应</summary>
     protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
-        var bedrockResp = json.ToJsonEntity<BedrockResponse>();
+        var bedrockResp = json.ToJsonEntity<BedrockResponse>(JsonOptions);
         if (bedrockResp == null) return new ChatResponse { Model = request.Model };
         bedrockResp.Model ??= request.Model;
         return bedrockResp;
@@ -124,7 +133,7 @@ public class BedrockChatClient(AiClientOptions options) : AiClientBase(options)
 
     /// <summary>解析流式 chunk</summary>
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
-        => data.ToJsonEntity<BedrockStreamEvent>()?.ToChunkResponse(request.Model);
+        => data.ToJsonEntity<BedrockStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model);
 
     /// <summary>设置请求头。使用 AWS SigV4 签名认证</summary>
     protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
