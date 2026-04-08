@@ -221,7 +221,7 @@ public class ChatCompletionRequestTests
         }
         """;
 
-        var result = json.ToJsonEntity<ChatCompletionRequest>();
+        var result = json.ToJsonEntity<ChatCompletionRequest>(OpenAIChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         Assert.Equal("gpt-4o", result!.Model);

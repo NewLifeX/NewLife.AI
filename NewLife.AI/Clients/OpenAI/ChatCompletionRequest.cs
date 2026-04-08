@@ -1,6 +1,5 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
-using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.OpenAI;
 
@@ -9,71 +8,54 @@ public class ChatCompletionRequest : IChatRequest
 {
     #region 属性
     /// <summary>模型编码</summary>
-    [DataMember(Name = "model")]
     public String? Model { get; set; }
 
     /// <summary>消息列表</summary>
-    [DataMember(Name = "messages")]
     public IList<ChatMessage> Messages { get; set; } = [];
 
     /// <summary>温度。0~2，越高越随机，默认1</summary>
-    [DataMember(Name = "temperature")]
     public Double? Temperature { get; set; }
 
     /// <summary>核采样。0~1，与Temperature二选一</summary>
-    [DataMember(Name = "top_p")]
     public Double? TopP { get; set; }
 
     /// <summary>Top K</summary>
-    [DataMember(Name = "top_k")]
     public Int32? TopK { get; set; }
 
     /// <summary>最大生成令牌数</summary>
-    [DataMember(Name = "max_tokens")]
     public Int32? MaxTokens { get; set; }
 
     /// <summary>是否流式输出</summary>
-    [DataMember(Name = "stream")]
     public Boolean Stream { get; set; }
 
     /// <summary>流式选项。Stream=true 时附带，请求包含用量统计</summary>
-    [DataMember(Name = "stream_options")]
     public IDictionary<String, Object>? StreamOptions { get; set; }
 
     /// <summary>停止词列表</summary>
-    [DataMember(Name = "stop")]
     public IList<String>? Stop { get; set; }
 
     /// <summary>存在惩罚。-2~2</summary>
-    [DataMember(Name = "presence_penalty")]
     public Double? PresencePenalty { get; set; }
 
     /// <summary>频率惩罚。-2~2</summary>
-    [DataMember(Name = "frequency_penalty")]
     public Double? FrequencyPenalty { get; set; }
 
     /// <summary>可用工具列表。用于函数调用</summary>
-    [DataMember(Name = "tools")]
     public IList<ChatTool>? Tools { get; set; }
 
     /// <summary>工具选择策略。auto/none/required 或指定工具名</summary>
-    [DataMember(Name = "tool_choice")]
     public Object? ToolChoice { get; set; }
 
     /// <summary>用户标识。用于追踪和限流</summary>
-    [DataMember(Name = "user")]
     public String? User { get; set; }
 
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>
-    [DataMember(Name = "enable_thinking")]
     public Boolean? EnableThinking { get; set; }
 
     /// <summary>响应格式。用于结构化输出，如 {"type":"json_schema","json_schema":{...}}。支持的服务商：DashScope、OpenAI 等</summary>
-    [DataMember(Name = "response_format")]
     public Object? ResponseFormat { get; set; }
 
     /// <summary>是否允许并行工具调用。null=不设置，true=允许，false=禁止</summary>
-    [DataMember(Name = "parallel_tool_calls")]
     public Boolean? ParallelToolCalls { get; set; }
 
     /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
@@ -324,7 +306,5 @@ public class ChatCompletionRequest : IChatRequest
 
         return req;
     }
-
-
     #endregion
 }

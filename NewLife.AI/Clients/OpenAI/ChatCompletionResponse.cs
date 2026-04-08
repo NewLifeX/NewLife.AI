@@ -236,7 +236,6 @@ public class CompletionChoice
     public ChatMessage? Delta { get; set; }
 
     /// <summary>结束原因。stop/length/tool_calls/content_filter</summary>
-    [DataMember(Name = "finish_reason")]
     public String? FinishReason { get; set; }
 }
 
@@ -244,15 +243,12 @@ public class CompletionChoice
 public class CompletionUsage
 {
     /// <summary>提示令牌数</summary>
-    [DataMember(Name = "prompt_tokens")]
     public Int32 PromptTokens { get; set; }
 
     /// <summary>回复令牌数</summary>
-    [DataMember(Name = "completion_tokens")]
     public Int32 CompletionTokens { get; set; }
 
     /// <summary>总令牌数</summary>
-    [DataMember(Name = "total_tokens")]
     public Int32 TotalTokens { get; set; }
 
     /// <summary>从内部用量统计转换</summary>

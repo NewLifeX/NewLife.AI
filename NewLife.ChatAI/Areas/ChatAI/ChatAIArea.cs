@@ -11,7 +11,7 @@ namespace NewLife.ChatAI.Areas.ChatAI;
 public class ChatAIArea : AreaBase
 {
     /// <summary>初始化</summary>
-    public ChatAIArea() : base(nameof(ChatAIArea).TrimEnd("Area")) { }
+    public ChatAIArea() : base(nameof(ChatAIArea).TrimSuffix("Area")) { }
 }
 
 /// <summary>对话控制器基类</summary>

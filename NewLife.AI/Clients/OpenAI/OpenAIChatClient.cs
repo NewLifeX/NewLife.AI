@@ -13,7 +13,6 @@ namespace NewLife.AI.Clients.OpenAI;
 /// 类上标注的多个 <see cref="AiClientAttribute"/> 由 <see cref="AiClientRegistry"/> 反射扫描自动注册。
 /// </remarks>
 /// <remarks>用连接选项初始化 OpenAI 客户端</remarks>
-/// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 // ── OpenAI 原生 ──────────────────────────────────────────────────────────────────────
 [AiClient("OpenAI", "OpenAI", "https://api.openai.com", Description = "OpenAI GPT 系列模型", Order = 1)]
 [AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true)]
@@ -23,7 +22,7 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true)]
 [AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true)]
 [AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false)]
-public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(options)
+public partial class OpenAIChatClient : AiClientBase
 {
     #region 属性
     /// <inheritdoc/>
@@ -31,9 +30,19 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
 
     /// <summary>对话完成路径。默认 /v1/chat/completions，部分服务商需要调整</summary>
     public override String ChatPath { get; set; } = "/v1/chat/completions";
+
+    /// <summary>默认Json序列化选项</summary>
+    public static JsonOptions DefaultJsonOptions = new()
+    {
+        PropertyNaming = PropertyNaming.SnakeCaseLower,
+        IgnoreNullValues = true,
+    };
     #endregion
 
     #region 构造
+    /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
+    public OpenAIChatClient(AiClientOptions options) : base(options) => JsonOptions = DefaultJsonOptions;
+
     /// <summary>以 API 密钥和可选模型快速创建 OpenAI 兼容客户端</summary>
     /// <param name="apiKey">API 密钥</param>
     /// <param name="model">默认模型编码，为空时由每次请求指定</param>
@@ -208,7 +217,7 @@ public partial class OpenAIChatClient(AiClientOptions options) : AiClientBase(op
     /// <param name="json">JSON 字符串</param>
     /// <param name="request">请求对象</param>
     /// <returns></returns>
-    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>()!;
+    protected override IChatResponse ParseResponse(String json, IChatRequest request) => json.ToJsonEntity<ChatCompletionResponse>(JsonOptions)!;
 
     /// <summary>解析消息对象</summary>
     /// <param name="dic">字典</param>

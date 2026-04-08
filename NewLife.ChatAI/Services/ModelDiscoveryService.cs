@@ -198,7 +198,7 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             var config = ModelConfig.FindByProviderIdAndCode(providerConfig.Id, modelCode);
             //if (config != null) continue;
 
-            var name = model.Name.TrimEnd(":latest");
+            var name = model.Name.TrimSuffix(":latest");
             if (name.IsNullOrEmpty()) name = model.Details?.Family ?? modelCode;
 
             var psize = model.Details?.ParameterSize;

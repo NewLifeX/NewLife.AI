@@ -41,7 +41,7 @@ public class ChatCompletionResponseTests
         }
         """;
 
-        var result = json.ToJsonEntity<ChatCompletionResponse>();
+        var result = json.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions);
 
         Assert.NotNull(result);
         Assert.Equal("chatcmpl-123", result!.Id);

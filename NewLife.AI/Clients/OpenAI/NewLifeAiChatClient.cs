@@ -63,7 +63,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/messages";
 
         var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        var resp = responseText.ToJsonEntity<AnthropicResponse>()!;
+        var resp = responseText.ToJsonEntity<AnthropicResponse>(JsonOptions)!;
         resp.Model ??= request.Model;
         return resp;
     }
@@ -96,7 +96,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             if (data.Length == 0) continue;
 
             IChatResponse? chunk = null;
-            try { chunk = data.ToJsonEntity<AnthropicStreamEvent>()?.ToChunkResponse(request.Model); } catch { }
+            try { chunk = data.ToJsonEntity<AnthropicStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model); } catch { }
             if (chunk != null) yield return chunk;
         }
     }
@@ -114,7 +114,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/gemini";
 
         var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        var resp = responseText.ToJsonEntity<GeminiResponse>()!;
+        var resp = responseText.ToJsonEntity<GeminiResponse>(JsonOptions)!;
         resp.Model = request.Model;
         return resp;
     }
@@ -149,7 +149,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             IChatResponse? chunk = null;
             try
             {
-                var resp = data.ToJsonEntity<GeminiResponse>();
+                var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions);
                 if (resp != null) { resp.Model = request.Model; chunk = resp; }
             }
             catch { }
@@ -213,7 +213,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
         if (!resp.IsSuccessStatusCode)
             throw new ApiException((Int32)resp.StatusCode, json);
 
-        return json.ToJsonEntity<ImageGenerationResponse>();
+        return json.ToJsonEntity<ImageGenerationResponse>(JsonOptions);
     }
 
     /// <summary>图像编辑（分参数重载）。POST /v1/images/edits，multipart/form-data 格式</summary>
