@@ -29,8 +29,7 @@ public class GeminiRequest : IChatRequest
     /// <summary>生成配置</summary>
     public GeminiGenerationConfig? GenerationConfig { get; set; }
 
-    /// <summary>是否流式输出。Gemini 原生通过不同端点区分，此处作为扩展字段</summary>
-    [IgnoreDataMember]
+    /// <summary>是否流式输出。Gemini 原生通过不同端点区分；NewLifeAI 网关通过此字段决定是否返回 SSE 事件流</summary>
     public Boolean Stream { get; set; }
 
     /// <summary>工具定义列表。Gemini 格式：[{functionDeclarations:[...]}]</summary>

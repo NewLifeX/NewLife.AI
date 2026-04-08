@@ -111,10 +111,14 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     {
         request.Stream = false;
         var body = request is GeminiRequest gr ? gr : GeminiRequest.FromChatRequest(request);
+        // Gemini 协议使用 camelCase（如 systemInstruction/generationConfig），必须用 Gemini 专用 JsonOptions 序列化，
+        // 不能使用父类的 SnakeCaseLower JsonOptions，否则字段名不匹配导致网关解析失败
+        var bodyJson = JsonHost.Write(body, GeminiChatClient.DefaultJsonOptions)!;
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/gemini";
 
-        var responseText = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
-        var resp = responseText.ToJsonEntity<GeminiResponse>(JsonOptions)!;
+        var responseText = await PostAsync(url, bodyJson, request, _options, cancellationToken).ConfigureAwait(false);
+        // 同理，Gemini 响应字段（candidates/finishReason/usageMetadata）也是 camelCase，需用 Gemini JsonOptions 反序列化
+        var resp = responseText.ToJsonEntity<GeminiResponse>(GeminiChatClient.DefaultJsonOptions)!;
         resp.Model = request.Model;
         return resp;
     }
@@ -127,9 +131,11 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     {
         request.Stream = true;
         var body = request is GeminiRequest gr ? gr : GeminiRequest.FromChatRequest(request);
+        // Gemini 协议使用 camelCase，必须用 Gemini 专用 JsonOptions 序列化，避免 snake_case 与网关期望格式不匹配
+        var bodyJson = JsonHost.Write(body, GeminiChatClient.DefaultJsonOptions)!;
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/gemini";
 
-        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        using var httpResponse = await PostStreamAsync(url, bodyJson, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -149,7 +155,8 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             IChatResponse? chunk = null;
             try
             {
-                var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions);
+                // Gemini 流式块字段（candidates/finishReason）为 camelCase，用 Gemini JsonOptions 反序列化
+                var resp = data.ToJsonEntity<GeminiResponse>(GeminiChatClient.DefaultJsonOptions);
                 if (resp != null) { resp.Model = request.Model; chunk = resp; }
             }
             catch { }

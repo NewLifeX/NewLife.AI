@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
@@ -60,12 +61,16 @@ public class DeepSeekIntegrationTests
     };
 
     /// <summary>构建简单的用户消息请求</summary>
+    /// <remarks>
+    /// 注意：DeepSeek 使用 <c>thinking: {type: "disabled"}</c> 控制思考模式，而非 <c>enable_thinking</c>。
+    /// deepseek-chat 默认不启用思考，无需显式禁用；deepseek-reasoner 始终输出思维链，无法禁用。
+    /// 此处不设置 EnableThinking，保持语义清晰，避免发送 DeepSeek 不识别的 enable_thinking 参数。
+    /// </remarks>
     private static ChatRequest CreateSimpleRequest(String model, String prompt, Int32 maxTokens = 200) => new()
     {
         Model = model,
         Messages = [new ChatMessage { Role = "user", Content = prompt }],
         MaxTokens = maxTokens,
-        EnableThinking = false,
     };
 
     /// <summary>构建带系统提示的请求</summary>
@@ -78,7 +83,6 @@ public class DeepSeekIntegrationTests
             new ChatMessage { Role = "user", Content = userPrompt },
         ],
         MaxTokens = maxTokens,
-        EnableThinking = false,
     };
 
     /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
@@ -164,7 +168,6 @@ public class DeepSeekIntegrationTests
                 new ChatMessage { Role = "user", Content = "我叫什么名字？只回答名字" },
             ],
             MaxTokens = 200,
-            EnableThinking = false,
         };
 
         var response = await ChatAsync(request);
@@ -266,6 +269,23 @@ public class DeepSeekIntegrationTests
 
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
+    }
+
+    [Fact]
+    [DisplayName("参数_EnableThinking_False_禁用思考模式")]
+    public async Task ChatAsync_EnableThinkingFalse_Accepted()
+    {
+        // DeepSeekChatClient 将 EnableThinking=false 映射为 thinking: {type: "disabled"}，而非 enable_thinking
+        // deepseek-chat 默认不思考，显式禁用可确保调用非思考模式
+        var request = CreateSimpleRequest("deepseek-chat", "1+1=?", 100);
+        request.EnableThinking = false;
+
+        var response = await ChatAsync(request);
+
+        Assert.NotNull(response.Messages);
+        Assert.NotEmpty(response.Messages);
+        var content = response.Messages[0].Message?.Content as String;
+        Assert.False(String.IsNullOrWhiteSpace(content));
     }
 
     [Fact]
@@ -728,7 +748,6 @@ public class DeepSeekIntegrationTests
             Model = "deepseek-chat",
             Messages = [],
             MaxTokens = 200,
-            EnableThinking = false,
         };
 
         try
@@ -752,7 +771,6 @@ public class DeepSeekIntegrationTests
             Messages = [],
             MaxTokens = 200,
             Stream = true,
-            EnableThinking = false,
         };
 
         try
@@ -814,7 +832,6 @@ public class DeepSeekIntegrationTests
                     },
                 },
             ],
-            EnableThinking = false,
         };
 
         var response = await ChatAsync(request);
@@ -858,7 +875,6 @@ public class DeepSeekIntegrationTests
                 },
             ],
             ToolChoice = "auto",
-            EnableThinking = false,
         };
 
         var response = await ChatAsync(request);
@@ -904,7 +920,6 @@ public class DeepSeekIntegrationTests
             ],
             MaxTokens = 100,
             Tools = [weatherTool],
-            EnableThinking = false,
         };
 
         var response1 = await ChatAsync(request1, CreateOptions());
@@ -939,7 +954,6 @@ public class DeepSeekIntegrationTests
             ],
             MaxTokens = 100,
             Tools = [weatherTool],
-            EnableThinking = false,
         };
 
         var response2 = await ChatAsync(request2, CreateOptions());
@@ -990,7 +1004,6 @@ public class DeepSeekIntegrationTests
                     },
                 },
             ],
-            EnableThinking = false,
         };
 
         var chunks = new List<IChatResponse>();
@@ -1017,8 +1030,11 @@ public class DeepSeekIntegrationTests
     [DisplayName("深度思考_非流式_返回ReasoningContent")]
     public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
     {
-        // deepseek-reasoner 原生输出 reasoning_content，无需额外参数
-        var request = CreateSimpleRequest("deepseek-reasoner", "9.11 和 9.8 哪个更大？", 300);
+        // deepseek-reasoner 原生始终输出 reasoning_content 思维链，无需额外参数（与 deepseek-chat 的 thinking 参数无关）
+        // deepseek-reasoner 不支持 temperature/top_p/presence_penalty/frequency_penalty，传入会被忽略
+        // max_tokens 需足够大：deepseek-reasoner 的 max_tokens 为推理链 + 最终回答的合计上限，
+        // 设置过小（如 300）可能导致推理链耗尽 token，最终回答返回空
+        var request = CreateSimpleRequest("deepseek-reasoner", "9.11 和 9.8 哪个更大？", 2000);
 
         var response = await ChatAsync(request);
 
@@ -1027,18 +1043,19 @@ public class DeepSeekIntegrationTests
 
         var message = response.Messages[0].Message;
         Assert.NotNull(message);
-        Assert.False(String.IsNullOrWhiteSpace(message.Content as String));
+        Assert.False(String.IsNullOrWhiteSpace(message.Content as String), "deepseek-reasoner 最终回答内容不应为空");
 
-        // deepseek-reasoner 会在 reasoning_content 字段输出思维链
-        if (!String.IsNullOrWhiteSpace(message.ReasoningContent))
-            Assert.True(message.ReasoningContent.Length > 0);
+        // deepseek-reasoner 必定输出思维链到 reasoning_content 字段
+        Assert.False(String.IsNullOrWhiteSpace(message.ReasoningContent), "deepseek-reasoner 应包含 reasoning_content 思维链");
     }
 
     [Fact]
     [DisplayName("深度思考_流式_增量输出ReasoningContent")]
     public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
     {
-        var request = CreateSimpleRequest("deepseek-reasoner", "1+1等于几？", 100);
+        // deepseek-reasoner 流式：先输出 reasoning_content（思维链），再输出 content（最终回答）
+        // max_tokens 需足够大：deepseek-reasoner 的 max_tokens 为推理链 + 最终回答合计上限，太小会导致内容截断
+        var request = CreateSimpleRequest("deepseek-reasoner", "1+1等于几？", 2000);
         request.Stream = true;
 
         var reasoningChunks = new List<String>();
@@ -1057,6 +1074,8 @@ public class DeepSeekIntegrationTests
         }
 
         Assert.NotEmpty(contentChunks);
+        // deepseek-reasoner 必定流式输出思维链增量
+        Assert.NotEmpty(reasoningChunks);
     }
 
     #endregion
@@ -1125,6 +1144,15 @@ public class DeepSeekIntegrationTests
     public void Provider_Implements_AiClientDescriptor()
     {
         Assert.IsType<AiClientDescriptor>(_descriptor);
+    }
+
+    [Fact]
+    [DisplayName("Provider_工厂创建 DeepSeekChatClient 实例")]
+    public void Factory_Creates_DeepSeekChatClient()
+    {
+        // 移动到 DeepSeekChatClient 之后，工厂应创建该具体类型而非限 OpenAIChatClient
+        using var client = _descriptor.Factory(CreateOptions());
+        Assert.IsType<DeepSeekChatClient>(client);
     }
 
     #endregion

@@ -252,7 +252,6 @@ public class NewLifeAiIntegrationTests
         var request = CreateSimpleRequest("写一篇关于代码的长文", 10);
         request.EnableThinking = false;
         var response = await ChatAsync(request);
-        Assert.Null(response);
         Assert.NotNull(response);
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.OutputTokens <= 15,

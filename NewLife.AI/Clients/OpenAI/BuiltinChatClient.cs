@@ -1,9 +1,6 @@
 ﻿namespace NewLife.AI.Clients.OpenAI;
 
 // ── 国内外兼容 OpenAI 协议的服务商 ────────────────────────────────────────────────────
-[AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
-[AiClientModel("deepseek-chat", "DeepSeek Chat", Code = "DeepSeek", FunctionCalling = true)]
-[AiClientModel("deepseek-reasoner", "DeepSeek Reasoner", Code = "DeepSeek", Thinking = true)]
 [AiClient("VolcEngine", "字节豆包", "https://ark.cn-beijing.volces.com/api/v3",
     Description = "字节跳动火山方舟平台，支持豆包等大模型", ChatPath = "/chat/completions", Order = 4)]
 [AiClientModel("doubao-1.5-pro-32k", "豆包 1.5 Pro", Code = "VolcEngine", Thinking = true, Vision = true)]
