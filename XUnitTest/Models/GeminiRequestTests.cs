@@ -143,5 +143,23 @@ public class GeminiRequestTests
         Assert.Contains("\"model\"", json);
         Assert.Contains("qwen3.5-flash", json);
     }
+
+    [Fact]
+    [DisplayName("JSON序列化—Stream字段写入请求体（网关流式识别）")]
+    public void JsonSerialization_StreamField()
+    {
+        // GeminiRequest.Stream 必须参与序列化：NewLifeAI 网关依赖此字段判断是否返回 SSE 事件流
+        // 去掉 [IgnoreDataMember] 后，"stream":true 应出现在请求体中
+        var request = new ChatRequest { Model = "gemini-2.5-flash", Stream = true };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var gemini = GeminiRequest.FromChatRequest(request);
+        Assert.True(gemini.Stream);
+
+        var client = new GeminiChatClient(new AiClientOptions());
+        var json = client.JsonHost.Write(gemini, GeminiChatClient.DefaultJsonOptions)!;
+        Assert.Contains("\"stream\"", json);
+        Assert.Contains("true", json);
+    }
     #endregion
 }
