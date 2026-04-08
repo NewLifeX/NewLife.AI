@@ -50,8 +50,8 @@ public class DashScopeRequest : IChatRequest
                         {
                             toolCalls.Add(new ToolCall
                             {
-                                Id = tc.Id,
-                                Type = tc.Type,
+                                Id = tc.Id!,
+                                Type = tc.Type!,
                                 Function = tc.Function != null ? new FunctionCall { Name = tc.Function.Name ?? "", Arguments = tc.Function.Arguments } : null,
                             });
                         }

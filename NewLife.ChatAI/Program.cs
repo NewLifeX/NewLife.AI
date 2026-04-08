@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI;
 using NewLife.Cube;
 using NewLife.Log;
@@ -20,6 +22,30 @@ services.AddControllersWithViews()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         SystemJson.Apply(options.JsonSerializerOptions, true);
     });
+
+// 当 [FromBody] JSON 解析失败时，返回网关统一错误格式 {code, message}，而非 ProblemDetails
+services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = ctx =>
+    {
+        var firstError = ctx.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .FirstOrDefault() ?? "请求体格式错误";
+
+        var body = new Dictionary<String, Object>
+        {
+            ["code"] = "INVALID_REQUEST",
+            ["message"] = firstError,
+        };
+        return new ContentResult
+        {
+            StatusCode = 400,
+            ContentType = "application/json",
+            Content = JsonSerializer.Serialize(body),
+        };
+    };
+});
 services.AddCube();
 
 var app = builder.Build();

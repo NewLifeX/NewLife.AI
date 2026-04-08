@@ -38,6 +38,7 @@ public abstract class ChatEntityController<T> : EntityController<T> where T : En
         }
     }
 
+    /// <summary>已重载。</summary>
     protected override FieldCollection OnGetFields(ViewKinds kind, Object model)
     {
         var fields = base.OnGetFields(kind, model);

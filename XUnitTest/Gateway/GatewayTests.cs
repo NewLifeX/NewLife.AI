@@ -347,7 +347,7 @@ public class GatewayTests
     [Fact]
     public void NormalizeModelsBuildsCommaSeparatedUniqueValues()
     {
-        var text = NewLife.ChatAI.Entity.AppKey.NormalizeModels(" gpt-4o，qwen-max\nGPT-4o ; deepseek-r1 ");
+        var text = AppKey.NormalizeModels(" gpt-4o，qwen-max\nGPT-4o ; deepseek-r1 ");
 
         Assert.Equal("gpt-4o,qwen-max,deepseek-r1", text);
     }

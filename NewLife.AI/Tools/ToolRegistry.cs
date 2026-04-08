@@ -224,10 +224,10 @@ public class ToolRegistry : IToolProvider
     private static Object?[] DeserializeArguments(ParameterInfo[] parameters, String arguments)
     {
         var result = new Object?[parameters.Length];
-        Dictionary<String, Object?>? parsed;
+        IDictionary<String, Object?>? parsed;
         try
         {
-            parsed = arguments.ToJsonEntity<Dictionary<String, Object?>>();
+            parsed = JsonParser.Decode(arguments);
         }
         catch
         {
@@ -265,7 +265,7 @@ public class ToolRegistry : IToolProvider
 
         // 复杂类型：序列化回 JSON 再反序列化为目标类型
         if (value is IDictionary<String, Object?> || value is IList<Object?>)
-            return value.ToJson().ToJsonEntity(underlyingType);
+            return JsonHelper.Default.Convert(value, underlyingType);
 
         return value;
     }

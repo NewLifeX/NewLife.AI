@@ -1,7 +1,6 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.ComponentModel;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -15,41 +14,25 @@ namespace XUnitTest.Gateway;
 
 /// <summary>API 网关集成测试。覆盖 GatewayController 全部公开端点</summary>
 /// <remarks>
-/// 配置读取优先级：
-/// 1. ./config/GatewayIntegration.key（第 1 行 = 网关端点 URL，第 2 行 = API 密钥）
-/// 2. 环境变量 GATEWAY_ENDPOINT / GATEWAY_API_KEY
-/// 未配置时自动使用默认值 https://ai.newlifex.com + sk-NewLifeAI2026
+/// 通过 ChatAIWebAppFactory 在进程内启动 ChatAI，数据库中已配置密钥 sk-NewLifeAI2026。
 /// </remarks>
-public class GatewayIntegrationTests : IDisposable
+public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFactory>
 {
-    private const String DefaultEndpoint = "https://ai.newlifex.com";
-    private const String DefaultApiKey = "sk-NewLifeAI2026";
+    private const String ApiKey = "sk-NewLifeAI2026";
     private const String TestModel = "qwen3.5-flash";
 
-    private readonly String _endpoint;
-    private readonly String _apiKey;
     private readonly HttpClient _http;
     private readonly HttpClient _httpBadKey;
 
-    public GatewayIntegrationTests()
+    public GatewayIntegrationTests(ChatAIWebAppFactory factory)
     {
-        var (endpoint, apiKey) = LoadConfig();
-        _endpoint = endpoint;
-        _apiKey = apiKey;
-
-        _http = new HttpClient
-        {
-            BaseAddress = new Uri(_endpoint.TrimEnd('/') + "/"),
-            Timeout = TimeSpan.FromSeconds(60),
-        };
+        _http = factory.CreateDefaultClient();
+        _http.Timeout = TimeSpan.FromSeconds(60);
         _http.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", _apiKey);
+            new AuthenticationHeaderValue("Bearer", ApiKey);
 
-        _httpBadKey = new HttpClient
-        {
-            BaseAddress = new Uri(_endpoint.TrimEnd('/') + "/"),
-            Timeout = TimeSpan.FromSeconds(15),
-        };
+        _httpBadKey = factory.CreateDefaultClient();
+        _httpBadKey.Timeout = TimeSpan.FromSeconds(15);
         _httpBadKey.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", "sk-invalid-key-xyz-000");
     }
@@ -61,30 +44,6 @@ public class GatewayIntegrationTests : IDisposable
         _httpBadKey.Dispose();
     }
 
-    /// <summary>从 config 目录或环境变量加载网关配置</summary>
-    private static (String endpoint, String apiKey) LoadConfig()
-    {
-        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "GatewayIntegration.key");
-        if (File.Exists(configPath))
-        {
-            var lines = File.ReadAllLines(configPath);
-            var endpoint = lines.Length >= 1 && lines[0].Trim().StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                ? lines[0].Trim()
-                : DefaultEndpoint;
-            var apiKey = lines.Length >= 2 ? lines[1].Trim() : "";
-            if (!String.IsNullOrWhiteSpace(apiKey))
-                return (endpoint, apiKey);
-        }
-
-        // 从环境变量覆盖
-        var envEndpoint = Environment.GetEnvironmentVariable("GATEWAY_ENDPOINT") ?? DefaultEndpoint;
-        var envKey = Environment.GetEnvironmentVariable("GATEWAY_API_KEY") ?? DefaultApiKey;
-        return (envEndpoint, envKey);
-    }
-
-    /// <summary>是否已配置网关凭据</summary>
-    private Boolean HasConfig() => !String.IsNullOrWhiteSpace(_apiKey) && !String.IsNullOrWhiteSpace(_endpoint);
-
     /// <summary>构建 application/json 请求体</summary>
     private static StringContent JsonBody(Object body) =>
         new(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
@@ -95,8 +54,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("GET /v1/models 返回模型列表，object=list")]
     public async Task ListModels_Returns_ModelList()
     {
-        if (!HasConfig()) return;
-
         var resp = await _http.GetAsync("v1/models");
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
@@ -114,8 +71,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("GET /v1/models 无效密钥返回 401 + INVALID_API_KEY")]
     public async Task ListModels_InvalidKey_Returns_401()
     {
-        if (!HasConfig()) return;
-
         var resp = await _httpBadKey.GetAsync("v1/models");
 
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
@@ -131,8 +86,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 非流式：model/choices/usage 均正确")]
     public async Task ChatCompletions_NonStream_Returns_ValidResponse()
     {
-        if (!HasConfig()) return;
-
         var body = JsonBody(new
         {
             model = TestModel,
@@ -173,8 +126,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 流式：返回 SSE 格式，包含 data: chunk 和 [DONE]")]
     public async Task ChatCompletions_Stream_Returns_SseChunks()
     {
-        if (!HasConfig()) return;
-
         var body = JsonBody(new
         {
             model = TestModel,
@@ -217,8 +168,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 携带 stream_options 不干扰模型路由（原 Bug 复现验证）")]
     public async Task ChatCompletions_StreamOptions_Does_Not_Break_Routing()
     {
-        if (!HasConfig()) return;
-
         // 原 Bug：SystemJson IExtend 转换器导致 model 字段丢失，返回 404 "未找到模型 ''"
         var body = JsonBody(new
         {
@@ -260,8 +209,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 携带 tools 参数正常响应")]
     public async Task ChatCompletions_WithTools_Returns_ValidResponse()
     {
-        if (!HasConfig()) return;
-
         var body = JsonBody(new
         {
             model = TestModel,
@@ -308,8 +255,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 无效密钥返回 401 + INVALID_API_KEY")]
     public async Task ChatCompletions_InvalidApiKey_Returns_401()
     {
-        if (!HasConfig()) return;
-
         var body = JsonBody(new
         {
             model = TestModel,
@@ -327,8 +272,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 未知模型返回 404 + MODEL_NOT_FOUND，错误消息含模型名")]
     public async Task ChatCompletions_UnknownModel_Returns_404_With_ModelName()
     {
-        if (!HasConfig()) return;
-
         var unknownModel = "non-existent-model-xyz-99999";
         var body = JsonBody(new
         {
@@ -348,8 +291,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/chat/completions 请求体格式错误返回 400 + INVALID_REQUEST")]
     public async Task ChatCompletions_MalformedBody_Returns_400()
     {
-        if (!HasConfig()) return;
-
         var badBody = new StringContent("{ not valid json !!!}", Encoding.UTF8, "application/json");
         var resp = await _http.PostAsync("v1/chat/completions", badBody);
 
@@ -366,8 +307,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/responses 等价于 /v1/chat/completions，正常返回响应")]
     public async Task Responses_Endpoint_Works_Like_Chat()
     {
-        if (!HasConfig()) return;
-
         var body = JsonBody(new
         {
             model = TestModel,
@@ -394,8 +333,6 @@ public class GatewayIntegrationTests : IDisposable
     [DisplayName("POST /v1/messages Anthropic 兼容端点正常响应")]
     public async Task Messages_Anthropic_Endpoint_Works()
     {
-        if (!HasConfig()) return;
-
         var body = JsonBody(new
         {
             model = TestModel,
@@ -411,8 +348,13 @@ public class GatewayIntegrationTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var doc = JsonNode.Parse(await resp.Content.ReadAsStringAsync());
-        // Anthropic 响应使用 content 数组而非 choices
-        Assert.NotNull(doc?["content"]);
+        Assert.NotNull(doc);
+        // /v1/messages 返回 Anthropic 协议格式（type/content），不是 OpenAI 的 choices 格式
+        Assert.Equal("message", doc["type"]?.GetValue<String>());
+        Assert.NotNull(doc["content"]);
+        Assert.True(doc["content"]!.AsArray().Count > 0, "Anthropic content 不应为空");
+        var text = doc["content"]![0]?["text"]?.GetValue<String>();
+        Assert.False(String.IsNullOrWhiteSpace(text), "Anthropic 响应内容不应为空");
     }
 
     #endregion

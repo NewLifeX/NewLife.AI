@@ -240,7 +240,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             result = result.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {MaxResultLength} 字符]";
         }
 
-        return result;
+        return result!;
     }
 
     /// <summary>合并流式 tool_call 增量到收集列表。OpenAI 流式协议中 tool_calls 分块到达</summary>

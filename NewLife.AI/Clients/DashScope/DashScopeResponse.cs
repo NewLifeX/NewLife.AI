@@ -236,7 +236,7 @@ public class DashScopeMessageData
     /// <returns>等效的 ChatMessage 实例</returns>
     public ChatMessage ToChatMessage()
     {
-        var msg = new ChatMessage { Role = Role, ReasoningContent = ReasoningContent };
+        var msg = new ChatMessage { Role = Role!, ReasoningContent = ReasoningContent };
 
         // 多模态响应：content 为 [{text: "..."}] 数组，归一化为字符串
         if (Content is IList<Object> contentList)
@@ -268,7 +268,7 @@ public class DashScopeMessageData
                     Function = tc.Function != null
                         ? new FunctionCall
                         {
-                            Name = tc.Function.Name,
+                            Name = tc.Function.Name!,
                             Arguments = tc.Function.Arguments ?? "{}",
                         }
                         : null,
