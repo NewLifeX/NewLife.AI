@@ -52,14 +52,44 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
     /// <summary>获取@提及下拉列表的技能。按用户最近使用优先，支持关键词模糊过滤</summary>
     /// <param name="keyword">搜索关键词（可选）</param>
     /// <param name="limit">最大返回数量，默认20</param>
+    /// <summary>获取@提及下拉列表的技能和工具。工具排在前面，技能跟在后面，均支持关键词过滤</summary>
+    /// <param name="keyword">搜索关键词（可选）</param>
+    /// <param name="limit">最大返回数量，默认20</param>
     /// <returns></returns>
     [HttpGet("mention")]
     public ActionResult<IList<SkillDto>> GetMentionSkills([FromQuery] String? keyword, [FromQuery] Int32 limit = 20)
     {
         var userId = GetCurrentUserId();
         if (limit <= 0 || limit > 50) limit = 20;
-        var list = skillService.GetMentionSkills(userId, keyword, limit);
-        return Ok(list.Select(ToDto).ToList());
+
+        var result = new List<SkillDto>();
+
+        // 工具排在前面
+        var tools = NativeTool.FindAllEnabled();
+        if (!String.IsNullOrEmpty(keyword))
+            tools = tools.Where(e =>
+                (!e.Name.IsNullOrEmpty() && e.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                (!e.DisplayName.IsNullOrEmpty() && e.DisplayName.Contains(keyword, StringComparison.OrdinalIgnoreCase))).ToList();
+
+        foreach (var tool in tools.OrderByDescending(e => e.Sort))
+        {
+            result.Add(new SkillDto
+            {
+                Code = tool.Name,
+                Name = tool.DisplayName,
+                Description = tool.Description,
+                Type = "tool",
+            });
+        }
+
+        // 技能跟在后面
+        var skills = skillService.GetMentionSkills(userId, keyword, limit);
+        foreach (var skill in skills)
+        {
+            result.Add(ToDto(skill));
+        }
+
+        return Ok(result.Take(limit).ToList());
     }
 
     /// <summary>切换会话使用的技能</summary>
@@ -101,6 +131,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
         Category = skill.Category,
         Description = skill.Description,
         IsSystem = skill.IsSystem,
+        Type = "skill",
     };
 }
 
@@ -127,6 +158,9 @@ public class SkillDto
 
     /// <summary>系统内置</summary>
     public Boolean IsSystem { get; set; }
+
+    /// <summary>类型。skill=技能/tool=工具</summary>
+    public String Type { get; set; } = "skill";
 }
 
 /// <summary>切换技能请求</summary>

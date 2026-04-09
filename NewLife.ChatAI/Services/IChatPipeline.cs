@@ -59,6 +59,11 @@ public class ChatPipelineContext : IExtend
 /// </remarks>
 public interface IChatPipeline
 {
+    /// <summary>准备上下文。注入技能提示词、解析 @引用、记录技能使用。在 StreamAsync/CompleteAsync 前调用，以便外部获取 SystemPrompt 并持久化</summary>
+    /// <param name="contextMessages">上下文消息列表（会被修改）</param>
+    /// <param name="context">管道执行上下文</param>
+    void PrepareContext(IList<AiChatMessage> contextMessages, ChatPipelineContext context);
+
     /// <summary>流式执行对话。依次经过能力扩展层（技能注入、工具调用）和知识进化层（记忆注入、自学习触发）</summary>
     /// <param name="contextMessages">已构建好的上下文消息列表（含历史消息；技能系统消息由管道注入）</param>
     /// <param name="modelConfig">目标模型配置</param>

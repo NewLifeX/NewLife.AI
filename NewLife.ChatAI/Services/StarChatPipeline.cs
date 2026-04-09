@@ -34,6 +34,20 @@ public class ChatAIPipeline(
     #region IChatPipeline
 
     /// <inheritdoc/>
+    public void PrepareContext(IList<AiChatMessage> contextMessages, ChatPipelineContext context)
+    {
+        InjectSkillPrompt(contextMessages, context);
+
+        // 将构建完成的 system 提示词记录到上下文，供外部持久化
+        var systemMsg = contextMessages.FirstOrDefault(m => m.Role == "system");
+        context.SystemPrompt = systemMsg?.Content as String;
+
+        var userId = context.UserId.ToInt();
+        if (context.SkillId > 0 && skillService != null && userId > 0)
+            skillService.RecordUsage(userId, context.SkillId);
+    }
+
+    /// <inheritdoc/>
     public async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
         IList<AiChatMessage> contextMessages,
         ModelConfig modelConfig,
@@ -41,12 +55,9 @@ public class ChatAIPipeline(
         ChatPipelineContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // 1. 技能注入 + 使用记录
-        InjectSkillPrompt(contextMessages, context);
-
-        var userId = context.UserId.ToInt();
-        if (context.SkillId > 0 && skillService != null && userId > 0)
-            skillService.RecordUsage(userId, context.SkillId);
+        // 1. 技能注入 + 使用记录（若外部未调用 PrepareContext，此处兖底）
+        if (context.SystemPrompt == null)
+            PrepareContext(contextMessages, context);
 
         // 2. 获取服务商客户端
         var descriptor = gatewayService.GetDescriptor(modelConfig);
@@ -171,7 +182,8 @@ public class ChatAIPipeline(
         ChatPipelineContext context,
         CancellationToken cancellationToken)
     {
-        InjectSkillPrompt(contextMessages, context);
+        if (context.SystemPrompt == null)
+            PrepareContext(contextMessages, context);
 
         var descriptor = gatewayService.GetDescriptor(modelConfig);
         if (descriptor == null)
@@ -246,7 +258,7 @@ public class ChatAIPipeline(
 
         // 取最后一条用户消息的内容，用于解析 @引用 等技能占位符
         var lastUserContent = contextMessages.LastOrDefault(m => m.Role == "user")?.Content as String;
-        var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools);
+        var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools, context.ResolvedSkillNames);
         if (skillPrompt.IsNullOrWhiteSpace()) return;
 
         var systemMsg = contextMessages.FirstOrDefault(m => m.Role == "system");

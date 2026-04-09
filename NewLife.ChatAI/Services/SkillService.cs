@@ -125,8 +125,9 @@ public class SkillService(ILog log)
     /// <param name="conversationSkillId">会话当前激活的技能编号</param>
     /// <param name="messageContent">用户消息内容（用于解析@引用）</param>
     /// <param name="selectedTools">用于收集消息中 @ToolName 引用的工具名称集合；为 null 时就是不收集</param>
+    /// <param name="skillCollector">用于收集本轮实际注入的技能名称（Code/Name 格式）；为 null 时不收集</param>
     /// <returns>拼接后的技能提示词，无技能时返回 null</returns>
-    public String? BuildSkillPrompt(Int32 conversationSkillId, String? messageContent, ISet<String>? selectedTools = null)
+    public String? BuildSkillPrompt(Int32 conversationSkillId, String? messageContent, ISet<String>? selectedTools = null, IList<String>? skillCollector = null)
     {
         var parts = new List<String>();
 
@@ -138,6 +139,7 @@ public class SkillService(ILog log)
             {
                 var resolved = ResolveReferences(skill.Content, 0, []);
                 parts.Add(resolved);
+                skillCollector?.Add($"{skill.Code}/{skill.Name}");
             }
         }
 
@@ -149,13 +151,14 @@ public class SkillService(ILog log)
             {
                 var resolved = ResolveReferences(skill.Content, 0, []);
                 parts.Add(resolved);
+                skillCollector?.Add($"{skill.Code}/{skill.Name}");
             }
         }
 
         // 3. 消息中的 @技能名/@工具名 引用
         if (!messageContent.IsNullOrEmpty())
         {
-            var referencedParts = ResolveMessageReferences(messageContent, selectedTools);
+            var referencedParts = ResolveMessageReferences(messageContent, selectedTools, skillCollector);
             if (referencedParts != null)
                 parts.AddRange(referencedParts);
         }
@@ -165,11 +168,12 @@ public class SkillService(ILog log)
         return String.Join("\n\n", parts);
     }
 
-    /// <summary>解析消息中的 @技能名/@工具名 引用。技能存在时返回对应内容；仅工具存在时将工具名加入 selectedTools 集合</summary>
+    /// <summary>解析消息中的 @技能名/@工具名 引用。工具优先匹配加入 selectedTools，无工具匹配时再查找技能获取提示词内容</summary>
     /// <param name="content">消息内容</param>
     /// <param name="selectedTools">收集工具引用的集合；为 null 时不收集</param>
+    /// <param name="skillCollector">收集技能名称（Code/Name 格式）的列表；为 null 时不收集</param>
     /// <returns></returns>
-    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null)
+    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null, IList<String>? skillCollector = null)
     {
         // 匹配 @技能名 格式，技能名可以是中英文数字下划线
         var matches = Regex.Matches(content, @"@([\w\u4e00-\u9fff]+)");
@@ -183,18 +187,21 @@ public class SkillService(ILog log)
             var skillName = match.Groups[1].Value;
             if (!resolved.Add(skillName)) continue;
 
-            // 优先按名称查找技能
+            // 优先匹配内置工具（按 Name 或 DisplayName）
+            var tool = NativeTool.FindByNameOrDisplayName(skillName);
+            if (tool is { Enable: true })
+            {
+                selectedTools?.Add(tool.Name);
+                continue;
+            }
+
+            // 未匹配工具时，尝试按名称查找技能
             var skill = FindSkillByName(skillName);
             if (skill != null && skill.Enable && !String.IsNullOrWhiteSpace(skill.Content))
             {
                 var content2 = ResolveReferences(skill.Content, 0, []);
                 parts.Add(content2);
-            }
-            else if (selectedTools != null)
-            {
-                // 未匹配技能时，尝试匹配内置工具名称
-                if (NativeTool.FindByName(skillName) is { Enable: true })
-                    selectedTools.Add(skillName);
+                skillCollector?.Add($"{skill.Code}/{skill.Name}");
             }
         }
 

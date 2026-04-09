@@ -145,6 +145,24 @@ public partial class NativeTool : Entity<NativeTool>
     /// <summary>查找所有启用的内置工具</summary>
     /// <returns>启用的内置工具列表</returns>
     public static IList<NativeTool> FindAllEnabled() => FindAll(_.Enable == true);
+
+    /// <summary>按名称或显示名称查找内置工具。先匹配 Name（snake_case），再匹配 DisplayName（中文）</summary>
+    /// <param name="name">名称或显示名称</param>
+    /// <returns></returns>
+    public static NativeTool? FindByNameOrDisplayName(String name)
+    {
+        if (name.IsNullOrEmpty()) return null;
+
+        // 先按 Name 精确匹配
+        var tool = FindByName(name);
+        if (tool != null) return tool;
+
+        // 再按 DisplayName 匹配（实体缓存）
+        if (Meta.Session.Count < 1000)
+            return Meta.Cache.Find(e => e.DisplayName.EqualIgnoreCase(name));
+
+        return Find(_.DisplayName == name);
+    }
     #endregion
 
     #region 业务操作

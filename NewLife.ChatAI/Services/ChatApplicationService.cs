@@ -686,6 +686,15 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         }
         if (skillId > 0 && !skillName.IsNullOrEmpty())
             assistantMsg.SkillNames = skillName;
+        // 追加管道中解析到的所有技能名称
+        if (msgPipelineCtx.ResolvedSkillNames.Count > 0)
+        {
+            var existing = assistantMsg.SkillNames;
+            var allNames = existing.IsNullOrEmpty()
+                ? String.Join(",", msgPipelineCtx.ResolvedSkillNames)
+                : existing + "," + String.Join(",", msgPipelineCtx.ResolvedSkillNames);
+            assistantMsg.SkillNames = allNames;
+        }
         if (toolCallsCollector.Count > 0)
             assistantMsg.ToolNames = String.Join(",", toolCallsCollector.Select(t => t.Name));
         ApplyUsageToMessage(assistantMsg, finalUsage, hasError, deferredErrorEvent?.Error);
