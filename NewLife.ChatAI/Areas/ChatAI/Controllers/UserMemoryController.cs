@@ -22,6 +22,7 @@ public class UserMemoryController : ChatEntityController<UserMemory>
 
         //ListFields.RemoveField("Id", "Creator");
         ListFields.RemoveCreateField().RemoveRemarkField();
+        ListFields.AddListField("Value", null, "Key");
 
         //{
         //    var df = ListFields.GetField("Code") as ListField;
