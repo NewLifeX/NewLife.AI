@@ -7,7 +7,7 @@ namespace NewLife.AI.Models;
 /// <remarks>
 /// 职责分离设计：
 /// <list type="bullet">
-/// <item><see cref="ChatCompletionRequest"/>：OpenAI 协议 Wire-Format DTO，含 [DataMember] 注解，仅用于 Controller [FromBody] 接收前端请求</item>
+/// <item><see cref="ChatCompletionRequest"/>：OpenAI 协议 Wire-Format DTO，仅用于 Controller [FromBody] 接收前端请求</item>
 /// <item><see cref="ChatRequest"/>：内部统一传输模型，继承 ChatOptions 所有参数，增加 Messages 和 Stream，贯穿过滤器链到协议层</item>
 /// </list>
 /// </remarks>

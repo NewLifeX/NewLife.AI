@@ -359,7 +359,7 @@ public class ProtocolResponseTests
     }
 
     [Fact]
-    [DisplayName("Gemini 非流式：finishReason 映射为 STOP（camelCase 通过 DataMember 保证）")]
+    [DisplayName("Gemini 非流式：finishReason 映射为 STOP（camelCase 通过 _camelCaseOptions 保证）")]
     public void Gemini_NonStream_FinishReason()
     {
         var response = BuildNonStreamResponse();

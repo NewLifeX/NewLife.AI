@@ -11,7 +11,7 @@ namespace NewLife.AI.Clients.Gemini;
 /// <list type="bullet">
 /// <item>顶级使用 candidates 数组（非 choices），每个 candidate 含 content.parts[].text</item>
 /// <item>角色为 "model"（而非 "assistant"）</item>
-/// <item>使用 camelCase 命名（finishReason / usageMetadata / promptTokenCount 等），通过 DataMember 强制指定</item>
+/// <item>使用 camelCase 命名（finishReason / usageMetadata / promptTokenCount 等）</item>
 /// <item>流式与非流式结构相同，无需 data: [DONE] 结束标记</item>
 /// </list>
 /// </remarks>
