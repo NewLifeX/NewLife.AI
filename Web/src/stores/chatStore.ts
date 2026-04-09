@@ -468,7 +468,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               _generatingMsgId: null,
               messages: s.messages.map((m) =>
                 m.id === id
-                  ? { ...m, status: 'done' as const, usage: event.usage ? { promptTokens: event.usage.promptTokens, completionTokens: event.usage.completionTokens, totalTokens: event.usage.totalTokens } : m.usage }
+                  ? { ...m, status: 'done' as const, usage: event.usage ? { inputTokens: event.usage.inputTokens, outputTokens: event.usage.outputTokens, totalTokens: event.usage.totalTokens } : m.usage }
                   : m,
               ),
             }))
@@ -558,7 +558,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               if (assistantMsgId != null) {
                 set((s) => ({
                   messages: s.messages.map((m) =>
-                    m.id === assistantMsgId ? { ...m, status: 'done' as const, usage: event.usage ? { promptTokens: event.usage.promptTokens, completionTokens: event.usage.completionTokens, totalTokens: event.usage.totalTokens } : m.usage } : m,
+                    m.id === assistantMsgId ? { ...m, status: 'done' as const, usage: event.usage ? { inputTokens: event.usage.inputTokens, outputTokens: event.usage.outputTokens, totalTokens: event.usage.totalTokens } : m.usage } : m,
                   ),
                   isGenerating: false,
                   _abortController: null,

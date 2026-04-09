@@ -220,8 +220,8 @@ interface MessageDto {
     arguments?: string
     result?: string
   }>
-  promptTokens?: number
-  completionTokens?: number
+  inputTokens?: number
+  outputTokens?: number
   totalTokens?: number
   feedbackType?: number
 }
@@ -249,8 +249,8 @@ function toMessage(dto: MessageDto): Message {
       result: tc.result,
     })),
     usage: dto.totalTokens ? {
-      promptTokens: dto.promptTokens,
-      completionTokens: dto.completionTokens,
+      inputTokens: dto.inputTokens,
+      outputTokens: dto.outputTokens,
       totalTokens: dto.totalTokens,
     } : undefined,
     feedbackType: dto.feedbackType,
@@ -281,8 +281,8 @@ export interface ChatStreamEvent {
   code?: string
   message?: string
   usage?: {
-    promptTokens?: number
-    completionTokens?: number
+    inputTokens?: number
+    outputTokens?: number
     totalTokens?: number
   }
   title?: string
@@ -504,7 +504,7 @@ export interface SharedConversationContent {
     createdAt: string
     thinkingContent?: string
     toolCalls?: Array<{ id: string; name: string; status: string; arguments?: string; result?: string }>
-    usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }
+    usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
   }>
   createTime: string
   expireTime?: string
@@ -599,8 +599,8 @@ export async function clearUserData(): Promise<void> {
 export interface UsageSummary {
   conversations: number
   messages: number
-  promptTokens: number
-  completionTokens: number
+  inputTokens: number
+  outputTokens: number
   totalTokens: number
   lastActiveTime?: string
 }
@@ -608,8 +608,8 @@ export interface UsageSummary {
 export interface DailyUsage {
   date: string
   calls: number
-  promptTokens: number
-  completionTokens: number
+  inputTokens: number
+  outputTokens: number
   totalTokens: number
 }
 

@@ -60,22 +60,22 @@ export function UsageSettings() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('usage.promptTokens')}: {formatNumber(summary.promptTokens)}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('usage.inputTokens')}: {formatNumber(summary.inputTokens)}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('usage.completionTokens')}: {formatNumber(summary.completionTokens)}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('usage.outputTokens')}: {formatNumber(summary.outputTokens)}</span>
             </div>
           </div>
           {summary.totalTokens > 0 && (
             <div className="mt-3 w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex">
               <div
                 className="h-full bg-blue-500 rounded-l-full"
-                style={{ width: `${(summary.promptTokens / summary.totalTokens) * 100}%` }}
+                style={{ width: `${(summary.inputTokens / summary.totalTokens) * 100}%` }}
               />
               <div
                 className="h-full bg-green-500 rounded-r-full"
-                style={{ width: `${(summary.completionTokens / summary.totalTokens) * 100}%` }}
+                style={{ width: `${(summary.outputTokens / summary.totalTokens) * 100}%` }}
               />
             </div>
           )}
@@ -121,8 +121,8 @@ export function UsageSettings() {
                 <tr>
                   <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">{t('usage.date')}</th>
                   <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">{t('usage.calls')}</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">{t('usage.promptTokens')}</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">{t('usage.completionTokens')}</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">{t('usage.inputTokens')}</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">{t('usage.outputTokens')}</th>
                   <th className="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">{t('usage.totalTokens')}</th>
                 </tr>
               </thead>
@@ -131,8 +131,8 @@ export function UsageSettings() {
                   <tr key={d.date} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{new Date(d.date).toLocaleDateString()}</td>
                     <td className="px-3 py-2 text-right text-gray-600 dark:text-gray-400">{d.calls}</td>
-                    <td className="px-3 py-2 text-right text-gray-600 dark:text-gray-400">{formatNumber(d.promptTokens)}</td>
-                    <td className="px-3 py-2 text-right text-gray-600 dark:text-gray-400">{formatNumber(d.completionTokens)}</td>
+                    <td className="px-3 py-2 text-right text-gray-600 dark:text-gray-400">{formatNumber(d.inputTokens)}</td>
+                    <td className="px-3 py-2 text-right text-gray-600 dark:text-gray-400">{formatNumber(d.outputTokens)}</td>
                     <td className="px-3 py-2 text-right font-medium text-gray-700 dark:text-gray-300">{formatNumber(d.totalTokens)}</td>
                   </tr>
                 ))}

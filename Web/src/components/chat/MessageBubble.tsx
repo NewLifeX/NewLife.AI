@@ -303,9 +303,9 @@ export function MessageBubble({
           />
           <div className="ml-auto flex items-center space-x-2 mr-1">
             {usage && usage.totalTokens != null && (
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default" title={`${t('chat.promptTokens')}: ${usage.promptTokens ?? 0} | ${t('chat.completionTokens')}: ${usage.completionTokens ?? 0}`}>
-                {usage.promptTokens != null && usage.completionTokens != null
-                  ? `${usage.promptTokens} + ${usage.completionTokens} = ${usage.totalTokens} tokens`
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default" title={`${t('chat.inputTokens')}: ${usage.inputTokens ?? 0} | ${t('chat.outputTokens')}: ${usage.outputTokens ?? 0}`}>
+                {usage.inputTokens != null && usage.outputTokens != null
+                  ? `${usage.inputTokens} + ${usage.outputTokens} = ${usage.totalTokens} tokens`
                   : `${usage.totalTokens} tokens`}
               </span>
             )}

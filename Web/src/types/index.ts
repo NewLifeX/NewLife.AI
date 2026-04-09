@@ -10,8 +10,8 @@ export interface Conversation {
 }
 
 export interface TokenUsage {
-  promptTokens?: number
-  completionTokens?: number
+  inputTokens?: number
+  outputTokens?: number
   totalTokens?: number
 }
 
