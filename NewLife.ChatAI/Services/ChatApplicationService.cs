@@ -269,7 +269,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         var contextMessages = new List<AiChatMessage>();
 
         // 注入系统提示词（用户全局级 + 模型级；技能提示词由管道的技能注入层负责）
-        var systemMsg = BuildSystemMessage(userId, modelConfig);
+        var systemMsg = BuildSystemMessage(userId, modelConfig, beforeMessages.Count);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -457,7 +457,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         var contextMessages = new List<AiChatMessage>();
 
         // 注入系统提示词（技能提示词由管道注入）
-        var systemMsg = BuildSystemMessage(userId, modelConfig);
+        var systemMsg = BuildSystemMessage(userId, modelConfig, beforeMessages.Count);
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -1274,7 +1274,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         var messages = new List<AiChatMessage>();
 
         // 注入系统提示词（用户全局级 + 模型级；技能提示词由管道的 SkillFilter 在执行时注入）
-        var systemMsg = BuildSystemMessage(userId, modelConfig);
+        var systemMsg = BuildSystemMessage(userId, modelConfig, history.Count);
         if (systemMsg != null) messages.Add(systemMsg);
 
         // 添加历史消息（assistant 含工具调用时重建 tool 角色消息，保持多轮上下文完整性）
@@ -1335,8 +1335,9 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词（技能提示词由管道注入）</summary>
     /// <param name="userId">当前用户编号</param>
     /// <param name="modelConfig">模型配置（可选）</param>
+    /// <param name="historyCount">当前上下文中历史消息条数，大于 0 时才注入多轮优先级提示</param>
     /// <returns>系统消息，无提示词时返回 null</returns>
-    private AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig)
+    private AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig, Int32 historyCount = 0)
     {
         using var span = tracer?.NewSpan(nameof(BuildSystemMessage), new { userId });
         var parts = new List<String>();
@@ -1391,8 +1392,9 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
             parts.Add(modelConfig.SystemPrompt.Trim());
 
-        // 4. 多轮对话时强调最新消息优先级，避免 LLM 注意力被早期消息稀释
-        parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
+        // 4. 多轮对话时强调最新消息优先级，避免 LLM 注意力被早期消息稀释（第一轮无需注入）
+        if (historyCount > 0)
+            parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
 
         if (parts.Count == 0) return null;
         span?.Value = parts.Count;
