@@ -5,12 +5,11 @@ using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.AI.Services;
+using NewLife.ChatAI.Entity;
+using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
-using NewLife.ChatAI.Entity;
-using NewLife.ChatAI.Models;
-using XCode;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using AiFunctionCall = NewLife.AI.Models.FunctionCall;
 using AiToolCall = NewLife.AI.Models.ToolCall;
@@ -315,7 +314,8 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         ApplyRequestParams(entity, modelConfig, regenPipelineCtx);
         entity.Update();
 
-        // 累计会话 Token
+        // 累计会话 Token（重新生成：叠加本次 API 消耗，不扣减被替换消息的旧 Token）
+        // 注意：重新生成不需要更新 MessageCount，仅叠加统计
         conversation.LastMessageTime = DateTime.Now;
         if (finalUsage != null)
         {
@@ -376,7 +376,9 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
             }
         }
 
-        // 解析模型配置
+        // 解析模型配置（在插入 assistant 消息之前，避免模型不可用时留下空消息残留）
+        // 优先使用请求携带的模型（前端本轮选择），其次回退到会话绑定的模型（上次使用的默认）
+        // 切换后更新会话绑定，形成 sticky 效果；model_id=0 时自动降级为第一个可用模型
         var modelId = request.ModelId > 0 ? request.ModelId : conversation.ModelId;
         var modelConfig = gatewayService.ResolveModelOrDefault(modelId);
         if (modelConfig == null)
@@ -392,13 +394,18 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
             conversation.Update();
         }
 
-        // 处理技能激活
+        // 处理技能激活：每轮均可切换技能，sticky 更新会话绑定（仅更新会话元数据；技能提示词由管道注入）
+        // SkillCode 非空且有效  → 切换到新技能，写回会话
+        // SkillCode = "none"   → 清除技能绑定，回到通用对话，写回会话
+        // SkillCode 为空       → 不变，沿用会话上次的技能
+        // 工具集由技能定义决定，切换技能即切换本轮可用工具；全局 MCP 开关由用户设置控制
         var skillId = conversation.SkillId;
         var skillName = conversation.SkillName;
         if (!String.IsNullOrEmpty(request.SkillCode))
         {
             if (request.SkillCode.EqualIgnoreCase("none"))
             {
+                // 清除技能绑定，回到通用对话
                 skillId = 0;
                 skillName = null;
                 if (conversation.SkillId != 0)
@@ -432,7 +439,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
             userMsg.Update();
         }
 
-        // 构建上下文
+        // 构建上下文（在插入空 assistant 消息 Id 之前，避免空消息被包含在上下文中）
         var contextMessages = BuildContextMessages(userId, conversationId, request.Content, modelConfig);
 
         // 预分配AI回复消息编号
@@ -449,6 +456,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, modelConfig.Code ?? String.Empty, request.ThinkingMode);
 
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
+        // 标题只需要用户问题文本，无需等待 AI 回复完成
         if (conversation.MessageCount == 0 && ChatSetting.Current.AutoGenerateTitle)
         {
             _ = Task.Run(() => GenerateTitleAsync(conversationId, request.Content, CancellationToken.None));
@@ -462,7 +470,12 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         ChatStreamEvent? deferredErrorEvent = null;
         var toolCallsCollector = new List<ToolCallDto>();
 
-        var msgPipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = conversationId + "", SkillId = skillId };
+        var msgPipelineCtx = new ChatPipelineContext
+        {
+            UserId = userId + "",
+            ConversationId = conversationId + "",
+            SkillId = skillId
+        };
         if (request.Options != null) msgPipelineCtx.Items = request.Options;
 
         // 预处理：注入技能提示词、解析@引用，生成 SystemPrompt
