@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NewLife.ChatAI.Entity;
+using XCode.DataAccessLayer;
 
 namespace XUnitTest.Gateway;
 
@@ -16,14 +17,17 @@ public class ChatAIWebAppFactory : WebApplicationFactory<Program>
     {
         // 在工厂构造时覆盖连接字符串环境变量，确保在 WebApplication.CreateBuilder 之前生效
         // ASP.NET Core 环境变量规则：ConnectionStrings__ChatAI → ConnectionStrings:ChatAI
-        var dataDir = FindDataDirectory();
-        if (dataDir != null)
-        {
-            Environment.SetEnvironmentVariable("ConnectionStrings__ChatAI",
-                $"Data Source={Path.Combine(dataDir, "ChatAI.db")};Provider=SQLite");
-            Environment.SetEnvironmentVariable("ConnectionStrings__Membership",
-                $"Data Source={Path.Combine(dataDir, "Membership.db")};Provider=SQLite");
-        }
+        //var dataDir = FindDataDirectory();
+        //if (dataDir != null)
+        //{
+        //    Environment.SetEnvironmentVariable("ConnectionStrings__ChatAI",
+        //        $"Data Source={Path.Combine(dataDir, "ChatAI.db")};Provider=SQLite");
+        //    Environment.SetEnvironmentVariable("ConnectionStrings__Membership",
+        //        $"Data Source={Path.Combine(dataDir, "Membership.db")};Provider=SQLite");
+        //}
+
+        DAL.AddConnStr("ChatAI", "Data Source=..\\Data\\ChatAI.db;Provider=SQLite", null, "SQLite");
+        DAL.AddConnStr("Membership", "Data Source=..\\Data\\Membership.db;Provider=SQLite", null, "SQLite");
     }
 
     /// <inheritdoc/>
@@ -106,19 +110,19 @@ public class ChatAIWebAppFactory : WebApplicationFactory<Program>
         }
     }
 
-    /// <summary>从测试输出目录向上查找包含 Data/ChatAI.db 的目录</summary>
-    private static String? FindDataDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null)
-        {
-            var dataPath = Path.Combine(dir.FullName, "Data");
-            if (File.Exists(Path.Combine(dataPath, "ChatAI.db")))
-                return dataPath;
-            dir = dir.Parent;
-        }
-        return null;
-    }
+    ///// <summary>从测试输出目录向上查找包含 Data/ChatAI.db 的目录</summary>
+    //private static String? FindDataDirectory()
+    //{
+    //    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    //    while (dir != null)
+    //    {
+    //        var dataPath = Path.Combine(dir.FullName, "Data");
+    //        if (File.Exists(Path.Combine(dataPath, "ChatAI.db")))
+    //            return dataPath;
+    //        dir = dir.Parent;
+    //    }
+    //    return null;
+    //}
 
     /// <summary>从测试输出目录向上查找指定子目录</summary>
     private static String? FindProjectRoot(String projectDirName)

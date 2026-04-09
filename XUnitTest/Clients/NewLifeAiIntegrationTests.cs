@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -12,62 +11,47 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
+using XUnitTest.Gateway;
 
 namespace XUnitTest.Clients;
 
-/// <summary>新生命 AI 服务集成测试，需要有效 AppKey 才能运行</summary>
+/// <summary>新生命 AI 服务集成测试。通过 ChatAIWebAppFactory 在进程内启动 ChatAI，无需外部接口</summary>
 /// <remarks>
-/// AppKey 加载优先级：
-/// 1. ./config/NewLifeAI.key 文件中的文本内容作为 AppKey
-/// 2. 环境变量 NEWLIFEAI_API_KEY
-/// 未配置时测试自动跳过
+/// 通过 ChatAIWebAppFactory 在进程内启动 ChatAI 网关，使用数据库中已配置的密钥 sk-NewLifeAI2026。
 /// </remarks>
 [TestCaseOrderer("NewLife.UnitTest.DefaultOrderer", "NewLife.UnitTest")]
-public class NewLifeAiIntegrationTests
+public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 {
+    private const String ApiKey = "sk-NewLifeAI2026";
+    private const String TestModel = "qwen3.5-flash";
+
     private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("NewLifeAI")!;
-    private readonly String _apiKey;
+    private readonly ChatAIWebAppFactory _factory;
 
-    public NewLifeAiIntegrationTests()
+    public NewLifeAiIntegrationTests(ChatAIWebAppFactory factory)
     {
-        _apiKey = LoadApiKey() ?? "";
+        _factory = factory;
     }
 
-    /// <summary>从 config 目录或环境变量加载 AppKey</summary>
-    private static String? LoadApiKey()
-    {
-        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "NewLifeAI.key");
-        if (File.Exists(configPath))
-        {
-            var key = File.ReadAllText(configPath).Trim();
-            if (!String.IsNullOrWhiteSpace(key)) return key;
-        }
-        else
-        {
-            var dir = Path.GetDirectoryName(configPath);
-            if (!String.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            File.WriteAllText(configPath, "");
-        }
-
-        return Environment.GetEnvironmentVariable("NEWLIFEAI_API_KEY");
-    }
-
-    /// <summary>创建默认客户端选项</summary>
+    /// <summary>创建默认客户端选项，端点指向进程内测试服务器</summary>
     private AiClientOptions CreateOptions() => new()
     {
-#if DEBUG
-        Endpoint = "http://localhost:5080",
-#else
-        Endpoint = _descriptor.DefaultEndpoint,
-#endif
-        ApiKey = _apiKey,
+        Endpoint = _factory.Server.BaseAddress.AbsoluteUri.TrimEnd('/'),
+        ApiKey = ApiKey,
     };
+
+    /// <summary>创建 NewLifeAIChatClient 并注入进程内测试服务器的 HttpClient</summary>
+    private NewLifeAIChatClient CreateClient()
+    {
+        var client = new NewLifeAIChatClient(CreateOptions());
+        client.HttpClient = _factory.CreateDefaultClient();
+        return client;
+    }
 
     /// <summary>构建简单的用户消息请求</summary>
     private static ChatRequest CreateSimpleRequest(String prompt, Int32 maxTokens = 200) => new()
     {
-        Model = "qwen3.5-flash",
+        Model = TestModel,
         Messages = [new ChatMessage { Role = "user", Content = prompt }],
         MaxTokens = maxTokens,
         EnableThinking = false,
@@ -76,7 +60,7 @@ public class NewLifeAiIntegrationTests
     /// <summary>构建含系统提示词的请求</summary>
     private static ChatRequest CreateRequestWithSystem(String systemPrompt, String userPrompt, Int32 maxTokens = 100) => new()
     {
-        Model = "qwen3.5-flash",
+        Model = TestModel,
         Messages =
         [
             new ChatMessage { Role = "system", Content = systemPrompt },
@@ -88,20 +72,20 @@ public class NewLifeAiIntegrationTests
     /// <summary>创建客户端并执行非流式对话</summary>
     private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
     {
-        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        using var client = CreateClient();
         return await client.GetResponseAsync(request);
     }
 
     /// <summary>创建客户端并执行流式对话</summary>
     private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions? opts = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        using var client = CreateClient();
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
             yield return chunk;
     }
 
     /// <summary>创建 NewLifeAI 专用客户端（用于 ResponsesAsync/MessagesAsync 等扩展端点）</summary>
-    private NewLifeAIChatClient CreateNewLifeAiClient() => (NewLifeAIChatClient)_descriptor.Factory(CreateOptions());
+    private NewLifeAIChatClient CreateNewLifeAiClient() => CreateClient();
 
     #region 元数据验证（不需要 AppKey）
 
