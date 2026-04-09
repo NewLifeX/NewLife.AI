@@ -279,7 +279,7 @@ public class DashScopeChatClient : OpenAIChatClient
         if (String.IsNullOrEmpty(model)) return false;
         if (model.IndexOf("-vl", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (model.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase)) return true;
-        if (model.StartsWith("qwen3.5-", StringComparison.OrdinalIgnoreCase)) return true;
+        if (model.StartsWithIgnoreCase("qwen3.5-", "qwen3.")) return true;
         return false;
     }
 
@@ -371,7 +371,7 @@ public class DashScopeChatClient : OpenAIChatClient
         // 视觉能力
         if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qwen3.5-", StringComparison.OrdinalIgnoreCase))
+            modelId.StartsWithIgnoreCase("qwen3.5-", "qwen3."))
             vision = true;
 
         // 思考/推理能力
