@@ -1,7 +1,10 @@
-﻿using NewLife.ChatAI.Entity;
+﻿using NewLife.AI.Models;
+using NewLife.ChatAI.Entity;
 using NewLife.Data;
 using NewLife.Log;
 using XCode;
+using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
+using UsageDetails = NewLife.AI.Models.UsageDetails;
 
 namespace NewLife.ChatAI.Services;
 
@@ -11,6 +14,48 @@ namespace NewLife.ChatAI.Services;
 public class UsageService(ILog log)
 {
     #region 写入用量
+    /// <summary>记录一次 AI 调用的用量（携带 UsageDetails，自动填充所有 Token 详情字段）</summary>
+    /// <param name="userId">用户编号</param>
+    /// <param name="appKeyId">应用密钥编号，无则为0</param>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="modelId">模型编号</param>
+    /// <param name="usage">用量详情</param>
+    /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
+    public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId, Int32 modelId, UsageDetails usage, String source)
+    {
+        if (!ChatSetting.Current.EnableUsageStats) return;
+
+        try
+        {
+            var entity = new UsageRecord
+            {
+                UserId = userId,
+                AppKeyId = appKeyId,
+                ConversationId = conversationId,
+                MessageId = messageId,
+                ModelId = modelId,
+                ModelName = ModelConfig.FindById(modelId)?.Name,
+                InputTokens = usage.InputTokens,
+                OutputTokens = usage.OutputTokens,
+                TotalTokens = usage.TotalTokens,
+                CachedInputTokens = usage.CachedInputTokens,
+                ReasoningTokens = usage.ReasoningTokens,
+                InputAudioTokens = usage.InputAudioTokens,
+                InputTextTokens = usage.InputTextTokens,
+                OutputAudioTokens = usage.OutputAudioTokens,
+                OutputTextTokens = usage.OutputTextTokens,
+                ElapsedMs = usage.ElapsedMs,
+                Source = source,
+            };
+            entity.Insert();
+        }
+        catch (Exception ex)
+        {
+            log?.Error("写入用量记录失败: {0}", ex.Message);
+        }
+    }
+
     /// <summary>记录一次 AI 调用的用量</summary>
     /// <param name="userId">用户编号</param>
     /// <param name="appKeyId">应用密钥编号，无则为0</param>

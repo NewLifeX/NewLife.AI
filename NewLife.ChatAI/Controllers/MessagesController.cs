@@ -1,17 +1,14 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.Models;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Services;
-using NewLife.Log;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
+using NewLife.Log;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>消息控制器</summary>
 [Route("api")]
-public class MessagesController(ChatApplicationService chatService, MessageRateLimiter rateLimiter, ITracer tracer) : ChatApiControllerBase
+public class MessagesController(ChatApplicationService chatService, MessageService messageService, MessageRateLimiter rateLimiter, ITracer tracer) : ChatApiControllerBase
 {
 
     /// <summary>全文搜索消息内容。在当前用户的所有会话中按关键词检索</summary>
@@ -60,7 +57,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
         using var span = tracer?.NewSpan("ai:StreamSend", new { request.ModelId, request.SkillCode, request.ThinkingMode });
         span?.AppendTag(request.Content);
         SetSseHeaders();
-        await StreamEventsAsync(chatService.StreamMessageAsync(conversationId, request, userId, cancellationToken), cancellationToken, "MODEL_UNAVAILABLE", ex => span?.SetError(ex)).ConfigureAwait(false);
+        await StreamEventsAsync(messageService.StreamMessageAsync(conversationId, request, userId, cancellationToken), cancellationToken, "MODEL_UNAVAILABLE", ex => span?.SetError(ex)).ConfigureAwait(false);
     }
 
     /// <summary>编辑消息内容</summary>
@@ -86,7 +83,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     {
         using var span = tracer?.NewSpan("ai:ResendStream", new { id, request.Content });
         SetSseHeaders();
-        await StreamEventsAsync(chatService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
+        await StreamEventsAsync(messageService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>重新生成回复（非流式）</summary>
@@ -97,7 +94,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     public async Task<ActionResult<MessageDto>> RegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
         using var span = tracer?.NewSpan("ai:Regenerate", id);
-        var result = await chatService.RegenerateMessageAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
+        var result = await messageService.RegenerateMessageAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (result == null) return NotFound();
         return Ok(result);
     }
@@ -111,7 +108,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     {
         using var span = tracer?.NewSpan("ai:StreamRegenerate", id);
         SetSseHeaders();
-        await StreamEventsAsync(chatService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
+        await StreamEventsAsync(messageService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>停止生成</summary>
@@ -121,7 +118,7 @@ public class MessagesController(ChatApplicationService chatService, MessageRateL
     [HttpPost("messages/{id:long}/stop")]
     public async Task<IActionResult> StopAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
-        await chatService.StopGenerateAsync(id, cancellationToken).ConfigureAwait(false);
+        await messageService.StopGenerateAsync(id, cancellationToken).ConfigureAwait(false);
         return Accepted();
     }
 

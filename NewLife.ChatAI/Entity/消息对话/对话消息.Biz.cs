@@ -116,11 +116,14 @@ public partial class ChatMessage : Entity<ChatMessage>
     #region 扩展属性
     /// <summary>会话</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Conversation Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
 
     /// <summary>会话</summary>
     [Map(nameof(ConversationId), typeof(Conversation), "Id")]
-    public String ConversationTitle => Conversation?.Title;
+    public String? ConversationTitle => Conversation?.Title;
+
+    /// <summary>是否主消息（用户或助手）</summary>
+    public Boolean IsMain => Role.EqualIgnoreCase("user", "assistant");
     #endregion
 
     #region 高级查询
