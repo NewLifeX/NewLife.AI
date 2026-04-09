@@ -39,7 +39,7 @@ public class UserMemoryController : ChatEntityController<UserMemory>
         //    var df = ListFields.GetField("Kind") as ListField;
         //    df.GetValue = e => ((Int32)(e as UserMemory).Kind).ToString("X4");
         //}
-        //ListFields.TraceUrl("TraceId");
+        ListFields.TraceUrl("TraceId");
     }
 
     //private readonly ITracer _tracer;
