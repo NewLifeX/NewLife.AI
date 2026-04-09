@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Entity;
@@ -18,7 +19,7 @@ namespace NewLife.ChatAI.Services;
 /// <param name="gatewayService">网关服务</param>
 /// <param name="memoryService">记忆服务</param>
 /// <param name="log">日志</param>
-public class ConversationAnalysisService(GatewayService gatewayService, MemoryService memoryService, ILog log)
+public class ConversationAnalysisService(GatewayService gatewayService, MemoryService memoryService, ITracer tracer, ILog log)
 {
     /// <summary>记忆服务（同时对外暴露给 LearningFilter 注入上下文）</summary>
     public MemoryService MemoryService { get; } = memoryService;
@@ -93,15 +94,20 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
             return;
         }
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        using var span = tracer?.NewSpan("ai:Analyze");
+
+        var sw = Stopwatch.StartNew();
         try
         {
             var extractedCount = await ExtractAndSaveMemoriesAsync(userId, conversationId, messages, response, cancellationToken).ConfigureAwait(false);
             sw.Stop();
             log?.Info("用户 {0} 记忆提取完成，提取 {1} 条，耗时 {2}ms", userId, extractedCount, sw.ElapsedMilliseconds);
+
+            span?.Value += extractedCount;
         }
         catch (Exception ex)
         {
+            span?.SetError(ex);
             sw.Stop();
             log?.Error("用户 {0} 记忆提取失败（耗时 {1}ms）: {2}", userId, sw.ElapsedMilliseconds, ex.Message);
         }
