@@ -26,6 +26,21 @@ public class ChatPipelineContext : IExtend
     /// <summary>本轮实际注入给模型的工具名称列表。由管道在构建工具提供者后填充，用于记录到用户消息的 ToolNames 字段</summary>
     public IList<String> AvailableToolNames { get; } = [];
 
+    /// <summary>本轮实际注入的技能名称列表（Code/Name 格式）。由 SkillService 在 BuildSkillPrompt 中填充</summary>
+    public IList<String> ResolvedSkillNames { get; } = [];
+
+    /// <summary>构建完成的系统提示词内容。由 PrepareContext 填充，供外部持久化</summary>
+    public String? SystemPrompt { get; set; }
+
+    /// <summary>实际使用的最大Token数。由管道在构建 ChatOptions 后填充</summary>
+    public Int32 MaxTokens { get; set; }
+
+    /// <summary>实际使用的采样温度。由管道在构建 ChatOptions 后填充</summary>
+    public Double? Temperature { get; set; }
+
+    /// <summary>完成原因。由管道在流式/非流式结束后填充</summary>
+    public String? FinishReason { get; set; }
+
     /// <summary>请求级扩展参数。由 <see cref="SendMessageRequest.Options"/> 传入，最终通过 ChatOptions.Items 注入服务商。
     /// 支持 DashScope 专属参数，如 EnableSearch / SearchStrategy / ThinkingBudget / TopK 等</summary>
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();

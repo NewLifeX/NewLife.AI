@@ -403,7 +403,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         assistantMsg.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : null;
         if (thinkingBuilder.Length > 0)
             assistantMsg.ThinkingContent = thinkingBuilder.ToString();
-        ApplyUsageToMessage(assistantMsg, finalUsage, hasError);
+        ApplyUsageToMessage(assistantMsg, finalUsage, hasError, deferredErrorEvent?.Error);
+        ApplyRequestParams(assistantMsg, modelConfig, editPipelineCtx);
         assistantMsg.Update();
 
         ApplyUsageToConversation(conversation, entity.ConversationId, finalUsage);
@@ -496,7 +497,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         entity.Content = contentBuilder.Length > 0 ? contentBuilder.ToString() : null;
         if (thinkingBuilder.Length > 0)
             entity.ThinkingContent = thinkingBuilder.ToString();
-        ApplyUsageToMessage(entity, finalUsage, hasError);
+        ApplyUsageToMessage(entity, finalUsage, hasError, deferredErrorEvent?.Error);
+        ApplyRequestParams(entity, modelConfig, regenPipelineCtx);
         entity.Update();
 
         // 累计会话 Token（重新生成：叠加本次 API 消耗，不扣减被替换消息的旧 Token）
@@ -641,6 +643,22 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
 
         var msgPipelineCtx = new ChatPipelineContext { UserId = userId + "", ConversationId = conversationId + "", SkillId = skillId };
         if (request.Options != null) msgPipelineCtx.Items = request.Options;
+
+        // 预处理：注入技能提示词、解析@引用，生成 SystemPrompt
+        pipeline.PrepareContext(contextMessages, msgPipelineCtx);
+
+        // 持久化 system 消息（仅保存注入的技能提示词，便于调试分析）
+        if (!msgPipelineCtx.SystemPrompt.IsNullOrEmpty())
+        {
+            var systemMsg = new ChatMessage
+            {
+                ConversationId = conversationId,
+                Role = "system",
+                Content = msgPipelineCtx.SystemPrompt,
+            };
+            systemMsg.Insert();
+        }
+
         var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, request.ThinkingMode, msgPipelineCtx, cancellationToken);
         await foreach (var ev in DrainPipelineAsync(pipelineStream, contentBuilder, thinkingBuilder, toolCallsCollector,
             u => finalUsage = u, (err, e) => { hasError = err; deferredErrorEvent = e; }, "流式生成失败", cancellationToken).ConfigureAwait(false))
@@ -670,7 +688,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             assistantMsg.SkillNames = skillName;
         if (toolCallsCollector.Count > 0)
             assistantMsg.ToolNames = String.Join(",", toolCallsCollector.Select(t => t.Name));
-        ApplyUsageToMessage(assistantMsg, finalUsage, hasError);
+        ApplyUsageToMessage(assistantMsg, finalUsage, hasError, deferredErrorEvent?.Error);
+        ApplyRequestParams(assistantMsg, modelConfig, msgPipelineCtx);
         assistantMsg.Update();
 
         // 更新会话
@@ -797,10 +816,20 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
     }
 
     /// <summary>将用量统计写入 AI 回复消息实体（不保存，调用方负责 Update）</summary>
-    private static void ApplyUsageToMessage(ChatMessage msg, UsageDetails? usage, Boolean hasError)
+    private static void ApplyUsageToMessage(ChatMessage msg, UsageDetails? usage, Boolean hasError, String? errorDetail = null)
     {
         if (msg.Content.IsNullOrEmpty())
-            msg.Content = hasError ? "[生成失败]" : "[已中断]";
+        {
+            if (hasError)
+                msg.Content = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
+            else
+                msg.Content = "[已中断]";
+        }
+        else if (hasError && !errorDetail.IsNullOrEmpty())
+        {
+            // 已有部分内容但最终出错，追加错误信息
+            msg.Content += $"\n\n[错误] {errorDetail}";
+        }
         if (usage != null)
         {
             msg.InputTokens = usage.InputTokens;
@@ -810,6 +839,18 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         }
     }
 
+    /// <summary>将请求参数写入 AI 回复消息实体（不保存，调用方负责 Update）</summary>
+    /// <param name="msg">消息实体</param>
+    /// <param name="modelConfig">模型配置</param>
+    /// <param name="context">管道上下文（携带 MaxTokens/Temperature/FinishReason）</param>
+    private static void ApplyRequestParams(ChatMessage msg, ModelConfig modelConfig, ChatPipelineContext context)
+    {
+        msg.ModelName = modelConfig.Code;
+        if (context.MaxTokens > 0) msg.MaxTokens = context.MaxTokens;
+        if (context.Temperature != null) msg.Temperature = context.Temperature.Value;
+        if (!context.FinishReason.IsNullOrEmpty()) msg.FinishReason = context.FinishReason;
+    }
+
     /// <summary>将用量统计累加到会话实体并更新最后消息时间（不保存，调用方负责 Update）</summary>
     private static void ApplyUsageToConversation(Conversation conversation, Int64 conversationId, UsageDetails? usage)
     {
@@ -817,8 +858,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
         if (usage != null)
         {
-            conversation.TotalPromptTokens += usage.InputTokens;
-            conversation.TotalCompletionTokens += usage.OutputTokens;
+            conversation.InputTokens += usage.InputTokens;
+            conversation.OutputTokens += usage.OutputTokens;
             conversation.TotalTokens += usage.TotalTokens;
             conversation.ElapsedMs += usage.ElapsedMs;
         }
@@ -1432,8 +1473,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         return new MessageDto(entity.Id, entity.ConversationId, entity.Role ?? String.Empty, entity.Content ?? String.Empty, entity.ThinkingContent, entity.ThinkingMode, entity.Attachments, entity.CreateTime)
         {
             ToolCalls = toolCalls,
-            PromptTokens = entity.PromptTokens,
-            CompletionTokens = entity.CompletionTokens,
+            InputTokens = entity.InputTokens,
+            OutputTokens = entity.OutputTokens,
             TotalTokens = entity.TotalTokens,
             FeedbackType = (Int32)feedbackType,
         };

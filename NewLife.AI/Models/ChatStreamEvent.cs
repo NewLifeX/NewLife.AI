@@ -48,6 +48,9 @@ public class ChatStreamEvent
     /// <summary>错误描述</summary>
     public String? Message { get; set; }
 
+    /// <summary>完成原因。stop/length/tool_calls/content_filter</summary>
+    public String? FinishReason { get; set; }
+
     /// <summary>令牌用量统计</summary>
     public UsageDetails? Usage { get; set; }
 
@@ -85,9 +88,10 @@ public class ChatStreamEvent
     /// <summary>消息完成事件</summary>
     /// <param name="usage">用量统计</param>
     /// <param name="title">标题（可选）</param>
+    /// <param name="finishReason">完成原因（可选）</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null) =>
-        new() { Type = "message_done", Usage = usage, Title = title };
+    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? finishReason = null) =>
+        new() { Type = "message_done", Usage = usage, Title = title, FinishReason = finishReason };
 
     /// <summary>错误事件</summary>
     /// <param name="code">错误码</param>

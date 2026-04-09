@@ -92,12 +92,17 @@ public class ChatAIPipeline(
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
         ApplyResponseStyle(chatOptions, context.UserId);
 
+        // 记录实际请求参数到上下文，供 ChatApplicationService 写入消息记录
+        context.MaxTokens = chatOptions.MaxTokens ?? modelConfig.MaxTokens;
+        context.Temperature = chatOptions.Temperature;
+
         // 5. 流式调用并转换为 SSE 事件
         using var streamClient = clientBuilder.Build();
 
         var thinkingBuilder = new StringBuilder();
         UsageDetails? lastUsage = null;
         Int64 thinkingStart = 0;
+        String? lastFinishReason = null;
         var streamSw = Stopwatch.StartNew();
 
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
@@ -128,6 +133,10 @@ public class ChatAIPipeline(
             var choice = chunk.Messages?.FirstOrDefault();
             if (choice == null) continue;
 
+            // 追踪最后一个 FinishReason
+            if (choice.FinishReason != null)
+                lastFinishReason = choice.FinishReason.Value.ToApiString();
+
             var delta = choice.Delta;
             if (delta == null) continue;
 
@@ -150,7 +159,9 @@ public class ChatAIPipeline(
         lastUsage ??= new UsageDetails();
         lastUsage.ElapsedMs = (Int32)streamSw.ElapsedMilliseconds;
 
-        yield return ChatStreamEvent.MessageDone(lastUsage);
+        context.FinishReason = lastFinishReason;
+
+        yield return ChatStreamEvent.MessageDone(lastUsage, finishReason: lastFinishReason);
     }
 
     /// <inheritdoc/>
@@ -183,8 +194,19 @@ public class ChatAIPipeline(
         };
         ApplyResponseStyle(chatOptions, context.UserId);
 
+        // 记录实际请求参数到上下文
+        context.MaxTokens = chatOptions.MaxTokens ?? modelConfig.MaxTokens;
+        context.Temperature = chatOptions.Temperature;
+
         using var chatClient = clientBuilder.Build();
-        return ChatResponse.From(await chatClient.GetResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false));
+        var response = ChatResponse.From(await chatClient.GetResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false));
+
+        // 记录完成原因到上下文
+        var firstChoice = response.Messages?.FirstOrDefault();
+        if (firstChoice?.FinishReason != null)
+            context.FinishReason = firstChoice.FinishReason.Value.ToApiString();
+
+        return response;
     }
 
     #endregion
