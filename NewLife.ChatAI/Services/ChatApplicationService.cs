@@ -307,8 +307,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
                 var conv = Conversation.FindById(entity.ConversationId);
                 if (conv != null)
                 {
-                    conv.TotalPromptTokens += response.Usage.InputTokens;
-                    conv.TotalCompletionTokens += response.Usage.OutputTokens;
+                    conv.InputTokens += response.Usage.InputTokens;
+                    conv.OutputTokens += response.Usage.OutputTokens;
                     conv.TotalTokens += response.Usage.TotalTokens;
                     conv.ElapsedMs += regenElapsed;
                     conv.Update();
@@ -504,8 +504,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         conversation.LastMessageTime = DateTime.Now;
         if (finalUsage != null)
         {
-            conversation.TotalPromptTokens += finalUsage.InputTokens;
-            conversation.TotalCompletionTokens += finalUsage.OutputTokens;
+            conversation.InputTokens += finalUsage.InputTokens;
+            conversation.OutputTokens += finalUsage.OutputTokens;
             conversation.TotalTokens += finalUsage.TotalTokens;
             conversation.ElapsedMs += finalUsage.ElapsedMs;
             conversation.Update();
@@ -803,8 +803,8 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             msg.Content = hasError ? "[生成失败]" : "[已中断]";
         if (usage != null)
         {
-            msg.PromptTokens = usage.InputTokens;
-            msg.CompletionTokens = usage.OutputTokens;
+            msg.InputTokens = usage.InputTokens;
+            msg.OutputTokens = usage.OutputTokens;
             msg.TotalTokens = usage.TotalTokens;
             msg.ElapsedMs = usage.ElapsedMs;
         }

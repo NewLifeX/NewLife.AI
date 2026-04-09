@@ -81,21 +81,21 @@ public partial class UsageRecord
     [BindColumn("ModelName", "模型名称。冗余存储模型名称，方便历史数据检索", "")]
     public String? ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
 
-    private Int32 _PromptTokens;
-    /// <summary>提示Token数</summary>
-    [DisplayName("提示Token数")]
-    [Description("提示Token数")]
+    private Int32 _InputTokens;
+    /// <summary>输入Token数</summary>
+    [DisplayName("输入Token数")]
+    [Description("输入Token数")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("PromptTokens", "提示Token数", "")]
-    public Int32 PromptTokens { get => _PromptTokens; set { if (OnPropertyChanging("PromptTokens", value)) { _PromptTokens = value; OnPropertyChanged("PromptTokens"); } } }
+    [BindColumn("InputTokens", "输入Token数", "")]
+    public Int32 InputTokens { get => _InputTokens; set { if (OnPropertyChanging("InputTokens", value)) { _InputTokens = value; OnPropertyChanged("InputTokens"); } } }
 
-    private Int32 _CompletionTokens;
-    /// <summary>回复Token数</summary>
-    [DisplayName("回复Token数")]
-    [Description("回复Token数")]
+    private Int32 _OutputTokens;
+    /// <summary>输出Token数</summary>
+    [DisplayName("输出Token数")]
+    [Description("输出Token数")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("CompletionTokens", "回复Token数", "")]
-    public Int32 CompletionTokens { get => _CompletionTokens; set { if (OnPropertyChanging("CompletionTokens", value)) { _CompletionTokens = value; OnPropertyChanged("CompletionTokens"); } } }
+    [BindColumn("OutputTokens", "输出Token数", "")]
+    public Int32 OutputTokens { get => _OutputTokens; set { if (OnPropertyChanging("OutputTokens", value)) { _OutputTokens = value; OnPropertyChanged("OutputTokens"); } } }
 
     private Int32 _TotalTokens;
     /// <summary>总Token数</summary>
@@ -104,6 +104,62 @@ public partial class UsageRecord
     [DataObjectField(false, false, false, 0)]
     [BindColumn("TotalTokens", "总Token数", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
+
+    private Int32 _CachedInputTokens;
+    /// <summary>缓存输入Token数</summary>
+    [DisplayName("缓存输入Token数")]
+    [Description("缓存输入Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("CachedInputTokens", "缓存输入Token数", "")]
+    public Int32 CachedInputTokens { get => _CachedInputTokens; set { if (OnPropertyChanging("CachedInputTokens", value)) { _CachedInputTokens = value; OnPropertyChanged("CachedInputTokens"); } } }
+
+    private Int32 _ReasoningTokens;
+    /// <summary>推理Token数</summary>
+    [DisplayName("推理Token数")]
+    [Description("推理Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ReasoningTokens", "推理Token数", "")]
+    public Int32 ReasoningTokens { get => _ReasoningTokens; set { if (OnPropertyChanging("ReasoningTokens", value)) { _ReasoningTokens = value; OnPropertyChanged("ReasoningTokens"); } } }
+
+    private Int32 _InputAudioTokens;
+    /// <summary>音频输入Token数</summary>
+    [DisplayName("音频输入Token数")]
+    [Description("音频输入Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("InputAudioTokens", "音频输入Token数", "")]
+    public Int32 InputAudioTokens { get => _InputAudioTokens; set { if (OnPropertyChanging("InputAudioTokens", value)) { _InputAudioTokens = value; OnPropertyChanged("InputAudioTokens"); } } }
+
+    private Int32 _InputTextTokens;
+    /// <summary>文本输入Token数</summary>
+    [DisplayName("文本输入Token数")]
+    [Description("文本输入Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("InputTextTokens", "文本输入Token数", "")]
+    public Int32 InputTextTokens { get => _InputTextTokens; set { if (OnPropertyChanging("InputTextTokens", value)) { _InputTextTokens = value; OnPropertyChanged("InputTextTokens"); } } }
+
+    private Int32 _OutputAudioTokens;
+    /// <summary>音频输出Token数</summary>
+    [DisplayName("音频输出Token数")]
+    [Description("音频输出Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("OutputAudioTokens", "音频输出Token数", "")]
+    public Int32 OutputAudioTokens { get => _OutputAudioTokens; set { if (OnPropertyChanging("OutputAudioTokens", value)) { _OutputAudioTokens = value; OnPropertyChanged("OutputAudioTokens"); } } }
+
+    private Int32 _OutputTextTokens;
+    /// <summary>文本输出Token数</summary>
+    [DisplayName("文本输出Token数")]
+    [Description("文本输出Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("OutputTextTokens", "文本输出Token数", "")]
+    public Int32 OutputTextTokens { get => _OutputTextTokens; set { if (OnPropertyChanging("OutputTextTokens", value)) { _OutputTextTokens = value; OnPropertyChanged("OutputTextTokens"); } } }
+
+    private Int32 _ElapsedMs;
+    /// <summary>耗时。毫秒</summary>
+    [DisplayName("耗时")]
+    [Description("耗时。毫秒")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ElapsedMs", "耗时。毫秒", "")]
+    public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
 
     private String? _Source;
     /// <summary>请求来源。Chat=对话/Gateway=网关</summary>
@@ -156,9 +212,16 @@ public partial class UsageRecord
             "MessageId" => _MessageId,
             "ModelId" => _ModelId,
             "ModelName" => _ModelName,
-            "PromptTokens" => _PromptTokens,
-            "CompletionTokens" => _CompletionTokens,
+            "InputTokens" => _InputTokens,
+            "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
+            "CachedInputTokens" => _CachedInputTokens,
+            "ReasoningTokens" => _ReasoningTokens,
+            "InputAudioTokens" => _InputAudioTokens,
+            "InputTextTokens" => _InputTextTokens,
+            "OutputAudioTokens" => _OutputAudioTokens,
+            "OutputTextTokens" => _OutputTextTokens,
+            "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
             "TraceId" => _TraceId,
             "CreateTime" => _CreateTime,
@@ -176,9 +239,16 @@ public partial class UsageRecord
                 case "MessageId": _MessageId = value.ToLong(); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
                 case "ModelName": _ModelName = Convert.ToString(value); break;
-                case "PromptTokens": _PromptTokens = value.ToInt(); break;
-                case "CompletionTokens": _CompletionTokens = value.ToInt(); break;
+                case "InputTokens": _InputTokens = value.ToInt(); break;
+                case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
+                case "CachedInputTokens": _CachedInputTokens = value.ToInt(); break;
+                case "ReasoningTokens": _ReasoningTokens = value.ToInt(); break;
+                case "InputAudioTokens": _InputAudioTokens = value.ToInt(); break;
+                case "InputTextTokens": _InputTextTokens = value.ToInt(); break;
+                case "OutputAudioTokens": _OutputAudioTokens = value.ToInt(); break;
+                case "OutputTextTokens": _OutputTextTokens = value.ToInt(); break;
+                case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -315,14 +385,35 @@ public partial class UsageRecord
         /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
         public static readonly Field ModelName = FindByName("ModelName");
 
-        /// <summary>提示Token数</summary>
-        public static readonly Field PromptTokens = FindByName("PromptTokens");
+        /// <summary>输入Token数</summary>
+        public static readonly Field InputTokens = FindByName("InputTokens");
 
-        /// <summary>回复Token数</summary>
-        public static readonly Field CompletionTokens = FindByName("CompletionTokens");
+        /// <summary>输出Token数</summary>
+        public static readonly Field OutputTokens = FindByName("OutputTokens");
 
         /// <summary>总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
+
+        /// <summary>缓存输入Token数</summary>
+        public static readonly Field CachedInputTokens = FindByName("CachedInputTokens");
+
+        /// <summary>推理Token数</summary>
+        public static readonly Field ReasoningTokens = FindByName("ReasoningTokens");
+
+        /// <summary>音频输入Token数</summary>
+        public static readonly Field InputAudioTokens = FindByName("InputAudioTokens");
+
+        /// <summary>文本输入Token数</summary>
+        public static readonly Field InputTextTokens = FindByName("InputTextTokens");
+
+        /// <summary>音频输出Token数</summary>
+        public static readonly Field OutputAudioTokens = FindByName("OutputAudioTokens");
+
+        /// <summary>文本输出Token数</summary>
+        public static readonly Field OutputTextTokens = FindByName("OutputTextTokens");
+
+        /// <summary>耗时。毫秒</summary>
+        public static readonly Field ElapsedMs = FindByName("ElapsedMs");
 
         /// <summary>请求来源。Chat=对话/Gateway=网关</summary>
         public static readonly Field Source = FindByName("Source");
@@ -363,14 +454,35 @@ public partial class UsageRecord
         /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
         public const String ModelName = "ModelName";
 
-        /// <summary>提示Token数</summary>
-        public const String PromptTokens = "PromptTokens";
+        /// <summary>输入Token数</summary>
+        public const String InputTokens = "InputTokens";
 
-        /// <summary>回复Token数</summary>
-        public const String CompletionTokens = "CompletionTokens";
+        /// <summary>输出Token数</summary>
+        public const String OutputTokens = "OutputTokens";
 
         /// <summary>总Token数</summary>
         public const String TotalTokens = "TotalTokens";
+
+        /// <summary>缓存输入Token数</summary>
+        public const String CachedInputTokens = "CachedInputTokens";
+
+        /// <summary>推理Token数</summary>
+        public const String ReasoningTokens = "ReasoningTokens";
+
+        /// <summary>音频输入Token数</summary>
+        public const String InputAudioTokens = "InputAudioTokens";
+
+        /// <summary>文本输入Token数</summary>
+        public const String InputTextTokens = "InputTextTokens";
+
+        /// <summary>音频输出Token数</summary>
+        public const String OutputAudioTokens = "OutputAudioTokens";
+
+        /// <summary>文本输出Token数</summary>
+        public const String OutputTextTokens = "OutputTextTokens";
+
+        /// <summary>耗时。毫秒</summary>
+        public const String ElapsedMs = "ElapsedMs";
 
         /// <summary>请求来源。Chat=对话/Gateway=网关</summary>
         public const String Source = "Source";

@@ -683,8 +683,8 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
                 if (conversation != null)
                 {
                     conversation.MessageCount = responseContent.IsNullOrEmpty() ? 1 : 2;
-                    conversation.TotalPromptTokens = usage?.InputTokens ?? 0;
-                    conversation.TotalCompletionTokens = usage?.OutputTokens ?? 0;
+                    conversation.InputTokens = usage?.InputTokens ?? 0;
+                    conversation.OutputTokens = usage?.OutputTokens ?? 0;
                     conversation.TotalTokens = usage?.TotalTokens ?? 0;
                     conversation.ElapsedMs = usage?.ElapsedMs ?? 0;
                     conversation.LastMessageTime = DateTime.Now;
@@ -704,8 +704,8 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
                     Source = "Gateway",
                     LastMessageTime = DateTime.Now,
                     MessageCount = responseContent.IsNullOrEmpty() ? 1 : 2,
-                    TotalPromptTokens = usage?.InputTokens ?? 0,
-                    TotalCompletionTokens = usage?.OutputTokens ?? 0,
+                    InputTokens = usage?.InputTokens ?? 0,
+                    OutputTokens = usage?.OutputTokens ?? 0,
                     TotalTokens = usage?.TotalTokens ?? 0,
                     ElapsedMs = usage?.ElapsedMs ?? 0,
                 };
@@ -720,7 +720,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
                 ConversationId = conversation.Id,
                 Role = "user",
                 Content = userContent,
-                PromptTokens = usage?.InputTokens ?? 0,
+                InputTokens = usage?.InputTokens ?? 0,
             };
             userMsg.Insert();
 
@@ -733,7 +733,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
                     Role = "assistant",
                     Content = responseContent,
                     ThinkingContent = thinkingContent.IsNullOrEmpty() ? null : thinkingContent,
-                    CompletionTokens = usage?.OutputTokens ?? 0,
+                    OutputTokens = usage?.OutputTokens ?? 0,
                     TotalTokens = usage?.TotalTokens ?? 0,
                     ElapsedMs = usage?.ElapsedMs ?? 0,
                 };

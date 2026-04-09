@@ -102,21 +102,53 @@ public partial class ChatMessage
     [BindColumn("ToolCalls", "工具调用。JSON格式，存储tool_call链路记录", "", ShowIn = "Auto,-List,-Search")]
     public String? ToolCalls { get => _ToolCalls; set { if (OnPropertyChanging("ToolCalls", value)) { _ToolCalls = value; OnPropertyChanged("ToolCalls"); } } }
 
-    private Int32 _PromptTokens;
-    /// <summary>提示Token数</summary>
-    [DisplayName("提示Token数")]
-    [Description("提示Token数")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("PromptTokens", "提示Token数", "")]
-    public Int32 PromptTokens { get => _PromptTokens; set { if (OnPropertyChanging("PromptTokens", value)) { _PromptTokens = value; OnPropertyChanged("PromptTokens"); } } }
+    private String? _ModelName;
+    /// <summary>模型名称。实际使用的模型编码，方便回溯</summary>
+    [DisplayName("模型名称")]
+    [Description("模型名称。实际使用的模型编码，方便回溯")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("ModelName", "模型名称。实际使用的模型编码，方便回溯", "")]
+    public String? ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
 
-    private Int32 _CompletionTokens;
-    /// <summary>回复Token数</summary>
-    [DisplayName("回复Token数")]
-    [Description("回复Token数")]
+    private Int32 _MaxTokens;
+    /// <summary>最大Token数。本次请求的最大生成Token数限制</summary>
+    [DisplayName("最大Token数")]
+    [Description("最大Token数。本次请求的最大生成Token数限制")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("CompletionTokens", "回复Token数", "")]
-    public Int32 CompletionTokens { get => _CompletionTokens; set { if (OnPropertyChanging("CompletionTokens", value)) { _CompletionTokens = value; OnPropertyChanged("CompletionTokens"); } } }
+    [BindColumn("MaxTokens", "最大Token数。本次请求的最大生成Token数限制", "")]
+    public Int32 MaxTokens { get => _MaxTokens; set { if (OnPropertyChanging("MaxTokens", value)) { _MaxTokens = value; OnPropertyChanged("MaxTokens"); } } }
+
+    private Double _Temperature;
+    /// <summary>温度。本次请求的采样温度参数</summary>
+    [DisplayName("温度")]
+    [Description("温度。本次请求的采样温度参数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Temperature", "温度。本次请求的采样温度参数", "")]
+    public Double Temperature { get => _Temperature; set { if (OnPropertyChanging("Temperature", value)) { _Temperature = value; OnPropertyChanged("Temperature"); } } }
+
+    private String? _FinishReason;
+    /// <summary>完成原因。stop=正常结束/length=截断/tool_calls=工具调用/error=异常</summary>
+    [DisplayName("完成原因")]
+    [Description("完成原因。stop=正常结束/length=截断/tool_calls=工具调用/error=异常")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("FinishReason", "完成原因。stop=正常结束/length=截断/tool_calls=工具调用/error=异常", "")]
+    public String? FinishReason { get => _FinishReason; set { if (OnPropertyChanging("FinishReason", value)) { _FinishReason = value; OnPropertyChanged("FinishReason"); } } }
+
+    private Int32 _InputTokens;
+    /// <summary>输入Token数</summary>
+    [DisplayName("输入Token数")]
+    [Description("输入Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("InputTokens", "输入Token数", "")]
+    public Int32 InputTokens { get => _InputTokens; set { if (OnPropertyChanging("InputTokens", value)) { _InputTokens = value; OnPropertyChanged("InputTokens"); } } }
+
+    private Int32 _OutputTokens;
+    /// <summary>输出Token数</summary>
+    [DisplayName("输出Token数")]
+    [Description("输出Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("OutputTokens", "输出Token数", "")]
+    public Int32 OutputTokens { get => _OutputTokens; set { if (OnPropertyChanging("OutputTokens", value)) { _OutputTokens = value; OnPropertyChanged("OutputTokens"); } } }
 
     private Int32 _TotalTokens;
     /// <summary>总Token数</summary>
@@ -189,8 +221,12 @@ public partial class ChatMessage
             "SkillNames" => _SkillNames,
             "ToolNames" => _ToolNames,
             "ToolCalls" => _ToolCalls,
-            "PromptTokens" => _PromptTokens,
-            "CompletionTokens" => _CompletionTokens,
+            "ModelName" => _ModelName,
+            "MaxTokens" => _MaxTokens,
+            "Temperature" => _Temperature,
+            "FinishReason" => _FinishReason,
+            "InputTokens" => _InputTokens,
+            "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
             "ElapsedMs" => _ElapsedMs,
             "TraceId" => _TraceId,
@@ -213,8 +249,12 @@ public partial class ChatMessage
                 case "SkillNames": _SkillNames = Convert.ToString(value); break;
                 case "ToolNames": _ToolNames = Convert.ToString(value); break;
                 case "ToolCalls": _ToolCalls = Convert.ToString(value); break;
-                case "PromptTokens": _PromptTokens = value.ToInt(); break;
-                case "CompletionTokens": _CompletionTokens = value.ToInt(); break;
+                case "ModelName": _ModelName = Convert.ToString(value); break;
+                case "MaxTokens": _MaxTokens = value.ToInt(); break;
+                case "Temperature": _Temperature = value.ToDouble(); break;
+                case "FinishReason": _FinishReason = Convert.ToString(value); break;
+                case "InputTokens": _InputTokens = value.ToInt(); break;
+                case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
@@ -320,11 +360,23 @@ public partial class ChatMessage
         /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
         public static readonly Field ToolCalls = FindByName("ToolCalls");
 
-        /// <summary>提示Token数</summary>
-        public static readonly Field PromptTokens = FindByName("PromptTokens");
+        /// <summary>模型名称。实际使用的模型编码，方便回溯</summary>
+        public static readonly Field ModelName = FindByName("ModelName");
 
-        /// <summary>回复Token数</summary>
-        public static readonly Field CompletionTokens = FindByName("CompletionTokens");
+        /// <summary>最大Token数。本次请求的最大生成Token数限制</summary>
+        public static readonly Field MaxTokens = FindByName("MaxTokens");
+
+        /// <summary>温度。本次请求的采样温度参数</summary>
+        public static readonly Field Temperature = FindByName("Temperature");
+
+        /// <summary>完成原因。stop=正常结束/length=截断/tool_calls=工具调用/error=异常</summary>
+        public static readonly Field FinishReason = FindByName("FinishReason");
+
+        /// <summary>输入Token数</summary>
+        public static readonly Field InputTokens = FindByName("InputTokens");
+
+        /// <summary>输出Token数</summary>
+        public static readonly Field OutputTokens = FindByName("OutputTokens");
 
         /// <summary>总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
@@ -380,11 +432,23 @@ public partial class ChatMessage
         /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
         public const String ToolCalls = "ToolCalls";
 
-        /// <summary>提示Token数</summary>
-        public const String PromptTokens = "PromptTokens";
+        /// <summary>模型名称。实际使用的模型编码，方便回溯</summary>
+        public const String ModelName = "ModelName";
 
-        /// <summary>回复Token数</summary>
-        public const String CompletionTokens = "CompletionTokens";
+        /// <summary>最大Token数。本次请求的最大生成Token数限制</summary>
+        public const String MaxTokens = "MaxTokens";
+
+        /// <summary>温度。本次请求的采样温度参数</summary>
+        public const String Temperature = "Temperature";
+
+        /// <summary>完成原因。stop=正常结束/length=截断/tool_calls=工具调用/error=异常</summary>
+        public const String FinishReason = "FinishReason";
+
+        /// <summary>输入Token数</summary>
+        public const String InputTokens = "InputTokens";
+
+        /// <summary>输出Token数</summary>
+        public const String OutputTokens = "OutputTokens";
 
         /// <summary>总Token数</summary>
         public const String TotalTokens = "TotalTokens";

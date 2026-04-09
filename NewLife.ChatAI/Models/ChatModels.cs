@@ -27,11 +27,11 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
     /// <summary>工具调用列表</summary>
     public IReadOnlyList<ToolCallDto>? ToolCalls { get; set; }
 
-    /// <summary>提示Token数</summary>
-    public Int32 PromptTokens { get; set; }
+    /// <summary>输入Token数</summary>
+    public Int32 InputTokens { get; set; }
 
-    /// <summary>回复Token数</summary>
-    public Int32 CompletionTokens { get; set; }
+    /// <summary>输出Token数</summary>
+    public Int32 OutputTokens { get; set; }
 
     /// <summary>总Token数</summary>
     public Int32 TotalTokens { get; set; }

@@ -79,8 +79,8 @@ public partial class UsageRecord : Entity<UsageRecord>
     //    entity.ConversationId = 0;
     //    entity.MessageId = 0;
     //    entity.ModelCode = "abc";
-    //    entity.PromptTokens = 0;
-    //    entity.CompletionTokens = 0;
+    //    entity.InputTokens = 0;
+    //    entity.OutputTokens = 0;
     //    entity.TotalTokens = 0;
     //    entity.Source = "abc";
     //    entity.Insert();

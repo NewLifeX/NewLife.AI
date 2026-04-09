@@ -120,28 +120,28 @@ public partial class Conversation
     [BindColumn("LastMessageTime", "最后消息时间。用于排序", "")]
     public DateTime LastMessageTime { get => _LastMessageTime; set { if (OnPropertyChanging("LastMessageTime", value)) { _LastMessageTime = value; OnPropertyChanged("LastMessageTime"); } } }
 
-    private Int32 _TotalPromptTokens;
-    /// <summary>提问Tokens。会话累计消耗的提示Token数</summary>
-    [DisplayName("提问Tokens")]
-    [Description("提问Tokens。会话累计消耗的提示Token数")]
+    private Int32 _InputTokens;
+    /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+    [DisplayName("输入Token数")]
+    [Description("输入Token数。会话累计消耗的输入Token数")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalPromptTokens", "提问Tokens。会话累计消耗的提示Token数", "")]
-    public Int32 TotalPromptTokens { get => _TotalPromptTokens; set { if (OnPropertyChanging("TotalPromptTokens", value)) { _TotalPromptTokens = value; OnPropertyChanged("TotalPromptTokens"); } } }
+    [BindColumn("InputTokens", "输入Token数。会话累计消耗的输入Token数", "")]
+    public Int32 InputTokens { get => _InputTokens; set { if (OnPropertyChanging("InputTokens", value)) { _InputTokens = value; OnPropertyChanged("InputTokens"); } } }
 
-    private Int32 _TotalCompletionTokens;
-    /// <summary>回复Tokens。会话累计消耗的回复Token数</summary>
-    [DisplayName("回复Tokens")]
-    [Description("回复Tokens。会话累计消耗的回复Token数")]
+    private Int32 _OutputTokens;
+    /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+    [DisplayName("输出Token数")]
+    [Description("输出Token数。会话累计消耗的输出Token数")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCompletionTokens", "回复Tokens。会话累计消耗的回复Token数", "")]
-    public Int32 TotalCompletionTokens { get => _TotalCompletionTokens; set { if (OnPropertyChanging("TotalCompletionTokens", value)) { _TotalCompletionTokens = value; OnPropertyChanged("TotalCompletionTokens"); } } }
+    [BindColumn("OutputTokens", "输出Token数。会话累计消耗的输出Token数", "")]
+    public Int32 OutputTokens { get => _OutputTokens; set { if (OnPropertyChanging("OutputTokens", value)) { _OutputTokens = value; OnPropertyChanged("OutputTokens"); } } }
 
     private Int32 _TotalTokens;
-    /// <summary>总Tokens。会话累计消耗的总Token数</summary>
-    [DisplayName("总Tokens")]
-    [Description("总Tokens。会话累计消耗的总Token数")]
+    /// <summary>总Token数。会话累计消耗的总Token数</summary>
+    [DisplayName("总Token数")]
+    [Description("总Token数。会话累计消耗的总Token数")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokens", "总Tokens。会话累计消耗的总Token数", "")]
+    [BindColumn("TotalTokens", "总Token数。会话累计消耗的总Token数", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
     private Int32 _ElapsedMs;
@@ -253,8 +253,8 @@ public partial class Conversation
             "IsPinned" => _IsPinned,
             "MessageCount" => _MessageCount,
             "LastMessageTime" => _LastMessageTime,
-            "TotalPromptTokens" => _TotalPromptTokens,
-            "TotalCompletionTokens" => _TotalCompletionTokens,
+            "InputTokens" => _InputTokens,
+            "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
             "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
@@ -284,8 +284,8 @@ public partial class Conversation
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
                 case "LastMessageTime": _LastMessageTime = value.ToDateTime(); break;
-                case "TotalPromptTokens": _TotalPromptTokens = value.ToInt(); break;
-                case "TotalCompletionTokens": _TotalCompletionTokens = value.ToInt(); break;
+                case "InputTokens": _InputTokens = value.ToInt(); break;
+                case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
@@ -428,13 +428,13 @@ public partial class Conversation
         /// <summary>最后消息时间。用于排序</summary>
         public static readonly Field LastMessageTime = FindByName("LastMessageTime");
 
-        /// <summary>提问Tokens。会话累计消耗的提示Token数</summary>
-        public static readonly Field TotalPromptTokens = FindByName("TotalPromptTokens");
+        /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+        public static readonly Field InputTokens = FindByName("InputTokens");
 
-        /// <summary>回复Tokens。会话累计消耗的回复Token数</summary>
-        public static readonly Field TotalCompletionTokens = FindByName("TotalCompletionTokens");
+        /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+        public static readonly Field OutputTokens = FindByName("OutputTokens");
 
-        /// <summary>总Tokens。会话累计消耗的总Token数</summary>
+        /// <summary>总Token数。会话累计消耗的总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
         /// <summary>耗时。毫秒</summary>
@@ -509,13 +509,13 @@ public partial class Conversation
         /// <summary>最后消息时间。用于排序</summary>
         public const String LastMessageTime = "LastMessageTime";
 
-        /// <summary>提问Tokens。会话累计消耗的提示Token数</summary>
-        public const String TotalPromptTokens = "TotalPromptTokens";
+        /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+        public const String InputTokens = "InputTokens";
 
-        /// <summary>回复Tokens。会话累计消耗的回复Token数</summary>
-        public const String TotalCompletionTokens = "TotalCompletionTokens";
+        /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+        public const String OutputTokens = "OutputTokens";
 
-        /// <summary>总Tokens。会话累计消耗的总Token数</summary>
+        /// <summary>总Token数。会话累计消耗的总Token数</summary>
         public const String TotalTokens = "TotalTokens";
 
         /// <summary>耗时。毫秒</summary>

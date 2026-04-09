@@ -257,14 +257,14 @@ public class InMemoryChatApplicationService
         }
 
         // 占位 Token 用量
-        var promptTokens = request.Content.Length;
-        var completionTokens = content.Length;
+        var inputTokens = request.Content.Length;
+        var outputTokens = content.Length;
 
         var assistantDto = new MessageDto(assistantMessageId, conversationId, "assistant", content.ToString(), null, request.ThinkingMode, null, DateTime.Now)
         {
-            PromptTokens = promptTokens,
-            CompletionTokens = completionTokens,
-            TotalTokens = promptTokens + completionTokens,
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens,
+            TotalTokens = inputTokens + outputTokens,
         };
         list.Add(assistantDto);
 

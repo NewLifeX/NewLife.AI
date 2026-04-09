@@ -17,12 +17,12 @@ public class UsageService(ILog log)
     /// <param name="conversationId">会话编号</param>
     /// <param name="messageId">消息编号</param>
     /// <param name="modelId">模型编号</param>
-    /// <param name="promptTokens">提示Token数</param>
-    /// <param name="completionTokens">回复Token数</param>
+    /// <param name="inputTokens">输入Token数</param>
+    /// <param name="outputTokens">输出Token数</param>
     /// <param name="totalTokens">总Token数</param>
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
     public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId,
-        Int32 modelId, Int32 promptTokens, Int32 completionTokens, Int32 totalTokens, String source)
+        Int32 modelId, Int32 inputTokens, Int32 outputTokens, Int32 totalTokens, String source)
     {
         if (!ChatSetting.Current.EnableUsageStats) return;
 
@@ -36,8 +36,8 @@ public class UsageService(ILog log)
                 MessageId = messageId,
                 ModelId = modelId,
                 ModelName = ModelConfig.FindById(modelId)?.Name,
-                PromptTokens = promptTokens,
-                CompletionTokens = completionTokens,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
                 TotalTokens = totalTokens,
                 Source = source,
             };
@@ -62,8 +62,8 @@ public class UsageService(ILog log)
 
         // 聚合用量
         var records = UsageRecord.FindAllByUserId(userId);
-        var totalPrompt = records.Sum(e => e.PromptTokens);
-        var totalCompletion = records.Sum(e => e.CompletionTokens);
+        var totalPrompt = records.Sum(e => e.InputTokens);
+        var totalCompletion = records.Sum(e => e.OutputTokens);
         var totalTokens = records.Sum(e => e.TotalTokens);
         var lastActive = records.Count > 0 ? records.Max(e => e.CreateTime) : DateTime.MinValue;
 
@@ -85,8 +85,8 @@ public class UsageService(ILog log)
             .Select(g => new DailyUsageDto(
                 g.Key,
                 g.Count(),
-                g.Sum(e => e.PromptTokens),
-                g.Sum(e => e.CompletionTokens),
+                g.Sum(e => e.InputTokens),
+                g.Sum(e => e.OutputTokens),
                 g.Sum(e => e.TotalTokens)))
             .ToList();
     }
@@ -147,8 +147,8 @@ public class UsageService(ILog log)
             .Select(g => new DailyUsageDto(
                 g.Key,
                 g.Count(),
-                g.Sum(e => e.PromptTokens),
-                g.Sum(e => e.CompletionTokens),
+                g.Sum(e => e.InputTokens),
+                g.Sum(e => e.OutputTokens),
                 g.Sum(e => e.TotalTokens)))
             .ToList();
     }
@@ -157,10 +157,10 @@ public class UsageService(ILog log)
 
 #region DTO 定义
 /// <summary>用量摘要</summary>
-public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 PromptTokens, Int32 CompletionTokens, Int32 TotalTokens, DateTime LastActiveTime);
+public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, DateTime LastActiveTime);
 
 /// <summary>按日用量</summary>
-public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 PromptTokens, Int32 CompletionTokens, Int32 TotalTokens);
+public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens);
 
 /// <summary>模型使用分布</summary>
 public record ModelUsageDto(Int32 ModelId, Int32 Calls, Int32 TotalTokens);

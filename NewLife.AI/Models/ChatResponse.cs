@@ -126,34 +126,34 @@ public class ChatChoice
     public FinishReason? FinishReason { get; set; }
 }
 
-/// <summary>令牌用量统计</summary>
+/// <summary>Token用量统计</summary>
 public class UsageDetails
 {
-    /// <summary>提示令牌数</summary>
+    /// <summary>输入Token数</summary>
     public Int32 InputTokens { get; set; }
 
-    /// <summary>回复令牌数</summary>
+    /// <summary>输出Token数</summary>
     public Int32 OutputTokens { get; set; }
 
-    /// <summary>总令牌数</summary>
+    /// <summary>总Token数</summary>
     public Int32 TotalTokens { get; set; }
 
-    /// <summary>缓存输入令牌数</summary>
+    /// <summary>缓存输入Token数</summary>
     public Int32 CachedInputTokens { get; set; }
 
-    /// <summary>推理令牌数</summary>
+    /// <summary>推理Token数</summary>
     public Int32 ReasoningTokens { get; set; }
 
-    /// <summary>音频输入令牌数</summary>
+    /// <summary>音频输入Token数</summary>
     public Int32 InputAudioTokens { get; set; }
 
-    /// <summary>文本输入令牌数</summary>
+    /// <summary>文本输入Token数</summary>
     public Int32 InputTextTokens { get; set; }
 
-    /// <summary>音频输出令牌数</summary>
+    /// <summary>音频输出Token数</summary>
     public Int32 OutputAudioTokens { get; set; }
 
-    /// <summary>文本输出令牌数</summary>
+    /// <summary>文本输出Token数</summary>
     public Int32 OutputTextTokens { get; set; }
 
     /// <summary>耗时。本次LLM调用的端到端毫秒数</summary>
