@@ -45,7 +45,7 @@ public partial class UserMemory : Entity<UserMemory>
         if (!base.Valid(method)) return false;
 
         // 新插入时默认激活
-        if (method == DataMethod.Insert && !Dirtys[nameof(IsActive)]) IsActive = true;
+        if (method == DataMethod.Insert && !Dirtys[nameof(Enable)]) Enable = true;
 
         return true;
     }
@@ -69,7 +69,7 @@ public partial class UserMemory : Entity<UserMemory>
     {
         if (userId <= 0) return [];
 
-        return FindAll(_.UserId == userId & _.IsActive == true, _.Confidence.Desc(), null, 0, 0);
+        return FindAll(_.UserId == userId & _.Enable == true, _.Confidence.Desc(), null, 0, 0);
     }
 
     /// <summary>根据用户和分类查找记忆</summary>
@@ -80,7 +80,7 @@ public partial class UserMemory : Entity<UserMemory>
     {
         if (userId <= 0) return [];
 
-        var exp = _.UserId == userId & _.IsActive == true;
+        var exp = _.UserId == userId & _.Enable == true;
         if (!category.IsNullOrEmpty()) exp &= _.Category == category;
 
         return FindAll(exp, _.Confidence.Desc(), null, 0, 0);
@@ -92,7 +92,7 @@ public partial class UserMemory : Entity<UserMemory>
     /// <returns>实体列表</returns>
     public static IList<UserMemory> FindActiveByScope(Int32 userId, String scope)
     {
-        var exp = _.IsActive == true & _.Status == 1;
+        var exp = _.Enable == true & _.Status == 1;
         if (userId > 0) exp &= _.UserId == userId;
         if (!scope.IsNullOrEmpty()) exp &= _.Scope == scope;
 
@@ -102,14 +102,14 @@ public partial class UserMemory : Entity<UserMemory>
     /// <summary>获取待审核的记忆</summary>
     /// <param name="count">最大返回数</param>
     /// <returns></returns>
-    public static IList<UserMemory> FindPendingReview(Int32 count = 50) => FindAll(_.Status == 0 & _.IsActive == true, _.Id.Asc(), null, 0, count);
+    public static IList<UserMemory> FindPendingReview(Int32 count = 50) => FindAll(_.Status == 0 & _.Enable == true, _.Id.Asc(), null, 0, count);
     #endregion
 
     #region 业务操作
     /// <summary>将记忆标记为无效</summary>
     public void Deactivate()
     {
-        IsActive = false;
+        Enable = false;
         Update();
     }
 
@@ -137,7 +137,7 @@ public partial class UserMemory : Entity<UserMemory>
     public void Deprecate()
     {
         Status = 3;
-        IsActive = false;
+        Enable = false;
         Update();
     }
     #endregion

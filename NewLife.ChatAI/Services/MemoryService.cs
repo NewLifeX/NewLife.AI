@@ -47,10 +47,11 @@ public class MemoryService(ITracer tracer, ILog log)
             if (existing.Confidence < confidence || !existing.Value.EqualIgnoreCase(value))
             {
                 var oldValue = existing.Value;
+                existing.Category = category;
                 existing.Value = value;
                 existing.Confidence = confidence;
                 existing.ConversationId = conversationId;
-                existing.IsActive = true;
+                existing.Enable = true;
                 existing.Version++;
                 existing.Update();
             }
@@ -69,7 +70,7 @@ public class MemoryService(ITracer tracer, ILog log)
             Scope = "user",
             Status = 1,
             Version = 1,
-            IsActive = true,
+            Enable = true,
         };
         memory.Insert();
 
@@ -179,7 +180,8 @@ public class MemoryService(ITracer tracer, ILog log)
 
         foreach (var group in grouped)
         {
-            var label = group.Key;
+            // 兼容历史英文分类：将英文枚举值翻译为中文显示
+            var label = ConversationAnalysisService.NormalizeCategory(group.Key);
             sb.Append("**").Append(label).AppendLine("：**");
             foreach (var m in group.Take(MaxMemoriesPerCategory))
             {

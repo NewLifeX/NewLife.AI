@@ -23,40 +23,44 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
     /// <summary>记忆服务（同时对外暴露给 LearningFilter 注入上下文）</summary>
     public MemoryService MemoryService { get; } = memoryService;
 
-    /// <summary>有效的记忆分类集合（用于校验 AI 返回的 category 值）</summary>
+    /// <summary>英文枚举值到中文标准分类名的映射（数据库和用户展示使用中文）</summary>
+    internal static readonly Dictionary<String, String> CategoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["identity"] = "身份信息",
+        ["preference"] = "偏好",
+        ["habit"] = "习惯",
+        ["interest"] = "兴趣",
+        ["background"] = "背景",
+        ["profession"] = "职业",
+        ["goal"] = "目标",
+        ["relationship"] = "人际关系",
+        ["skill"] = "技能",
+        ["instruction"] = "交互指令",
+    };
+
+    /// <summary>中文别名到标准中文分类名的映射（消除 AI 返回的中文变体）</summary>
+    internal static readonly Dictionary<String, String> CategoryAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["技能专长"] = "技能",
+        ["目标计划"] = "目标",
+        ["背景信息"] = "背景",
+        ["职业信息"] = "职业",
+        ["兴趣爱好"] = "兴趣",
+        ["行为习惯"] = "习惯",
+    };
+
+    /// <summary>有效的记忆分类集合（同时包含英文枚举值和中文标准名，用于校验）</summary>
     internal static readonly HashSet<String> ValidCategories = new(StringComparer.OrdinalIgnoreCase)
     {
         "identity", "preference", "habit", "interest", "background",
         "profession", "goal", "relationship", "skill", "instruction",
-        // 兼容中文分类名
         "身份信息", "偏好", "习惯", "兴趣", "背景",
         "职业", "目标", "人际关系", "技能", "交互指令",
     };
 
-    /// <summary>中文分类名到英文枚举值的映射</summary>
-    internal static readonly Dictionary<String, String> CategoryMapping = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["身份信息"] = "identity",
-        ["偏好"] = "preference",
-        ["习惯"] = "habit",
-        ["兴趣"] = "interest",
-        ["背景"] = "background",
-        ["职业"] = "profession",
-        ["目标"] = "goal",
-        ["人际关系"] = "relationship",
-        ["技能"] = "skill",
-        ["交互指令"] = "instruction",
-        ["技能专长"] = "skill",
-        ["目标计划"] = "goal",
-        ["背景信息"] = "background",
-        ["职业信息"] = "profession",
-        ["兴趣爱好"] = "interest",
-        ["行为习惯"] = "habit",
-    };
-
     /// <summary>记忆提取系统提示词（10 类分类体系，对标 Mem0/ChatGPT/Claude）</summary>
     private static readonly String ExtractionSystemPrompt = """
-        你是一个用户记忆提取助手。分析以下对话内容，从中提取 10 类结构化用户记忆和用户标签。
+        你是一个用户记忆提取助手。分析以下对话内容，从中提取 10 类结构化用户记忆。
 
         ## 记忆分类（category 必须使用以下英文枚举值）
         - identity：身份信息（姓名、昵称、年龄、所在地、语言、时区）
@@ -72,15 +76,16 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
 
         ## 输出格式
         请以 JSON 格式返回，其中：
-        - memories：记忆条目列表，每条包含 category（上述英文枚举值）、key（简短标识）、value（具体内容）、confidence（0-100 置信度）
+        - memories：记忆条目列表，每条包含 category（上述英文枚举值）、key（简短中文标识）、value（具体内容，优先用中文描述）、confidence（0-100 置信度）
 
         ## 规则
         - 只提取能明确从对话中推断的信息，无法确定的不要猜测
         - category 必须使用上述 10 个英文枚举值之一
+        - key 和 value 优先使用中文
         - 如果没有可提取的信息，返回空列表
 
         返回格式示例：
-        {"memories": [{"category": "preference", "key": "回答语言", "value": "中文", "confidence": 95}, {"category": "profession", "key": "职位", "value": "后端开发", "confidence": 85}]}
+        {"memories": [{"category": "preference", "key": "回答语言", "value": "中文", "confidence": 95}, {"category": "profession", "key": "职位", "value": "后端开发工程师", "confidence": 85}]}
         """;
 
     #region 分析
@@ -246,18 +251,49 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         return count;
     }
 
-    /// <summary>规范化分类名，中文映射为英文枚举值，无效值回退为 general</summary>
+    /// <summary>规范化分类名。英文枚举值映射为中文标准名，中文别名归一化，无效值回退为"通用"</summary>
+    /// <param name="category">AI 返回的分类名（英文枚举值或中文）</param>
+    /// <returns>中文标准分类名</returns>
     internal static String NormalizeCategory(String? category)
+    {
+        if (category.IsNullOrWhiteSpace()) return "通用";
+
+        // 英文枚举值 → 中文标准名
+        if (CategoryNames.TryGetValue(category!, out var chineseName))
+            return chineseName;
+
+        // 中文别名 → 标准中文名
+        if (CategoryAliases.TryGetValue(category!, out var standard))
+            return standard;
+
+        // 已经是标准中文分类名
+        if (CategoryNames.ContainsValue(category!))
+            return category!;
+
+        return "通用";
+    }
+
+    /// <summary>将中文分类名转换为英文枚举值（供需要英文的场景使用）</summary>
+    /// <param name="category">中文分类名或英文枚举值</param>
+    /// <returns>英文枚举值</returns>
+    internal static String GetEnglishCategory(String? category)
     {
         if (category.IsNullOrWhiteSpace()) return "general";
 
-        // 优先查找中文名/别名映射
-        if (CategoryMapping.TryGetValue(category!, out var mapped))
-            return mapped;
-
-        // 再检查是否已经是合法英文枚举值
-        if (ValidCategories.Contains(category!))
+        // 已经是英文枚举值
+        if (CategoryNames.ContainsKey(category!))
             return category!.ToLower();
+
+        // 标准中文名 → 英文
+        foreach (var kvp in CategoryNames)
+        {
+            if (kvp.Value.EqualIgnoreCase(category!))
+                return kvp.Key;
+        }
+
+        // 中文别名 → 先获取标准中文名 → 再转英文
+        if (CategoryAliases.TryGetValue(category!, out var std))
+            return GetEnglishCategory(std);
 
         return "general";
     }

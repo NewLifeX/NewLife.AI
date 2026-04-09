@@ -19,7 +19,6 @@ namespace NewLife.ChatAI.Entity;
 [Description("用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据")]
 [BindIndex("IX_UserMemory_UserId_Category_Key", false, "UserId,Category,Key")]
 [BindIndex("IX_UserMemory_UserId_Key", false, "UserId,Key")]
-[BindIndex("IX_UserMemory_UserId_IsActive_Id", false, "UserId,IsActive,Id")]
 [BindIndex("IX_UserMemory_ConversationId", false, "ConversationId")]
 [BindTable("UserMemory", Description = "用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class UserMemory
@@ -129,13 +128,13 @@ public partial class UserMemory
     [BindColumn("ParentId", "父记忆。融合来源，0表示原始提取", "")]
     public Int64 ParentId { get => _ParentId; set { if (OnPropertyChanging("ParentId", value)) { _ParentId = value; OnPropertyChanged("ParentId"); } } }
 
-    private Boolean _IsActive;
-    /// <summary>有效。是否仍然有效，可被覆盖或废弃</summary>
-    [DisplayName("有效")]
-    [Description("有效。是否仍然有效，可被覆盖或废弃")]
+    private Boolean _Enable;
+    /// <summary>启用</summary>
+    [DisplayName("启用")]
+    [Description("启用")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("IsActive", "有效。是否仍然有效，可被覆盖或废弃", "")]
-    public Boolean IsActive { get => _IsActive; set { if (OnPropertyChanging("IsActive", value)) { _IsActive = value; OnPropertyChanged("IsActive"); } } }
+    [BindColumn("Enable", "启用", "")]
+    public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
 
     private DateTime _ExpireTime;
     /// <summary>过期时间。null表示永不过期</summary>
@@ -144,6 +143,15 @@ public partial class UserMemory
     [DataObjectField(false, false, true, 0)]
     [BindColumn("ExpireTime", "过期时间。null表示永不过期", "")]
     public DateTime ExpireTime { get => _ExpireTime; set { if (OnPropertyChanging("ExpireTime", value)) { _ExpireTime = value; OnPropertyChanged("ExpireTime"); } } }
+
+    private String? _TraceId;
+    /// <summary>链路。方便问题排查</summary>
+    [Category("扩展")]
+    [DisplayName("链路")]
+    [Description("链路。方便问题排查")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("TraceId", "链路。方便问题排查", "")]
+    public String? TraceId { get => _TraceId; set { if (OnPropertyChanging("TraceId", value)) { _TraceId = value; OnPropertyChanged("TraceId"); } } }
 
     private DateTime _CreateTime;
     /// <summary>创建时间</summary>
@@ -185,8 +193,9 @@ public partial class UserMemory
             "ReviewTime" => _ReviewTime,
             "Version" => _Version,
             "ParentId" => _ParentId,
-            "IsActive" => _IsActive,
+            "Enable" => _Enable,
             "ExpireTime" => _ExpireTime,
+            "TraceId" => _TraceId,
             "CreateTime" => _CreateTime,
             "UpdateTime" => _UpdateTime,
             _ => base[name]
@@ -208,8 +217,9 @@ public partial class UserMemory
                 case "ReviewTime": _ReviewTime = value.ToDateTime(); break;
                 case "Version": _Version = value.ToInt(); break;
                 case "ParentId": _ParentId = value.ToLong(); break;
-                case "IsActive": _IsActive = value.ToBoolean(); break;
+                case "Enable": _Enable = value.ToBoolean(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
+                case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
                 case "UpdateTime": _UpdateTime = value.ToDateTime(); break;
                 default: base[name] = value; break;
@@ -292,20 +302,20 @@ public partial class UserMemory
     /// <param name="userId">用户</param>
     /// <param name="conversationId">来源会话。提取该记忆的会话编号</param>
     /// <param name="category">分类。偏好/习惯/兴趣/背景</param>
-    /// <param name="isActive">有效。是否仍然有效，可被覆盖或废弃</param>
+    /// <param name="enable">启用</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserMemory> Search(Int32 userId, Int64 conversationId, String? category, Boolean? isActive, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserMemory> Search(Int32 userId, Int64 conversationId, String? category, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (!category.IsNullOrEmpty()) exp &= _.Category == category;
-        if (isActive != null) exp &= _.IsActive == isActive;
+        if (enable != null) exp &= _.Enable == enable;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -368,11 +378,14 @@ public partial class UserMemory
         /// <summary>父记忆。融合来源，0表示原始提取</summary>
         public static readonly Field ParentId = FindByName("ParentId");
 
-        /// <summary>有效。是否仍然有效，可被覆盖或废弃</summary>
-        public static readonly Field IsActive = FindByName("IsActive");
+        /// <summary>启用</summary>
+        public static readonly Field Enable = FindByName("Enable");
 
         /// <summary>过期时间。null表示永不过期</summary>
         public static readonly Field ExpireTime = FindByName("ExpireTime");
+
+        /// <summary>链路。方便问题排查</summary>
+        public static readonly Field TraceId = FindByName("TraceId");
 
         /// <summary>创建时间</summary>
         public static readonly Field CreateTime = FindByName("CreateTime");
@@ -425,11 +438,14 @@ public partial class UserMemory
         /// <summary>父记忆。融合来源，0表示原始提取</summary>
         public const String ParentId = "ParentId";
 
-        /// <summary>有效。是否仍然有效，可被覆盖或废弃</summary>
-        public const String IsActive = "IsActive";
+        /// <summary>启用</summary>
+        public const String Enable = "Enable";
 
         /// <summary>过期时间。null表示永不过期</summary>
         public const String ExpireTime = "ExpireTime";
+
+        /// <summary>链路。方便问题排查</summary>
+        public const String TraceId = "TraceId";
 
         /// <summary>创建时间</summary>
         public const String CreateTime = "CreateTime";

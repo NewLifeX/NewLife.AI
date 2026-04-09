@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -403,7 +403,7 @@
         <Column Name="ReviewTime" DataType="DateTime" Description="审核时间" />
         <Column Name="Version" DataType="Int32" Description="版本号。每次修改递增" />
         <Column Name="ParentId" DataType="Int64" Description="父记忆。融合来源，0表示原始提取" />
-        <Column Name="IsActive" DataType="Boolean" Description="有效。是否仍然有效，可被覆盖或废弃" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -412,7 +412,6 @@
       <Indexes>
         <Index Columns="UserId,Category,Key" />
         <Index Columns="UserId,Key" />
-        <Index Columns="UserId,IsActive,Id" />
         <Index Columns="ConversationId" />
       </Indexes>
     </Table>
