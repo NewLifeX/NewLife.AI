@@ -1391,6 +1391,9 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
             parts.Add(modelConfig.SystemPrompt.Trim());
 
+        // 4. 多轮对话时强调最新消息优先级，避免 LLM 注意力被早期消息稀释
+        parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
+
         if (parts.Count == 0) return null;
         span?.Value = parts.Count;
 

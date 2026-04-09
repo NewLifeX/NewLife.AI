@@ -23,7 +23,7 @@ public class InMemoryChatApplicationService
     private readonly ConcurrentDictionary<Int64, ConversationSummaryDto> _conversations = new();
     private readonly ConcurrentDictionary<Int64, List<MessageDto>> _messages = new();
     private readonly ConcurrentDictionary<String, (Int64 ConversationId, DateTime CreateTime, DateTime? ExpireTime)> _shares = new();
-    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false);
+    private UserSettingsDto _settings = new("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, String.Empty, ResponseStyle.Balanced, String.Empty, false);
     private Int64 _conversationSeed = 1000;
     private Int64 _messageSeed = 5000;
 

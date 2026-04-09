@@ -380,7 +380,7 @@ public class ChatAITests
         Assert.Equal(0, settings.DefaultModel);
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "You are helpful", false),
+            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "Stone", "Backend developer", ResponseStyle.Vivid, "You are helpful", false),
             CancellationToken.None);
         Assert.Equal("en", updated.Language);
         Assert.Equal("dark", updated.Theme);
@@ -586,7 +586,7 @@ public class ChatAITests
     [Fact]
     public void UserSettingsDtoHasAllFields()
     {
-        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "You are helpful", false);
+        var dto = new UserSettingsDto("zh-CN", "dark", 18, "Enter", 1, ThinkingMode.Think, 10, "Stone", "Backend developer", ResponseStyle.Precise, "You are helpful", false);
 
         Assert.Equal("zh-CN", dto.Language);
         Assert.Equal("dark", dto.Theme);
@@ -595,6 +595,9 @@ public class ChatAITests
         Assert.Equal(1, dto.DefaultModel);
         Assert.Equal(ThinkingMode.Think, dto.DefaultThinkingMode);
         Assert.Equal(10, dto.ContextRounds);
+        Assert.Equal("Stone", dto.Nickname);
+        Assert.Equal("Backend developer", dto.UserBackground);
+        Assert.Equal(ResponseStyle.Precise, dto.ResponseStyle);
         Assert.Equal("You are helpful", dto.SystemPrompt);
     }
     #endregion
@@ -871,7 +874,7 @@ public class ChatAITests
         var service = new InMemoryChatApplicationService();
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Be concise", false),
+            new UserSettingsDto("en", "dark", 20, "Ctrl+Enter", 2, ThinkingMode.Think, 5, "Stone", "Backend developer", ResponseStyle.Precise, "Be concise", false),
             CancellationToken.None);
 
         Assert.Equal("en", updated.Language);
