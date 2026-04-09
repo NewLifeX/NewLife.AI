@@ -582,21 +582,40 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             conversation.Update();
         }
 
-        // 处理技能激活：通过 SkillCode 解析技能并更新会话（仅更新会话元数据；技能提示词由管道注入）
+        // 处理技能激活：每轮均可切换技能，sticky 更新会话绑定（仅更新会话元数据；技能提示词由管道注入）
+        // SkillCode 非空且有效  → 切换到新技能，写回会话
+        // SkillCode = "none"   → 清除技能绑定，回到通用对话，写回会话
+        // SkillCode 为空       → 不变，沿用会话上次的技能
+        // 工具集由技能定义决定，切换技能即切换本轮可用工具；全局 MCP 开关由用户设置控制
         var skillId = conversation.SkillId;
         var skillName = conversation.SkillName;
         if (!String.IsNullOrEmpty(request.SkillCode))
         {
-            var skill = Skill.FindByCode(request.SkillCode);
-            if (skill != null && skill.Enable)
+            if (request.SkillCode.EqualIgnoreCase("none"))
             {
-                skillId = skill.Id;
-                skillName = skill.Name;
-                if (conversation.SkillId != skillId)
+                // 清除技能绑定，回到通用对话
+                skillId = 0;
+                skillName = null;
+                if (conversation.SkillId != 0)
                 {
-                    conversation.SkillId = skillId;
-                    conversation.SkillName = skillName;
+                    conversation.SkillId = 0;
+                    conversation.SkillName = null;
                     conversation.Update();
+                }
+            }
+            else
+            {
+                var skill = Skill.FindByCode(request.SkillCode);
+                if (skill != null && skill.Enable)
+                {
+                    skillId = skill.Id;
+                    skillName = skill.Name;
+                    if (conversation.SkillId != skillId)
+                    {
+                        conversation.SkillId = skillId;
+                        conversation.SkillName = skillName;
+                        conversation.Update();
+                    }
                 }
             }
         }
