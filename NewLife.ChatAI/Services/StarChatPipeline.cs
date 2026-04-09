@@ -90,6 +90,7 @@ public class ChatAIPipeline(
             ConversationId = context.ConversationId,
         };
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
+        ApplyResponseStyle(chatOptions, context.UserId);
 
         // 5. 流式调用并转换为 SSE 事件
         using var streamClient = clientBuilder.Build();
@@ -180,6 +181,7 @@ public class ChatAIPipeline(
             UserId = context.UserId,
             ConversationId = context.ConversationId,
         };
+        ApplyResponseStyle(chatOptions, context.UserId);
 
         using var chatClient = clientBuilder.Build();
         return ChatResponse.From(await chatClient.GetResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false));
@@ -188,6 +190,28 @@ public class ChatAIPipeline(
     #endregion
 
     #region 辅助
+
+    /// <summary>根据用户回应风格设置采样参数。仅在请求未显式指定时设置，不强制覆盖</summary>
+    /// <param name="chatOptions">聊天选项</param>
+    /// <param name="userId">用户编号</param>
+    private static void ApplyResponseStyle(ChatOptions chatOptions, String? userId)
+    {
+        var uid = userId.ToInt();
+        if (uid <= 0) return;
+
+        var userSetting = UserSetting.FindByUserId(uid);
+        if (userSetting == null || userSetting.ResponseStyle == ResponseStyle.Balanced) return;
+
+        var (temp, topP) = userSetting.ResponseStyle switch
+        {
+            ResponseStyle.Precise => (0.3, 0.7),
+            ResponseStyle.Vivid => (1.0, 0.9),
+            ResponseStyle.Creative => (1.4, 0.95),
+            _ => ((Double?)null, (Double?)null)
+        };
+        chatOptions.Temperature ??= temp;
+        chatOptions.TopP ??= topP;
+    }
 
     /// <summary>注入技能系统提示词。取消息列表中的系统消息，将技能提示词前置拼接；同时解析消息中的 @ToolName 引用并填充 context.SelectedTools</summary>
     /// <param name="contextMessages">上下文消息（会被修改）</param>

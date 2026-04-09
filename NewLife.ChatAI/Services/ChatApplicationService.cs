@@ -1055,7 +1055,7 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         if (entity == null)
         {
             // 返回默认设置
-            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, false)
+            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, String.Empty, ResponseStyle.Balanced, String.Empty, false)
             {
                 EnableLearning = true,
             });
@@ -1084,6 +1084,9 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         entity.DefaultModel = settings.DefaultModel;
         entity.DefaultThinkingMode = settings.DefaultThinkingMode;
         entity.ContextRounds = settings.ContextRounds;
+        entity.Nickname = settings.Nickname;
+        entity.UserBackground = settings.UserBackground;
+        entity.ResponseStyle = settings.ResponseStyle;
         entity.SystemPrompt = settings.SystemPrompt;
         entity.AllowTraining = settings.AllowTraining;
         entity.McpEnabled = settings.McpEnabled;
@@ -1360,12 +1363,31 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             }
         }
 
-        // 1. 用户全局系统提示词
+        // 1. 个性化定制
         var userSetting = UserSetting.FindByUserId(userId);
+        if (userSetting != null)
+        {
+            if (!String.IsNullOrWhiteSpace(userSetting.Nickname))
+                parts.Add($"用户希望你称呼他为「{userSetting.Nickname.Trim()}」");
+
+            if (!String.IsNullOrWhiteSpace(userSetting.UserBackground))
+                parts.Add($"## 用户背景信息\n{userSetting.UserBackground.Trim()}");
+
+            var stylePrompt = userSetting.ResponseStyle switch
+            {
+                ResponseStyle.Precise => "请给出准确、确定性高的回答。优先引用事实和数据，避免模糊表述和不确定的推测。回答简洁有条理。",
+                ResponseStyle.Vivid => "请用丰富的表达方式回答，善于使用类比、举例和故事来解释概念。让回答有温度、易于理解，适当展开讨论。",
+                ResponseStyle.Creative => "请大胆发散思维，提供新颖独特的视角和创意方案。鼓励联想、跨界类比和非常规思路，不必拘泥于常规答案。",
+                _ => null
+            };
+            if (stylePrompt != null) parts.Add(stylePrompt);
+        }
+
+        // 2. 用户自定义指令
         if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
             parts.Add(userSetting.SystemPrompt.Trim());
 
-        // 2. 模型级系统提示词
+        // 3. 模型级系统提示词
         if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
             parts.Add(modelConfig.SystemPrompt.Trim());
 
@@ -1423,6 +1445,9 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
             entity.DefaultModel,
             entity.DefaultThinkingMode,
             entity.ContextRounds > 0 ? entity.ContextRounds : 10,
+            entity.Nickname ?? String.Empty,
+            entity.UserBackground ?? String.Empty,
+            entity.ResponseStyle,
             entity.SystemPrompt ?? String.Empty,
             entity.AllowTraining)
         {

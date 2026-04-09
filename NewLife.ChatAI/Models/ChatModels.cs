@@ -50,7 +50,7 @@ public record PagedResultDto<T>(IReadOnlyList<T> Items, Int32 Total, Int32 Page,
 public record ShareLinkDto(String Url, DateTime CreateTime, DateTime? ExpireTime);
 
 /// <summary>用户设置</summary>
-public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, Int32 DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String SystemPrompt, Boolean AllowTraining)
+public record UserSettingsDto(String Language, String Theme, Int32 FontSize, String SendShortcut, Int32 DefaultModel, ThinkingMode DefaultThinkingMode, Int32 ContextRounds, String Nickname, String UserBackground, ResponseStyle ResponseStyle, String SystemPrompt, Boolean AllowTraining)
 {
     /// <summary>是否启用 MCP</summary>
     public Boolean McpEnabled { get; set; } = true;

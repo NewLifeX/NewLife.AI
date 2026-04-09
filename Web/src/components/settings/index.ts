@@ -1,4 +1,5 @@
 export { SettingsModal } from './SettingsModal'
 export { GeneralSettings } from './GeneralSettings'
+export { PersonalizationSettings } from './PersonalizationSettings'
 export { ChatSettings } from './ChatSettings'
 export { McpSettings } from './McpSettings'

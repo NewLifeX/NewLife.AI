@@ -6,6 +6,7 @@ import { Icon } from '@/components/common/Icon'
 import { ScrollArea } from '@/components/common/ScrollArea'
 import { GeneralSettings } from './GeneralSettings'
 import { ChatSettings } from './ChatSettings'
+import { PersonalizationSettings } from './PersonalizationSettings'
 import { McpSettings } from './McpSettings'
 import { DataSettings } from './DataSettings'
 import { UsageSettings } from './UsageSettings'
@@ -13,7 +14,7 @@ import { AppKeySettings } from './AppKeySettings'
 import type { UserSettings, ModelInfo } from '@/types'
 import { fetchMcpServers, toggleMcpServer, type McpServer } from '@/lib/api'
 
-type SettingsTab = 'general' | 'account' | 'chat' | 'mcp' | 'appkeys' | 'usage' | 'data'
+type SettingsTab = 'general' | 'account' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'usage' | 'data'
 
 interface SettingsModalProps {
   open: boolean
@@ -45,6 +46,7 @@ export function SettingsModal({
   const tabs: { id: SettingsTab; icon: string; label: string; badge?: string }[] = [
     { id: 'general', icon: 'tune', label: t('settings.general') },
     { id: 'account', icon: 'account_circle', label: t('settings.account') },
+    { id: 'personalization', icon: 'auto_awesome', label: t('personalization.title') },
     { id: 'chat', icon: 'chat', label: t('settings.chatPrefs') },
     { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced'), badge: 'New' },
     { id: 'appkeys', icon: 'key', label: t('appKey.title') },
@@ -106,6 +108,18 @@ export function SettingsModal({
             onContentWidthChange={(v) => update({ contentWidth: v })}
           />
         )}
+        {activeTab === 'personalization' && (
+          <PersonalizationSettings
+            nickname={settings.nickname}
+            onNicknameChange={(v) => update({ nickname: v })}
+            userBackground={settings.userBackground}
+            onUserBackgroundChange={(v) => update({ userBackground: v })}
+            responseStyle={settings.responseStyle}
+            onResponseStyleChange={(v) => update({ responseStyle: v })}
+            systemPrompt={settings.systemPrompt}
+            onSystemPromptChange={(v) => update({ systemPrompt: v })}
+          />
+        )}
         {activeTab === 'chat' && (
           <ChatSettings
             sendShortcut={settings.sendShortcut}
@@ -116,8 +130,6 @@ export function SettingsModal({
             onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
             contextRounds={settings.contextRounds}
             onContextRoundsChange={(v) => update({ contextRounds: v })}
-            systemPrompt={settings.systemPrompt}
-            onSystemPromptChange={(v) => update({ systemPrompt: v })}
             mcpEnabled={settings.mcpEnabled}
             onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
             showToolCalls={settings.showToolCalls}

@@ -71,6 +71,9 @@ export interface UserSettings {
   defaultModel: number
   defaultThinkingMode: number
   contextRounds: number
+  nickname: string
+  userBackground: string
+  responseStyle: number
   systemPrompt: string
   mcpEnabled: boolean
   showToolCalls: boolean

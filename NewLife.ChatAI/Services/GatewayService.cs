@@ -257,12 +257,31 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
             }
         }
 
-        // 1. 用户全局系统提示词
+        // 1. 个性化定制
         var userSetting = appKey.UserId > 0 ? UserSetting.FindByUserId(appKey.UserId) : null;
+        if (userSetting != null)
+        {
+            if (!String.IsNullOrWhiteSpace(userSetting.Nickname))
+                parts.Add($"用户希望你称呼他为「{userSetting.Nickname.Trim()}」");
+
+            if (!String.IsNullOrWhiteSpace(userSetting.UserBackground))
+                parts.Add($"## 用户背景信息\n{userSetting.UserBackground.Trim()}");
+
+            var stylePrompt = userSetting.ResponseStyle switch
+            {
+                ResponseStyle.Precise => "请给出准确、确定性高的回答。优先引用事实和数据，避免模糊表述和不确定的推测。回答简洁有条理。",
+                ResponseStyle.Vivid => "请用丰富的表达方式回答，善于使用类比、举例和故事来解释概念。让回答有温度、易于理解，适当展开讨论。",
+                ResponseStyle.Creative => "请大胆发散思维，提供新颖独特的视角和创意方案。鼓励联想、跨界类比和非常规思路，不必拘泥于常规答案。",
+                _ => null
+            };
+            if (stylePrompt != null) parts.Add(stylePrompt);
+        }
+
+        // 2. 用户自定义指令
         if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
             parts.Add(userSetting.SystemPrompt.Trim());
 
-        // 2. 模型级系统提示词
+        // 3. 模型级系统提示词
         if (!String.IsNullOrWhiteSpace(config.SystemPrompt))
             parts.Add(config.SystemPrompt.Trim());
 

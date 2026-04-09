@@ -261,6 +261,9 @@
         <Column Name="DefaultModel" DataType="Int32" Description="默认模型。新会话的默认模型配置Id" />
         <Column Name="DefaultThinkingMode" DataType="Int32" Description="默认思考模式。Auto=0, Think=1, Fast=2" Type="NewLife.AI.Models.ThinkingMode" />
         <Column Name="ContextRounds" DataType="Int32" Description="上下文轮数。每次请求携带的历史对话轮数，默认10" />
+        <Column Name="Nickname" DataType="String" Description="AI称呼。你希望AI怎么称呼你" />
+        <Column Name="UserBackground" DataType="String" Length="500" Description="用户背景。你希望AI了解你的哪些信息，如职业、专长、偏好等" />
+        <Column Name="ResponseStyle" DataType="Int32" Description="回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3" Type="NewLife.AI.Models.ResponseStyle" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。全局System Prompt" />
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许反馈数据用于模型改进" />
         <Column Name="McpEnabled" DataType="Boolean" Description="启用MCP。是否启用MCP工具调用" />

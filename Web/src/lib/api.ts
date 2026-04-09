@@ -416,6 +416,9 @@ interface UserSettingsDto {
   defaultModel: number
   defaultThinkingMode: number
   contextRounds: number
+  nickname: string
+  userBackground: string
+  responseStyle: number
   systemPrompt: string
   allowTraining: boolean
   mcpEnabled: boolean
@@ -433,6 +436,9 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     defaultModel: dto.defaultModel,
     defaultThinkingMode: dto.defaultThinkingMode,
     contextRounds: dto.contextRounds,
+    nickname: dto.nickname ?? '',
+    userBackground: dto.userBackground ?? '',
+    responseStyle: dto.responseStyle ?? 0,
     systemPrompt: dto.systemPrompt,
     mcpEnabled: dto.mcpEnabled,
     showToolCalls: dto.showToolCalls ?? false,
@@ -458,6 +464,9 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       defaultModel: settings.defaultModel ?? 0,
       defaultThinkingMode: settings.defaultThinkingMode ?? 0,
       contextRounds: settings.contextRounds ?? 10,
+      nickname: settings.nickname ?? '',
+      userBackground: settings.userBackground ?? '',
+      responseStyle: settings.responseStyle ?? 0,
       systemPrompt: settings.systemPrompt ?? '',
       allowTraining: settings.allowTraining ?? false,
       mcpEnabled: settings.mcpEnabled,

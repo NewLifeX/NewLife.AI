@@ -1,11 +1,10 @@
 ﻿using System.Text;
-using NewLife.Log;
-using NewLife.Serialization;
-using NewLife.ChatAI.Entity;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
+using NewLife.ChatAI.Entity;
+using NewLife.Log;
+using NewLife.Serialization;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
-using ChatResponse = NewLife.AI.Models.ChatResponse;
 
 namespace NewLife.ChatAI.Services;
 
@@ -111,7 +110,7 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
 
         if (totalChars < minContentLength && userMessages.Count < 2)
         {
-            log?.Debug("用户 {0} 消息不足（{1}轮/{2}字），跳过记忆提取", userId, userMessages.Count, totalChars);
+            //log?.Debug("用户 {0} 消息不足（{1}轮/{2}字），跳过记忆提取", userId, userMessages.Count, totalChars);
             return;
         }
 
@@ -176,9 +175,11 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         foreach (var msg in messages)
         {
             if (msg.Role is not ("user" or "assistant")) continue;
+
             var role = msg.Role == "user" ? "用户" : "助手";
             var content = msg.Content as String ?? String.Empty;
             if (content.IsNullOrWhiteSpace()) continue;
+
             sb.Append(role).Append(": ").AppendLine(content);
         }
 

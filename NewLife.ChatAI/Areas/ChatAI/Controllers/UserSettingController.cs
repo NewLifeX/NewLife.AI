@@ -52,6 +52,7 @@ public class UserSettingController : ChatEntityController<UserSetting>
     {
         var userId = p["userId"].ToInt(-1);
         var defaultThinkingMode = (ThinkingMode)p["defaultThinkingMode"].ToInt(-1);
+        var responseStyle = (ResponseStyle)p["responseStyle"].ToInt(-1);
         var allowTraining = p["allowTraining"]?.ToBoolean();
         var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
         var showToolCalls = p["showToolCalls"]?.ToBoolean();
@@ -60,6 +61,6 @@ public class UserSettingController : ChatEntityController<UserSetting>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, defaultThinkingMode, allowTraining, mcpEnabled, showToolCalls, enableLearning, start, end, p["Q"], p);
+        return UserSetting.Search(userId, defaultThinkingMode, responseStyle, allowTraining, mcpEnabled, showToolCalls, enableLearning, start, end, p["Q"], p);
     }
 }

@@ -71,3 +71,23 @@ public enum McpTransportType
     /// <summary>标准输入输出</summary>
     Stdio = 2,
 }
+
+/// <summary>回应风格</summary>
+public enum ResponseStyle
+{
+    /// <summary>均衡。平衡专业性与友好度，适合通用对话</summary>
+    [Description("均衡")]
+    Balanced = 0,
+
+    /// <summary>精确。准确简洁，高确定性回答，适合代码和技术问答</summary>
+    [Description("精确")]
+    Precise = 1,
+
+    /// <summary>生动。丰富表达，善用类比举例，适合学习和解释</summary>
+    [Description("生动")]
+    Vivid = 2,
+
+    /// <summary>创意。发散思维，大胆联想，适合头脑风暴和写作</summary>
+    [Description("创意")]
+    Creative = 3,
+}

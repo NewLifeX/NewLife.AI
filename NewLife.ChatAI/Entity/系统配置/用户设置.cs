@@ -94,6 +94,30 @@ public partial class UserSetting
     [BindColumn("ContextRounds", "上下文轮数。每次请求携带的历史对话轮数，默认10", "")]
     public Int32 ContextRounds { get => _ContextRounds; set { if (OnPropertyChanging("ContextRounds", value)) { _ContextRounds = value; OnPropertyChanged("ContextRounds"); } } }
 
+    private String? _Nickname;
+    /// <summary>AI称呼。你希望AI怎么称呼你</summary>
+    [DisplayName("AI称呼")]
+    [Description("AI称呼。你希望AI怎么称呼你")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Nickname", "AI称呼。你希望AI怎么称呼你", "")]
+    public String? Nickname { get => _Nickname; set { if (OnPropertyChanging("Nickname", value)) { _Nickname = value; OnPropertyChanged("Nickname"); } } }
+
+    private String? _UserBackground;
+    /// <summary>用户背景。你希望AI了解你的哪些信息，如职业、专长、偏好等</summary>
+    [DisplayName("用户背景")]
+    [Description("用户背景。你希望AI了解你的哪些信息，如职业、专长、偏好等")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("UserBackground", "用户背景。你希望AI了解你的哪些信息，如职业、专长、偏好等", "")]
+    public String? UserBackground { get => _UserBackground; set { if (OnPropertyChanging("UserBackground", value)) { _UserBackground = value; OnPropertyChanged("UserBackground"); } } }
+
+    private NewLife.AI.Models.ResponseStyle _ResponseStyle;
+    /// <summary>回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3</summary>
+    [DisplayName("回应风格")]
+    [Description("回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ResponseStyle", "回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3", "")]
+    public NewLife.AI.Models.ResponseStyle ResponseStyle { get => _ResponseStyle; set { if (OnPropertyChanging("ResponseStyle", value)) { _ResponseStyle = value; OnPropertyChanged("ResponseStyle"); } } }
+
     private String? _SystemPrompt;
     /// <summary>系统提示词。全局System Prompt</summary>
     [DisplayName("系统提示词")]
@@ -246,6 +270,9 @@ public partial class UserSetting
             "DefaultModel" => _DefaultModel,
             "DefaultThinkingMode" => _DefaultThinkingMode,
             "ContextRounds" => _ContextRounds,
+            "Nickname" => _Nickname,
+            "UserBackground" => _UserBackground,
+            "ResponseStyle" => _ResponseStyle,
             "SystemPrompt" => _SystemPrompt,
             "AllowTraining" => _AllowTraining,
             "McpEnabled" => _McpEnabled,
@@ -277,6 +304,9 @@ public partial class UserSetting
                 case "DefaultModel": _DefaultModel = value.ToInt(); break;
                 case "DefaultThinkingMode": _DefaultThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "ContextRounds": _ContextRounds = value.ToInt(); break;
+                case "Nickname": _Nickname = Convert.ToString(value); break;
+                case "UserBackground": _UserBackground = Convert.ToString(value); break;
+                case "ResponseStyle": _ResponseStyle = (NewLife.AI.Models.ResponseStyle)value.ToInt(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
@@ -345,6 +375,7 @@ public partial class UserSetting
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。设置所属用户</param>
     /// <param name="defaultThinkingMode">默认思考模式。Auto=0, Think=1, Fast=2</param>
+    /// <param name="responseStyle">回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3</param>
     /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
     /// <param name="showToolCalls">显示工具调用。是否在对话中显示工具调用的入参和出参详情</param>
@@ -354,12 +385,13 @@ public partial class UserSetting
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, NewLife.AI.Models.ResponseStyle responseStyle, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (defaultThinkingMode >= 0) exp &= _.DefaultThinkingMode == defaultThinkingMode;
+        if (responseStyle >= 0) exp &= _.ResponseStyle == responseStyle;
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
         if (showToolCalls != null) exp &= _.ShowToolCalls == showToolCalls;
@@ -401,6 +433,15 @@ public partial class UserSetting
 
         /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
         public static readonly Field ContextRounds = FindByName("ContextRounds");
+
+        /// <summary>AI称呼。你希望AI怎么称呼你</summary>
+        public static readonly Field Nickname = FindByName("Nickname");
+
+        /// <summary>用户背景。你希望AI了解你的哪些信息，如职业、专长、偏好等</summary>
+        public static readonly Field UserBackground = FindByName("UserBackground");
+
+        /// <summary>回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3</summary>
+        public static readonly Field ResponseStyle = FindByName("ResponseStyle");
 
         /// <summary>系统提示词。全局System Prompt</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
@@ -482,6 +523,15 @@ public partial class UserSetting
 
         /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
         public const String ContextRounds = "ContextRounds";
+
+        /// <summary>AI称呼。你希望AI怎么称呼你</summary>
+        public const String Nickname = "Nickname";
+
+        /// <summary>用户背景。你希望AI了解你的哪些信息，如职业、专长、偏好等</summary>
+        public const String UserBackground = "UserBackground";
+
+        /// <summary>回应风格。AI回复的风格偏好。Balanced=0, Precise=1, Vivid=2, Creative=3</summary>
+        public const String ResponseStyle = "ResponseStyle";
 
         /// <summary>系统提示词。全局System Prompt</summary>
         public const String SystemPrompt = "SystemPrompt";
