@@ -57,11 +57,11 @@ public class UserMemoryController : ChatEntityController<UserMemory>
         var userId = p["userId"].ToInt(-1);
         var conversationId = p["conversationId"].ToLong(-1);
         var category = p["category"];
-        var isActive = p["isActive"]?.ToBoolean();
+        var enable = p["enable"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserMemory.Search(userId, conversationId, category, isActive, start, end, p["Q"], p);
+        return UserMemory.Search(userId, conversationId, category, enable, start, end, p["Q"], p);
     }
 }

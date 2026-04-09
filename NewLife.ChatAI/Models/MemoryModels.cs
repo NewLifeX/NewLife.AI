@@ -24,8 +24,10 @@ public class MemoryItemDto
     public String? Key { get; set; }
     /// <summary>值</summary>
     public String? Value { get; set; }
-    /// <summary>置信度</summary>
+    /// <summary>置信度（0-100）</summary>
     public Int32 Confidence { get; set; }
+    /// <summary>是否有效</summary>
+    public Boolean Enable { get; set; }
     /// <summary>创建时间</summary>
     public DateTime CreateTime { get; set; }
     /// <summary>更新时间</summary>
@@ -41,6 +43,8 @@ public class UpdateMemoryRequest
     public Int32? Confidence { get; set; }
     /// <summary>新的分类</summary>
     public String? Category { get; set; }
+    /// <summary>是否有效（切换启停用）</summary>
+    public Boolean? Enable { get; set; }
 }
 
 

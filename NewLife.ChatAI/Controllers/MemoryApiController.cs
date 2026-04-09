@@ -38,6 +38,7 @@ public class MemoryApiController(MemoryService memoryService) : ChatApiControlle
         if (request.Value != null) memory.Value = request.Value;
         if (request.Confidence.HasValue) memory.Confidence = request.Confidence.Value;
         if (request.Category != null) memory.Category = request.Category;
+        if (request.Enable.HasValue) memory.Enable = request.Enable.Value;
         memory.Update();
 
         return Ok(new { success = true });

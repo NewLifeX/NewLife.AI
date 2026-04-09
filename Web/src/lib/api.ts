@@ -701,6 +701,7 @@ export interface MemoryItem {
   key: string
   value: string
   confidence: number
+  enable: boolean
   createTime: string
   updateTime: string
 }
@@ -727,7 +728,7 @@ export async function addMemory(data: { category?: string; key: string; value: s
   })
 }
 
-export async function updateMemory(id: string, data: { value?: string; confidence?: number; category?: string }): Promise<void> {
+export async function updateMemory(id: string, data: { value?: string; confidence?: number; category?: string; enable?: boolean }): Promise<void> {
   await request<void>(`/api/memory/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),

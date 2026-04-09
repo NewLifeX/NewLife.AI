@@ -19,6 +19,90 @@ public class MemoryService(ITracer tracer, ILog log)
     private const Int32 MaxTotalMemories = 30;
     #endregion
 
+    #region 分类规范化
+    /// <summary>英文枚举值到中文标准分类名的映射</summary>
+    public static readonly Dictionary<String, String> CategoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["identity"] = "身份信息",
+        ["preference"] = "偏好",
+        ["habit"] = "习惯",
+        ["interest"] = "兴趣",
+        ["background"] = "背景",
+        ["profession"] = "职业",
+        ["goal"] = "目标",
+        ["relationship"] = "人际关系",
+        ["skill"] = "技能",
+        ["instruction"] = "交互指令",
+    };
+
+    /// <summary>中文别名到标准中文分类名的映射（消除 AI 返回的中文变体）</summary>
+    public static readonly Dictionary<String, String> CategoryAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["技能专长"] = "技能",
+        ["目标计划"] = "目标",
+        ["背景信息"] = "背景",
+        ["职业信息"] = "职业",
+        ["兴趣爱好"] = "兴趣",
+        ["行为习惯"] = "习惯",
+    };
+
+    /// <summary>有效的记忆分类集合（英文枚举值 + 中文标准名，用于校验）</summary>
+    public static readonly HashSet<String> ValidCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "identity", "preference", "habit", "interest", "background",
+        "profession", "goal", "relationship", "skill", "instruction",
+        "身份信息", "偏好", "习惯", "兴趣", "背景",
+        "职业", "目标", "人际关系", "技能", "交互指令",
+    };
+
+    /// <summary>规范化分类名。英文枚举值映射为中文标准名，中文别名归一化，无效值回退为"通用"</summary>
+    /// <param name="category">AI 返回的分类名（英文枚举值或中文）</param>
+    /// <returns>中文标准分类名</returns>
+    public static String NormalizeCategory(String? category)
+    {
+        if (category.IsNullOrWhiteSpace()) return "通用";
+
+        // 英文枚举值 → 中文标准名
+        if (CategoryNames.TryGetValue(category!, out var chineseName))
+            return chineseName;
+
+        // 中文别名 → 标准中文名
+        if (CategoryAliases.TryGetValue(category!, out var standard))
+            return standard;
+
+        // 已经是标准中文分类名
+        if (CategoryNames.ContainsValue(category!))
+            return category!;
+
+        return "通用";
+    }
+
+    /// <summary>将中文分类名转换为英文枚举值（供需要英文的场景使用）</summary>
+    /// <param name="category">中文分类名或英文枚举值</param>
+    /// <returns>英文枚举值</returns>
+    public static String GetEnglishCategory(String? category)
+    {
+        if (category.IsNullOrWhiteSpace()) return "general";
+
+        // 已经是英文枚举值
+        if (CategoryNames.ContainsKey(category!))
+            return category!.ToLower();
+
+        // 标准中文名 → 英文
+        foreach (var kvp in CategoryNames)
+        {
+            if (kvp.Value.EqualIgnoreCase(category!))
+                return kvp.Key;
+        }
+
+        // 中文别名 → 先获取标准中文名 → 再转英文
+        if (CategoryAliases.TryGetValue(category!, out var standard))
+            return GetEnglishCategory(standard);
+
+        return "general";
+    }
+    #endregion
+
     #region 写入记忆
     /// <summary>保存或更新一条记忆条目（key 相同则更新，否则新增）</summary>
     /// <param name="userId">用户ID</param>
@@ -39,6 +123,9 @@ public class MemoryService(ITracer tracer, ILog log)
         CancellationToken cancellationToken = default)
     {
         await Task.Yield(); // 允许调用方继续（实体操作为同步，保持异步接口一致性）
+
+        // 规范化分类名，确保始终以中文存储
+        category = NormalizeCategory(category);
 
         var existing = UserMemory.FindAllByUserId(userId).FirstOrDefault(e => e.Key.EqualIgnoreCase(key));
         if (existing != null)
@@ -108,7 +195,17 @@ public class MemoryService(ITracer tracer, ILog log)
     {
         if (userId <= 0) return [];
 
-        return UserMemory.FindActiveByUserId(userId);
+        var list = UserMemory.FindActiveByUserId(userId);
+
+        // 自动迁移历史英文分类名为中文并回写数据库（首次查询时一次性修复）
+        foreach (var m in list)
+        {
+            if (!CategoryNames.ContainsKey(m.Category)) continue;
+            m.Category = NormalizeCategory(m.Category);
+            m.Update();
+        }
+
+        return list;
     }
 
     /// <summary>获取指定分类的有效记忆</summary>
@@ -145,6 +242,7 @@ public class MemoryService(ITracer tracer, ILog log)
                 Key = m.Key,
                 Value = m.Value,
                 Confidence = m.Confidence,
+                Enable = m.Enable,
                 CreateTime = m.CreateTime,
                 UpdateTime = m.UpdateTime,
             })
@@ -181,7 +279,7 @@ public class MemoryService(ITracer tracer, ILog log)
         foreach (var group in grouped)
         {
             // 兼容历史英文分类：将英文枚举值翻译为中文显示
-            var label = ConversationAnalysisService.NormalizeCategory(group.Key);
+            var label = NormalizeCategory(group.Key);
             sb.Append("**").Append(label).AppendLine("：**");
             foreach (var m in group.Take(MaxMemoriesPerCategory))
             {
