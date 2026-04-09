@@ -564,11 +564,9 @@ public class ChatApplicationService(IChatPipeline pipeline, GatewayService gatew
         }
 
         // 解析模型配置（在插入 assistant 消息之前，避免模型不可用时留下空消息残留）
-        // 优先使用会话绑定的模型，其次使用请求携带的模型（前端当前选择）
-        // model_id=0 时（新用户首次发消息默认值）自动降级为第一个可用模型
-        var modelId = conversation.ModelId;
-        if (modelId <= 0 && request.ModelId > 0)
-            modelId = request.ModelId;
+        // 优先使用请求携带的模型（前端本轮选择），其次回退到会话绑定的模型（上次使用的默认）
+        // 切换后更新会话绑定，形成 sticky 效果；model_id=0 时自动降级为第一个可用模型
+        var modelId = request.ModelId > 0 ? request.ModelId : conversation.ModelId;
 
         var modelConfig = gatewayService.ResolveModelOrDefault(modelId);
         if (modelConfig == null)
