@@ -402,6 +402,7 @@
         <Column Name="ParentId" DataType="Int64" Description="父记忆。融合来源，0表示原始提取" />
         <Column Name="IsActive" DataType="Boolean" Description="有效。是否仍然有效，可被覆盖或废弃" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
+        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
         <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
       </Columns>

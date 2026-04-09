@@ -34,6 +34,7 @@ public partial class UserMemory : Entity<UserMemory>
     static UserMemory()
     {
         Meta.Interceptors.Add<TimeInterceptor>();
+        Meta.Interceptors.Add<TraceInterceptor>();
     }
 
     /// <summary>验证并修补数据，返回验证结果，或者通过抛出异常的方式提示验证失败。</summary>
