@@ -156,7 +156,8 @@ public class ChatApplicationService
     {
         //var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
         //var list = ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
-        var list = ChatMessage.FindAllByConversationIdOrdered(conversationId);
+        var list = ChatMessage.FindAllByConversationIdOrdered(conversationId)
+            .Where(e => e.IsMain).ToList();
 
         // 批量查询反馈，避免 N+1
         var messageIds = list.Select(e => e.Id).ToList();
