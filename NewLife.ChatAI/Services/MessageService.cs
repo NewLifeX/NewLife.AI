@@ -483,10 +483,14 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         pipeline.PrepareContext(contextMessages, msgPipelineCtx);
 
         // 注册系统消息就绪回调（管道收到第一个 chunk 时触发，早于整个流结束，且已包含 LearningFilter 注入的完整用户记忆）
+        // 将完整系统提示词写入用户消息的 ThinkingContent 字段，方便调试查看，无需额外插入 system 消息
         msgPipelineCtx.OnSystemReady = sysContent =>
         {
             if (!sysContent.IsNullOrEmpty())
-                new ChatMessage { ConversationId = conversationId, Role = "system", Content = sysContent }.Insert();
+            {
+                userMsg.ThinkingContent = sysContent;
+                userMsg.Update();
+            }
         };
 
         var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, request.ThinkingMode, msgPipelineCtx, cancellationToken);
