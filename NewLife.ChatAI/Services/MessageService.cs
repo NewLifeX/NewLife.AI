@@ -482,17 +482,12 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         // 预处理：注入技能提示词、解析@引用，生成 SystemPrompt
         pipeline.PrepareContext(contextMessages, msgPipelineCtx);
 
-        // 持久化 system 消息（仅保存注入的技能提示词，便于调试分析）
-        if (!msgPipelineCtx.SystemPrompt.IsNullOrEmpty())
+        // 注册系统消息就绪回调（管道收到第一个 chunk 时触发，早于整个流结束，且已包含 LearningFilter 注入的完整用户记忆）
+        msgPipelineCtx.OnSystemReady = sysContent =>
         {
-            var systemMsg = new ChatMessage
-            {
-                ConversationId = conversationId,
-                Role = "system",
-                Content = msgPipelineCtx.SystemPrompt,
-            };
-            systemMsg.Insert();
-        }
+            if (!sysContent.IsNullOrEmpty())
+                new ChatMessage { ConversationId = conversationId, Role = "system", Content = sysContent }.Insert();
+        };
 
         var pipelineStream = pipeline.StreamAsync(contextMessages, modelConfig, request.ThinkingMode, msgPipelineCtx, cancellationToken);
 

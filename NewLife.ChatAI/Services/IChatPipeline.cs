@@ -32,6 +32,10 @@ public class ChatPipelineContext : IExtend
     /// <summary>构建完成的系统提示词内容。由 PrepareContext 填充，供外部持久化</summary>
     public String? SystemPrompt { get; set; }
 
+    /// <summary>系统消息就绪回调。管道收到第一个流式 chunk 时触发（before filter 已完成，含记忆注入），
+    /// 此时 <see cref="SystemPrompt"/> 已是完整内容，可安全持久化。参数为完整的系统消息文本</summary>
+    public Action<String>? OnSystemReady { get; set; }
+
     /// <summary>实际使用的最大Token数。由管道在构建 ChatOptions 后填充</summary>
     public Int32 MaxTokens { get; set; }
 

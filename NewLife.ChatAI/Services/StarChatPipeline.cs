@@ -116,8 +116,13 @@ public class ChatAIPipeline(
         String? lastFinishReason = null;
         var streamSw = Stopwatch.StartNew();
 
+        var sysFired = false;
+
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
         {
+            // 第一个 chunk 到来时 before filter（含记忆注入）已完成，立即触发一次
+            if (!sysFired) { sysFired = true; context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String; context.OnSystemReady?.Invoke(context.SystemPrompt); }
+
             if (chunk.Usage != null) lastUsage = chunk.Usage;
 
             // 处理 ToolChatClient 注入的工具调用事件
@@ -162,6 +167,9 @@ public class ChatAIPipeline(
             if (!String.IsNullOrEmpty(text))
                 yield return ChatStreamEvent.ContentDelta(text);
         }
+
+        // 兜底：无 chunk 时（空响应/异常）亦更新 SystemPrompt
+        if (!sysFired) context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
 
         if (thinkingBuilder.Length > 0)
             yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
