@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
-using System.Threading.Channels;
 using NewLife.AI.Models;
+using NewLife.Caching;
 using NewLife.Log;
 
 namespace NewLife.AI.Services;
@@ -10,7 +10,7 @@ namespace NewLife.AI.Services;
 /// <remarks>
 /// 工作机制：
 /// 1. 用户发送消息时，如果开启后台生成，将管道事件流注册到后台
-/// 2. 后台通过 Channel 缓冲事件，前端从 ChannelReader 实时消费
+/// 2. 后台通过 MemoryQueue 缓冲事件，前端从队列异步消费
 /// 3. 浏览器断开后，后台任务继续执行并收集完整结果
 /// 4. 任务完成后触发回调，将完整内容持久化到数据库
 /// </remarks>
@@ -24,19 +24,15 @@ public class BackgroundGenerationService(ILog log)
     #endregion
 
     #region 任务管理
-    /// <summary>注册后台生成任务。启动后台消费并返回事件通道供前端实时读取</summary>
+    /// <summary>注册后台生成任务。启动后台消费并返回事件队列供前端实时读取</summary>
     /// <param name="messageId">AI 回复消息编号</param>
     /// <param name="eventStream">管道事件流异步枚举</param>
     /// <param name="onComplete">任务完成回调（成功/失败/取消均触发）</param>
-    /// <returns>事件通道读取端，前端通过 ReadAllAsync 消费</returns>
-    public ChannelReader<ChatStreamEvent> Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
+    /// <returns>生产消费队列，前端通过 TakeOneAsync 消费，null 表示流结束</returns>
+    public IProducerConsumer<ChatStreamEvent> Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
     {
         var cts = new CancellationTokenSource();
-        var channel = Channel.CreateBounded<ChatStreamEvent>(new BoundedChannelOptions(512)
-        {
-            SingleWriter = true,
-            FullMode = BoundedChannelFullMode.DropOldest,
-        });
+        var queue = new MemoryQueue<ChatStreamEvent>();
         var task = new BackgroundTask
         {
             MessageId = messageId,
@@ -47,10 +43,10 @@ public class BackgroundGenerationService(ILog log)
         _tasks[messageId] = task;
         _cancellations[messageId] = cts;
 
-        // 启动后台消费任务：写入 Channel 同时收集完整结果
-        _ = ConsumeAsync(task, eventStream, channel.Writer, onComplete, cts.Token);
+        // 启动后台消费任务：写入队列同时收集完整结果
+        _ = ConsumeAsync(task, eventStream, queue, onComplete, cts.Token);
 
-        return channel.Reader;
+        return queue;
     }
 
     /// <summary>停止后台生成任务</summary>
@@ -86,15 +82,15 @@ public class BackgroundGenerationService(ILog log)
     #endregion
 
     #region 辅助
-    /// <summary>后台消费事件流。将事件写入 Channel 供前端实时消费，同时收集完整内容供回调持久化</summary>
-    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, ChannelWriter<ChatStreamEvent> writer, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
+    /// <summary>后台消费事件流。将事件写入队列供前端实时消费，同时收集完整内容供回调持久化</summary>
+    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, MemoryQueue<ChatStreamEvent> queue, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
     {
         try
         {
             await foreach (var ev in eventStream.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                // 写入 Channel 供前端实时消费（DropOldest：前端断连后旧事件自动丢弃）
-                writer.TryWrite(ev);
+                // 写入队列供前端实时消费
+                queue.Add(ev);
 
                 // 同步收集完整结果（不受前端连接状态影响）
                 switch (ev.Type)
@@ -139,7 +135,9 @@ public class BackgroundGenerationService(ILog log)
         finally
         {
             task.EndTime = DateTime.Now;
-            writer.TryComplete();
+            // null 哨兵通知消费端流已结束（避免 default! 直接传入 params 引起歧义）
+            ChatStreamEvent? end = null;
+            queue.Add(end!);
             _cancellations.TryRemove(task.MessageId, out _);
 
             if (onComplete != null)

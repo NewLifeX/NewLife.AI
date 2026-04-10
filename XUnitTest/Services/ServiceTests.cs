@@ -155,8 +155,8 @@ public class ServiceTests
     }
 
     [Fact]
-    [DisplayName("BackgroundGenerationService—Register 返回非 null ChannelReader")]
-    public void BackgroundGenerationService_Register_ReturnsChannelReader()
+    [DisplayName("BackgroundGenerationService—Register 返回非 null 队列")]
+    public void BackgroundGenerationService_Register_ReturnsQueue()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
         var reader = svc.Register(2001, EmptyStream());
