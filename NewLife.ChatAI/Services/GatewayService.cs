@@ -601,6 +601,9 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
     {
         if (message == null) return null;
 
+        // 确保多模态内容已解析（Content 可能是未解析的 JSON 数组对象）
+        message.ResolveContents();
+
         // 优先从 Contents 中提取 TextContent
         if (message.Contents is { Count: > 0 } contents)
         {

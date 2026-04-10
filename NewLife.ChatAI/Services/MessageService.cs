@@ -460,7 +460,12 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         // 标题只需要用户问题文本，无需等待 AI 回复完成
         if (conversation.MessageCount == 0 && ChatSetting.Current.AutoGenerateTitle)
         {
-            _ = Task.Run(() => GenerateTitleAsync(conversationId, request.Content, CancellationToken.None));
+            // 多模态消息时 Content 可能为空或 JSON，需提取纯文本；纯图片时补充描述
+            var titleText = ExtractTitleText(request.Content);
+            if (titleText.IsNullOrEmpty() && request.AttachmentIds is { Count: > 0 })
+                titleText = "[图片] 对话";
+            if (!titleText.IsNullOrEmpty())
+                _ = Task.Run(() => GenerateTitleAsync(conversationId, titleText, CancellationToken.None));
         }
 
         // 委托管道流式执行（能力扩展层 + 知识进化层由管道内部处理）
@@ -572,13 +577,16 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
 
     /// <summary>异步生成会话标题。根据用户首条消息内容，调用模型生成简短标题</summary>
     /// <param name="conversationId">会话编号</param>
-    /// <param name="userMessage">用户首条消息内容</param>
+    /// <param name="userMessage">用户首条消息内容（已提取纯文本）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     public async Task<String?> GenerateTitleAsync(Int64 conversationId, String userMessage, CancellationToken cancellationToken)
     {
         var conversation = Conversation.FindById(conversationId);
         if (conversation == null) return null;
+
+        // 防御：若调用方未预处理，再做一次多模态文本提取
+        userMessage = ExtractTitleText(userMessage) ?? userMessage;
 
         using var span = tracer?.NewSpan("ai:GenerateTitle");
 
@@ -627,6 +635,35 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         }
 
         return fallbackTitle;
+    }
+
+    /// <summary>从用户消息中提取纯文本，支持 JSON 编码的多模态内容数组。用于标题生成等场景</summary>
+    /// <param name="userMessage">用户消息文本，可能是纯文本或 JSON 多模态内容数组</param>
+    /// <returns>提取到的纯文本，无文本时返回 null</returns>
+    internal static String? ExtractTitleText(String? userMessage)
+    {
+        if (userMessage.IsNullOrEmpty()) return null;
+
+        // 快速判断：不以 [ 开头则视为普通文本
+        if (!userMessage.StartsWith('[')) return userMessage;
+
+        // 尝试按 OpenAI 多模态格式解析 [{"type":"text","text":"..."},...]，提取文本片段
+        var contents = AiChatMessage.ParseMultimodalContent(userMessage);
+        if (contents == null || contents.Count == 0) return userMessage;
+
+        var sb = Pool.StringBuilder.Get();
+        foreach (var item in contents)
+        {
+            if (item is TextContent text && !String.IsNullOrEmpty(text.Text))
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(text.Text);
+            }
+        }
+        var result = sb.Return(true);
+
+        // 有文本则返回；全是图片等非文本内容时返回 "[图片] 对话"
+        return !result.IsNullOrEmpty() ? result : null;
     }
 
     #endregion
