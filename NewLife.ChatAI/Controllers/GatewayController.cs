@@ -18,7 +18,7 @@ namespace NewLife.ChatAI.Controllers;
 /// 通过 Authorization: Bearer {appkey} 进行认证。
 /// </remarks>
 [ApiController]
-public class GatewayController(GatewayService gatewayService, IChatPipeline pipeline) : ControllerBase
+public class GatewayController(GatewayService gatewayService, ModelService modelService, IChatPipeline pipeline) : ControllerBase
 {
     #region 模型列表
     /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
@@ -150,8 +150,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
         if (!gatewayService.IsModelAllowed(appKey, config))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
 
-        var descriptor = gatewayService.GetDescriptor(config);
-        if (descriptor == null)
+        if (!modelService.IsAvailable(config))
             return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         // 通过 ChatCompletions 方式请求图像生成（兼容 OpenAI DALL-E 等通过聊天接口生成图像的场景）
@@ -161,11 +160,10 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
 
         try
         {
-            var options = GatewayService.BuildOptions(config);
-            using var imageClient = descriptor.Factory(options);
+            using var imageClient = modelService.CreateClient(config)!;
             var response = await imageClient.GetResponseAsync(
                 [new ChatMessage { Role = "user", Content = $"Generate an image: {prompt}. Size: {size}" }],
-                new ChatOptions { Model = config.Code },
+                null,
                 cancellationToken).ConfigureAwait(false);
 
             return Ok(new
@@ -220,8 +218,7 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
         if (!gatewayService.IsModelAllowed(appKey, config))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
 
-        var descriptor = gatewayService.GetDescriptor(config);
-        if (descriptor == null)
+        if (!modelService.IsAvailable(config))
             return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         try
@@ -252,11 +249,10 @@ public class GatewayController(GatewayService gatewayService, IChatPipeline pipe
             if (maskInfo != null)
                 contentParts.Add(new { type = "image_url", image_url = new { url = maskInfo } });
 
-            var options = GatewayService.BuildOptions(config);
-            using var editClient = descriptor.Factory(options);
+            using var editClient = modelService.CreateClient(config)!;
             var response = await editClient.GetResponseAsync(
                 [new ChatMessage { Role = "user", Content = contentParts }],
-                new ChatOptions { Model = config.Code },
+                null,
                 cancellationToken).ConfigureAwait(false);
 
             return Ok(new

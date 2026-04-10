@@ -25,7 +25,7 @@ namespace NewLife.ChatAI.Services;
 /// 过滤器包在最外层，仅在全部工具调用完成后触发一次 OnStreamCompletedAsync。
 /// </remarks>
 public class ChatAIPipeline(
-    GatewayService gatewayService,
+    ModelService modelService,
     IEnumerable<IToolProvider> toolProviders,
     IEnumerable<IChatFilter> chatFilters,
     SkillService? skillService,
@@ -60,15 +60,12 @@ public class ChatAIPipeline(
             PrepareContext(contextMessages, context);
 
         // 2. 获取服务商客户端
-        var descriptor = gatewayService.GetDescriptor(modelConfig);
-        if (descriptor == null)
+        using var rawClient = modelService.CreateClient(modelConfig);
+        if (rawClient == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.GetEffectiveProvider()}'");
             yield break;
         }
-
-        var providerOptions = GatewayService.BuildOptions(modelConfig);
-        using var rawClient = descriptor.Factory(providerOptions);
 
         // 3. 组装中间件管道：过滤器在外层（仅触发一次回调），工具循环在内层靠近 RawClient
         var clientBuilder = rawClient.AsBuilder();
@@ -193,12 +190,9 @@ public class ChatAIPipeline(
         if (context.SystemPrompt == null)
             PrepareContext(contextMessages, context);
 
-        var descriptor = gatewayService.GetDescriptor(modelConfig);
-        if (descriptor == null)
+        using var rawClient = modelService.CreateClient(modelConfig);
+        if (rawClient == null)
             return new ChatResponse { Messages = [new ChatChoice { Message = new AiChatMessage { Role = "assistant", Content = "未找到服务商" } }] };
-
-        var providerOptions = GatewayService.BuildOptions(modelConfig);
-        using var rawClient = descriptor.Factory(providerOptions);
 
         var clientBuilder = rawClient.AsBuilder();
         foreach (var filter in chatFilters)

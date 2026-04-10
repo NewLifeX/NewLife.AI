@@ -16,10 +16,11 @@ namespace NewLife.ChatAI.Services;
 /// 2. AI 按 JSON 格式返回提取到的记忆条目
 /// 3. 通过 MemoryService 将结果持久化到数据库
 /// </remarks>
-/// <param name="gatewayService">网关服务</param>
+/// <param name="modelService">模型服务</param>
 /// <param name="memoryService">记忆服务</param>
+/// <param name="tracer">链路追踪</param>
 /// <param name="log">日志</param>
-public class ConversationAnalysisService(GatewayService gatewayService, MemoryService memoryService, ITracer tracer, ILog log)
+public class ConversationAnalysisService(ModelService modelService, MemoryService memoryService, ITracer tracer, ILog log)
 {
     /// <summary>记忆服务（同时对外暴露给 LearningFilter 注入上下文）</summary>
     public MemoryService MemoryService { get; } = memoryService;
@@ -134,21 +135,17 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         }
 
         // 调用 AI 提取记忆
-        var extractRequest = new ChatRequest
+        using var client = modelService.CreateClient(modelConfig);
+        if (client == null)
         {
-            Model = modelConfig.Code,
-            Messages =
-            [
-                new AiChatMessage { Role = "system", Content = ExtractionSystemPrompt },
-                new AiChatMessage { Role = "user", Content = $"请分析以下对话内容：\n\n{dialogText}" },
-            ],
-            MaxTokens = 1024,
-            Temperature = 0.2,
-            EnableThinking = false,
-        };
+            log?.Warn("未找到模型 '{0}' 对应的服务商，跳过记忆提取", modelConfig.Code);
+            return 0;
+        }
 
-        var result = await gatewayService.ChatAsync(extractRequest, modelConfig, null, cancellationToken).ConfigureAwait(false);
-        var jsonText = result.Messages?.FirstOrDefault()?.Message?.Content as String;
+        var jsonText = await client.ChatAsync(
+            [("system", ExtractionSystemPrompt), ("user", $"请分析以下对话内容：\n\n{dialogText}")],
+            new ChatOptions { MaxTokens = 1024, Temperature = 0.2 },
+            cancellationToken).ConfigureAwait(false);
         if (jsonText.IsNullOrWhiteSpace()) return 0;
 
         // 解析 JSON 并保存
@@ -183,7 +180,7 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
         var setting = ChatSetting.Current;
         if (!setting.LearningModel.IsNullOrWhiteSpace())
         {
-            var configured = gatewayService.ResolveModelByCode(setting.LearningModel);
+            var configured = modelService.ResolveModelByCode(setting.LearningModel);
             if (configured != null) return configured;
         }
 
