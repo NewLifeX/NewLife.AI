@@ -143,7 +143,7 @@ public class ServiceTests
     public async Task BackgroundGenerationService_Register_CreatesRunningTask()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        var cts = svc.Register(1001, EmptyStream());
+        var reader = svc.Register(1001, EmptyStream());
 
         // 任务刚注册时 IsRunning 为 true（异步还未完成）
         var isRunning = svc.IsRunning(1001);
@@ -152,16 +152,15 @@ public class ServiceTests
         var task = svc.GetTask(1001);
         Assert.NotNull(task);
         Assert.Equal(1001, task!.MessageId);
-        cts.Dispose();
     }
 
     [Fact]
-    [DisplayName("BackgroundGenerationService—Register 返回非 null CancellationTokenSource")]
-    public void BackgroundGenerationService_Register_ReturnsCts()
+    [DisplayName("BackgroundGenerationService—Register 返回非 null ChannelReader")]
+    public void BackgroundGenerationService_Register_ReturnsChannelReader()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        using var cts = svc.Register(2001, EmptyStream());
-        Assert.NotNull(cts);
+        var reader = svc.Register(2001, EmptyStream());
+        Assert.NotNull(reader);
     }
 
     [Fact]
@@ -193,7 +192,7 @@ public class ServiceTests
     public async Task BackgroundGenerationService_Stream_CompletesTask()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        using var cts = svc.Register(3001, EmptyStream());
+        var reader = svc.Register(3001, EmptyStream());
 
         // 等待后台任务完成
         await Task.Delay(200);
@@ -207,7 +206,7 @@ public class ServiceTests
     public async Task BackgroundGenerationService_ContentDelta_Accumulated()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        using var cts = svc.Register(4001, ContentStream(["Hello", " World"]));
+        var reader = svc.Register(4001, ContentStream(["Hello", " World"]));
 
         // 等待完成
         await Task.Delay(200);
@@ -222,7 +221,7 @@ public class ServiceTests
     {
         // 使用阻塞流，确保任务在 Stop 调用时还在运行
         var svc = new BackgroundGenerationService(Logger.Null);
-        using var cts = svc.Register(5001, LongRunningStream());
+        var reader = svc.Register(5001, LongRunningStream());
 
         await Task.Delay(50); // 让后台任务启动
         svc.Stop(5001);
@@ -243,7 +242,7 @@ public class ServiceTests
         var svc = new BackgroundGenerationService(Logger.Null);
         BackgroundTask completedTask = null;
 
-        using var cts = svc.Register(6001, EmptyStream(), t =>
+        var reader = svc.Register(6001, EmptyStream(), t =>
         {
             completedTask = t;
             return Task.CompletedTask;
@@ -282,12 +281,12 @@ public class ServiceTests
     }
 
     [Fact]
-    [DisplayName("BackgroundTask—Events 列表默认为空")]
-    public void BackgroundTask_Events_DefaultEmpty()
+    [DisplayName("BackgroundTask—ToolCalls 列表默认为空")]
+    public void BackgroundTask_ToolCalls_DefaultEmpty()
     {
         var task = new BackgroundTask();
-        Assert.NotNull(task.Events);
-        Assert.Empty(task.Events);
+        Assert.NotNull(task.ToolCalls);
+        Assert.Empty(task.ToolCalls);
     }
 
     [Fact]

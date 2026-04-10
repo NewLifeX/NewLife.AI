@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
+using System.Threading.Channels;
 using NewLife.AI.Models;
 using NewLife.Log;
 
@@ -8,9 +9,10 @@ namespace NewLife.AI.Services;
 /// <summary>后台继续生成服务。浏览器关闭后模型继续生成，结果持久化到数据库</summary>
 /// <remarks>
 /// 工作机制：
-/// 1. 用户发送消息时，如果开启后台生成，将任务注册到后台
-/// 2. 浏览器断开（SSE 连接中断）时，后台任务继续执行
-/// 3. 用户重新打开页面，可获取完整的 AI 回复
+/// 1. 用户发送消息时，如果开启后台生成，将管道事件流注册到后台
+/// 2. 后台通过 Channel 缓冲事件，前端从 ChannelReader 实时消费
+/// 3. 浏览器断开后，后台任务继续执行并收集完整结果
+/// 4. 任务完成后触发回调，将完整内容持久化到数据库
 /// </remarks>
 /// <remarks>实例化后台生成服务</remarks>
 /// <param name="log">日志</param>
@@ -22,14 +24,19 @@ public class BackgroundGenerationService(ILog log)
     #endregion
 
     #region 任务管理
-    /// <summary>注册后台生成任务</summary>
+    /// <summary>注册后台生成任务。启动后台消费并返回事件通道供前端实时读取</summary>
     /// <param name="messageId">AI 回复消息编号</param>
-    /// <param name="eventStream">事件流异步枚举</param>
-    /// <param name="onComplete">任务完成回调</param>
-    /// <returns>取消令牌源，用于外部取消</returns>
-    public CancellationTokenSource Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
+    /// <param name="eventStream">管道事件流异步枚举</param>
+    /// <param name="onComplete">任务完成回调（成功/失败/取消均触发）</param>
+    /// <returns>事件通道读取端，前端通过 ReadAllAsync 消费</returns>
+    public ChannelReader<ChatStreamEvent> Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
     {
         var cts = new CancellationTokenSource();
+        var channel = Channel.CreateBounded<ChatStreamEvent>(new BoundedChannelOptions(512)
+        {
+            SingleWriter = true,
+            FullMode = BoundedChannelFullMode.DropOldest,
+        });
         var task = new BackgroundTask
         {
             MessageId = messageId,
@@ -40,10 +47,10 @@ public class BackgroundGenerationService(ILog log)
         _tasks[messageId] = task;
         _cancellations[messageId] = cts;
 
-        // 启动后台消费任务
-        _ = ConsumeAsync(task, eventStream, onComplete, cts.Token);
+        // 启动后台消费任务：写入 Channel 同时收集完整结果
+        _ = ConsumeAsync(task, eventStream, channel.Writer, onComplete, cts.Token);
 
-        return cts;
+        return channel.Reader;
     }
 
     /// <summary>停止后台生成任务</summary>
@@ -79,23 +86,41 @@ public class BackgroundGenerationService(ILog log)
     #endregion
 
     #region 辅助
-    /// <summary>后台消费事件流，收集内容</summary>
-    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
+    /// <summary>后台消费事件流。将事件写入 Channel 供前端实时消费，同时收集完整内容供回调持久化</summary>
+    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, ChannelWriter<ChatStreamEvent> writer, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
     {
         try
         {
             await foreach (var ev in eventStream.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                if (ev.Type == "content_delta" && ev.Content != null)
-                    task.ContentBuilder.Append(ev.Content);
-                else if (ev.Type == "thinking_delta" && ev.Content != null)
-                    task.ThinkingBuilder.Append(ev.Content);
-                else if (ev.Type == "message_done")
-                    task.Usage = ev.Usage;
-                else if (ev.Type == "error")
-                    task.Error = ev.Message;
+                // 写入 Channel 供前端实时消费（DropOldest：前端断连后旧事件自动丢弃）
+                writer.TryWrite(ev);
 
-                task.Events.Add(ev);
+                // 同步收集完整结果（不受前端连接状态影响）
+                switch (ev.Type)
+                {
+                    case "content_delta" when ev.Content != null:
+                        task.ContentBuilder.Append(ev.Content);
+                        break;
+                    case "thinking_delta" when ev.Content != null:
+                        task.ThinkingBuilder.Append(ev.Content);
+                        break;
+                    case "tool_call_start":
+                        task.ToolCalls.Add(new BackgroundToolCall(ev.ToolCallId + "", ev.Name + "", ev.Arguments));
+                        break;
+                    case "tool_call_done":
+                        UpdateToolCall(task.ToolCalls, ev.ToolCallId, true, ev.Result);
+                        break;
+                    case "tool_call_error":
+                        UpdateToolCall(task.ToolCalls, ev.ToolCallId, false, ev.Error);
+                        break;
+                    case "message_done":
+                        task.Usage = ev.Usage;
+                        break;
+                    case "error":
+                        task.Error = ev.Message;
+                        break;
+                }
             }
 
             task.Status = BackgroundTaskStatus.Completed;
@@ -114,6 +139,7 @@ public class BackgroundGenerationService(ILog log)
         finally
         {
             task.EndTime = DateTime.Now;
+            writer.TryComplete();
             _cancellations.TryRemove(task.MessageId, out _);
 
             if (onComplete != null)
@@ -126,6 +152,21 @@ public class BackgroundGenerationService(ILog log)
                 {
                     log?.Error("后台生成回调失败: {0}", ex.Message);
                 }
+            }
+        }
+    }
+
+    /// <summary>更新工具调用列表中指定 id 的结果</summary>
+    private static void UpdateToolCall(List<BackgroundToolCall> calls, String? id, Boolean success, String? value)
+    {
+        for (var i = calls.Count - 1; i >= 0; i--)
+        {
+            if (calls[i].Id == id)
+            {
+                calls[i].Done = true;
+                calls[i].Success = success;
+                calls[i].Result = value;
+                break;
             }
         }
     }
@@ -153,14 +194,40 @@ public class BackgroundTask
     /// <summary>思考内容</summary>
     public StringBuilder ThinkingBuilder { get; } = new();
 
-    /// <summary>收集到的所有事件</summary>
-    public List<ChatStreamEvent> Events { get; } = [];
+    /// <summary>工具调用记录</summary>
+    public List<BackgroundToolCall> ToolCalls { get; } = [];
 
     /// <summary>用量统计</summary>
     public UsageDetails? Usage { get; set; }
 
     /// <summary>错误信息</summary>
     public String? Error { get; set; }
+}
+
+/// <summary>后台任务工具调用信息</summary>
+/// <remarks>实例化</remarks>
+/// <param name="id">调用编号</param>
+/// <param name="name">工具名称</param>
+/// <param name="arguments">调用参数</param>
+public class BackgroundToolCall(String id, String name, String? arguments)
+{
+    /// <summary>调用编号</summary>
+    public String Id { get; set; } = id;
+
+    /// <summary>工具名称</summary>
+    public String Name { get; set; } = name;
+
+    /// <summary>调用参数</summary>
+    public String? Arguments { get; set; } = arguments;
+
+    /// <summary>是否已完成</summary>
+    public Boolean Done { get; set; }
+
+    /// <summary>是否成功</summary>
+    public Boolean Success { get; set; } = true;
+
+    /// <summary>返回结果或错误信息</summary>
+    public String? Result { get; set; }
 }
 
 /// <summary>后台任务状态</summary>
