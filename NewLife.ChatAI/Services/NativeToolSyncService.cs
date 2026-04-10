@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel;
+using System.Reflection;
 using NewLife.AI.Tools;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -108,7 +109,7 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
     /// <summary>将单个工具方法的信息同步到 NativeTool 表</summary>
     private static void SyncMethod(Type type, MethodInfo method)
     {
-        // 通过 ToolSchemaBuilder 构建 ChatTool（会尝试读取 XML 注释）
+        // 通过 ToolSchemaBuilder 构建 ChatTool（方法/参数 [Description] 优先，无则读 XML 注释）
         var chatTool = ToolSchemaBuilder.BuildFromMethod(method);
         var toolName = chatTool.Function!.Name;
         var description = chatTool.Function.Description;
@@ -116,7 +117,9 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
 
         // 首次发现则新建，填充种子配置（DisplayName、Providers、远程地址）
         _seeds.TryGetValue(toolName, out var seed);
-        var record = NativeTool.FindByName(toolName) ?? new NativeTool
+        var existing = NativeTool.FindByName(toolName);
+        var isNew = existing == null;
+        var record = existing ?? new NativeTool
         {
             Name = toolName,
             Enable = true,
@@ -125,7 +128,21 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
             Endpoint = seed.Endpoint,
         };
 
-        if (!toolName.IsNullOrEmpty()) record.DisplayName = toolName;
+        // DisplayName 解析：[DisplayName] 标注 > XML 注释句号前中文 > 种子 > 工具名
+        var displayNameAttr = method.GetCustomAttribute<DisplayNameAttribute>();
+        var resolvedDisplayName = displayNameAttr?.DisplayName;
+        if (String.IsNullOrEmpty(resolvedDisplayName) && !String.IsNullOrEmpty(description))
+        {
+            var idx = description.IndexOf('。');
+            if (idx > 0) resolvedDisplayName = description[..idx];
+        }
+        if (String.IsNullOrEmpty(resolvedDisplayName))
+            resolvedDisplayName = seed.DisplayName;
+        if (String.IsNullOrEmpty(resolvedDisplayName))
+            resolvedDisplayName = toolName;
+        // 新增记录时初始化 DisplayName；或存在明确的 [DisplayName] 标注且未锁定时更新
+        if (isNew || (!record.IsLocked && displayNameAttr != null))
+            record.DisplayName = resolvedDisplayName;
 
         // 始终更新类/方法定位信息
         record.ClassName = type.FullName;

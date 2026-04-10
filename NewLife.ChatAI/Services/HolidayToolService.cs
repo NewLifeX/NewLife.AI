@@ -1,4 +1,5 @@
-﻿using NewLife.AI.Tools;
+﻿using System.ComponentModel;
+using NewLife.AI.Tools;
 using NewLife.Collections;
 using NewLife.Holiday;
 
@@ -12,7 +13,9 @@ public class HolidayToolService
     /// <summary>查询指定日期的农历、节气及工作日状态（工作/放假/调休）</summary>
     /// <param name="date">要查询的日期，格式 yyyy-MM-dd。不传则默认今天</param>
     [ToolDescription("query_date_info", IsSystem = true)]
-    public Object QueryDateInfo(String? date = null)
+    [DisplayName("日期节假日查询")]
+    [Description("查询指定日期的农历、节气及工作日状态（工作/放假/调休）")]
+    public Object QueryDateInfo([Description("要查询的日期，格式 yyyy-MM-dd。不传则默认今天")] String? date = null)
     {
         DateTime dt;
         if (String.IsNullOrWhiteSpace(date))

@@ -1,4 +1,5 @@
-﻿using NewLife.Model;
+﻿using System.ComponentModel;
+using NewLife.Model;
 
 namespace NewLife.AI.Tools;
 
@@ -20,7 +21,12 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="maxLength">返回的最大字符数，防止超长内容占用过多 token。默认 5000</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("web_fetch")]
-    public async Task<Object> WebFetchAsync(String url, Int32 maxLength = 5000, CancellationToken cancellationToken = default)
+    [DisplayName("网页抓取")]
+    [Description("爬取指定 URL 的网页内容并提取正文文本。适用于读取文章、文档或任何公开网页")]
+    public async Task<Object> WebFetchAsync(
+        [Description("要爬取的网页地址，必须是完整的 http/https URL")] String url,
+        [Description("返回的最大字符数，防止超长内容占用过多 token。默认 5000")] Int32 maxLength = 5000,
+        CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrWhiteSpace(url))
             return new { error = "url is required" };
@@ -40,7 +46,12 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="count">返回结果数量，1~10 之间。默认 5</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("web_search")]
-    public async Task<Object> WebSearchAsync(String query, Int32 count = 5, CancellationToken cancellationToken = default)
+    [DisplayName("网络搜索")]
+    [Description("使用搜索引擎检索互联网信息，返回标题、链接和摘要列表。适用于查找最新资讯、事实核查等场景")]
+    public async Task<Object> WebSearchAsync(
+        [Description("搜索关键词或自然语言问题")] String query,
+        [Description("返回结果数量，1~10 之间。默认 5")] Int32 count = 5,
+        CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrWhiteSpace(query))
             return new { error = "query is required" };
@@ -70,7 +81,11 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="ip">要查询的 IPv4/IPv6 地址；留空则自动查询本机当前公网 IP</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("get_ip_location")]
-    public async Task<Object> GetIpLocationAsync(String? ip = null, CancellationToken cancellationToken = default)
+    [DisplayName("IP归属地")]
+    [Description("查询 IP 地址的归属地信息（国家、省份、城市、运营商）。不传入 ip 时查询本机当前公网 IP")]
+    public async Task<Object> GetIpLocationAsync(
+        [Description("要查询的 IPv4/IPv6 地址；留空则自动查询本机当前公网 IP")] String? ip = null,
+        CancellationToken cancellationToken = default)
     {
         var _ipServices = Resolve<IIpLocationService>(serviceProvider);
         foreach (var svc in _ipServices)
@@ -91,7 +106,12 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="unit">温度单位：C（摄氏度，默认）或 F（华氏度）</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("get_weather")]
-    public async Task<Object> GetWeatherAsync(String city, String unit = "C", CancellationToken cancellationToken = default)
+    [DisplayName("天气查询")]
+    [Description("获取指定城市的实时天气信息，包括温度、湿度、风速、天气描述等。无需 API 密鑰")]
+    public async Task<Object> GetWeatherAsync(
+        [Description("城市名称，支持中英文，如 Shanghai、上海、New York")] String city,
+        [Description("温度单位：C（摄氏度，默认）或 F（华氏度）")] String unit = "C",
+        CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrWhiteSpace(city))
             return new { error = "city is required" };
@@ -116,7 +136,13 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="sourceLang">源语言代码，默认 auto（自动检测）</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("translate")]
-    public async Task<Object> TranslateAsync(String text, String targetLang = "zh", String sourceLang = "auto", CancellationToken cancellationToken = default)
+    [DisplayName("文本翻译")]
+    [Description("将文本翻译为目标语言。支持 60+ 种语言，无需 API 密鑰（每天免费额度 5000 词）")]
+    public async Task<Object> TranslateAsync(
+        [Description("要翻译的文本内容")] String text,
+        [Description("目标语言代码，如 zh（中文）、en（英文）、ja（日文）、fr（法文）、de（德文）、ko（韩文）")] String targetLang = "zh",
+        [Description("源语言代码，默认 auto（自动检测）")] String sourceLang = "auto",
+        CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(text))
             return new { error = "text is required" };

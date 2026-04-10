@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Reflection;
 using System.Xml;
 using NewLife.AI.Models;
@@ -7,10 +8,10 @@ namespace NewLife.AI.Tools;
 
 /// <summary>工具 Schema 构建器。通过反射和 XML 文档注释将 C# 方法转换为标准 <see cref="ChatTool"/> 定义</summary>
 /// <remarks>
-/// 转换规则：
+/// 转换规则（优先级：代码特性标注 &gt; XML 文档注释）：
 /// <list type="bullet">
-/// <item>方法 <c>&lt;summary&gt;</c> → <c>description</c></item>
-/// <item>参数 <c>&lt;param name="x"&gt;</c> → 参数的 <c>description</c></item>
+/// <item>方法 <see cref="System.ComponentModel.DescriptionAttribute"/> 或 <c>&lt;summary&gt;</c> → <c>description</c></item>
+/// <item>参数 <see cref="System.ComponentModel.DescriptionAttribute"/> 或 <c>&lt;param name="x"&gt;</c> → 参数的 <c>description</c></item>
 /// <item>有默认值的参数 → 从 <c>required</c> 数组排除</item>
 /// <item>复杂类型参数 → 递归展开 <c>object</c> + <c>properties</c></item>
 /// </list>
@@ -42,7 +43,11 @@ public static class ToolSchemaBuilder
 
         var xmlDoc = LoadXmlDoc(method.DeclaringType?.Assembly);
         var memberKey = GetMemberKey(method);
-        var methodSummary = xmlDoc != null ? GetSummary(xmlDoc, memberKey) : null;
+        // 优先使用方法上的 [Description] 标注，无则从 XML 文档加载
+        var descAttr = method.GetCustomAttribute<DescriptionAttribute>();
+        var methodSummary = !String.IsNullOrEmpty(descAttr?.Description)
+            ? descAttr!.Description
+            : (xmlDoc != null ? GetSummary(xmlDoc, memberKey) : null);
         var paramDocs = xmlDoc != null ? GetParamDocs(xmlDoc, memberKey) : null;
 
         var schema = BuildParameterSchema(method, paramDocs);
@@ -78,7 +83,11 @@ public static class ToolSchemaBuilder
             // 跳过 CancellationToken 参数
             if (p.ParameterType == typeof(CancellationToken)) continue;
 
-            var description = paramDocs != null && paramDocs.TryGetValue(p.Name, out var d) ? d : null;
+            // 优先使用参数的 [Description] 标注，无则从 XML 文档加载
+            var pDescAttr = p.GetCustomAttribute<DescriptionAttribute>();
+            var description = !String.IsNullOrEmpty(pDescAttr?.Description)
+                ? pDescAttr!.Description
+                : (paramDocs != null && paramDocs.TryGetValue(p.Name, out var d) ? d : null);
             properties[p.Name] = BuildTypeSchema(p.ParameterType, description);
 
             if (!p.HasDefaultValue && !p.IsOptional)
