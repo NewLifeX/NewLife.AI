@@ -36,6 +36,7 @@ public static class ChatAIExtensions
         services.AddScoped<MessageService>();
         services.AddSingleton<SkillService>();
         services.AddSingleton<UsageService>();
+        services.AddSingleton<ModelService>();
         services.AddSingleton<GatewayService>();
 
         // 对话执行管道：将能力扩展层（工具调用、技能注入）与知识进化层（记忆注入、自学习、事件智能体）装配为统一执行入口

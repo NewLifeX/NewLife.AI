@@ -27,12 +27,12 @@ namespace NewLife.ChatAI.Services;
 /// 能力扩展层（工具调用、技能注入）与知识进化层（记忆、自学习）均通过 <see cref="IChatPipeline"/> 透明注入。
 /// </remarks>
 /// <param name="pipeline">已装配好三层能力的对话执行管道</param>
-/// <param name="gatewayService">网关服务（用于模型解析）</param>
+/// <param name="modelService">模型服务（用于模型解析和客户端创建）</param>
 /// <param name="backgroundService">后台生成服务</param>
 /// <param name="usageService">用量统计服务</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-public class MessageService(IChatPipeline pipeline, GatewayService gatewayService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer tracer, ILog log)
+public class MessageService(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer tracer, ILog log)
 {
     #region 生成方法
 
@@ -51,7 +51,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         var conversation = Conversation.FindById(entity.ConversationId);
         if (conversation == null) return null;
 
-        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = modelService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             // 模型不可用时直接报错，不做降级
@@ -59,7 +59,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         }
 
         // 服务商不可用时提前返回（管道内部也有校验，但提前失败更友好）
-        if (gatewayService.GetDescriptor(modelConfig) == null) return null;
+        if (!modelService.IsAvailable(modelConfig)) return null;
 
         // 构建上下文：取该消息之前的所有消息（注入系统提示词）
         var beforeMessages = ChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id).Where(e => e.IsMain).ToList();
@@ -162,7 +162,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         }
 
         // 3. 解析模型
-        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = modelService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
@@ -249,7 +249,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
             yield break;
         }
 
-        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = modelService.ResolveModel(conversation.ModelId);
         if (modelConfig == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelId}' 不可用");
@@ -381,7 +381,7 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         // 优先使用请求携带的模型（前端本轮选择），其次回退到会话绑定的模型（上次使用的默认）
         // 切换后更新会话绑定，形成 sticky 效果；model_id=0 时自动降级为第一个可用模型
         var modelId = request.ModelId > 0 ? request.ModelId : conversation.ModelId;
-        var modelConfig = gatewayService.ResolveModelOrDefault(modelId);
+        var modelConfig = modelService.ResolveModelOrDefault(modelId);
         if (modelConfig == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", "系统暂无可用模型，请先在管理后台配置并启用至少一个模型");
@@ -579,26 +579,20 @@ public class MessageService(IChatPipeline pipeline, GatewayService gatewayServic
         using var span = tracer?.NewSpan("ai:GenerateTitle");
 
         // 尝试通过模型生成标题
-        var modelConfig = gatewayService.ResolveModel(conversation.ModelId);
+        var modelConfig = modelService.ResolveModel(conversation.ModelId);
         if (modelConfig != null)
         {
-            var descriptor = gatewayService.GetDescriptor(modelConfig);
-            if (descriptor != null)
+            using var titleClient = modelService.CreateClient(modelConfig);
+            if (titleClient != null)
             {
                 try
                 {
                     var prompt = "请用16个字以内为以下对话生成一个简短标题，只输出标题文字，不要加任何标点和引号：";
-                    var options = GatewayService.BuildOptions(modelConfig);
-                    using var titleClient = descriptor.Factory(options);
-                    var clientTimeout = (titleClient as AiClientBase)?.Timeout ?? TimeSpan.FromSeconds(30);
-                    using var titleCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    titleCts.CancelAfter(clientTimeout * 3);
-                    var response = await titleClient.GetResponseAsync(
-                        [new AiChatMessage { Role = "user", Content = $"{prompt}\n{userMessage}" }],
-                        new ChatOptions { Model = modelConfig.Code, MaxTokens = 30 },
-                        titleCts.Token).ConfigureAwait(false);
+                    var title = await titleClient.ChatAsync(
+                        $"{prompt}\n{userMessage}",
+                        new ChatOptions { MaxTokens = 30, Temperature = 0.3 },
+                        cancellationToken).ConfigureAwait(false);
 
-                    var title = response.Messages?.FirstOrDefault()?.Message?.Content as String;
                     if (!String.IsNullOrWhiteSpace(title))
                     {
                         title = title.Trim().Trim('"', '\u201c', '\u201d', '\'', '\u300a', '\u300b');

@@ -144,6 +144,7 @@ public class ConversationAnalysisService(GatewayService gatewayService, MemorySe
             ],
             MaxTokens = 1024,
             Temperature = 0.2,
+            EnableThinking = false,
         };
 
         var result = await gatewayService.ChatAsync(extractRequest, modelConfig, null, cancellationToken).ConfigureAwait(false);
