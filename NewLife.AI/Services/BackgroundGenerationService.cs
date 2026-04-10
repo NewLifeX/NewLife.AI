@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
-using NewLife.Caching;
 using NewLife.Log;
 
 namespace NewLife.AI.Services;
@@ -9,12 +9,11 @@ namespace NewLife.AI.Services;
 /// <summary>后台继续生成服务。浏览器关闭后模型继续生成，结果持久化到数据库</summary>
 /// <remarks>
 /// 工作机制：
-/// 1. 用户发送消息时，如果开启后台生成，将管道事件流注册到后台
-/// 2. 后台通过 MemoryQueue 缓冲事件，前端从队列异步消费
-/// 3. 浏览器断开后，后台任务继续执行并收集完整结果
-/// 4. 任务完成后触发回调，将完整内容持久化到数据库
+/// 1. Register 启动后台消费，事件写入 BackgroundTask.Events 列表
+/// 2. Subscribe 返回 IAsyncEnumerable，从 Events[0] 开始读取，任务运行中则等待新事件
+/// 3. 首次连接和断线重连均使用同一个 Subscribe，天然支持从头回放
+/// 4. 任务完成后触发 onComplete 回调，将完整内容持久化到数据库
 /// </remarks>
-/// <remarks>实例化后台生成服务</remarks>
 /// <param name="log">日志</param>
 public class BackgroundGenerationService(ILog log)
 {
@@ -24,15 +23,13 @@ public class BackgroundGenerationService(ILog log)
     #endregion
 
     #region 任务管理
-    /// <summary>注册后台生成任务。启动后台消费并返回事件队列供前端实时读取</summary>
+    /// <summary>注册后台生成任务。启动后台消费，事件存入 BackgroundTask 供 Subscribe 读取</summary>
     /// <param name="messageId">AI 回复消息编号</param>
     /// <param name="eventStream">管道事件流异步枚举</param>
     /// <param name="onComplete">任务完成回调（成功/失败/取消均触发）</param>
-    /// <returns>生产消费队列，前端通过 TakeOneAsync 消费，null 表示流结束</returns>
-    public IProducerConsumer<ChatStreamEvent> Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
+    public void Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
     {
         var cts = new CancellationTokenSource();
-        var queue = new MemoryQueue<ChatStreamEvent>();
         var task = new BackgroundTask
         {
             MessageId = messageId,
@@ -43,10 +40,34 @@ public class BackgroundGenerationService(ILog log)
         _tasks[messageId] = task;
         _cancellations[messageId] = cts;
 
-        // 启动后台消费任务：写入队列同时收集完整结果
-        _ = ConsumeAsync(task, eventStream, queue, onComplete, cts.Token);
+        // 启动后台消费任务
+        _ = ConsumeAsync(task, eventStream, onComplete, cts.Token);
+    }
 
-        return queue;
+    /// <summary>订阅事件流。从头回放全部已有事件，任务运行中则继续等待实时事件</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="cancellationToken">取消令牌（客户端断连时取消）</param>
+    /// <returns>事件流（历史+实时），任务不存在则返回空流</returns>
+    public async IAsyncEnumerable<ChatStreamEvent> Subscribe(Int64 messageId, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (!_tasks.TryGetValue(messageId, out var task)) yield break;
+
+        var index = 0;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            // 读取所有已有事件
+            while (index < task.EventCount)
+            {
+                yield return task.GetEvent(index++);
+            }
+
+            // 任务已结束则退出
+            if (task.Status != BackgroundTaskStatus.Running) yield break;
+
+            // 等待新事件通知
+            try { await task.WaitAsync(cancellationToken).ConfigureAwait(false); }
+            catch (OperationCanceledException) { yield break; }
+        }
     }
 
     /// <summary>停止后台生成任务</summary>
@@ -60,7 +81,10 @@ public class BackgroundGenerationService(ILog log)
         }
 
         if (_tasks.TryGetValue(messageId, out var task))
+        {
             task.Status = BackgroundTaskStatus.Cancelled;
+            task.Notify();
+        }
     }
 
     /// <summary>获取后台任务状态</summary>
@@ -82,17 +106,17 @@ public class BackgroundGenerationService(ILog log)
     #endregion
 
     #region 辅助
-    /// <summary>后台消费事件流。将事件写入队列供前端实时消费，同时收集完整内容供回调持久化</summary>
-    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, MemoryQueue<ChatStreamEvent> queue, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
+    /// <summary>后台消费事件流。将事件写入 BackgroundTask 供订阅者读取，同时收集完整内容供回调持久化</summary>
+    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
     {
         try
         {
             await foreach (var ev in eventStream.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                // 写入队列供前端实时消费
-                queue.Add(ev);
+                // 写入事件列表并通知订阅者
+                task.AddEvent(ev);
 
-                // 同步收集完整结果（不受前端连接状态影响）
+                // 收集完整结果（不受前端连接状态影响）
                 switch (ev.Type)
                 {
                     case "content_delta" when ev.Content != null:
@@ -135,9 +159,8 @@ public class BackgroundGenerationService(ILog log)
         finally
         {
             task.EndTime = DateTime.Now;
-            // null 哨兵通知消费端流已结束（避免 default! 直接传入 params 引起歧义）
-            ChatStreamEvent? end = null;
-            queue.Add(end!);
+            // 通知订阅者任务已结束（Subscribe 检查 Status 后退出）
+            task.Notify();
             _cancellations.TryRemove(task.MessageId, out _);
 
             if (onComplete != null)
@@ -200,6 +223,44 @@ public class BackgroundTask
 
     /// <summary>错误信息</summary>
     public String? Error { get; set; }
+
+    #region 事件通知
+    private readonly List<ChatStreamEvent> _events = [];
+    private volatile TaskCompletionSource<Boolean> _signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>事件总数</summary>
+    public Int32 EventCount { get { lock (_events) return _events.Count; } }
+
+    /// <summary>读取指定位置的事件</summary>
+    /// <param name="index">事件索引</param>
+    /// <returns></returns>
+    public ChatStreamEvent GetEvent(Int32 index) { lock (_events) return _events[index]; }
+
+    /// <summary>写入事件并通知所有等待者</summary>
+    /// <param name="ev">事件</param>
+    internal void AddEvent(ChatStreamEvent ev)
+    {
+        lock (_events) _events.Add(ev);
+        Notify();
+    }
+
+    /// <summary>唤醒所有等待中的订阅者</summary>
+    internal void Notify()
+    {
+        var old = Interlocked.Exchange(ref _signal, new TaskCompletionSource<Boolean>(TaskCreationOptions.RunContinuationsAsynchronously));
+        old.TrySetResult(true);
+    }
+
+    /// <summary>等待新事件通知</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    internal async Task WaitAsync(CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<Boolean>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var _ = cancellationToken.Register(() => tcs.TrySetResult(default));
+        await Task.WhenAny(_signal.Task, tcs.Task).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+    #endregion
 }
 
 /// <summary>后台任务工具调用信息</summary>

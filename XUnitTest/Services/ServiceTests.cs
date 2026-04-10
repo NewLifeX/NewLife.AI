@@ -143,7 +143,7 @@ public class ServiceTests
     public async Task BackgroundGenerationService_Register_CreatesRunningTask()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        var reader = svc.Register(1001, EmptyStream());
+        svc.Register(1001, EmptyStream());
 
         // 任务刚注册时 IsRunning 为 true（异步还未完成）
         var isRunning = svc.IsRunning(1001);
@@ -155,12 +155,13 @@ public class ServiceTests
     }
 
     [Fact]
-    [DisplayName("BackgroundGenerationService—Register 返回非 null 队列")]
-    public void BackgroundGenerationService_Register_ReturnsQueue()
+    [DisplayName("BackgroundGenerationService—Register 注册后 IsRunning 返回 true")]
+    public void BackgroundGenerationService_Register_IsRunning()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        var reader = svc.Register(2001, EmptyStream());
-        Assert.NotNull(reader);
+        svc.Register(2001, LongRunningStream());
+        Assert.True(svc.IsRunning(2001));
+        svc.Stop(2001);
     }
 
     [Fact]
@@ -192,7 +193,7 @@ public class ServiceTests
     public async Task BackgroundGenerationService_Stream_CompletesTask()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        var reader = svc.Register(3001, EmptyStream());
+        svc.Register(3001, EmptyStream());
 
         // 等待后台任务完成
         await Task.Delay(200);
@@ -206,7 +207,7 @@ public class ServiceTests
     public async Task BackgroundGenerationService_ContentDelta_Accumulated()
     {
         var svc = new BackgroundGenerationService(Logger.Null);
-        var reader = svc.Register(4001, ContentStream(["Hello", " World"]));
+        svc.Register(4001, ContentStream(["Hello", " World"]));
 
         // 等待完成
         await Task.Delay(200);
@@ -221,7 +222,7 @@ public class ServiceTests
     {
         // 使用阻塞流，确保任务在 Stop 调用时还在运行
         var svc = new BackgroundGenerationService(Logger.Null);
-        var reader = svc.Register(5001, LongRunningStream());
+        svc.Register(5001, LongRunningStream());
 
         await Task.Delay(50); // 让后台任务启动
         svc.Stop(5001);
@@ -242,7 +243,7 @@ public class ServiceTests
         var svc = new BackgroundGenerationService(Logger.Null);
         BackgroundTask completedTask = null;
 
-        var reader = svc.Register(6001, EmptyStream(), t =>
+        svc.Register(6001, EmptyStream(), t =>
         {
             completedTask = t;
             return Task.CompletedTask;
@@ -251,6 +252,92 @@ public class ServiceTests
         await Task.Delay(200);
         Assert.NotNull(completedTask);
         Assert.Equal(6001, completedTask!.MessageId);
+    }
+
+    [Fact]
+    [DisplayName("BackgroundGenerationService—Subscribe 回放全部历史事件")]
+    public async Task BackgroundGenerationService_Subscribe_ReplaysHistory()
+    {
+        var svc = new BackgroundGenerationService(Logger.Null);
+
+        // 注册一个发 3 个 chunk 后完成的流
+        svc.Register(7001, ThreeChunkStream(), null);
+        await Task.Delay(300); // 等待完成
+
+        // 通过 Subscribe 读取，应该能收到全部事件
+        var events = new List<ChatStreamEvent>();
+        using var cts = new CancellationTokenSource(1000);
+        await foreach (var ev in svc.Subscribe(7001, cts.Token).ConfigureAwait(false))
+        {
+            events.Add(ev);
+        }
+
+        Assert.Equal(4, events.Count); // 3 content_delta + 1 message_done
+        Assert.Equal("content_delta", events[0].Type);
+        Assert.Equal("chunk0", events[0].Content);
+        Assert.Equal("content_delta", events[1].Type);
+        Assert.Equal("chunk1", events[1].Content);
+        Assert.Equal("content_delta", events[2].Type);
+        Assert.Equal("chunk2", events[2].Content);
+        Assert.Equal("message_done", events[3].Type);
+    }
+
+    [Fact]
+    [DisplayName("BackgroundGenerationService—Subscribe 任务运行中可接收实时事件")]
+    public async Task BackgroundGenerationService_Subscribe_ReceivesLiveEvents()
+    {
+        var svc = new BackgroundGenerationService(Logger.Null);
+
+        // 注册一个慢速流（每 20ms 一个 chunk）
+        svc.Register(7002, LongRunningStream(), null);
+        await Task.Delay(100); // 等待部分事件产生
+
+        // 此时任务仍在运行
+        var task = svc.GetTask(7002);
+        Assert.NotNull(task);
+        Assert.Equal(BackgroundTaskStatus.Running, task!.Status);
+
+        // Subscribe 读取历史 + 实时事件
+        var events = new List<ChatStreamEvent>();
+        using var cts = new CancellationTokenSource(500);
+        try
+        {
+            await foreach (var ev in svc.Subscribe(7002, cts.Token).ConfigureAwait(false))
+            {
+                events.Add(ev);
+            }
+        }
+        catch (OperationCanceledException) { }
+
+        // 应该至少收到初始的历史事件
+        Assert.True(events.Count > 0, "Subscribe 应至少产出历史事件");
+
+        svc.Stop(7002);
+    }
+
+    [Fact]
+    [DisplayName("BackgroundGenerationService—Subscribe 不存在的任务返回空流")]
+    public async Task BackgroundGenerationService_Subscribe_NotFound_ReturnsEmpty()
+    {
+        var svc = new BackgroundGenerationService(Logger.Null);
+        var events = new List<ChatStreamEvent>();
+        await foreach (var ev in svc.Subscribe(99999).ConfigureAwait(false))
+        {
+            events.Add(ev);
+        }
+        Assert.Empty(events);
+    }
+
+    /// <summary>发送 3 个 chunk 后完成的流</summary>
+    private static async IAsyncEnumerable<ChatStreamEvent> ThreeChunkStream(
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            await Task.Delay(10, ct).ConfigureAwait(false);
+            yield return new ChatStreamEvent { Type = "content_delta", Content = $"chunk{i}" };
+        }
+        yield return new ChatStreamEvent { Type = "message_done" };
     }
 
     /// <summary>持续发送内容但需外部取消的流</summary>
