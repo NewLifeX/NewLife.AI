@@ -28,6 +28,7 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
         {
             ["get_current_time"] = ("", "", "当前时间"),
             ["calculate"] = ("", "", "数学计算"),
+            ["query_date_info"] = ("", "", "日期节假日查询"),
             ["get_ip_location"] = ("pconline,ipapi,newlife", "https://ai.newlifex.com", "IP归属地"),
             ["get_weather"] = ("nmc,wttr,newlife", "https://ai.newlifex.com", "天气查询"),
             ["translate"] = ("mymemory,newlife", "https://ai.newlifex.com", "文本翻译"),
@@ -120,7 +121,6 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
             Name = toolName,
             Enable = true,
             IsLocked = false,
-            //DisplayName = seed.DisplayName ?? toolName,
             Providers = seed.Providers,
             Endpoint = seed.Endpoint,
         };

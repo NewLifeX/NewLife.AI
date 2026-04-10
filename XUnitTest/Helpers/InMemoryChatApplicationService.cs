@@ -287,7 +287,7 @@ public class InMemoryChatApplicationService
         {
             Type = "message_done",
             MessageId = assistantMessageId,
-            Usage = new UsageDetails { InputTokens = promptTokens, OutputTokens = completionTokens, TotalTokens = promptTokens + completionTokens },
+            Usage = new UsageDetails { InputTokens = inputTokens, OutputTokens = outputTokens, TotalTokens = inputTokens + outputTokens },
             Title = title,
         };
     }
