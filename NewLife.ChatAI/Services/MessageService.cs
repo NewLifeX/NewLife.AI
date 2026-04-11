@@ -525,17 +525,14 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         }
         if (skillId > 0 && !skillName.IsNullOrEmpty())
             assistantMsg.SkillNames = skillName;
-        // 追加管道中解析到的所有技能名称
-        if (msgPipelineCtx.ResolvedSkillNames.Count > 0)
-        {
-            var existing = assistantMsg.SkillNames;
-            var allNames = existing.IsNullOrEmpty()
-                ? String.Join(",", msgPipelineCtx.ResolvedSkillNames)
-                : existing + "," + String.Join(",", msgPipelineCtx.ResolvedSkillNames);
-            assistantMsg.SkillNames = allNames;
-        }
+        // 追加管道中解析到的所有技能名称（ISet 已自动去重）
+        var skillNames = new HashSet<String>(msgPipelineCtx.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
+        if (skillId > 0 && !skillName.IsNullOrEmpty())
+            skillNames.Add(skillName);
+        if (skillNames.Count > 0)
+            assistantMsg.SkillNames = String.Join(",", skillNames);
         if (toolCallsCollector.Count > 0)
-            assistantMsg.ToolNames = String.Join(",", toolCallsCollector.Select(t => t.Name));
+            assistantMsg.ToolNames = String.Join(",", toolCallsCollector.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase));
         ApplyUsageToMessage(assistantMsg, finalUsage, hasError, deferredErrorEvent?.Error);
         ApplyRequestParams(assistantMsg, modelConfig, msgPipelineCtx);
         assistantMsg.Update();

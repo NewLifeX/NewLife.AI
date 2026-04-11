@@ -23,11 +23,11 @@ public class ChatPipelineContext : IExtend
     /// <summary>消息中 @ToolName 显式引用的工具名称集合。由 SkillService 解析消息后填充，DbToolProvider 据此过滤非系统工具</summary>
     public ISet<String> SelectedTools { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>本轮实际注入给模型的工具名称列表。由管道在构建工具提供者后填充，用于记录到用户消息的 ToolNames 字段</summary>
-    public IList<String> AvailableToolNames { get; } = [];
+    /// <summary>本轮实际注入给模型的工具名称集合。由管道在构建工具提供者后填充，用于记录到用户消息的 ToolNames 字段</summary>
+    public ISet<String> AvailableToolNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>本轮实际注入的技能名称列表（Code/Name 格式）。由 SkillService 在 BuildSkillPrompt 中填充</summary>
-    public IList<String> ResolvedSkillNames { get; } = [];
+    /// <summary>本轮实际注入的技能名称集合（Code/Name 格式）。由 SkillService 在 BuildSkillPrompt 中填充</summary>
+    public ISet<String> ResolvedSkillNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>构建完成的系统提示词内容。由 PrepareContext 填充，供外部持久化</summary>
     public String? SystemPrompt { get; set; }

@@ -127,7 +127,7 @@ public class SkillService(ILog log)
     /// <param name="selectedTools">用于收集消息中 @ToolName 引用的工具名称集合；为 null 时就是不收集</param>
     /// <param name="skillCollector">用于收集本轮实际注入的技能名称（Code/Name 格式）；为 null 时不收集</param>
     /// <returns>拼接后的技能提示词，无技能时返回 null</returns>
-    public String? BuildSkillPrompt(Int32 conversationSkillId, String? messageContent, ISet<String>? selectedTools = null, IList<String>? skillCollector = null)
+    public String? BuildSkillPrompt(Int32 conversationSkillId, String? messageContent, ISet<String>? selectedTools = null, ICollection<String>? skillCollector = null)
     {
         var parts = new List<String>();
 
@@ -173,7 +173,7 @@ public class SkillService(ILog log)
     /// <param name="selectedTools">收集工具引用的集合；为 null 时不收集</param>
     /// <param name="skillCollector">收集技能名称（Code/Name 格式）的列表；为 null 时不收集</param>
     /// <returns></returns>
-    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null, IList<String>? skillCollector = null)
+    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null, ICollection<String>? skillCollector = null)
     {
         // 匹配 @技能名 格式，技能名可以是中英文数字下划线
         var matches = Regex.Matches(content, @"@([\w\u4e00-\u9fff]+)");
