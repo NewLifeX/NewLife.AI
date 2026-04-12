@@ -12,6 +12,7 @@ using NewLife.AI.Models;
 using NewLife.Remoting;
 using NewLife.Serialization;
 using Xunit;
+using XUnitTest.Helpers;
 
 namespace XUnitTest.Clients;
 
@@ -72,7 +73,7 @@ public class OllamaIntegrationTests
 
     #region 非流式对话 - 基础场景
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("非流式_返回有效响应")]
     public async Task ChatAsync_ReturnsValidResponse()
     {
@@ -87,7 +88,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(content), "AI 回复内容不应为空");
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("非流式_系统提示词有效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
@@ -102,7 +103,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(content));
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("非流式_多轮对话上下文保留")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
@@ -137,7 +138,7 @@ public class OllamaIntegrationTests
 
     #region 非流式对话 - 参数设置
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("参数_Temperature设置有效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
@@ -151,7 +152,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(content));
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("参数_TopP设置有效")]
     public async Task ChatAsync_TopP_Accepted()
     {
@@ -165,7 +166,7 @@ public class OllamaIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("参数_MaxTokens设置有效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
@@ -176,7 +177,7 @@ public class OllamaIntegrationTests
         Assert.NotNull(response.Messages);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("参数_Stop停止词有效")]
     public async Task ChatAsync_Stop_Accepted()
     {
@@ -190,7 +191,7 @@ public class OllamaIntegrationTests
         Assert.NotNull(content);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("参数_所有可选参数同时设置")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
@@ -210,7 +211,7 @@ public class OllamaIntegrationTests
 
     #region 非流式对话 - 响应结构验证
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("响应结构_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
@@ -224,7 +225,7 @@ public class OllamaIntegrationTests
             $"FinishReason 应为 stop 或 length，实际为: {finishReason}");
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("响应结构_包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
@@ -235,7 +236,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(response.Model));
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("响应结构_包含响应Id")]
     public async Task ChatAsync_Response_ContainsId()
     {
@@ -246,7 +247,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(response.Id));
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("响应结构_Object字段为chat.completion")]
     public async Task ChatAsync_Response_ObjectField()
     {
@@ -257,7 +258,7 @@ public class OllamaIntegrationTests
         Assert.Equal("chat.completion", response.Object);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("响应结构_Choices索引正确")]
     public async Task ChatAsync_Response_ChoiceIndex()
     {
@@ -269,7 +270,7 @@ public class OllamaIntegrationTests
         Assert.Equal(0, response.Messages[0].Index);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("响应结构_Message角色为assistant")]
     public async Task ChatAsync_Response_MessageRole()
     {
@@ -282,7 +283,7 @@ public class OllamaIntegrationTests
         Assert.Equal("assistant", msg.Role);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("验证_非流式响应包含Usage")]
     public async Task ChatAsync_Usage_Returned()
     {
@@ -305,7 +306,7 @@ public class OllamaIntegrationTests
 
     #region 流式对话 - 基础场景
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式_返回多个Chunk")]
     public async Task ChatStreamAsync_ReturnsChunks()
     {
@@ -328,7 +329,7 @@ public class OllamaIntegrationTests
         Assert.True(hasContent, "流式响应应包含至少一个内容 chunk");
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式_内容可拼合为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
@@ -351,7 +352,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(fullContent), "拼合后内容不应为空");
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式_系统提示词有效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
@@ -374,7 +375,7 @@ public class OllamaIntegrationTests
         Assert.False(String.IsNullOrWhiteSpace(fullContent));
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式_CancellationToken_可取消")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
@@ -405,7 +406,7 @@ public class OllamaIntegrationTests
 
     #region 流式对话 - 结构验证
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式结构_每个Chunk包含Choices")]
     public async Task ChatStreamAsync_EachChunk_HasChoices()
     {
@@ -425,7 +426,7 @@ public class OllamaIntegrationTests
         Assert.True(chunksWithChoices > 0);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式结构_Chunk使用Delta而非Message")]
     public async Task ChatStreamAsync_Chunk_UsesDelta()
     {
@@ -446,7 +447,7 @@ public class OllamaIntegrationTests
         Assert.True(hasDelta, "流式 chunk 应使用 Delta 字段");
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式结构_Object字段为chat.completion.chunk")]
     public async Task ChatStreamAsync_ObjectField()
     {
@@ -467,7 +468,7 @@ public class OllamaIntegrationTests
         Assert.Equal("chat.completion.chunk", objectField);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
     public async Task ChatStreamAsync_LastChunk_HasFinishReason()
     {
@@ -492,7 +493,7 @@ public class OllamaIntegrationTests
             $"最后一个 chunk 的 FinishReason 应为 stop 或 length，实际为: {lastFinishReason}");
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("流式结构_包含模型标识")]
     public async Task ChatStreamAsync_ContainsModel()
     {
@@ -516,7 +517,7 @@ public class OllamaIntegrationTests
 
     #region 异常测试
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("异常_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
@@ -550,7 +551,7 @@ public class OllamaIntegrationTests
         });
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("异常_流式不存在的模型_抛出ApiException")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {
@@ -571,7 +572,7 @@ public class OllamaIntegrationTests
         });
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("异常_空消息列表_抛出异常")]
     public async Task ChatAsync_EmptyMessages_ThrowsException()
     {
@@ -593,7 +594,7 @@ public class OllamaIntegrationTests
 
     #region FunctionCalling
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("FunctionCalling_工具定义被正确接受")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
@@ -704,7 +705,7 @@ public class OllamaIntegrationTests
 
     #region Options 验证
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("Options_Endpoint为空时使用默认")]
     public async Task Options_EmptyEndpoint_UsesDefault()
     {
@@ -716,7 +717,7 @@ public class OllamaIntegrationTests
         Assert.NotNull(response.Messages);
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
@@ -732,7 +733,7 @@ public class OllamaIntegrationTests
 
     #region 并发和稳定性
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("稳定性_多请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
@@ -752,7 +753,7 @@ public class OllamaIntegrationTests
         }
     }
 
-    [Fact]
+    [OllamaFact]
     [DisplayName("稳定性_非流式和流式交替请求")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {
