@@ -80,29 +80,31 @@ public partial class ChatPreset : Entity<ChatPreset>
     }
 
     ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected override void InitData()
+    {
+        // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
+        if (Meta.Session.Count > 0) return;
 
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化ChatPreset[对话预设]数据……");
+        if (XTrace.Debug) XTrace.WriteLine("开始初始化ChatPreset[对话预设]数据……");
 
-    //    var entity = new ChatPreset();
-    //    entity.UserId = 0;
-    //    entity.Name = "abc";
-    //    entity.ModelId = 0;
-    //    entity.ModelName = "abc";
-    //    entity.SkillCode = "abc";
-    //    entity.SystemPrompt = "abc";
-    //    entity.ThinkingMode = 0;
-    //    entity.IsDefault = true;
-    //    entity.Sort = 0;
-    //    entity.Enable = true;
-    //    entity.Insert();
+        var entity = new ChatPreset
+        {
+            UserId = 0,
+            Name = "通用助手",
+            ModelId = 0,
+            ModelName = "qwen3.5-plus",
+            SystemPrompt = "你是一个有帮助的AI助手，能够回答各种问题并提供实用的建议。",
+            Prompt = "请问有什么我可以帮助你的？",
+            ThinkingMode = NewLife.AI.Models.ThinkingMode.Auto,
+            IsDefault = false,
+            Sort = 0,
+            Enable = true,
+        };
+        entity.Insert();
 
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化ChatPreset[对话预设]数据！");
-    //}
+        if (XTrace.Debug) XTrace.WriteLine("完成初始化ChatPreset[对话预设]数据！");
+    }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
     ///// <returns></returns>

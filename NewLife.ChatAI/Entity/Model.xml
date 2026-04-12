@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -304,7 +304,7 @@
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。0=系统级预设" />
         <Column Name="Name" DataType="String" Master="True" Length="100" Description="名称。预设模板名称" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@$@Name" Description="模型。关联的模型配置Id" />
-        <Column Name="ModelName" DataType="String" Description="模型名称" />
+        <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
         <Column Name="SkillCode" DataType="String" Description="技能编码。关联的技能Code" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="系统提示词。预设的System Prompt" />
         <Column Name="Prompt" DataType="String" Length="500" Description="提示词。选中预设时自动填入用户输入框的引导文本" />

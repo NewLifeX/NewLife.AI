@@ -56,11 +56,11 @@ public partial class ChatPreset
     public Int32 ModelId { get => _ModelId; set { if (OnPropertyChanging("ModelId", value)) { _ModelId = value; OnPropertyChanged("ModelId"); } } }
 
     private String? _ModelName;
-    /// <summary>模型名称</summary>
+    /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
     [DisplayName("模型名称")]
-    [Description("模型名称")]
+    [Description("模型名称。冗余存储模型名称，方便历史数据检索")]
     [DataObjectField(false, false, true, 50)]
-    [BindColumn("ModelName", "模型名称", "")]
+    [BindColumn("ModelName", "模型名称。冗余存储模型名称，方便历史数据检索", "")]
     public String? ModelName { get => _ModelName; set { if (OnPropertyChanging("ModelName", value)) { _ModelName = value; OnPropertyChanged("ModelName"); } } }
 
     private String? _SkillCode;
@@ -335,7 +335,7 @@ public partial class ChatPreset
         /// <summary>模型。关联的模型配置Id</summary>
         public static readonly Field ModelId = FindByName("ModelId");
 
-        /// <summary>模型名称</summary>
+        /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
         public static readonly Field ModelName = FindByName("ModelName");
 
         /// <summary>技能编码。关联的技能Code</summary>
@@ -395,7 +395,7 @@ public partial class ChatPreset
         /// <summary>模型。关联的模型配置Id</summary>
         public const String ModelId = "ModelId";
 
-        /// <summary>模型名称</summary>
+        /// <summary>模型名称。冗余存储模型名称，方便历史数据检索</summary>
         public const String ModelName = "ModelName";
 
         /// <summary>技能编码。关联的技能Code</summary>
