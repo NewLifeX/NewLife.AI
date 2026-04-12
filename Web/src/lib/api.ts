@@ -584,6 +584,7 @@ export interface UserProfile {
   account: string
   avatar?: string
   role?: string
+  roles?: Array<{ name: string; isSystem: boolean }>
   department?: string
   email?: string
   mobile?: string

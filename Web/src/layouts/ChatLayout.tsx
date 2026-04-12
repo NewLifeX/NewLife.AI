@@ -20,6 +20,9 @@ interface ChatLayoutProps {
   onConversationRename?: (id: string, title: string) => void
   onNewChat: () => void
   onSettingsOpen?: () => void
+  onAdminOpen?: () => void
+  onLogout?: () => void
+  isSystem?: boolean
   sidebarCollapsed?: boolean
   onSidebarToggle?: () => void
   onLoadMore?: () => void
@@ -41,6 +44,9 @@ export function ChatLayout({
   onConversationRename,
   onNewChat,
   onSettingsOpen,
+  onAdminOpen,
+  onLogout,
+  isSystem,
   sidebarCollapsed = false,
   onSidebarToggle,
   onLoadMore,
@@ -152,7 +158,10 @@ export function ChatLayout({
           onNewChat={onNewChat}
           onToggle={onSidebarToggle}
           onLoadMore={onLoadMore}
-          onUserClick={onSettingsOpen}
+          isSystem={isSystem}
+          onSettingsClick={onSettingsOpen}
+          onAdminClick={onAdminOpen}
+          onLogoutClick={onLogout}
           collapsed={isMobile ? false : sidebarCollapsed}
           userName={userName}
           userAvatar={userAvatar}

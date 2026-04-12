@@ -20,6 +20,11 @@ export default {
     checkUpdate: '檢查更新',
     user: '使用者',
   },
+  menu: {
+    settings: '設定',
+    admin: '管理後台',
+    logout: '退出',
+  },
   sidebar: {
     newChat: '新對話',
     collapse: '收起側邊欄',

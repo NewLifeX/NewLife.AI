@@ -89,13 +89,6 @@ export function SettingsModal({
             </button>
           ))}
         </nav>
-        <div className="px-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-center space-x-2 text-xs text-gray-400">
-            <span>{t('common.version')}</span>
-            <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <button className="hover:underline hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded">{t('common.checkUpdate')}</button>
-          </div>
-        </div>
       </div>
 
       <ScrollArea className="flex-1 bg-white dark:bg-[#1e1e20] p-8">
@@ -218,12 +211,6 @@ export function SettingsModal({
               </div>
 
               <div className="border-b border-gray-100 dark:border-gray-800" />
-
-              {/* 版本 */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('about.version')}</div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">{t('common.version')}</span>
-              </div>
 
               <div className="border-b border-gray-100 dark:border-gray-800" />
 

@@ -20,6 +20,11 @@ export default {
     checkUpdate: '检查更新',
     user: '用户',
   },
+  menu: {
+    settings: '设置',
+    admin: '管理后台',
+    logout: '退出',
+  },
   sidebar: {
     newChat: '新对话',
     collapse: '收起侧边栏',

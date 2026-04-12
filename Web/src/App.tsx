@@ -50,6 +50,7 @@ function ChatApp() {
   const { settingsOpen, openSettings, closeSettings, sidebarCollapsed, toggleSidebar } = useUIStore()
   const [userName, setUserName] = useState<string | undefined>(undefined)
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
+  const [isSystem, setIsSystem] = useState(false)
   const [appReady, setAppReady] = useState(false)
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
@@ -66,7 +67,11 @@ function ChatApp() {
       loadModels(),
       loadSettingsFromServer(),
       fetchUserProfile()
-        .then((p) => { setUserName(p.nickname || p.account); setUserAvatar(p.avatar ?? undefined) })
+        .then((p) => {
+          setUserName(p.nickname || p.account)
+          setUserAvatar(p.avatar ?? undefined)
+          setIsSystem(p.roles?.some((r) => r.isSystem) ?? false)
+        })
         .catch(() => {}),
       fetchSystemConfig()
         .then((cfg) => {
@@ -154,6 +159,9 @@ function ChatApp() {
         onConversationRename={renameConv}
         onNewChat={handleNewChat}
         onSettingsOpen={openSettings}
+        onAdminOpen={() => window.open('/Admin', '_blank')}
+        onLogout={() => { window.location.href = '/Admin/User/Logout' }}
+        isSystem={isSystem}
         sidebarCollapsed={sidebarCollapsed}
         onSidebarToggle={toggleSidebar}
         onLoadMore={() => useChatStore.getState().loadMoreConversations()}

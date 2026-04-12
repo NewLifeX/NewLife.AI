@@ -20,6 +20,11 @@ export default {
     checkUpdate: 'Check for updates',
     user: 'User',
   },
+  menu: {
+    settings: 'Settings',
+    admin: 'Admin Panel',
+    logout: 'Sign Out',
+  },
   sidebar: {
     newChat: 'New Chat',
     collapse: 'Collapse sidebar',

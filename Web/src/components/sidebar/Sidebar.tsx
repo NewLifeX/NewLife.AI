@@ -20,7 +20,10 @@ interface SidebarProps {
   onNavItemClick?: (id: string) => void
   userName?: string
   userAvatar?: string
-  onUserClick?: () => void
+  isSystem?: boolean
+  onSettingsClick?: () => void
+  onAdminClick?: () => void
+  onLogoutClick?: () => void
   collapsed?: boolean
   className?: string
 }
@@ -39,7 +42,10 @@ export function Sidebar({
   onNavItemClick,
   userName,
   userAvatar,
-  onUserClick,
+  isSystem,
+  onSettingsClick,
+  onAdminClick,
+  onLogoutClick,
   collapsed = false,
   className,
 }: SidebarProps) {
@@ -104,7 +110,7 @@ export function Sidebar({
         onLoadMore={onLoadMore}
       />
 
-      <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} onClick={onUserClick} />
+      <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} isSystem={isSystem} onSettingsClick={onSettingsClick} onAdminClick={onAdminClick} onLogoutClick={onLogoutClick} />
     </aside>
   )
 }
