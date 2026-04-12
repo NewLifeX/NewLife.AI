@@ -32,6 +32,7 @@ export interface Message {
   thinkingSegments?: ThinkingSegment[]
   toolCalls?: ToolCall[]
   usage?: TokenUsage
+  model?: string
   feedbackType?: number
   attachments?: string
 }

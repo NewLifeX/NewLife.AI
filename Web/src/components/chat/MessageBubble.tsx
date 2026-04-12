@@ -11,6 +11,7 @@ import { useLongPress } from '@/hooks/useLongPress'
 import { fetchAttachmentInfos, type AttachmentInfo } from '@/lib/api'
 import type { ToolCall, TokenUsage } from '@/types'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useChatStore } from '@/stores/chatStore'
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant'
@@ -37,6 +38,7 @@ interface MessageBubbleProps {
   createdAt?: string
   isError?: boolean
   usage?: TokenUsage
+  model?: string
   className?: string
 }
 
@@ -64,11 +66,14 @@ export function MessageBubble({
   createdAt,
   isError = false,
   usage,
+  model,
   className,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const showToolCalls = useSettingsStore((s) => s.showToolCalls)
+  const models = useChatStore((s) => s.models)
+  const modelName = model ? (models.find((m) => m.code === model)?.name ?? model) : undefined
   const [editValue, setEditValue] = useState(rawContent ?? '')
   const editRef = useRef<HTMLTextAreaElement>(null)
 
@@ -302,6 +307,11 @@ export function MessageBubble({
             className="mt-0"
           />
           <div className="ml-auto flex items-center space-x-2 mr-1">
+            {modelName && (
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default">
+                {modelName}
+              </span>
+            )}
             {usage && usage.totalTokens != null && (
               <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default" title={`${t('chat.inputTokens')}: ${usage.inputTokens ?? 0} | ${t('chat.outputTokens')}: ${usage.outputTokens ?? 0}`}>
                 {usage.inputTokens != null && usage.outputTokens != null

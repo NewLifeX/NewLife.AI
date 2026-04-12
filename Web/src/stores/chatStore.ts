@@ -275,6 +275,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 content: '',
                 createdAt: new Date().toISOString(),
                 status: 'streaming',
+                model: event.model,
               }
               set((s) => ({ messages: [...s.messages, aiMsg] }))
             }
@@ -552,6 +553,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     thinkingContent: undefined,
                     status: 'streaming' as const,
                     createdAt: new Date().toISOString(),
+                    model: event.model,
                   }],
                 }))
               }

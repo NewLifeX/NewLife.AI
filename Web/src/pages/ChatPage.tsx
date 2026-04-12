@@ -219,6 +219,7 @@ export function ChatPage({
               createdAt={msg.createdAt}
               isError={msg.status === 'error'}
               usage={msg.usage}
+              model={msg.model}
             />
             )
           })}
