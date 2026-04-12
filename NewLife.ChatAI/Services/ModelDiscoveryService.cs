@@ -204,19 +204,19 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             var psize = model.Details?.ParameterSize;
             if (!psize.IsNullOrEmpty()) name = $"{name} ({psize})";
 
+            var isNew = config == null;
             config ??= new ModelConfig
             {
                 ProviderId = providerConfig.Id,
                 Code = modelCode,
                 //Name = name,
                 Enable = providerConfig.Enable,
-                SupportFunctionCalling = true,
             };
             config.Name = name;
             if (model.ModifiedAt > DateTime.MinValue) config.ModelTime = model.ModifiedAt;
 
-            // 推断模型能力：仅当四个能力字段全为 false 时才自动填充
-            if (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration && !config.SupportFunctionCalling)
+            // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动设置）
+            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration /*&& !config.SupportFunctionCalling*/))
             {
                 var caps = descriptor?.FindModelCapabilities(modelCode) ?? client?.InferModelCapabilities(modelCode, model.Details);
                 if (caps != null)
@@ -299,20 +299,20 @@ public class ModelDiscoveryService(ILog log) : IHostedService
             //if (config != null) continue;
 
             codes.Add(model.Id!);
+            var isNew = config == null;
             config ??= new ModelConfig
             {
                 ProviderId = providerConfig.Id,
                 Code = model.Id!,
                 //Name = model.Name!,
                 Enable = providerConfig.Enable,
-                SupportFunctionCalling = true,
             };
 
             if (!model.Name.IsNullOrEmpty()) config.Name = model.Name;
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
 
-            // 推断模型能力：仅当四个能力字段全为 false 时才自动填充（保护用户手动配置）
-            if (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration && !config.SupportFunctionCalling)
+            // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动配置）
+            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration /*&& !config.SupportFunctionCalling*/))
             {
                 var caps = descriptor?.FindModelCapabilities(model.Id) ?? client?.InferModelCapabilities(model.Id);
                 if (caps != null)

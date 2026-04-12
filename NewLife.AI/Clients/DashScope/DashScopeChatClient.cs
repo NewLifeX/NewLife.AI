@@ -271,7 +271,7 @@ public class DashScopeChatClient : OpenAIChatClient
     /// <list type="bullet">
     /// <item>含 -vl：Vision-Language 系列</item>
     /// <item>qvq- 前缀：视觉推理系列（区别于纯文本推理 qwq-）</item>
-    /// <item>qwen3.5- 前缀：内置多模态能力，仅支持 multimodal-generation 端点</item>
+    /// <item>qwen3.X- 前缀（如 qwen3.5-/qwen3.6-）：内置多模态能力，仅支持 multimodal-generation 端点</item>
     /// </list>
     /// </remarks>
     private static Boolean IsMultimodalModel(String? model)
@@ -332,15 +332,20 @@ public class DashScopeChatClient : OpenAIChatClient
 
     /// <summary>根据千问模型 ID 命名规律推断模型能力</summary>
     /// <remarks>
-    /// 阿里百炼模型命名规律：
+    /// 阿里百炼模型命名规律（基于 2026-04 官方文档）：
     /// <list type="bullet">
     /// <item>qwen*-vl* / qvq-*：视觉能力</item>
-    /// <item>qwen3.5-*：全系列内置多模态（视觉）</item>
-    /// <item>qwq-* / 含 max/plus 的高端系列：思考能力</item>
-    /// <item>wanx* / flux*：文生图能力</item>
-    /// <item>embed*/rerank*/paraformer*/cosyvoice*：非对话模型</item>
+    /// <item>qwen3.X-*（如 qwen3.5-/qwen3.6-）中 Plus 和开源版：内置多模态（视觉），Flash/Max/Coder 纯文本</item>
+    /// <item>qwq-* / qvq-*：专用推理模型，始终具备思考能力</item>
+    /// <item>qwen3*（除 coder 和 -instruct 后缀）：qwen3 时代全系列支持思考模式</item>
+    /// <item>qwen-max/plus/flash/turbo（稳定版别名）：当前均指向 qwen3 时代，支持思考</item>
+    /// <item>qwen-long / qwen2* / qwen1*：不支持思考模式</item>
+    /// <item>qwen*-omni*：全模态模型，视觉+音频，使用专用 API</item>
+    /// <item>wanx* / wan2* / flux* / qwen-image* / z-image*：文生图/视频生成</item>
+    /// <item>embed* / rerank* / paraformer* / cosyvoice* / sambert* 等：非对话模型</item>
     /// <item>farui* / qwen-mt*：专用模型，不支持函数调用</item>
     /// </list>
+    /// 注意：-max/-plus 本身不是思考能力的可靠信号，早期 qwen-max（qwen2 时代）不支持思考
     /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
@@ -348,13 +353,17 @@ public class DashScopeChatClient : OpenAIChatClient
     {
         if (String.IsNullOrEmpty(modelId)) return null;
 
-        // 非对话模型：嵌入、重排序、语音识别、语音合成
+        // 非对话模型：嵌入、重排序、语音识别/合成等
         if (modelId.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("paraformer", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("sambert", StringComparison.OrdinalIgnoreCase))
+            modelId.StartsWith("sambert", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("sensevoice", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWithIgnoreCase("qwen3-asr", "qwen3-tts", "qwen-tts", "qwen-voice"))
             return new AiProviderCapabilities(false, false, false, false);
 
         var thinking = false;
@@ -362,33 +371,60 @@ public class DashScopeChatClient : OpenAIChatClient
         var imageGen = false;
         var funcCall = true;
 
-        // 文生图：wanx / flux 系列
+        // 文生图/视频生成：wanx / wan2 / flux / stable-diffusion / qwen-image / z-image
         if (modelId.StartsWith("wanx", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("flux", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase))
+            modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("z-image", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(false, false, true, false);
 
-        // 视觉能力
+        // 全模态模型 omni：视觉+音频输入，使用专用 API，不支持标准函数调用
+        if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, true, false, false);
+
+        // === 视觉能力 ===
+        // VL 系列和 QVQ 视觉推理模型
         if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWithIgnoreCase("qwen3.5-", "qwen3."))
+            modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
             vision = true;
 
-        // 思考/推理能力
+        // qwen3.X-*（如 qwen3.5-/qwen3.6-）中 Plus 和开源模型支持多模态（文本+图像+视频输入）
+        // Flash/Max/Turbo/Coder 子系列为纯文本，"qwen3." 不匹配 "qwen3-max" 等
+        if (modelId.StartsWithIgnoreCase("qwen3.") &&
+            !modelId.Contains("-flash", StringComparison.OrdinalIgnoreCase) &&
+            !modelId.Contains("-max", StringComparison.OrdinalIgnoreCase) &&
+            !modelId.Contains("-turbo", StringComparison.OrdinalIgnoreCase) &&
+            !modelId.Contains("-coder", StringComparison.OrdinalIgnoreCase))
+            vision = true;
+
+        // === 思考/推理能力 ===
+        // 按模型家族精确匹配，-max/-plus 本身不是思考能力的可靠信号
+        // 例如早期 qwen-max（qwen2 时代）不支持思考，仅 qwen3 时代才全面支持
+
+        // 专用推理模型：qwq 纯文本推理，qvq 视觉推理
         if (modelId.StartsWith("qwq-", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
             thinking = true;
 
-        // 高端系列（max/plus）默认支持思考
-        if (modelId.Contains("-max", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("-plus", StringComparison.OrdinalIgnoreCase))
+        // qwen3 全系列支持思考模式（qwen3-max/qwen3.5-plus/qwen3.5-flash 等）
+        // 排除：coder（instruct-only）、-instruct 后缀（显式非思考版本）
+        if (modelId.StartsWith("qwen3", StringComparison.OrdinalIgnoreCase) &&
+            !modelId.Contains("-coder", StringComparison.OrdinalIgnoreCase) &&
+            !modelId.Contains("-instruct", StringComparison.OrdinalIgnoreCase))
             thinking = true;
 
-        // qwen3 全系列支持思考
-        if (modelId.StartsWith("qwen3-", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qwen3.", StringComparison.OrdinalIgnoreCase))
+        // 稳定版别名当前均指向 qwen3 时代，支持思考模式
+        // qwen-max → qwen3-max, qwen-plus → qwen3.6-plus, qwen-flash → qwen3.5-flash
+        if (modelId.StartsWithIgnoreCase("qwen-max", "qwen-plus", "qwen-flash", "qwen-turbo"))
             thinking = true;
 
+        // 明确不支持思考的模型
+        if (modelId.StartsWithIgnoreCase("qwen-long", "qwen2", "qwen1"))
+            thinking = false;
+
+        // === 函数调用 ===
         // 专用模型不支持函数调用
         if (modelId.StartsWith("farui", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-mt", StringComparison.OrdinalIgnoreCase))

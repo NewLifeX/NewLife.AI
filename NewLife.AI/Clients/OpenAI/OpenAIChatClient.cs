@@ -329,6 +329,11 @@ public partial class OpenAIChatClient : AiClientBase
             modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
             thinking = true;
 
+        // 高端系列（max/plus）通常支持思考
+        if (modelId.Contains("-max", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("-plus", StringComparison.OrdinalIgnoreCase))
+            thinking = true;
+
         // 文生图
         if (modelId.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("image-gen", StringComparison.OrdinalIgnoreCase))

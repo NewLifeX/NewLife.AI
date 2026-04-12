@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.DashScope;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using Xunit;
@@ -416,6 +417,86 @@ public class AiProviderTests
         Assert.True(qwenPlus.Capabilities.SupportVision);
         Assert.False(qwenPlus.Capabilities.SupportImageGeneration);
         Assert.True(qwenPlus.Capabilities.SupportFunctionCalling);
+    }
+
+    [Fact]
+    [DisplayName("DashScope_Qwen3.6Plus_推断能力与3.5Plus一致")]
+    public void DashScope_Qwen36Plus_InferredCapabilities()
+    {
+        var client = new DashScopeChatClient(new AiClientOptions { Endpoint = "https://dashscope.aliyuncs.com" });
+
+        // qwen3.6-plus 未在已知模型列表中，应通过 InferModelCapabilities 推断
+        var caps = client.InferModelCapabilities("qwen3.6-plus");
+        Assert.NotNull(caps);
+        Assert.True(caps!.SupportThinking);
+        Assert.True(caps.SupportVision);
+        Assert.False(caps.SupportImageGeneration);
+        Assert.True(caps.SupportFunctionCalling);
+    }
+
+    [Theory]
+    [DisplayName("DashScope_InferCapabilities_各模型家族正确推断")]
+    // qwen3-max：纯文本，支持思考
+    [InlineData("qwen3-max", true, false, false, true)]
+    [InlineData("qwen3-max-2026-01-23", true, false, false, true)]
+    // qwen3.5/3.6 Plus：多模态 + 思考
+    [InlineData("qwen3.5-plus", true, true, false, true)]
+    [InlineData("qwen3.6-plus-2026-04-02", true, true, false, true)]
+    [InlineData("qwen3.5-27b", true, true, false, true)]
+    [InlineData("qwen3.5-397b-a17b", true, true, false, true)]
+    // qwen3.5-flash：纯文本 Flash 系列，支持思考但不是多模态
+    [InlineData("qwen3.5-flash", true, false, false, true)]
+    // 稳定版别名：思考但不确定多模态（保守推断）
+    [InlineData("qwen-max", true, false, false, true)]
+    [InlineData("qwen-plus", true, false, false, true)]
+    [InlineData("qwen-flash", true, false, false, true)]
+    [InlineData("qwen-turbo", true, false, false, true)]
+    [InlineData("qwen-plus-2025-12-01", true, false, false, true)]
+    // 专用推理模型
+    [InlineData("qwq-plus", true, false, false, true)]
+    [InlineData("qwq-32b", true, false, false, true)]
+    [InlineData("qvq-max", true, true, false, true)]
+    [InlineData("qvq-plus", true, true, false, true)]
+    // 不支持思考的旧模型
+    [InlineData("qwen2.5-72b-instruct", false, false, false, true)]
+    [InlineData("qwen1.5-72b-chat", false, false, false, true)]
+    [InlineData("qwen-long", false, false, false, true)]
+    // coder 不支持思考（instruct-only）
+    [InlineData("qwen3-coder-plus", false, false, false, true)]
+    [InlineData("qwen3-coder-flash", false, false, false, true)]
+    // -instruct 后缀表示非思考版本
+    [InlineData("qwen3-235b-a22b-instruct-2507", false, false, false, true)]
+    [InlineData("qwen3-235b-a22b-thinking-2507", true, false, false, true)]
+    // VL 视觉模型
+    [InlineData("qwen3-vl-plus", true, true, false, true)]
+    [InlineData("qwen3-vl-32b-instruct", false, true, false, true)]
+    // 文生图
+    [InlineData("wanx-v1", false, false, true, false)]
+    [InlineData("wan2.6-t2i", false, false, true, false)]
+    [InlineData("qwen-image-plus", false, false, true, false)]
+    [InlineData("z-image-turbo", false, false, true, false)]
+    // 非对话模型
+    [InlineData("text-embedding-v4", false, false, false, false)]
+    [InlineData("cosyvoice-v3-plus", false, false, false, false)]
+    [InlineData("fun-asr-realtime", false, false, false, false)]
+    [InlineData("qwen-audio-turbo", false, false, false, false)]
+    // omni 全模态
+    [InlineData("qwen3.5-omni-plus", false, true, false, false)]
+    [InlineData("qwen3-omni-flash", false, true, false, false)]
+    // 专用模型不支持函数调用
+    [InlineData("farui-plus", false, false, false, false)]
+    [InlineData("qwen-mt-plus", false, false, false, false)]
+    public void DashScope_InferCapabilities_ByModelFamily(
+        String modelId, Boolean expectThinking, Boolean expectVision,
+        Boolean expectImageGen, Boolean expectFuncCall)
+    {
+        var client = new DashScopeChatClient(new AiClientOptions { Endpoint = "https://dashscope.aliyuncs.com" });
+        var caps = client.InferModelCapabilities(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThinking, caps!.SupportThinking);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectImageGen, caps.SupportImageGeneration);
+        Assert.Equal(expectFuncCall, caps.SupportFunctionCalling);
     }
 
     #endregion
