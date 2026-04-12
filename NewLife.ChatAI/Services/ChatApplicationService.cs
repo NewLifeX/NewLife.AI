@@ -457,6 +457,84 @@ public class ChatApplicationService
         return Task.FromResult(stream);
     }
 
+    /// <summary>导入用户数据。接受与导出格式一致的 JSON</summary>
+    /// <param name="userId">当前用户编号</param>
+    /// <param name="stream">JSON 数据流</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>导入的会话数量</returns>
+    public async Task<Int32> ImportUserDataAsync(Int32 userId, Stream stream, CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        if (json.IsNullOrWhiteSpace()) return 0;
+
+        var items = json.ToJsonEntity<List<ImportConversationItem>>();
+        if (items == null || items.Count == 0) return 0;
+
+        var count = 0;
+        foreach (var item in items)
+        {
+            // 创建会话
+            var conv = new Conversation
+            {
+                UserId = userId,
+                Title = item.Title,
+                ModelId = item.ModelId,
+                IsPinned = item.IsPinned,
+                CreateTime = item.CreateTime,
+                LastMessageTime = item.LastMessageTime,
+            };
+            conv.Insert();
+
+            // 导入消息
+            if (item.Messages != null)
+            {
+                foreach (var msg in item.Messages)
+                {
+                    var entity = new ChatMessage
+                    {
+                        ConversationId = conv.Id,
+                        Role = msg.Role,
+                        Content = msg.Content,
+                        ThinkingContent = msg.ThinkingContent,
+                        ThinkingMode = (ThinkingMode)msg.ThinkingMode,
+                        Attachments = msg.Attachments,
+                        CreateTime = msg.CreateTime,
+                        CreateUserID = userId,
+                    };
+                    entity.Insert();
+                }
+
+                conv.MessageCount = item.Messages.Count;
+                conv.Update();
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
+    private class ImportConversationItem
+    {
+        public String? Title { get; set; }
+        public Int32 ModelId { get; set; }
+        public Boolean IsPinned { get; set; }
+        public DateTime CreateTime { get; set; }
+        public DateTime LastMessageTime { get; set; }
+        public List<ImportMessageItem>? Messages { get; set; }
+    }
+
+    private class ImportMessageItem
+    {
+        public String? Role { get; set; }
+        public String? Content { get; set; }
+        public String? ThinkingContent { get; set; }
+        public Int32 ThinkingMode { get; set; }
+        public String? Attachments { get; set; }
+        public DateTime CreateTime { get; set; }
+    }
+
     /// <summary>清除所有对话</summary>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>

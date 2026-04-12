@@ -70,6 +70,14 @@ export default {
     charLimit: '{{current}}/{{max}} characters, exceeds limit',
     dropToUpload: 'Drop files to upload',
   },
+  artifact: {
+    copy: 'Copy code',
+    download: 'Download file',
+    close: 'Close preview',
+  },
+  preset: {
+    title: 'Presets',
+  },
   thinking: {
     auto: 'Auto',
     autoDesc: 'Model decides whether to think',
@@ -134,6 +142,9 @@ export default {
     exportData: 'Export Chat Data',
     exportDataDesc: 'Export all conversations as a JSON file for backup and migration.',
     exportBtn: 'Export Data',
+    importData: 'Import Chat Data',
+    importDataDesc: 'Restore conversations from a previously exported JSON file.',
+    importBtn: 'Import Data',
     clearData: 'Clear All Data',
     clearDataDesc: 'Permanently delete all conversations, messages, feedback and share links. This cannot be undone.',
     clearBtn: 'Clear Data',

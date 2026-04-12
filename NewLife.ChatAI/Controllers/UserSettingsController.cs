@@ -52,4 +52,20 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
         await chatService.ClearUserConversationsAsync(GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         return NoContent();
     }
+
+    /// <summary>导入用户数据。接受与导出格式一致的 JSON 文件</summary>
+    /// <param name="file">JSON 文件</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("data/import")]
+    [RequestSizeLimit(50 * 1024 * 1024)]
+    public async Task<IActionResult> ImportAsync(IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0) return BadRequest("请上传文件");
+        if (!file.ContentType.Contains("json") && !file.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("仅支持 JSON 格式");
+
+        using var stream = file.OpenReadStream();
+        var count = await chatService.ImportUserDataAsync(GetCurrentUserId(), stream, cancellationToken).ConfigureAwait(false);
+        return Ok(new { imported = count });
+    }
 }

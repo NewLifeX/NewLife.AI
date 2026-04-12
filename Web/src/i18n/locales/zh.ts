@@ -70,6 +70,14 @@ export default {
     charLimit: '已输入 {{current}}/{{max}} 字，超出限制',
     dropToUpload: '释放以上传文件',
   },
+  artifact: {
+    copy: '复制代码',
+    download: '下载文件',
+    close: '关闭预览',
+  },
+  preset: {
+    title: '预设',
+  },
   thinking: {
     auto: '自动',
     autoDesc: '模型自行决定是否启用思考',
@@ -134,6 +142,9 @@ export default {
     exportData: '导出对话数据',
     exportDataDesc: '将所有对话记录导出为 JSON 文件，方便备份和迁移。',
     exportBtn: '导出数据',
+    importData: '导入对话数据',
+    importDataDesc: '从之前导出的 JSON 文件中恢复对话记录。',
+    importBtn: '导入数据',
     clearData: '清除所有数据',
     clearDataDesc: '永久删除所有会话、消息、反馈和分享链接，此操作不可撤销。',
     clearBtn: '清除数据',
