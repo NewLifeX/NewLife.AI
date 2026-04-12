@@ -296,6 +296,31 @@
         <Index Columns="UserId" Unique="True" />
       </Indexes>
     </Table>
+    <Table Name="ChatPreset" Description="对话预设。保存模型+技能+SystemPrompt组合为预设模板" Output="消息对话">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。0=系统级预设" />
+        <Column Name="Name" DataType="String" Master="True" Length="100" Description="名称。预设模板名称" />
+        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@$@Name" Description="模型。关联的模型配置Id" />
+        <Column Name="ModelName" DataType="String" Description="模型名称" />
+        <Column Name="SkillCode" DataType="String" Description="技能编码。关联的技能Code" />
+        <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="系统提示词。预设的System Prompt" />
+        <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0, Think=1, Fast=2" Type="NewLife.AI.Models.ThinkingMode" />
+        <Column Name="IsDefault" DataType="Boolean" Description="默认预设。是否为用户的默认预设" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="UserId,Name" Unique="True" />
+        <Index Columns="UserId" />
+      </Indexes>
+    </Table>
     <Table Name="McpServerConfig" Description="MCP服务配置。MCP Server列表及工具发现信息" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />

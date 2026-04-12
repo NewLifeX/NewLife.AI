@@ -594,6 +594,44 @@ export async function clearUserData(): Promise<void> {
   await request<void>('/api/user/data/clear', { method: 'DELETE' })
 }
 
+export async function importUserData(file: File): Promise<{ imported: number }> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE_URL}/api/user/data/import`, { method: 'POST', body: form })
+  if (!res.ok) throw new Error(`Import ${res.status}`)
+  return res.json()
+}
+
+// ── Presets ──
+
+export interface Preset {
+  id: number
+  name: string
+  modelId: number
+  modelName?: string
+  skillCode?: string
+  systemPrompt?: string
+  thinkingMode: number
+  isDefault: boolean
+  sort: number
+}
+
+export async function fetchPresets(): Promise<Preset[]> {
+  return request<Preset[]>('/api/presets')
+}
+
+export async function createPreset(data: Omit<Preset, 'id' | 'modelName'>): Promise<Preset> {
+  return request<Preset>('/api/presets', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } })
+}
+
+export async function updatePreset(id: number, data: Omit<Preset, 'id' | 'modelName'>): Promise<Preset> {
+  return request<Preset>(`/api/presets/${id}`, { method: 'PUT', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } })
+}
+
+export async function deletePreset(id: number): Promise<void> {
+  await request<void>(`/api/presets/${id}`, { method: 'DELETE' })
+}
+
 // ── Usage Statistics ──
 
 export interface UsageSummary {

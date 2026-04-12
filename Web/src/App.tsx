@@ -5,6 +5,7 @@ import { WelcomePage } from '@/pages/WelcomePage'
 import { ChatPage } from '@/pages/ChatPage'
 import { SharePage } from '@/pages/SharePage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
+import { PresetSelector } from '@/components/chat/PresetSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/lib/api'
@@ -160,6 +161,7 @@ function ChatApp() {
         userName={userName}
         userAvatar={userAvatar}
         modelSelector={
+          <div className="flex items-center gap-2">
           <ModelSelector
             models={models}
             currentModel={currentModel}
@@ -172,6 +174,23 @@ function ChatApp() {
               }
             }}
           />
+          <PresetSelector
+            onSelect={(preset) => {
+              if (preset.modelId) {
+                settings.update({ defaultModel: preset.modelId })
+                if (activeConversationId != null) {
+                  switchModel(preset.modelId)
+                }
+              }
+              if (preset.systemPrompt !== undefined) {
+                settings.update({ systemPrompt: preset.systemPrompt ?? '' })
+              }
+              if (preset.thinkingMode !== undefined) {
+                setThinkingMode(preset.thinkingMode === 1 ? 'think' : preset.thinkingMode === 2 ? 'fast' : 'auto')
+              }
+            }}
+          />
+          </div>
         }
       >
         {isWelcome ? (
