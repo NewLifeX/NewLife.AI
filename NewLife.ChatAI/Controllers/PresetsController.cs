@@ -25,11 +25,16 @@ public class PresetsController : ChatApiControllerBase
     {
         var userId = GetCurrentUserId();
 
+        var modelId = request.ModelId;
+        if (modelId == 0 && !request.ModelName.IsNullOrEmpty())
+            modelId = ModelConfig.FindByCodeOrName(request.ModelName)?.Id ?? 0;
+
         var entity = new ChatPreset
         {
             UserId = userId,
             Name = request.Name,
-            ModelId = request.ModelId,
+            ModelId = modelId,
+            ModelName = request.ModelName,
             SkillCode = request.SkillCode,
             SystemPrompt = request.SystemPrompt,
             Prompt = request.Prompt,
@@ -57,8 +62,13 @@ public class PresetsController : ChatApiControllerBase
         // 系统级预设不允许普通用户修改
         if (entity.UserId == 0) return Forbid();
 
+        var modelId = request.ModelId;
+        if (modelId == 0 && !request.ModelName.IsNullOrEmpty())
+            modelId = ModelConfig.FindByCodeOrName(request.ModelName)?.Id ?? 0;
+
         entity.Name = request.Name;
-        entity.ModelId = request.ModelId;
+        entity.ModelId = modelId;
+        entity.ModelName = request.ModelName;
         entity.SkillCode = request.SkillCode;
         entity.SystemPrompt = request.SystemPrompt;
         entity.Prompt = request.Prompt;
@@ -120,6 +130,9 @@ public class PresetRequest
 
     /// <summary>模型</summary>
     public Int32 ModelId { get; set; }
+
+    /// <summary>模型名称。ModelId为0时按此名称匹配Code或Name</summary>
+    public String? ModelName { get; set; }
 
     /// <summary>技能编码</summary>
     public String? SkillCode { get; set; }

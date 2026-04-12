@@ -236,6 +236,18 @@ public partial class ModelConfig : Entity<ModelConfig>
         return FindAllWithCache().FirstOrDefault(e => e.Enable && e.Code.EqualIgnoreCase(code) && e.ProviderInfo?.Enable == true);
     }
 
+    /// <summary>根据编码或名称查找启用的模型配置。优先按Code匹配，再按Name匹配</summary>
+    /// <param name="name">模型编码或名称</param>
+    /// <returns>模型配置，未找到返回null</returns>
+    public static ModelConfig? FindByCodeOrName(String name)
+    {
+        if (name.IsNullOrEmpty()) return null;
+
+        var list = FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).ToList();
+        return list.FirstOrDefault(e => e.Code.EqualIgnoreCase(name))
+            ?? list.FirstOrDefault(e => e.Name.EqualIgnoreCase(name));
+    }
+
     /// <summary>获取用户可用的模型列表</summary>
     /// <param name="roleIds">用户角色组</param>
     /// <param name="departmentId">用户部门编号</param>
