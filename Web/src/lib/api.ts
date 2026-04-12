@@ -387,9 +387,12 @@ interface ModelInfoDto {
   name: string
   provider?: string
   supportThinking: boolean
-  supportVision: boolean
-  supportImageGeneration: boolean
   supportFunctionCalling: boolean
+  supportVision: boolean
+  supportAudio: boolean
+  supportImageGeneration: boolean
+  supportVideoGeneration: boolean
+  contextLength: number
 }
 
 export async function fetchModels(): Promise<ModelInfo[]> {
@@ -400,9 +403,12 @@ export async function fetchModels(): Promise<ModelInfo[]> {
     name: d.name,
     provider: d.provider || undefined,
     supportThinking: d.supportThinking,
-    supportVision: d.supportVision,
-    supportImageGeneration: d.supportImageGeneration,
     supportFunctionCalling: d.supportFunctionCalling,
+    supportVision: d.supportVision,
+    supportAudio: d.supportAudio,
+    supportImageGeneration: d.supportImageGeneration,
+    supportVideoGeneration: d.supportVideoGeneration,
+    contextLength: d.contextLength || undefined,
   }))
 }
 

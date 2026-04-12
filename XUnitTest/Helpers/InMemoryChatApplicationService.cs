@@ -342,9 +342,9 @@ public class InMemoryChatApplicationService
     {
         var models = new[]
         {
-            new ModelInfoDto(1, "qwen-max", "Qwen-Max", true, true, false, true, "Qwen"),
-            new ModelInfoDto(2, "deepseek-r1", "DeepSeek-R1", true, false, false, true, "DeepSeek"),
-            new ModelInfoDto(3, "gpt-4o", "GPT-4o", true, true, false, true, "OpenAI")
+            new ModelInfoDto(1, "qwen-max", "Qwen-Max", true, true, true, false, false, false, 131_072, "Qwen"),
+            new ModelInfoDto(2, "deepseek-r1", "DeepSeek-R1", true, true, false, false, false, false, 65_536, "DeepSeek"),
+            new ModelInfoDto(3, "gpt-4o", "GPT-4o", true, true, true, false, false, false, 128_000, "OpenAI")
         };
         return Task.FromResult(models);
     }

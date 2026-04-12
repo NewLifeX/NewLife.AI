@@ -222,9 +222,12 @@ public class ModelDiscoveryService(ILog log) : IHostedService
                 if (caps != null)
                 {
                     config.SupportThinking = caps.SupportThinking;
-                    config.SupportVision = caps.SupportVision;
-                    config.SupportImageGeneration = caps.SupportImageGeneration;
                     config.SupportFunctionCalling = caps.SupportFunctionCalling;
+                    config.SupportVision = caps.SupportVision;
+                    config.SupportAudio = caps.SupportAudio;
+                    config.SupportImageGeneration = caps.SupportImageGeneration;
+                    config.SupportVideoGeneration = caps.SupportVideoGeneration;
+                    if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
                 }
             }
 
@@ -318,11 +321,17 @@ public class ModelDiscoveryService(ILog log) : IHostedService
                 if (caps != null)
                 {
                     config.SupportThinking = caps.SupportThinking;
-                    config.SupportVision = caps.SupportVision;
-                    config.SupportImageGeneration = caps.SupportImageGeneration;
                     config.SupportFunctionCalling = caps.SupportFunctionCalling;
+                    config.SupportVision = caps.SupportVision;
+                    config.SupportAudio = caps.SupportAudio;
+                    config.SupportImageGeneration = caps.SupportImageGeneration;
+                    config.SupportVideoGeneration = caps.SupportVideoGeneration;
+                    if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
                 }
             }
+
+            // API 返回的上下文长度优先（如 OpenRouter）
+            if (model.ContextLength > 0) config.ContextLength = model.ContextLength;
 
             if (config.Save() > 0)
                 log?.Info("同步 {0} 模型：{1}", providerConfig.Name, model.Id);

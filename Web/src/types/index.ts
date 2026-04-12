@@ -50,9 +50,12 @@ export interface ModelInfo {
   name: string
   provider?: string
   supportThinking?: boolean
-  supportVision?: boolean
-  supportImageGeneration?: boolean
   supportFunctionCalling?: boolean
+  supportVision?: boolean
+  supportAudio?: boolean
+  supportImageGeneration?: boolean
+  supportVideoGeneration?: boolean
+  contextLength?: number
 }
 
 export interface Attachment {

@@ -3,7 +3,7 @@
 namespace NewLife.ChatAI.Models;
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportVision, Boolean SupportImageGeneration, Boolean SupportFunctionCalling, String Provider = "");
+public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunctionCalling, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImageGeneration, Boolean SupportVideoGeneration, Int32 ContextLength = 0, String Provider = "");
 
 /// <summary>工具调用信息</summary>
 public record ToolCallDto(String Id, String Name, ToolCallStatus Status, String? Arguments = null, String? Result = null);

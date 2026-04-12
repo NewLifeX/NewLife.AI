@@ -429,74 +429,81 @@ public class AiProviderTests
         var caps = client.InferModelCapabilities("qwen3.6-plus");
         Assert.NotNull(caps);
         Assert.True(caps!.SupportThinking);
+        Assert.True(caps.SupportFunctionCalling);
         Assert.True(caps.SupportVision);
         Assert.False(caps.SupportImageGeneration);
-        Assert.True(caps.SupportFunctionCalling);
     }
 
     [Theory]
     [DisplayName("DashScope_InferCapabilities_各模型家族正确推断")]
     // qwen3-max：纯文本，支持思考
-    [InlineData("qwen3-max", true, false, false, true)]
-    [InlineData("qwen3-max-2026-01-23", true, false, false, true)]
+    [InlineData("qwen3-max", true, true, false, false, false, false)]
+    [InlineData("qwen3-max-2026-01-23", true, true, false, false, false, false)]
     // qwen3.5/3.6 Plus：多模态 + 思考
-    [InlineData("qwen3.5-plus", true, true, false, true)]
-    [InlineData("qwen3.6-plus-2026-04-02", true, true, false, true)]
-    [InlineData("qwen3.5-27b", true, true, false, true)]
-    [InlineData("qwen3.5-397b-a17b", true, true, false, true)]
+    [InlineData("qwen3.5-plus", true, true, true, false, false, false)]
+    [InlineData("qwen3.6-plus-2026-04-02", true, true, true, false, false, false)]
+    [InlineData("qwen3.5-27b", true, true, true, false, false, false)]
+    [InlineData("qwen3.5-397b-a17b", true, true, true, false, false, false)]
     // qwen3.5-flash：纯文本 Flash 系列，支持思考但不是多模态
-    [InlineData("qwen3.5-flash", true, false, false, true)]
+    [InlineData("qwen3.5-flash", true, true, false, false, false, false)]
     // 稳定版别名：思考但不确定多模态（保守推断）
-    [InlineData("qwen-max", true, false, false, true)]
-    [InlineData("qwen-plus", true, false, false, true)]
-    [InlineData("qwen-flash", true, false, false, true)]
-    [InlineData("qwen-turbo", true, false, false, true)]
-    [InlineData("qwen-plus-2025-12-01", true, false, false, true)]
+    [InlineData("qwen-max", true, true, false, false, false, false)]
+    [InlineData("qwen-plus", true, true, false, false, false, false)]
+    [InlineData("qwen-flash", true, true, false, false, false, false)]
+    [InlineData("qwen-turbo", true, true, false, false, false, false)]
+    [InlineData("qwen-plus-2025-12-01", true, true, false, false, false, false)]
     // 专用推理模型
-    [InlineData("qwq-plus", true, false, false, true)]
-    [InlineData("qwq-32b", true, false, false, true)]
-    [InlineData("qvq-max", true, true, false, true)]
-    [InlineData("qvq-plus", true, true, false, true)]
+    [InlineData("qwq-plus", true, true, false, false, false, false)]
+    [InlineData("qwq-32b", true, true, false, false, false, false)]
+    [InlineData("qvq-max", true, true, true, false, false, false)]
+    [InlineData("qvq-plus", true, true, true, false, false, false)]
     // 不支持思考的旧模型
-    [InlineData("qwen2.5-72b-instruct", false, false, false, true)]
-    [InlineData("qwen1.5-72b-chat", false, false, false, true)]
-    [InlineData("qwen-long", false, false, false, true)]
+    [InlineData("qwen2.5-72b-instruct", false, true, false, false, false, false)]
+    [InlineData("qwen1.5-72b-chat", false, true, false, false, false, false)]
+    [InlineData("qwen-long", false, true, false, false, false, false)]
     // coder 不支持思考（instruct-only）
-    [InlineData("qwen3-coder-plus", false, false, false, true)]
-    [InlineData("qwen3-coder-flash", false, false, false, true)]
+    [InlineData("qwen3-coder-plus", false, true, false, false, false, false)]
+    [InlineData("qwen3-coder-flash", false, true, false, false, false, false)]
     // -instruct 后缀表示非思考版本
-    [InlineData("qwen3-235b-a22b-instruct-2507", false, false, false, true)]
-    [InlineData("qwen3-235b-a22b-thinking-2507", true, false, false, true)]
+    [InlineData("qwen3-235b-a22b-instruct-2507", false, true, false, false, false, false)]
+    [InlineData("qwen3-235b-a22b-thinking-2507", true, true, false, false, false, false)]
     // VL 视觉模型
-    [InlineData("qwen3-vl-plus", true, true, false, true)]
-    [InlineData("qwen3-vl-32b-instruct", false, true, false, true)]
+    [InlineData("qwen3-vl-plus", true, true, true, false, false, false)]
+    [InlineData("qwen3-vl-32b-instruct", false, true, true, false, false, false)]
     // 文生图
-    [InlineData("wanx-v1", false, false, true, false)]
-    [InlineData("wan2.6-t2i", false, false, true, false)]
-    [InlineData("qwen-image-plus", false, false, true, false)]
-    [InlineData("z-image-turbo", false, false, true, false)]
+    [InlineData("wanx-v1", false, false, false, false, true, false)]
+    [InlineData("wan2.6-t2i", false, false, false, false, true, false)]
+    [InlineData("qwen-image-plus", false, false, false, false, true, false)]
+    [InlineData("z-image-turbo", false, false, false, false, true, false)]
+    // 文生视频 / 图生视频
+    [InlineData("wan2.1-t2v-turbo", false, false, false, false, false, true)]
+    [InlineData("wan2.1-t2v-plus", false, false, false, false, false, true)]
+    [InlineData("wan2.1-i2v-turbo", false, false, false, false, false, true)]
+    [InlineData("wan2.1-i2v-plus", false, false, false, false, false, true)]
     // 非对话模型
-    [InlineData("text-embedding-v4", false, false, false, false)]
-    [InlineData("cosyvoice-v3-plus", false, false, false, false)]
-    [InlineData("fun-asr-realtime", false, false, false, false)]
-    [InlineData("qwen-audio-turbo", false, false, false, false)]
+    [InlineData("text-embedding-v4", false, false, false, false, false, false)]
+    [InlineData("cosyvoice-v3-plus", false, false, false, false, false, false)]
+    [InlineData("fun-asr-realtime", false, false, false, false, false, false)]
+    [InlineData("qwen-audio-turbo", false, false, false, false, false, false)]
     // omni 全模态
-    [InlineData("qwen3.5-omni-plus", false, true, false, false)]
-    [InlineData("qwen3-omni-flash", false, true, false, false)]
+    [InlineData("qwen3.5-omni-plus", false, false, true, true, false, false)]
+    [InlineData("qwen3-omni-flash", false, false, true, true, false, false)]
     // 专用模型不支持函数调用
-    [InlineData("farui-plus", false, false, false, false)]
-    [InlineData("qwen-mt-plus", false, false, false, false)]
+    [InlineData("farui-plus", false, false, false, false, false, false)]
+    [InlineData("qwen-mt-plus", false, false, false, false, false, false)]
     public void DashScope_InferCapabilities_ByModelFamily(
-        String modelId, Boolean expectThinking, Boolean expectVision,
-        Boolean expectImageGen, Boolean expectFuncCall)
+        String modelId, Boolean expectThinking, Boolean expectFuncCall,
+        Boolean expectVision, Boolean expectAudio, Boolean expectImageGen, Boolean expectVideoGen)
     {
         var client = new DashScopeChatClient(new AiClientOptions { Endpoint = "https://dashscope.aliyuncs.com" });
         var caps = client.InferModelCapabilities(modelId);
         Assert.NotNull(caps);
         Assert.Equal(expectThinking, caps!.SupportThinking);
-        Assert.Equal(expectVision, caps.SupportVision);
-        Assert.Equal(expectImageGen, caps.SupportImageGeneration);
         Assert.Equal(expectFuncCall, caps.SupportFunctionCalling);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectAudio, caps.SupportAudio);
+        Assert.Equal(expectImageGen, caps.SupportImageGeneration);
+        Assert.Equal(expectVideoGen, caps.SupportVideoGeneration);
     }
 
     #endregion

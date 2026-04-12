@@ -237,6 +237,17 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
         => ImageEditsAsync(new ImageEditsRequest { ImageStream = imageStream, ImageFileName = imageFileName, Prompt = prompt, Model = model, Size = size, MaskStream = maskStream, MaskFileName = maskFileName }, cancellationToken);
     #endregion
 
+    #region 视频生成（/v1/video/generations）
+    /// <summary>视频生成（简便重载）。提交异步任务并返回任务编号</summary>
+    /// <param name="prompt">视频描述提示词</param>
+    /// <param name="model">模型名称，为 null 时使用默认</param>
+    /// <param name="size">视频尺寸，如 "1280*720"，为 null 时使用默认</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>任务提交响应</returns>
+    public virtual Task<VideoTaskSubmitResponse> VideoGenerationsAsync(String prompt, String? model = null, String? size = null, CancellationToken cancellationToken = default)
+        => SubmitVideoGenerationAsync(new VideoGenerationRequest { Prompt = prompt, Model = model, Size = size }, cancellationToken);
+    #endregion
+
     #region 辅助
     /// <summary>以指定路径发起非流式对话请求</summary>
     protected async Task<IChatResponse> ChatViaPathAsync(IChatRequest request, String path, CancellationToken cancellationToken)

@@ -200,6 +200,81 @@ public partial class OpenAIChatClient : AiClientBase
         => SpeechAsync(new SpeechRequest { Input = input, Voice = voice, Model = model ?? "tts-1", ResponseFormat = responseFormat, Speed = speed }, cancellationToken);
     #endregion
 
+    #region 文生视频
+    /// <summary>提交视频生成任务。返回任务编号用于后续轮询</summary>
+    /// <param name="request">视频生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>任务提交响应，含 TaskId</returns>
+    public virtual async Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
+    {
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = endpoint + "/v1/video/generations";
+
+        var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseVideoTaskSubmitResponse(json);
+    }
+
+    /// <summary>查询视频生成任务状态</summary>
+    /// <param name="taskId">任务编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>任务状态响应</returns>
+    public virtual async Task<VideoTaskStatusResponse> GetVideoTaskAsync(String taskId, CancellationToken cancellationToken = default)
+    {
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        var url = endpoint + $"/v1/video/generations/{taskId}";
+
+        var json = await GetAsync(url, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseVideoTaskStatusResponse(json);
+    }
+
+    /// <summary>解析视频任务提交响应</summary>
+    /// <param name="json">响应 JSON</param>
+    /// <returns>解析后的提交响应</returns>
+    protected virtual VideoTaskSubmitResponse ParseVideoTaskSubmitResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return new VideoTaskSubmitResponse();
+
+        return new VideoTaskSubmitResponse
+        {
+            TaskId = dic["id"] as String ?? dic["task_id"] as String,
+            RequestId = dic["request_id"] as String,
+            Status = dic["status"] as String,
+        };
+    }
+
+    /// <summary>解析视频任务状态响应</summary>
+    /// <param name="json">响应 JSON</param>
+    /// <returns>解析后的状态响应</returns>
+    protected virtual VideoTaskStatusResponse ParseVideoTaskStatusResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return new VideoTaskStatusResponse();
+
+        var resp = new VideoTaskStatusResponse
+        {
+            TaskId = dic["id"] as String ?? dic["task_id"] as String,
+            RequestId = dic["request_id"] as String,
+            Status = dic["status"] as String,
+        };
+
+        // OpenAI 格式：generation.url
+        if (dic["generation"] is IDictionary<String, Object> gen && gen["url"] is String genUrl)
+            resp.VideoUrls = [genUrl];
+
+        // 通用格式：video_url / video_urls
+        if (dic["video_url"] is String videoUrl)
+            resp.VideoUrls = [videoUrl];
+        else if (dic["video_urls"] is IList<Object> urls)
+            resp.VideoUrls = urls.Select(u => u?.ToString() ?? "").Where(u => u.Length > 0).ToArray();
+
+        resp.ErrorCode = dic["error_code"] as String ?? dic["code"] as String;
+        resp.ErrorMessage = dic["error_message"] as String ?? dic["message"] as String;
+
+        return resp;
+    }
+    #endregion
+
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
     protected override String BuildUrl(IChatRequest request) => _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + ChatPath;
@@ -309,9 +384,12 @@ public partial class OpenAIChatClient : AiClientBase
             return new AiProviderCapabilities(false, false, false, false);
 
         var thinking = false;
-        var vision = false;
-        var imageGen = false;
         var funcCall = true;
+        var vision = false;
+        var audio = false;
+        var imageGen = false;
+        var videoGen = false;
+        var contextLength = 0;
 
         // 视觉能力：含 -vl / -vision / 含 vision
         if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
@@ -342,7 +420,43 @@ public partial class OpenAIChatClient : AiClientBase
             funcCall = false;
         }
 
-        return new AiProviderCapabilities(thinking, vision, imageGen, funcCall);
+        // 音频能力：gpt-4o-audio 系列
+        if (modelId.Contains("-audio", StringComparison.OrdinalIgnoreCase))
+            audio = true;
+
+        // 文生视频：Sora 系列
+        if (modelId.StartsWith("sora", StringComparison.OrdinalIgnoreCase))
+        {
+            videoGen = true;
+            funcCall = false;
+        }
+
+        // === 上下文长度 ===
+        // OpenAI o 系列推理模型：200K
+        if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
+            contextLength = 200_000;
+        // GPT-4o 系列：128K
+        else if (modelId.StartsWith("gpt-4o", StringComparison.OrdinalIgnoreCase))
+            contextLength = 128_000;
+        // GPT-4 Turbo：128K
+        else if (modelId.StartsWith("gpt-4-turbo", StringComparison.OrdinalIgnoreCase))
+            contextLength = 128_000;
+        // GPT-4 经典：8K
+        else if (modelId.StartsWith("gpt-4", StringComparison.OrdinalIgnoreCase))
+            contextLength = 8_192;
+        // GPT-3.5 Turbo：16K
+        else if (modelId.StartsWith("gpt-3.5", StringComparison.OrdinalIgnoreCase))
+            contextLength = 16_385;
+        // Claude 系列：200K
+        else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
+            contextLength = 200_000;
+        // DeepSeek 系列：64K
+        else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
+            contextLength = 65_536;
+
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, contextLength);
     }
     #endregion
 }

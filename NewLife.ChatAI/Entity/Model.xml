@@ -213,11 +213,13 @@
         <Column Name="ProviderId" DataType="Int32" Map="ProviderConfig@Id@Name" Description="提供商。关联的提供商实例ID" />
         <Column Name="Code" DataType="String" Description="编码。模型唯一标识" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。显示名称" />
-        <Column Name="MaxTokens" DataType="Int32" Description="最大令牌数" />
+        <Column Name="ContextLength" DataType="Int32" Description="上下文长度。模型支持的上下文窗口大小（令牌数）" />
         <Column Name="SupportThinking" DataType="Boolean" Description="思考。是否支持思考模式" />
-        <Column Name="SupportVision" DataType="Boolean" Description="视觉。是否支持图片输入" />
-        <Column Name="SupportImageGeneration" DataType="Boolean" Description="图像。是否支持文生图" />
         <Column Name="SupportFunctionCalling" DataType="Boolean" Description="函数调用。是否支持Function Calling" />
+        <Column Name="SupportVision" DataType="Boolean" Description="视觉。是否支持图片输入" />
+        <Column Name="SupportAudio" DataType="Boolean" Description="音频。是否支持音频输入输出" />
+        <Column Name="SupportImageGeneration" DataType="Boolean" Description="图像。是否支持文生图" />
+        <Column Name="SupportVideoGeneration" DataType="Boolean" Description="视频生成。是否支持文生视频" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />

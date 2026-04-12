@@ -3,14 +3,20 @@
 /// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
 /// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
 /// <param name="SupportThinking">是否支持思考模式。如 DeepSeek-R1、Claude 的 extended thinking</param>
-/// <param name="SupportVision">是否支持图片输入（视觉）。如 GPT-4V、Claude Vision、Qwen-VL</param>
-/// <param name="SupportImageGeneration">是否支持文生图。如 DALL·E、Qwen 的图像生成</param>
 /// <param name="SupportFunctionCalling">是否支持 Function Calling / Tool Use</param>
+/// <param name="SupportVision">是否支持图片输入（视觉）。如 GPT-4V、Claude Vision、Qwen-VL</param>
+/// <param name="SupportAudio">是否支持音频输入输出。如 GPT-4o-audio、Qwen-Omni</param>
+/// <param name="SupportImageGeneration">是否支持文生图。如 DALL·E、Qwen 的图像生成</param>
+/// <param name="SupportVideoGeneration">是否支持文生视频。如 Sora、Wan2</param>
+/// <param name="ContextLength">上下文窗口大小（Token 数）。0 表示未知</param>
 public record AiProviderCapabilities(
     Boolean SupportThinking = false,
+    Boolean SupportFunctionCalling = false,
     Boolean SupportVision = false,
+    Boolean SupportAudio = false,
     Boolean SupportImageGeneration = false,
-    Boolean SupportFunctionCalling = false);
+    Boolean SupportVideoGeneration = false,
+    Int32 ContextLength = 0);
 
 /// <summary>AI 模型信息。描述服务商旗下某具体模型的标识与能力</summary>
 /// <param name="Model">模型标识，即 API 请求中 model 字段的值，如 "gpt-4o"</param>

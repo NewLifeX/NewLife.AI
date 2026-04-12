@@ -14,9 +14,11 @@ interface ModelSelectorProps {
 // 能力标签配置：key / 显示文字 / 颜色
 const CAPABILITIES: { key: keyof ModelInfo; label: string; cls: string }[] = [
   { key: 'supportThinking', label: '思考', cls: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/25' },
-  { key: 'supportVision', label: '视觉', cls: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/25' },
-  { key: 'supportImageGeneration', label: '图像', cls: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/25' },
   { key: 'supportFunctionCalling', label: '工具', cls: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/25' },
+  { key: 'supportVision', label: '视觉', cls: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/25' },
+  { key: 'supportAudio', label: '音频', cls: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/25' },
+  { key: 'supportImageGeneration', label: '图像', cls: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/25' },
+  { key: 'supportVideoGeneration', label: '视频', cls: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-900/25' },
 ]
 
 export function ModelSelector({

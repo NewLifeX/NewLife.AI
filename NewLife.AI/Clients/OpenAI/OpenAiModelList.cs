@@ -27,4 +27,7 @@ public class OpenAiModelObject
 
     /// <summary>模型归属方，通常为提供商编码</summary>
     public String? OwnedBy { get; set; }
+
+    /// <summary>模型上下文窗口长度（令牌数）。部分 OpenAI 兼容平台（如 OpenRouter）会返回此扩展字段</summary>
+    public Int32 ContextLength { get; set; }
 }

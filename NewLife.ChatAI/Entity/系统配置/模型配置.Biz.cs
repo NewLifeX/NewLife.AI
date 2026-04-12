@@ -24,7 +24,7 @@ public partial class ModelConfig : Entity<ModelConfig>
     {
         // 累加字段，生成 Update xx Set Count=Count+1234 Where xxx
         //var df = Meta.Factory.AdditionalFields;
-        //df.Add(nameof(MaxTokens));
+        //df.Add(nameof(ContextLength));
 
         // 拦截器 UserInterceptor、TimeInterceptor、IPInterceptor
         Meta.Interceptors.Add(new UserInterceptor { AllowEmpty = false });
@@ -103,9 +103,11 @@ public partial class ModelConfig : Entity<ModelConfig>
                 if (model.Capabilities != null)
                 {
                     entity.SupportThinking = model.Capabilities.SupportThinking;
-                    entity.SupportVision = model.Capabilities.SupportVision;
-                    entity.SupportImageGeneration = model.Capabilities.SupportImageGeneration;
                     entity.SupportFunctionCalling = model.Capabilities.SupportFunctionCalling;
+                    entity.SupportVision = model.Capabilities.SupportVision;
+                    entity.SupportAudio = model.Capabilities.SupportAudio;
+                    entity.SupportImageGeneration = model.Capabilities.SupportImageGeneration;
+                    entity.SupportVideoGeneration = model.Capabilities.SupportVideoGeneration;
                 }
 
                 count += entity.Save();
@@ -252,25 +254,29 @@ public partial class ModelConfig : Entity<ModelConfig>
     /// <param name="providerId">提供商编号</param>
     /// <param name="code">编码</param>
     /// <param name="supportThinking">支持思考</param>
-    /// <param name="supportVision">支持视觉</param>
-    /// <param name="supportImageGeneration">支持图像生成</param>
     /// <param name="supportFunctionCalling">支持函数调用</param>
+    /// <param name="supportVision">支持视觉</param>
+    /// <param name="supportAudio">支持音频</param>
+    /// <param name="supportImageGeneration">支持图像生成</param>
+    /// <param name="supportVideoGeneration">支持视频生成</param>
     /// <param name="enable">启用</param>
     /// <param name="start">创建时间开始</param>
     /// <param name="end">创建时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数</param>
     /// <returns></returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportVision, Boolean? supportImageGeneration, Boolean? supportFunctionCalling, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
+    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
     {
         var exp = new WhereExpression();
 
         if (providerId >= 0) exp &= _.ProviderId == providerId;
         if (!code.IsNullOrEmpty()) exp &= _.Code == code;
         if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
-        if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
-        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
         if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
+        if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
+        if (supportAudio != null) exp &= _.SupportAudio == supportAudio.Value;
+        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
+        if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration.Value;
         if (enable != null) exp &= _.Enable == enable.Value;
 
         exp &= _.CreateTime.Between(start, end);
