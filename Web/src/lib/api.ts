@@ -583,6 +583,11 @@ export interface UserProfile {
   nickname: string
   account: string
   avatar?: string
+  role?: string
+  department?: string
+  email?: string
+  mobile?: string
+  remark?: string
 }
 
 export async function fetchUserProfile(): Promise<UserProfile> {
