@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
@@ -8,6 +8,19 @@ interface ThinkingBlockProps {
   isStreaming?: boolean
   thinkingTime?: number
   className?: string
+}
+
+/** 流式推理时的实时计时器 */
+function LiveTimer() {
+  const [elapsed, setElapsed] = useState(0)
+  const startRef = useRef(Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Date.now() - startRef.current), 100)
+    return () => clearInterval(id)
+  }, [])
+
+  return <span className="ml-1 tabular-nums opacity-70">({(elapsed / 1000).toFixed(1)}s)</span>
 }
 
 export function ThinkingBlock({
@@ -29,6 +42,7 @@ export function ThinkingBlock({
           <>
             <Icon name="cyclone" variant="symbols" size="sm" className="animate-spin" />
             <span className="animate-pulse">{t('chat.thinkingInProgress')}</span>
+            <LiveTimer />
           </>
         ) : (
           <>
