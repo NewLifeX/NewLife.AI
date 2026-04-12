@@ -68,6 +68,31 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
     }
 
     [Fact]
+    [DisplayName("GET /v1/models 每个模型对象包含上下文长度和6个能力字段")]
+    public async Task ListModels_Returns_ContextLength_And_Capabilities()
+    {
+        var resp = await _http.GetAsync("v1/models");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+
+        var data = doc!["data"]!.AsArray();
+        Assert.True(data.Count > 0, "模型列表不应为空");
+
+        // 验证第一个模型对象包含所有扩展字段
+        var first = data[0]!;
+        Assert.True(first["context_length"] != null, "缺少 context_length 字段");
+        Assert.True(first["support_thinking"] != null, "缺少 support_thinking 字段");
+        Assert.True(first["support_function_calling"] != null, "缺少 support_function_calling 字段");
+        Assert.True(first["support_vision"] != null, "缺少 support_vision 字段");
+        Assert.True(first["support_audio"] != null, "缺少 support_audio 字段");
+        Assert.True(first["support_image_generation"] != null, "缺少 support_image_generation 字段");
+        Assert.True(first["support_video_generation"] != null, "缺少 support_video_generation 字段");
+    }
+
+    [Fact]
     [DisplayName("GET /v1/models 无效密钥返回 401 + INVALID_API_KEY")]
     public async Task ListModels_InvalidKey_Returns_401()
     {

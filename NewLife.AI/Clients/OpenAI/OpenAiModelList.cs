@@ -30,4 +30,22 @@ public class OpenAiModelObject
 
     /// <summary>模型上下文窗口长度（令牌数）。部分 OpenAI 兼容平台（如 OpenRouter）会返回此扩展字段</summary>
     public Int32 ContextLength { get; set; }
+
+    /// <summary>是否支持思考模式（Chain-of-Thought）</summary>
+    public Boolean SupportThinking { get; set; }
+
+    /// <summary>是否支持 Function Calling / Tool Use</summary>
+    public Boolean SupportFunctionCalling { get; set; }
+
+    /// <summary>是否支持图片输入（视觉多模态）</summary>
+    public Boolean SupportVision { get; set; }
+
+    /// <summary>是否支持音频输入输出</summary>
+    public Boolean SupportAudio { get; set; }
+
+    /// <summary>是否支持文生图（图像生成）</summary>
+    public Boolean SupportImageGeneration { get; set; }
+
+    /// <summary>是否支持文生视频（视频生成）</summary>
+    public Boolean SupportVideoGeneration { get; set; }
 }

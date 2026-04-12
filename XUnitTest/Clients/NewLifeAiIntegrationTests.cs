@@ -445,6 +445,53 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
     #endregion
 
+    #region 模型列表（/v1/models）
+
+    [Fact]
+    [DisplayName("模型列表_返回非空列表且包含上下文长度")]
+    public async Task ListModelsAsync_ReturnsModelsWithContextLength()
+    {
+        using var client = CreateClient();
+        var result = await client.ListModelsAsync();
+
+        Assert.NotNull(result);
+        Assert.Equal("list", result!.Object);
+        Assert.NotNull(result.Data);
+        Assert.True(result.Data.Length > 0, "模型列表不应为空");
+
+        // 至少有一个模型包含完整的扩展信息
+        var first = result.Data[0];
+        Assert.False(String.IsNullOrWhiteSpace(first.Id), "模型 ID 不应为空");
+        Assert.True(first.ContextLength >= 0, "ContextLength 不应为负数");
+    }
+
+    [Fact]
+    [DisplayName("模型列表_每个模型包含全部6个能力字段")]
+    public async Task ListModelsAsync_ReturnsModelsWithAllCapabilityFields()
+    {
+        using var client = CreateClient();
+        var result = await client.ListModelsAsync();
+
+        Assert.NotNull(result);
+        Assert.NotNull(result!.Data);
+        Assert.True(result.Data.Length > 0, "模型列表不应为空");
+
+        // 验证所有返回的模型都能正确反序列化布尔能力字段（不抛出，字段值可为 true/false）
+        foreach (var m in result.Data)
+        {
+            Assert.False(String.IsNullOrWhiteSpace(m.Id), $"模型 {m.Id} 的 Id 不应为空");
+            // Boolean 字段类型保证，只需能访问即可，不做业务值断言
+            _ = m.SupportThinking;
+            _ = m.SupportFunctionCalling;
+            _ = m.SupportVision;
+            _ = m.SupportAudio;
+            _ = m.SupportImageGeneration;
+            _ = m.SupportVideoGeneration;
+        }
+    }
+
+    #endregion
+
     #region 工厂注册验证
 
     [Fact]

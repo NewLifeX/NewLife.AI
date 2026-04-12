@@ -119,6 +119,13 @@ public partial class OpenAIChatClient : AiClientBase
                     Object = d["object"] as String,
                     Created = d["created"].ToLong().ToDateTime(),
                     OwnedBy = d["owned_by"] as String,
+                    ContextLength = d.TryGetValue("context_length", out var cl) ? cl.ToInt() : 0,
+                    SupportThinking = d.TryGetValue("support_thinking", out var st) && st.ToBoolean(),
+                    SupportFunctionCalling = d.TryGetValue("support_function_calling", out var sfc) && sfc.ToBoolean(),
+                    SupportVision = d.TryGetValue("support_vision", out var sv) && sv.ToBoolean(),
+                    SupportAudio = d.TryGetValue("support_audio", out var sa) && sa.ToBoolean(),
+                    SupportImageGeneration = d.TryGetValue("support_image_generation", out var sig) && sig.ToBoolean(),
+                    SupportVideoGeneration = d.TryGetValue("support_video_generation", out var svg) && svg.ToBoolean(),
                 });
             }
             response.Data = [.. items];
