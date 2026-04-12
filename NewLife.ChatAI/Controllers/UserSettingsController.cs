@@ -2,6 +2,7 @@
 using NewLife.ChatAI.Services;
 using NewLife.Cube;
 using NewLife.ChatAI.Models;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -18,7 +19,40 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
         var account = user?.Name ?? "";
         var avatar = user?.GetAvatarUrl();
 
-        return Ok(new UserProfileDto(nickname, account, avatar));
+        // 角色：取主角色或所有角色名拼接
+        String? role = null;
+        if (user != null)
+        {
+            var roleIds = user.RoleIds?.SplitAsInt();
+            if (roleIds?.Length > 0)
+            {
+                var roleNames = roleIds
+                    .Select(id => Role.FindByID(id)?.Name)
+                    .Where(n => !n.IsNullOrEmpty())
+                    .Join("、");
+                if (!roleNames.IsNullOrEmpty()) role = roleNames;
+            }
+            else if (user.RoleID > 0)
+            {
+                role = Role.FindByID(user.RoleID)?.Name;
+            }
+        }
+
+        // 部门
+        String? department = null;
+        if (user?.DepartmentID > 0)
+            department = Department.FindByID(user.DepartmentID)?.Name;
+
+        return Ok(new UserProfileDto(
+            nickname,
+            account,
+            avatar,
+            Role: role,
+            Department: department,
+            Email: user?.Mail.IsNullOrEmpty() == false ? user.Mail : null,
+            Mobile: user?.Mobile.IsNullOrEmpty() == false ? user.Mobile : null,
+            Remark: user?.Remark.IsNullOrEmpty() == false ? user.Remark : null
+        ));
     }
 
     /// <summary>获取用户设置</summary>

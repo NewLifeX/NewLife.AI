@@ -12,7 +12,7 @@ import { DataSettings } from './DataSettings'
 import { UsageSettings } from './UsageSettings'
 import { AppKeySettings } from './AppKeySettings'
 import type { UserSettings, ModelInfo } from '@/types'
-import { fetchMcpServers, toggleMcpServer, type McpServer } from '@/lib/api'
+import { fetchMcpServers, toggleMcpServer, fetchUserProfile, type McpServer, type UserProfile } from '@/lib/api'
 
 type SettingsTab = 'general' | 'account' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'usage' | 'data'
 
@@ -36,10 +36,13 @@ export function SettingsModal({
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [mcpServers, setMcpServers] = useState<McpServer[]>([])
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [legalDialog, setLegalDialog] = useState<'terms' | 'privacy' | null>(null)
 
   useEffect(() => {
     if (open) {
       fetchMcpServers().then(setMcpServers).catch((e) => console.error('Failed to load MCP servers:', e))
+      fetchUserProfile().then(setUserProfile).catch(() => {})
     }
   }, [open])
 
@@ -169,22 +172,122 @@ export function SettingsModal({
               {t('settings.account')}
             </h3>
             <div className="space-y-5">
-              <div className="text-sm text-gray-500 dark:text-gray-400">{t('settings.accountNote')}</div>
+              {/* 用户头像 + 昵称卡片 */}
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                {userProfile?.avatar ? (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.nickname || userProfile.account}
+                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                    <Icon name="account_circle" variant="filled" size="xl" className="text-blue-500 dark:text-blue-400" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                    {userProfile?.nickname || userProfile?.account || '—'}
+                  </span>
+                  {userProfile?.nickname && userProfile.account && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      @{userProfile.account}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 详细信息列表 */}
+              <div className="rounded-xl border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+                {([
+                  { icon: 'badge', label: t('account.role'), value: userProfile?.role },
+                  { icon: 'corporate_fare', label: t('account.department'), value: userProfile?.department },
+                  { icon: 'alternate_email', label: t('account.username'), value: userProfile?.account },
+                  { icon: 'mail', label: t('account.email'), value: userProfile?.email },
+                  { icon: 'phone', label: t('account.mobile'), value: userProfile?.mobile },
+                  { icon: 'sticky_note_2', label: t('account.remark'), value: userProfile?.remark },
+                ] as { icon: string; label: string; value?: string }[]).map(({ icon, label, value }) => (
+                  <div key={label} className="flex items-start gap-3 px-4 py-3 bg-white dark:bg-gray-800/30">
+                    <Icon name={icon} size="base" className="text-gray-400 dark:text-gray-500 mt-0.5 shrink-0" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400 w-20 shrink-0">{label}</span>
+                    <span className="text-sm text-gray-800 dark:text-gray-200 break-all">
+                      {value || <span className="text-gray-300 dark:text-gray-600">—</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
               <div className="border-b border-gray-100 dark:border-gray-800" />
+
+              {/* 版本 */}
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('about.version')}</div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('common.version')}</span>
               </div>
+
               <div className="border-b border-gray-100 dark:border-gray-800" />
+
+              {/* 服务条款 & 隐私政策 —— 点击弹窗 */}
               <div className="flex flex-col gap-3">
-                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2">
+                <button
+                  onClick={() => setLegalDialog('terms')}
+                  className="text-sm text-primary hover:underline flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+                >
                   <Icon name="description" size="base" />
                   {t('about.terms')}
-                </a>
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-2">
+                </button>
+                <button
+                  onClick={() => setLegalDialog('privacy')}
+                  className="text-sm text-primary hover:underline flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+                >
                   <Icon name="shield" size="base" />
                   {t('about.privacy')}
-                </a>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 服务条款 / 隐私政策 弹窗 */}
+        {legalDialog && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setLegalDialog(null)}
+          >
+            <div
+              className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                  {legalDialog === 'terms' ? t('about.terms') : t('about.privacy')}
+                </h4>
+                <button
+                  onClick={() => setLegalDialog(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors focus-visible:outline-none"
+                  aria-label="close"
+                >
+                  <Icon name="close" size="lg" />
+                </button>
+              </div>
+              <div className="px-6 py-5 overflow-y-auto text-sm text-gray-600 dark:text-gray-300 leading-relaxed space-y-4">
+                {legalDialog === 'terms' ? (
+                  <>
+                    <p>{t('legal.termsIntro')}</p>
+                    <p><strong>{t('legal.termsUseTitle')}</strong><br />{t('legal.termsUseBody')}</p>
+                    <p><strong>{t('legal.termsDataTitle')}</strong><br />{t('legal.termsDataBody')}</p>
+                    <p><strong>{t('legal.termsLimitTitle')}</strong><br />{t('legal.termsLimitBody')}</p>
+                    <p className="text-xs text-gray-400">{t('legal.termsUpdate')}</p>
+                  </>
+                ) : (
+                  <>
+                    <p>{t('legal.privacyIntro')}</p>
+                    <p><strong>{t('legal.privacyCollectTitle')}</strong><br />{t('legal.privacyCollectBody')}</p>
+                    <p><strong>{t('legal.privacyUseTitle')}</strong><br />{t('legal.privacyUseBody')}</p>
+                    <p><strong>{t('legal.privacySecurityTitle')}</strong><br />{t('legal.privacySecurityBody')}</p>
+                    <p className="text-xs text-gray-400">{t('legal.privacyUpdate')}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>

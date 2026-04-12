@@ -75,7 +75,17 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
 };
 
 /// <summary>用户资料</summary>
-public record UserProfileDto(String Nickname, String Account, String? Avatar);
+/// <summary>用户资料</summary>
+public record UserProfileDto(
+    String Nickname,
+    String Account,
+    String? Avatar,
+    String? Role = null,
+    String? Department = null,
+    String? Email = null,
+    String? Mobile = null,
+    String? Remark = null
+);
 
 /// <summary>系统公开配置。前端初始化时无需登录即可拉取</summary>
 public class SystemConfigDto
