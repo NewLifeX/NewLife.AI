@@ -162,7 +162,7 @@ public class ImportExportTests
         Assert.Equal("zh-CN", dto.Language);
         Assert.Equal("system", dto.Theme);
         Assert.Equal(16, dto.FontSize);
-        Assert.Equal(ThinkingMode.Auto, dto.ThinkingMode);
+        Assert.Equal(ThinkingMode.Auto, dto.DefaultThinkingMode);
     }
 
     #endregion

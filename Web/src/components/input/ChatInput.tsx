@@ -21,6 +21,8 @@ interface ChatInputProps {
   onThinkingModeChange?: (mode: ThinkingMode) => void
   showThinkingToggle?: boolean
   sendShortcut?: 'Enter' | 'Ctrl+Enter'
+  prefillValue?: string
+  onPrefillConsumed?: () => void
   className?: string
 }
 
@@ -36,10 +38,20 @@ export function ChatInput({
   onThinkingModeChange,
   showThinkingToggle = false,
   sendShortcut = 'Enter',
+  prefillValue,
+  onPrefillConsumed,
   className,
 }: ChatInputProps) {
   const { t } = useTranslation()
   const [value, setValue] = useState('')
+
+  // 预设提示词自动填入输入框
+  useEffect(() => {
+    if (prefillValue) {
+      setValue(prefillValue)
+      onPrefillConsumed?.()
+    }
+  }, [prefillValue, onPrefillConsumed])
 
   const MAX_LENGTH = 6000
   const isOverLimit = value.length > MAX_LENGTH

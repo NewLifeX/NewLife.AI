@@ -611,6 +611,7 @@ export interface Preset {
   modelName?: string
   skillCode?: string
   systemPrompt?: string
+  prompt?: string
   thinkingMode: number
   isDefault: boolean
   sort: number

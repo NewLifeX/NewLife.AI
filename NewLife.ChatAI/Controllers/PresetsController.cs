@@ -32,6 +32,7 @@ public class PresetsController : ChatApiControllerBase
             ModelId = request.ModelId,
             SkillCode = request.SkillCode,
             SystemPrompt = request.SystemPrompt,
+            Prompt = request.Prompt,
             ThinkingMode = (ThinkingMode)request.ThinkingMode,
             IsDefault = request.IsDefault,
             Sort = request.Sort,
@@ -60,6 +61,7 @@ public class PresetsController : ChatApiControllerBase
         entity.ModelId = request.ModelId;
         entity.SkillCode = request.SkillCode;
         entity.SystemPrompt = request.SystemPrompt;
+        entity.Prompt = request.Prompt;
         entity.ThinkingMode = (ThinkingMode)request.ThinkingMode;
         entity.IsDefault = request.IsDefault;
         entity.Sort = request.Sort;
@@ -89,6 +91,7 @@ public class PresetsController : ChatApiControllerBase
         entity.ModelName,
         entity.SkillCode,
         entity.SystemPrompt,
+        entity.Prompt,
         (Int32)entity.ThinkingMode,
         entity.IsDefault,
         entity.Sort
@@ -103,6 +106,7 @@ public record PresetDto(
     String? ModelName,
     String? SkillCode,
     String? SystemPrompt,
+    String? Prompt,
     Int32 ThinkingMode,
     Boolean IsDefault,
     Int32 Sort
@@ -122,6 +126,9 @@ public class PresetRequest
 
     /// <summary>系统提示词</summary>
     public String? SystemPrompt { get; set; }
+
+    /// <summary>提示词。选中预设时自动填入用户输入框</summary>
+    public String? Prompt { get; set; }
 
     /// <summary>思考模式</summary>
     public Int32 ThinkingMode { get; set; }

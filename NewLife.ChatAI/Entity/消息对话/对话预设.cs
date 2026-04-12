@@ -79,6 +79,14 @@ public partial class ChatPreset
     [BindColumn("SystemPrompt", "系统提示词。预设的System Prompt", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String? SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
 
+    private String? _Prompt;
+    /// <summary>提示词。选中预设时自动填入用户输入框的引导文本</summary>
+    [DisplayName("提示词")]
+    [Description("提示词。选中预设时自动填入用户输入框的引导文本")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Prompt", "提示词。选中预设时自动填入用户输入框的引导文本", "")]
+    public String? Prompt { get => _Prompt; set { if (OnPropertyChanging("Prompt", value)) { _Prompt = value; OnPropertyChanged("Prompt"); } } }
+
     private NewLife.AI.Models.ThinkingMode _ThinkingMode;
     /// <summary>思考模式。Auto=0, Think=1, Fast=2</summary>
     [DisplayName("思考模式")]
@@ -181,6 +189,7 @@ public partial class ChatPreset
             "ModelName" => _ModelName,
             "SkillCode" => _SkillCode,
             "SystemPrompt" => _SystemPrompt,
+            "Prompt" => _Prompt,
             "ThinkingMode" => _ThinkingMode,
             "IsDefault" => _IsDefault,
             "Sort" => _Sort,
@@ -204,6 +213,7 @@ public partial class ChatPreset
                 case "ModelName": _ModelName = Convert.ToString(value); break;
                 case "SkillCode": _SkillCode = Convert.ToString(value); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
+                case "Prompt": _Prompt = Convert.ToString(value); break;
                 case "ThinkingMode": _ThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
                 case "IsDefault": _IsDefault = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
@@ -244,7 +254,7 @@ public partial class ChatPreset
         if (id < 0) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.Id == id);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
 
         // 单对象缓存
         return Meta.SingleCache[id];
@@ -262,7 +272,7 @@ public partial class ChatPreset
         if (name == null) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.Find(e => e.UserId == userId && e.Name.EqualIgnoreCase(name));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.UserId == userId && e.Name.EqualIgnoreCase(name));
 
         return Find(_.UserId == userId & _.Name == name);
     }
@@ -275,7 +285,7 @@ public partial class ChatPreset
         if (userId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < 1000) return Meta.Cache.FindAll(e => e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
 
         return FindAll(_.UserId == userId);
     }
@@ -334,6 +344,9 @@ public partial class ChatPreset
         /// <summary>系统提示词。预设的System Prompt</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
 
+        /// <summary>提示词。选中预设时自动填入用户输入框的引导文本</summary>
+        public static readonly Field Prompt = FindByName("Prompt");
+
         /// <summary>思考模式。Auto=0, Think=1, Fast=2</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
 
@@ -390,6 +403,9 @@ public partial class ChatPreset
 
         /// <summary>系统提示词。预设的System Prompt</summary>
         public const String SystemPrompt = "SystemPrompt";
+
+        /// <summary>提示词。选中预设时自动填入用户输入框的引导文本</summary>
+        public const String Prompt = "Prompt";
 
         /// <summary>思考模式。Auto=0, Think=1, Fast=2</summary>
         public const String ThinkingMode = "ThinkingMode";

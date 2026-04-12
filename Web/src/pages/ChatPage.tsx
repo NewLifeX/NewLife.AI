@@ -35,6 +35,8 @@ interface ChatPageProps {
   onAttachmentAdd?: (file: File) => void
   onAttachmentRemove?: (id: number) => void
   sendShortcut?: 'Enter' | 'Ctrl+Enter'
+  prefillValue?: string
+  onPrefillConsumed?: () => void
 }
 
 function isNearBottom(el: HTMLElement, threshold = 80): boolean {
@@ -62,6 +64,8 @@ export function ChatPage({
   onAttachmentAdd,
   onAttachmentRemove,
   sendShortcut = 'Enter',
+  prefillValue,
+  onPrefillConsumed,
 }: ChatPageProps) {
   const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -252,6 +256,8 @@ export function ChatPage({
           onAttachmentAdd={handleAttachClick}
           onFilePaste={handlePasteFile}
           sendShortcut={sendShortcut}
+          prefillValue={prefillValue}
+          onPrefillConsumed={onPrefillConsumed}
         />
       </div>
 

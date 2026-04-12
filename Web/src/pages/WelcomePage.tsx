@@ -13,9 +13,11 @@ interface WelcomePageProps {
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
   onAttachmentRemove?: (id: number) => void
+  prefillValue?: string
+  onPrefillConsumed?: () => void
 }
 
-export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove }: WelcomePageProps) {
+export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove, prefillValue, onPrefillConsumed }: WelcomePageProps) {
   const { t } = useTranslation()
   const sendShortcut = useSettingsStore((s) => s.sendShortcut)
   const contentWidth = useSettingsStore((s) => s.contentWidth)
@@ -108,6 +110,8 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
           onAttachmentAdd={handleAttachClick}
           onAttachmentRemove={onAttachmentRemove}
           onFilePaste={onAttachmentAdd}
+          prefillValue={prefillValue}
+          onPrefillConsumed={onPrefillConsumed}
         />
       </div>
     </>

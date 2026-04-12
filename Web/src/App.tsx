@@ -53,6 +53,7 @@ function ChatApp() {
   const [appReady, setAppReady] = useState(false)
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
+  const [draftInput, setDraftInput] = useState('')
 
   const handleNewChat = useCallback(() => {
     newChat()
@@ -188,6 +189,9 @@ function ChatApp() {
               if (preset.thinkingMode !== undefined) {
                 setThinkingMode(preset.thinkingMode === 1 ? 'think' : preset.thinkingMode === 2 ? 'fast' : 'auto')
               }
+              if (preset.prompt) {
+                setDraftInput(preset.prompt)
+              }
             }}
           />
           </div>
@@ -201,6 +205,8 @@ function ChatApp() {
             attachments={pendingAttachments}
             onAttachmentAdd={addAttachment}
             onAttachmentRemove={removeAttachment}
+            prefillValue={draftInput}
+            onPrefillConsumed={() => setDraftInput('')}
           />
         ) : (
           <ChatPage
@@ -224,6 +230,8 @@ function ChatApp() {
             onAttachmentAdd={addAttachment}
             onAttachmentRemove={removeAttachment}
             sendShortcut={settings.sendShortcut}
+            prefillValue={draftInput}
+            onPrefillConsumed={() => setDraftInput('')}
           />
         )}
       </ChatLayout>

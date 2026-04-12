@@ -305,6 +305,7 @@
         <Column Name="ModelName" DataType="String" Description="模型名称" />
         <Column Name="SkillCode" DataType="String" Description="技能编码。关联的技能Code" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="系统提示词。预设的System Prompt" />
+        <Column Name="Prompt" DataType="String" Length="500" Description="提示词。选中预设时自动填入用户输入框的引导文本" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0, Think=1, Fast=2" Type="NewLife.AI.Models.ThinkingMode" />
         <Column Name="IsDefault" DataType="Boolean" Description="默认预设。是否为用户的默认预设" />
         <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
