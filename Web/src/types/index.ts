@@ -63,6 +63,15 @@ export interface Attachment {
   previewUrl?: string
 }
 
+export interface Artifact {
+  /** 代码块语言标识 */
+  language: string
+  /** 代码/HTML 源码 */
+  code: string
+  /** 显示标题（取自代码块首行注释或语言名） */
+  title?: string
+}
+
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system'
   language: string

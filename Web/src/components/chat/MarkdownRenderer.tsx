@@ -11,8 +11,10 @@ import { Icon } from '@/components/common/Icon'
 import { Lightbox } from '@/components/common/Lightbox'
 import { ImageEditDialog } from '@/components/chat/ImageEditDialog'
 import { ProgressiveImage } from '@/components/chat/ProgressiveImage'
-import { editImage } from '@/lib/api'
+import { isPreviewable } from '@/components/chat/ArtifactPanel'
+import { useArtifactStore } from '@/stores'
 import { useChatStore } from '@/stores/chatStore'
+import { editImage } from '@/lib/api'
 
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
 
@@ -69,10 +71,28 @@ function CopyCodeButton({ code }: { code: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="absolute top-2 right-2 p-1 rounded bg-gray-700/60 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
+      className="p-1 rounded bg-gray-700/60 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
       title="Copy"
     >
       <Icon name="content_copy" size="sm" />
+    </button>
+  )
+}
+
+function PreviewCodeButton({ code, language }: { code: string; language: string }) {
+  const open = useArtifactStore((s) => s.open)
+
+  const handlePreview = useCallback(() => {
+    open({ language, code, title: language.toUpperCase() })
+  }, [open, language, code])
+
+  return (
+    <button
+      onClick={handlePreview}
+      className="p-1 rounded bg-gray-700/60 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
+      title="Preview"
+    >
+      <Icon name="visibility" size="sm" />
     </button>
   )
 }
@@ -118,6 +138,14 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
               typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
                 ? String((codeEl as { props?: { children?: ReactNode } }).props?.children ?? '')
                 : ''
+            // 提取语言标识 (language-xxx)
+            const langClass =
+              typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
+                ? String((codeEl as { props?: { className?: string } }).props?.className ?? '')
+                : ''
+            const lang = langClass.replace(/^language-/, '')
+            const canPreview = isPreviewable(lang) && !!codeStr
+
             return (
               <div className="relative group/code">
                 <pre
@@ -126,7 +154,10 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
                 >
                   {children}
                 </pre>
-                {codeStr && <CopyCodeButton code={codeStr} />}
+                <div className="absolute top-2 right-2 flex items-center gap-1">
+                  {canPreview && <PreviewCodeButton code={codeStr} language={lang} />}
+                  {codeStr && <CopyCodeButton code={codeStr} />}
+                </div>
               </div>
             )
           },

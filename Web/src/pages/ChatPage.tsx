@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSettingsStore } from '@/stores'
+import { useSettingsStore, useArtifactStore } from '@/stores'
 import { Icon } from '@/components/common/Icon'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/input/ChatInput'
@@ -10,6 +10,7 @@ import { ThinkingBlock } from '@/components/chat/ThinkingBlock'
 import { ToolCallBadge } from '@/components/chat/ToolCallBadge'
 import { ShareDialog } from '@/components/chat/ShareDialog'
 import { DislikeReasonDialog } from '@/components/chat/DislikeReasonDialog'
+import { ArtifactPanel } from '@/components/chat/ArtifactPanel'
 
 type ThinkingMode = 'fast' | 'auto' | 'think'
 
@@ -69,6 +70,7 @@ export function ChatPage({
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
   const contentWidth = useSettingsStore((s) => s.contentWidth) ?? 960
+  const artifactOpen = useArtifactStore((s) => s.current !== null)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
@@ -114,6 +116,7 @@ export function ChatPage({
   }, [messages, scrollToBottom])
 
   return (
+    <div className="relative flex flex-1 min-h-0">
     <div
       className="relative flex flex-col flex-1 min-h-0"
     >
@@ -270,6 +273,8 @@ export function ChatPage({
           conversationId={conversationId}
         />
       )}
+    </div>
+    {artifactOpen && <ArtifactPanel />}
     </div>
   )
 }
