@@ -370,19 +370,31 @@ public class DashScopeChatClient : OpenAIChatClient
         var vision = false;
         var imageGen = false;
         var funcCall = true;
+        var audio = false;
+        var videoGen = false;
+        var contextLength = 32_768;
 
-        // 文生图/视频生成：wanx / wan2 / flux / stable-diffusion / qwen-image / z-image
+        // 文生图：wanx / flux / stable-diffusion / qwen-image / z-image
         if (modelId.StartsWith("wanx", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("flux", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("z-image", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, true, false);
+            return new AiProviderCapabilities(false, false, false, false, true, false, 0);
 
-        // 全模态模型 omni：视觉+音频输入，使用专用 API，不支持标准函数调用
+        // 文生视频 / 图生视频：wan2*-t2v* / wan2*-i2v*
+        if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase) &&
+            (modelId.Contains("-t2v", StringComparison.OrdinalIgnoreCase) ||
+             modelId.Contains("-i2v", StringComparison.OrdinalIgnoreCase)))
+            return new AiProviderCapabilities(false, false, false, false, false, true, 0);
+
+        // 文生图：wan2 其他系列（如 wan2*-t2i*）
+        if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, false, false, false, true, false, 0);
+
+        // 全模态模型 omni：视觉+音频输入输出，使用专用 API，不支持标准函数调用
         if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, true, false, false);
+            return new AiProviderCapabilities(false, false, true, true, false, false, 32_768);
 
         // === 视觉能力 ===
         // VL 系列和 QVQ 视觉推理模型
@@ -430,7 +442,130 @@ public class DashScopeChatClient : OpenAIChatClient
             modelId.StartsWith("qwen-mt", StringComparison.OrdinalIgnoreCase))
             funcCall = false;
 
-        return new AiProviderCapabilities(thinking, vision, imageGen, funcCall);
+        // === 上下文长度 ===
+        // qwen-long 专为长文档设计，支持 1M tokens
+        if (modelId.StartsWithIgnoreCase("qwen-long"))
+            contextLength = 1_000_000;
+        // qwen3/qwen3.5 全系列、稳定版别名（qwen-max/plus/flash/turbo）、推理模型（qwq/qvq）、qwen2.5 系列
+        else if (modelId.StartsWithIgnoreCase("qwen3", "qwen-max", "qwen-plus", "qwen-flash", "qwen-turbo",
+            "qwq-", "qvq-", "qwen2.5"))
+            contextLength = 131_072;
+        // deepseek 系列
+        else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
+            contextLength = 65_536;
+        // 其余对话模型默认 32K（已在变量初始化时设置）
+
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, contextLength);
+    }
+    #endregion
+
+    #region 文生视频
+    /// <summary>提交视频生成任务。使用 DashScope 原生异步任务接口</summary>
+    /// <param name="request">视频生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>任务提交响应，含 TaskId</returns>
+    public override async Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
+    {
+        var endpoint = NativeEndpoint.TrimEnd('/');
+        var url = endpoint + "/services/aigc/video-generation/generation";
+
+        var body = new Dictionary<String, Object?>
+        {
+            ["model"] = request.Model ?? _options.Model,
+            ["input"] = BuildVideoInput(request),
+            ["parameters"] = BuildVideoParameters(request),
+        };
+
+        var json = await PostAsync(url, body, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseDashScopeVideoSubmitResponse(json);
+    }
+
+    /// <summary>查询视频生成任务状态。使用 DashScope 的 /tasks/{task_id} 接口</summary>
+    /// <param name="taskId">任务编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>任务状态响应</returns>
+    public override async Task<VideoTaskStatusResponse> GetVideoTaskAsync(String taskId, CancellationToken cancellationToken = default)
+    {
+        var endpoint = NativeEndpoint.TrimEnd('/');
+        var url = endpoint + $"/tasks/{taskId}";
+
+        var json = await GetAsync(url, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseDashScopeVideoStatusResponse(json);
+    }
+
+    /// <summary>构建 DashScope 视频生成 input 字段</summary>
+    private static Dictionary<String, Object?> BuildVideoInput(VideoGenerationRequest request)
+    {
+        var input = new Dictionary<String, Object?> { ["prompt"] = request.Prompt };
+        if (!String.IsNullOrEmpty(request.ImageUrl))
+            input["img_url"] = request.ImageUrl;
+        if (!String.IsNullOrEmpty(request.NegativePrompt))
+            input["negative_prompt"] = request.NegativePrompt;
+        return input;
+    }
+
+    /// <summary>构建 DashScope 视频生成 parameters 字段</summary>
+    private static Dictionary<String, Object?>? BuildVideoParameters(VideoGenerationRequest request)
+    {
+        var param = new Dictionary<String, Object?>();
+        if (!String.IsNullOrEmpty(request.Size))
+            param["size"] = request.Size;
+        if (request.Duration > 0)
+            param["duration"] = request.Duration;
+        if (request.Fps > 0)
+            param["fps"] = request.Fps;
+        if (request.Seed.HasValue)
+            param["seed"] = request.Seed.Value;
+        return param.Count > 0 ? param : null;
+    }
+
+    /// <summary>解析 DashScope 视频任务提交响应</summary>
+    private VideoTaskSubmitResponse ParseDashScopeVideoSubmitResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return new VideoTaskSubmitResponse();
+
+        var output = dic["output"] as IDictionary<String, Object>;
+        return new VideoTaskSubmitResponse
+        {
+            TaskId = output?["task_id"] as String,
+            RequestId = dic["request_id"] as String,
+            Status = output?["task_status"] as String,
+        };
+    }
+
+    /// <summary>解析 DashScope 视频任务状态响应</summary>
+    private VideoTaskStatusResponse ParseDashScopeVideoStatusResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return new VideoTaskStatusResponse();
+
+        var output = dic["output"] as IDictionary<String, Object>;
+        var resp = new VideoTaskStatusResponse
+        {
+            TaskId = output?["task_id"] as String,
+            RequestId = dic["request_id"] as String,
+            Status = output?["task_status"] as String,
+        };
+
+        // 视频URL在 output.video_url 或 output.results[].url
+        if (output?["video_url"] is String videoUrl)
+        {
+            resp.VideoUrls = [videoUrl];
+        }
+        else if (output?["results"] is IList<Object> results)
+        {
+            resp.VideoUrls = results
+                .OfType<IDictionary<String, Object>>()
+                .Select(r => r["url"] as String ?? "")
+                .Where(u => u.Length > 0)
+                .ToArray();
+        }
+
+        resp.ErrorCode = output?["code"] as String ?? dic["code"] as String;
+        resp.ErrorMessage = output?["message"] as String ?? dic["message"] as String;
+
+        return resp;
     }
     #endregion
 }

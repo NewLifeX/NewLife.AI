@@ -266,7 +266,7 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
 // ── SSE Streaming ──
 
 export interface ChatStreamEvent {
-  type: 'message_start' | 'thinking_delta' | 'thinking_done' | 'content_delta' | 'tool_call_start' | 'tool_call_done' | 'tool_call_error' | 'message_done' | 'error'
+  type: 'message_start' | 'thinking_delta' | 'thinking_done' | 'content_delta' | 'artifact_start' | 'artifact_delta' | 'artifact_end' | 'tool_call_start' | 'tool_call_done' | 'tool_call_error' | 'message_done' | 'error'
   messageId?: string
   model?: string
   thinkingMode?: number
@@ -286,6 +286,7 @@ export interface ChatStreamEvent {
     totalTokens?: number
   }
   title?: string
+  artifactType?: string
 }
 
 export async function streamMessage(

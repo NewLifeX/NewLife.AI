@@ -101,7 +101,7 @@ public class ChatAIPipeline(
         ApplyResponseStyle(chatOptions, context.UserId);
 
         // 记录实际请求参数到上下文，供 ChatApplicationService 写入消息记录
-        context.MaxTokens = chatOptions.MaxTokens;
+        context.MaxTokens = chatOptions.MaxTokens ?? 0;
         context.Temperature = chatOptions.Temperature;
 
         // 5. 流式调用并转换为 SSE 事件
@@ -209,7 +209,7 @@ public class ChatAIPipeline(
         ApplyResponseStyle(chatOptions, context.UserId);
 
         // 记录实际请求参数到上下文
-        context.MaxTokens = chatOptions.MaxTokens;
+        context.MaxTokens = chatOptions.MaxTokens ?? 0;
         context.Temperature = chatOptions.Temperature;
 
         using var chatClient = clientBuilder.Build();

@@ -56,6 +56,9 @@ public class ChatStreamEvent
 
     /// <summary>会话标题。首条消息自动生成标题时返回</summary>
     public String? Title { get; set; }
+
+    /// <summary>Artifact 类型。artifact_start 时表示内容类型（html/svg/mermaid）</summary>
+    public String? ArtifactType { get; set; }
     #endregion
 
     #region 工厂方法
@@ -126,5 +129,23 @@ public class ChatStreamEvent
     /// <returns></returns>
     public static ChatStreamEvent ToolCallError(String toolCallId, String error) =>
         new() { Type = "tool_call_error", ToolCallId = toolCallId, Error = error };
+
+    /// <summary>Artifact 开始事件。通知前端打开预览面板</summary>
+    /// <param name="artifactType">内容类型（html/svg/mermaid）</param>
+    /// <param name="title">Artifact 标题</param>
+    /// <returns></returns>
+    public static ChatStreamEvent ArtifactStart(String artifactType, String? title = null) =>
+        new() { Type = "artifact_start", ArtifactType = artifactType, Title = title };
+
+    /// <summary>Artifact 增量内容事件</summary>
+    /// <param name="content">增量内容片段</param>
+    /// <returns></returns>
+    public static ChatStreamEvent ArtifactDelta(String content) =>
+        new() { Type = "artifact_delta", Content = content };
+
+    /// <summary>Artifact 完成事件</summary>
+    /// <returns></returns>
+    public static ChatStreamEvent ArtifactEnd() =>
+        new() { Type = "artifact_end" };
     #endregion
 }

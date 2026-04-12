@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Conversation, Message } from '@/types'
+import { useArtifactStore } from '@/stores/artifactStore'
 import {
   fetchConversations,
   createConversation,
@@ -291,6 +292,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }
             break
 
+          case 'artifact_start':
+            useArtifactStore.getState().startStreaming(event.artifactType ?? 'html', event.title)
+            break
+          case 'artifact_delta':
+            if (event.content) useArtifactStore.getState().appendCode(event.content)
+            break
+          case 'artifact_end':
+            useArtifactStore.getState().endStreaming()
+            break
+
           case 'thinking_delta':
             if (assistantMsgId != null && event.content) {
               const needNewSegment = segmentFinalized
@@ -454,6 +465,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ),
             }))
             break
+          case 'artifact_start':
+            useArtifactStore.getState().startStreaming(event.artifactType ?? 'html', event.title)
+            break
+          case 'artifact_delta':
+            if (event.content) useArtifactStore.getState().appendCode(event.content)
+            break
+          case 'artifact_end':
+            useArtifactStore.getState().endStreaming()
+            break
           case 'thinking_delta':
             set((s) => ({
               messages: s.messages.map((m) =>
@@ -553,6 +573,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   ),
                 }))
               }
+              break
+            case 'artifact_start':
+              useArtifactStore.getState().startStreaming(event.artifactType ?? 'html', event.title)
+              break
+            case 'artifact_delta':
+              if (event.content) useArtifactStore.getState().appendCode(event.content)
+              break
+            case 'artifact_end':
+              useArtifactStore.getState().endStreaming()
               break
             case 'message_done':
               if (assistantMsgId != null) {

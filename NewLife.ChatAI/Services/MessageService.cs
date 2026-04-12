@@ -904,6 +904,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ISpan? toolSpan = null;
+        var artifactDetector = new ArtifactDetector();
 
         var enumerator = source.GetAsyncEnumerator(cancellationToken);
         try
@@ -934,6 +935,25 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
                         break;
                     case "content_delta":
                         contentBuilder.Append(ev.Content);
+
+                        // Artifact 检测：识别可预览代码块（html/svg/mermaid）
+                        var artifactEvents = artifactDetector.Process(ev.Content!);
+                        foreach (var ae in artifactEvents)
+                        {
+                            switch (ae.Kind)
+                            {
+                                case ArtifactEventKind.ArtifactStart:
+                                    yield return ChatStreamEvent.ArtifactStart(ae.Language!);
+                                    break;
+                                case ArtifactEventKind.ArtifactDelta:
+                                    yield return ChatStreamEvent.ArtifactDelta(ae.Content!);
+                                    break;
+                                case ArtifactEventKind.ArtifactEnd:
+                                    yield return ChatStreamEvent.ArtifactEnd();
+                                    break;
+                            }
+                        }
+
                         yield return ev;
                         break;
                     case "message_done":
