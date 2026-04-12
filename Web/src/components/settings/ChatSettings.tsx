@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { Toggle } from '@/components/atoms/Toggle'
 import { Select } from '@/components/atoms/Select'
 import { Slider } from '@/components/atoms/Slider'
 import { Icon } from '@/components/common/Icon'
@@ -14,10 +13,6 @@ interface ChatSettingsProps {
   onDefaultThinkingModeChange: (v: number) => void
   contextRounds: number
   onContextRoundsChange: (v: number) => void
-  mcpEnabled: boolean
-  onMcpEnabledChange: (enabled: boolean) => void
-  showToolCalls: boolean
-  onShowToolCallsChange: (enabled: boolean) => void
   streamingSpeed: number
   onStreamingSpeedChange: (speed: number) => void
   models: ModelInfo[]
@@ -43,10 +38,6 @@ export function ChatSettings({
   onDefaultThinkingModeChange,
   contextRounds,
   onContextRoundsChange,
-  mcpEnabled,
-  onMcpEnabledChange,
-  showToolCalls,
-  onShowToolCallsChange,
   streamingSpeed,
   onStreamingSpeedChange,
   models,
@@ -125,32 +116,6 @@ export function ChatSettings({
             <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{contextRounds}</span>
           </div>
           <Slider value={contextRounds} onChange={onContextRoundsChange} min={1} max={30} labelLeft="1" labelRight="30" />
-        </div>
-
-        <div className="border-b border-gray-100 dark:border-gray-800" />
-
-        {/* MCP 开关 */}
-        <div className="flex items-center justify-between">
-          <div className="flex-1 mr-4">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.enableMcp')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {t('settings.enableMcpDesc')}
-            </div>
-          </div>
-          <Toggle checked={mcpEnabled} onChange={onMcpEnabledChange} />
-        </div>
-
-        <div className="border-b border-gray-100 dark:border-gray-800" />
-
-        {/* 工具调用详情开关 */}
-        <div className="flex items-center justify-between">
-          <div className="flex-1 mr-4">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.showToolCalls')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {t('settings.showToolCallsDesc')}
-            </div>
-          </div>
-          <Toggle checked={showToolCalls} onChange={onShowToolCallsChange} />
         </div>
 
         <div className="border-b border-gray-100 dark:border-gray-800" />

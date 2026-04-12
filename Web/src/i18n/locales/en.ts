@@ -153,6 +153,10 @@ export default {
     clearData: 'Clear All Data',
     clearDataDesc: 'Permanently delete all conversations, messages, feedback and share links. This cannot be undone.',
     clearBtn: 'Clear Data',
+    groupBasic: 'Basic',
+    groupAI: 'AI Interaction',
+    groupAdvanced: 'Advanced',
+    mcpGlobalSettings: 'Global Settings',
   },
   personalization: {
     title: 'Personalization',

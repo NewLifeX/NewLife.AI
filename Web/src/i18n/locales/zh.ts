@@ -153,6 +153,10 @@ export default {
     clearData: '清除所有数据',
     clearDataDesc: '永久删除所有会话、消息、反馈和分享链接，此操作不可撤销。',
     clearBtn: '清除数据',
+    groupBasic: '基本',
+    groupAI: 'AI 交互',
+    groupAdvanced: '高级功能',
+    mcpGlobalSettings: '全局设置',
   },
   personalization: {
     title: '个性化',
@@ -217,7 +221,8 @@ export default {
     privacySecurityTitle: '数据安全',
     privacySecurityBody: '我们采用行业标准的加密和访问控制措施保护您的数据。您有权随时导出或删除自己的数据。',
     privacyUpdate: '本隐私政策可能不定期更新，重大变更时我们会在页面内发出通知。',
-  },,
+  },
+  share: {
     createLink: '创建分享链接',
     createFailed: '创建分享链接失败，请稍后重试',
     linkHint: '任何拥有此链接的人都可以查看对话内容。',

@@ -14,7 +14,7 @@ namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 /// <summary>对话预设。保存模型+技能+SystemPrompt组合为预设模板</summary>
 [Menu(60, true, Icon = "fa-table")]
 [ChatAIArea]
-public class ChatPresetController : EntityController<ChatPreset>
+public class ChatPresetController : ChatEntityController<ChatPreset>
 {
     static ChatPresetController()
     {

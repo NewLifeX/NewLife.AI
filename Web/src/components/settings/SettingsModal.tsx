@@ -9,12 +9,11 @@ import { ChatSettings } from './ChatSettings'
 import { PersonalizationSettings } from './PersonalizationSettings'
 import { McpSettings } from './McpSettings'
 import { DataSettings } from './DataSettings'
-import { UsageSettings } from './UsageSettings'
 import { AppKeySettings } from './AppKeySettings'
 import type { UserSettings, ModelInfo } from '@/types'
 import { fetchMcpServers, toggleMcpServer, fetchUserProfile, type McpServer, type UserProfile } from '@/lib/api'
 
-type SettingsTab = 'general' | 'account' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'usage' | 'data'
+type SettingsTab = 'account' | 'general' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'data'
 
 interface SettingsModalProps {
   open: boolean
@@ -34,7 +33,7 @@ export function SettingsModal({
   models = [],
 }: SettingsModalProps) {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
   const [mcpServers, setMcpServers] = useState<McpServer[]>([])
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [legalDialog, setLegalDialog] = useState<'terms' | 'privacy' | null>(null)
@@ -46,15 +45,29 @@ export function SettingsModal({
     }
   }, [open])
 
-  const tabs: { id: SettingsTab; icon: string; label: string; badge?: string }[] = [
-    { id: 'general', icon: 'tune', label: t('settings.general') },
-    { id: 'account', icon: 'account_circle', label: t('settings.account') },
-    { id: 'personalization', icon: 'auto_awesome', label: t('personalization.title') },
-    { id: 'chat', icon: 'chat', label: t('settings.chatPrefs') },
-    { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced'), badge: 'New' },
-    { id: 'appkeys', icon: 'key', label: t('appKey.title') },
-    { id: 'usage', icon: 'bar_chart', label: t('usage.title') },
-    { id: 'data', icon: 'storage', label: t('settings.dataManagement') },
+  const tabGroups: { label: string; tabs: { id: SettingsTab; icon: string; label: string; badge?: string }[] }[] = [
+    {
+      label: t('settings.groupBasic'),
+      tabs: [
+        { id: 'account', icon: 'account_circle', label: t('settings.account') },
+        { id: 'general', icon: 'tune', label: t('settings.general') },
+      ],
+    },
+    {
+      label: t('settings.groupAI'),
+      tabs: [
+        { id: 'personalization', icon: 'auto_awesome', label: t('personalization.title') },
+        { id: 'chat', icon: 'chat', label: t('settings.chatPrefs') },
+      ],
+    },
+    {
+      label: t('settings.groupAdvanced'),
+      tabs: [
+        { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced'), badge: 'New' },
+        { id: 'appkeys', icon: 'key', label: t('appKey.title') },
+        { id: 'data', icon: 'storage', label: t('settings.dataManagement') },
+      ],
+    },
   ]
 
   const update = (partial: Partial<UserSettings>) => {
@@ -67,26 +80,36 @@ export function SettingsModal({
         <div className="px-6 mb-6">
           <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{t('settings.title')}</h2>
         </div>
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg w-full text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                activeTab === tab.id
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
-              )}
-            >
-              <Icon name={tab.icon} size="lg" />
-              <span>{tab.label}</span>
-              {tab.badge && (
-                <span className="ml-auto bg-blue-100 dark:bg-blue-900 text-[10px] text-blue-600 dark:text-blue-300 font-bold px-1.5 py-0.5 rounded-full">
-                  {tab.badge}
-                </span>
-              )}
-            </button>
+        <nav className="flex-1 px-3 overflow-y-auto custom-scrollbar">
+          {tabGroups.map((group, gi) => (
+            <div key={group.label}>
+              {gi > 0 && <div className="mx-2 my-2 border-t border-gray-100 dark:border-gray-800" />}
+              <div className="px-3 pt-3 pb-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                {group.label}
+              </div>
+              <div className="space-y-0.5">
+                {group.tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'flex items-center space-x-3 px-3 py-2.5 text-sm font-medium rounded-lg w-full text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                      activeTab === tab.id
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
+                    )}
+                  >
+                    <Icon name={tab.icon} size="lg" />
+                    <span>{tab.label}</span>
+                    {tab.badge && (
+                      <span className="ml-auto bg-blue-100 dark:bg-blue-900 text-[10px] text-blue-600 dark:text-blue-300 font-bold px-1.5 py-0.5 rounded-full">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </div>
@@ -126,10 +149,6 @@ export function SettingsModal({
             onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
             contextRounds={settings.contextRounds}
             onContextRoundsChange={(v) => update({ contextRounds: v })}
-            mcpEnabled={settings.mcpEnabled}
-            onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
-            showToolCalls={settings.showToolCalls}
-            onShowToolCallsChange={(v) => update({ showToolCalls: v })}
             streamingSpeed={settings.streamingSpeed}
             onStreamingSpeedChange={(v) => update({ streamingSpeed: v })}
             models={models}
@@ -154,6 +173,10 @@ export function SettingsModal({
                 prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
               )
             }}
+            mcpEnabled={settings.mcpEnabled}
+            onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
+            showToolCalls={settings.showToolCalls}
+            onShowToolCallsChange={(v) => update({ showToolCalls: v })}
           />
         )}
         {activeTab === 'account' && (
@@ -287,7 +310,6 @@ export function SettingsModal({
           />
         )}
         {activeTab === 'appkeys' && <AppKeySettings />}
-        {activeTab === 'usage' && <UsageSettings />}
       </ScrollArea>
     </Modal>
   )

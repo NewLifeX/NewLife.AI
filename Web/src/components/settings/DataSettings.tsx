@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/components/common/Icon'
 import { Toggle } from '@/components/atoms/Toggle'
+import { UsageSettings } from './UsageSettings'
 import { exportUserData, clearUserData, importUserData } from '@/lib/api'
 
 interface DataSettingsProps {
@@ -69,6 +70,12 @@ export function DataSettings({ onDataCleared, allowTraining = false, onAllowTrai
 
   return (
     <div className="mb-10">
+      {/* 使用统计区域 */}
+      <UsageSettings />
+
+      <div className="my-8 border-t border-gray-200 dark:border-gray-700" />
+
+      {/* 数据管理区域 */}
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
         <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-600 p-1 rounded mr-3">
           <Icon name="storage" variant="filled" size="lg" />
