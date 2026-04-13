@@ -130,12 +130,14 @@ public class SkillService(ILog log)
     public String? BuildSkillPrompt(Int32 conversationSkillId, String? messageContent, ISet<String>? selectedTools = null, ICollection<String>? skillCollector = null)
     {
         var parts = new List<String>();
+        // 跨三个来源去重：避免同一技能被系统技能、会话技能、@引用重复注入
+        var injectedSkillIds = new HashSet<Int32>();
 
         // 1. 系统内置技能
         var systemSkills = GetSystemSkills();
         foreach (var skill in systemSkills)
         {
-            if (!skill.Content.IsNullOrWhiteSpace())
+            if (!skill.Content.IsNullOrWhiteSpace() && injectedSkillIds.Add(skill.Id))
             {
                 var resolved = ResolveReferences(skill.Content, 0, []);
                 parts.Add(resolved);
@@ -147,7 +149,7 @@ public class SkillService(ILog log)
         if (conversationSkillId > 0)
         {
             var skill = GetSkillById(conversationSkillId);
-            if (skill != null && skill.Enable && !skill.Content.IsNullOrWhiteSpace())
+            if (skill != null && skill.Enable && !skill.Content.IsNullOrWhiteSpace() && injectedSkillIds.Add(skill.Id))
             {
                 var resolved = ResolveReferences(skill.Content, 0, []);
                 parts.Add(resolved);
@@ -155,10 +157,10 @@ public class SkillService(ILog log)
             }
         }
 
-        // 3. 消息中的 @技能名/@工具名 引用
+        // 3. 消息中的 @技能名/@工具名 引用（传入已注入 ID 集合，避免重入同一技能）
         if (!messageContent.IsNullOrEmpty())
         {
-            var referencedParts = ResolveMessageReferences(messageContent, selectedTools, skillCollector);
+            var referencedParts = ResolveMessageReferences(messageContent, selectedTools, skillCollector, injectedSkillIds);
             if (referencedParts != null)
                 parts.AddRange(referencedParts);
         }
@@ -172,8 +174,9 @@ public class SkillService(ILog log)
     /// <param name="content">消息内容</param>
     /// <param name="selectedTools">收集工具引用的集合；为 null 时不收集</param>
     /// <param name="skillCollector">收集技能名称（Code/Name 格式）的列表；为 null 时不收集</param>
+    /// <param name="injectedIds">已注入的技能 ID 集合，用于跨来源去重；为 null 时不做去重</param>
     /// <returns></returns>
-    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null, ICollection<String>? skillCollector = null)
+    private List<String>? ResolveMessageReferences(String content, ISet<String>? selectedTools = null, ICollection<String>? skillCollector = null, ISet<Int32>? injectedIds = null)
     {
         // 匹配 @技能名 格式，技能名可以是中英文数字下划线
         var matches = Regex.Matches(content, @"@([\w\u4e00-\u9fff]+)");
@@ -199,6 +202,9 @@ public class SkillService(ILog log)
             var skill = FindSkillByName(skillName);
             if (skill != null && skill.Enable && !String.IsNullOrWhiteSpace(skill.Content))
             {
+                // 跳过已在系统技能或会话技能中注入过的技能，避免重入
+                if (injectedIds != null && !injectedIds.Add(skill.Id)) continue;
+
                 var content2 = ResolveReferences(skill.Content, 0, []);
                 parts.Add(content2);
                 skillCollector?.Add($"{skill.Code}/{skill.Name}");
