@@ -200,7 +200,7 @@ public class MemoryService(ITracer tracer, ILog log)
         // 自动迁移历史英文分类名为中文并回写数据库（首次查询时一次性修复）
         foreach (var m in list)
         {
-            if (!CategoryNames.ContainsKey(m.Category)) continue;
+            if (m.Category.IsNullOrEmpty() || !CategoryNames.ContainsKey(m.Category)) continue;
             m.Category = NormalizeCategory(m.Category);
             m.Update();
         }
@@ -263,7 +263,7 @@ public class MemoryService(ITracer tracer, ILog log)
         var memories = GetActiveMemories(userId);
         if (memories.Count == 0) return null;
 
-        using var span = tracer?.NewSpan(nameof(BuildContextForUser), userId, memories.Count);
+        using var span = tracer?.NewSpan("ai:BuildContextForUser", userId, memories.Count);
 
         // 按分类分组，每分类最多取 MaxMemoriesPerCategory 条（置信度最高优先）
         var grouped = memories

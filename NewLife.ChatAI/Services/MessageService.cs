@@ -585,6 +585,18 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         // 防御：若调用方未预处理，再做一次多模态文本提取
         userMessage = ExtractTitleText(userMessage) ?? userMessage;
 
+        // 短文本无需调用模型，直接用作标题
+        var cleanMsg = userMessage.Replace("\n", " ").Replace("\r", "").Trim();
+        if (cleanMsg.Length <= 16)
+        {
+            if (!String.IsNullOrWhiteSpace(cleanMsg) && cleanMsg != conversation.Title)
+            {
+                conversation.Title = cleanMsg;
+                conversation.Update();
+            }
+            return cleanMsg;
+        }
+
         using var span = tracer?.NewSpan("ai:GenerateTitle");
 
         // 尝试通过模型生成标题
