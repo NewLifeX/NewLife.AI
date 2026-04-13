@@ -31,20 +31,7 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
     protected static Boolean IsCurrentUserSystem()
     {
         var user = ManageProvider.User;
-        if (user == null) return false;
-
-        var allIds = new List<Int32>();
-        if (user.RoleID > 0) allIds.Add(user.RoleID);
-        var extraIds = user.RoleIds?.SplitAsInt();
-        if (extraIds?.Length > 0)
-        {
-            foreach (var id in extraIds)
-            {
-                if (!allIds.Contains(id)) allIds.Add(id);
-            }
-        }
-
-        return allIds.Count > 0 && allIds.Any(id => Role.FindByID(id)?.IsSystem == true);
+        return user != null && user.Roles.Any(e => e.IsSystem);
     }
 
     /// <summary>Action 执行前校验登录状态。未标记 AllowAnonymous 的接口要求已登录</summary>
