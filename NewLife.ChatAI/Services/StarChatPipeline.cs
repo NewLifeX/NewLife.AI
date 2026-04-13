@@ -11,6 +11,7 @@ using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Services;
 
@@ -84,6 +85,16 @@ public class ChatAIPipeline(
             }
         }
 
+        // 将本轮工具函数定义（含参数 Schema）记录到埋点，方便测试分析；不落消息库，避免鉴权信息泄漏
+        if (context.AvailableToolNames.Count > 0)
+        {
+            using var toolSchemaSpan = tracer?.NewSpan("ai:ToolSchema");
+            toolSchemaSpan?.AppendTag(providers.SelectMany(p => p.GetTools())
+                .Where(t => t.Function != null)
+                .Select(t => t.Function)
+                .ToJson());
+        }
+
         // 4. 构建 ChatOptions
         var chatOptions = new ChatOptions
         {
@@ -118,7 +129,12 @@ public class ChatAIPipeline(
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
         {
             // 第一个 chunk 到来时 before filter（含记忆注入）已完成，立即触发一次
-            if (!sysFired) { sysFired = true; context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String; context.OnSystemReady?.Invoke(context.SystemPrompt); }
+            if (!sysFired)
+            {
+                sysFired = true;
+                context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+                context.OnSystemReady?.Invoke(context.SystemPrompt!);
+            }
 
             if (chunk.Usage != null) lastUsage = chunk.Usage;
 

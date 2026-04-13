@@ -55,11 +55,11 @@ public partial class ChatMessage
     public String? Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
 
     private String? _ThinkingContent;
-    /// <summary>思考内容。思考模式下的推理过程</summary>
+    /// <summary>思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）</summary>
     [DisplayName("思考内容")]
-    [Description("思考内容。思考模式下的推理过程")]
+    [Description("思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）")]
     [DataObjectField(false, false, true, -1)]
-    [BindColumn("ThinkingContent", "思考内容。思考模式下的推理过程", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
+    [BindColumn("ThinkingContent", "思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String? ThinkingContent { get => _ThinkingContent; set { if (OnPropertyChanging("ThinkingContent", value)) { _ThinkingContent = value; OnPropertyChanged("ThinkingContent"); } } }
 
     private NewLife.AI.Models.ThinkingMode _ThinkingMode;
@@ -87,19 +87,19 @@ public partial class ChatMessage
     public String? SkillNames { get => _SkillNames; set { if (OnPropertyChanging("SkillNames", value)) { _SkillNames = value; OnPropertyChanged("SkillNames"); } } }
 
     private String? _ToolNames;
-    /// <summary>工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔</summary>
+    /// <summary>工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）</summary>
     [DisplayName("工具列表")]
-    [Description("工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔")]
+    [Description("工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）")]
     [DataObjectField(false, false, true, 500)]
-    [BindColumn("ToolNames", "工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔", "")]
+    [BindColumn("ToolNames", "工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）", "")]
     public String? ToolNames { get => _ToolNames; set { if (OnPropertyChanging("ToolNames", value)) { _ToolNames = value; OnPropertyChanged("ToolNames"); } } }
 
     private String? _ToolCalls;
-    /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+    /// <summary>工具调用。role=assistant时存实际调用链路ToolCallDto[]（含入参Arguments和执行结果Result）</summary>
     [DisplayName("工具调用")]
-    [Description("工具调用。JSON格式，存储tool_call链路记录")]
+    [Description("工具调用。role=assistant时存实际调用链路ToolCallDto[]（含入参Arguments和执行结果Result）")]
     [DataObjectField(false, false, true, -1)]
-    [BindColumn("ToolCalls", "工具调用。JSON格式，存储tool_call链路记录", "", ShowIn = "Auto,-List,-Search")]
+    [BindColumn("ToolCalls", "工具调用。role=assistant时存实际调用链路ToolCallDto[]（含入参Arguments和执行结果Result）", "", ShowIn = "Auto,-List,-Search")]
     public String? ToolCalls { get => _ToolCalls; set { if (OnPropertyChanging("ToolCalls", value)) { _ToolCalls = value; OnPropertyChanged("ToolCalls"); } } }
 
     private String? _ModelName;
@@ -342,7 +342,7 @@ public partial class ChatMessage
         /// <summary>内容。Markdown格式文本</summary>
         public static readonly Field Content = FindByName("Content");
 
-        /// <summary>思考内容。思考模式下的推理过程</summary>
+        /// <summary>思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）</summary>
         public static readonly Field ThinkingContent = FindByName("ThinkingContent");
 
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
@@ -354,10 +354,10 @@ public partial class ChatMessage
         /// <summary>技能列表。本轮激活的技能名称，多个逗号分隔</summary>
         public static readonly Field SkillNames = FindByName("SkillNames");
 
-        /// <summary>工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔</summary>
+        /// <summary>工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）</summary>
         public static readonly Field ToolNames = FindByName("ToolNames");
 
-        /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+        /// <summary>工具调用。role=assistant时存实际调用链路ToolCallDto[]（含入参Arguments和执行结果Result）</summary>
         public static readonly Field ToolCalls = FindByName("ToolCalls");
 
         /// <summary>模型名称。实际使用的模型编码，方便回溯</summary>
@@ -414,7 +414,7 @@ public partial class ChatMessage
         /// <summary>内容。Markdown格式文本</summary>
         public const String Content = "Content";
 
-        /// <summary>思考内容。思考模式下的推理过程</summary>
+        /// <summary>思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）</summary>
         public const String ThinkingContent = "ThinkingContent";
 
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
@@ -426,10 +426,10 @@ public partial class ChatMessage
         /// <summary>技能列表。本轮激活的技能名称，多个逗号分隔</summary>
         public const String SkillNames = "SkillNames";
 
-        /// <summary>工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔</summary>
+        /// <summary>工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）</summary>
         public const String ToolNames = "ToolNames";
 
-        /// <summary>工具调用。JSON格式，存储tool_call链路记录</summary>
+        /// <summary>工具调用。role=assistant时存实际调用链路ToolCallDto[]（含入参Arguments和执行结果Result）</summary>
         public const String ToolCalls = "ToolCalls";
 
         /// <summary>模型名称。实际使用的模型编码，方便回溯</summary>

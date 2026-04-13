@@ -81,12 +81,12 @@
         <Column Name="ConversationId" DataType="Int64" Description="会话。所属会话" />
         <Column Name="Role" DataType="String" Description="角色。User=用户, Assistant=AI助手" />
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。Markdown格式文本" />
-        <Column Name="ThinkingContent" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。思考模式下的推理过程" />
+        <Column Name="ThinkingContent" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.Models.ThinkingMode" />
         <Column Name="Attachments" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="附件列表。存储魔方附件ID数组" />
         <Column Name="SkillNames" DataType="String" Length="200" Description="技能列表。本轮激活的技能名称，多个逗号分隔" />
-        <Column Name="ToolNames" DataType="String" Length="500" Description="工具列表。用户消息记录本轮可用工具名称，助手消息记录实际调用的MCP工具名称，多个逗号分隔" />
-        <Column Name="ToolCalls" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="工具调用。JSON格式，存储tool_call链路记录" />
+        <Column Name="ToolNames" DataType="String" Length="500" Description="工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）" />
+        <Column Name="ToolCalls" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="工具调用。role=assistant时存实际调用链路ToolCallDto[]（含入参Arguments和执行结果Result）" />
         <Column Name="ModelName" DataType="String" Description="模型名称。实际使用的模型编码，方便回溯" />
         <Column Name="MaxTokens" DataType="Int32" Description="最大Token数。本次请求的最大生成Token数限制" />
         <Column Name="Temperature" DataType="Double" Description="温度。本次请求的采样温度参数" />
