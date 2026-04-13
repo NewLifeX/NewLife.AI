@@ -74,7 +74,11 @@ public record UserSettingsDto(String Language, String Theme, Int32 FontSize, Str
     public Int32 ContentWidth { get; set; } = 0;
 };
 
-/// <summary>用户资料</summary>
+/// <summary>用户角色信息</summary>
+/// <param name="Name">角色名称</param>
+/// <param name="IsSystem">是否系统角色</param>
+public record UserRoleDto(String Name, Boolean IsSystem);
+
 /// <summary>用户资料</summary>
 public record UserProfileDto(
     String Nickname,
@@ -84,7 +88,8 @@ public record UserProfileDto(
     String? Department = null,
     String? Email = null,
     String? Mobile = null,
-    String? Remark = null
+    String? Remark = null,
+    UserRoleDto[]? Roles = null
 );
 
 /// <summary>系统公开配置。前端初始化时无需登录即可拉取</summary>

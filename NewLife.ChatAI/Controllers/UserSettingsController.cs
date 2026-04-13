@@ -19,22 +19,32 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
         var account = user?.Name ?? "";
         var avatar = user?.GetAvatarUrl();
 
-        // 角色：取主角色或所有角色名拼接
+        // 角色：收集所有角色 ID（主角色 + 多角色），统一查询
         String? role = null;
+        UserRoleDto[]? roles = null;
         if (user != null)
         {
-            var roleIds = user.RoleIds?.SplitAsInt();
-            if (roleIds?.Length > 0)
+            var allIds = new List<Int32>();
+            if (user.RoleID > 0) allIds.Add(user.RoleID);
+            var extraIds = user.RoleIds?.SplitAsInt();
+            if (extraIds?.Length > 0)
             {
-                var roleNames = roleIds
-                    .Select(id => Role.FindByID(id)?.Name)
-                    .Where(n => !n.IsNullOrEmpty())
-                    .Join("、");
-                if (!roleNames.IsNullOrEmpty()) role = roleNames;
+                foreach (var id in extraIds)
+                {
+                    if (!allIds.Contains(id)) allIds.Add(id);
+                }
             }
-            else if (user.RoleID > 0)
+
+            if (allIds.Count > 0)
             {
-                role = Role.FindByID(user.RoleID)?.Name;
+                var roleEntities = allIds
+                    .Select(id => Role.FindByID(id))
+                    .Where(r => r != null)
+                    .ToArray();
+
+                roles = roleEntities.Select(r => new UserRoleDto(r!.Name, r.IsSystem)).ToArray();
+                var roleNames = roleEntities.Select(r => r!.Name).Join("、");
+                if (!roleNames.IsNullOrEmpty()) role = roleNames;
             }
         }
 
@@ -51,7 +61,8 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
             Department: department,
             Email: user?.Mail.IsNullOrEmpty() == false ? user.Mail : null,
             Mobile: user?.Mobile.IsNullOrEmpty() == false ? user.Mobile : null,
-            Remark: user?.Remark.IsNullOrEmpty() == false ? user.Remark : null
+            Remark: user?.Remark.IsNullOrEmpty() == false ? user.Remark : null,
+            Roles: roles
         ));
     }
 
