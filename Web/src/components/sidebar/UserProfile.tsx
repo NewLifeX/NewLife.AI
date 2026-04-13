@@ -73,7 +73,7 @@ export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onAdmi
         className="w-full flex items-center space-x-3 px-2 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm text-gray-700 dark:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <Avatar type="user" src={avatarUrl} letter={letter} size="sm" />
-        <span className="font-medium truncate flex-1">{name}</span>
+        <span className="font-medium truncate flex-1 text-left">{name}</span>
         <Icon name="more_horiz" size="base" className="text-gray-400 flex-shrink-0" />
       </button>
     </div>
