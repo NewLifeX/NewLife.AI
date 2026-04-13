@@ -26,6 +26,27 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
     /// <returns></returns>
     protected static Int32 GetCurrentUserId() => XCode.Membership.ManageProvider.User?.ID ?? 0;
 
+    /// <summary>判断当前用户是否拥有系统角色（IsSystem=true）。用于系统管理接口的权限校验</summary>
+    /// <returns>拥有任意 IsSystem 角色则返回 true</returns>
+    protected static Boolean IsCurrentUserSystem()
+    {
+        var user = ManageProvider.User;
+        if (user == null) return false;
+
+        var allIds = new List<Int32>();
+        if (user.RoleID > 0) allIds.Add(user.RoleID);
+        var extraIds = user.RoleIds?.SplitAsInt();
+        if (extraIds?.Length > 0)
+        {
+            foreach (var id in extraIds)
+            {
+                if (!allIds.Contains(id)) allIds.Add(id);
+            }
+        }
+
+        return allIds.Count > 0 && allIds.Any(id => Role.FindByID(id)?.IsSystem == true);
+    }
+
     /// <summary>Action 执行前校验登录状态。未标记 AllowAnonymous 的接口要求已登录</summary>
     /// <param name="context">上下文</param>
     [NonAction]

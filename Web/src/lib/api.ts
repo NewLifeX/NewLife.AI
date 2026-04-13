@@ -705,6 +705,64 @@ export async function fetchSystemConfig(): Promise<SystemConfig> {
   return request<SystemConfig>('/api/system/config')
 }
 
+// ── System Settings (admin only) ──
+
+export interface SystemSettings {
+  // 站点配置
+  name: string
+  siteTitle: string
+  logoUrl: string
+  autoGenerateTitle: boolean
+  // 对话默认
+  defaultModel: number
+  defaultThinkingMode: number
+  defaultContextRounds: number
+  // 上传与分享
+  maxAttachmentSize: number
+  maxAttachmentCount: number
+  allowedExtensions: string
+  defaultImageSize: string
+  shareExpireDays: number
+  // 网关
+  enableGateway: boolean
+  enableGatewayPipeline: boolean
+  gatewayRateLimit: number
+  upstreamRetryCount: number
+  enableGatewayRecording: boolean
+  // 工具能力
+  enableFunctionCalling: boolean
+  enableMcp: boolean
+  enableSuggestedQuestionCache: boolean
+  streamingSpeed: number
+  toolAdvertiseThreshold: number
+  toolResultMaxChars: number
+  // 系统功能
+  enableUsageStats: boolean
+  backgroundGeneration: boolean
+  maxMessagesPerMinute: number
+  // 学习记忆
+  enableAutoLearning: boolean
+  learningModel: string
+  minLearningContentLength: number
+}
+
+export interface ModelOption {
+  id: number
+  name: string
+}
+
+export interface SystemSettingsWithModels extends SystemSettings {
+  models: ModelOption[]
+}
+
+export async function fetchSystemSettings(): Promise<SystemSettingsWithModels> {
+  return request<SystemSettingsWithModels>('/api/system/settings')
+}
+
+export async function saveSystemSettings(data: Partial<SystemSettings>): Promise<void> {
+  return request<void>('/api/system/settings', { method: 'PUT', body: JSON.stringify(data) })
+}
+
 // ── Skills ──
 
 export interface Skill {

@@ -9,12 +9,13 @@ interface UserProfileProps {
   avatarUrl?: string
   isSystem?: boolean
   onSettingsClick?: () => void
+  onSystemSettingsClick?: () => void
   onAdminClick?: () => void
   onLogoutClick?: () => void
   className?: string
 }
 
-export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onAdminClick, onLogoutClick, className }: UserProfileProps) {
+export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onSystemSettingsClick, onAdminClick, onLogoutClick, className }: UserProfileProps) {
   const { t } = useTranslation()
   const letter = name ? name.charAt(0).toUpperCase() : 'U'
   const [open, setOpen] = useState(false)
@@ -48,6 +49,15 @@ export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onAdmi
             <Icon name="settings" size="base" className="text-gray-400 dark:text-gray-500" />
             {t('menu.settings')}
           </button>
+          {isSystem && (
+            <button
+              onClick={() => handleMenuItem(onSystemSettingsClick)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-lg"
+            >
+              <Icon name="tune" size="base" className="text-gray-400 dark:text-gray-500" />
+              {t('menu.systemSettings')}
+            </button>
+          )}
           {isSystem && (
             <button
               onClick={() => handleMenuItem(onAdminClick)}

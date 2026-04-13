@@ -7,6 +7,7 @@ import { SharePage } from '@/pages/SharePage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { PresetSelector } from '@/components/chat/PresetSelector'
 import { SettingsModal } from '@/components/settings/SettingsModal'
+import { SystemSettingsModal } from '@/components/settings/SystemSettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
@@ -52,6 +53,7 @@ function ChatApp() {
   const [userAvatar, setUserAvatar] = useState<string | undefined>(undefined)
   const [isSystem, setIsSystem] = useState(false)
   const [appReady, setAppReady] = useState(false)
+  const [systemSettingsOpen, setSystemSettingsOpen] = useState(false)
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
   const [draftInput, setDraftInput] = useState('')
@@ -159,6 +161,7 @@ function ChatApp() {
         onConversationRename={renameConv}
         onNewChat={handleNewChat}
         onSettingsOpen={openSettings}
+        onSystemSettingsOpen={() => setSystemSettingsOpen(true)}
         onAdminOpen={() => window.open('/Admin', '_blank')}
         onLogout={() => { window.location.href = '/Admin/User/Logout' }}
         isSystem={isSystem}
@@ -254,6 +257,10 @@ function ChatApp() {
           loadConversations()
           handleNewChat()
         }}
+      />
+      <SystemSettingsModal
+        open={systemSettingsOpen}
+        onClose={() => setSystemSettingsOpen(false)}
       />
     </>
   )

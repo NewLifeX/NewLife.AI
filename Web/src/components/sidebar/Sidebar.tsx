@@ -22,6 +22,7 @@ interface SidebarProps {
   userAvatar?: string
   isSystem?: boolean
   onSettingsClick?: () => void
+  onSystemSettingsClick?: () => void
   onAdminClick?: () => void
   onLogoutClick?: () => void
   collapsed?: boolean
@@ -44,6 +45,7 @@ export function Sidebar({
   userAvatar,
   isSystem,
   onSettingsClick,
+  onSystemSettingsClick,
   onAdminClick,
   onLogoutClick,
   collapsed = false,
@@ -110,7 +112,7 @@ export function Sidebar({
         onLoadMore={onLoadMore}
       />
 
-      <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} isSystem={isSystem} onSettingsClick={onSettingsClick} onAdminClick={onAdminClick} onLogoutClick={onLogoutClick} />
+      <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} isSystem={isSystem} onSettingsClick={onSettingsClick} onSystemSettingsClick={onSystemSettingsClick} onAdminClick={onAdminClick} onLogoutClick={onLogoutClick} />
     </aside>
   )
 }
