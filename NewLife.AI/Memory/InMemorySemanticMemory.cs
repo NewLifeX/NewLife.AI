@@ -1,4 +1,4 @@
-namespace NewLife.AI.Memory;
+﻿namespace NewLife.AI.Memory;
 
 /// <summary>内存实现的语义记忆。使用余弦相似度进行向量检索，适合开发测试和小数据集场景</summary>
 /// <remarks>线程安全：内部使用 lock 保护，支持多线程并发读写。</remarks>
@@ -86,7 +86,10 @@ public sealed class InMemorySemanticMemory : ISemanticMemory
         lock (_lock)
         {
             if (_store.TryGetValue(collection, out var col))
+            {
                 col.Remove(id);
+                if (col.Count == 0) _store.Remove(collection);
+            }
         }
         return Task.CompletedTask;
     }
