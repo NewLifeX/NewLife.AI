@@ -517,20 +517,17 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
             assistantMsg.ThinkingContent = thinkingBuilder.ToString();
         if (toolCallsCollector.Count > 0)
             assistantMsg.ToolCalls = toolCallsCollector.ToJson();
-        // 记录本轮技能与工具信息
-        if (msgPipelineCtx.AvailableToolNames.Count > 0)
-        {
-            userMsg.ToolNames = String.Join(",", msgPipelineCtx.AvailableToolNames);
-            userMsg.Update();
-        }
-        if (skillId > 0 && !skillName.IsNullOrEmpty())
-            assistantMsg.SkillNames = skillName;
-        // 追加管道中解析到的所有技能名称（ISet 已自动去重）
+
+        // 技能名称与可用工具名称写入用户消息（ResolvedSkillNames 为 ISet 已自动去重）
         var skillNames = new HashSet<String>(msgPipelineCtx.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
         if (skillId > 0 && !skillName.IsNullOrEmpty())
             skillNames.Add(skillName);
         if (skillNames.Count > 0)
-            assistantMsg.SkillNames = String.Join(",", skillNames);
+            userMsg.SkillNames = String.Join(",", skillNames);
+        if (msgPipelineCtx.AvailableToolNames.Count > 0)
+            userMsg.ToolNames = String.Join(",", msgPipelineCtx.AvailableToolNames);
+        userMsg.Update();
+
         if (toolCallsCollector.Count > 0)
             assistantMsg.ToolNames = String.Join(",", toolCallsCollector.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase));
         ApplyUsageToMessage(assistantMsg, finalUsage, hasError, deferredErrorEvent?.Error);
