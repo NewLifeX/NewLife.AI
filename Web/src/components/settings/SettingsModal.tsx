@@ -37,11 +37,12 @@ export function SettingsModal({
   const [mcpServers, setMcpServers] = useState<McpServer[]>([])
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [legalDialog, setLegalDialog] = useState<'terms' | 'privacy' | null>(null)
+  const [avatarImgError, setAvatarImgError] = useState(false)
 
   useEffect(() => {
     if (open) {
       fetchMcpServers().then(setMcpServers).catch((e) => console.error('Failed to load MCP servers:', e))
-      fetchUserProfile().then(setUserProfile).catch(() => {})
+      fetchUserProfile().then((p) => { setUserProfile(p); setAvatarImgError(false) }).catch(() => {})
     }
   }, [open])
 
@@ -167,11 +168,12 @@ export function SettingsModal({
             <div className="space-y-5">
               {/* 用户头像 + 昵称卡片 */}
               <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                {userProfile?.avatar ? (
+                {userProfile?.avatar && userProfile.avatar.trim() && !avatarImgError ? (
                   <img
                     src={userProfile.avatar}
                     alt={userProfile.nickname || userProfile.account}
                     className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                    onError={() => setAvatarImgError(true)}
                   />
                 ) : (
                   <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 interface AvatarProps {
@@ -16,6 +17,13 @@ const sizeStyles = {
 }
 
 export function Avatar({ type, src, alt, size = 'md', letter, className }: AvatarProps) {
+  const [imgError, setImgError] = useState(false)
+
+  // src 变更时重置加载错误状态
+  useEffect(() => {
+    setImgError(false)
+  }, [src])
+
   if (type === 'ai') {
     return (
       <div
@@ -31,6 +39,9 @@ export function Avatar({ type, src, alt, size = 'md', letter, className }: Avata
     )
   }
 
+  // 空字符串视为无头像
+  const validSrc = src && src.trim() ? src : undefined
+
   return (
     <div
       className={cn(
@@ -39,8 +50,13 @@ export function Avatar({ type, src, alt, size = 'md', letter, className }: Avata
         className,
       )}
     >
-      {src ? (
-        <img src={src} alt={alt ?? 'User'} className="w-full h-full object-cover" />
+      {validSrc && !imgError ? (
+        <img
+          src={validSrc}
+          alt={alt ?? 'User'}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
       ) : (
         <span className="text-blue-600 font-bold">{letter ?? 'U'}</span>
       )}

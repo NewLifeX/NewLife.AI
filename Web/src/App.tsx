@@ -71,7 +71,7 @@ function ChatApp() {
       fetchUserProfile()
         .then((p) => {
           setUserName(p.nickname || p.account)
-          setUserAvatar(p.avatar ?? undefined)
+          setUserAvatar(p.avatar || undefined)
           setIsSystem(p.roles?.some((r) => r.isSystem) ?? false)
         })
         .catch(() => {}),
