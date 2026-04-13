@@ -21,7 +21,7 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClient("DashScope", "阿里百炼", "https://dashscope.aliyuncs.com/api/v1", Protocol = "DashScope", Description = "阿里云百炼大模型平台，支持 Qwen/通义千问全系列商业版模型")]
 [AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true)]
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
-[AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Vision = true)]
+[AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
 [AiClientModel("qwen3-plus", "Qwen3 Plus", Thinking = true)]
 [AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
