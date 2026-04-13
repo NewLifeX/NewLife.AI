@@ -263,6 +263,8 @@ public class ChatAIPipeline(
         var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools, context.ResolvedSkillNames);
         if (skillPrompt.IsNullOrWhiteSpace()) return;
 
+        span?.AppendTag(skillPrompt);
+
         var systemMsg = contextMessages.FirstOrDefault(m => m.Role == "system");
         if (systemMsg != null)
         {
