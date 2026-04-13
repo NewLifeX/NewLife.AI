@@ -109,7 +109,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
 
         if (appKey.UserId > 0)
         {
-            var iuser = XCode.Membership.ManageProvider.Provider?.FindByID(appKey.UserId) as XCode.Membership.IUser;
+            var iuser = ManageProvider.Provider?.FindByID(appKey.UserId) as XCode.Membership.IUser;
             roleIds = iuser?.RoleIds?.SplitAsInt() ?? [];
             departmentId = iuser?.DepartmentID ?? 0;
         }

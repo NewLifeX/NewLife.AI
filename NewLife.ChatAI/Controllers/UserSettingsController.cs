@@ -14,7 +14,7 @@ public class UserSettingsController(ChatApplicationService chatService) : ChatAp
     [HttpGet("profile")]
     public ActionResult<UserProfileDto> GetProfile()
     {
-        var user = XCode.Membership.ManageProvider.User;
+        var user = ManageProvider.User;
         var nickname = user?.DisplayName ?? user?.Name ?? "用户";
         var account = user?.Name ?? "";
         var avatar = user?.GetAvatarUrl();

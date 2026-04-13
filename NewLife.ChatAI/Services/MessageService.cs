@@ -10,7 +10,9 @@ using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Cube.Entity;
 using NewLife.Log;
+using NewLife.Office;
 using NewLife.Serialization;
+using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using AiFunctionCall = NewLife.AI.Models.FunctionCall;
 using AiToolCall = NewLife.AI.Models.ToolCall;
@@ -371,6 +373,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
             var cached = SuggestedQuestion.FindCachedTodayByQuestion(request.Content);
             if (cached != null)
             {
+                using var span2 = tracer?.NewSpan("ai:SuggestedCache", cached.Question);
                 await foreach (var ev in StreamSuggestedCacheAsync(conversationId, conversation, cached, request.ThinkingMode, cancellationToken))
                     yield return ev;
                 yield break;
@@ -837,7 +840,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         var parts = new List<String>();
 
         // 0. 当前用户基础信息
-        if (userId > 0 && XCode.Membership.ManageProvider.Provider?.FindByID(userId) is XCode.Membership.IUser user)
+        if (userId > 0 && ManageProvider.Provider?.FindByID(userId) is IUser user)
         {
             var sb = Pool.StringBuilder.Get();
             sb.Append($"当前用户：{user.DisplayName}（{user.Name}）");
@@ -845,7 +848,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
             if (roles?.Length > 0) sb.Append($"，角色：{roles.Join(",")}");
             if (user.DepartmentID > 0)
             {
-                var dept = XCode.Membership.Department.FindByID(user.DepartmentID);
+                var dept = Department.FindByID(user.DepartmentID);
                 if (dept != null) sb.Append($"，部门：{dept.Name}");
             }
             parts.Add(sb.Return(true));
@@ -1186,7 +1189,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
                 case ".docx":
                 case ".doc":
                     {
-                        using var reader = new NewLife.Office.WordReader(filePath);
+                        using var reader = new WordReader(filePath);
                         var sb = Pool.StringBuilder.Get();
                         foreach (var para in reader.ReadParagraphs())
                         {
@@ -1209,13 +1212,13 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
                     }
                 case ".pdf":
                     {
-                        using var reader = new NewLife.Office.PdfReader(filePath);
+                        using var reader = new PdfReader(filePath);
                         return reader.ExtractText();
                     }
                 case ".xlsx":
                 case ".xls":
                     {
-                        using var reader = new NewLife.Office.ExcelReader(filePath);
+                        using var reader = new ExcelReader(filePath);
                         var sb = Pool.StringBuilder.Get();
                         var sheets = reader.Sheets;
                         if (sheets != null)
@@ -1248,13 +1251,13 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
                 case ".pptx":
                 case ".ppt":
                     {
-                        using var reader = new NewLife.Office.PptxReader(filePath);
+                        using var reader = new PptxReader(filePath);
                         return reader.ReadAllText();
                     }
                 case ".txt":
                 case ".csv":
                 case ".md":
-                    return File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+                    return File.ReadAllText(filePath, Encoding.UTF8);
                 default:
                     return null;
             }

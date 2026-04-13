@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Services;
-using NewLife.Cube;
 using NewLife.ChatAI.Models;
+using NewLife.ChatAI.Services;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -13,7 +13,7 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
     [HttpGet]
     public async Task<ActionResult<ModelInfoDto[]>> QueryAsync(CancellationToken cancellationToken)
     {
-        var user = XCode.Membership.ManageProvider.User;
+        var user = ManageProvider.User;
         var roleIds = user?.Roles?.Select(e => e.ID).ToArray() ?? [];
         var departmentId = user?.DepartmentID ?? 0;
 

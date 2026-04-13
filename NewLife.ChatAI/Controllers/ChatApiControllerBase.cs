@@ -24,7 +24,7 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
 
     /// <summary>获取当前登录用户编号</summary>
     /// <returns></returns>
-    protected static Int32 GetCurrentUserId() => XCode.Membership.ManageProvider.User?.ID ?? 0;
+    protected static Int32 GetCurrentUserId() => ManageProvider.User?.ID ?? 0;
 
     /// <summary>判断当前用户是否拥有系统角色（IsSystem=true）。用于系统管理接口的权限校验</summary>
     /// <returns>拥有任意 IsSystem 角色则返回 true</returns>
