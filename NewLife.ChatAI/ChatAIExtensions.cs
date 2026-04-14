@@ -143,8 +143,9 @@ public static class ChatAIExtensions
         if (redirectToChat)
         {
             app.MapGet("/", () => Results.Redirect("/chat"));
-            // 仅对 /chat/* 路径做 SPA 兜底，不干扰其他模块（如 Cube 后台）的路由
+            // 仅对 /chat/* 与 /share/* 路径做 SPA 兜底，不干扰其他模块（如 Cube 后台）的路由
             app.MapFallbackToFile("/chat/{**path}", "chat.html");
+            app.MapFallbackToFile("/share/{**path}", "chat.html");
         }
 
         return app;

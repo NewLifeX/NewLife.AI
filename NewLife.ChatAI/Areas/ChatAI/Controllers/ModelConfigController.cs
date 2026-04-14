@@ -25,22 +25,22 @@ public class ModelConfigController : EntityController<ModelConfig>
 
         {
             var df = AddFormFields.AddDataField("RoleIds", "RoleNames");
-            df.DataSource = entity => Role.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            df.DataSource = entity => Role.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.ID).ToDictionary(e => e.ID, e => e.Name);
             AddFormFields.RemoveField("RoleNames");
         }
         {
             var df = EditFormFields.AddDataField("RoleIds", "RoleNames");
-            df.DataSource = entity => Role.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            df.DataSource = entity => Role.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.ID).ToDictionary(e => e.ID, e => e.Name);
             EditFormFields.RemoveField("RoleNames");
         }
         {
             var df = AddFormFields.AddDataField("DepartmentIds", "DepartmentNames");
-            df.DataSource = entity => Department.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            df.DataSource = entity => Department.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.ID).ToDictionary(e => e.ID, e => e.Name);
             AddFormFields.RemoveField("DepartmentNames");
         }
         {
             var df = EditFormFields.AddDataField("DepartmentIds", "DepartmentNames");
-            df.DataSource = entity => Department.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ToDictionary(e => e.ID, e => e.Name);
+            df.DataSource = entity => Department.FindAllWithCache().Where(x => x.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.ID).ToDictionary(e => e.ID, e => e.Name);
             EditFormFields.RemoveField("DepartmentNames");
         }
     }
