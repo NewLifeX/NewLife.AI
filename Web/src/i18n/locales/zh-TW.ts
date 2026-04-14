@@ -329,6 +329,8 @@ export default {
     sharedAt: '分享於',
     expiresAt: '過期於',
     readOnlyNotice: '這是一個唯讀的分享對話，您無法傳送訊息或進行操作。',
+    you: '使用者',
+    assistant: '助手',
   },
   usage: {
     title: '用量統計',

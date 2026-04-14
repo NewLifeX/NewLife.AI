@@ -329,6 +329,8 @@ export default {
     sharedAt: 'Shared at',
     expiresAt: 'Expires at',
     readOnlyNotice: 'This is a read-only shared conversation. You cannot send messages or perform actions.',
+    you: 'User',
+    assistant: 'Assistant',
   },
   usage: {
     title: 'Usage Statistics',

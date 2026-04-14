@@ -79,48 +79,58 @@ export function SharePage() {
       </div>
 
       {/* Messages */}
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         {data.messages.map((msg) => {
+          const isUser = msg.role === 'user'
           const msgTime = safeTime(msg.createdAt, 'time')
           return (
-          <div
-            key={msg.id}
-            className={cn(
-              'flex',
-              msg.role === 'user' ? 'justify-end' : 'justify-start',
-            )}
-          >
             <div
+              key={msg.id}
               className={cn(
-                'max-w-[85%] rounded-2xl px-4 py-3',
-                msg.role === 'user'
-                  ? 'bg-primary text-white rounded-br-sm'
-                  : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-bl-sm',
+                'rounded-xl px-5 py-4',
+                isUser
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
+                  : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700',
               )}
             >
+              {/* Role header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  className={cn(
+                    'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0',
+                    isUser
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white',
+                  )}
+                >
+                  <Icon name={isUser ? 'person' : 'smart_toy'} size="xs" />
+                </div>
+                <span
+                  className={cn(
+                    'text-xs font-semibold',
+                    isUser ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300',
+                  )}
+                >
+                  {isUser ? t('sharePage.you') : t('sharePage.assistant')}
+                </span>
+                {msgTime && <span className="text-[10px] text-gray-400 ml-auto">{msgTime}</span>}
+              </div>
+              {/* Thinking */}
               {msg.thinkingContent && (
-                <details className="mb-2">
+                <details className="mb-3 ml-8">
                   <summary className="text-xs opacity-60 cursor-pointer">{t('chat.thinkingProcess')}</summary>
                   <div className="mt-1 text-xs opacity-70 whitespace-pre-wrap">{msg.thinkingContent}</div>
                 </details>
               )}
-              {msg.role === 'assistant' ? (
-                <MarkdownRenderer content={msg.content} />
-              ) : (
-                <div className="whitespace-pre-wrap">{msg.content}</div>
-              )}
-              {msgTime && (
-                <div
-                  className={cn(
-                    'text-[10px] mt-1',
-                    msg.role === 'user' ? 'text-white/60' : 'text-gray-400',
-                  )}
-                >
-                  {msgTime}
-                </div>
-              )}
+              {/* Content */}
+              <div className="ml-8">
+                {isUser ? (
+                  <div className="whitespace-pre-wrap text-gray-900 dark:text-gray-100">{msg.content}</div>
+                ) : (
+                  <MarkdownRenderer content={msg.content} />
+                )}
+              </div>
             </div>
-          </div>
           )
         })}
       </div>

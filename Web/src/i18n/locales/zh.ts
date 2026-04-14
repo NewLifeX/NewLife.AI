@@ -327,6 +327,8 @@ export default {
     sharedAt: '分享于',
     expiresAt: '过期于',
     readOnlyNotice: '这是一个只读的分享对话，您无法发送消息或进行操作。',
+    you: '用户',
+    assistant: '助手',
   },
   usage: {
     title: '用量统计',
