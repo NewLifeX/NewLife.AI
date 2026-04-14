@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
@@ -10,7 +8,7 @@ namespace NewLife.ChatAI.Controllers;
 
 /// <summary>图像编辑控制器。面向前端 Web UI，使用 Cookie 认证，无需 AppKey</summary>
 [Route("api/images")]
-public class ImageEditController(GatewayService gatewayService) : ChatApiControllerBase
+public class ImageEditController(ModelService modelService) : ChatApiControllerBase
 {
     /// <summary>图像编辑。解析 multipart/form-data，路由到对应图像编辑服务商</summary>
     [HttpPost("edits")]
@@ -29,12 +27,11 @@ public class ImageEditController(GatewayService gatewayService) : ChatApiControl
         if (imageFile == null || imageFile.Length == 0)
             return BadRequest(new { code = "INVALID_REQUEST", message = "image 文件不能为空" });
 
-        var config = gatewayService.ResolveModelByCode(modelCode);
+        var config = modelService.ResolveModelByCode(modelCode);
         if (config == null)
             return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
 
-        var descriptor = gatewayService.GetDescriptor(config);
-        if (descriptor == null)
+        if (!modelService.IsAvailable(config))
             return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         try
@@ -62,10 +59,9 @@ public class ImageEditController(GatewayService gatewayService) : ChatApiControl
             if (maskInfo != null)
                 contentParts.Add(new { type = "image_url", image_url = new { url = maskInfo } });
 
-            var options = GatewayService.BuildOptions(config);
-            using var editClient = descriptor.Factory(options);
+            using var editClient = modelService.CreateClient(config)!;
             var response = await editClient.GetResponseAsync(
-                [new AiChatMessage { Role = "user", Content = $"Edit this image: {prompt}. Size: {size}. Image: {dataUri}" }],
+                [new AiChatMessage { Role = "user", Content = contentParts }],
                 new ChatOptions { Model = config.Code },
                 cancellationToken).ConfigureAwait(false);
 

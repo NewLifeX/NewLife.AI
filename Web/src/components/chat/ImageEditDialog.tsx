@@ -23,6 +23,11 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
   const [submitting, setSubmitting] = useState(false)
   const imageRef = useRef<HTMLImageElement | null>(null)
 
+  useEffect(() => {
+    if (!selectedModel && models.length > 0)
+      setSelectedModel(models[0].code)
+  }, [models, selectedModel])
+
   // 加载图片到 canvas
   useEffect(() => {
     const img = new Image()
@@ -253,7 +258,7 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
             />
             <button
               onClick={handleSubmit}
-              disabled={!prompt.trim() || !imageLoaded || submitting}
+              disabled={!prompt.trim() || !imageLoaded || submitting || !selectedModel}
               className={cn(
                 'px-6 py-2.5 rounded-xl font-medium text-white transition-colors',
                 'bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed',

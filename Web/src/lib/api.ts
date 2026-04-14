@@ -80,12 +80,16 @@ async function fetchSSE(
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let res: Response
   try {
+    // FormData 时不设置 Content-Type，让浏览器自动加 multipart boundary
+    const isFormData = options?.body instanceof FormData
     res = await fetch(`${BASE_URL}${path}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers: isFormData
+        ? { ...(options?.headers as Record<string, string>) }
+        : {
+            'Content-Type': 'application/json',
+            ...options?.headers,
+          },
     })
   } catch {
     // 网络不通 / DNS 解析失败 / 后端未启动
@@ -869,12 +873,10 @@ export async function editImage(
   formData.append('model', model)
   if (mask) formData.append('mask', mask, 'mask.png')
   if (size) formData.append('size', size)
-  const res = await fetch(`${BASE_URL}/api/images/edits`, {
+  return request<ImageEditResult>('/api/images/edits', {
     method: 'POST',
     body: formData,
   })
-  if (!res.ok) throw new Error(`Image edit ${res.status}`)
-  return res.json()
 }
 
 // ── AppKey Management ──
