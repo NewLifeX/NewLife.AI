@@ -30,7 +30,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         if (appKey == null)
             return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
 
-        var models = gatewayService.GetModelsForAppKey(appKey);
+        var models = modelService.GetModelsForAppKey(appKey);
 
         var data = models.Select(m =>
         {
@@ -151,10 +151,10 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
 
         // 路由到模型
-        var config = gatewayService.ResolveModelByCode(modelCode);
+        var config = modelService.ResolveModelByCode(modelCode);
         if (config == null)
             return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
-        if (!gatewayService.IsModelAllowed(appKey, config))
+        if (!modelService.IsModelAllowed(appKey, config))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
 
         if (!modelService.IsAvailable(config))
@@ -219,10 +219,10 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return BadRequest(new { code = "INVALID_REQUEST", message = "image 文件不能为空" });
 
         // 路由到模型
-        var config = gatewayService.ResolveModelByCode(modelCode);
+        var config = modelService.ResolveModelByCode(modelCode);
         if (config == null)
             return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
-        if (!gatewayService.IsModelAllowed(appKey, config))
+        if (!modelService.IsModelAllowed(appKey, config))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
 
         if (!modelService.IsAvailable(config))
@@ -298,13 +298,13 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         }
 
         // 模型路由
-        var config = gatewayService.ResolveModelByCode(request.Model);
+        var config = modelService.ResolveModelByCode(request.Model);
         if (config == null)
         {
             await WriteErrorAsync(404, "MODEL_NOT_FOUND", $"未找到模型 '{request.Model}'").ConfigureAwait(false);
             return;
         }
-        if (!gatewayService.IsModelAllowed(appKey, config))
+        if (!modelService.IsModelAllowed(appKey, config))
         {
             await WriteErrorAsync(403, "MODEL_FORBIDDEN", $"当前密钥无权使用模型 '{request.Model}'").ConfigureAwait(false);
             return;

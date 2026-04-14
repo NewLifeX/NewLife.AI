@@ -33,13 +33,11 @@ public enum GatewayProtocol
 /// <summary>API 网关服务。按 model 字段路由到对应的模型提供商，支持认证校验和限流重试</summary>
 /// <remarks>实例化网关服务</remarks>
 /// <param name="usageService">用量统计服务</param>
-/// <param name="serviceProvider">服务提供者</param>
+/// <param name="modelService">模型服务。统一负责模型可用性判断与 IChatClient 创建</param>
 /// <param name="log">日志</param>
-public class GatewayService(UsageService? usageService, IServiceProvider serviceProvider, ILog log)
+public class GatewayService(UsageService? usageService, ModelService modelService, ILog log)
 {
     #region 属性
-    private readonly AiClientRegistry _registry = AiClientRegistry.Default;
-
     /// <summary>上游重试最大次数</summary>
     private const Int32 MaxRetryCount = 5;
 
@@ -97,131 +95,6 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
         if (appKey.ExpireTime.Year > 2000 && appKey.ExpireTime < DateTime.Now) return null;
 
         return appKey;
-    }
-
-    /// <summary>根据 AppKey 获取该密钥所属用户可使用的模型列表</summary>
-    /// <param name="appKey">应用密钥实体</param>
-    /// <returns>经权限过滤的启用模型列表</returns>
-    public IList<ModelConfig> GetModelsForAppKey(AppKey appKey)
-    {
-        Int32[] roleIds = [];
-        var departmentId = 0;
-
-        if (appKey.UserId > 0)
-        {
-            var iuser = ManageProvider.Provider?.FindByID(appKey.UserId) as XCode.Membership.IUser;
-            roleIds = iuser?.RoleIds?.SplitAsInt() ?? [];
-            departmentId = iuser?.DepartmentID ?? 0;
-        }
-
-        var models = ModelConfig.FindAllByPermission(roleIds, departmentId);
-        return models.Where(e => IsModelAllowed(appKey, e)).ToList();
-    }
-
-    /// <summary>检查 AppKey 是否允许访问指定模型。若未配置模型限制则放行</summary>
-    /// <param name="appKey">应用密钥</param>
-    /// <param name="config">模型配置</param>
-    /// <returns></returns>
-    public Boolean IsModelAllowed(AppKey appKey, ModelConfig config)
-    {
-        if (appKey == null || config == null) return false;
-
-        var set = appKey.GetAllowedModels();
-        if (set.Count == 0) return true;
-
-        if (!config.Code.IsNullOrEmpty() && set.Contains(config.Code)) return true;
-        if (!config.Name.IsNullOrEmpty() && set.Contains(config.Name)) return true;
-
-        return false;
-    }
-    #endregion
-
-    #region 模型路由
-    /// <summary>根据模型编号查找模型配置</summary>
-    /// <param name="modelId">模型编号</param>
-    /// <returns>模型配置，未找到返回 null</returns>
-    public ModelConfig? ResolveModel(Int32 modelId)
-    {
-        if (modelId <= 0) return null;
-
-        var config = ModelConfig.FindById(modelId);
-        if (config == null || !config.Enable) return null;
-
-        return config;
-    }
-
-    /// <summary>根据模型编号查找模型配置，当编号为 0 或找不到时自动降级为系统默认模型</summary>
-    /// <param name="modelId">模型编号，0 表示自动选择默认模型</param>
-    /// <returns>模型配置，系统无可用模型时返回 null</returns>
-    /// <remarks>适用于前端首次发消息尚未选择模型（model_id=0）的兼容场景</remarks>
-    public ModelConfig? ResolveModelOrDefault(Int32 modelId)
-    {
-        if (modelId > 0)
-        {
-            var config = ModelConfig.FindById(modelId);
-            if (config != null && config.Enable) return config;
-        }
-
-        // 降级：按系统设置取默认模型，再取第一个可用模型
-        var setting = ChatSetting.Current;
-        var models = ModelConfig.FindAllEnabled();
-        return SelectDefaultModel(models, setting.DefaultModel);
-    }
-
-    /// <summary>从已启用模型列表中按优先级选出默认模型。优先匹配 <paramref name="defaultModelId"/>，其次取列表第一项</summary>
-    /// <param name="models">已启用的模型列表</param>
-    /// <param name="defaultModelId">系统配置的默认模型编号，0 表示不指定</param>
-    /// <returns>选出的模型配置，列表为空时返回 null</returns>
-    public static ModelConfig? SelectDefaultModel(IList<ModelConfig> models, Int32 defaultModelId)
-    {
-        if (models == null || models.Count == 0) return null;
-
-        if (defaultModelId > 0)
-        {
-            var preferred = models.FirstOrDefault(e => e.Id == defaultModelId);
-            if (preferred != null) return preferred;
-        }
-
-        return models.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).FirstOrDefault();
-    }
-
-    /// <summary>根据模型编码查找模型配置（网关场景，按Code匹配第一个启用的模型）</summary>
-    /// <param name="modelCode">模型编码</param>
-    /// <returns>模型配置，未找到返回 null</returns>
-    public ModelConfig? ResolveModelByCode(String? modelCode)
-    {
-        if (String.IsNullOrWhiteSpace(modelCode)) return null;
-
-        return ModelConfig.FindByCode(modelCode);
-    }
-
-    /// <summary>根据模型配置获取对应的 AI 客户端描述符。按 ProviderConfig.Provider（编码或类型全名）查找注册表</summary>
-    /// <param name="config">模型配置</param>
-    /// <returns>描述符，未找到返回 null</returns>
-    public AiClientDescriptor? GetDescriptor(ModelConfig config)
-    {
-        if (config == null) return null;
-
-        var providerConfig = config.ProviderInfo;
-        if (providerConfig == null) return null;
-
-        // 按 ProviderConfig.Provider（Code 或旧版类型全名）查找描述符
-        return _registry.GetDescriptor(providerConfig.Provider);
-    }
-
-    /// <summary>构建服务商连接选项。从关联的 ProviderConfig 获取 Endpoint/ApiKey，从 ModelConfig 获取默认模型和协议</summary>
-    /// <param name="config">模型配置</param>
-    /// <returns></returns>
-    public static AiClientOptions BuildOptions(ModelConfig config)
-    {
-        var providerConfig = config.ProviderInfo;
-        return new AiClientOptions
-        {
-            Endpoint = config.GetEffectiveEndpoint(),
-            ApiKey = config.GetEffectiveApiKey(),
-            Model = config.Code,
-            Protocol = providerConfig?.ApiProtocol,
-        };
     }
     #endregion
 
@@ -323,13 +196,10 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
     /// <returns></returns>
     public async Task<ChatResponse> ChatAsync(IChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
     {
-        var descriptor = GetDescriptor(config);
-        if (descriptor == null)
+        using var client = modelService.CreateClient(config);
+        if (client == null)
             throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
 
-        var options = BuildOptions(config);
-
-        using var client = descriptor.Factory(options);
         ChatResponse? response = null;
         for (var i = 0; i <= MaxRetryCount; i++)
         {
@@ -366,13 +236,10 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
     /// <returns></returns>
     public async IAsyncEnumerable<ChatResponse> ChatStreamAsync(IChatRequest request, ModelConfig config, AppKey? appKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var descriptor = GetDescriptor(config);
-        if (descriptor == null)
+        using var streamClient = modelService.CreateClient(config);
+        if (streamClient == null)
             throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
 
-        var options = BuildOptions(config);
-
-        using var streamClient = descriptor.Factory(options);
         IAsyncEnumerable<IChatResponse>? stream = null;
         for (var i = 0; i <= MaxRetryCount; i++)
         {

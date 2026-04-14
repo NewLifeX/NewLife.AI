@@ -1,6 +1,8 @@
-using NewLife.AI.Clients;
-using NewLife.AI.Models;
+﻿using NewLife.AI.Clients;
 using NewLife.ChatAI.Entity;
+using NewLife.Log;
+using XCode.Membership;
+using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
 
@@ -9,11 +11,47 @@ namespace NewLife.ChatAI.Services;
 /// 将模型路由（按 ID/Code 查找 ModelConfig）与客户端工厂（BuildOptions + AiClientRegistry.Factory）
 /// 统一收口，业务服务只需注入 ModelService 即可获取可用模型和对应的 IChatClient 实例。
 /// </remarks>
-public class ModelService
+public class ModelService(ITracer tracer, ILog log)
 {
     private readonly AiClientRegistry _registry = AiClientRegistry.Default;
 
     #region 模型解析
+    /// <summary>根据 AppKey 获取该密钥所属用户可使用的模型列表</summary>
+    /// <param name="appKey">应用密钥实体</param>
+    /// <returns>经权限过滤的启用模型列表</returns>
+    public IList<ModelConfig> GetModelsForAppKey(AppKey appKey)
+    {
+        Int32[] roleIds = [];
+        var departmentId = 0;
+
+        if (appKey.UserId > 0)
+        {
+            var iuser = ManageProvider.Provider?.FindByID(appKey.UserId) as IUser;
+            roleIds = iuser?.RoleIds?.SplitAsInt() ?? [];
+            departmentId = iuser?.DepartmentID ?? 0;
+        }
+
+        var models = ModelConfig.FindAllByPermission(roleIds, departmentId);
+        return models.Where(e => IsModelAllowed(appKey, e)).ToList();
+    }
+
+    /// <summary>检查 AppKey 是否允许访问指定模型。若未配置模型限制则放行</summary>
+    /// <param name="appKey">应用密钥</param>
+    /// <param name="config">模型配置</param>
+    /// <returns>true 表示允许访问</returns>
+    public Boolean IsModelAllowed(AppKey appKey, ModelConfig config)
+    {
+        if (appKey == null || config == null) return false;
+
+        var set = appKey.GetAllowedModels();
+        if (set.Count == 0) return true;
+
+        if (!config.Code.IsNullOrEmpty() && set.Contains(config.Code)) return true;
+        if (!config.Name.IsNullOrEmpty() && set.Contains(config.Name)) return true;
+
+        return false;
+    }
+
     /// <summary>根据模型编号查找模型配置</summary>
     /// <param name="modelId">模型编号</param>
     /// <returns>模型配置，未找到或未启用返回 null</returns>
@@ -104,7 +142,11 @@ public class ModelService
         var descriptor = _registry.GetDescriptor(providerConfig.Provider);
         if (descriptor == null) return null;
 
-        return descriptor.Factory(BuildOptions(config));
+        var client = descriptor.Factory(BuildOptions(config));
+        if (client is ITracerFeature tf) tf.Tracer = tracer;
+        if (client is ILogFeature lf) lf.Log = log;
+
+        return client;
     }
 
     /// <summary>检查模型的服务商是否已注册可用</summary>
