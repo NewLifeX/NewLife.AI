@@ -56,6 +56,8 @@ public class ChatAIPipeline(
         ChatPipelineContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        using var span = tracer?.NewSpan("ai:StreamAsync", new { messages = contextMessages.Count });
+
         // 1. 技能注入 + 使用记录（若外部未调用 PrepareContext，此处兖底）
         if (context.SystemPrompt == null)
             PrepareContext(contextMessages, context);
@@ -203,6 +205,8 @@ public class ChatAIPipeline(
         ChatPipelineContext context,
         CancellationToken cancellationToken)
     {
+        using var span = tracer?.NewSpan("ai:CompleteAsync", new { messages = contextMessages.Count });
+
         if (context.SystemPrompt == null)
             PrepareContext(contextMessages, context);
 
