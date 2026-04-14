@@ -182,12 +182,14 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 
                 // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
                 ToolCallEventInfo resultEvent;
-                var span = Tracer?.NewSpan($"tool:{tc.Function.Name}", tc.Function.Arguments);
+                var span = Tracer?.NewSpan($"ai:tool:{tc.Function.Name}", tc.Function.Arguments);
                 try
                 {
                     var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
                     workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = toolResult });
-                    span?.Value = toolResult?.Length ?? 0;
+                    if (span != null && toolResult != null)
+                        span.AppendTag(toolResult, toolResult.Length);
+
                     resultEvent = new ToolCallEventInfo("done", tc.Id, tc.Function.Name, toolResult);
                 }
                 catch (Exception ex)

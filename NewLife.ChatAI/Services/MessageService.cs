@@ -1001,7 +1001,6 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         String errorLogPrefix,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ISpan? toolSpan = null;
         var artifactDetector = new ArtifactDetector();
 
         var enumerator = source.GetAsyncEnumerator(cancellationToken);
@@ -1061,21 +1060,14 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
                         setErrorState(true, ev);
                         break;
                     case "tool_call_start" when toolCallsCollector != null:
-                        toolSpan = tracer?.NewSpan($"ai:ToolCall:{ev.Name}");
                         toolCallsCollector.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments));
                         yield return ev;
                         break;
                     case "tool_call_done" when toolCallsCollector != null:
-                        toolSpan?.AppendTag(ev.Result!);
-                        toolSpan?.Dispose();
-                        toolSpan = null;
                         UpdateToolCallStatus(toolCallsCollector, ev.ToolCallId, ToolCallStatus.Done, ev.Result);
                         yield return ev;
                         break;
                     case "tool_call_error" when toolCallsCollector != null:
-                        toolSpan?.SetError(new Exception(ev.Error));
-                        toolSpan?.Dispose();
-                        toolSpan = null;
                         UpdateToolCallStatus(toolCallsCollector, ev.ToolCallId, ToolCallStatus.Error, ev.Error);
                         yield return ev;
                         break;
