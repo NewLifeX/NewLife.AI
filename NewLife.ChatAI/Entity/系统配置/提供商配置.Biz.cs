@@ -143,7 +143,7 @@ public partial class ProviderConfig : Entity<ProviderConfig>
     /// <returns></returns>
     public static IList<ProviderConfig> FindAllEnabled()
     {
-        return FindAll(_.Enable == true, _.Sort.Asc(), null, 0, 0);
+        return FindAll(_.Enable == true, _.Sort.Desc() & _.Id.Desc(), null, 0, 0);
     }
 
     /// <summary>查找或初始化提供商配置，已存在则更新基本信息（不覆盖用户配置的 Endpoint/ApiKey）</summary>

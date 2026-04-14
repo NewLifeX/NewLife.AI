@@ -71,7 +71,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
                 (!e.Name.IsNullOrEmpty() && e.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
                 (!e.DisplayName.IsNullOrEmpty() && e.DisplayName.Contains(keyword, StringComparison.OrdinalIgnoreCase))).ToList();
 
-        foreach (var tool in tools.OrderByDescending(e => e.Sort))
+        foreach (var tool in tools.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id))
         {
             result.Add(new SkillDto
             {

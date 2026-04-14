@@ -182,7 +182,7 @@ public class GatewayService(UsageService? usageService, IServiceProvider service
             if (preferred != null) return preferred;
         }
 
-        return models.FirstOrDefault();
+        return models.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).FirstOrDefault();
     }
 
     /// <summary>根据模型编码查找模型配置（网关场景，按Code匹配第一个启用的模型）</summary>

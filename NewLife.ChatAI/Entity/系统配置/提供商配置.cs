@@ -120,11 +120,11 @@ public partial class ProviderConfig
     public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
 
     private Int32 _Sort;
-    /// <summary>排序。越小越靠前</summary>
+    /// <summary>排序。越大越靠前</summary>
     [DisplayName("排序")]
-    [Description("排序。越小越靠前")]
+    [Description("排序。越大越靠前")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("Sort", "排序。越小越靠前", "")]
+    [BindColumn("Sort", "排序。越大越靠前", "")]
     public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
 
     private Int32 _CreateUserID;
@@ -349,7 +349,7 @@ public partial class ProviderConfig
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
-        /// <summary>排序。越小越靠前</summary>
+        /// <summary>排序。越大越靠前</summary>
         public static readonly Field Sort = FindByName("Sort");
 
         /// <summary>创建用户</summary>
@@ -415,7 +415,7 @@ public partial class ProviderConfig
         /// <summary>启用</summary>
         public const String Enable = "Enable";
 
-        /// <summary>排序。越小越靠前</summary>
+        /// <summary>排序。越大越靠前</summary>
         public const String Sort = "Sort";
 
         /// <summary>创建用户</summary>

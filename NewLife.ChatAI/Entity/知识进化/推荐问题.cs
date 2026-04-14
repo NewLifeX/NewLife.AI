@@ -17,8 +17,8 @@ namespace NewLife.ChatAI.Entity;
 [Serializable]
 [DataObject]
 [Description("推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验")]
-[BindIndex("IX_SuggestedQuestion_SortOrder", false, "SortOrder")]
-[BindIndex("IX_SuggestedQuestion_Enable_SortOrder", false, "Enable,SortOrder")]
+[BindIndex("IX_SuggestedQuestion_Sort", false, "Sort")]
+[BindIndex("IX_SuggestedQuestion_Enable_Sort", false, "Enable,Sort")]
 [BindTable("SuggestedQuestion", Description = "推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class SuggestedQuestion
 {
@@ -79,13 +79,13 @@ public partial class SuggestedQuestion
     [BindColumn("Color", "颜色。图标CSS颜色类，如text-blue-500", "")]
     public String? Color { get => _Color; set { if (OnPropertyChanging("Color", value)) { _Color = value; OnPropertyChanged("Color"); } } }
 
-    private Int32 _SortOrder;
-    /// <summary>排序。越小越靠前</summary>
+    private Int32 _Sort;
+    /// <summary>排序。越大越靠前</summary>
     [DisplayName("排序")]
-    [Description("排序。越小越靠前")]
+    [Description("排序。越大越靠前")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("SortOrder", "排序。越小越靠前", "")]
-    public Int32 SortOrder { get => _SortOrder; set { if (OnPropertyChanging("SortOrder", value)) { _SortOrder = value; OnPropertyChanged("SortOrder"); } } }
+    [BindColumn("Sort", "排序。越大越靠前", "")]
+    public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
 
     private Boolean _Enable;
     /// <summary>启用</summary>
@@ -165,7 +165,7 @@ public partial class SuggestedQuestion
             "ModelId" => _ModelId,
             "Icon" => _Icon,
             "Color" => _Color,
-            "SortOrder" => _SortOrder,
+            "Sort" => _Sort,
             "Enable" => _Enable,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -186,7 +186,7 @@ public partial class SuggestedQuestion
                 case "ModelId": _ModelId = value.ToInt(); break;
                 case "Icon": _Icon = Convert.ToString(value); break;
                 case "Color": _Color = Convert.ToString(value); break;
-                case "SortOrder": _SortOrder = value.ToInt(); break;
+                case "Sort": _Sort = value.ToInt(); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -229,22 +229,22 @@ public partial class SuggestedQuestion
     }
 
     /// <summary>根据排序查找</summary>
-    /// <param name="sortOrder">排序</param>
+    /// <param name="sort">排序</param>
     /// <returns>实体列表</returns>
-    public static IList<SuggestedQuestion> FindAllBySortOrder(Int32 sortOrder)
+    public static IList<SuggestedQuestion> FindAllBySort(Int32 sort)
     {
-        if (sortOrder < 0) return [];
+        if (sort < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.SortOrder == sortOrder);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.Sort == sort);
 
-        return FindAll(_.SortOrder == sortOrder);
+        return FindAll(_.Sort == sort);
     }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
-    /// <param name="sortOrder">排序。越小越靠前</param>
+    /// <param name="sort">排序。越大越靠前</param>
     /// <param name="enable">启用</param>
     /// <param name="modelId">模型。生成缓存响应时使用的模型</param>
     /// <param name="start">更新时间开始</param>
@@ -252,11 +252,11 @@ public partial class SuggestedQuestion
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<SuggestedQuestion> Search(Int32 sortOrder, Boolean? enable, Int32 modelId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<SuggestedQuestion> Search(Int32 sort, Boolean? enable, Int32 modelId, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
-        if (sortOrder >= 0) exp &= _.SortOrder == sortOrder;
+        if (sort >= 0) exp &= _.Sort == sort;
         if (enable != null) exp &= _.Enable == enable;
         if (modelId >= 0) exp &= _.ModelId == modelId;
         exp &= _.UpdateTime.Between(start, end);
@@ -291,8 +291,8 @@ public partial class SuggestedQuestion
         /// <summary>颜色。图标CSS颜色类，如text-blue-500</summary>
         public static readonly Field Color = FindByName("Color");
 
-        /// <summary>排序。越小越靠前</summary>
-        public static readonly Field SortOrder = FindByName("SortOrder");
+        /// <summary>排序。越大越靠前</summary>
+        public static readonly Field Sort = FindByName("Sort");
 
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
@@ -342,8 +342,8 @@ public partial class SuggestedQuestion
         /// <summary>颜色。图标CSS颜色类，如text-blue-500</summary>
         public const String Color = "Color";
 
-        /// <summary>排序。越小越靠前</summary>
-        public const String SortOrder = "SortOrder";
+        /// <summary>排序。越大越靠前</summary>
+        public const String Sort = "Sort";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

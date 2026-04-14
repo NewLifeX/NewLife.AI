@@ -193,7 +193,7 @@
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -225,7 +225,7 @@
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
         <Column Name="ModelTime" DataType="DateTime" Description="模型时间。提供商侧的模型创建或最后更新时间" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -310,7 +310,7 @@
         <Column Name="Prompt" DataType="String" Length="500" Description="提示词。选中预设时自动填入用户输入框的引导文本" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0, Think=1, Fast=2" Type="NewLife.AI.Models.ThinkingMode" />
         <Column Name="IsDefault" DataType="Boolean" Description="默认预设。是否为用户的默认预设" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
@@ -334,7 +334,7 @@
         <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
         <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -362,7 +362,7 @@
         <Column Name="Providers" DataType="String" Description="服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo" />
         <Column Name="Endpoint" DataType="String" ItemType="url" Length="200" Description="远程地址。工具依赖的远程服务地址，如https://ai.newlifex.com" />
         <Column Name="ApiKey" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="API密钥。调用远程服务所需的访问密钥" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
@@ -385,7 +385,7 @@
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
         <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
-        <Column Name="SortOrder" DataType="Int32" Description="排序。越小越靠前" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
@@ -395,8 +395,8 @@
         <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
       </Columns>
       <Indexes>
-        <Index Columns="SortOrder" />
-        <Index Columns="Enable,SortOrder" />
+        <Index Columns="Sort" />
+        <Index Columns="Enable,Sort" />
       </Indexes>
     </Table>
     <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">
@@ -408,7 +408,7 @@
         <Column Name="Category" DataType="String" Description="分类。通用/开发/创作/分析" />
         <Column Name="Description" DataType="String" Length="500" Description="描述。一句话说明该技能做什么" />
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
-        <Column Name="Sort" DataType="Int32" Description="排序。数值大的排前面" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />
         <Column Name="Version" DataType="Int32" Description="版本。每次编辑自增" />

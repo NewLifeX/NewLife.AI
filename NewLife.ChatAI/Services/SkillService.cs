@@ -55,7 +55,7 @@ public class SkillService(ILog log)
     public IList<Skill> GetAllSkills(String? category = null)
     {
         if (!String.IsNullOrEmpty(category))
-            return Skill.FindAllByCategory(category).Where(e => e.Enable).OrderByDescending(e => e.Sort).ToList();
+            return Skill.FindAllByCategory(category).Where(e => e.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
 
         return Skill.FindAllEnabled();
     }
@@ -86,6 +86,7 @@ public class SkillService(ILog log)
         var result = allSkills
             .OrderByDescending(e => recentOrder.TryGetValue(e.Id, out var w) ? w : 0)
             .ThenByDescending(e => e.Sort)
+            .ThenByDescending(e => e.Id)
             .Take(maxCount)
             .ToList();
 

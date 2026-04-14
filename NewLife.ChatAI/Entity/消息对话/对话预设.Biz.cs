@@ -143,7 +143,7 @@ public partial class ChatPreset : Entity<ChatPreset>
     /// <returns></returns>
     public static IList<ChatPreset> FindAllAvailable(Int32 userId)
     {
-        return FindAll(_.Enable == true & (_.UserId == 0 | _.UserId == userId), _.Sort.Asc() & _.Id.Asc(), null, 0, 0);
+        return FindAll(_.Enable == true & (_.UserId == 0 | _.UserId == userId), _.Sort.Desc() & _.Id.Desc(), null, 0, 0);
     }
 
     #endregion

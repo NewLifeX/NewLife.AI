@@ -128,11 +128,11 @@ public partial class NativeTool
     public String? ApiKey { get => _ApiKey; set { if (OnPropertyChanging("ApiKey", value)) { _ApiKey = value; OnPropertyChanged("ApiKey"); } } }
 
     private Int32 _Sort;
-    /// <summary>排序。越小越靠前</summary>
+    /// <summary>排序。越大越靠前</summary>
     [DisplayName("排序")]
-    [Description("排序。越小越靠前")]
+    [Description("排序。越大越靠前")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("Sort", "排序。越小越靠前", "")]
+    [BindColumn("Sort", "排序。越大越靠前", "")]
     public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
 
     private Int32 _CreateUserID;
@@ -365,7 +365,7 @@ public partial class NativeTool
         /// <summary>API密钥。调用远程服务所需的访问密钥</summary>
         public static readonly Field ApiKey = FindByName("ApiKey");
 
-        /// <summary>排序。越小越靠前</summary>
+        /// <summary>排序。越大越靠前</summary>
         public static readonly Field Sort = FindByName("Sort");
 
         /// <summary>创建用户</summary>
@@ -434,7 +434,7 @@ public partial class NativeTool
         /// <summary>API密钥。调用远程服务所需的访问密钥</summary>
         public const String ApiKey = "ApiKey";
 
-        /// <summary>排序。越小越靠前</summary>
+        /// <summary>排序。越大越靠前</summary>
         public const String Sort = "Sort";
 
         /// <summary>创建用户</summary>

@@ -17,9 +17,10 @@ public class SystemConfigController : ChatApiControllerBase
     {
         var s = ChatSetting.Current;
 
-        // 从推荐问题表读取启用的问题，按排序号排列
+        // 从推荐问题表读取启用的问题，按排序号倒序、编号倒序排列
         var questions = SuggestedQuestion.FindAllCachedEnabled()
-            .OrderBy(q => q.SortOrder)
+            .OrderByDescending(q => q.Sort)
+            .ThenByDescending(q => q.Id)
             .Select(q => new SuggestedQuestionDto
             {
                 Question = q.Question,

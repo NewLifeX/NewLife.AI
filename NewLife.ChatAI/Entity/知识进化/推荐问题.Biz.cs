@@ -105,7 +105,7 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
                 Question = item.Question,
                 Icon = item.Icon,
                 Color = item.Color,
-                SortOrder = i + 1,
+                Sort = items.Length - i,
                 Enable = true,
             };
             entity.Insert();

@@ -162,10 +162,10 @@ public partial class Skill : Entity<Skill>
     /// <returns></returns>
     public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
 
-    /// <summary>查找所有启用的技能，按排序降序、编号升序排列</summary>
+    /// <summary>查找所有启用的技能，按排序降序、编号降序排列</summary>
     /// <returns>启用的技能列表</returns>
     public static IList<Skill> FindAllEnabled()
-        => FindAll(_.Enable == true, _.Sort.Desc() & _.Id.Asc(), null, 0, 0);
+        => FindAll(_.Enable == true, _.Sort.Desc() & _.Id.Desc(), null, 0, 0);
 
     /// <summary>按名称查找技能（走实体缓存，忽略大小写）</summary>
     /// <param name="name">技能名称</param>
@@ -182,9 +182,9 @@ public partial class Skill : Entity<Skill>
     public static IList<Skill> GetSystemSkills()
     {
         if (Meta.Count < MaxCacheCount)
-            return FindAllWithCache().Where(e => e.IsSystem && e.Enable).OrderByDescending(e => e.Sort).ToList();
+            return FindAllWithCache().Where(e => e.IsSystem && e.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
 
-        return FindAll(_.IsSystem == true & _.Enable == true, _.Sort.Desc(), null, 0, 0);
+        return FindAll(_.IsSystem == true & _.Enable == true, _.Sort.Desc() & _.Id.Desc(), null, 0, 0);
     }
     #endregion
 }

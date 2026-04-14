@@ -86,7 +86,7 @@ public class ModelService
             if (preferred != null) return preferred;
         }
 
-        return models.FirstOrDefault();
+        return models.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).FirstOrDefault();
     }
     #endregion
 
