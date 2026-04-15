@@ -106,6 +106,6 @@ public class ChatMessage
     }
 
     /// <summary>返回字符串表示形式，格式为 "[Role]{Content}"</summary>
-    public override String ToString() => $"[{Role}]{(Content as String)?[..64]}";
+    public override String ToString() => $"[{Role}]{(Content is String str ? str[..Math.Min(64, str.Length)] : Content)}";
     #endregion
 }

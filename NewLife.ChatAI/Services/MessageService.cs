@@ -849,7 +849,9 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
 
         var history = ChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
-        history.Reverse();
+        //history.Reverse();
+        //!!! 不能使用 Reverse ，它未能让列表完全倒置
+        history = history.OrderBy(e => e.Id).ToList();
 
         var messages = new List<AiChatMessage>();
 
