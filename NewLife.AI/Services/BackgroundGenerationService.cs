@@ -161,7 +161,8 @@ public class BackgroundGenerationService(ILog log)
             task.EndTime = DateTime.Now;
             // 通知订阅者任务已结束（Subscribe 检查 Status 后退出）
             task.Notify();
-            _cancellations.TryRemove(task.MessageId, out _);
+            if (_cancellations.TryRemove(task.MessageId, out var removedCts))
+                removedCts.Dispose();
 
             if (onComplete != null)
             {
