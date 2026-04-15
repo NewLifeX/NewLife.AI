@@ -24,8 +24,8 @@ public sealed class RoundRobinSelector : IGroupChatSelector
     {
         if (agents == null || agents.Count == 0) throw new ArgumentException("代理列表不能为空", nameof(agents));
 
-        // 原子操作确保多线程安全
-        var next = Interlocked.Increment(ref _index) % agents.Count;
+        // 原子操作确保多线程安全，& 0x7FFFFFFF 防止溢出为负索引
+        var next = (Interlocked.Increment(ref _index) & 0x7FFFFFFF) % agents.Count;
         return Task.FromResult(agents[next]);
     }
 

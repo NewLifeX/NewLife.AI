@@ -81,10 +81,10 @@ public class DelegatingAgent : IAgent
         }
 
         // 后置拦截（可修改/过滤/追加消息）
-        results = (List<AgentMessage>)await OnAfterAsync(ctx, results).ConfigureAwait(false);
+        var afterResults = await OnAfterAsync(ctx, results).ConfigureAwait(false);
 
         // 逐条产出
-        foreach (var msg in results)
+        foreach (var msg in afterResults)
         {
             yield return msg;
         }

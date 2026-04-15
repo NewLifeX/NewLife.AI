@@ -172,8 +172,8 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
 
     #region 释放
 
-    /// <summary>释放资源（HttpClient 为静态共享，不随实例释放）</summary>
-    public void Dispose() { }
+    /// <summary>释放 HttpClient 资源</summary>
+    public void Dispose() => _httpClient?.Dispose();
 
     #endregion
 

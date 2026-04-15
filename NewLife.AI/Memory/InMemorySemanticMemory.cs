@@ -13,8 +13,8 @@ public sealed class InMemorySemanticMemory : ISemanticMemory
     public Task SaveAsync(MemoryEntry entry, CancellationToken cancellationToken = default)
     {
         if (entry == null) throw new ArgumentNullException(nameof(entry));
-        if (String.IsNullOrEmpty(entry.Id)) throw new ArgumentException("MemoryEntry.Id 不能为空", nameof(entry));
-        if (String.IsNullOrEmpty(entry.Collection)) throw new ArgumentException("MemoryEntry.Collection 不能为空", nameof(entry));
+        if (String.IsNullOrEmpty(entry.Id)) throw new ArgumentException("Id 不能为空", nameof(entry));
+        if (String.IsNullOrEmpty(entry.Collection)) throw new ArgumentException("Collection 不能为空", nameof(entry));
 
         lock (_lock)
         {
