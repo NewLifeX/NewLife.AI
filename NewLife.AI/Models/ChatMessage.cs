@@ -104,5 +104,8 @@ public class ChatMessage
 
         return result.Count > 0 ? result : null;
     }
+
+    /// <summary>返回字符串表示形式，格式为 "[Role]{Content}"</summary>
+    public override String ToString() => $"[{Role}]{(Content as String)?[..64]}";
     #endregion
 }

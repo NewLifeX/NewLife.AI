@@ -148,6 +148,12 @@ public partial class ModelConfig : Entity<ModelConfig>
     #endregion
 
     #region 高级查询
+    /// <summary>获取所有启用的模型配置，按排序降序、编号降序。模型自身已启用且关联提供商未禁用时才认为可用</summary>
+    public static IList<ModelConfig> FindAllEnabled()
+    {
+        var list = Meta.Count < MaxCacheCount ? FindAllWithCache() : FindAll(_.Enable == true);
+        return list.Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
+    }
 
     // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
     static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))
@@ -219,12 +225,12 @@ public partial class ModelConfig : Entity<ModelConfig>
         return false;
     }
 
-    /// <summary>获取所有启用的模型配置，按排序降序、编号降序。模型自身已启用且关联提供商未禁用时才认为可用</summary>
-    /// <returns>模型配置列表</returns>
-    public static IList<ModelConfig> FindAllEnabled()
-    {
-        return FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
-    }
+    ///// <summary>获取所有启用的模型配置，按排序降序、编号降序。模型自身已启用且关联提供商未禁用时才认为可用</summary>
+    ///// <returns>模型配置列表</returns>
+    //public static IList<ModelConfig> FindAllEnabled()
+    //{
+    //    return FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
+    //}
 
     /// <summary>根据编码查找启用的模型配置。模型自身已启用且关联提供商未禁用时才认为可用</summary>
     /// <param name="code">模型编码</param>

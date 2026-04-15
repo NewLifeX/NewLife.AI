@@ -185,10 +185,10 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         }
 
         // 其次选择 Code 含 "mini" / "flash" / "lite" 的轻量模型以节省成本
-        var all = ModelConfig.FindAll();
-        var enabled = all.Where(m => m.Enable).ToList();
-        return enabled.FirstOrDefault(m => m.Code.Contains("mini") || m.Code.Contains("flash") || m.Code.Contains("lite"))
-               ?? enabled.FirstOrDefault();
+        var all = ModelConfig.FindAllEnabled();
+        //var enabled = all.Where(m => m.Enable).ToList();
+        return all.FirstOrDefault(m => m.Code.Contains("mini") || m.Code.Contains("flash") || m.Code.Contains("lite"))
+               ?? all.FirstOrDefault();
     }
 
     private async Task<Int32> ParseAndSaveAsync(

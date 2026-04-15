@@ -57,7 +57,7 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
     public IList<McpToolInfo> GetAllTools()
     {
         var list = new List<McpToolInfo>();
-        var servers = McpServerConfig.FindAll();
+        var servers = McpServerConfig.FindAllWithCache();
 
         foreach (var server in servers)
         {

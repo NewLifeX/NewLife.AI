@@ -16,7 +16,7 @@ public class McpApiController(McpClientService mcpClientService) : ChatApiContro
     [HttpGet("servers")]
     public ActionResult<IList<McpServerResponseDto>> GetServers()
     {
-        var list = McpServerConfig.FindAll();
+        var list = McpServerConfig.FindAllWithCache();
         var items = list.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).Select(e => ToDto(e)).ToList();
         return Ok(items);
     }

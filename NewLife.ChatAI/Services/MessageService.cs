@@ -239,6 +239,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
             Role = "user",
             Content = request.Content,
             ThinkingMode = request.ThinkingMode,
+            ModelName = flow.ModelConfig.Code,
         };
         if (request.AttachmentIds is { Count: > 0 })
             userMsg.Attachments = request.AttachmentIds.ToJson();
@@ -270,6 +271,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
             ConversationId = conversationId,
             Role = "assistant",
             ThinkingMode = request.ThinkingMode,
+            ModelName = flow.ModelConfig.Code,
         };
         assistantMsg.Insert();
 
@@ -623,7 +625,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
         var contextMessages = new List<AiChatMessage>();
 
         // 注入系统提示词（技能提示词由管道注入）
-        var systemMsg = BuildSystemMessage(flow.UserId, flow.ModelConfig, beforeMessages.Count);
+        var systemMsg = BuildSystemMessage(flow.UserId, flow.ModelConfig, beforeMessages.Count(e => e.Role == "user"));
         if (systemMsg != null) contextMessages.Add(systemMsg);
 
         foreach (var msg in beforeMessages)
@@ -969,7 +971,7 @@ public class MessageService(IChatPipeline pipeline, ModelService modelService, B
             parts.Add(modelConfig.SystemPrompt.Trim());
 
         // 4. 多轮对话时强调最新消息优先级
-        if (historyCount > 0)
+        if (historyCount > 1)
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
 
         if (parts.Count == 0) return null;

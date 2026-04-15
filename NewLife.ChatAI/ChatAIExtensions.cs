@@ -249,7 +249,7 @@ public static class ChatAIExtensions
     {
         try
         {
-            var list = NativeTool.FindAll();
+            var list = NativeTool.FindAllWithCache();
             return list.ToDictionary(t => t.Name!, StringComparer.OrdinalIgnoreCase);
         }
         catch
