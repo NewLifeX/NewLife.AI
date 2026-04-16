@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Models;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Cube.Entity;
@@ -12,7 +12,7 @@ using NewLife.Serialization;
 using XCode;
 using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
-using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
+using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
 
 namespace NewLife.ChatAI.Services;
 

@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.ChatAI.Models;
 using NewLife.Log;
 

@@ -4,18 +4,16 @@ using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 using NewLife;
 using NewLife.AI.Clients;
-using NewLife.AI.Pipeline;
 using NewLife.Common;
 using NewLife.Data;
 using NewLife.Log;
-using NewLife.Web;
 using XCode;
 using XCode.Cache;
 using XCode.Membership;
 
 namespace NewLife.ChatData.Entity;
 
-public partial class ModelConfig : Entity<ModelConfig>, IChatPipelineModel
+public partial class ModelConfig : Entity<ModelConfig>
 {
     #region 对象操作
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存

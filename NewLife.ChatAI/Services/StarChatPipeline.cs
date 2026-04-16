@@ -6,7 +6,7 @@ using NewLife.AI.Filters;
 using NewLife.AI.Models;
 using NewLife.AI.Tools;
 using NewLife.Log;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;

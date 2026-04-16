@@ -1,5 +1,5 @@
-using NewLife.AI.Tools;
-using NewLife.ChatAI.Entity;
+﻿using NewLife.AI.Tools;
+using NewLife.ChatData.Entity;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Services;

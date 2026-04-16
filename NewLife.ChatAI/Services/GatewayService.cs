@@ -7,12 +7,12 @@ using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.ChatData.Entity;
 using NewLife.Collections;
 using NewLife.Serialization;
-using NewLife.ChatAI.Entity;
 using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
-using DbChatMessage = NewLife.ChatAI.Entity.ChatMessage;
+using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
@@ -585,7 +585,7 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
             if (conversation == null) return;
 
             // 创建用户消息
-            var userMsg = new DbChatMessage
+            var userMsg = new ChatMessage
             {
                 ConversationId = conversation.Id,
                 Role = "user",
@@ -597,7 +597,7 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
             // 创建 AI 回复消息
             if (!responseContent.IsNullOrEmpty())
             {
-                var assistantMsg = new DbChatMessage
+                var assistantMsg = new ChatMessage
                 {
                     ConversationId = conversation.Id,
                     Role = "assistant",

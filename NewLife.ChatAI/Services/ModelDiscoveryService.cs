@@ -1,7 +1,7 @@
 ﻿using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.Log;
 using NewLife.Threading;
 

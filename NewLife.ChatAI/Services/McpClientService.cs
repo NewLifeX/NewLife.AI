@@ -2,7 +2,7 @@
 using NewLife.AI.ModelContextProtocol;
 using NewLife.AI.Models;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.Log;
 using NewLife.Serialization;
 

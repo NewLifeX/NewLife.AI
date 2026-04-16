@@ -1,7 +1,7 @@
 ﻿using NewLife.AI.Models;
-using NewLife.Data;
-using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
+using NewLife.ChatData.Entity;
+using NewLife.Data;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;

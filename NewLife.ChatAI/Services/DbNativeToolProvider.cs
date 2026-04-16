@@ -1,7 +1,7 @@
 ﻿using NewLife.AI.Models;
 using NewLife.AI.Tools;
 using NewLife.Serialization;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 
 namespace NewLife.ChatAI.Services;
 
