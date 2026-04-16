@@ -11,7 +11,7 @@ using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>消息反馈。用户对AI回复的点赞或点踩</summary>
 [Serializable]

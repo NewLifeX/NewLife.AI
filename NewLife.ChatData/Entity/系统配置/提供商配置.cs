@@ -11,7 +11,7 @@ using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例</summary>
 [Serializable]
@@ -304,30 +304,6 @@ public partial class ProviderConfig : IProviderConfig, IEntity<IProviderConfig>
         if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.Provider.EqualIgnoreCase(provider));
 
         return FindAll(_.Provider == provider);
-    }
-    #endregion
-
-    #region 高级查询
-    /// <summary>高级查询</summary>
-    /// <param name="code">编码。提供商实例唯一标识，如my-openai</param>
-    /// <param name="provider">实现类。IAiProvider实现类完整类名，如NewLife.AI.Providers.OpenAiProvider</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">更新时间开始</param>
-    /// <param name="end">更新时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
-    /// <returns>实体列表</returns>
-    public static IList<ProviderConfig> Search(String? code, String? provider, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
-    {
-        var exp = new WhereExpression();
-
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
-        if (enable != null) exp &= _.Enable == enable;
-        exp &= _.UpdateTime.Between(start, end);
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
-
-        return FindAll(exp, page);
     }
     #endregion
 

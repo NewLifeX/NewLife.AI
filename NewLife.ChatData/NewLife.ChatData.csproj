@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyTitle>数据层</AssemblyTitle>
-    <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 33 个服务商，提供函数调用、图像生成、MCP 工具调用等能力</Description>
+    <Description>数据层</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
     <VersionPrefix>1.1</VersionPrefix>
@@ -20,42 +20,9 @@
     <AssemblyOriginatorKeyFile>..\Doc\newlife.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <PackageId>$(AssemblyName)</PackageId>
-    <Authors>$(Company)</Authors>
-    <PackageProjectUrl>https://newlifex.com</PackageProjectUrl>
-    <PackageIcon>leaf.png</PackageIcon>
-    <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>服务商扩展至48个，新增 Azure OpenAI/AWS Bedrock；FinishReason 改为强类型枚举；统一 IChatRequest/IChatResponse 接口；新增 ISemanticMemory/IVectorStore 语义记忆抽象；FunctionCallingPlanner 规划器；MultiAgent 多智能体框架（GroupChat/ParallelGroupChat）；IChatFilter 中间件管道；ToolChatClient 结果截断</PackageReleaseNotes>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="NewLife.XCode" Version="11.25.2026.403" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Readme.MD">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
+    <PackageReference Include="NewLife.XCode" Version="11.25.2026.403" />
   </ItemGroup>
 
 </Project>

@@ -1,13 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Entity;
-using NewLife;
+﻿using NewLife.ChatData.Entity;
 using NewLife.Cube;
-using NewLife.Cube.Extensions;
-using NewLife.Cube.ViewModels;
-using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.ModelConfig;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 

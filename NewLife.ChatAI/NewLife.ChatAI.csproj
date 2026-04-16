@@ -103,11 +103,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- 从所有可能的项集中移除临时目录 -->
-    <Content Remove="Entity\Config\**\*" />
-    <None Remove="Entity\Config\**\*" />
-    <EmbeddedResource Remove="Entity\Config\**\*" />
-  </ItemGroup>
-
 </Project>

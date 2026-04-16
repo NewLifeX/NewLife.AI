@@ -11,7 +11,7 @@ using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>MCP服务配置。MCP Server列表及工具发现信息</summary>
 [Serializable]

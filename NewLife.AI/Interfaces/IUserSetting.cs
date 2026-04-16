@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>用户设置。用户的个性化配置</summary>
 public partial interface IUserSetting

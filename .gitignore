@@ -31,3 +31,4 @@ node_modules/
 Web/dist/
 /NewLife.ChatAI/wwwroot/assets
 .pids
+/NewLife.ChatData/Entity/Config

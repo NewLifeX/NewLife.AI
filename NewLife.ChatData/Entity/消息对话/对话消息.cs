@@ -11,7 +11,7 @@ using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>对话消息。会话中的单条发言，包括用户消息和AI回复</summary>
 [Serializable]

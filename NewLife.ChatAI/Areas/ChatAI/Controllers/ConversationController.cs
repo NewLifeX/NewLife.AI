@@ -3,7 +3,7 @@ using NewLife.AI.Models;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.Web;
 using XCode.Membership;
 

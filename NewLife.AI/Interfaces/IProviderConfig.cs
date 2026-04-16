@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例</summary>
 public partial interface IProviderConfig

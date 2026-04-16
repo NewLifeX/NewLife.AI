@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.Security;
 
 namespace NewLife.ChatAI.Controllers;

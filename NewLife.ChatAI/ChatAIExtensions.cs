@@ -6,7 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using NewLife.AI.Filters;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
 using NewLife.Cube.Extensions;

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using Microsoft.AspNetCore.Mvc.Filters;
 using NewLife.AI.Models;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatData.Entity;
 using NewLife.ChatAI.Services;
 using NewLife.Cube;
 

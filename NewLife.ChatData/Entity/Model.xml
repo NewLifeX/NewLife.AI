@@ -8,7 +8,7 @@
     <!--基类。可能包含基类和接口，其中{name}替换为Table.Name-->
     <BaseClass>Entity</BaseClass>
     <!--命名空间-->
-    <Namespace>NewLife.ChatAI.Entity</Namespace>
+    <Namespace>NewLife.ChatData.Entity</Namespace>
     <!--引用命名空间-->
     <ExtendNameSpace />
     <!--输出目录-->
@@ -38,7 +38,7 @@
     <!--魔方区域显示名-->
     <DisplayName>AI对话</DisplayName>
     <!--魔方控制器输出目录-->
-    <CubeOutput>../Areas/ChatAI/</CubeOutput>
+    <CubeOutput>../../NewLife.ChatAI/Areas/ChatAI/</CubeOutput>
   </Option>
   <Tables>
     <Table Name="Conversation" Description="会话。一次完整的多轮对话上下文" Output="消息对话">

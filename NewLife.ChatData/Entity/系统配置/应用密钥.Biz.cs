@@ -2,7 +2,7 @@
 using NewLife.Log;
 using XCode;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 public partial class AppKey : Entity<AppKey>
 {

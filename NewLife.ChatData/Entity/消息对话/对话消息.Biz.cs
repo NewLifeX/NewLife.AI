@@ -4,7 +4,7 @@ using System.Xml.Serialization;
 using NewLife.Data;
 using XCode;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 public partial class ChatMessage : Entity<ChatMessage>
 {

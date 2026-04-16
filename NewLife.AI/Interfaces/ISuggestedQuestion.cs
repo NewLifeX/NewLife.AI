@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验</summary>
 public partial interface ISuggestedQuestion

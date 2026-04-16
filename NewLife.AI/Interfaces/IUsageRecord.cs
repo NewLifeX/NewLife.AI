@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 /// <summary>用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计</summary>
 public partial interface IUsageRecord

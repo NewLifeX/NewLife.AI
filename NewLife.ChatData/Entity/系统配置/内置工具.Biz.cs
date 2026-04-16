@@ -24,7 +24,7 @@ using XCode.DataAccessLayer;
 using XCode.Membership;
 using XCode.Shards;
 
-namespace NewLife.ChatAI.Entity;
+namespace NewLife.ChatData.Entity;
 
 public partial class NativeTool : Entity<NativeTool>
 {
