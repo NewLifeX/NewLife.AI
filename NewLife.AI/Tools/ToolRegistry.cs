@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel;
+using System.Reflection;
 using NewLife.AI.Models;
+using NewLife.ChatAI.Entity;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
@@ -20,7 +22,7 @@ public class ToolRegistry : IToolProvider
     /// <summary>已注册工具的 ChatTool 定义列表，可直接注入到 ChatCompletionRequest.Tools</summary>
     public IReadOnlyList<ChatTool> Tools => _tools.AsReadOnly();
 
-    /// <summary>已注册工具服务的类型列表，供 NativeToolSyncService 等外部服务扫描工具元信息</summary>
+    /// <summary>已注册工具服务的类型列表，供数据预热等流程扫描工具元信息</summary>
     public IReadOnlyList<Type> RegisteredTypes => _registeredTypes.AsReadOnly();
 
     private readonly List<ChatTool> _tools = [];
@@ -97,6 +99,173 @@ public class ToolRegistry : IToolProvider
             foreach (var method in methods)
                 RegisterMethod(method, instance);
         }
+    }
+
+    #endregion
+
+    #region 内置工具同步
+
+    /// <summary>获取类型上所有标注 <see cref="ToolDescriptionAttribute"/> 的公开实例方法</summary>
+    /// <param name="type">工具服务类型</param>
+    /// <returns>方法列表</returns>
+    public static IList<MethodInfo> GetToolMethods(Type type)
+    {
+        if (type == null) throw new ArgumentNullException(nameof(type));
+
+        return type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null)
+            .ToList();
+    }
+
+    /// <summary>描述单个工具方法，并将工具名、显示名、参数Schema、触发词等信息写入目标实体</summary>
+    /// <param name="type">工具服务类型</param>
+    /// <param name="method">工具方法</param>
+    /// <param name="model">待填充的内置工具实体</param>
+    public static void DescribeMethod(Type type, MethodInfo method, INativeTool model)
+    {
+        if (type == null) throw new ArgumentNullException(nameof(type));
+        if (method == null) throw new ArgumentNullException(nameof(method));
+        if (model == null) throw new ArgumentNullException(nameof(model));
+
+        var chatTool = ToolSchemaBuilder.BuildFromMethod(method);
+        var function = chatTool.Function;
+        var toolName = function?.Name;
+        if (String.IsNullOrEmpty(toolName)) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
+
+        if (function == null) throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 未生成函数定义");
+
+        var description = function.Description;
+        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>()
+            ?? throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 缺少 ToolDescriptionAttribute");
+
+        model.Name = toolName;
+        model.DisplayName = ResolveDisplayName(method, description, toolName);
+        model.Description = description;
+        model.Parameters = function.Parameters?.ToJson();
+        model.Triggers = NormalizeTriggers(attr.Triggers);
+        model.IsSystem = attr.IsSystem;
+        model.Enable = attr.Enable;
+        model.ClassName = type.FullName;
+        model.MethodName = method.Name;
+    }
+
+    /// <summary>规范化触发词字符串，去重并统一使用英文逗号连接</summary>
+    /// <param name="triggers">原始触发词文本</param>
+    /// <returns>规范化后的触发词文本</returns>
+    public static String? NormalizeTriggers(String? triggers)
+    {
+        if (String.IsNullOrWhiteSpace(triggers)) return null;
+
+        var words = triggers.Split([',', '，'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(e => e.Trim())
+            .Where(e => !String.IsNullOrWhiteSpace(e))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return words.Length == 0 ? null : String.Join(",", words);
+    }
+
+    /// <summary>解析显示名称。优先级：DisplayNameAttribute &gt; 描述首句（中文句号前）&gt; 工具名</summary>
+    /// <param name="method">工具方法</param>
+    /// <param name="description">工具描述</param>
+    /// <param name="toolName">工具名称</param>
+    /// <returns>显示名称</returns>
+    public static String ResolveDisplayName(MethodInfo method, String? description, String toolName)
+    {
+        if (method == null) throw new ArgumentNullException(nameof(method));
+        if (String.IsNullOrEmpty(toolName)) throw new ArgumentNullException(nameof(toolName));
+
+        var displayName = method.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
+        if (!String.IsNullOrEmpty(displayName)) return displayName;
+        if (!String.IsNullOrEmpty(description))
+        {
+            var value = description!;
+            var idx = value.IndexOf('。');
+            if (idx > 0) return value[..idx];
+        }
+
+        return toolName;
+    }
+
+    /// <summary>同步内置工具元数据到业务表。扫描已注册工具类型并按规则写入实体表</summary>
+    /// <typeparam name="TNativeTool">内置工具实体类型</typeparam>
+    /// <param name="findByName">按工具名称查找实体的方法</param>
+    /// <param name="save">保存实体的方法</param>
+    /// <param name="onError">错误回调。单个工具同步失败时触发，不中断后续同步</param>
+    /// <returns>处理的工具数量</returns>
+    public Int32 SyncNativeTools<TNativeTool>(Func<String, TNativeTool?> findByName, Action<TNativeTool> save, Action<Exception>? onError = null)
+        where TNativeTool : class, INativeTool, new()
+    {
+        if (findByName == null) throw new ArgumentNullException(nameof(findByName));
+        if (save == null) throw new ArgumentNullException(nameof(save));
+
+        var count = 0;
+        foreach (var type in _registeredTypes)
+        {
+            var methods = GetToolMethods(type);
+            foreach (var method in methods)
+            {
+                try
+                {
+                    SyncNativeToolMethod(type, method, findByName, save);
+                    count++;
+                }
+                catch (Exception ex)
+                {
+                    onError?.Invoke(ex);
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>将单个工具方法的信息同步到内置工具表</summary>
+    /// <typeparam name="TNativeTool">内置工具实体类型</typeparam>
+    /// <param name="type">工具服务类型</param>
+    /// <param name="method">工具方法</param>
+    /// <param name="findByName">按工具名称查找实体的方法</param>
+    /// <param name="save">保存实体的方法</param>
+    private static void SyncNativeToolMethod<TNativeTool>(Type type, MethodInfo method, Func<String, TNativeTool?> findByName, Action<TNativeTool> save)
+        where TNativeTool : class, INativeTool, new()
+    {
+        var model = new TNativeTool();
+        DescribeMethod(type, method, model);
+
+        var toolName = model.Name;
+        if (String.IsNullOrEmpty(toolName)) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
+
+        var existing = findByName(toolName);
+        var isNew = existing == null;
+        var record = existing ?? new TNativeTool
+        {
+            Name = toolName,
+            Enable = model.Enable,
+            IsLocked = false,
+        };
+
+        // 显式禁用的内置工具在同步时强制关闭，避免被误触发或误暴露
+        if (!model.Enable) record.Enable = false;
+
+        var displayNameAttr = method.GetCustomAttribute<DisplayNameAttribute>();
+        // 新增记录时初始化 DisplayName；或存在明确的 [DisplayName] 标注且未锁定时更新
+        if (isNew || (!record.IsLocked && displayNameAttr != null))
+            record.DisplayName = model.DisplayName;
+
+        // 始终更新类/方法定位信息
+        record.ClassName = model.ClassName;
+        record.MethodName = model.MethodName;
+
+        // 未锁定时才更新描述和参数，保护手工调整的内容
+        if (!record.IsLocked)
+        {
+            record.IsSystem = model.IsSystem;
+            record.Description = model.Description;
+            record.Parameters = model.Parameters;
+            record.Triggers = model.Triggers;
+        }
+
+        save(record);
     }
 
     #endregion
@@ -274,7 +443,7 @@ public class ToolRegistry : IToolProvider
 
     #region IToolProvider
 
-    IList<ChatTool> IToolProvider.GetTools() => new List<ChatTool>(_tools);
+    IList<ChatTool> IToolProvider.GetTools() => [.. _tools];
 
     Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken)
         => InvokeAsync(toolName, argumentsJson, cancellationToken);

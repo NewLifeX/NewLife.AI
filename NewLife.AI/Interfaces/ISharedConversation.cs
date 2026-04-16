@@ -28,8 +28,5 @@ public partial interface ISharedConversation
 
     /// <summary>过期时间。null表示永不过期</summary>
     DateTime ExpireTime { get; set; }
-
-    /// <summary>创建者</summary>
-    String? CreateUser { get; set; }
     #endregion
 }

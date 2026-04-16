@@ -44,12 +44,6 @@ public partial interface ISkill
     /// <summary>版本。每次编辑自增</summary>
     Int32 Version { get; set; }
 
-    /// <summary>创建者</summary>
-    String? CreateUser { get; set; }
-
-    /// <summary>更新者</summary>
-    String? UpdateUser { get; set; }
-
     /// <summary>备注</summary>
     String? Remark { get; set; }
     #endregion

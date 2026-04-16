@@ -221,7 +221,7 @@ public class OllamaChatRequest : IChatRequest
             if (request.Temperature != null) opts.Temperature = request.Temperature.Value;
             if (request.TopP != null) opts.TopP = request.TopP.Value;
             if (request.Stop != null && request.Stop.Count > 0)
-                opts.Stop = request.Stop is List<String> list ? list : new List<String>(request.Stop);
+                opts.Stop = request.Stop is List<String> list ? list : [.. request.Stop];
             result.Options = opts;
         }
 

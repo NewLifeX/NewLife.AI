@@ -76,7 +76,7 @@ public static class ChatAIExtensions
         services.AddSingleton<IChatFilter, LearningFilter>();
         services.AddSingleton<ModelDiscoveryService>();
         services.AddHostedService(p => p.GetRequiredService<ModelDiscoveryService>());
-        services.AddHostedService<NativeToolSyncService>();
+        services.AddHostedService<DataPreloadService>();
         services.AddHttpClient("McpClient");
 
         // 消息频率限制器
