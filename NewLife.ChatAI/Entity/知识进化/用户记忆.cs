@@ -21,7 +21,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_UserMemory_UserId_Key", false, "UserId,Key")]
 [BindIndex("IX_UserMemory_ConversationId", false, "ConversationId")]
 [BindTable("UserMemory", Description = "用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UserMemory
+public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
 {
     #region 属性
     private Int64 _Id;
@@ -170,6 +170,29 @@ public partial class UserMemory
     [DataObjectField(false, false, true, 0)]
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IUserMemory model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        ConversationId = model.ConversationId;
+        Category = model.Category;
+        Key = model.Key;
+        Value = model.Value;
+        Confidence = model.Confidence;
+        Scope = model.Scope;
+        Status = model.Status;
+        ReviewUserId = model.ReviewUserId;
+        ReviewTime = model.ReviewTime;
+        Version = model.Version;
+        ParentId = model.ParentId;
+        Enable = model.Enable;
+        ExpireTime = model.ExpireTime;
+    }
     #endregion
 
     #region 获取/设置 字段值

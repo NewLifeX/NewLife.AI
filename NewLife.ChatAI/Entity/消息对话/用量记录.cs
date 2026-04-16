@@ -22,7 +22,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_UsageRecord_ModelId_Id", false, "ModelId,Id")]
 [BindIndex("IX_UsageRecord_ConversationId", false, "ConversationId")]
 [BindTable("UsageRecord", Description = "用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UsageRecord
+public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 {
     #region 属性
     private Int64 _Id;
@@ -195,6 +195,32 @@ public partial class UsageRecord
     [DataObjectField(false, false, true, 50)]
     [BindColumn("CreateIP", "创建地址", "")]
     public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IUsageRecord model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        AppKeyId = model.AppKeyId;
+        ConversationId = model.ConversationId;
+        MessageId = model.MessageId;
+        ModelId = model.ModelId;
+        ModelName = model.ModelName;
+        InputTokens = model.InputTokens;
+        OutputTokens = model.OutputTokens;
+        TotalTokens = model.TotalTokens;
+        CachedInputTokens = model.CachedInputTokens;
+        ReasoningTokens = model.ReasoningTokens;
+        InputAudioTokens = model.InputAudioTokens;
+        InputTextTokens = model.InputTextTokens;
+        OutputAudioTokens = model.OutputAudioTokens;
+        OutputTextTokens = model.OutputTextTokens;
+        ElapsedMs = model.ElapsedMs;
+        Source = model.Source;
+    }
     #endregion
 
     #region 获取/设置 字段值

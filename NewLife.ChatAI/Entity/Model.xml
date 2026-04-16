@@ -28,9 +28,9 @@
     <!--模型类输出目录。默认当前目录的Models子目录-->
     <ModelsOutput>..\Models\</ModelsOutput>
     <!--模型接口模版。设置后生成模型接口，用于约束模型类和实体类，例如I{name}-->
-    <ModelInterface />
+    <ModelInterface>I{name}</ModelInterface>
     <!--模型接口输出目录。默认当前目录的Interfaces子目录-->
-    <InterfacesOutput>.\Interfaces\</InterfacesOutput>
+    <InterfacesOutput>..\..\NewLife.AI\Interfaces</InterfacesOutput>
     <!--用户实体转为模型类的模型类。例如{name}或{name}DTO-->
     <ModelNameForToModel />
     <!--命名格式。Default/Upper/Lower/Underline-->
@@ -60,13 +60,13 @@
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数。会话累计消耗的总Token数" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="Source" DataType="String" Description="来源。Web/Gateway/Channel等，标识对话入口" />
-        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -95,10 +95,10 @@
         <Column Name="OutputTokens" DataType="Int32" Description="输出Token数" />
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
-        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="ConversationId,Id" />
@@ -113,12 +113,12 @@
         <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" Type="NewLife.AI.Models.FeedbackType" />
         <Column Name="Reason" DataType="String" Length="500" Description="原因。点踩原因" />
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许用于模型学习训练" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="MessageId,UserId" Unique="True" />
@@ -134,13 +134,13 @@
         <Column Name="SnapshotTitle" DataType="String" Description="快照标题" />
         <Column Name="SnapshotMessageId" DataType="Int64" Description="快照消息。截止到的最后一条消息编号" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
-        <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" Model="False" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="ShareToken" Unique="True" />
@@ -168,9 +168,9 @@
         <Column Name="OutputTextTokens" DataType="Int32" Description="文本输出Token数" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="Source" DataType="String" Description="请求来源。Chat=对话/Gateway=网关" />
-        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="UserId,Id" />
@@ -194,12 +194,12 @@
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -226,12 +226,12 @@
         <Column Name="ModelTime" DataType="DateTime" Description="模型时间。提供商侧的模型创建或最后更新时间" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -250,12 +250,12 @@
         <Column Name="LastCallTime" DataType="DateTime" Description="最后调用时间" />
         <Column Name="Calls" DataType="Int64" Description="调用次数。累计API请求数" />
         <Column Name="TotalTokens" DataType="Int64" Description="总Token数。累计消耗Token" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -287,12 +287,12 @@
         <Column Name="LearningModel" DataType="String" Description="学习模型。用户自选的记忆提取模型，为空则使用系统配置" />
         <Column Name="MemoryInjectNum" DataType="Int32" Description="记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置" />
         <Column Name="ContentWidth" DataType="Int32" Description="内容区宽度。标准960/宽屏1200/自适应0" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="UserId" Unique="True" />
@@ -312,12 +312,12 @@
         <Column Name="IsDefault" DataType="Boolean" Description="默认预设。是否为用户的默认预设" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="UserId,Name" Unique="True" />
@@ -336,12 +336,12 @@
         <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -365,12 +365,12 @@
         <Column Name="Endpoint" DataType="String" ItemType="url" Length="200" Description="远程地址。工具依赖的远程服务地址，如https://ai.newlifex.com" />
         <Column Name="ApiKey" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="API密钥。调用远程服务所需的访问密钥" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -389,12 +389,12 @@
         <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="Sort" />
@@ -414,14 +414,14 @@
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />
         <Column Name="Version" DataType="Int32" Description="版本。每次编辑自增" />
-        <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateUser" DataType="String" Description="更新者" Category="扩展" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" Model="False" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUser" DataType="String" Description="更新者" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
@@ -446,9 +446,9 @@
         <Column Name="ParentId" DataType="Int64" Description="父记忆。融合来源，0表示原始提取" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
-        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
         <Index Columns="UserId,Category,Key" />

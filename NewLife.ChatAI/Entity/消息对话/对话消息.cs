@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("对话消息。会话中的单条发言，包括用户消息和AI回复")]
 [BindIndex("IX_ChatMessage_ConversationId_Id", false, "ConversationId,Id")]
 [BindTable("ChatMessage", Description = "对话消息。会话中的单条发言，包括用户消息和AI回复", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ChatMessage
+public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
 {
     #region 属性
     private Int64 _Id;
@@ -201,6 +201,32 @@ public partial class ChatMessage
     [DataObjectField(false, false, true, 0)]
     [BindColumn("CreateTime", "创建时间", "")]
     public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IChatMessage model)
+    {
+        Id = model.Id;
+        ConversationId = model.ConversationId;
+        Role = model.Role;
+        Content = model.Content;
+        ThinkingContent = model.ThinkingContent;
+        ThinkingMode = model.ThinkingMode;
+        Attachments = model.Attachments;
+        SkillNames = model.SkillNames;
+        ToolNames = model.ToolNames;
+        ToolCalls = model.ToolCalls;
+        ModelName = model.ModelName;
+        MaxTokens = model.MaxTokens;
+        Temperature = model.Temperature;
+        FinishReason = model.FinishReason;
+        InputTokens = model.InputTokens;
+        OutputTokens = model.OutputTokens;
+        TotalTokens = model.TotalTokens;
+        ElapsedMs = model.ElapsedMs;
+    }
     #endregion
 
     #region 获取/设置 字段值

@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("模型配置。后端接入的大语言模型，关联到具体的提供商实例")]
 [BindIndex("IU_ModelConfig_ProviderId_Code", true, "ProviderId,Code")]
 [BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型，关联到具体的提供商实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ModelConfig
+public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
 {
     #region 属性
     private Int32 _Id;
@@ -220,6 +220,32 @@ public partial class ModelConfig
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IModelConfig model)
+    {
+        Id = model.Id;
+        ProviderId = model.ProviderId;
+        Code = model.Code;
+        Name = model.Name;
+        ContextLength = model.ContextLength;
+        SupportThinking = model.SupportThinking;
+        SupportFunctionCalling = model.SupportFunctionCalling;
+        SupportVision = model.SupportVision;
+        SupportAudio = model.SupportAudio;
+        SupportImageGeneration = model.SupportImageGeneration;
+        SupportVideoGeneration = model.SupportVideoGeneration;
+        SystemPrompt = model.SystemPrompt;
+        RoleIds = model.RoleIds;
+        DepartmentIds = model.DepartmentIds;
+        ModelTime = model.ModelTime;
+        Enable = model.Enable;
+        Sort = model.Sort;
+        Remark = model.Remark;
+    }
     #endregion
 
     #region 获取/设置 字段值

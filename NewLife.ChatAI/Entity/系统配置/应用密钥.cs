@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_AppKey_Secret", true, "Secret")]
 [BindIndex("IX_AppKey_UserId", false, "UserId")]
 [BindTable("AppKey", Description = "应用密钥。API网关访问凭证，用于外部系统调用模型服务", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class AppKey
+public partial class AppKey : IAppKey, IEntity<IAppKey>
 {
     #region 属性
     private Int32 _Id;
@@ -165,6 +165,25 @@ public partial class AppKey
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IAppKey model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        Name = model.Name;
+        Secret = model.Secret;
+        Models = model.Models;
+        Enable = model.Enable;
+        ExpireTime = model.ExpireTime;
+        LastCallTime = model.LastCallTime;
+        Calls = model.Calls;
+        TotalTokens = model.TotalTokens;
+        Remark = model.Remark;
+    }
     #endregion
 
     #region 获取/设置 字段值

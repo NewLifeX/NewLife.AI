@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_Skill_Code", true, "Code")]
 [BindIndex("IX_Skill_Category", false, "Category")]
 [BindTable("Skill", Description = "技能。可复用的AI行为指令，Markdown格式的结构化提示文本", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class Skill
+public partial class Skill : ISkill, IEntity<ISkill>
 {
     #region 属性
     private Int32 _Id;
@@ -191,6 +191,26 @@ public partial class Skill
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(ISkill model)
+    {
+        Id = model.Id;
+        Code = model.Code;
+        Name = model.Name;
+        Icon = model.Icon;
+        Category = model.Category;
+        Description = model.Description;
+        Content = model.Content;
+        Sort = model.Sort;
+        Enable = model.Enable;
+        IsSystem = model.IsSystem;
+        Version = model.Version;
+        Remark = model.Remark;
+    }
     #endregion
 
     #region 获取/设置 字段值

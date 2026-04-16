@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("MCP服务配置。MCP Server列表及工具发现信息")]
 [BindIndex("IU_McpServerConfig_Name", true, "Name")]
 [BindTable("McpServerConfig", Description = "MCP服务配置。MCP Server列表及工具发现信息", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class McpServerConfig
+public partial class McpServerConfig : IMcpServerConfig, IEntity<IMcpServerConfig>
 {
     #region 属性
     private Int32 _Id;
@@ -164,6 +164,25 @@ public partial class McpServerConfig
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IMcpServerConfig model)
+    {
+        Id = model.Id;
+        Name = model.Name;
+        Endpoint = model.Endpoint;
+        TransportType = model.TransportType;
+        AuthType = model.AuthType;
+        AuthToken = model.AuthToken;
+        AvailableTools = model.AvailableTools;
+        Triggers = model.Triggers;
+        Enable = model.Enable;
+        Sort = model.Sort;
+        Remark = model.Remark;
+    }
     #endregion
 
     #region 获取/设置 字段值

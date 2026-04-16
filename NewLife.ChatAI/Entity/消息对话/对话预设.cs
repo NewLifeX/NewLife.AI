@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_ChatPreset_UserId_Name", true, "UserId,Name")]
 [BindIndex("IX_ChatPreset_UserId", false, "UserId")]
 [BindTable("ChatPreset", Description = "对话预设。保存模型+技能+SystemPrompt组合为预设模板", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ChatPreset
+public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
 {
     #region 属性
     private Int32 _Id;
@@ -172,6 +172,26 @@ public partial class ChatPreset
     [DataObjectField(false, false, true, 0)]
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IChatPreset model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        Name = model.Name;
+        ModelId = model.ModelId;
+        ModelName = model.ModelName;
+        SkillCode = model.SkillCode;
+        SystemPrompt = model.SystemPrompt;
+        Prompt = model.Prompt;
+        ThinkingMode = model.ThinkingMode;
+        IsDefault = model.IsDefault;
+        Sort = model.Sort;
+        Enable = model.Enable;
+    }
     #endregion
 
     #region 获取/设置 字段值

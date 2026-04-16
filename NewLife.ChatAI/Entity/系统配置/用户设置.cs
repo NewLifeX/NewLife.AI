@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("用户设置。用户的个性化配置")]
 [BindIndex("IU_UserSetting_UserId", true, "UserId")]
 [BindTable("UserSetting", Description = "用户设置。用户的个性化配置", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UserSetting
+public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
 {
     #region 属性
     private Int32 _Id;
@@ -251,6 +251,36 @@ public partial class UserSetting
     [DataObjectField(false, false, true, 0)]
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IUserSetting model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        Language = model.Language;
+        Theme = model.Theme;
+        FontSize = model.FontSize;
+        SendShortcut = model.SendShortcut;
+        DefaultModel = model.DefaultModel;
+        DefaultThinkingMode = model.DefaultThinkingMode;
+        ContextRounds = model.ContextRounds;
+        Nickname = model.Nickname;
+        UserBackground = model.UserBackground;
+        ResponseStyle = model.ResponseStyle;
+        SystemPrompt = model.SystemPrompt;
+        AllowTraining = model.AllowTraining;
+        McpEnabled = model.McpEnabled;
+        ShowToolCalls = model.ShowToolCalls;
+        DefaultSkill = model.DefaultSkill;
+        StreamingSpeed = model.StreamingSpeed;
+        EnableLearning = model.EnableLearning;
+        LearningModel = model.LearningModel;
+        MemoryInjectNum = model.MemoryInjectNum;
+        ContentWidth = model.ContentWidth;
+    }
     #endregion
 
     #region 获取/设置 字段值

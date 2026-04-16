@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_NativeTool_Name", true, "Name")]
 [BindIndex("IX_NativeTool_Enable", false, "Enable")]
 [BindTable("NativeTool", Description = "内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class NativeTool
+public partial class NativeTool : INativeTool, IEntity<INativeTool>
 {
     #region 属性
     private Int32 _Id;
@@ -205,6 +205,30 @@ public partial class NativeTool
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(INativeTool model)
+    {
+        Id = model.Id;
+        Name = model.Name;
+        DisplayName = model.DisplayName;
+        ClassName = model.ClassName;
+        MethodName = model.MethodName;
+        Description = model.Description;
+        Parameters = model.Parameters;
+        Triggers = model.Triggers;
+        Enable = model.Enable;
+        IsSystem = model.IsSystem;
+        IsLocked = model.IsLocked;
+        Providers = model.Providers;
+        Endpoint = model.Endpoint;
+        ApiKey = model.ApiKey;
+        Sort = model.Sort;
+        Remark = model.Remark;
+    }
     #endregion
 
     #region 获取/设置 字段值

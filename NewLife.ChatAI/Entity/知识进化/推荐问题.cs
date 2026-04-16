@@ -20,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_SuggestedQuestion_Sort", false, "Sort")]
 [BindIndex("IX_SuggestedQuestion_Enable_Sort", false, "Enable,Sort")]
 [BindTable("SuggestedQuestion", Description = "推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class SuggestedQuestion
+public partial class SuggestedQuestion : ISuggestedQuestion, IEntity<ISuggestedQuestion>
 {
     #region 属性
     private Int32 _Id;
@@ -148,6 +148,23 @@ public partial class SuggestedQuestion
     [DataObjectField(false, false, true, 0)]
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(ISuggestedQuestion model)
+    {
+        Id = model.Id;
+        Question = model.Question;
+        Response = model.Response;
+        ThinkingResponse = model.ThinkingResponse;
+        ModelId = model.ModelId;
+        Icon = model.Icon;
+        Color = model.Color;
+        Sort = model.Sort;
+        Enable = model.Enable;
+    }
     #endregion
 
     #region 获取/设置 字段值

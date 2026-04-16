@@ -21,7 +21,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_Conversation_UserId_IsPinned_Id", false, "UserId,IsPinned,Id")]
 [BindIndex("IX_Conversation_Source", false, "Source")]
 [BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class Conversation
+public partial class Conversation : IConversation, IEntity<IConversation>
 {
     #region 属性
     private Int64 _Id;
@@ -231,6 +231,32 @@ public partial class Conversation
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(IConversation model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        UserName = model.UserName;
+        Title = model.Title;
+        ModelId = model.ModelId;
+        ModelName = model.ModelName;
+        SkillId = model.SkillId;
+        SkillName = model.SkillName;
+        ThinkingMode = model.ThinkingMode;
+        IsPinned = model.IsPinned;
+        MessageCount = model.MessageCount;
+        LastMessageTime = model.LastMessageTime;
+        InputTokens = model.InputTokens;
+        OutputTokens = model.OutputTokens;
+        TotalTokens = model.TotalTokens;
+        ElapsedMs = model.ElapsedMs;
+        Source = model.Source;
+        Remark = model.Remark;
+    }
     #endregion
 
     #region 获取/设置 字段值
