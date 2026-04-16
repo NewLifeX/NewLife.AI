@@ -1,10 +1,10 @@
-﻿using NewLife.AI.Clients;
-using NewLife.ChatAI.Entity;
+using NewLife.AI.Clients;
+using NewLife.ChatData.Entity;
 using NewLife.Log;
 using XCode.Membership;
 using ILog = NewLife.Log.ILog;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
 /// <summary>模型服务。封装模型解析与客户端创建，解耦业务服务对 GatewayService 的依赖</summary>
 /// <remarks>
@@ -76,7 +76,6 @@ public class ModelService(ITracer tracer, ILog log)
             if (config != null && config.Enable) return config;
         }
 
-        // 降级：按系统设置取默认模型，再取第一个可用模型
         var setting = ChatSetting.Current;
         var models = ModelConfig.FindAllEnabled();
         return SelectDefaultModel(models, setting.DefaultModel);
@@ -92,21 +91,25 @@ public class ModelService(ITracer tracer, ILog log)
         return ModelConfig.FindByCode(modelCode);
     }
 
-    /// <summary>解析轻量模型配置。优先按 ChatSetting.LearningModel 编码查找，未配置时回退到指定的 fallbackModelId</summary>
+    /// <summary>解析轻量模型配置。优先按 ChatSetting.LightweightModel 编码查找，未配置时回退到 LearningModel，最终回退到指定的 fallbackModelId</summary>
     /// <param name="fallbackModelId">回退模型编号（通常为当前对话模型）</param>
     /// <returns>模型配置，未找到返回 null</returns>
     public ModelConfig? ResolveLightweightModel(Int32 fallbackModelId = 0)
     {
         var setting = ChatSetting.Current;
 
-        // 优先使用学习模型编码
+        if (!setting.LightweightModel.IsNullOrEmpty())
+        {
+            var config = ModelConfig.FindByCode(setting.LightweightModel);
+            if (config != null && config.Enable) return config;
+        }
+
         if (!setting.LearningModel.IsNullOrEmpty())
         {
             var config = ModelConfig.FindByCode(setting.LearningModel);
             if (config != null && config.Enable) return config;
         }
 
-        // 最终回退到指定模型
         return ResolveModelOrDefault(fallbackModelId);
     }
 
@@ -137,7 +140,7 @@ public class ModelService(ITracer tracer, ILog log)
         if (config == null) return null;
 
         var providerConfig = config.ProviderInfo;
-        if (providerConfig == null) return null;
+        if (providerConfig == null || providerConfig.Provider.IsNullOrWhiteSpace()) return null;
 
         var descriptor = _registry.GetDescriptor(providerConfig.Provider);
         if (descriptor == null) return null;
@@ -157,7 +160,7 @@ public class ModelService(ITracer tracer, ILog log)
         if (config == null) return false;
 
         var providerConfig = config.ProviderInfo;
-        if (providerConfig == null) return false;
+        if (providerConfig == null || providerConfig.Provider.IsNullOrWhiteSpace()) return false;
 
         return _registry.GetDescriptor(providerConfig.Provider) != null;
     }

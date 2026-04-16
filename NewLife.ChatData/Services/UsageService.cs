@@ -1,12 +1,12 @@
-﻿using NewLife.AI.Models;
-using NewLife.ChatAI.Entity;
+using NewLife.AI.Models;
+using NewLife.ChatData.Entity;
 using NewLife.Data;
 using NewLife.Log;
 using XCode;
-using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
+using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
 /// <summary>用量统计服务。记录和查询 AI 调用的 Token 消耗，支持按用户和 AppKey 双维度统计</summary>
 /// <remarks>实例化用量统计服务</remarks>
@@ -105,7 +105,6 @@ public class UsageService(ILog log)
         var messages = (Int32)ChatMessage.FindCount(
             ChatMessage._.ConversationId.In(Conversation.FindSQLWithKey(Conversation._.UserId == userId)));
 
-        // 聚合用量
         var records = UsageRecord.FindAllByUserId(userId);
         var totalPrompt = records.Sum(e => e.InputTokens);
         var totalCompletion = records.Sum(e => e.OutputTokens);
@@ -168,7 +167,7 @@ public class UsageService(ILog log)
             var records = UsageRecord.FindAllByAppKeyId(key.Id);
             result.Add(new AppKeyUsageDto(
                 key.Id,
-                key.Name,
+                key.Name ?? "",
                 records.Count,
                 records.Sum(e => e.TotalTokens),
                 key.LastCallTime));
