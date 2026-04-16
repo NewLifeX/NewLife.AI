@@ -33,4 +33,10 @@ public sealed class ToolDescriptionAttribute : Attribute
 
     /// <summary>是否系统工具。true 时每次 LLM 请求自动携带，无需 @引用；false 时需在消息中 @工具名 显式引用</summary>
     public Boolean IsSystem { get; set; }
+
+    /// <summary>触发词。多个词使用中英文逗号分隔，用户消息命中任一词时可自动激活该工具</summary>
+    public String? Triggers { get; set; }
+
+    /// <summary>是否启用。false 时同步到配置表后将保持禁用状态，可用于临时下线工具</summary>
+    public Boolean Enable { get; set; } = true;
 }

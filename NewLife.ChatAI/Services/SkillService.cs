@@ -277,6 +277,37 @@ public class SkillService(ILog log)
         return p.Value.Split(',').Select(e => e.ToInt()).Where(id => id > 0).ToList();
     }
 
+    /// <summary>根据消息内容匹配原生工具触发词。仅返回启用且 IsSystem=false 的工具名称集合</summary>
+    /// <param name="content">用户消息内容</param>
+    /// <returns>命中的工具名称集合</returns>
+    public ISet<String> MatchNativeToolNamesByContent(String? content)
+    {
+        var result = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        if (content.IsNullOrWhiteSpace()) return result;
+
+        var tools = GetNativeToolsForTriggerMatch();
+        foreach (var tool in tools.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id))
+        {
+            if (tool.Name.IsNullOrWhiteSpace() || tool.IsSystem || tool.Triggers.IsNullOrWhiteSpace()) continue;
+
+            var triggers = tool.Triggers.Split(',', '，');
+            foreach (var trigger in triggers)
+            {
+                var word = trigger.Trim();
+                if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Add(tool.Name);
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>获取启用的原生工具列表（用于触发词匹配）。可在子类中覆盖以支持测试</summary>
+    protected virtual IList<NativeTool> GetNativeToolsForTriggerMatch() => NativeTool.FindAllEnabled();
+
     /// <summary>按名称或编码查找技能</summary>
     /// <param name="name">技能名称或编码</param>
     /// <returns></returns>

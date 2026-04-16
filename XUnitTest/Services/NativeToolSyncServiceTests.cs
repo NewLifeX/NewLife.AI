@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
@@ -15,14 +14,9 @@ namespace XUnitTest.Services;
 [DisplayName("ChatAI 内置工具同步服务测试")]
 public class NativeToolSyncServiceTests
 {
-    // 通过反射访问私有 _seeds 字典
-    private static Dictionary<String, (String, String, String)> GetSeeds()
-    {
-        var field = typeof(NativeToolSyncService).GetField("_seeds",
-            BindingFlags.Static | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        return (Dictionary<String, (String, String, String)>)field!.GetValue(null)!;
-    }
+    private static ToolDescriptionAttribute GetToolAttribute(Type type, String methodName) =>
+        type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)!
+            .GetCustomAttribute<ToolDescriptionAttribute>()!;
 
     // ── ToolRegistry 注册类型跟踪 ──────────────────────────────────────────
 
@@ -130,79 +124,45 @@ public class NativeToolSyncServiceTests
         Assert.Contains("translate", names);
     }
 
-    // ── 种子配置完整性 ─────────────────────────────────────────────────────
+    // ── 特性元数据完整性 ───────────────────────────────────────────────────
 
     [Fact]
-    [DisplayName("种子字典中 DisplayName（Item3）均不为空")]
-    public void Seeds_AllHaveNonEmptyDisplayName()
+    [DisplayName("核心工具方法均配置 DisplayName，供同步时直接使用")]
+    public void ToolMethods_AllHaveDisplayNameAttribute()
     {
-        var seeds = GetSeeds();
-        foreach (var kv in seeds)
-            Assert.False(String.IsNullOrEmpty(kv.Value.Item3),
-                $"种子 '{kv.Key}' 的 DisplayName 为空，应填写中文显示名");
-    }
-
-    [Fact]
-    [DisplayName("ChatAI 种子包含所有已注册工具名称")]
-    public void Seeds_ContainsAllChatAiToolNames()
-    {
-        var seeds = GetSeeds();
-
-        // BuiltinToolService
-        Assert.True(seeds.ContainsKey("get_current_time"), "缺少 get_current_time 种子");
-        Assert.True(seeds.ContainsKey("calculate"), "缺少 calculate 种子");
-
-        // HolidayToolService
-        Assert.True(seeds.ContainsKey("query_date_info"), "缺少 query_date_info 种子");
-
-        // CurrentUserTool
-        Assert.True(seeds.ContainsKey("get_current_user"), "缺少 get_current_user 种子");
-
-        // NetworkToolService
-        Assert.True(seeds.ContainsKey("get_ip_location"), "缺少 get_ip_location 种子");
-        Assert.True(seeds.ContainsKey("get_weather"), "缺少 get_weather 种子");
-        Assert.True(seeds.ContainsKey("web_search"), "缺少 web_search 种子");
-        Assert.True(seeds.ContainsKey("web_fetch"), "缺少 web_fetch 种子");
-        Assert.True(seeds.ContainsKey("translate"), "缺少 translate 种子");
-    }
-
-    [Fact]
-    [DisplayName("网络工具种子包含正确的 Providers（Item1）配置")]
-    public void Seeds_NetworkTools_HaveProviders()
-    {
-        var seeds = GetSeeds();
-
-        Assert.True(seeds.TryGetValue("get_ip_location", out var ipSeed));
-        Assert.Contains("pconline", ipSeed.Item1);
-
-        Assert.True(seeds.TryGetValue("get_weather", out var weatherSeed));
-        Assert.Contains("nmc", weatherSeed.Item1);
-
-        Assert.True(seeds.TryGetValue("web_search", out var searchSeed));
-        Assert.Contains("bing", searchSeed.Item1);
-    }
-
-    // ── 锁定保护逻辑（纯逻辑，不依赖数据库）─────────────────────────────
-
-    [Fact]
-    [DisplayName("新记录 DisplayName 应从种子获取中文名（query_date_info → 日期节假日查询）")]
-    public void NewRecord_QueryDateInfo_UsesSeedChineseName()
-    {
-        var method = typeof(HolidayToolService)
+        var methods = typeof(BuiltinToolService)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .First(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null);
-        var chatTool = ToolSchemaBuilder.BuildFromMethod(method);
-        var toolName = chatTool.Function!.Name;
+            .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null)
+            .Concat(typeof(NetworkToolService)
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null))
+            .Concat(typeof(HolidayToolService)
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null))
+            .Concat(typeof(CurrentUserTool)
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null));
 
-        Assert.Equal("query_date_info", toolName);
+        foreach (var method in methods)
+            Assert.False(String.IsNullOrEmpty(method.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName),
+                $"方法 {method.DeclaringType?.Name}.{method.Name} 缺少 DisplayName 标注");
+    }
 
-        var seeds = GetSeeds();
-        seeds.TryGetValue(toolName, out var seed);
+    [Fact]
+    [DisplayName("网络工具在特性中声明严格触发词")]
+    public void NetworkTools_TriggersConfiguredOnAttribute()
+    {
+        Assert.Contains("今天天气怎么样", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.GetWeatherAsync)).Triggers);
+        Assert.Contains("帮我搜索", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebSearchAsync)).Triggers);
+        Assert.Contains("读取网页", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebFetchAsync)).Triggers);
+    }
 
-        // Item3 = DisplayName：新记录应使用种子中文名，而非 snake_case 工具名
-        var displayName = String.IsNullOrEmpty(seed.Item3) ? toolName : seed.Item3;
-        Assert.Equal("日期节假日查询", displayName);
-        Assert.NotEqual(toolName, displayName);
+    [Fact]
+    [DisplayName("严格天气触发词不再包含宽泛词下雨")]
+    public void GetWeather_TriggersAreSpecific()
+    {
+        var triggers = GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.GetWeatherAsync)).Triggers ?? "";
+        Assert.DoesNotContain("下雨", triggers);
     }
 
     // ── IsSystem 属性验证 ─────────────────────────────────────────────────
@@ -223,6 +183,7 @@ public class NativeToolSyncServiceTests
         var method = typeof(BuiltinToolService).GetMethod(nameof(BuiltinToolService.Calculate))!;
         var attr = method.GetCustomAttribute<ToolDescriptionAttribute>()!;
         Assert.False(attr.IsSystem);
+        Assert.False(attr.Enable);
     }
 
     [Fact]

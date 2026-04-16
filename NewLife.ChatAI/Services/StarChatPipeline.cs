@@ -280,6 +280,20 @@ public class ChatAIPipeline(
 
         // 取最后一条用户消息的内容，用于解析 @引用 等技能占位符
         var lastUserContent = contextMessages.LastOrDefault(m => m.Role == "user")?.Content as String;
+
+        // 追加 NativeTool 触发词命中（低于系统工具，高于普通自动发现）
+        var matchedNativeTools = skillService.MatchNativeToolNamesByContent(lastUserContent);
+        foreach (var toolName in matchedNativeTools)
+            context.SelectedTools.Add(toolName);
+
+        // 追加 MCP 触发词命中（含默认每轮可用的服务）
+        foreach (var mcp in toolProviders.OfType<McpClientService>())
+        {
+            var matchedMcpTools = mcp.MatchToolNamesByContent(lastUserContent);
+            foreach (var toolName in matchedMcpTools)
+                context.SelectedTools.Add(toolName);
+        }
+
         var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools, context.ResolvedSkillNames);
         if (skillPrompt.IsNullOrWhiteSpace()) return;
 
@@ -304,6 +318,8 @@ public class ChatAIPipeline(
         {
             if (p is DbToolProvider dbTool)
                 yield return new ScopedDbToolProvider(dbTool, selectedTools);
+            else if (p is McpClientService mcp)
+                yield return new ScopedMcpToolProvider(mcp, selectedTools);
             else
                 yield return p;
         }
@@ -318,6 +334,17 @@ public class ChatAIPipeline(
         /// <inheritdoc/>
         public Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default)
             => inner.CallToolAsync(toolName, argumentsJson, cancellationToken);
+    }
+
+    /// <summary>携带 SelectedTools 的轻量 McpClientService 包装器</summary>
+    private sealed class ScopedMcpToolProvider(McpClientService inner, ISet<String> selectedTools) : IToolProvider
+    {
+        /// <inheritdoc/>
+        public IList<ChatTool> GetTools() => inner.GetFilteredTools(selectedTools);
+
+        /// <inheritdoc/>
+        public Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default)
+            => ((IToolProvider)inner).CallToolAsync(toolName, argumentsJson, cancellationToken);
     }
 
     #endregion

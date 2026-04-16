@@ -333,6 +333,7 @@
         <Column Name="AuthType" DataType="String" Description="认证类型。None/Bearer/ApiKey" />
         <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
         <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
@@ -356,6 +357,7 @@
         <Column Name="MethodName" DataType="String" Description="方法名。工具对应的C#方法名，如GetCurrentTime" />
         <Column Name="Description" DataType="String" ItemType="markdown" Length="2000" Description="描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖" />
         <Column Name="Parameters" DataType="String" ItemType="json" ShowIn="Auto,-List,-Search" Length="-1" Description="参数Schema。JSON格式的函数参数定义，锁定后不再覆盖" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）" />
         <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。是否启用此工具，禁用后不传给LLM调用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统工具。每次LLM请求自动携带，无需@引用，如当前时间、当前用户信息" />
         <Column Name="IsLocked" DataType="Boolean" Description="锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整" />

@@ -141,6 +141,20 @@ public class NativeToolTests
         Assert.False(attr.HasExplicitName);
     }
 
+    [Fact]
+    [DisplayName("ToolDescriptionAttribute 支持配置触发词和启用状态")]
+    public void ToolDescriptionAttribute_CanSetTriggersAndEnable()
+    {
+        var attr = new ToolDescriptionAttribute("tool")
+        {
+            Triggers = "触发词A,触发词B",
+            Enable = false,
+        };
+
+        Assert.Equal("触发词A,触发词B", attr.Triggers);
+        Assert.False(attr.Enable);
+    }
+
     // ── ToolSchemaBuilder 测试 ────────────────────────────────────────────────
 
     [Fact]

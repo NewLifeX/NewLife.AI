@@ -12,39 +12,16 @@ namespace NewLife.ChatAI.Services;
 /// <remarks>
 /// 同步规则：
 /// <list type="bullet">
-/// <item>首次发现（Name 不存在）→ INSERT，Enable 默认 true，按内置 Seed 预填 Providers/Endpoint</item>
-/// <item>已存在且 IsLocked=false → UPDATE Description、Parameters、ClassName、MethodName（不修改 Enable）</item>
+/// <item>首次发现（Name 不存在）→ INSERT，按 ToolDescriptionAttribute / DisplayName / XML 注释初始化</item>
+/// <item>已存在且 IsLocked=false → UPDATE Description、Parameters、Triggers、ClassName、MethodName（不主动恢复 Enable）</item>
 /// <item>已存在且 IsLocked=true  → 只 UPDATE ClassName、MethodName（手工调整内容受保护）</item>
+/// <item>若 ToolDescriptionAttribute 显式禁用某工具 → 同步时强制关闭 Enable，避免误触发</item>
 /// </list>
 /// </remarks>
 /// <remarks>实例化内置工具同步服务</remarks>
 /// <param name="registry">工具注册表，包含所有已注册工具的类型信息</param>
 public class NativeToolSyncService(ToolRegistry registry) : IHostedService
 {
-    #region 种子配置
-
-    // 各工具的默认 Providers / Endpoint，首次插入时使用
-    private static readonly Dictionary<String, (String Providers, String Endpoint, String DisplayName)> _seeds
-        = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["get_current_time"] = ("", "", "当前时间"),
-            ["calculate"] = ("", "", "数学计算"),
-            ["query_date_info"] = ("", "", "日期节假日查询"),
-            ["get_ip_location"] = ("pconline,ipapi,newlife", "https://ai.newlifex.com", "IP归属地"),
-            ["get_weather"] = ("nmc,wttr,newlife", "https://ai.newlifex.com", "天气查询"),
-            ["translate"] = ("mymemory,newlife", "https://ai.newlifex.com", "文本翻译"),
-            ["web_search"] = ("bing,duckduckgo,newlife", "https://ai.newlifex.com", "网络搜索"),
-            ["web_fetch"] = ("direct,newlife", "https://ai.newlifex.com", "网页抓取"),
-            ["get_user_memories"] = ("", "", "用户记忆查询"),
-            ["get_user_trust"] = ("", "", "用户信任查询"),
-            ["fuse_knowledge"] = ("", "", "知识融合"),
-            ["evolve_skill"] = ("", "", "技能演化"),
-            ["review_knowledge"] = ("", "", "知识审核"),
-            ["get_current_user"] = ("", "", "当前用户信息"),
-        };
-
-    #endregion
-
     #region IHostedService
 
     /// <summary>启动时同步工具信息到数据库</summary>
@@ -114,21 +91,21 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
         var toolName = chatTool.Function!.Name;
         var description = chatTool.Function.Description;
         var parametersJson = chatTool.Function.Parameters?.ToJson();
+        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>()!;
 
-        // 首次发现则新建，填充种子配置（DisplayName、Providers、远程地址）
-        _seeds.TryGetValue(toolName, out var seed);
+        // 首次发现则新建，填充特性声明的启用状态
         var existing = NativeTool.FindByName(toolName);
         var isNew = existing == null;
         var record = existing ?? new NativeTool
         {
             Name = toolName,
-            Enable = true,
+            Enable = attr.Enable,
             IsLocked = false,
-            Providers = seed.Providers,
-            Endpoint = seed.Endpoint,
         };
 
-        // DisplayName 解析：[DisplayName] 标注 > XML 注释句号前中文 > 种子 > 工具名
+        if (!attr.Enable) record.Enable = false;
+
+        // DisplayName 解析：[DisplayName] 标注 > XML 注释句号前中文 > 工具名
         var displayNameAttr = method.GetCustomAttribute<DisplayNameAttribute>();
         var resolvedDisplayName = displayNameAttr?.DisplayName;
         if (String.IsNullOrEmpty(resolvedDisplayName) && !String.IsNullOrEmpty(description))
@@ -136,8 +113,6 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
             var idx = description.IndexOf('。');
             if (idx > 0) resolvedDisplayName = description[..idx];
         }
-        if (String.IsNullOrEmpty(resolvedDisplayName))
-            resolvedDisplayName = seed.DisplayName;
         if (String.IsNullOrEmpty(resolvedDisplayName))
             resolvedDisplayName = toolName;
         // 新增记录时初始化 DisplayName；或存在明确的 [DisplayName] 标注且未锁定时更新
@@ -149,15 +124,27 @@ public class NativeToolSyncService(ToolRegistry registry) : IHostedService
         record.MethodName = method.Name;
 
         // 未锁定时才更新描述和参数，保护手工调整的内容
-        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>()!;
         if (!record.IsLocked)
         {
             record.IsSystem = attr.IsSystem;
             record.Description = description;
             record.Parameters = parametersJson;
+            record.Triggers = NormalizeTriggers(attr.Triggers);
         }
 
         record.Save();
+    }
+
+    private static String? NormalizeTriggers(String? triggers)
+    {
+        if (String.IsNullOrWhiteSpace(triggers)) return null;
+
+        var words = triggers.Split([',', '，'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(e => !String.IsNullOrWhiteSpace(e))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return words.Length == 0 ? null : String.Join(",", words);
     }
 
     #endregion

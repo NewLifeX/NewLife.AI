@@ -79,6 +79,14 @@ public partial class NativeTool
     [BindColumn("Parameters", "参数Schema。JSON格式的函数参数定义，锁定后不再覆盖", "", ItemType = "json", ShowIn = "Auto,-List,-Search")]
     public String? Parameters { get => _Parameters; set { if (OnPropertyChanging("Parameters", value)) { _Parameters = value; OnPropertyChanged("Parameters"); } } }
 
+    private String? _Triggers;
+    /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）</summary>
+    [DisplayName("触发词")]
+    [Description("触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）", "")]
+    public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
+
     private Boolean _Enable;
     /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
     [DisplayName("启用")]
@@ -214,6 +222,7 @@ public partial class NativeTool
             "MethodName" => _MethodName,
             "Description" => _Description,
             "Parameters" => _Parameters,
+            "Triggers" => _Triggers,
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
             "IsLocked" => _IsLocked,
@@ -241,6 +250,7 @@ public partial class NativeTool
                 case "MethodName": _MethodName = Convert.ToString(value); break;
                 case "Description": _Description = Convert.ToString(value); break;
                 case "Parameters": _Parameters = Convert.ToString(value); break;
+                case "Triggers": _Triggers = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
                 case "IsLocked": _IsLocked = value.ToBoolean(); break;
@@ -347,6 +357,9 @@ public partial class NativeTool
         /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>
         public static readonly Field Parameters = FindByName("Parameters");
 
+        /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）</summary>
+        public static readonly Field Triggers = FindByName("Triggers");
+
         /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -415,6 +428,9 @@ public partial class NativeTool
 
         /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>
         public const String Parameters = "Parameters";
+
+        /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）</summary>
+        public const String Triggers = "Triggers";
 
         /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
         public const String Enable = "Enable";

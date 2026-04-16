@@ -87,10 +87,20 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
     /// <returns>工具定义列表，供注入 ChatCompletionRequest.Tools</returns>
     public IList<ChatTool> GetTools()
     {
+        return GetFilteredTools(null);
+    }
+
+    /// <summary>按工具名集合过滤 MCP 工具定义。用于会话级作用域控制</summary>
+    /// <param name="selectedTools">已选工具集合。null 表示不过滤，返回全部已启用 MCP 工具</param>
+    /// <returns>工具定义列表</returns>
+    public IList<ChatTool> GetFilteredTools(ISet<String>? selectedTools)
+    {
         var mcpTools = GetAllTools();
         var tools = new List<ChatTool>(mcpTools.Count);
         foreach (var t in mcpTools)
         {
+            if (selectedTools != null && !selectedTools.Contains(t.Name)) continue;
+
             tools.Add(new ChatTool
             {
                 Type = "function",
@@ -103,6 +113,42 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
             });
         }
         return tools;
+    }
+
+    /// <summary>根据消息内容匹配 MCP 触发词，返回应自动激活的工具名称集合</summary>
+    /// <param name="content">用户消息</param>
+    /// <returns>工具名称集合</returns>
+    public ISet<String> MatchToolNamesByContent(String? content)
+    {
+        var result = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
+        var servers = McpServerConfig.FindAllWithCache();
+        foreach (var server in servers)
+        {
+            if (!server.Enable || server.AvailableTools.IsNullOrEmpty()) continue;
+
+            var tools = server.AvailableTools.ToJsonEntity<IList<ToolDefinition>>();
+            if (tools == null || tools.Count == 0) continue;
+
+            // 触发词为空：该 MCP 服务默认每轮可用
+            if (server.Triggers.IsNullOrWhiteSpace())
+            {
+                foreach (var tool in tools)
+                {
+                    if (!tool.Name.IsNullOrEmpty()) result.Add(tool.Name);
+                }
+                continue;
+            }
+
+            if (!IsTriggered(server.Triggers, content)) continue;
+
+            foreach (var tool in tools)
+            {
+                if (!tool.Name.IsNullOrEmpty()) result.Add(tool.Name);
+            }
+        }
+
+        return result;
     }
     #endregion
 
@@ -202,6 +248,21 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
             throw new InvalidOperationException("MCP Server 返回了无效的 JSON-RPC 响应");
 
         return response;
+    }
+
+    private static Boolean IsTriggered(String triggers, String? content)
+    {
+        if (content.IsNullOrWhiteSpace()) return false;
+
+        var words = triggers.Split(',', '，');
+        foreach (var item in words)
+        {
+            var word = item.Trim();
+            if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
     #endregion
 }

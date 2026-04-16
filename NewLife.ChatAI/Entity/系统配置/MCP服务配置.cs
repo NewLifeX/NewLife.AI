@@ -78,6 +78,14 @@ public partial class McpServerConfig
     [BindColumn("AvailableTools", "可用工具。已发现的工具列表，JSON格式", "", ShowIn = "Auto,-List,-Search")]
     public String? AvailableTools { get => _AvailableTools; set { if (OnPropertyChanging("AvailableTools", value)) { _AvailableTools = value; OnPropertyChanged("AvailableTools"); } } }
 
+    private String? _Triggers;
+    /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+    [DisplayName("触发词")]
+    [Description("触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Triggers", "触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）", "")]
+    public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
+
     private Boolean _Enable;
     /// <summary>启用</summary>
     [DisplayName("启用")]
@@ -173,6 +181,7 @@ public partial class McpServerConfig
             "AuthType" => _AuthType,
             "AuthToken" => _AuthToken,
             "AvailableTools" => _AvailableTools,
+            "Triggers" => _Triggers,
             "Enable" => _Enable,
             "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
@@ -195,6 +204,7 @@ public partial class McpServerConfig
                 case "AuthType": _AuthType = Convert.ToString(value); break;
                 case "AuthToken": _AuthToken = Convert.ToString(value); break;
                 case "AvailableTools": _AvailableTools = Convert.ToString(value); break;
+                case "Triggers": _Triggers = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -294,6 +304,9 @@ public partial class McpServerConfig
         /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
         public static readonly Field AvailableTools = FindByName("AvailableTools");
 
+        /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+        public static readonly Field Triggers = FindByName("Triggers");
+
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -347,6 +360,9 @@ public partial class McpServerConfig
 
         /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
         public const String AvailableTools = "AvailableTools";
+
+        /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+        public const String Triggers = "Triggers";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";
