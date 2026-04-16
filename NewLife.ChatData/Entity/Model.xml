@@ -52,6 +52,7 @@
         <Column Name="SkillId" DataType="Int32" Map="Skill@Id@SkillName" Description="技能。当前会话使用的技能，引用Skill.Id" />
         <Column Name="SkillName" DataType="String" Description="技能名称。冗余存储技能名称，方便历史数据检索" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.Models.ThinkingMode" />
+        <Column Name="KnowledgeBases" DataType="String" Length="200" Description="知识库。逗号分隔的知识库ID列表，会话级绑定" />
         <Column Name="IsPinned" DataType="Boolean" Description="置顶。是否置顶显示" />
         <Column Name="MessageCount" DataType="Int32" Description="消息数" />
         <Column Name="LastMessageTime" DataType="DateTime" Description="最后消息时间。用于排序" />
@@ -333,7 +334,7 @@
         <Column Name="AuthType" DataType="String" Description="认证类型。None/Bearer/ApiKey" />
         <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
         <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
-        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
@@ -357,7 +358,7 @@
         <Column Name="MethodName" DataType="String" Description="方法名。工具对应的C#方法名，如GetCurrentTime" />
         <Column Name="Description" DataType="String" ItemType="markdown" Length="2000" Description="描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖" />
         <Column Name="Parameters" DataType="String" ItemType="json" ShowIn="Auto,-List,-Search" Length="-1" Description="参数Schema。JSON格式的函数参数定义，锁定后不再覆盖" />
-        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）" />
         <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。是否启用此工具，禁用后不传给LLM调用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统工具。每次LLM请求自动携带，无需@引用，如当前时间、当前用户信息" />
         <Column Name="IsLocked" DataType="Boolean" Description="锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整" />
@@ -410,6 +411,9 @@
         <Column Name="Category" DataType="String" Description="分类。通用/开发/创作/分析" />
         <Column Name="Description" DataType="String" Length="500" Description="描述。一句话说明该技能做什么" />
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译" />
+        <Column Name="ContinueHints" DataType="String" Length="200" Description="延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段" />
+        <Column Name="ExitHints" DataType="String" Length="200" Description="退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />

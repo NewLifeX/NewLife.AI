@@ -6,6 +6,7 @@ using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
 using ChatMessage = NewLife.AI.Models.ChatMessage;

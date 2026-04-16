@@ -32,7 +32,7 @@ public partial interface IMcpServerConfig
     /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
     String? AvailableTools { get; set; }
 
-    /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+    /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用</summary>
     String? Triggers { get; set; }
 
     /// <summary>启用</summary>

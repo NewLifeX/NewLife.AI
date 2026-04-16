@@ -1,28 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Script.Serialization;
-using System.Xml.Serialization;
-using NewLife;
+﻿using System.ComponentModel;
 using NewLife.Data;
 using NewLife.Log;
-using NewLife.Model;
-using NewLife.Reflection;
-using NewLife.Threading;
-using NewLife.Web;
 using XCode;
-using XCode.Cache;
-using XCode.Configuration;
-using XCode.DataAccessLayer;
-using XCode.Membership;
-using XCode.Shards;
 
 namespace NewLife.ChatData.Entity;
 
@@ -107,18 +86,6 @@ public partial class ChatPreset : Entity<ChatPreset>
     }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
-    ///// <returns></returns>
-    //public override Int32 Insert()
-    //{
-    //    return base.Insert();
-    //}
-
-    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
-    ///// <returns></returns>
-    //protected override Int32 OnDelete()
-    //{
-    //    return base.OnDelete();
-    //}
     #endregion
 
     #region 扩展属性
@@ -126,25 +93,40 @@ public partial class ChatPreset : Entity<ChatPreset>
 
     #region 高级查询
 
-    // Select Count(Id) as Id,Category From ChatPreset Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
-    //static readonly FieldCache<ChatPreset> _CategoryCache = new(nameof(Category))
-    //{
-    //Where = _.CreateTime > DateTime.Today.AddDays(-30) & Expression.Empty
-    //};
+    /// <summary>查询用户可用的预设列表（含系统级预设），按排序降序、编号降序排列</summary>
+    /// <param name="userId">用户编号</param>
+    /// <returns>预设列表</returns>
+    public static IList<ChatPreset> FindAllAvailable(Int32 userId)
+        => FindAll((_.UserId == userId | _.UserId == 0) & _.Enable == true, _.Sort.Desc() + "," + _.Id.Desc(), null, 0, 0);
 
-    ///// <summary>获取类别列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
-    ///// <returns></returns>
-    //public static IDictionary<String, String> GetCategoryList() => _CategoryCache.FindAllName();
+    /// <summary>高级查询</summary>
+    /// <param name="userId">用户。所属用户，0表示系统级预设</param>
+    /// <param name="modelId">模型。关联的模型配置</param>
+    /// <param name="sort">排序。越大越靠前</param>
+    /// <param name="enable">启用</param>
+    /// <param name="isDefault">默认预设。是否为用户默认选中的预设</param>
+    /// <param name="start">更新时间开始</param>
+    /// <param name="end">更新时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
+    /// <returns>实体列表</returns>
+    public static IList<ChatPreset> Search(Int32 userId, Int32 modelId, Int32 sort, Boolean? enable, Boolean? isDefault, DateTime start, DateTime end, String key, PageParameter page)
+    {
+        var exp = new WhereExpression();
+
+        if (userId >= 0) exp &= _.UserId == userId;
+        if (modelId >= 0) exp &= _.ModelId == modelId;
+        if (sort >= 0) exp &= _.Sort == sort;
+        if (enable != null) exp &= _.Enable == enable;
+        if (isDefault != null) exp &= _.IsDefault == isDefault;
+        exp &= _.UpdateTime.Between(start, end);
+        if (!key.IsNullOrEmpty()) exp &= _.Name.Contains(key) | _.ModelName.Contains(key);
+
+        return FindAll(exp, page);
+    }
+
     #endregion
 
     #region 业务操作
-    /// <summary>获取可用预设（当前用户 + 系统级）</summary>
-    /// <param name="userId">用户编号</param>
-    /// <returns></returns>
-    public static IList<ChatPreset> FindAllAvailable(Int32 userId)
-    {
-        return FindAll(_.Enable == true & (_.UserId == 0 | _.UserId == userId), _.Sort.Desc() & _.Id.Desc(), null, 0, 0);
-    }
-
     #endregion
 }

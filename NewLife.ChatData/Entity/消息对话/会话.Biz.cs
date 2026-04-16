@@ -153,6 +153,17 @@ public partial class Conversation : Entity<Conversation>
     /// <returns>会话编号数组</returns>
     public static Int64[] FindIdsByUserId(Int32 userId)
         => FindAll(_.UserId == userId, null, _.Id, 0, 0).Select(e => e.Id).ToArray();
+
+    /// <summary>获取用户最近的会话列表，按最后消息时间倒序</summary>
+    /// <param name="userId">用户编号</param>
+    /// <param name="maxCount">最大返回数</param>
+    /// <returns>会话列表</returns>
+    public static IList<Conversation> FindAllByUserId(Int32 userId, Int32 maxCount)
+    {
+        if (userId <= 0 || maxCount <= 0) return [];
+
+        return FindAll(_.UserId == userId, _.LastMessageTime.Desc(), null, 0, maxCount);
+    }
     #endregion
 
     #region 业务操作

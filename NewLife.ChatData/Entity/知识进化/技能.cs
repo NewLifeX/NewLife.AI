@@ -79,6 +79,30 @@ public partial class Skill : ISkill, IEntity<ISkill>
     [BindColumn("Content", "技能正文。Markdown格式，包含完整的行为指令、规则和示例", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String? Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
 
+    private String? _Triggers;
+    /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+    [DisplayName("触发词")]
+    [Description("触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译", "")]
+    public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
+
+    private String? _ContinueHints;
+    /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+    [DisplayName("延续提示词")]
+    [Description("延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("ContinueHints", "延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段", "")]
+    public String? ContinueHints { get => _ContinueHints; set { if (OnPropertyChanging("ContinueHints", value)) { _ContinueHints = value; OnPropertyChanged("ContinueHints"); } } }
+
+    private String? _ExitHints;
+    /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+    [DisplayName("退出提示词")]
+    [Description("退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("ExitHints", "退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题", "")]
+    public String? ExitHints { get => _ExitHints; set { if (OnPropertyChanging("ExitHints", value)) { _ExitHints = value; OnPropertyChanged("ExitHints"); } } }
+
     private Int32 _Sort;
     /// <summary>排序。越大越靠前</summary>
     [DisplayName("排序")]
@@ -205,6 +229,9 @@ public partial class Skill : ISkill, IEntity<ISkill>
         Category = model.Category;
         Description = model.Description;
         Content = model.Content;
+        Triggers = model.Triggers;
+        ContinueHints = model.ContinueHints;
+        ExitHints = model.ExitHints;
         Sort = model.Sort;
         Enable = model.Enable;
         IsSystem = model.IsSystem;
@@ -228,6 +255,9 @@ public partial class Skill : ISkill, IEntity<ISkill>
             "Category" => _Category,
             "Description" => _Description,
             "Content" => _Content,
+            "Triggers" => _Triggers,
+            "ContinueHints" => _ContinueHints,
+            "ExitHints" => _ExitHints,
             "Sort" => _Sort,
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
@@ -254,6 +284,9 @@ public partial class Skill : ISkill, IEntity<ISkill>
                 case "Category": _Category = Convert.ToString(value); break;
                 case "Description": _Description = Convert.ToString(value); break;
                 case "Content": _Content = Convert.ToString(value); break;
+                case "Triggers": _Triggers = Convert.ToString(value); break;
+                case "ContinueHints": _ContinueHints = Convert.ToString(value); break;
+                case "ExitHints": _ExitHints = Convert.ToString(value); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
@@ -371,6 +404,15 @@ public partial class Skill : ISkill, IEntity<ISkill>
         /// <summary>技能正文。Markdown格式，包含完整的行为指令、规则和示例</summary>
         public static readonly Field Content = FindByName("Content");
 
+        /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+        public static readonly Field Triggers = FindByName("Triggers");
+
+        /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+        public static readonly Field ContinueHints = FindByName("ContinueHints");
+
+        /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+        public static readonly Field ExitHints = FindByName("ExitHints");
+
         /// <summary>排序。越大越靠前</summary>
         public static readonly Field Sort = FindByName("Sort");
 
@@ -436,6 +478,15 @@ public partial class Skill : ISkill, IEntity<ISkill>
 
         /// <summary>技能正文。Markdown格式，包含完整的行为指令、规则和示例</summary>
         public const String Content = "Content";
+
+        /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+        public const String Triggers = "Triggers";
+
+        /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+        public const String ContinueHints = "ContinueHints";
+
+        /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+        public const String ExitHints = "ExitHints";
 
         /// <summary>排序。越大越靠前</summary>
         public const String Sort = "Sort";

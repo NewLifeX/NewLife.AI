@@ -44,8 +44,8 @@ public partial class NativeTool : Entity<NativeTool>
         Meta.Interceptors.Add(new IPInterceptor { AllowEmpty = false });
 
         // 实体缓存
-        // var ec = Meta.Cache;
-        // ec.Expire = 60;
+        var ec = Meta.Cache;
+        ec.Expire = 60;
 
         // 单对象缓存
         var sc = Meta.SingleCache;
@@ -144,7 +144,7 @@ public partial class NativeTool : Entity<NativeTool>
 
     /// <summary>查找所有启用的内置工具</summary>
     /// <returns>启用的内置工具列表</returns>
-    public static IList<NativeTool> FindAllEnabled() => FindAll(_.Enable == true);
+    public static IList<NativeTool> FindAllEnabled() => FindAllWithCache().Where(e => e.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
 
     /// <summary>按名称或显示名称查找内置工具。先匹配 Name（snake_case），再匹配 DisplayName（中文）</summary>
     /// <param name="name">名称或显示名称</param>

@@ -156,40 +156,6 @@ public partial class ModelConfig : Entity<ModelConfig>, IChatPipelineModel
         return list.Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
     }
 
-    /// <summary>高级查询</summary>
-    /// <param name="providerId">提供商。关联的提供商实例ID</param>
-    /// <param name="code">编码。模型唯一标识</param>
-    /// <param name="supportThinking">思考。是否支持思考模式</param>
-    /// <param name="supportFunctionCalling">函数调用。是否支持Function Calling</param>
-    /// <param name="supportVision">视觉。是否支持图片输入</param>
-    /// <param name="supportAudio">音频。是否支持音频输入输出</param>
-    /// <param name="supportImageGeneration">图像。是否支持文生图</param>
-    /// <param name="supportVideoGeneration">视频生成。是否支持文生视频</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">更新时间开始</param>
-    /// <param name="end">更新时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
-    /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
-    {
-        var exp = new WhereExpression();
-
-        if (providerId >= 0) exp &= _.ProviderId == providerId;
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (supportThinking != null) exp &= _.SupportThinking == supportThinking;
-        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling;
-        if (supportVision != null) exp &= _.SupportVision == supportVision;
-        if (supportAudio != null) exp &= _.SupportAudio == supportAudio;
-        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration;
-        if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration;
-        if (enable != null) exp &= _.Enable == enable;
-        exp &= _.UpdateTime.Between(start, end);
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
-
-        return FindAll(exp, page);
-    }
-
     // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
     static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))
     {
@@ -260,13 +226,6 @@ public partial class ModelConfig : Entity<ModelConfig>, IChatPipelineModel
         return false;
     }
 
-    ///// <summary>获取所有启用的模型配置，按排序降序、编号降序。模型自身已启用且关联提供商未禁用时才认为可用</summary>
-    ///// <returns>模型配置列表</returns>
-    //public static IList<ModelConfig> FindAllEnabled()
-    //{
-    //    return FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
-    //}
-
     /// <summary>根据编码查找启用的模型配置。模型自身已启用且关联提供商未禁用时才认为可用</summary>
     /// <param name="code">模型编码</param>
     /// <returns>模型配置，未找到返回null</returns>
@@ -303,40 +262,40 @@ public partial class ModelConfig : Entity<ModelConfig>, IChatPipelineModel
         return list.Where(e => e.CheckPermission(roleIds, departmentId) && (e.ProviderInfo == null || e.ProviderInfo.CheckPermission(roleIds, departmentId))).ToList();
     }
 
-    ///// <summary>高级搜索。用于魔方前台列表页</summary>
-    ///// <param name="providerId">提供商编号</param>
-    ///// <param name="code">编码</param>
-    ///// <param name="supportThinking">支持思考</param>
-    ///// <param name="supportFunctionCalling">支持函数调用</param>
-    ///// <param name="supportVision">支持视觉</param>
-    ///// <param name="supportAudio">支持音频</param>
-    ///// <param name="supportImageGeneration">支持图像生成</param>
-    ///// <param name="supportVideoGeneration">支持视频生成</param>
-    ///// <param name="enable">启用</param>
-    ///// <param name="start">创建时间开始</param>
-    ///// <param name="end">创建时间结束</param>
-    ///// <param name="key">关键字</param>
-    ///// <param name="page">分页参数</param>
-    ///// <returns></returns>
-    //public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
-    //{
-    //    var exp = new WhereExpression();
+    /// <summary>高级搜索。用于魔方前台列表页</summary>
+    /// <param name="providerId">提供商编号</param>
+    /// <param name="code">编码</param>
+    /// <param name="supportThinking">支持思考</param>
+    /// <param name="supportFunctionCalling">支持函数调用</param>
+    /// <param name="supportVision">支持视觉</param>
+    /// <param name="supportAudio">支持音频</param>
+    /// <param name="supportImageGeneration">支持图像生成</param>
+    /// <param name="supportVideoGeneration">支持视频生成</param>
+    /// <param name="enable">启用</param>
+    /// <param name="start">创建时间开始</param>
+    /// <param name="end">创建时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数</param>
+    /// <returns></returns>
+    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    {
+        var exp = new WhereExpression();
 
-    //    if (providerId >= 0) exp &= _.ProviderId == providerId;
-    //    if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-    //    if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
-    //    if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
-    //    if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
-    //    if (supportAudio != null) exp &= _.SupportAudio == supportAudio.Value;
-    //    if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
-    //    if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration.Value;
-    //    if (enable != null) exp &= _.Enable == enable.Value;
+        if (providerId >= 0) exp &= _.ProviderId == providerId;
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+        if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
+        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
+        if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
+        if (supportAudio != null) exp &= _.SupportAudio == supportAudio.Value;
+        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
+        if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration.Value;
+        if (enable != null) exp &= _.Enable == enable.Value;
 
-    //    exp &= _.CreateTime.Between(start, end);
+        exp &= _.CreateTime.Between(start, end);
 
-    //    if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
-    //    return FindAll(exp, page);
-    //}
+        return FindAll(exp, page);
+    }
     #endregion
 }

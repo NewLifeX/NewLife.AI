@@ -32,6 +32,15 @@ public partial interface ISkill
     /// <summary>技能正文。Markdown格式，包含完整的行为指令、规则和示例</summary>
     String? Content { get; set; }
 
+    /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+    String? Triggers { get; set; }
+
+    /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+    String? ContinueHints { get; set; }
+
+    /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+    String? ExitHints { get; set; }
+
     /// <summary>排序。越大越靠前</summary>
     Int32 Sort { get; set; }
 

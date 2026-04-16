@@ -44,8 +44,8 @@ public partial class McpServerConfig : Entity<McpServerConfig>
         Meta.Interceptors.Add(new IPInterceptor { AllowEmpty = false });
 
         // 实体缓存
-        // var ec = Meta.Cache;
-        // ec.Expire = 60;
+        var ec = Meta.Cache;
+        ec.Expire = 60;
 
         // 单对象缓存
         var sc = Meta.SingleCache;

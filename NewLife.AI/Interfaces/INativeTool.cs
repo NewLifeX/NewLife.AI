@@ -32,7 +32,7 @@ public partial interface INativeTool
     /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>
     String? Parameters { get; set; }
 
-    /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅 IsSystem=false 生效）</summary>
+    /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
     String? Triggers { get; set; }
 
     /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>

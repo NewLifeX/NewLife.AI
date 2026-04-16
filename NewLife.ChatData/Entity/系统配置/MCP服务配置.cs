@@ -79,11 +79,11 @@ public partial class McpServerConfig : IMcpServerConfig, IEntity<IMcpServerConfi
     public String? AvailableTools { get => _AvailableTools; set { if (OnPropertyChanging("AvailableTools", value)) { _AvailableTools = value; OnPropertyChanged("AvailableTools"); } } }
 
     private String? _Triggers;
-    /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+    /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用</summary>
     [DisplayName("触发词")]
-    [Description("触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）")]
+    [Description("触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用")]
     [DataObjectField(false, false, true, 500)]
-    [BindColumn("Triggers", "触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）", "")]
+    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用", "")]
     public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
 
     private Boolean _Enable;
@@ -323,7 +323,7 @@ public partial class McpServerConfig : IMcpServerConfig, IEntity<IMcpServerConfi
         /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
         public static readonly Field AvailableTools = FindByName("AvailableTools");
 
-        /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+        /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用</summary>
         public static readonly Field Triggers = FindByName("Triggers");
 
         /// <summary>启用</summary>
@@ -380,7 +380,7 @@ public partial class McpServerConfig : IMcpServerConfig, IEntity<IMcpServerConfi
         /// <summary>可用工具。已发现的工具列表，JSON格式</summary>
         public const String AvailableTools = "AvailableTools";
 
-        /// <summary>触发词。逗号分隔；消息命中任一关键词时自动激活该 MCP 服务（仅非系统工具过滤场景）</summary>
+        /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用</summary>
         public const String Triggers = "Triggers";
 
         /// <summary>启用</summary>
