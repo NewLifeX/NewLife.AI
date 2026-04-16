@@ -7,9 +7,8 @@ using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
+using NewLife.ChatData.Entity;
 using Xunit;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
 

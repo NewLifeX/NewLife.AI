@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
     <ProjectReference Include="..\NewLife.ChatAI\NewLife.ChatAI.csproj" />
+    <ProjectReference Include="..\NewLife.ChatData\NewLife.ChatData.csproj" />
   </ItemGroup>
 
 </Project>
