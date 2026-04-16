@@ -269,40 +269,40 @@ public partial class ModelConfig : Entity<ModelConfig>, IChatPipelineModel
         return list.Where(e => e.CheckPermission(roleIds, departmentId) && (e.ProviderInfo == null || e.ProviderInfo.CheckPermission(roleIds, departmentId))).ToList();
     }
 
-    /// <summary>高级搜索。用于魔方前台列表页</summary>
-    /// <param name="providerId">提供商编号</param>
-    /// <param name="code">编码</param>
-    /// <param name="supportThinking">支持思考</param>
-    /// <param name="supportFunctionCalling">支持函数调用</param>
-    /// <param name="supportVision">支持视觉</param>
-    /// <param name="supportAudio">支持音频</param>
-    /// <param name="supportImageGeneration">支持图像生成</param>
-    /// <param name="supportVideoGeneration">支持视频生成</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">创建时间开始</param>
-    /// <param name="end">创建时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数</param>
-    /// <returns></returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
-    {
-        var exp = new WhereExpression();
+    ///// <summary>高级搜索。用于魔方前台列表页</summary>
+    ///// <param name="providerId">提供商编号</param>
+    ///// <param name="code">编码</param>
+    ///// <param name="supportThinking">支持思考</param>
+    ///// <param name="supportFunctionCalling">支持函数调用</param>
+    ///// <param name="supportVision">支持视觉</param>
+    ///// <param name="supportAudio">支持音频</param>
+    ///// <param name="supportImageGeneration">支持图像生成</param>
+    ///// <param name="supportVideoGeneration">支持视频生成</param>
+    ///// <param name="enable">启用</param>
+    ///// <param name="start">创建时间开始</param>
+    ///// <param name="end">创建时间结束</param>
+    ///// <param name="key">关键字</param>
+    ///// <param name="page">分页参数</param>
+    ///// <returns></returns>
+    //public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    //{
+    //    var exp = new WhereExpression();
 
-        if (providerId >= 0) exp &= _.ProviderId == providerId;
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
-        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
-        if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
-        if (supportAudio != null) exp &= _.SupportAudio == supportAudio.Value;
-        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
-        if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration.Value;
-        if (enable != null) exp &= _.Enable == enable.Value;
+    //    if (providerId >= 0) exp &= _.ProviderId == providerId;
+    //    if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+    //    if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
+    //    if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
+    //    if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
+    //    if (supportAudio != null) exp &= _.SupportAudio == supportAudio.Value;
+    //    if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
+    //    if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration.Value;
+    //    if (enable != null) exp &= _.Enable == enable.Value;
 
-        exp &= _.CreateTime.Between(start, end);
+    //    exp &= _.CreateTime.Between(start, end);
 
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+    //    if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
-        return FindAll(exp, page);
-    }
+    //    return FindAll(exp, page);
+    //}
     #endregion
 }

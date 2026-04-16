@@ -4,6 +4,7 @@ using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 using NewLife.AI.Clients;
 using NewLife.Common;
+using NewLife.Data;
 using NewLife.Log;
 using NewLife.Web;
 using XCode;
@@ -189,29 +190,29 @@ public partial class ProviderConfig : Entity<ProviderConfig>
         return entity;
     }
 
-    /// <summary>高级搜索。用于魔方前台列表页</summary>
-    /// <param name="code">编码</param>
-    /// <param name="provider">协议</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">创建时间开始</param>
-    /// <param name="end">创建时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数</param>
-    /// <returns></returns>
-    public static IList<ProviderConfig> Search(String code, String provider, Boolean? enable, DateTime start, DateTime end, String key, Pager page)
-    {
-        var exp = new WhereExpression();
+    ///// <summary>高级搜索。用于魔方前台列表页</summary>
+    ///// <param name="code">编码</param>
+    ///// <param name="provider">协议</param>
+    ///// <param name="enable">启用</param>
+    ///// <param name="start">创建时间开始</param>
+    ///// <param name="end">创建时间结束</param>
+    ///// <param name="key">关键字</param>
+    ///// <param name="page">分页参数</param>
+    ///// <returns></returns>
+    //public static IList<ProviderConfig> Search(String code, String provider, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    //{
+    //    var exp = new WhereExpression();
 
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
-        if (enable != null) exp &= _.Enable == enable.Value;
+    //    if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+    //    if (!provider.IsNullOrEmpty()) exp &= _.Provider == provider;
+    //    if (enable != null) exp &= _.Enable == enable.Value;
 
-        exp &= _.CreateTime.Between(start, end);
+    //    exp &= _.CreateTime.Between(start, end);
 
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+    //    if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
-        return FindAll(exp, page);
-    }
+    //    return FindAll(exp, page);
+    //}
 
     /// <summary>检查用户是否有权限使用此提供商</summary>
     /// <param name="roleIds">用户角色组</param>
