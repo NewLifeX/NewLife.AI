@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
+    <PackageReference Include="NewLife.Holiday" Version="1.4.2026.206" />
     <PackageReference Include="NewLife.XCode" Version="11.25.2026.403" />
   </ItemGroup>
 

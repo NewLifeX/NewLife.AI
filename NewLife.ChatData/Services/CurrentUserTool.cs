@@ -1,9 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using NewLife.AI.Tools;
 using NewLife.Collections;
 using XCode.Membership;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
 /// <summary>当前用户工具服务。提供当前请求用户的详细档案，作为系统工具自动注入每次 LLM 请求，供 AI 按需查询</summary>
 /// <remarks>初始化当前用户工具服务</remarks>
