@@ -54,6 +54,12 @@ public class MessageFlow
     /// <summary>日志</summary>
     protected readonly ILog? Log;
 
+    /// <summary>上下文增强器链（DI 注册的 <see cref="IContextEnricher"/>，按 Order 升序执行）</summary>
+    protected readonly IReadOnlyList<IContextEnricher> Enrichers;
+
+    /// <summary>消息流后处理器链（DI 注册的 <see cref="IMessageFlowPostProcessor"/>，按 Order 升序执行）</summary>
+    protected readonly IReadOnlyList<IMessageFlowPostProcessor> PostProcessors;
+
     #endregion
 
     #region 构造
@@ -65,7 +71,9 @@ public class MessageFlow
     /// <param name="usageService">用量统计服务</param>
     /// <param name="tracer">追踪器</param>
     /// <param name="log">日志</param>
-    public MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer? tracer, ILog? log)
+    /// <param name="enrichers">上下文增强器链（可选）</param>
+    /// <param name="postProcessors">消息流后处理器链（可选）</param>
+    public MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
     {
         Pipeline = pipeline;
         ModelService = modelService;
@@ -73,6 +81,8 @@ public class MessageFlow
         UsageService = usageService;
         Tracer = tracer;
         Log = log;
+        Enrichers = enrichers?.OrderBy(e => e.Order).ToArray() ?? [];
+        PostProcessors = postProcessors?.OrderBy(p => p.Order).ToArray() ?? [];
     }
 
     #endregion
@@ -95,16 +105,20 @@ public class MessageFlow
         try
         {
             // Step2: 构建对话上下文
-            var contextMessages = await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
+            await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
 
-            // Step3: 初始化管道上下文 + 执行
+            // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行
             InitPipelineContext(flow);
+            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
             var sw = Stopwatch.StartNew();
-            var response = await Pipeline.CompleteAsync(contextMessages, flow.ModelConfig, flow.PipelineContext, cancellationToken).ConfigureAwait(false);
+            var response = await Pipeline.CompleteAsync(flow.ContextMessages, flow.ModelConfig, flow.PipelineContext, cancellationToken).ConfigureAwait(false);
             sw.Stop();
 
             // Step4: 持久化结果
             PersistCompleteResult(flow, response, (Int32)sw.ElapsedMilliseconds);
+
+            // Step5: 后处理链
+            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
             return ToMessageDto(flow.AssistantMessage);
         }
@@ -150,17 +164,21 @@ public class MessageFlow
         flow.AssistantMessage = assistantMsg;
 
         // Step2: 构建对话上下文
-        var contextMessages = await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
+        await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
 
         yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, flow.UserMessage!.ThinkingMode);
 
-        // Step3: 初始化管道上下文 + 执行流式生成
+        // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow);
-        await foreach (var ev in ExecuteStreamAsync(flow, contextMessages, cancellationToken).ConfigureAwait(false))
+        await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+        await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
             yield return ev;
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
+
+        // Step5: 后处理链
+        await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
             yield return new ChatStreamEvent { Type = "message_done", MessageId = flow.AssistantMessage.Id, Usage = flow.Usage, };
@@ -184,18 +202,22 @@ public class MessageFlow
         }
 
         // Step2: 构建对话上下文
-        var contextMessages = await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
+        await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // message_start
         yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, flow.AssistantMessage.ThinkingMode);
 
-        // Step3: 初始化管道上下文 + 执行流式生成
+        // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow);
-        await foreach (var ev in ExecuteStreamAsync(flow, contextMessages, cancellationToken).ConfigureAwait(false))
+        await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+        await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
             yield return ev;
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
+
+        // Step5: 后处理链
+        await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // message_done
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
@@ -277,7 +299,7 @@ public class MessageFlow
         flow.SkillName = skillName;
 
         // Step2: 构建对话上下文
-        var contextMessages = await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
+        await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
 
         // message_start
         using var span = Tracer?.NewSpan($"ai:Stream:{flow.ModelConfig.Code}", request.Content);
@@ -286,11 +308,12 @@ public class MessageFlow
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         TryStartTitleGeneration(conversation, conversationId, request.Content, request.AttachmentIds is { Count: > 0 });
 
-        // Step3: 初始化管道上下文 + 执行流式生成
+        // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow, request.Options);
+        await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 预处理：注入技能提示词、解析@引用，生成 SystemPrompt
-        Pipeline.PrepareContext(contextMessages, flow.PipelineContext);
+        Pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
 
         // 注册系统消息就绪回调
         flow.PipelineContext.OnSystemReady = sysContent =>
@@ -302,13 +325,16 @@ public class MessageFlow
             }
         };
 
-        await foreach (var ev in ExecuteStreamAsync(flow, contextMessages, cancellationToken).ConfigureAwait(false))
+        await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
         {
             yield return ev;
         }
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
+
+        // Step5: 后处理链
+        await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 推荐问题缓存回写
         if (!flow.HasError && ChatSetting.Current.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
@@ -599,6 +625,7 @@ public class MessageFlow
         using var span = Tracer?.NewSpan("ai:BuildContext");
 
         var contextMessages = BuildContextMessages(flow.UserId, flow.Conversation.Id, currentContent, flow.ModelConfig);
+        flow.ContextMessages = contextMessages;
         return Task.FromResult(contextMessages);
     }
 
@@ -634,6 +661,7 @@ public class MessageFlow
             contextMessages.Add(new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content });
         }
 
+        flow.ContextMessages = contextMessages;
         return Task.FromResult<IList<AiChatMessage>>(contextMessages);
     }
 
@@ -1172,6 +1200,56 @@ public class MessageFlow
                 var orig = collector[i];
                 collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value);
                 break;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Enricher / PostProcessor 调用
+
+    /// <summary>遍历上下文增强器链。按 Order 升序依次调用，单个 Enricher 失败只记录日志，不影响后续与主流程</summary>
+    /// <param name="flow">流程上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步任务</returns>
+    protected virtual async Task InvokeContextEnrichersAsync(MessageFlowContext flow, CancellationToken cancellationToken)
+    {
+        if (Enrichers.Count == 0) return;
+        using var span = Tracer?.NewSpan("ai:InvokeEnrichers", Enrichers.Count);
+        foreach (var enricher in Enrichers)
+        {
+            if (!enricher.IsApplicable(flow)) continue;
+            try
+            {
+                await enricher.EnrichAsync(flow, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                Log?.Warn("上下文增强器 {0} 执行失败：{1}", enricher.GetType().Name, ex.Message);
+            }
+        }
+    }
+
+    /// <summary>遍历消息流后处理器链。按 Order 升序依次调用；单个 PostProcessor 失败只记录日志，不影响后续执行与主流程返回</summary>
+    /// <param name="flow">流程上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步任务</returns>
+    protected virtual async Task InvokePostProcessorsAsync(MessageFlowContext flow, CancellationToken cancellationToken)
+    {
+        if (PostProcessors.Count == 0) return;
+        using var span = Tracer?.NewSpan("ai:InvokePostProcessors", PostProcessors.Count);
+        foreach (var processor in PostProcessors)
+        {
+            if (!processor.IsApplicable(flow)) continue;
+            try
+            {
+                await processor.ProcessAsync(flow, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                Log?.Warn("消息流后处理器 {0} 执行失败：{1}", processor.GetType().Name, ex.Message);
             }
         }
     }

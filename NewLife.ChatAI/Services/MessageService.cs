@@ -26,8 +26,10 @@ namespace NewLife.ChatAI.Services;
 /// <param name="usageService">用量统计服务</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-public class MessageService(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer tracer, ILog log)
-    : MessageFlow(pipeline, modelService, backgroundService, usageService, tracer, log)
+/// <param name="enrichers">上下文增强器（可选，DI 自动注入）</param>
+/// <param name="postProcessors">消息流后处理器（可选，DI 自动注入）</param>
+public class MessageService(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer tracer, ILog log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
+    : MessageFlow(pipeline, modelService, backgroundService, usageService, tracer, log, enrichers, postProcessors)
 {
     #region 覆盖：附加用户部门信息
 
