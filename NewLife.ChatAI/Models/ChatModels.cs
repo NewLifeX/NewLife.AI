@@ -15,28 +15,6 @@ public record ConversationSummaryDto(Int64 Id, String Title, Int32 ModelId, Date
     public String? IconColor { get; set; }
 };
 
-/// <summary>消息数据</summary>
-public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Content, String? ThinkingContent, ThinkingMode ThinkingMode, String? Attachments, DateTime CreateTime)
-{
-    /// <summary>消息状态</summary>
-    public MessageStatus Status { get; set; } = MessageStatus.Done;
-
-    /// <summary>工具调用列表</summary>
-    public IReadOnlyList<ToolCallDto>? ToolCalls { get; set; }
-
-    /// <summary>输入Token数</summary>
-    public Int32 InputTokens { get; set; }
-
-    /// <summary>输出Token数</summary>
-    public Int32 OutputTokens { get; set; }
-
-    /// <summary>总Token数</summary>
-    public Int32 TotalTokens { get; set; }
-
-    /// <summary>反馈类型。Like=1, Dislike=2, 0=无反馈</summary>
-    public Int32 FeedbackType { get; set; }
-};
-
 /// <summary>附件信息</summary>
 public record AttachmentInfoDto(Int64 Id, String FileName, Int64 Size, String Url, Boolean IsImage);
 

@@ -1,21 +1,22 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Filters;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.AI.Tools;
-using NewLife.Log;
 using NewLife.ChatData.Entity;
+using NewLife.Log;
+using NewLife.Serialization;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
-using NewLife.Serialization;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
-/// <summary>ChatAI 对话执行管道。将工具调用、技能注入、知识进化等中间件组装为统一的执行入口</summary>
+/// <summary>默认对话执行管道。将工具调用、技能注入、过滤器链等中间件组装为统一的执行入口</summary>
 /// <remarks>
 /// 流式管道为单路径：
 /// <code>
@@ -24,8 +25,14 @@ namespace NewLife.ChatAI.Services;
 ///     → 服务商 RawClient（HTTP 调用）
 /// </code>
 /// 过滤器包在最外层，仅在全部工具调用完成后触发一次 OnStreamCompletedAsync。
+/// 商用版可通过派生类覆盖 <see cref="BuildScopedProviders"/> / 注册自家 <see cref="IChatFilter"/> 等手段扩展。
 /// </remarks>
-public class ChatAIPipeline(
+/// <param name="modelService">模型服务</param>
+/// <param name="toolProviders">已注册的工具提供者（DbToolProvider、McpClientService 等）</param>
+/// <param name="chatFilters">聊天过滤器链（日志、学习、Agent 触发等）</param>
+/// <param name="skillService">技能服务（可选）</param>
+/// <param name="tracer">追踪器</param>
+public class ChatPipeline(
     ModelService modelService,
     IEnumerable<IToolProvider> toolProviders,
     IEnumerable<IChatFilter> chatFilters,
@@ -35,7 +42,7 @@ public class ChatAIPipeline(
     #region IChatPipeline
 
     /// <inheritdoc/>
-    public void PrepareContext(IList<AiChatMessage> contextMessages, ChatPipelineContext context)
+    public virtual void PrepareContext(IList<AiChatMessage> contextMessages, ChatPipelineContext context)
     {
         InjectSkillPrompt(contextMessages, context);
 
@@ -49,7 +56,7 @@ public class ChatAIPipeline(
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
+    public virtual async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
         IList<AiChatMessage> contextMessages,
         IModelConfig modelConfig,
         ThinkingMode thinkingMode,
@@ -75,9 +82,9 @@ public class ChatAIPipeline(
         foreach (var filter in chatFilters)
             clientBuilder = clientBuilder.UseFilters(filter);
         var providers = BuildScopedProviders(context.SelectedTools).ToArray();
-        if (providers.Length > 0) clientBuilder = clientBuilder.UseTools(providers);
+        ApplyTools(ref clientBuilder, contextMessages, providers);
 
-        // 记录本轮可用工具名称（供 ChatApplicationService 写入 userMsg.ToolNames）
+        // 记录本轮可用工具名称（供外部写入 userMsg.ToolNames）
         foreach (var p in providers)
         {
             foreach (var t in p.GetTools())
@@ -113,7 +120,7 @@ public class ChatAIPipeline(
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
         ApplyResponseStyle(chatOptions, context.UserId);
 
-        // 记录实际请求参数到上下文，供 ChatApplicationService 写入消息记录
+        // 记录实际请求参数到上下文，供外部写入消息记录
         context.MaxTokens = chatOptions.MaxTokens ?? 0;
         context.Temperature = chatOptions.Temperature;
 
@@ -199,7 +206,7 @@ public class ChatAIPipeline(
     }
 
     /// <inheritdoc/>
-    public async Task<ChatResponse> CompleteAsync(
+    public virtual async Task<ChatResponse> CompleteAsync(
         IList<AiChatMessage> contextMessages,
         IModelConfig modelConfig,
         ChatPipelineContext context,
@@ -218,7 +225,7 @@ public class ChatAIPipeline(
         foreach (var filter in chatFilters)
             clientBuilder = clientBuilder.UseFilters(filter);
         var providers2 = BuildScopedProviders(context.SelectedTools).ToArray();
-        if (providers2.Length > 0) clientBuilder = clientBuilder.UseTools(providers2);
+        ApplyTools(ref clientBuilder, contextMessages, providers2);
 
         var chatOptions = new ChatOptions
         {
@@ -245,12 +252,21 @@ public class ChatAIPipeline(
 
     #endregion
 
-    #region 辅助
+    #region 可覆盖钩子
+
+    /// <summary>将工具提供者应用到客户端构建器。派生类可覆盖以实现渐进式工具发现、结果截断等策略</summary>
+    /// <param name="clientBuilder">客户端构建器（ref 传入，便于派生类链式替换）</param>
+    /// <param name="contextMessages">上下文消息列表</param>
+    /// <param name="providers">已解析的工具提供者集合</param>
+    protected virtual void ApplyTools(ref ChatClientBuilder clientBuilder, IList<AiChatMessage> contextMessages, IToolProvider[] providers)
+    {
+        if (providers.Length > 0) clientBuilder = clientBuilder.UseTools(providers);
+    }
 
     /// <summary>根据用户回应风格设置采样参数。仅在请求未显式指定时设置，不强制覆盖</summary>
     /// <param name="chatOptions">聊天选项</param>
     /// <param name="userId">用户编号</param>
-    private static void ApplyResponseStyle(ChatOptions chatOptions, String? userId)
+    protected virtual void ApplyResponseStyle(ChatOptions chatOptions, String? userId)
     {
         var uid = userId.ToInt();
         if (uid <= 0) return;
@@ -272,7 +288,7 @@ public class ChatAIPipeline(
     /// <summary>注入技能系统提示词。取消息列表中的系统消息，将技能提示词前置拼接；同时解析消息中的 @ToolName 引用并填充 context.SelectedTools</summary>
     /// <param name="contextMessages">上下文消息（会被修改）</param>
     /// <param name="context">管道执行上下文</param>
-    private void InjectSkillPrompt(IList<AiChatMessage> contextMessages, ChatPipelineContext context)
+    protected virtual void InjectSkillPrompt(IList<AiChatMessage> contextMessages, ChatPipelineContext context)
     {
         if (skillService == null) return;
 
@@ -311,8 +327,10 @@ public class ChatAIPipeline(
         }
     }
 
-    /// <summary>将 DbToolProvider 包装为携带 selectedTools 的作用域版本</summary>
-    private IEnumerable<IToolProvider> BuildScopedProviders(ISet<String> selectedTools)
+    /// <summary>将 DbToolProvider/McpClientService 包装为携带 selectedTools 的作用域版本</summary>
+    /// <param name="selectedTools">本轮选中的工具名称集合</param>
+    /// <returns>作用域化的工具提供者序列</returns>
+    protected virtual IEnumerable<IToolProvider> BuildScopedProviders(ISet<String> selectedTools)
     {
         foreach (var p in toolProviders)
         {
@@ -324,6 +342,10 @@ public class ChatAIPipeline(
                 yield return p;
         }
     }
+
+    #endregion
+
+    #region 辅助类型
 
     /// <summary>携带 SelectedTools 的轻量 DbToolProvider 包装器</summary>
     private sealed class ScopedDbToolProvider(DbToolProvider inner, ISet<String> selectedTools) : IToolProvider
@@ -347,8 +369,5 @@ public class ChatAIPipeline(
             => ((IToolProvider)inner).CallToolAsync(toolName, argumentsJson, cancellationToken);
     }
 
-    #endregion
-
-    #region 日志
     #endregion
 }

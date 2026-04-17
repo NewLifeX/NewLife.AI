@@ -14,6 +14,7 @@ using Boolean = System.Boolean;
 using CancellationToken = System.Threading.CancellationToken;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Models;
+using NewLife.ChatData.Models;
 
 namespace NewLife.ChatAI.Services;
 

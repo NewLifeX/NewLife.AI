@@ -42,7 +42,7 @@ public static class ChatAIExtensions
         // 对话执行管道：将能力扩展层（工具调用、技能注入）与知识进化层（记忆注入、自学习、事件智能体）装配为统一执行入口
         // ChatApplicationService 通过 IChatPipeline 驱动执行，对各层实现细节保持透明
         // IEnumerable<IToolProvider> 由 DI 自动聚合所有注册的 IToolProvider 实现（DbToolProvider、McpClientService 等）
-        services.AddSingleton<IChatPipeline, ChatAIPipeline>();
+        services.AddSingleton<IChatPipeline, ChatPipeline>();
 
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);
