@@ -1,9 +1,9 @@
-﻿using NewLife.AI.Models;
+using NewLife.AI.Models;
 using NewLife.AI.Tools;
-using NewLife.Serialization;
 using NewLife.ChatData.Entity;
+using NewLife.Serialization;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
 /// <summary>DB 工具提供者。从 <see cref="NativeTool"/> 表读取已启用的工具定义，执行时通过 <see cref="ToolRegistry"/> 路由到原生 .NET 实现</summary>
 /// <remarks>
