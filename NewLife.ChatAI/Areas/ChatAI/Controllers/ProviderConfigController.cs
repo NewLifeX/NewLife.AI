@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatData.Entity;
-using NewLife.ChatAI.Services;
 using NewLife.Cube;
 using NewLife.Cube.ViewModels;
 using NewLife.Web;
@@ -9,12 +8,12 @@ using XCode.Membership;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例</summary>
+/// <remarks>实例化提供商配置控制器</remarks>
+/// <param name="modelService">模型服务</param>
 [Menu(120, true, Icon = "fa-table")]
 [ChatAIArea]
-public class ProviderConfigController : EntityController<ProviderConfig>
+public class ProviderConfigController(ModelService modelService) : EntityController<ProviderConfig>
 {
-    private readonly ModelDiscoveryService _discoveryService;
-
     static ProviderConfigController()
     {
         //LogOnChange = true;
@@ -40,17 +39,6 @@ public class ProviderConfigController : EntityController<ProviderConfig>
         //}
         //ListFields.TraceUrl("TraceId");
     }
-
-    //private readonly ITracer _tracer;
-
-    //public ProviderConfigController(ITracer tracer)
-    //{
-    //    _tracer = tracer;
-    //}
-
-    /// <summary>实例化提供商配置控制器</summary>
-    /// <param name="discoveryService">模型发现服务</param>
-    public ProviderConfigController(ModelDiscoveryService discoveryService) => _discoveryService = discoveryService;
 
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>
@@ -83,7 +71,7 @@ public class ProviderConfigController : EntityController<ProviderConfig>
 
             try
             {
-                var msg = await _discoveryService.DiscoverAsync(config).ConfigureAwait(false);
+                var msg = await modelService.DiscoverAsync(config).ConfigureAwait(false);
                 results.Add(msg);
             }
             catch (Exception ex)

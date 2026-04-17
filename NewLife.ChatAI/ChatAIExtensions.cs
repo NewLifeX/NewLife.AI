@@ -74,8 +74,6 @@ public static class ChatAIExtensions
         services.AddSingleton<MemoryService>();
         services.AddSingleton<ConversationAnalysisService>();
         services.AddSingleton<IChatFilter, LearningFilter>();
-        services.AddSingleton<ModelDiscoveryService>();
-        services.AddHostedService(p => p.GetRequiredService<ModelDiscoveryService>());
         services.AddHostedService<DataPreloadService>();
         services.AddHttpClient("McpClient");
 
