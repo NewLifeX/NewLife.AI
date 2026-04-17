@@ -6,13 +6,12 @@ using NewLife.ChatData.Entity;
 using NewLife.Log;
 using NewLife.Serialization;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
 /// <summary>MCP 客户端服务。连接远程 MCP Server，发现工具并执行工具调用。实现 <see cref="IToolProvider"/> 以供 <c>ToolChatClient</c> 直接集成</summary>
 /// <remarks>实例化 MCP 客户端服务</remarks>
-/// <param name="httpClientFactory">HTTP 客户端工厂</param>
 /// <param name="log">日志</param>
-public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : IToolProvider
+public class McpClientService(ILog log) : IToolProvider
 {
     #region 工具发现
     /// <summary>发现指定 MCP Server 的可用工具列表，并更新到数据库</summary>
@@ -208,10 +207,9 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
     /// <summary>向 MCP Server 发送初始化请求</summary>
     /// <param name="config">服务配置</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
     private async Task InitializeAsync(McpServerConfig config, CancellationToken cancellationToken)
     {
-        var initParams = new InitializeParams("2025-06-18", new ClientInfo("NewLife.ChatAI", "1.0.0"));
+        var initParams = new InitializeParams("2025-06-18", new ClientInfo("NewLife.ChatData", "1.0.0"));
         var request = new JsonRpcRequest("2.0", "initialize", initParams, 1);
         await SendRequestAsync(config, request, cancellationToken).ConfigureAwait(false);
     }
@@ -223,7 +221,8 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
     /// <returns>JSON-RPC 响应</returns>
     private async Task<JsonRpcResponse> SendRequestAsync(McpServerConfig config, JsonRpcRequest request, CancellationToken cancellationToken)
     {
-        var client = httpClientFactory.CreateClient("McpClient");
+        //var client = httpClientFactory.CreateClient("McpClient");
+        var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(30);
 
         // 设置认证
@@ -241,7 +240,7 @@ public class McpClientService(IHttpClientFactory httpClientFactory, ILog log) : 
 
         httpResponse.EnsureSuccessStatusCode();
 
-        var responseBody = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var responseBody = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         var response = responseBody.ToJsonEntity<JsonRpcResponse>();
         if (response == null)

@@ -1,9 +1,9 @@
-﻿using System.Text;
+using System.Text;
 using NewLife.ChatData.Entity;
-using NewLife.ChatAI.Models;
+using NewLife.ChatData.Models;
 using NewLife.Log;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatData.Services;
 
 /// <summary>记忆服务。管理用户记忆条目的增删改查，并为对话构建记忆上下文</summary>
 /// <remarks>实例化记忆服务</remarks>
@@ -13,10 +13,10 @@ public class MemoryService(ITracer tracer, ILog log)
 {
     #region 属性
     /// <summary>注入系统提示词时每类记忆的最大条数</summary>
-    private const Int32 MaxMemoriesPerCategory = 10;
+    protected const Int32 MaxMemoriesPerCategory = 10;
 
     /// <summary>注入系统提示词时记忆总条数上限</summary>
-    private const Int32 MaxTotalMemories = 30;
+    protected const Int32 MaxTotalMemories = 30;
     #endregion
 
     #region 分类规范化
@@ -113,7 +113,7 @@ public class MemoryService(ITracer tracer, ILog log)
     /// <param name="conversationId">来源会话ID</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>保存后的记忆实体</returns>
-    public async Task<UserMemory> UpsertMemoryAsync(
+    public virtual async Task<UserMemory> UpsertMemoryAsync(
         Int32 userId,
         String category,
         String key,
@@ -133,7 +133,6 @@ public class MemoryService(ITracer tracer, ILog log)
             // 只有置信度更高或内容变化时才更新
             if (existing.Confidence < confidence || !existing.Value.EqualIgnoreCase(value))
             {
-                var oldValue = existing.Value;
                 existing.Category = category;
                 existing.Value = value;
                 existing.Confidence = confidence;
@@ -145,7 +144,7 @@ public class MemoryService(ITracer tracer, ILog log)
             return existing;
         }
 
-        // 新记忆：根据信任等级决定是否需要审核
+        // 新记忆
         var memory = new UserMemory
         {
             UserId = userId,
