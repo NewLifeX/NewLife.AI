@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatData.Entity;
 using NewLife.ChatAI.Services;
 

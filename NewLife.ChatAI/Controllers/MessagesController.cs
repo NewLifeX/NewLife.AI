@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.AI.Services;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 using NewLife.Log;
@@ -8,9 +7,8 @@ namespace NewLife.ChatAI.Controllers;
 
 /// <summary>消息控制器</summary>
 [Route("api")]
-public class MessagesController(ChatApplicationService chatService, MessageService messageService, MessageRateLimiter rateLimiter, ITracer tracer) : ChatApiControllerBase
+public class MessagesController(ChatApplicationService chatService, MessageService messageService, MessageRateLimiter rateLimiter, ITracer tracer, ChatSetting chatSetting) : ChatApiControllerBase
 {
-
     /// <summary>全文搜索消息内容。在当前用户的所有会话中按关键词检索</summary>
     /// <param name="keyword">搜索关键词</param>
     /// <param name="page">页码</param>
@@ -46,7 +44,7 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
     {
         // 速率限制检查：在设置 SSE 头之前返回 429，前端可直接解析 JSON
         var userId = GetCurrentUserId();
-        if (!rateLimiter.IsAllowed(userId, ChatSetting.Current.MaxMessagesPerMinute))
+        if (!rateLimiter.IsAllowed(userId, chatSetting.MaxMessagesPerMinute))
         {
             Response.StatusCode = 429;
             Response.ContentType = "application/json";

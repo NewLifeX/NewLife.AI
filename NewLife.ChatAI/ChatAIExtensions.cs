@@ -36,6 +36,7 @@ public static class ChatAIExtensions
         services.AddScoped<ChatApplicationService>();
         services.AddScoped<MessageService>();
         services.AddSingleton<IChatSetting>(_ => ChatSetting.Current);
+        services.AddSingleton<ChatSetting>(_ => ChatSetting.Current);
         services.AddSingleton<SkillService>();
         services.AddSingleton<UsageService>();
         services.AddSingleton<ModelService>();

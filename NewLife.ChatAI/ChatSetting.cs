@@ -1,6 +1,5 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using NewLife.AI.Models;
-using NewLife.ChatData;
 using NewLife.Configuration;
 using XCode.Configuration;
 

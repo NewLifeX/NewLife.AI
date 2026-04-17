@@ -1,11 +1,11 @@
-using NewLife.AI.Filters;
+﻿using NewLife.AI.Filters;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Services;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Filters;
 
-/// <summary>自学习过滤器。负责在对话前注入记忆上下文、对话后异步触发自学习分析</summary>
+/// <summary>自学习过滤器。属于知识进化层，负责在对话前注入记忆上下文、对话后异步触发自学习分析</summary>
 /// <remarks>
 /// 在 DI 中注册为单例后，通过 ChatClientBuilder.UseFilters(learningFilter) 接入管道：
 /// <code>
@@ -13,33 +13,35 @@ namespace NewLife.ChatAI.Filters;
 ///     .UseFilters(learningFilter)
 ///     .Build();
 /// </code>
-/// 两个生命周期：
+/// 生命周期：
 /// <list type="bullet">
 /// <item><description>OnChatAsync before：从 MemoryService 注入用户记忆到系统提示词</description></item>
 /// <item><description>OnChatAsync after / OnStreamCompletedAsync：触发 ConversationAnalysisService 自学习分析（火焰即忘）</description></item>
 /// </list>
 /// 通过 ChatOptions.UserId / ChatOptions.ConversationId 传入用户上下文，FilteredChatClient 会自动复制到 context.UserId / context.ConversationId。
 /// </remarks>
+/// <remarks>实例化自学习过滤器</remarks>
 /// <param name="analysisService">对话分析与记忆服务</param>
+/// <param name="chatSetting">配置</param>
 /// <param name="log">日志</param>
-public class LearningFilter(ConversationAnalysisService analysisService, ILog log) : IChatFilter
+public class LearningFilter(ConversationAnalysisService analysisService, ChatSetting chatSetting, ILog log) : IChatFilter
 {
     #region 方法
 
     /// <summary>执行对话过滤逻辑。before 阶段注入记忆；after 阶段（非流式）触发自学习分析</summary>
-    /// <param name="context">过滤器上下文</param>
+    /// <param name="context">过滤器上下文（context.UserId / context.ConversationId 由调用方通过 ExtraData 传入）</param>
     /// <param name="next">下一处理器</param>
     /// <param name="cancellationToken">取消令牌</param>
     public async Task OnChatAsync(ChatFilterContext context, Func<ChatFilterContext, CancellationToken, Task> next, CancellationToken cancellationToken = default)
     {
-        // 全局开关检查
-        if (!ChatSetting.Current.EnableAutoLearning)
+        // 全局自学习开关关闭时跳过记忆注入和分析
+        if (!chatSetting.EnableAutoLearning)
         {
             await next(context, cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        // before 阶段：向系统提示词注入用户记忆上下文
+        // before 阶段：向系统提示词注入用户记忆上下文（知识进化层能力）
         var userId = context.UserId.ToInt();
         if (userId > 0)
             InjectMemoryContext(context, userId);
@@ -54,11 +56,11 @@ public class LearningFilter(ConversationAnalysisService analysisService, ILog lo
     }
 
     /// <summary>流式对话完成后的回调。由 FilteredChatClient 在流结束后以"火焰即忘"方式触发</summary>
-    /// <param name="context">过滤器上下文</param>
+    /// <param name="context">过滤器上下文（Response 包含聚合的 Model/Usage 摘要）</param>
     /// <param name="cancellationToken">取消令牌</param>
     public Task OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken = default)
     {
-        if (!ChatSetting.Current.EnableAutoLearning) return Task.CompletedTask;
+        if (!chatSetting.EnableAutoLearning) return Task.CompletedTask;
 
         TriggerAnalysisAsync(context, "Chat");
         return Task.CompletedTask;

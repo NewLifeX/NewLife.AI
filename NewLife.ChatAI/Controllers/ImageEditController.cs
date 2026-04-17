@@ -8,7 +8,7 @@ namespace NewLife.ChatAI.Controllers;
 
 /// <summary>图像编辑控制器。面向前端 Web UI，使用 Cookie 认证，无需 AppKey</summary>
 [Route("api/images")]
-public class ImageEditController(ModelService modelService) : ChatApiControllerBase
+public class ImageEditController(ModelService modelService, ChatSetting chatSetting) : ChatApiControllerBase
 {
     /// <summary>图像编辑。解析 multipart/form-data，路由到对应图像编辑服务商</summary>
     [HttpPost("edits")]
@@ -18,7 +18,7 @@ public class ImageEditController(ModelService modelService) : ChatApiControllerB
         var form = await Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
         var modelCode = form["model"].FirstOrDefault();
         var prompt = form["prompt"].FirstOrDefault();
-        var size = form["size"].FirstOrDefault() ?? ChatSetting.Current.DefaultImageSize;
+        var size = form["size"].FirstOrDefault() ?? chatSetting.DefaultImageSize;
         var imageFile = form.Files.GetFile("image");
 
         if (String.IsNullOrWhiteSpace(prompt))

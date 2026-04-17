@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -896,7 +896,9 @@ public class MessageFlow
             sb.Append($"当前用户：{user.DisplayName}（{user.Name}）");
             var roles = user.Roles;
             if (roles?.Length > 0) sb.Append($"，角色：{roles.Join(",")}");
-            AppendUserExtraInfo(sb, user);
+            var dept = Department.FindByID(user.DepartmentID);
+            if (dept != null) sb.Append($"，部门：{dept.Name}");
+
             parts.Add(sb.Return(true));
         }
 
@@ -941,11 +943,6 @@ public class MessageFlow
             Content = String.Join("\n\n", parts),
         };
     }
-
-    /// <summary>追加用户附加信息到系统提示词（派生类可 override 注入部门等额外字段）</summary>
-    /// <param name="sb">用户信息拼装 StringBuilder</param>
-    /// <param name="user">当前用户实体</param>
-    protected virtual void AppendUserExtraInfo(StringBuilder sb, IUser user) { }
 
     /// <summary>将用户消息的附件与文本内容组合为多模态消息。基类为**降级实现**：仅保留文本内容，
     /// 不解析任何附件。派生类（例如 ChatAI 社区版读取 Cube <c>Attachment</c> 实体 + NewLife.Office 解析文档）应 override 增强</summary>

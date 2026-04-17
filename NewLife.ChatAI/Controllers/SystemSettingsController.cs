@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Models;
 using NewLife.ChatData.Entity;
 using NewLife.ChatAI.Models;
@@ -9,7 +9,7 @@ namespace NewLife.ChatAI.Controllers;
 
 /// <summary>系统设置控制器。仅 IsSystem 系统角色管理员可访问</summary>
 [Route("api/system/settings")]
-public class SystemSettingsController : ChatApiControllerBase
+public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControllerBase
 {
     /// <summary>获取系统设置</summary>
     /// <returns>当前 ChatSetting 配置，含可用模型列表</returns>
@@ -19,7 +19,6 @@ public class SystemSettingsController : ChatApiControllerBase
         if (!IsCurrentUserSystem())
             return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可访问系统设置" });
 
-        var s = ChatSetting.Current;
 
         // 构建可用模型下拉列表
         var models = new List<ModelOptionDto> { new(0, "默认（第一个可用模型）") };
@@ -29,40 +28,40 @@ public class SystemSettingsController : ChatApiControllerBase
         return Ok(new SystemSettingsDto
         {
             // 基本配置
-            Name = s.Name,
-            SiteTitle = s.SiteTitle,
-            LogoUrl = s.LogoUrl,
-            AutoGenerateTitle = s.AutoGenerateTitle,
+            Name = chatSetting.Name,
+            SiteTitle = chatSetting.SiteTitle,
+            LogoUrl = chatSetting.LogoUrl,
+            AutoGenerateTitle = chatSetting.AutoGenerateTitle,
             // 对话默认
-            DefaultModel = s.DefaultModel,
-            DefaultThinkingMode = (Int32)s.DefaultThinkingMode,
-            DefaultContextRounds = s.DefaultContextRounds,
+            DefaultModel = chatSetting.DefaultModel,
+            DefaultThinkingMode = (Int32)chatSetting.DefaultThinkingMode,
+            DefaultContextRounds = chatSetting.DefaultContextRounds,
             // 上传与分享
-            MaxAttachmentSize = s.MaxAttachmentSize,
-            MaxAttachmentCount = s.MaxAttachmentCount,
-            AllowedExtensions = s.AllowedExtensions,
-            DefaultImageSize = s.DefaultImageSize,
-            ShareExpireDays = s.ShareExpireDays,
+            MaxAttachmentSize = chatSetting.MaxAttachmentSize,
+            MaxAttachmentCount = chatSetting.MaxAttachmentCount,
+            AllowedExtensions = chatSetting.AllowedExtensions,
+            DefaultImageSize = chatSetting.DefaultImageSize,
+            ShareExpireDays = chatSetting.ShareExpireDays,
             // API 网关
-            EnableGateway = s.EnableGateway,
-            EnableGatewayPipeline = s.EnableGatewayPipeline,
-            GatewayRateLimit = s.GatewayRateLimit,
-            UpstreamRetryCount = s.UpstreamRetryCount,
-            EnableGatewayRecording = s.EnableGatewayRecording,
+            EnableGateway = chatSetting.EnableGateway,
+            EnableGatewayPipeline = chatSetting.EnableGatewayPipeline,
+            GatewayRateLimit = chatSetting.GatewayRateLimit,
+            UpstreamRetryCount = chatSetting.UpstreamRetryCount,
+            EnableGatewayRecording = chatSetting.EnableGatewayRecording,
             // 工具与能力
-            EnableFunctionCalling = s.EnableFunctionCalling,
-            EnableMcp = s.EnableMcp,
-            EnableSuggestedQuestionCache = s.EnableSuggestedQuestionCache,
-            StreamingSpeed = s.StreamingSpeed,
-            ToolAdvertiseThreshold = s.ToolAdvertiseThreshold,
+            EnableFunctionCalling = chatSetting.EnableFunctionCalling,
+            EnableMcp = chatSetting.EnableMcp,
+            EnableSuggestedQuestionCache = chatSetting.EnableSuggestedQuestionCache,
+            StreamingSpeed = chatSetting.StreamingSpeed,
+            ToolAdvertiseThreshold = chatSetting.ToolAdvertiseThreshold,
             // 功能开关
-            EnableUsageStats = s.EnableUsageStats,
-            BackgroundGeneration = s.BackgroundGeneration,
-            MaxMessagesPerMinute = s.MaxMessagesPerMinute,
+            EnableUsageStats = chatSetting.EnableUsageStats,
+            BackgroundGeneration = chatSetting.BackgroundGeneration,
+            MaxMessagesPerMinute = chatSetting.MaxMessagesPerMinute,
             // 自学习
-            EnableAutoLearning = s.EnableAutoLearning,
-            LearningModel = s.LearningModel,
-            MinLearningContentLength = s.MinLearningContentLength,
+            EnableAutoLearning = chatSetting.EnableAutoLearning,
+            LearningModel = chatSetting.LearningModel,
+            MinLearningContentLength = chatSetting.MinLearningContentLength,
             // 可用模型列表
             Models = [.. models],
         });
@@ -76,45 +75,44 @@ public class SystemSettingsController : ChatApiControllerBase
         if (!IsCurrentUserSystem())
             return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可修改系统设置" });
 
-        var s = ChatSetting.Current;
 
         // 基本配置
-        if (dto.Name != null) s.Name = dto.Name;
-        if (dto.SiteTitle != null) s.SiteTitle = dto.SiteTitle;
-        if (dto.LogoUrl != null) s.LogoUrl = dto.LogoUrl;
-        if (dto.AutoGenerateTitle.HasValue) s.AutoGenerateTitle = dto.AutoGenerateTitle.Value;
+        if (dto.Name != null) chatSetting.Name = dto.Name;
+        if (dto.SiteTitle != null) chatSetting.SiteTitle = dto.SiteTitle;
+        if (dto.LogoUrl != null) chatSetting.LogoUrl = dto.LogoUrl;
+        if (dto.AutoGenerateTitle.HasValue) chatSetting.AutoGenerateTitle = dto.AutoGenerateTitle.Value;
         // 对话默认
-        if (dto.DefaultModel.HasValue) s.DefaultModel = dto.DefaultModel.Value;
-        if (dto.DefaultThinkingMode.HasValue) s.DefaultThinkingMode = (ThinkingMode)dto.DefaultThinkingMode.Value;
-        if (dto.DefaultContextRounds.HasValue) s.DefaultContextRounds = dto.DefaultContextRounds.Value;
+        if (dto.DefaultModel.HasValue) chatSetting.DefaultModel = dto.DefaultModel.Value;
+        if (dto.DefaultThinkingMode.HasValue) chatSetting.DefaultThinkingMode = (ThinkingMode)dto.DefaultThinkingMode.Value;
+        if (dto.DefaultContextRounds.HasValue) chatSetting.DefaultContextRounds = dto.DefaultContextRounds.Value;
         // 上传与分享
-        if (dto.MaxAttachmentSize.HasValue) s.MaxAttachmentSize = dto.MaxAttachmentSize.Value;
-        if (dto.MaxAttachmentCount.HasValue) s.MaxAttachmentCount = dto.MaxAttachmentCount.Value;
-        if (dto.AllowedExtensions != null) s.AllowedExtensions = dto.AllowedExtensions;
-        if (dto.DefaultImageSize != null) s.DefaultImageSize = dto.DefaultImageSize;
-        if (dto.ShareExpireDays.HasValue) s.ShareExpireDays = dto.ShareExpireDays.Value;
+        if (dto.MaxAttachmentSize.HasValue) chatSetting.MaxAttachmentSize = dto.MaxAttachmentSize.Value;
+        if (dto.MaxAttachmentCount.HasValue) chatSetting.MaxAttachmentCount = dto.MaxAttachmentCount.Value;
+        if (dto.AllowedExtensions != null) chatSetting.AllowedExtensions = dto.AllowedExtensions;
+        if (dto.DefaultImageSize != null) chatSetting.DefaultImageSize = dto.DefaultImageSize;
+        if (dto.ShareExpireDays.HasValue) chatSetting.ShareExpireDays = dto.ShareExpireDays.Value;
         // API 网关
-        if (dto.EnableGateway.HasValue) s.EnableGateway = dto.EnableGateway.Value;
-        if (dto.EnableGatewayPipeline.HasValue) s.EnableGatewayPipeline = dto.EnableGatewayPipeline.Value;
-        if (dto.GatewayRateLimit.HasValue) s.GatewayRateLimit = dto.GatewayRateLimit.Value;
-        if (dto.UpstreamRetryCount.HasValue) s.UpstreamRetryCount = dto.UpstreamRetryCount.Value;
-        if (dto.EnableGatewayRecording.HasValue) s.EnableGatewayRecording = dto.EnableGatewayRecording.Value;
+        if (dto.EnableGateway.HasValue) chatSetting.EnableGateway = dto.EnableGateway.Value;
+        if (dto.EnableGatewayPipeline.HasValue) chatSetting.EnableGatewayPipeline = dto.EnableGatewayPipeline.Value;
+        if (dto.GatewayRateLimit.HasValue) chatSetting.GatewayRateLimit = dto.GatewayRateLimit.Value;
+        if (dto.UpstreamRetryCount.HasValue) chatSetting.UpstreamRetryCount = dto.UpstreamRetryCount.Value;
+        if (dto.EnableGatewayRecording.HasValue) chatSetting.EnableGatewayRecording = dto.EnableGatewayRecording.Value;
         // 工具与能力
-        if (dto.EnableFunctionCalling.HasValue) s.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
-        if (dto.EnableMcp.HasValue) s.EnableMcp = dto.EnableMcp.Value;
-        if (dto.EnableSuggestedQuestionCache.HasValue) s.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;
-        if (dto.StreamingSpeed.HasValue) s.StreamingSpeed = dto.StreamingSpeed.Value;
-        if (dto.ToolAdvertiseThreshold.HasValue) s.ToolAdvertiseThreshold = dto.ToolAdvertiseThreshold.Value;
+        if (dto.EnableFunctionCalling.HasValue) chatSetting.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
+        if (dto.EnableMcp.HasValue) chatSetting.EnableMcp = dto.EnableMcp.Value;
+        if (dto.EnableSuggestedQuestionCache.HasValue) chatSetting.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;
+        if (dto.StreamingSpeed.HasValue) chatSetting.StreamingSpeed = dto.StreamingSpeed.Value;
+        if (dto.ToolAdvertiseThreshold.HasValue) chatSetting.ToolAdvertiseThreshold = dto.ToolAdvertiseThreshold.Value;
         // 功能开关
-        if (dto.EnableUsageStats.HasValue) s.EnableUsageStats = dto.EnableUsageStats.Value;
-        if (dto.BackgroundGeneration.HasValue) s.BackgroundGeneration = dto.BackgroundGeneration.Value;
-        if (dto.MaxMessagesPerMinute.HasValue) s.MaxMessagesPerMinute = dto.MaxMessagesPerMinute.Value;
+        if (dto.EnableUsageStats.HasValue) chatSetting.EnableUsageStats = dto.EnableUsageStats.Value;
+        if (dto.BackgroundGeneration.HasValue) chatSetting.BackgroundGeneration = dto.BackgroundGeneration.Value;
+        if (dto.MaxMessagesPerMinute.HasValue) chatSetting.MaxMessagesPerMinute = dto.MaxMessagesPerMinute.Value;
         // 自学习
-        if (dto.EnableAutoLearning.HasValue) s.EnableAutoLearning = dto.EnableAutoLearning.Value;
-        if (dto.LearningModel != null) s.LearningModel = dto.LearningModel;
-        if (dto.MinLearningContentLength.HasValue) s.MinLearningContentLength = dto.MinLearningContentLength.Value;
+        if (dto.EnableAutoLearning.HasValue) chatSetting.EnableAutoLearning = dto.EnableAutoLearning.Value;
+        if (dto.LearningModel != null) chatSetting.LearningModel = dto.LearningModel;
+        if (dto.MinLearningContentLength.HasValue) chatSetting.MinLearningContentLength = dto.MinLearningContentLength.Value;
 
-        s.Save();
+        chatSetting.Save();
 
         return NoContent();
     }

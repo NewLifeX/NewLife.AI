@@ -29,23 +29,9 @@ namespace NewLife.ChatAI.Services;
 /// <param name="log">日志</param>
 /// <param name="enrichers">上下文增强器（可选，DI 自动注入）</param>
 /// <param name="postProcessors">消息流后处理器（可选，DI 自动注入）</param>
-public class MessageService(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer tracer, ILog log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
+public class MessageService(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ChatSetting setting, ITracer tracer, ILog log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
     : MessageFlow(pipeline, modelService, backgroundService, usageService, setting, tracer, log, enrichers, postProcessors)
 {
-    #region 覆盖：附加用户部门信息
-
-    /// <inheritdoc />
-    protected override void AppendUserExtraInfo(StringBuilder sb, IUser user)
-    {
-        if (user.DepartmentID > 0)
-        {
-            var dept = Department.FindByID(user.DepartmentID);
-            if (dept != null) sb.Append($"，部门：{dept.Name}");
-        }
-    }
-
-    #endregion
-
     #region 覆盖：完整多模态（图片 + Office 文档）
 
     /// <inheritdoc />

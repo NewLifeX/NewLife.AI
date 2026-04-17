@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
@@ -6,7 +6,6 @@ using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
-using NewLife.AI.Services;
 using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
@@ -19,7 +18,7 @@ namespace NewLife.ChatAI.Controllers;
 /// 通过 Authorization: Bearer {appkey} 进行认证。
 /// </remarks>
 [ApiController]
-public class GatewayController(GatewayService gatewayService, ModelService modelService, IChatPipeline pipeline) : ControllerBase
+public class GatewayController(GatewayService gatewayService, ModelService modelService, IChatPipeline pipeline, ChatSetting chatSetting) : ControllerBase
 {
     #region 模型列表
     /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
@@ -162,7 +161,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         // 通过 ChatCompletions 方式请求图像生成（兼容 OpenAI DALL-E 等通过聊天接口生成图像的场景）
-        var size = ChatSetting.Current.DefaultImageSize;
+        var size = chatSetting.DefaultImageSize;
         if (body.TryGetValue("size", out var sizeObj) && sizeObj != null)
             size = sizeObj.ToString()!;
 
@@ -210,7 +209,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var form = await Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
         var modelCode = form["model"].FirstOrDefault();
         var prompt = form["prompt"].FirstOrDefault();
-        var size = form["size"].FirstOrDefault() ?? ChatSetting.Current.DefaultImageSize;
+        var size = form["size"].FirstOrDefault() ?? chatSetting.DefaultImageSize;
         var imageFile = form.Files.GetFile("image");
 
         if (String.IsNullOrWhiteSpace(prompt))
@@ -312,7 +311,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         }
 
         // 网关对话记录：收集流式输出内容
-        var enableRecording = ChatSetting.Current.EnableGatewayRecording;
+        var enableRecording = chatSetting.EnableGatewayRecording;
         var contentBuilder = enableRecording ? new StringBuilder() : null;
         var thinkingBuilder = enableRecording ? new StringBuilder() : null;
         UsageDetails? lastUsage = null;
@@ -340,7 +339,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                     await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                if (ChatSetting.Current.EnableGatewayPipeline)
+                if (chatSetting.EnableGatewayPipeline)
                 {
                     // 完整能力管道路径：技能注入 + 工具调用 + 提示词管理
                     var contextMessages = gatewayService.BuildContextMessages(request, appKey, config);

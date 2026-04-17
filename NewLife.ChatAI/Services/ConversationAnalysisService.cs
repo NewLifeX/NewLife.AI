@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
@@ -18,9 +18,10 @@ namespace NewLife.ChatAI.Services;
 /// </remarks>
 /// <param name="modelService">模型服务</param>
 /// <param name="memoryService">记忆服务</param>
+/// <param name="chatSetting">配置</param>
 /// <param name="tracer">链路追踪</param>
 /// <param name="log">日志</param>
-public class ConversationAnalysisService(ModelService modelService, MemoryService memoryService, ITracer tracer, ILog log)
+public class ConversationAnalysisService(ModelService modelService, MemoryService memoryService, ChatSetting chatSetting, ITracer tracer, ILog log)
 {
     /// <summary>记忆服务（同时对外暴露给 LearningFilter 注入上下文）</summary>
     public MemoryService MemoryService { get; } = memoryService;
@@ -81,7 +82,7 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         CancellationToken cancellationToken = default)
     {
         // 智能触发条件：用户消息总字数低于配置阈值且轮数 < 2 时跳过
-        var minContentLength = ChatSetting.Current.MinLearningContentLength;
+        var minContentLength = chatSetting.MinLearningContentLength;
         var userMessages = messages.Where(m => m.Role == "user").ToList();
         var totalChars = 0;
         foreach (var msg in userMessages)
@@ -177,10 +178,9 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
     private ModelConfig? GetAnalysisModel()
     {
         // 优先使用配置的学习模型
-        var setting = ChatSetting.Current;
-        if (!setting.LearningModel.IsNullOrWhiteSpace())
+        if (!chatSetting.LearningModel.IsNullOrWhiteSpace())
         {
-            var configured = modelService.ResolveModelByCode(setting.LearningModel);
+            var configured = modelService.ResolveModelByCode(chatSetting.LearningModel);
             if (configured != null) return configured;
         }
 
