@@ -60,6 +60,9 @@ public class MessageFlow
     /// <summary>消息流后处理器链（DI 注册的 <see cref="IMessageFlowPostProcessor"/>，按 Order 升序执行）</summary>
     protected readonly IReadOnlyList<IMessageFlowPostProcessor> PostProcessors;
 
+    /// <summary>AI对话配置</summary>
+    protected readonly IChatSetting Setting;
+
     #endregion
 
     #region 构造
@@ -73,12 +76,13 @@ public class MessageFlow
     /// <param name="log">日志</param>
     /// <param name="enrichers">上下文增强器链（可选）</param>
     /// <param name="postProcessors">消息流后处理器链（可选）</param>
-    public MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
+    public MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
     {
         Pipeline = pipeline;
         ModelService = modelService;
         BackgroundService = backgroundService;
         UsageService = usageService;
+        Setting = setting;
         Tracer = tracer;
         Log = log;
         Enrichers = enrichers?.OrderBy(e => e.Order).ToArray() ?? [];
@@ -337,7 +341,7 @@ public class MessageFlow
         await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 推荐问题缓存回写
-        if (!flow.HasError && ChatSetting.Current.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
+        if (!flow.HasError && Setting.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
             TryWriteBackSuggestedQuestionCache(request.Content, flow.ContentBuilder.ToString(), flow.ThinkingBuilder.Length > 0 ? flow.ThinkingBuilder.ToString() : null, flow.ModelConfig.Id);
 
         // message_done
@@ -551,7 +555,7 @@ public class MessageFlow
     /// <returns>匹配到的缓存记录，未命中返回 null</returns>
     protected virtual SuggestedQuestion? MatchSuggestedCache(String content)
     {
-        if (!ChatSetting.Current.EnableSuggestedQuestionCache) return null;
+        if (!Setting.EnableSuggestedQuestionCache) return null;
 
         return SuggestedQuestion.FindCachedTodayByQuestion(content);
     }
@@ -605,7 +609,7 @@ public class MessageFlow
     /// <param name="hasAttachments">是否包含附件</param>
     protected virtual void TryStartTitleGeneration(Conversation conversation, Int64 conversationId, String content, Boolean hasAttachments)
     {
-        if (conversation.MessageCount != 0 || !ChatSetting.Current.AutoGenerateTitle) return;
+        if (conversation.MessageCount != 0 || !Setting.AutoGenerateTitle) return;
 
         var titleText = ExtractTitleText(content);
         if (titleText.IsNullOrEmpty() && hasAttachments)
@@ -640,7 +644,7 @@ public class MessageFlow
         var entity = flow.AssistantMessage;
         var beforeMessages = ChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
 
-        var setting = ChatSetting.Current;
+        var setting = Setting;
         var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
         if (beforeMessages.Count > maxCount)
             beforeMessages = beforeMessages.Skip(beforeMessages.Count - maxCount).ToList();
@@ -799,7 +803,7 @@ public class MessageFlow
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
     protected virtual IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
     {
-        var setting = ChatSetting.Current;
+        var setting = Setting;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
 
         var history = ChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
@@ -989,7 +993,7 @@ public class MessageFlow
         };
         cachedMsg.Insert();
 
-        var streamingSpeed = ChatSetting.Current.StreamingSpeed;
+        var streamingSpeed = Setting.StreamingSpeed;
 
         yield return ChatStreamEvent.MessageStart(cachedMsg.Id, cached.Model?.Code ?? String.Empty, thinkingMode);
 

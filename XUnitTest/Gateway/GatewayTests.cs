@@ -308,7 +308,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForEmpty()
     {
-        var service = new ModelService(null!, null!);
+        var service = new ModelService(null!, null!, null!);
 
         Assert.Null(service.ResolveModel(0));
         Assert.Null(service.ResolveModel(-1));
@@ -317,7 +317,7 @@ public class GatewayTests
     [Fact]
     public void ResolveModelReturnsNullForNonExistent()
     {
-        var service = new ModelService(null!, null!);
+        var service = new ModelService(null!, null!, null!);
 
         // 数据库无数据时返回 null
         Assert.Null(service.ResolveModel(99999));
@@ -326,7 +326,7 @@ public class GatewayTests
     [Fact]
     public void IsModelAllowedReturnsTrueWhenNoFilter()
     {
-        var service = new ModelService(null!, null!);
+        var service = new ModelService(null!, null!, null!);
         var appKey = new AppKey { Models = null };
         var model = new ModelConfig { Code = "gpt-4o", Name = "GPT-4o" };
 
@@ -336,7 +336,7 @@ public class GatewayTests
     [Fact]
     public void IsModelAllowedMatchesByCodeOrName()
     {
-        var service = new ModelService(null!, null!);
+        var service = new ModelService(null!, null!, null!);
         var appKey = new AppKey { Models = "qwen-max, GPT-4o" };
 
         Assert.True(service.IsModelAllowed(appKey, new ModelConfig { Code = "qwen-max", Name = "Qwen Max" }));

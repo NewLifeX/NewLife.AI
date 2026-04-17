@@ -7,6 +7,7 @@ using NewLife.AI.Filters;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using NewLife.ChatData.Entity;
+using NewLife.ChatData;
 using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
 using NewLife.Cube.Extensions;
@@ -34,6 +35,7 @@ public static class ChatAIExtensions
     {
         services.AddScoped<ChatApplicationService>();
         services.AddScoped<MessageService>();
+        services.AddSingleton<IChatSetting>(_ => ChatSetting.Current);
         services.AddSingleton<SkillService>();
         services.AddSingleton<UsageService>();
         services.AddSingleton<ModelService>();

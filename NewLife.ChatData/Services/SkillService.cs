@@ -7,8 +7,9 @@ namespace NewLife.ChatData.Services;
 
 /// <summary>技能服务。提供技能查询、使用记录和系统提示词构建</summary>
 /// <remarks>实例化技能服务</remarks>
+/// <param name="chatSetting">AI对话系统配置</param>
 /// <param name="log">日志</param>
-public class SkillService(ILog log)
+public class SkillService(IChatSetting chatSetting, ILog log)
 {
     /// <summary>@引用最大递归深度</summary>
     private const Int32 MaxReferenceDepth = 3;
@@ -157,7 +158,7 @@ public class SkillService(ILog log)
         if (parts.Count == 0) return null;
 
         var result = String.Join("\n\n", parts);
-        var budget = ChatSetting.Current.SkillBudgetChars;
+        var budget = chatSetting.SkillBudgetChars;
         if (budget > 0 && result.Length > budget)
         {
             var cutPos = result.LastIndexOf("\n\n", budget, StringComparison.Ordinal);

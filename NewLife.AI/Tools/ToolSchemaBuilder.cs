@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using System.Xml;
@@ -10,8 +10,8 @@ namespace NewLife.AI.Tools;
 /// <remarks>
 /// 转换规则（优先级：代码特性标注 &gt; XML 文档注释）：
 /// <list type="bullet">
-/// <item>方法 <see cref="System.ComponentModel.DescriptionAttribute"/> 或 <c>&lt;summary&gt;</c> → <c>description</c></item>
-/// <item>参数 <see cref="System.ComponentModel.DescriptionAttribute"/> 或 <c>&lt;param name="x"&gt;</c> → 参数的 <c>description</c></item>
+/// <item>方法 <see cref="DescriptionAttribute"/> 或 <c>&lt;summary&gt;</c> → <c>description</c></item>
+/// <item>参数 <see cref="DescriptionAttribute"/> 或 <c>&lt;param name="x"&gt;</c> → 参数的 <c>description</c></item>
 /// <item>有默认值的参数 → 从 <c>required</c> 数组排除</item>
 /// <item>复杂类型参数 → 递归展开 <c>object</c> + <c>properties</c></item>
 /// </list>

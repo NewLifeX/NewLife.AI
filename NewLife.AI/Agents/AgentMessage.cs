@@ -1,3 +1,5 @@
+﻿using NewLife.AI.Models;
+
 namespace NewLife.AI.Agents;
 
 /// <summary>Agent 消息类型</summary>
@@ -33,7 +35,7 @@ public abstract class AgentMessage
 
     /// <summary>转换为 ChatMessage（system/user/assistant/tool）。供 IChatClient 使用</summary>
     /// <returns>可用于 ChatCompletionRequest.Messages 的消息，若本消息类型不适合转换则返回 null</returns>
-    public abstract Models.ChatMessage? ToChatMessage();
+    public abstract ChatMessage? ToChatMessage();
 }
 
 /// <summary>普通文本消息</summary>
@@ -49,7 +51,7 @@ public sealed class TextMessage : AgentMessage
     public override AgentMessageType Type => AgentMessageType.Text;
 
     /// <inheritdoc/>
-    public override Models.ChatMessage? ToChatMessage() => new() { Role = Role, Content = Content };
+    public override ChatMessage? ToChatMessage() => new() { Role = Role, Content = Content };
 }
 
 /// <summary>系统消息。用于注入 Agent 的角色设定</summary>
@@ -62,7 +64,7 @@ public sealed class SystemMessage : AgentMessage
     public override AgentMessageType Type => AgentMessageType.System;
 
     /// <inheritdoc/>
-    public override Models.ChatMessage? ToChatMessage() => new() { Role = "system", Content = Content };
+    public override ChatMessage? ToChatMessage() => new() { Role = "system", Content = Content };
 }
 
 /// <summary>终止信号消息。GroupChat 收到此消息时停止轮询</summary>
@@ -75,7 +77,7 @@ public sealed class StopMessage : AgentMessage
     public override AgentMessageType Type => AgentMessageType.Stop;
 
     /// <inheritdoc/>
-    public override Models.ChatMessage? ToChatMessage() => null;
+    public override ChatMessage? ToChatMessage() => null;
 }
 
 /// <summary>工具调用请求消息</summary>
@@ -94,15 +96,15 @@ public sealed class ToolCallMessage : AgentMessage
     public override AgentMessageType Type => AgentMessageType.ToolCall;
 
     /// <inheritdoc/>
-    public override Models.ChatMessage? ToChatMessage() => new()
+    public override ChatMessage? ToChatMessage() => new()
     {
         Role = "assistant",
         ToolCalls =
         [
-            new Models.ToolCall
+            new ToolCall
             {
                 Id = CallId,
-                Function = new Models.FunctionCall { Name = ToolName, Arguments = Arguments },
+                Function = new FunctionCall { Name = ToolName, Arguments = Arguments },
             }
         ]
     };
@@ -124,7 +126,7 @@ public sealed class ToolCallResultMessage : AgentMessage
     public override AgentMessageType Type => AgentMessageType.ToolCallResult;
 
     /// <inheritdoc/>
-    public override Models.ChatMessage? ToChatMessage() => new()
+    public override ChatMessage? ToChatMessage() => new()
     {
         Role = "tool",
         Name = ToolName,
@@ -138,11 +140,11 @@ public static class AgentMessageHelper
     /// <summary>将 AgentMessage 列表转换为 ChatMessage 列表（过滤掉不支持转换的消息类型）</summary>
     /// <param name="messages">Agent 消息列表</param>
     /// <returns>可追加到 ChatCompletionRequest.Messages 的消息列表</returns>
-    public static IList<Models.ChatMessage> ToChatMessages(IList<AgentMessage> messages)
+    public static IList<ChatMessage> ToChatMessages(IList<AgentMessage> messages)
     {
         if (messages == null) throw new ArgumentNullException(nameof(messages));
 
-        var result = new List<Models.ChatMessage>(messages.Count);
+        var result = new List<ChatMessage>(messages.Count);
         foreach (var m in messages)
         {
             var cm = m.ToChatMessage();

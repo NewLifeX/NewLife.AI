@@ -1,7 +1,6 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 using NewLife.ChatData.Entity;
 using NewLife.Data;
-using AiChatMessage = NewLife.AI.Models.ChatMessage;
 
 namespace NewLife.AI.Services;
 
@@ -62,7 +61,7 @@ public interface IChatPipeline
     /// <summary>准备上下文。注入技能提示词、解析 @引用、记录技能使用。在 StreamAsync/CompleteAsync 前调用，以便外部获取 SystemPrompt 并持久化</summary>
     /// <param name="contextMessages">上下文消息列表（会被修改）</param>
     /// <param name="context">管道执行上下文</param>
-    void PrepareContext(IList<AiChatMessage> contextMessages, ChatPipelineContext context);
+    void PrepareContext(IList<ChatMessage> contextMessages, ChatPipelineContext context);
 
     /// <summary>流式执行对话。依次经过能力扩展层（技能注入、工具调用）和知识进化层（记忆注入、自学习触发）</summary>
     /// <param name="contextMessages">已构建好的上下文消息列表（含历史消息；技能系统消息由管道注入）</param>
@@ -72,7 +71,7 @@ public interface IChatPipeline
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>统一事件流（content_delta / thinking_delta / tool_call_* / message_done / error）</returns>
     IAsyncEnumerable<ChatStreamEvent> StreamAsync(
-        IList<AiChatMessage> contextMessages,
+        IList<ChatMessage> contextMessages,
         IModelConfig modelConfig,
         ThinkingMode thinkingMode,
         ChatPipelineContext context,
@@ -85,7 +84,7 @@ public interface IChatPipeline
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>完整的对话响应</returns>
     Task<ChatResponse> CompleteAsync(
-        IList<AiChatMessage> contextMessages,
+        IList<ChatMessage> contextMessages,
         IModelConfig modelConfig,
         ChatPipelineContext context,
         CancellationToken cancellationToken);

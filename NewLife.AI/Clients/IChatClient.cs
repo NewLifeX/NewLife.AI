@@ -1,5 +1,4 @@
-﻿using NewLife.AI.Clients.OpenAI;
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients;
 

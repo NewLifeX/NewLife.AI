@@ -10,8 +10,9 @@ namespace NewLife.ChatData.Services;
 
 /// <summary>用量统计服务。记录和查询 AI 调用的 Token 消耗，支持按用户和 AppKey 双维度统计</summary>
 /// <remarks>实例化用量统计服务</remarks>
+/// <param name="chatSetting">AI对话系统配置</param>
 /// <param name="log">日志</param>
-public class UsageService(ILog log)
+public class UsageService(IChatSetting chatSetting, ILog log)
 {
     #region 写入用量
     /// <summary>记录一次 AI 调用的用量（携带 UsageDetails，自动填充所有 Token 详情字段）</summary>
@@ -24,7 +25,7 @@ public class UsageService(ILog log)
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
     public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId, Int32 modelId, UsageDetails usage, String source)
     {
-        if (!ChatSetting.Current.EnableUsageStats) return;
+        if (!chatSetting.EnableUsageStats) return;
 
         try
         {
@@ -69,7 +70,7 @@ public class UsageService(ILog log)
     public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId,
         Int32 modelId, Int32 inputTokens, Int32 outputTokens, Int32 totalTokens, String source)
     {
-        if (!ChatSetting.Current.EnableUsageStats) return;
+        if (!chatSetting.EnableUsageStats) return;
 
         try
         {

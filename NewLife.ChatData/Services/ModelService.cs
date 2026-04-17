@@ -13,7 +13,7 @@ namespace NewLife.ChatData.Services;
 /// 将模型路由（按 ID/Code 查找 ModelConfig）与客户端工厂（BuildOptions + AiClientRegistry.Factory）
 /// 统一收口，业务服务只需注入 ModelService 即可获取可用模型和对应的 IChatClient 实例。
 /// </remarks>
-public class ModelService(ITracer tracer, ILog log)
+public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
 {
     private readonly AiClientRegistry _registry = AiClientRegistry.Default;
 
@@ -78,9 +78,8 @@ public class ModelService(ITracer tracer, ILog log)
             if (config != null && config.Enable) return config;
         }
 
-        var setting = ChatSetting.Current;
         var models = ModelConfig.FindAllEnabled();
-        return SelectDefaultModel(models, setting.DefaultModel);
+        return SelectDefaultModel(models, chatSetting.DefaultModel);
     }
 
     /// <summary>根据模型编码查找模型配置</summary>
@@ -98,17 +97,15 @@ public class ModelService(ITracer tracer, ILog log)
     /// <returns>模型配置，未找到返回 null</returns>
     public ModelConfig? ResolveLightweightModel(Int32 fallbackModelId = 0)
     {
-        var setting = ChatSetting.Current;
-
-        if (!setting.LightweightModel.IsNullOrEmpty())
+        if (!chatSetting.LightweightModel.IsNullOrEmpty())
         {
-            var config = ModelConfig.FindByCode(setting.LightweightModel);
+            var config = ModelConfig.FindByCode(chatSetting.LightweightModel);
             if (config != null && config.Enable) return config;
         }
 
-        if (!setting.LearningModel.IsNullOrEmpty())
+        if (!chatSetting.LearningModel.IsNullOrEmpty())
         {
-            var config = ModelConfig.FindByCode(setting.LearningModel);
+            var config = ModelConfig.FindByCode(chatSetting.LearningModel);
             if (config != null && config.Enable) return config;
         }
 

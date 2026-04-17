@@ -16,11 +16,12 @@ namespace NewLife.ChatData.Services;
 /// </remarks>
 /// <remarks>初始化 DB 工具提供者</remarks>
 /// <param name="registry">原生工具注册表（持有全部 .NET 工具实现）</param>
-public class DbToolProvider(ToolRegistry registry) : IToolProvider
+/// <param name="chatSetting">AI对话系统配置</param>
+public class DbToolProvider(ToolRegistry registry, IChatSetting chatSetting) : IToolProvider
 {
     #region IToolProvider
     /// <summary>从 DB 读取已启用工具的定义列表</summary>
-    /// <returns>工具定义列表；<see cref="ChatSetting.EnableFunctionCalling"/> 为 false 时返回空列表</returns>
+    /// <returns>工具定义列表；<see cref="IChatSetting.EnableFunctionCalling"/> 为 false 时返回空列表</returns>
     public IList<ChatTool> GetTools() => GetFilteredTools(null);
 
     /// <summary>根据 IsSystem 标志和指定工具名集合从 DB 读取启用工具</summary>
@@ -28,7 +29,7 @@ public class DbToolProvider(ToolRegistry registry) : IToolProvider
     /// <returns>工具定义列表</returns>
     public IList<ChatTool> GetFilteredTools(ISet<String>? selectedTools)
     {
-        if (!ChatSetting.Current.EnableFunctionCalling) return [];
+        if (!chatSetting.EnableFunctionCalling) return [];
 
         var tools = new List<ChatTool>();
         var dbTools = NativeTool.FindAllEnabled();
