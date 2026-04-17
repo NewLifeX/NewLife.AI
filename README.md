@@ -1,396 +1,276 @@
 # NewLife.AI
 
-[![NuGet](https://img.shields.io/nuget/v/NewLife.AI.svg?style=flat-square)](https://www.nuget.org/packages/NewLife.AI/)
-[![NuGet Download](https://img.shields.io/nuget/dt/NewLife.AI.svg?style=flat-square)](https://www.nuget.org/packages/NewLife.AI/)
-[![.NET](https://img.shields.io/badge/.NET-Standard2.1%2Bnet8%2Bnet10-purple?style=flat-square)](https://dotnet.microsoft.com)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+<p align="center">
+  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/v/NewLife.AI.svg" alt="NuGet"></a>
+  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/dt/NewLife.AI.svg" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/.NET-netstandard2.1%20%7C%20net8.0%20%7C%20net10.0-blue" alt=".NET">
+  <a href="https://github.com/NewLifeX/NewLife.AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/NewLifeX/NewLife.AI.svg" alt="License"></a>
+</p>
 
-**NewLife.AI** 是统一 AI 网关基础库，支持 48 个主流 AI 服务商的接入与编排。
-**NewLife.ChatAI** 是基于 NewLife.AI 构建的完整 AI 对话应用，提供对话 Web 前端、API 网关路由、使用量统计等全套业务能力。
+## 项目介绍
+
+**NewLife.AI** 是面向 .NET 生态的**开源 AI 基础库**，通过统一的 `IChatClient` 接口封装 **46 个主流大模型服务商**，内置函数调用、MCP 协议、流式输出、多模态、多智能体等能力，可作为 NuGet 包嵌入任意 .NET 项目（`netstandard2.1`）。
+
+**NewLife.ChatAI** 是构建于 NewLife.AI 之上的**完整 Web 对话应用**（ASP.NET Core），提供即开即用的多模型对话前端、统一 AI 网关与自动记忆进化，既可独立部署，也可通过 NuGet 嵌入已有 ASP.NET Core 项目。
 
 ---
 
 ## 核心特性
 
-- **48 个服务商支持**：OpenAI、Azure OpenAI、AWS Bedrock、Anthropic（Claude）、Google Gemini、阿里百炼（通义千问）、DeepSeek、Kimi、豆包、智谱、百度、讯飞、腾讯混元、Ollama（本地）等
-- **统一接口 `IChatClient`**：屏蔽协议差异，流式与非流式双模式，对标 Microsoft MEAI 规范
-- **`AiClientRegistry` 自动注册**：通过 `[AiClient]` 特性标注，反射扫描自动发现所有服务商
-- **`ChatClientBuilder` 中间件管道**：`UseFilters()` + `UseTools()` 链式组装，灵活扩展
-- **原生函数调用（Function Calling）**：`[ToolDescription]` 特性 + `ToolSchemaBuilder` 自动生成 JSON Schema，`ToolChatClient` 多轮调用循环
-- **MCP 协议支持**：`HttpMcpServer` 工具调用，`NewLife.AI.Extensions` 快速将 ASP.NET 应用扩展为 MCP Server
-- **思考模式（Thinking Mode）**：Auto / Think / Fast 三档，支持交错思考（think–tool–think）
-- **多模态**：图像理解（Vision）、图像生成、图像编辑（Inpainting）
-- **Planner 规划器**：`FunctionCallingPlanner` 将目标拆解为工具调用步骤并执行
-- **MultiAgent 框架**：`GroupChat` 多 Agent 轮询、`ParallelGroupChat` 并行协作、`AgentAsTool` 嵌套
-- **语义记忆抽象**：`ISemanticMemory` + `IVectorStore` 接口，内存版实现开箱即用
+- **46 家 AI 服务商，5 种协议**：OpenAI / Anthropic / Gemini / 通义 DashScope / Ollama + AWS Bedrock SigV4，一行代码任意切换
+- **统一 `IChatClient` 接口**：对齐 MEAI 规范，单轮、流式、函数调用、多模态全部统一 API
+- **函数调用（工具）**：`[ToolDescription]` 特性自动生成 JSON Schema，`ToolChatClient` 多轮循环，内置搜索 / 天气 / 翻译 / 网页抓取 / IP 定位等工具
+- **MCP 双向支持**：客户端对接外部 MCP Server（stdio / HTTP SSE），服务端将本系统工具暴露为标准 MCP 服务
+- **完整对话内核**：`MessageFlow` 五阶段模板（Validate → Prepare → Execute → Persist → PostProcess），可插拔 `IChatFilter` 与 `IContextEnricher`
+- **用户记忆进化**：自动从对话中提取 10 类结构化记忆，越用越懂用户
+- **统一 AI 网关**：兼容 OpenAI / Anthropic / Gemini 协议，AppKey 多租户，上游 429 指数退避重试
+- **技能系统**：Markdown 提示词复用，`@` 递归引用，触发词自动激活
+- **多智能体**：`ConversableAgent` / `GroupChat` / `ParallelGroupChat` / `FunctionCallingPlanner`
+- **React 19 Web 前端**：SSE 流式 + 思考过程（Chain-of-Thought）+ 工具调用可视化 + Markdown + KaTeX + Mermaid + 多模态
 
 ---
 
-## 支持的协议与服务商
+## 支持的 AI 服务商
 
-### 通信协议（6 种）
+46 家服务商，**9 个独立协议客户端 + 37 个 OpenAI 兼容适配**。
 
-| 协议 | 客户端类 | 适用服务商 | 认证方式 |
-|------|---------|---------|---------|
-| **OpenAI** | `OpenAiChatClient` | ~44 个 OpenAI 兼容服务商 | `Authorization: Bearer` |
-| **Azure OpenAI** | `AzureAIChatClient` | Azure OpenAI（部署名称 URL） | `api-key` 请求头 |
-| **Anthropic** | `AnthropicChatClient` | Anthropic Claude 系列 | `x-api-key` 请求头 |
-| **Google Gemini** | `GeminiChatClient` | Google Gemini 系列 | `?key=` 查询参数 |
-| **AWS Bedrock** | `BedrockChatClient` | AWS Bedrock Converse API | AWS SigV4 签名 |
-| **DashScope** | `DashScopeChatClient` | 阿里百炼（兼容 OpenAI 路由） | `Authorization: Bearer` |
-| **Ollama** | `OllamaChatClient` | 本地 Ollama 服务 | 无需认证 |
+### 独立协议实现（9 个）
 
----
+| 服务商 | 协议 | 特性 |
+|--------|------|------|
+| OpenAI | ChatCompletions / Responses | 视觉 / 函数调用 / 图像生成 / o3 推理 |
+| DeepSeek | OpenAI 兼容 | deepseek-chat / deepseek-reasoner |
+| Anthropic | Messages | Claude 3.5 / Claude 4 |
+| Google | Gemini | Gemini 1.5 / 2.0 / 2.5 |
+| 阿里云 | DashScope | qwen-plus / qwen-max / qwen-vl |
+| Azure AI | Azure OpenAI | 部署名称 URL + api-key |
+| Ollama | Ollama API | 本地 llama / deepseek / qwen |
+| AWS Bedrock | SigV4 签名 | Claude / Llama / Titan / Mistral |
+| NewLifeAI | 级联代理 | 聚合多服务商 |
 
-### 国内服务商（18 个）
+### OpenAI 兼容家族（37 个）
 
-| 编码 | 服务商 | 代表模型 | 特色 |
-|------|-------|---------|------|
-| `DeepSeek` | 深度求索 ★ | DeepSeek-V3 / R1 | 推理能力强，开源友好 |
-| `DashScope` | 阿里百炼 / 通义千问 | Qwen-Max / Qwen-Plus | 阿里云生态，模型最全 |
-| `VolcEngine` | 字节火山方舟（企业版） | 豆包 1.5 Pro | 字节跳动企业端入口 |
-| `Doubao` | 抖音豆包（消费端） | — | 字节跳动消费端入口 |
-| `Zhipu` | 智谱 AI | GLM-4 / CogView-3 | 代码 + 图像生成 |
-| `Moonshot` | 月之暗面 Kimi | Kimi-K1.5 / 128K | 超长上下文，网页阅读 |
-| `Hunyuan` | 腾讯混元 | 混元 T1 | 腾讯云生态 |
-| `Qianfan` | 百度文心千帆 | ERNIE 4.5 Turbo | 百度搜索生态 |
-| `Spark` | 讯飞星火 | 星火 4.0 Ultra | 语音 + 教育场景 |
-| `Stepfun` | 阶跃星辰 | Step-2 | 强推理，多模态 |
-| `Baichuan` | 百川智能 | 百川4 Turbo | 医疗 / 法律专项 |
-| `SenseNova` | 商汤日日新 | SenseNova 系列 | 商汤视觉 AI 融合 |
-| `MiniMax` | MiniMax | MiniMax-Text-01 | 超长上下文 |
-| `SiliconFlow` | 硅基流动 | Qwen / DeepSeek 托管 | 国内开源模型推理平台 |
-| `Yi` | 零一万物 | Yi-Large | 李开复旗下 |
-| `MiMo` | 小米 MiMo | MiMo 系列 | 小米推理模型 |
-| `Infini` | 无问芯穹 | 开源模型托管 | 国产 AI 算力平台 |
-| `XiaomaPower` | 小马算力 | 开源模型托管 | GPU 算力平台 |
+豆包（火山引擎）、智谱清言（GLM）、文心一言、月之暗面（Kimi）、MiniMax、阶跃星辰（StepFun）、百川、讯飞星火、零一万物、Moonshot、Mistral、Perplexity、Cohere、Together AI、Fireworks、OpenRouter、SiliconCloud、DeepInfra、Groq、Cerebras、Hyperbolic、Nebius、Novita、Lepton、302.AI、xAI（Grok）……以及其他 OpenAI 兼容平台。
 
----
-
-### 国际主流服务商（7 个）
-
-| 编码 | 服务商 | 代表模型 | 特色 |
-|------|-------|---------|------|
-| `OpenAI` | OpenAI ★ | GPT-4o / o3 / o4-mini | 行业标准，函数调用最成熟 |
-| `AzureAI` | Azure OpenAI | GPT-4o 部署 | 企业合规，私有部署 |
-| `Anthropic` | Anthropic Claude ★ | Claude 3.7 Sonnet | 长文本推理，安全对齐 |
-| `Gemini` | Google Gemini | Gemini 2.0 Flash | 多模态，代码执行 |
-| `Bedrock` | AWS Bedrock | Claude / Llama / Nova | 云原生，SigV4 认证 |
-| `XAI` | xAI Grok | Grok-3 / Grok-3 Mini | 马斯克旗下，实时信息 |
-| `Mistral` | Mistral AI | Mistral Large | 欧盟合规，高效模型 |
-
----
-
-### 国际聚合 / 新兴平台（16 个）
-
-| 编码 | 服务商 | 特色 |
-|------|-------|------|
-| `OpenRouter` ★ | OpenRouter | 统一路由 300+ 模型，价格对比 |
-| `GitHubModels` | GitHub Models | GitHub 内置模型市场 |
-| `HuggingFace` | Hugging Face | 数千种开源模型推理路由 |
-| `NvidiaNIM` | Nvidia NIM | GPU 专用推理微服务，Llama / Nemotron |
-| `Groq` | Groq | 极速推理（LPU 芯片），Llama/Gemma |
-| `Cerebras` | Cerebras | 晶圆级芯片，超高吞吐 |
-| `Perplexity` | Perplexity | 搜索增强推理 |
-| `Cohere` | Cohere | 企业 RAG 优化，Command 系列 |
-| `TogetherAI` | Together AI | 开源模型聚合平台 |
-| `Fireworks` | Fireworks AI | 生产级开源模型托管 |
-| `SambaNova` | SambaNova | RDU 架构，Llama 系列超速推理 |
-| `DeepInfra` | DeepInfra | 经济型开源模型推理 |
-| `Hyperbolic` | Hyperbolic | 去中心化 GPU 推理 |
-| `NovitaAI` | Novita AI | 图像 + 文本多模型平台 |
-| `AI21` | AI21 Labs | Jamba（SSM+Transformer 混合架构）|
-| `CloudflareAI` | Cloudflare AI | Workers AI，边缘推理 |
-
----
-
-### 本地 / 私有部署（4 个）
-
-| 编码 | 工具 | 特色 |
-|------|-----|------|
-| `Ollama` ★ | Ollama | 一键本地运行 Llama/Qwen/Gemma |
-| `LMStudio` | LM Studio | 桌面端 GUI 管理本地模型 |
-| `vLLM` | vLLM | 高吞吐量生产级推理引擎 |
-| `OneAPI` | OneAPI | 开源 LLM API 管理与分发 |
-
-> ★ 为各类别内最常用服务商。完整服务商列表见 [BuiltinChatClient.cs](NewLife.AI/Clients/BuiltinChatClient.cs)。
+所有服务商通过 `[AiClient]` 特性声明，`AiClientRegistry` 启动时自动扫描注册，新增服务商零配置。
 
 ---
 
 ## 快速开始
 
-### 安装 NuGet 包
+### 1. 仅使用 AI 基础库（SDK）
 
 ```bash
-# 核心基础库
 dotnet add package NewLife.AI
+```
 
-# ASP.NET Core DI 扩展（可选）
+```csharp
+using NewLife.AI.Clients;
+
+// 单轮问答
+using var client = new DashScopeChatClient("your-api-key", "qwen-plus");
+var reply = await client.ChatAsync("用三句话介绍一下大语言模型");
+Console.WriteLine(reply);
+
+// 多角色消息（元组数组，无需手动构造 ChatMessage）
+var reply2 = await client.ChatAsync([
+    ("system", "你是一名专业的 C# 开发助手"),
+    ("user", "解释一下 ValueTask 和 Task 的区别"),
+]);
+
+// 流式输出
+await foreach (var chunk in client.GetStreamingResponseAsync([
+    new ChatMessage { Role = "user", Content = "写一首关于代码的短诗" }
+], new ChatOptions()))
+{
+    Console.Write(chunk.Text);
+}
+```
+
+### 2. ASP.NET Core 依赖注入
+
+```bash
 dotnet add package NewLife.AI.Extensions
 ```
 
-### IChatClient 四种使用模式
-
-#### 模式一：直接 `new`（命令行 / 脚本 / 单文件，最简）
-
 ```csharp
-// 所有 6 个客户端均提供 (apiKey, model?, endpoint?) 便捷构造
-var client = new DashScopeChatClient("your-api-key", "qwen-plus");
+// 注册服务
+builder.Services.AddDashScope("your-api-key", "qwen-plus");
 
-// 可选：替换底层 HttpClient（设置代理、超时等）
-client.HttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+// Keyed 多服务商并存
+builder.Services.AddOpenAI("openai-key", serviceKey: "openai");
+builder.Services.AddAnthropic("anthropic-key", serviceKey: "anthropic");
 
-// 发送单条消息
-var reply = await client.ChatAsync("你好，请介绍一下你自己");
-Console.WriteLine(reply);
-
-// 多角色消息（元组数组，无需构造 ChatMessage）
-var reply2 = await client.ChatAsync([
-    ("system", "你是一名专业的 C# 开发助手"),
-    ("user", "请解释什么是依赖注入"),
-]);
-```
-
-可用的便捷构造：
-
-| 客户端 | 说明 |
-|--------|------|
-| `new OpenAIChatClient(apiKey, model?, endpoint?)` | OpenAI 及全部兼容服务商（~30 个） |
-| `new DashScopeChatClient(apiKey, model?, endpoint?)` | 阿里百炼 |
-| `new AnthropicChatClient(apiKey, model?, endpoint?)` | Claude |
-| `new GeminiChatClient(apiKey, model?, endpoint?)` | Google Gemini |
-| `new AzureAIChatClient(apiKey, model?, endpoint?)` | Azure OpenAI（部署名称作为 model） |
-| `new BedrockChatClient(accessKeyId, secretAccessKey, model?, region?)` | AWS Bedrock（SigV4 签名认证） |
-| `new OllamaChatClient(apiKey?, model?, endpoint?)` | Ollama（本地部署 apiKey 可为 null）|
-| `new NewLifeAIChatClient(apiKey, model?, endpoint?)` | 级联 NewLife.AI 实例 |
-
-#### 模式二：AiClientRegistry（配置驱动 / 动态切换服务商）
-
-```csharp
-// 通过服务商编码 + 选项创建（适合从数据库/配置文件读取参数）
-var client = AiClientRegistry.Default.CreateClient("DashScope", "your-api-key", "qwen-plus");
-
-// 从 AiClientOptions（含 Code 属性）批量创建
-var opts = new AiClientOptions { Code = "OpenAI", ApiKey = "sk-xxx", Model = "gpt-4o" };
-var client2 = AiClientRegistry.Default.CreateClient(opts.Code!, opts);
-```
-
-#### 模式三：ChatClientBuilder（中间件管道）
-
-```csharp
-// MEAI 风格：先设置服务商，再链式叠加中间件
-var client = new ChatClientBuilder()
-    .UseDashScope("your-api-key", "qwen-plus")   // UseOpenAI / UseAnthropic / UseGemini / UseOllama / UseNewLifeAI
-    .UseFilters(new MyAuditFilter())               // 日志 / 审计 / 速率限制（IChatFilter 实现）
-    .UseTools(toolRegistry)                        // 自动多轮 Function Calling
-    .Build();
-```
-
-#### 模式四：DI 注入（ASP.NET Core，需 `NewLife.AI.Extensions`）
-
-```csharp
-// 单服务商 —— 专属便捷注册（推荐）
-services.AddDashScope("your-api-key", "qwen-plus");
-// 注入：IChatClient
-
-// 多服务商（.NET 8+，Keyed Services）
-services.AddKeyedDashScope("fast",   "sk-xxx", "qwen3.5-flash");
-services.AddKeyedOpenAI  ("strong", "sk-xxx", "gpt-4o");
-// 注入：[FromKeyedServices("fast")] IChatClient fastClient
-```
-
-全部专属 DI 方法：`AddOpenAI` / `AddDashScope` / `AddAnthropic` / `AddGemini` / `AddAzureAI` / `AddBedrock` / `AddOllama` / `AddNewLifeAI`，均有对应 `AddKeyed*` 变体（.NET 8+）。
-
-#### 多模态流式输出（视觉理解）
-
-```csharp
-var message = new ChatMessage
+// 注入使用
+public class MyService(IChatClient chatClient)
 {
-    Role = "user",
-    Contents = [
-        new ImageContent { Uri = "https://example.com/image.jpg" },
-        new TextContent("请描述这张图片的内容"),
-    ]
-};
-await foreach (var chunk in client.GetStreamingResponseAsync([message]))
-{
-    var text = chunk.Text;
-    if (!String.IsNullOrEmpty(text))
-        Console.Write(text);
+    public Task<String> ChatAsync(String question)
+        => chatClient.ChatAsync(question);
 }
 ```
 
-#### 自定义工具（原生 .NET 方法）
+### 3. 函数调用（工具）
 
 ```csharp
-// 用 [ToolDescription] 标注工具方法，ToolRegistry 通过反射自动扫描注册
-public class WeatherService
+public class MyTools
 {
+    /// <summary>获取指定城市的天气</summary>
     [ToolDescription("get_weather")]
     public async Task<String> GetWeatherAsync(
-        [Description("城市名称")] String city)
-    {
-        return $"{city} 今天晴，25°C";
-    }
+        [Description("城市名")] String city)
+        => $"{city} 今天晴，22°C";
 }
 
-// 非 DI 场景：直接构建
-var toolRegistry = new ToolRegistry();
-toolRegistry.AddTools(new WeatherService());
+// 注册工具
+var registry = new ToolRegistry();
+registry.AddTools<MyTools>(new MyTools());
 
-// DI 场景：注册为 IToolProvider
-services.AddSingleton<IToolProvider>(_ =>
-{
-    var registry = new ToolRegistry();
-    registry.AddTools(new WeatherService());
-    return registry;
-});
+// 挂入管道，自动多轮循环工具调用
+var client = rawClient.AsBuilder()
+    .UseTools(registry)
+    .Build();
+
+// 模型自动调用 get_weather("北京")，返回最终文本答案
+var reply = await client.ChatAsync("北京今天天气怎么样？");
 ```
 
-#### MultiAgent 协作
-
-```csharp
-var toolRegistry = new ToolRegistry();
-toolRegistry.AddTools(new WebSearchService());
-
-var researcher = new ConversableAgent("researcher", researchClient)
-{
-    Tools = [..toolRegistry.Tools],
-};
-var writer = new ConversableAgent("writer", writingClient);
-
-// 默认使用 RoundRobinSelector 轮询调度
-var groupChat = new GroupChat([researcher, writer]);
-await foreach (var msg in groupChat.RunAsync(new TextMessage { Content = "分析人工智能行业趋势并写一篇报告" }))
-{
-    if (msg is TextMessage text)
-        Console.WriteLine($"[{msg.Source}] {text.Content}");
-}
-```
-
----
-
-## 项目结构
-
-```text
-NewLife.AI.sln
-├── NewLife.AI/               # 核心基础库（netstandard2.1）
-│   ├── Clients/              # IChatClient 实现（OpenAI/Anthropic/Gemini 等）
-│   ├── Providers/            # AiClientRegistry + ChatClientBuilder
-│   ├── Filters/              # IChatFilter 过滤器体系
-│   ├── Tools/                # 工具注册 + 内置工具（搜索/天气/翻译）
-│   ├── Agents/               # MultiAgent 框架
-│   ├── Planner/              # FunctionCallingPlanner
-│   ├── Memory/               # ISemanticMemory + IVectorStore
-│   └── ModelContextProtocol/ # MCP 协议实现
-│
-├── NewLife.AI.Extensions/    # ASP.NET Core 扩展（net6/8/10）
-│   └── AspNetMcpServer.cs   # 将 ASP.NET 应用扩展为 MCP Server
-│
-├── NewLife.ChatAI/           # 完整 Web 应用（net8/10）
-│   ├── Controllers/          # 16 个 API 控制器
-│   ├── Services/             # 业务服务层
-│   ├── Entity/               # XCode 实体类（8 张表）
-│   └── wwwroot/              # React 前端（内嵌到 DLL）
-│
-└── Web/                      # 前端源码（React 19 + TypeScript + Vite）
-```
-
----
-
-## NewLife.ChatAI 完整应用
-
-### 主要功能
-
-| 功能 | 说明 |
-|------|------|
-| 多轮对话 | SSE 流式输出，思考过程可视化，思考/快速/自动三档 |
-| 技能系统 | 内置与用户自定义技能，@ 输入补全选择，提示词自动注入上下文 |
-| 用户记忆 | 自动从对话提取记忆并注入上下文，支持手动管理记忆条目 |
-| 推荐问题 | 欢迎页展示引导性推荐问题，辅助用户快速上手 |
-| 工具调用 | Function Calling + MCP 工具，前端折叠展示 ToolCallBlock |
-| 图像多模态 | 图像上传理解（拖拽/粘贴）、文生图、图像编辑（Inpainting） |
-| API 网关 | 兼容 OpenAI / Anthropic / Gemini 标准协议，AppKey 认证 |
-| 会话管理 | 置顶、分组、关键词全文搜索、分享链接 |
-| 使用量统计 | 按用户 / AppKey 维度的 Token 消耗统计 |
-| 管理后台 | 基于 NewLife.Cube，提供模型配置、服务商管理、用户管理 |
-
-### 部署方式
-
-#### 独立可执行文件（推荐）
-
-```bash
-# 从发布包启动
-dotnet NewLife.ChatAI.dll
-
-# 或直接运行
-./NewLife.ChatAI
-```
-
-#### 从源码运行
+### 4. 运行完整 Web 对话应用
 
 ```bash
 git clone https://github.com/NewLifeX/NewLife.AI.git
 cd NewLife.AI
-cd Web
-pnpm install
-pnpm build
-cd ../NewLife.ChatAI
-dotnet build
+
+# 构建前端（需要 Node.js + pnpm）
+cd Web && pnpm install && pnpm build && cd ..
+
+# 启动
+cd NewLife.ChatAI
 dotnet run --framework net8.0
 ```
 
-应用启动后访问 `http://localhost:5000`。首次启动通过魔方管理后台（`/Admin`）配置服务商与模型。
+浏览器访问 `http://localhost:5000`，默认 SQLite，开箱即用。首次启动通过 `/Admin` 配置服务商 API Key。
 
-### API 网关端点
+也可将 `NewLife.ChatAI` 通过 NuGet 嵌入已有项目：
 
-| 端点 | 协议 | 说明 |
-|------|------|------|
-| `POST /v1/chat/completions` | OpenAI | 聊天补全，支持流式/函数调用/视觉 |
-| `POST /v1/responses` | OpenAI Responses | 推理模型（o3/gpt-5 等）|
-| `POST /v1/messages` | Anthropic | Claude 系列 |
-| `POST /v1/gemini` | Google Gemini | Gemini 系列 |
-| `POST /v1/images/generations` | OpenAI | 文字生图 |
-| `GET /v1/models` | OpenAI | 可用模型列表 |
+```bash
+dotnet add package NewLife.ChatAI
+```
 
-所有网关端点通过 `Authorization: Bearer sk-xxxx` AppKey 认证。
+```csharp
+using NewLife.ChatAI;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddChatAI();
+
+var app = builder.Build();
+app.UseChatAI(redirectToChat: true);
+app.Run();
+```
 
 ---
 
-## 自定义扩展
+## API 网关
+
+NewLife.ChatAI 内置多协议 AI 网关，第三方系统无需改造即可接入，全路径经过记忆注入与技能增强。
+
+| 协议 | 路由 | 说明 |
+|------|------|------|
+| OpenAI ChatCompletions | `POST /v1/chat/completions` | 流式 / 非流式 / 函数调用 / 视觉 |
+| OpenAI Responses | `POST /v1/responses` | o3 / gpt-5 推理模型 |
+| Anthropic Messages | `POST /v1/messages` | Claude 系列 |
+| Google Gemini | `POST /v1/gemini/...` | Gemini 系列 |
+| 图像生成 | `POST /v1/images/generations` | Text-to-Image |
+| 图像编辑 | `POST /v1/images/edits` | Inpainting（multipart/form-data）|
+| 模型发现 | `GET /v1/models` | 可用模型列表 |
+
+**认证**：`Authorization: Bearer sk-xxxx`（AppKey）
+
+**特性**：上游 429 指数退避重试（随机抖动，最多 5 次）、Token 用量自动记录、按 AppKey + 用户双维度统计
+
+---
+
+## 扩展开发
 
 ### 新增 AI 服务商
 
+继承 `OpenAIChatClient`，添加 `[AiClient]` 特性，`AiClientRegistry` 启动自动扫描注册：
+
 ```csharp
-[AiClient("myai", "MyAI", "https://api.myai.com/v1")]
-[AiClientModel("myai-latest", FunctionCalling = true, Vision = true)]
-public class MyAiChatClient : DelegatingChatClient
+[AiClient("MyAI", "我的服务", "https://api.myai.com/v1",
+    Description = "自定义 AI 服务")]
+[AiClientModel("myai-latest", "MyAI Latest", Code = "MyAI",
+    FunctionCalling = true, Vision = true)]
+public class MyAiChatClient : OpenAIChatClient
 {
-    // 实现协议转换逻辑
+    public MyAiChatClient() { }
+    public MyAiChatClient(String apiKey, String? model = null, String? endpoint = null)
+        : base(apiKey, model, endpoint) { }
 }
-// AiClientRegistry 启动时自动发现，无需手动注册
 ```
 
-### 新增 IChatFilter
+### 新增工具
 
 ```csharp
-public class ContentAuditFilter : IChatFilter
+public class MyTools
 {
-    // 洋葱圈模式：调用 next 前后分别处理请求和响应
-    public async Task OnChatAsync(ChatFilterContext ctx,
+    /// <summary>查询当前时间</summary>
+    [ToolDescription("get_current_time")]
+    public String GetCurrentTime()
+        => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+}
+
+var registry = new ToolRegistry();
+registry.AddTools<MyTools>(new MyTools());
+
+// DI 场景
+services.AddSingleton<IToolProvider>(_ =>
+{
+    var r = new ToolRegistry();
+    r.AddTools<MyTools>(new MyTools());
+    return r;
+});
+```
+
+### 新增上下文增强器
+
+在每次对话 Prepare 阶段自动注入内容（如实时数据、用户状态）：
+
+```csharp
+public class CurrentTimeEnricher : IContextEnricher
+{
+    public Int32 Order => 150;   // 控制与其他 Enricher 的执行顺序
+
+    public Task EnrichAsync(MessageFlowContext ctx, CancellationToken ct)
+    {
+        ctx.Messages.Insert(0,
+            new ChatMessage("system", $"当前时间：{DateTime.Now:yyyy-MM-dd HH:mm}"));
+        return Task.CompletedTask;
+    }
+}
+
+// DI 注册后自动按 Order 升序调用
+services.AddSingleton<IContextEnricher, CurrentTimeEnricher>();
+```
+
+### 新增过滤器
+
+洋葱圈模型，可在对话前后插入日志、审计、内容审核等逻辑：
+
+```csharp
+public class AuditFilter : IChatFilter
+{
+    public async Task OnChatAsync(
+        ChatFilterContext ctx,
         Func<ChatFilterContext, CancellationToken, Task> next,
         CancellationToken ct)
     {
-        // before — 内容检测、敏感词过滤（可修改 ctx.Request）
+        // before：记录输入 / 敏感词过滤
         await next(ctx, ct);
-        // after — 读取 ctx.Response，写审计日志
+        // after：记录输出 / 写审计日志
     }
 
-    // 流式结束后回调，可触发自学习分析
-    public async Task OnStreamCompletedAsync(ChatFilterContext ctx, CancellationToken ct)
-    {
-        // 审计日志、学习触发
-    }
+    public Task OnStreamCompletedAsync(ChatFilterContext ctx, CancellationToken ct)
+        => Task.CompletedTask;
 }
 ```
 
@@ -400,21 +280,30 @@ public class ContentAuditFilter : IChatFilter
 
 | 文档 | 说明 |
 |------|------|
-| [需求规格说明](Doc/需求规格说明.md) | 完整功能规格，含 SSE 协议、UI 交互细节 |
-| [架构设计](Doc/架构设计.md) | 系统架构、数据模型、API 接口规范 |
-| [API 网关需求](Doc/API网关需求.md) | API 网关详细设计 |
-| [AI 编排框架需求](Doc/AI编排框架需求.md) | Planner / MultiAgent / Memory 详细设计 |
+| [需求规格说明](Doc/需求规格说明.md) | 产品目标、功能清单、非功能需求 |
+| [架构设计](Doc/架构设计.md) | 四层架构、各模块设计细节 |
+| [AI 编排框架需求](Doc/AI编排框架需求.md) | 工具 / 智能体 / 规划器设计 |
+| [API 网关需求](Doc/API网关需求.md) | 网关协议适配详解 |
+| [MCP 架构](Doc/MCP架构.md) | MCP 客户端与服务端设计 |
+| [技能管理需求](Doc/技能管理需求.md) | 技能系统详细设计 |
+| [自学习系统需求](Doc/自学习系统需求.md) | 对话分析 + 记忆提取 |
+| [对话数据保存流程](Doc/对话数据保存流程.md) | MessageFlow 详细流程 |
+| [功能模块清单](Doc/功能模块清单.md) | 完整功能清单 |
 
 ---
 
-## 依赖
+## 许可证
 
-- **NewLife.Core**：基础工具库（字符串扩展、配置、序列化）
-- **NewLife.Cube**（ChatAI 应用）：Web 框架，提供权限、管理后台、配置中心
-- **XCode**（ChatAI 应用）：ORM 数据库框架，支持 SQLite / MySQL / SQL Server 等
+[MIT License](LICENSE)
 
----
+欢迎提交 Issue 与 Pull Request。
 
-## License
+- GitHub：https://github.com/NewLifeX/NewLife.AI
+- 官网：https://newlifex.com
+- QQ 群：1600800
 
-MIT © NewLife Dev Team
+## 相关项目
+
+- [NewLife.Core](https://github.com/NewLifeX/X) — .NET 基础库
+- [XCode](https://github.com/NewLifeX/X) — ORM 数据框架
+- [NewLife.Cube](https://github.com/NewLifeX/NewLife.Cube) — 魔方快速开发平台

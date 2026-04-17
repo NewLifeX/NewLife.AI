@@ -1,6 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.Models;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Bedrock;

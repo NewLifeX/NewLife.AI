@@ -60,8 +60,6 @@ public class AnthropicResponse : IChatResponse
         {
             if (_messages == null && Content != null)
             {
-                String? contentText = null;
-                String? reasoningText = null;
                 List<ToolCall>? toolCalls = null;
 
                 var textParts = new List<String>();
@@ -92,8 +90,8 @@ public class AnthropicResponse : IChatResponse
                     }
                 }
 
-                contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
-                reasoningText = reasoningParts.Count > 0 ? String.Join("", reasoningParts) : null;
+                var contentText = textParts.Count > 0 ? String.Join("", textParts) : null;
+                var reasoningText = reasoningParts.Count > 0 ? String.Join("", reasoningParts) : null;
                 var finishReason = MapStopReason(StopReason);
 
                 var choice = new ChatChoice
