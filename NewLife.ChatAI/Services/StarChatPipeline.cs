@@ -51,19 +51,19 @@ public class ChatAIPipeline(
     /// <inheritdoc/>
     public async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
         IList<AiChatMessage> contextMessages,
-        ModelConfig modelConfig,
+        IModelConfig modelConfig,
         ThinkingMode thinkingMode,
         ChatPipelineContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var span = tracer?.NewSpan("ai:StreamAsync", new { messages = contextMessages.Count });
 
-        // 1. 技能注入 + 使用记录（若外部未调用 PrepareContext，此处兖底）
+        // 1. 技能注入 + 使用记录（若外部未调用 PrepareContext，此处兜底）
         if (context.SystemPrompt == null)
             PrepareContext(contextMessages, context);
 
-        // 2. 获取服务商客户端
-        using var rawClient = modelService.CreateClient(modelConfig);
+        // 2. 获取服务商客户端（ModelService.CreateClient 依赖具体实体导航属性，此处安全向下转型）
+        using var rawClient = modelService.CreateClient((ModelConfig)modelConfig);
         if (rawClient == null)
         {
             yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.GetEffectiveProvider()}'");
@@ -201,7 +201,7 @@ public class ChatAIPipeline(
     /// <inheritdoc/>
     public async Task<ChatResponse> CompleteAsync(
         IList<AiChatMessage> contextMessages,
-        ModelConfig modelConfig,
+        IModelConfig modelConfig,
         ChatPipelineContext context,
         CancellationToken cancellationToken)
     {
@@ -210,7 +210,7 @@ public class ChatAIPipeline(
         if (context.SystemPrompt == null)
             PrepareContext(contextMessages, context);
 
-        using var rawClient = modelService.CreateClient(modelConfig);
+        using var rawClient = modelService.CreateClient((ModelConfig)modelConfig);
         if (rawClient == null)
             return new ChatResponse { Messages = [new ChatChoice { Message = new AiChatMessage { Role = "assistant", Content = "未找到服务商" } }] };
 
