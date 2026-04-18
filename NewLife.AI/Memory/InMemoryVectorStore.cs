@@ -64,16 +64,12 @@ public sealed class InMemoryVectorStore : IVectorStore
         lock (_lock)
             snap = [.. _records.Values];
 
-        var results = new List<VectorSearchResult>(snap.Count);
-        foreach (var r in snap)
-        {
-            if (r.Vector == null || r.Vector.Length == 0) continue;
-            var score = CosineSimilarity(queryVector, r.Vector);
-            if (score >= minScore)
-                results.Add(new VectorSearchResult { Record = r, Score = score });
-        }
-
-        results.Sort((a, b) => b.Score.CompareTo(a.Score));
+        var results = snap
+            .Where(r => r.Vector != null && r.Vector.Length > 0)
+            .Select(r => new VectorSearchResult { Record = r, Score = CosineSimilarity(queryVector, r.Vector!) })
+            .Where(x => x.Score >= minScore)
+            .OrderByDescending(x => x.Score)
+            .ToList();
         IList<VectorSearchResult> top = topK > 0 && results.Count > topK
             ? results.GetRange(0, topK)
             : results;

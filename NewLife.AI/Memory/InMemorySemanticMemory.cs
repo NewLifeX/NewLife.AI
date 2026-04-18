@@ -60,16 +60,12 @@ public sealed class InMemorySemanticMemory : ISemanticMemory
             entries = [.. col.Values];
         }
 
-        var results = new List<MemorySearchResult>(entries.Count);
-        foreach (var entry in entries)
-        {
-            if (entry.Vector == null || entry.Vector.Length == 0) continue;
-            var score = CosineSimilarity(queryVector, entry.Vector);
-            if (score >= minRelevance)
-                results.Add(new MemorySearchResult { Entry = entry, Relevance = score });
-        }
-
-        results.Sort((a, b) => b.Relevance.CompareTo(a.Relevance));
+        var results = entries
+            .Where(e => e.Vector != null && e.Vector.Length > 0)
+            .Select(e => new MemorySearchResult { Entry = e, Relevance = CosineSimilarity(queryVector, e.Vector!) })
+            .Where(x => x.Relevance >= minRelevance)
+            .OrderByDescending(x => x.Relevance)
+            .ToList();
         IList<MemorySearchResult> topResults = topN > 0 && results.Count > topN
             ? results.GetRange(0, topN)
             : results;

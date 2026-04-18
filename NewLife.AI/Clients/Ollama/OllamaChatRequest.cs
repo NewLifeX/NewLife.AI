@@ -44,19 +44,7 @@ public class OllamaChatRequest : IChatRequest
     [IgnoreDataMember]
     IList<ChatMessage> IChatRequest.Messages
     {
-        get
-        {
-            if (_chatMessages == null)
-            {
-                var messages = new List<ChatMessage>();
-                foreach (var msg in Messages)
-                {
-                    messages.Add(msg.ToChatMessage());
-                }
-                _chatMessages = messages;
-            }
-            return _chatMessages;
-        }
+        get => _chatMessages ??= Messages.Select(e => e.ToChatMessage()).ToList();
         set => _chatMessages = value;
     }
 
@@ -176,7 +164,7 @@ public class OllamaChatRequest : IChatRequest
             };
 
             if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
-            {
+                {
                 var toolCalls = new List<OllamaToolCall>();
                 foreach (var tc in msg.ToolCalls)
                 {
@@ -227,7 +215,7 @@ public class OllamaChatRequest : IChatRequest
 
         // 工具定义
         if (request.Tools != null && request.Tools.Count > 0)
-        {
+            {
             var tools = new List<Object>();
             foreach (var tool in request.Tools)
             {
@@ -276,7 +264,7 @@ public class OllamaChatMessage
         };
 
         if (ToolCalls != null && ToolCalls.Count > 0)
-        {
+            {
             var toolCalls = new List<ToolCall>();
             foreach (var tc in ToolCalls)
             {
