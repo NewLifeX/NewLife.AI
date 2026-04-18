@@ -80,7 +80,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// </summary>
     /// <param name="ip">要查询的 IPv4/IPv6 地址；留空则自动查询本机当前公网 IP</param>
     /// <param name="cancellationToken">取消令牌</param>
-    [ToolDescription("get_ip_location", Triggers = "ip归属地,ip地址归属地,这个ip在哪,ip地理位置")]
+    [ToolDescription("get_ip_location", Triggers = "ip归属地,ip地址,ip归属地,这个ip在哪,ip地理位置")]
     [DisplayName("IP归属地")]
     [Description("查询 IP 地址的归属地信息（国家、省份、城市、运营商）。不传入 ip 时查询本机当前公网 IP")]
     public async Task<Object> GetIpLocationAsync(
@@ -105,7 +105,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="city">城市名称，支持中英文，如 Shanghai、上海、New York</param>
     /// <param name="unit">温度单位：C（摄氏度，默认）或 F（华氏度）</param>
     /// <param name="cancellationToken">取消令牌</param>
-    [ToolDescription("get_weather", Triggers = "今天天气怎么样,明天天气怎么样,天气预报,查询天气")]
+    [ToolDescription("get_weather", Triggers = "今天天气,明天天气,天气怎么样,天气预报,查询天气")]
     [DisplayName("天气查询")]
     [Description("获取指定城市的实时天气信息，包括温度、湿度、风速、天气描述等。无需 API 密鑰")]
     public async Task<Object> GetWeatherAsync(

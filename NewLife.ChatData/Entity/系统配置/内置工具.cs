@@ -59,7 +59,7 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
     /// <summary>方法名。工具对应的C#方法名，如GetCurrentTime</summary>
     [DisplayName("方法名")]
     [Description("方法名。工具对应的C#方法名，如GetCurrentTime")]
-    [DataObjectField(false, false, true, 50)]
+    [DataObjectField(false, false, true, 200)]
     [BindColumn("MethodName", "方法名。工具对应的C#方法名，如GetCurrentTime", "")]
     public String? MethodName { get => _MethodName; set { if (OnPropertyChanging("MethodName", value)) { _MethodName = value; OnPropertyChanged("MethodName"); } } }
 

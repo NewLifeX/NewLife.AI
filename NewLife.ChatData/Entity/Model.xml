@@ -299,7 +299,30 @@
         <Index Columns="UserId" Unique="True" />
       </Indexes>
     </Table>
-    <Table Name="ChatPreset" Description="对话预设。保存模型+技能+SystemPrompt组合为预设模板" Output="消息对话">
+    <Table Name="SuggestedQuestion" Description="推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验" Output="系统配置">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="Question" DataType="String" Master="True" Length="200" Description="问题。推荐问题文本" />
+        <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
+        <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
+        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
+        <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
+        <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
+      </Columns>
+      <Indexes>
+        <Index Columns="Sort" />
+        <Index Columns="Enable,Sort" />
+      </Indexes>
+    </Table>
+    <Table Name="ChatPreset" Description="对话预设。保存模型+技能+SystemPrompt组合为预设模板" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。0=系统级预设" />
@@ -322,7 +345,6 @@
       </Columns>
       <Indexes>
         <Index Columns="UserId,Name" Unique="True" />
-        <Index Columns="UserId" />
       </Indexes>
     </Table>
     <Table Name="McpServerConfig" Description="MCP服务配置。MCP Server列表及工具发现信息" Output="系统配置">
@@ -355,7 +377,7 @@
         <Column Name="Name" DataType="String" Master="True" Description="名称。工具唯一标识（snake_case），如get_current_time" />
         <Column Name="DisplayName" DataType="String" Description="显示名称。工具的中文名称，用于后台展示" />
         <Column Name="ClassName" DataType="String" Description="类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService" />
-        <Column Name="MethodName" DataType="String" Description="方法名。工具对应的C#方法名，如GetCurrentTime" />
+        <Column Name="MethodName" DataType="String" Length="200" Description="方法名。工具对应的C#方法名，如GetCurrentTime" />
         <Column Name="Description" DataType="String" ItemType="markdown" Length="2000" Description="描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖" />
         <Column Name="Parameters" DataType="String" ItemType="json" ShowIn="Auto,-List,-Search" Length="-1" Description="参数Schema。JSON格式的函数参数定义，锁定后不再覆盖" />
         <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）" />
@@ -377,29 +399,6 @@
       <Indexes>
         <Index Columns="Name" Unique="True" />
         <Index Columns="Enable" />
-      </Indexes>
-    </Table>
-    <Table Name="SuggestedQuestion" Description="推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验" Output="知识进化">
-      <Columns>
-        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="Question" DataType="String" Master="True" Length="200" Description="问题。推荐问题文本" />
-        <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
-        <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
-        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
-        <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
-        <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
-        <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
-      </Columns>
-      <Indexes>
-        <Index Columns="Sort" />
-        <Index Columns="Enable,Sort" />
       </Indexes>
     </Table>
     <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">

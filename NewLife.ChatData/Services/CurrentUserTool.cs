@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using NewLife.AI.Tools;
 using NewLife.Collections;
 using XCode.Membership;
@@ -12,7 +12,7 @@ public class CurrentUserTool
     #region 工具方法
 
     /// <summary>获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、地区城市、性别、年龄、生日、备注等档案数据。当用户询问"我是谁"或需要个人信息时调用</summary>
-    [ToolDescription("get_current_user", IsSystem = true)]
+    [ToolDescription("get_current_user", Triggers = "我是谁,我的信息,我的档案", IsSystem = true)]
     [DisplayName("当前用户信息")]
     [Description("获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、地区城市、性别、年龄、生日、备注等档案数据")]
     public String GetCurrentUser()

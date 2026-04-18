@@ -11,7 +11,7 @@ public class BuiltinToolService
     #region 时间工具
 
     /// <summary>获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等</summary>
-    [ToolDescription("get_current_time", IsSystem = true)]
+    [ToolDescription("get_current_time", Triggers = "今天,昨天,明天", IsSystem = true)]
     [DisplayName("当前时间")]
     [Description("获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等")]
     public String GetCurrentTime()

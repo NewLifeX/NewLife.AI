@@ -18,7 +18,6 @@ namespace NewLife.ChatData.Entity;
 [DataObject]
 [Description("对话预设。保存模型+技能+SystemPrompt组合为预设模板")]
 [BindIndex("IU_ChatPreset_UserId_Name", true, "UserId,Name")]
-[BindIndex("IX_ChatPreset_UserId", false, "UserId")]
 [BindTable("ChatPreset", Description = "对话预设。保存模型+技能+SystemPrompt组合为预设模板", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
 {
