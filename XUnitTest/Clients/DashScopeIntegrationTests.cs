@@ -1574,14 +1574,14 @@ public class DashScopeIntegrationTests
     #region 文生图（Text-to-Image）
 
     [Fact]
-    [DisplayName("文生图_wanx2.6-t2i_URL返回与负向提示词，并保存本地文件")]
+    [DisplayName("文生图_wan2.6-t2i_URL返回与负向提示词，并保存本地文件")]
     public async Task TextToImageAsync_Wanx26T2i_Complete()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         // 基础文生图，附带负向提示词字段验证，N=1 只返回单张
         var request = new ImageGenerationRequest
         {
-            Model = "wanx2.6-t2i",
+            Model = "wan2.6-t2i",
             Prompt = "一只在向日葵花田中奔跑的柴犬，写实风格，阳光明媚",
             NegativePrompt = "人物, 文字",
             N = 1,
@@ -1812,7 +1812,7 @@ public class DashScopeIntegrationTests
     // 覆盖 DashScopeChatClient 头部 [AiClientModel] 声明的全部默认模型：
     // 文本对话模型（Theory）： qwen3-max, qwen3.5-plus, qwen3.5-flash
     // 专用推理模型： qwq-plus；代码模型： qwen3-coder-next
-    // 集成测试在对应功能区域覆盖： qwen-vl-max（视觉区域）、wanx2.6-t2i（文生图区域）
+    // 集成测试在对应功能区域覆盖： qwen-vl-max（视觉区域）、wan2.6-t2i（文生图区域）
 
     [Theory]
     [InlineData("qwen3-max", "1+1=？，只回答数字", 100)]

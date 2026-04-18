@@ -25,8 +25,8 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
 [AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
 [AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
-[AiClientModel("wanx2.6-t2i", "Wanx 文生图", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("wanx2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
+[AiClientModel("wan2.6-t2i", "Wan 文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("wan2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "Wanx 图生视频", Vision = true, VideoGeneration = true, FunctionCalling = false)]
 public class DashScopeChatClient : OpenAIChatClient
 {
@@ -151,15 +151,114 @@ public class DashScopeChatClient : OpenAIChatClient
     #endregion
 
     #region 文生图
-    /// <summary>文生图。Wanx 系列模型必须通过 compatible-mode 端点调用 /v1/images/generations，基类使用的是 DefaultEndpoint，原生协议下路径不正确，在此重写修正</summary>
+    /// <summary>文生图。不同万相系列模型使用不同端点和请求格式：
+    /// <list type="bullet">
+    /// <item>wan2.6-t2i / wan2.*-t2i：原生 DashScope 多模态端点 /services/aigc/multimodal-generation/generation，messages 数组格式，结果在 output.choices[].message.content[].image</item>
+    /// <item>wanx3.0-t2i-* 等：兼容模式端点 /compatible-mode/v1/images/generations，DALL·E 格式</item>
+    /// </list>
+    /// </summary>
     /// <param name="request">图像生成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应</returns>
     public override async Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
     {
+        var modelId = request.Model ?? _options.Model ?? "";
+
+        // wan2.x-t2i 使用原生 DashScope 多模态端点（messages 格式），其余走兼容模式
+        if (IsWan2T2iModel(modelId))
+            return await TextToImageNativeAsync(request, cancellationToken).ConfigureAwait(false);
+
         var url = CompatibleEndpoint.TrimEnd('/') + "/v1/images/generations";
         var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseImageGenerationResponse(json);
+    }
+
+    /// <summary>wan2.x-t2i 原生多模态文生图。端点与多模态对话相同，请求格式用 messages 数组，图片 URL 在 output.choices[].message.content[].image</summary>
+    /// <param name="request">图像生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应</returns>
+    private async Task<ImageGenerationResponse?> TextToImageNativeAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
+    {
+        var url = NativeEndpoint.TrimEnd('/') + "/services/aigc/multimodal-generation/generation";
+
+        var body = new Dictionary<String, Object?>
+        {
+            ["model"] = request.Model ?? _options.Model,
+            ["input"] = new Dictionary<String, Object>
+            {
+                ["messages"] = new[]
+                {
+                    new Dictionary<String, Object>
+                    {
+                        ["role"] = "user",
+                        ["content"] = new[] { new Dictionary<String, Object> { ["text"] = request.Prompt } },
+                    },
+                },
+            },
+            ["parameters"] = BuildT2iParameters(request),
+        };
+
+        var json = await PostAsync(url, body, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseWan2T2iResponse(json);
+    }
+
+    /// <summary>判断是否为使用原生多模态端点的 wan2.x-t2i 系列（如 wan2.6-t2i、wan2.5-t2i-preview 等）</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>是则返回 true</returns>
+    private static Boolean IsWan2T2iModel(String modelId) =>
+        modelId.StartsWith("wan2.", StringComparison.OrdinalIgnoreCase) &&
+        modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
+
+    /// <summary>构建 wan2.x-t2i 文生图 parameters 字典</summary>
+    /// <param name="request">图像生成请求</param>
+    /// <returns>parameters 字典；无可用参数时返回 null</returns>
+    private static Dictionary<String, Object?>? BuildT2iParameters(ImageGenerationRequest request)
+    {
+        var p = new Dictionary<String, Object?>();
+        if (!String.IsNullOrEmpty(request.NegativePrompt)) p["negative_prompt"] = request.NegativePrompt;
+        if (request.N.HasValue) p["n"] = request.N.Value;
+        if (!String.IsNullOrEmpty(request.Size)) p["size"] = request.Size;
+        return p.Count > 0 ? p : null;
+    }
+
+    /// <summary>解析 wan2.x-t2i 原生多模态响应，提取图片 URL 列表</summary>
+    /// <param name="json">API 响应 JSON</param>
+    /// <returns>图像生成响应；解析失败时返回 null</returns>
+    private static ImageGenerationResponse? ParseWan2T2iResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return null;
+
+        var code = dic["code"] as String;
+        if (!String.IsNullOrEmpty(code))
+        {
+            var message = dic["message"] as String ?? code;
+            throw new HttpRequestException($"[DashScope] 文生图错误 {code}: {message}");
+        }
+
+        var resp = new ImageGenerationResponse();
+
+        if (dic["output"] is IDictionary<String, Object> output &&
+            output["choices"] is IList<Object> choices)
+        {
+            var items = new List<ImageData>();
+            foreach (var choice in choices)
+            {
+                if (choice is not IDictionary<String, Object> c) continue;
+                if (c["message"] is not IDictionary<String, Object> msg) continue;
+                if (msg["content"] is not IList<Object> contentList) continue;
+                foreach (var item in contentList)
+                {
+                    if (item is not IDictionary<String, Object> d) continue;
+                    var imageUrl = d["image"] as String;
+                    if (!String.IsNullOrEmpty(imageUrl))
+                        items.Add(new ImageData { Url = imageUrl });
+                }
+            }
+            resp.Data = [.. items];
+        }
+
+        return resp;
     }
     #endregion
 

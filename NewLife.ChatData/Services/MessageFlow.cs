@@ -1270,6 +1270,11 @@ public class MessageFlow
         {
             if (hasError)
                 msg.Content = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
+            else if (!msg.ThinkingContent.IsNullOrEmpty())
+            {
+                // 小参数量推理模型有时将正文误写入思考字段（正文为空、思考字段有内容）
+                // 不标记为"已中断"，ThinkingContent 中已有内容可供前端展示
+            }
             else
                 msg.Content = "[已中断]";
         }

@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +14,7 @@ using Xunit;
 
 namespace XUnitTest.Clients;
 
-/// <summary>DeepSeek（深度求索）服务商集成测试。需要有效 ApiKey 才能运行</summary>
+/// <summary>DeepSeek（深度求索）服务商集成测试。直接实例化 DeepSeekChatClient，需要有效 ApiKey 才能运行</summary>
 /// <remarks>
 /// ApiKey 读取优先级：
 /// 1. ./config/DeepSeek.key 文件（纯文本，首行为 ApiKey）
@@ -25,7 +24,6 @@ namespace XUnitTest.Clients;
 [TestCaseOrderer("NewLife.UnitTest.DefaultOrderer", "NewLife.UnitTest")]
 public class DeepSeekIntegrationTests
 {
-    private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek")!;
     private readonly String _apiKey;
 
     public DeepSeekIntegrationTests()
@@ -56,7 +54,6 @@ public class DeepSeekIntegrationTests
     /// <summary>构建默认连接选项</summary>
     private AiClientOptions CreateOptions() => new()
     {
-        Endpoint = _descriptor.DefaultEndpoint,
         ApiKey = _apiKey,
     };
 
@@ -93,7 +90,7 @@ public class DeepSeekIntegrationTests
         {
             try
             {
-                using var client = _descriptor.Factory(opts ?? CreateOptions());
+                using var client = new DeepSeekChatClient(opts ?? CreateOptions());
                 return await client.GetResponseAsync(request);
             }
             catch (HttpRequestException ex) when (retries-- > 0 && IsTransientNetworkError(ex))
@@ -110,7 +107,7 @@ public class DeepSeekIntegrationTests
     /// <summary>创建客户端并执行流式请求</summary>
     private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        using var client = _descriptor.Factory(opts ?? CreateOptions());
+        using var client = new DeepSeekChatClient(opts ?? CreateOptions());
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
             yield return chunk;
     }
@@ -128,7 +125,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content), "AI 回复内容不应为空");
+        Assert.NotEmpty(content);
 
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.TotalTokens > 0, "Token 用量应大于 0");
@@ -149,7 +146,7 @@ public class DeepSeekIntegrationTests
         var response = await ChatAsync(request);
 
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
         Assert.Contains("{", content);
         Assert.Contains("}", content);
     }
@@ -173,7 +170,7 @@ public class DeepSeekIntegrationTests
         var response = await ChatAsync(request);
 
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
         Assert.Contains("小明", content);
     }
 
@@ -192,7 +189,7 @@ public class DeepSeekIntegrationTests
         var response = await ChatAsync(request);
 
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
     }
 
     [Fact]
@@ -285,7 +282,7 @@ public class DeepSeekIntegrationTests
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
     }
 
     [Fact]
@@ -343,7 +340,7 @@ public class DeepSeekIntegrationTests
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
-        Assert.False(String.IsNullOrWhiteSpace(response.Model));
+        Assert.NotEmpty(response.Model);
         Assert.Contains("deepseek", response.Model, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -354,7 +351,7 @@ public class DeepSeekIntegrationTests
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         var response = await ChatAsync(request);
 
-        Assert.False(String.IsNullOrWhiteSpace(response.Id));
+        Assert.NotEmpty(response.Id);
     }
 
     [Fact]
@@ -454,7 +451,7 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        Assert.False(String.IsNullOrWhiteSpace(fullContent));
+        Assert.NotEmpty(fullContent);
         Assert.True(fullContent.Length > 5, $"concatenated content too short: {fullContent}");
     }
 
@@ -478,7 +475,7 @@ public class DeepSeekIntegrationTests
             }
         }
 
-        Assert.False(String.IsNullOrWhiteSpace(fullContent));
+        Assert.NotEmpty(fullContent);
     }
 
     [Fact]
@@ -632,7 +629,6 @@ public class DeepSeekIntegrationTests
         var request = CreateSimpleRequest("deepseek-chat", "hi");
         var options = new AiClientOptions
         {
-            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "",
         };
 
@@ -649,7 +645,6 @@ public class DeepSeekIntegrationTests
         var request = CreateSimpleRequest("deepseek-chat", "hi");
         var options = new AiClientOptions
         {
-            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
@@ -701,7 +696,6 @@ public class DeepSeekIntegrationTests
         request.Stream = true;
         var options = new AiClientOptions
         {
-            Endpoint = _descriptor.DefaultEndpoint,
             ApiKey = "sk-invalid-key-12345",
         };
 
@@ -847,7 +841,7 @@ public class DeepSeekIntegrationTests
             var toolCall = choice.Message.ToolCalls[0];
             Assert.Equal("function", toolCall.Type);
             Assert.Equal("get_weather", toolCall.Function?.Name);
-            Assert.False(String.IsNullOrWhiteSpace(toolCall.Id));
+            Assert.NotEmpty(toolCall.Id);
             Assert.NotNull(toolCall.Function?.Arguments);
         }
     }
@@ -963,7 +957,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response2.Messages);
 
         var finalContent = response2.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(finalContent));
+        Assert.NotEmpty(finalContent);
     }
 
     [Fact]
@@ -1043,10 +1037,10 @@ public class DeepSeekIntegrationTests
 
         var message = response.Messages[0].Message;
         Assert.NotNull(message);
-        Assert.False(String.IsNullOrWhiteSpace(message.Content as String), "deepseek-reasoner 最终回答内容不应为空");
+        Assert.NotEmpty(message.Content as String);
 
         // deepseek-reasoner 必定输出思维链到 reasoning_content 字段
-        Assert.False(String.IsNullOrWhiteSpace(message.ReasoningContent), "deepseek-reasoner 应包含 reasoning_content 思维链");
+        Assert.NotEmpty(message.ReasoningContent);
     }
 
     [Fact]
@@ -1080,79 +1074,74 @@ public class DeepSeekIntegrationTests
 
     #endregion
 
-    #region DeepSeekProvider 属性验证
+    #region DeepSeekChatClient 属性验证
 
     [Fact]
-    [DisplayName("Provider_Code为DeepSeek")]
-    public void Provider_Code_IsDeepSeek()
+    [DisplayName("客户端_Name为深度求索")]
+    public void Client_Name_IsCorrect()
     {
-        Assert.Equal("DeepSeek", _descriptor.Code);
+        using var client = new DeepSeekChatClient(CreateOptions());
+        Assert.Equal("深度求索", client.Name);
     }
 
     [Fact]
-    [DisplayName("Provider_Name为深度求索")]
-    public void Provider_Name_IsCorrect()
+    [DisplayName("客户端_默认端点为 DeepSeek API 地址")]
+    public void Client_DefaultEndpoint_IsDeepSeekApi()
     {
-        Assert.Equal("深度求索", _descriptor.DisplayName);
+        using var client = new DeepSeekChatClient(CreateOptions());
+        Assert.Equal("https://api.deepseek.com", client.DefaultEndpoint);
     }
 
     [Fact]
-    [DisplayName("Provider_DefaultEndpoint正确")]
-    public void Provider_DefaultEndpoint_IsCorrect()
+    [DisplayName("注册表_DeepSeek已注册且元数据正确")]
+    public void Registry_DeepSeek_Registered()
     {
-        Assert.Equal("https://api.deepseek.com", _descriptor.DefaultEndpoint);
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        Assert.Equal("DeepSeek", descriptor!.Code);
+        Assert.Equal("深度求索", descriptor.DisplayName);
+        Assert.Equal("https://api.deepseek.com", descriptor.DefaultEndpoint);
+        Assert.Equal("OpenAI", descriptor.Protocol);
     }
 
     [Fact]
-    [DisplayName("Provider_ApiProtocol为OpenAI")]
-    public void Provider_ApiProtocol_IsOpenAI()
+    [DisplayName("注册表_工厂创建 DeepSeekChatClient 实例")]
+    public void Registry_Factory_Creates_DeepSeekChatClient()
     {
-        Assert.Equal("OpenAI", _descriptor.Protocol);
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        using var client = descriptor!.Factory(CreateOptions());
+        Assert.IsType<DeepSeekChatClient>(client);
     }
 
     [Fact]
-    [DisplayName("Provider_Models列表非空且包含deepseek模型")]
-    public void Provider_Models_ContainsDeepSeek()
+    [DisplayName("注册表_Models包含deepseek-chat和deepseek-reasoner")]
+    public void Registry_Models_ContainsExpectedModels()
     {
-        var models = _descriptor.Models;
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        var models = descriptor!.Models;
         Assert.NotNull(models);
         Assert.NotEmpty(models);
-        Assert.Contains(models, m => m.Model.Contains("deepseek", StringComparison.OrdinalIgnoreCase) ||
-                                     m.DisplayName.Contains("deepseek", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(models, m => m.Model.Contains("deepseek", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    [DisplayName("Provider_包含支持FunctionCalling的模型")]
-    public void Provider_Models_HasFunctionCallingModel()
+    [DisplayName("注册表_Models包含支持FunctionCalling模型")]
+    public void Registry_Models_HasFunctionCallingModel()
     {
-        var models = _descriptor.Models;
-        Assert.NotNull(models);
-        Assert.Contains(models, m => m.Capabilities.SupportFunctionCalling);
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        Assert.Contains(descriptor!.Models, m => m.Capabilities.SupportFunctionCalling);
     }
 
     [Fact]
-    [DisplayName("Provider_包含支持Thinking的模型")]
-    public void Provider_Models_HasThinkingModel()
+    [DisplayName("注册表_Models包含支持Thinking模型")]
+    public void Registry_Models_HasThinkingModel()
     {
-        var models = _descriptor.Models;
-        Assert.NotNull(models);
-        Assert.Contains(models, m => m.Capabilities.SupportThinking);
-    }
-
-    [Fact]
-    [DisplayName("Provider_IAiProvider接口实现")]
-    public void Provider_Implements_AiClientDescriptor()
-    {
-        Assert.IsType<AiClientDescriptor>(_descriptor);
-    }
-
-    [Fact]
-    [DisplayName("Provider_工厂创建 DeepSeekChatClient 实例")]
-    public void Factory_Creates_DeepSeekChatClient()
-    {
-        // 移动到 DeepSeekChatClient 之后，工厂应创建该具体类型而非限 OpenAIChatClient
-        using var client = _descriptor.Factory(CreateOptions());
-        Assert.IsType<DeepSeekChatClient>(client);
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        Assert.Contains(descriptor!.Models, m => m.Capabilities.SupportThinking);
     }
 
     #endregion
@@ -1270,7 +1259,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
         Assert.Contains("{", content);
         Assert.Contains("}", content);
     }
