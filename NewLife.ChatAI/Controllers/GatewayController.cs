@@ -3,8 +3,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.Capabilities;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Embedding;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Services;
@@ -279,6 +281,229 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             return StatusCode(502, new { code = "IMAGE_GENERATION_FAILED", message = ex.Message });
         }
+    }
+    #endregion
+
+    #region 嵌入向量
+    /// <summary>嵌入向量接口。兼容 OpenAI POST /v1/embeddings 协议</summary>
+    /// <param name="request">嵌入请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("v1/embeddings")]
+    [SnakeCaseBody]
+    public async Task<IActionResult> EmbeddingsAsync([FromBody] EmbeddingRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(request.Model);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not IEmbeddingClient ec)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
+
+            var resp = await ec.GenerateAsync(request, cancellationToken).ConfigureAwait(false);
+            return Ok(resp);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "EMBEDDING_FAILED", message = ex.Message });
+        }
+    }
+    #endregion
+
+    #region 语音合成（TTS）
+    /// <summary>语音合成接口。兼容 OpenAI POST /v1/audio/speech 协议，返回 audio/mpeg 流</summary>
+    /// <param name="request">合成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("v1/audio/speech")]
+    [SnakeCaseBody]
+    public async Task<IActionResult> AudioSpeechAsync([FromBody] SpeechRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+        if (String.IsNullOrEmpty(request.Input)) return BadRequest(new { code = "INVALID_REQUEST", message = "input 不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(request.Model);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not ISpeechClient sc)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持语音合成" });
+
+            var bytes = await sc.SpeechAsync(request, cancellationToken).ConfigureAwait(false);
+            var contentType = (request.ResponseFormat ?? "mp3") switch
+            {
+                "wav" => "audio/wav",
+                "opus" => "audio/opus",
+                "aac" => "audio/aac",
+                "flac" => "audio/flac",
+                "pcm" => "audio/pcm",
+                _ => "audio/mpeg",
+            };
+            return File(bytes, contentType);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "SPEECH_FAILED", message = ex.Message });
+        }
+    }
+    #endregion
+
+    #region 语音识别（STT）
+    /// <summary>语音识别接口。兼容 OpenAI POST /v1/audio/transcriptions 协议（multipart/form-data）</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("v1/audio/transcriptions")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> AudioTranscriptionsAsync(CancellationToken cancellationToken)
+    {
+        var form = await Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+        var modelCode = form["model"].FirstOrDefault();
+        var file = form.Files.GetFile("file");
+
+        if (file == null || file.Length == 0)
+            return BadRequest(new { code = "INVALID_REQUEST", message = "file 不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(modelCode);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not ITranscriptionClient tc)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{modelCode}' 不支持语音识别" });
+
+            using var stream = file.OpenReadStream();
+            var req = new TranscriptionRequest
+            {
+                Model = modelCode,
+                File = stream,
+                FileName = file.FileName,
+                Language = form["language"].FirstOrDefault(),
+                Prompt = form["prompt"].FirstOrDefault(),
+                ResponseFormat = form["response_format"].FirstOrDefault(),
+                Temperature = Double.TryParse(form["temperature"].FirstOrDefault(), out var t) ? t : null,
+            };
+            var resp = await tc.TranscribeAsync(req, cancellationToken).ConfigureAwait(false);
+            return Ok(resp);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "TRANSCRIPTION_FAILED", message = ex.Message });
+        }
+    }
+    #endregion
+
+    #region 视频生成
+    /// <summary>提交视频生成任务。POST /v1/video/generations，返回 task_id</summary>
+    /// <param name="request">视频生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("v1/video/generations")]
+    [SnakeCaseBody]
+    public async Task<IActionResult> VideoGenerationsAsync([FromBody] VideoGenerationRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+        if (String.IsNullOrEmpty(request.Prompt)) return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(request.Model);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not IVideoClient vc)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持视频生成" });
+
+            var resp = await vc.SubmitVideoGenerationAsync(request, cancellationToken).ConfigureAwait(false);
+            return Ok(resp);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "VIDEO_GENERATION_FAILED", message = ex.Message });
+        }
+    }
+
+    /// <summary>查询视频生成任务状态。GET /v1/video/generations/{taskId}?model=xxx</summary>
+    /// <param name="taskId">任务编号</param>
+    /// <param name="model">模型编码（用于定位服务商）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpGet("v1/video/generations/{taskId}")]
+    public async Task<IActionResult> VideoTaskStatusAsync(String taskId, [FromQuery] String? model, CancellationToken cancellationToken)
+    {
+        if (String.IsNullOrEmpty(taskId)) return BadRequest(new { code = "INVALID_REQUEST", message = "taskId 不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(model);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not IVideoClient vc)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{model}' 不支持视频生成" });
+
+            var resp = await vc.GetVideoTaskAsync(taskId, cancellationToken).ConfigureAwait(false);
+            return Ok(resp);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "VIDEO_TASK_FAILED", message = ex.Message });
+        }
+    }
+    #endregion
+
+    #region 重排序
+    /// <summary>文档重排序。POST /v1/reranks（DashScope 兼容格式）</summary>
+    /// <param name="request">重排请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("v1/reranks")]
+    [SnakeCaseBody]
+    public async Task<IActionResult> RerankAsync([FromBody] RerankRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+        if (String.IsNullOrEmpty(request.Query)) return BadRequest(new { code = "INVALID_REQUEST", message = "query 不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(request.Model);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not IRerankClient rc)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持重排序" });
+
+            var resp = await rc.RerankAsync(request, cancellationToken).ConfigureAwait(false);
+            return Ok(resp);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "RERANK_FAILED", message = ex.Message });
+        }
+    }
+    #endregion
+
+    #region 通用校验
+    /// <summary>校验 AppKey 与模型可用性。返回 (错误响应, 模型配置)，错误响应不为空时调用方应直接 return</summary>
+    /// <param name="modelCode">模型编码</param>
+    /// <returns>错误响应或模型配置</returns>
+    private (IActionResult? error, NewLife.ChatData.Entity.ModelConfig? config) ValidateAndResolve(String? modelCode)
+    {
+        var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
+        if (appKey == null)
+            return (Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" }), null);
+
+        var config = modelService.ResolveModelByCode(modelCode);
+        if (config == null)
+            return (NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" }), null);
+
+        if (!modelService.IsModelAllowed(appKey, config))
+            return (StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" }), null);
+
+        if (!modelService.IsAvailable(config))
+            return (StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" }), null);
+
+        return (null, config);
     }
     #endregion
 

@@ -2,7 +2,9 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.Capabilities;
 using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Models;
 using NewLife.Remoting;
 using NewLife.Serialization;
 
@@ -19,7 +21,7 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("NewLifeAI", "新生命AI", "https://ai.newlifex.com", Description = "新生命团队星语 AI 网关，统一对接多种大模型")]
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true)]
-public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(options)
+public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(options), IRerankClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -246,6 +248,76 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <returns>任务提交响应</returns>
     public virtual Task<VideoTaskSubmitResponse> VideoGenerationsAsync(String prompt, String? model = null, String? size = null, CancellationToken cancellationToken = default)
         => SubmitVideoGenerationAsync(new VideoGenerationRequest { Prompt = prompt, Model = model, Size = size }, cancellationToken);
+    #endregion
+
+    #region 重排序（/v1/reranks）
+    /// <summary>文档重排序。POST /v1/reranks，OpenAI 兼容格式（与 DashScope 兼容模式相同）</summary>
+    /// <param name="request">重排请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>重排响应</returns>
+    public virtual async Task<RerankResponse> RerankAsync(RerankRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (String.IsNullOrEmpty(request.Query)) throw new ArgumentException("Query 不能为空", nameof(request));
+
+        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/reranks";
+
+        var dic = new Dictionary<String, Object>
+        {
+            ["model"] = request.Model ?? _options.Model ?? "gte-rerank",
+            ["query"] = request.Query,
+            ["documents"] = request.Documents,
+            ["return_documents"] = request.ReturnDocuments,
+        };
+        if (request.TopN.HasValue) dic["top_n"] = request.TopN.Value;
+
+        var json = await PostAsync(url, dic, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseRerankResponse(json);
+    }
+
+    /// <summary>解析 /v1/reranks 响应（OpenAI 兼容格式）</summary>
+    /// <param name="json">响应 JSON</param>
+    /// <returns>重排响应</returns>
+    protected virtual RerankResponse ParseRerankResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        var resp = new RerankResponse();
+        if (dic == null) return resp;
+
+        resp.RequestId = dic["request_id"] as String ?? dic["id"] as String;
+        if (dic["results"] is IList<Object> list)
+        {
+            foreach (var item in list)
+            {
+                if (item is not IDictionary<String, Object> d) continue;
+                var r = new RerankResult
+                {
+                    Index = d.TryGetValue("index", out var idx) ? idx.ToInt() : 0,
+                    RelevanceScore = d.TryGetValue("relevance_score", out var sc) ? sc.ToDouble() : 0,
+                };
+                if (d.TryGetValue("document", out var doc))
+                {
+                    r.Document = doc switch
+                    {
+                        String s => s,
+                        IDictionary<String, Object> dd when dd.TryGetValue("text", out var tx) => tx as String,
+                        _ => null,
+                    };
+                }
+                resp.Results.Add(r);
+            }
+        }
+
+        if (dic["usage"] is IDictionary<String, Object> usage)
+        {
+            resp.Usage = new RerankUsage
+            {
+                TotalTokens = usage.TryGetValue("total_tokens", out var tt) ? tt.ToInt() : 0,
+            };
+        }
+
+        return resp;
+    }
     #endregion
 
     #region 辅助

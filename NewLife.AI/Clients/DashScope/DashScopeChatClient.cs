@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients.Capabilities;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Collections;
@@ -28,7 +29,7 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("wan2.6-t2i", "Wan 文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "Wanx 图生视频", Vision = true, VideoGeneration = true, FunctionCalling = false)]
-public class DashScopeChatClient : OpenAIChatClient
+public class DashScopeChatClient : OpenAIChatClient, IRerankClient
 {
     #region 属性
     /// <inheritdoc/>

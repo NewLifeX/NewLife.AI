@@ -1,6 +1,8 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients.Capabilities;
+using NewLife.AI.Embedding;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 
@@ -22,7 +24,8 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true)]
 [AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true)]
 [AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false)]
-public partial class OpenAIChatClient : AiClientBase
+public partial class OpenAIChatClient : AiClientBase,
+    IImageClient, IVideoClient, ISpeechClient, ITranscriptionClient, IModelListClient, IEmbeddingClient
 {
     #region 属性
     /// <inheritdoc/>
