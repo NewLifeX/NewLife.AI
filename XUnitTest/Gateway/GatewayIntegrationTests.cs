@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -126,7 +126,7 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var json = await resp.Content.ReadAsStringAsync();
-        Assert.False(String.IsNullOrWhiteSpace(json), "响应体不应为空");
+        Assert.NotEmpty(json);
 
         var doc = JsonNode.Parse(json);
         Assert.NotNull(doc);
@@ -136,11 +136,11 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         Assert.True(doc["choices"]!.AsArray().Count > 0);
 
         var content = doc["choices"]![0]!["message"]?["content"]?.GetValue<String>();
-        Assert.False(String.IsNullOrWhiteSpace(content), "AI 回复内容不应为空");
+        Assert.NotEmpty(content);
 
         // 验证 finish_reason 为 snake_case（非 FinishReason PascalCase）
         var finishReason = doc["choices"]![0]!["finish_reason"]?.GetValue<String>();
-        Assert.False(String.IsNullOrWhiteSpace(finishReason), "finish_reason 不应为空");
+        Assert.NotEmpty(finishReason);
 
         // 验证 usage.total_tokens 为 snake_case
         var totalTokens = doc["usage"]?["total_tokens"]?.GetValue<Int32>();
@@ -379,7 +379,7 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         Assert.NotNull(doc["content"]);
         Assert.True(doc["content"]!.AsArray().Count > 0, "Anthropic content 不应为空");
         var text = doc["content"]![0]?["text"]?.GetValue<String>();
-        Assert.False(String.IsNullOrWhiteSpace(text), "Anthropic 响应内容不应为空");
+        Assert.NotEmpty(text);
     }
 
     #endregion

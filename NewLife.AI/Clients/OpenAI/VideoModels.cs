@@ -1,4 +1,4 @@
-namespace NewLife.AI.Clients.OpenAI;
+﻿namespace NewLife.AI.Clients.OpenAI;
 
 /// <summary>视频生成请求。兼容 OpenAI Sora 和阿里百炼 Wan2 系列接口</summary>
 /// <remarks>
@@ -8,7 +8,7 @@ namespace NewLife.AI.Clients.OpenAI;
 /// </remarks>
 public class VideoGenerationRequest
 {
-    /// <summary>模型编码。如 sora、wan2.1-t2v-turbo、wan2.1-t2v-plus</summary>
+    /// <summary>模型编码。如 sora、wan2.7-t2v、wan2.7-i2v</summary>
     public String? Model { get; set; }
 
     /// <summary>视频描述提示词</summary>

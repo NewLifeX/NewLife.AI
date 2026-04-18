@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Linq;
 using NewLife.AI.Models;
 using Xunit;
@@ -95,12 +95,12 @@ public class ArtifactDetectorTests
     {
         var req = new NewLife.AI.Clients.OpenAI.VideoGenerationRequest
         {
-            Model = "wan2.1-t2v-turbo",
+            Model = "wan2.7-t2v",
             Prompt = "一只猫在太空漫步",
             Size = "1280*720",
             Duration = 5,
         };
-        Assert.Equal("wan2.1-t2v-turbo", req.Model);
+        Assert.Equal("wan2.7-t2v", req.Model);
         Assert.Equal("一只猫在太空漫步", req.Prompt);
         Assert.Equal("1280*720", req.Size);
         Assert.Equal(5, req.Duration);

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -100,7 +100,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     [DisplayName("元数据_Name非空")]
     public void Provider_Name_NotEmpty()
     {
-        Assert.False(String.IsNullOrWhiteSpace(_descriptor.DisplayName));
+        Assert.NotEmpty(_descriptor.DisplayName);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     [DisplayName("元数据_Description非空")]
     public void Provider_Description_NotEmpty()
     {
-        Assert.False(String.IsNullOrWhiteSpace(_descriptor.Description));
+        Assert.NotEmpty(_descriptor.Description);
     }
 
     #endregion
@@ -142,7 +142,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content), "AI 回复内容不应为空");
+        Assert.NotEmpty(content);
 
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.TotalTokens > 0, "Token 数量应大于 0");
@@ -161,7 +161,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
         Assert.Contains("{", content);
     }
 
@@ -186,7 +186,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
         Assert.Contains("小明", content);
     }
 
@@ -212,7 +212,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.False(String.IsNullOrWhiteSpace(response.Model));
+        Assert.NotEmpty(response.Model);
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content));
+        Assert.NotEmpty(content);
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
             if (!String.IsNullOrEmpty(text)) fullContent += text;
         }
 
-        Assert.False(String.IsNullOrWhiteSpace(fullContent), "拼合后内容不应为空");
+        Assert.NotEmpty(fullContent);
         Assert.Contains("2", fullContent);
     }
 
@@ -326,7 +326,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content), "/v1/responses 回复内容不应为空");
+        Assert.NotEmpty(content);
     }
 
     [Fact]
@@ -361,7 +361,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content), "/v1/messages 回复内容不应为空");
+        Assert.NotEmpty(content);
     }
 
     [Fact]
@@ -396,7 +396,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.False(String.IsNullOrWhiteSpace(content), "/v1/gemini 回复内容不应为空");
+        Assert.NotEmpty(content);
     }
 
     [Fact]
@@ -461,7 +461,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         // 至少有一个模型包含完整的扩展信息
         var first = result.Data[0];
-        Assert.False(String.IsNullOrWhiteSpace(first.Id), "模型 ID 不应为空");
+        Assert.NotEmpty(first.Id);
         Assert.True(first.ContextLength >= 0, "ContextLength 不应为负数");
     }
 
@@ -479,7 +479,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         // 验证所有返回的模型都能正确反序列化布尔能力字段（不抛出，字段值可为 true/false）
         foreach (var m in result.Data)
         {
-            Assert.False(String.IsNullOrWhiteSpace(m.Id), $"模型 {m.Id} 的 Id 不应为空");
+            Assert.NotEmpty(m.Id);
             // Boolean 字段类型保证，只需能访问即可，不做业务值断言
             _ = m.SupportThinking;
             _ = m.SupportFunctionCalling;

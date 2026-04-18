@@ -23,10 +23,11 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
-[AiClientModel("qwen3-plus", "Qwen3 Plus", Thinking = true)]
 [AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
-[AiClientModel("qwen3-coder", "Qwen3 Coder")]
-[AiClientModel("wanx2.1-t2i-turbo", "Wanx 文生图", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
+[AiClientModel("wanx2.6-t2i", "Wanx 文生图", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("wanx2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
+[AiClientModel("wan2.7-i2v", "Wanx 图生视频", Vision = true, VideoGeneration = true, FunctionCalling = false)]
 public class DashScopeChatClient : OpenAIChatClient
 {
     #region 属性
@@ -146,6 +147,19 @@ public class DashScopeChatClient : OpenAIChatClient
                 yield return chunk;
             }
         }
+    }
+    #endregion
+
+    #region 文生图
+    /// <summary>文生图。Wanx 系列模型必须通过 compatible-mode 端点调用 /v1/images/generations，基类使用的是 DefaultEndpoint，原生协议下路径不正确，在此重写修正</summary>
+    /// <param name="request">图像生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应</returns>
+    public override async Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
+    {
+        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/images/generations";
+        var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseImageGenerationResponse(json);
     }
     #endregion
 
@@ -280,6 +294,9 @@ public class DashScopeChatClient : OpenAIChatClient
         if (model.IndexOf("-vl", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (model.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase)) return true;
         if (model.StartsWithIgnoreCase("qwen3.5-", "qwen3.")) return true;
+        // 音频理解模型（qwen-audio-chat、qwen-audio-turbo、qwen2-audio-instruct 等）使用多模态端点
+        if (model.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase)) return true;
+        if (model.StartsWith("qwen2-audio", StringComparison.OrdinalIgnoreCase)) return true;
         return false;
     }
 

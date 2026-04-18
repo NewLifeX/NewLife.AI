@@ -336,6 +336,14 @@ public class DashScopeRequest : IChatRequest
                     ? (new { image = url })
                     : new { type = "image_url", image_url = new { url } });
             }
+            else if (item is AudioContent audio)
+            {
+                // 音频内容仅在多模态端点（multimodal-generation）有效，格式为 {"audio": "url_or_base64"}
+                var audioUrl = audio.Data != null && audio.Data.Length > 0
+                    ? $"data:{audio.MediaType};base64,{Convert.ToBase64String(audio.Data)}"
+                    : audio.Uri ?? "";
+                parts.Add(new { audio = audioUrl });
+            }
         }
         return parts;
     }

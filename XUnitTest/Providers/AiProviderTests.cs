@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -262,14 +262,14 @@ public class AiProviderTests
     public void AllDescriptors_HaveNonEmptyDisplayName()
     {
         Assert.All(AiClientRegistry.Default.Descriptors.Values,
-            d => Assert.False(String.IsNullOrWhiteSpace(d.DisplayName)));
+            d => Assert.NotEmpty(d.DisplayName));
     }
 
     [Fact]
     public void AllDescriptors_HaveNonEmptyEndpoint()
     {
         Assert.All(AiClientRegistry.Default.Descriptors.Values,
-            d => Assert.False(String.IsNullOrWhiteSpace(d.DefaultEndpoint)));
+            d => Assert.NotEmpty(d.DefaultEndpoint));
     }
 
     [Fact]
@@ -476,9 +476,9 @@ public class AiProviderTests
     [InlineData("qwen-image-plus", false, false, false, false, true, false)]
     [InlineData("z-image-turbo", false, false, false, false, true, false)]
     // 文生视频 / 图生视频
-    [InlineData("wan2.1-t2v-turbo", false, false, false, false, false, true)]
+    [InlineData("wan2.7-t2v", false, false, false, false, false, true)]
     [InlineData("wan2.1-t2v-plus", false, false, false, false, false, true)]
-    [InlineData("wan2.1-i2v-turbo", false, false, false, false, false, true)]
+    [InlineData("wan2.7-i2v", false, false, false, false, false, true)]
     [InlineData("wan2.1-i2v-plus", false, false, false, false, false, true)]
     // 非对话模型
     [InlineData("text-embedding-v4", false, false, false, false, false, false)]

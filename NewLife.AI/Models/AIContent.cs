@@ -37,6 +37,19 @@ public class ImageContent : AIContent
     public String? Detail { get; set; }
 }
 
+/// <summary>音频内容片段。支持 URL 引用和二进制数据两种方式</summary>
+public class AudioContent : AIContent
+{
+    /// <summary>音频地址。http/https URL 或 data URI（优先级低于 Data）</summary>
+    public String? Uri { get; set; }
+
+    /// <summary>音频二进制数据。设置后自动编码为 base64 data URI，优先于 Uri</summary>
+    public Byte[]? Data { get; set; }
+
+    /// <summary>媒体类型。如 audio/wav、audio/mpeg，Data 不为空时生效；默认 audio/wav</summary>
+    public String MediaType { get; set; } = "audio/wav";
+}
+
 /// <summary>函数调用内容片段（assistant 角色发起的工具调用请求）</summary>
 public class FunctionCallContent : AIContent
 {
