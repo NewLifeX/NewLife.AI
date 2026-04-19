@@ -13,6 +13,7 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
+using XUnitTest.Helpers;
 
 namespace XUnitTest.Clients;
 
@@ -83,7 +84,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region 非流式对话 - 基本功能
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_QwenPlus_返回有效响应")]
     public async Task ChatAsync_QwenPlus_ReturnsValidResponse()
     {
@@ -104,7 +105,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(response.Usage.ElapsedMs > 0, "ElapsedMs 应大于 0");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_QwenTurbo_轻量模型可用")]
     public async Task ChatAsync_QwenTurbo_Works()
     {

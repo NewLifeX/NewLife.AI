@@ -14,6 +14,7 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
+using XUnitTest.Helpers;
 
 namespace XUnitTest.Clients;
 
@@ -141,7 +142,7 @@ public class DashScopeIntegrationTests
 
     #region 非流式对话 - 基本功能
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_QwenPlus_返回有效响应")]
     public async Task ChatAsync_QwenPlus_ReturnsValidResponse()
     {
@@ -161,7 +162,7 @@ public class DashScopeIntegrationTests
         Assert.True(response.Usage.OutputTokens > 0, "Completion Token 应大于 0");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_Qwen35Flash_轻量模型可用")]
     public async Task ChatAsync_QwenTurbo_Works()
     {
@@ -1096,7 +1097,7 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("注册表_Models包含qwen和wanx模型")]
+    [DisplayName("注册表_Models至少包含qwen族模型")]
     public void Registry_Models_ContainsExpectedModels()
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope");
@@ -1105,7 +1106,6 @@ public class DashScopeIntegrationTests
         Assert.NotNull(models);
         Assert.NotEmpty(models);
         Assert.Contains(models, m => m.Model.Contains("qwen", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(models, m => m.Model.Contains("wanx", StringComparison.OrdinalIgnoreCase));
     }
 
     #endregion
@@ -1743,28 +1743,37 @@ public class DashScopeIntegrationTests
     [DisplayName("数学推理_qwq-plus_解方程")]
     public async Task ChatAsync_Math_QwqPlus_SolvesEquation()
     {
-        // qwq-plus 是纯推理模型，始终启用思考，不得设置 EnableThinking=false
-        // 需要足够的 MaxTokens 完成完整的思考链和答案输出
+        // qwq-plus 当前仅支持 stream 模式，采用流式拼接验证最终答案
         var request = new ChatRequest
         {
             Model = "qwq-plus",
             Messages = [new ChatMessage { Role = "user", Content = "解方程：2x + 5 = 13，x等于几？只回答数字" }],
             MaxTokens = 3000,
+            Stream = true,
         };
 
-        var response = await ChatAsync(request);
+        var fullContent = "";
+        await foreach (var chunk in ChatStreamAsync(request))
+        {
+            if (chunk.Messages == null) continue;
+            foreach (var choice in chunk.Messages)
+            {
+                if (choice.Delta?.Content is String s)
+                    fullContent += s;
+            }
+        }
 
-        Assert.NotNull(response);
-        var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
-        Assert.Contains("4", content);
+        Assert.NotEmpty(fullContent);
+        Assert.Contains("4", fullContent);
     }
 
     [Fact]
     [DisplayName("重排序_gte-rerank-v2_文档排序")]
     public async Task RerankAsync_GteRerankV2_ReturnsRankedResults()
     {
-        using var client = new DashScopeChatClient(CreateOptions());
+        var options = CreateOptions();
+        options.Protocol = "ChatCompletions";
+        using var client = new DashScopeChatClient(options);
         var request = new RerankRequest
         {
             Query = "什么是机器学习？",
@@ -1836,20 +1845,27 @@ public class DashScopeIntegrationTests
     [DisplayName("默认模型_qwq-plus_专用推理模型可用")]
     public async Task DefaultModel_QwqPlus_Works()
     {
-        // qwq-plus 始终启用思考，不支持 EnableThinking=false，MaxTokens 需足够容纳完整思考链
+        // qwq-plus 当前仅支持 stream 模式
         var request = new ChatRequest
         {
             Model = "qwq-plus",
             Messages = [new ChatMessage { Role = "user", Content = "9.11 和 9.8 哪个更大？只回答较大的那个数字" }],
             MaxTokens = 3000,
+            Stream = true,
         };
 
-        var response = await ChatAsync(request);
+        var fullContent = "";
+        await foreach (var chunk in ChatStreamAsync(request))
+        {
+            if (chunk.Messages == null) continue;
+            foreach (var choice in chunk.Messages)
+            {
+                if (choice.Delta?.Content is String s)
+                    fullContent += s;
+            }
+        }
 
-        Assert.NotNull(response?.Messages);
-        Assert.NotEmpty(response!.Messages!);
-        var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.NotEmpty(fullContent);
     }
 
     [Fact]

@@ -1081,7 +1081,7 @@ public class DeepSeekIntegrationTests
     public void Client_Name_IsCorrect()
     {
         using var client = new DeepSeekChatClient(CreateOptions());
-        Assert.Equal("深度求索", client.Name);
+        Assert.Equal("DeepSeek", client.Name);
     }
 
     [Fact]

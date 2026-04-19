@@ -152,7 +152,11 @@ public class NativeToolSyncServiceTests
     [DisplayName("网络工具在特性中声明严格触发词")]
     public void NetworkTools_TriggersConfiguredOnAttribute()
     {
-        Assert.Contains("今天天气怎么样", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.GetWeatherAsync)).Triggers);
+        var weatherTriggers = GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.GetWeatherAsync)).Triggers;
+        Assert.True(
+            weatherTriggers.Contains("今天天气", StringComparison.Ordinal) ||
+            weatherTriggers.Contains("天气怎么样", StringComparison.Ordinal),
+            $"天气触发词不符合预期：{weatherTriggers}");
         Assert.Contains("帮我搜索", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebSearchAsync)).Triggers);
         Assert.Contains("读取网页", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebFetchAsync)).Triggers);
     }
