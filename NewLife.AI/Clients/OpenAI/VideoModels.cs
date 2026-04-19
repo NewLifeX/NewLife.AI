@@ -4,7 +4,7 @@
 /// <remarks>
 /// 视频生成为异步任务模式：提交请求获取任务 ID，轮询查询直到完成。
 /// OpenAI Sora：POST /v1/video/generations
-/// DashScope Wan2：POST /api/v1/services/aigc/video-generation/generation
+/// DashScope Wan2：POST /api/v1/services/aigc/video-generation/video-synthesis
 /// </remarks>
 public class VideoGenerationRequest
 {

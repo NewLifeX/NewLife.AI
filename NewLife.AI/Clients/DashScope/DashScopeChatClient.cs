@@ -1,7 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.Clients.Capabilities;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Collections;
@@ -305,15 +304,39 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <returns>重排序响应</returns>
     public async Task<RerankResponse> RerankAsync(RerankRequest request, CancellationToken cancellationToken = default)
     {
-        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/reranks";
         var body = new Dictionary<String, Object?>
         {
             ["model"] = !String.IsNullOrEmpty(request.Model) ? request.Model : "gte-rerank-v2",
             ["input"] = new Dictionary<String, Object> { ["query"] = request.Query, ["documents"] = request.Documents },
             ["parameters"] = BuildRerankParameters(request),
         };
-        var json = await PostAsync(url, body, null, _options, cancellationToken).ConfigureAwait(false);
-        return ParseRerankResponse(json);
+
+        // DashScope 当前重排序走原生端点（非 OpenAI 兼容）；保留历史路径回退
+        var nativeBase = NativeEndpoint.TrimEnd('/');
+        var compatBase = CompatibleEndpoint.TrimEnd('/');
+        var urls = new[]
+        {
+            nativeBase + "/services/rerank/text-rerank/text-rerank",
+            nativeBase + "/services/rerank/text-rerank",
+            compatBase + "/v1/reranks",
+            compatBase + "/v1/rerank",
+        };
+
+        Exception? last = null;
+        foreach (var url in urls)
+        {
+            try
+            {
+                var json = await PostAsync(url, body, null, _options, cancellationToken).ConfigureAwait(false);
+                return ParseRerankResponse(json);
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+            }
+        }
+
+        throw last ?? new InvalidOperationException("重排序调用失败");
     }
 
     private static Dictionary<String, Object> BuildRerankParameters(RerankRequest request)
@@ -365,6 +388,9 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
 
     // 原生对话路径（多模态：含视觉/音频/视频输入）
     private const String MultimodalGenerationPath = "/services/aigc/multimodal-generation/generation";
+
+    // 原生视频生成路径（Wan2.x 文生视频/图生视频）
+    private const String VideoSynthesisPath = "/services/aigc/video-generation/video-synthesis";
 
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
     protected override String BuildUrl(IChatRequest request)
@@ -430,11 +456,15 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         if (!String.IsNullOrEmpty(options.ApiKey))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
-        if (!IsNativeProtocol) return;
-        if (chatRequest == null || !chatRequest.Stream) return;
-
         var path = request.RequestUri?.AbsolutePath;
         if (String.IsNullOrEmpty(path)) return;
+
+        // 视频生成接口仅支持异步调用，必须携带该请求头
+        if (path.EndsWith(VideoSynthesisPath, StringComparison.OrdinalIgnoreCase))
+            request.Headers.TryAddWithoutValidation("X-DashScope-Async", "enable");
+
+        if (!IsNativeProtocol) return;
+        if (chatRequest == null || !chatRequest.Stream) return;
 
         if (!path.EndsWith(ChatGenerationPath, StringComparison.OrdinalIgnoreCase) &&
             !path.EndsWith(MultimodalGenerationPath, StringComparison.OrdinalIgnoreCase)) return;
@@ -584,7 +614,7 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     public override async Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
     {
         var endpoint = NativeEndpoint.TrimEnd('/');
-        var url = endpoint + "/services/aigc/video-generation/generation";
+        var url = endpoint + VideoSynthesisPath;
 
         var body = new Dictionary<String, Object?>
         {
@@ -615,10 +645,35 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     {
         var input = new Dictionary<String, Object?> { ["prompt"] = request.Prompt };
         if (!String.IsNullOrEmpty(request.ImageUrl))
-            input["img_url"] = request.ImageUrl;
+        {
+            // wan2.7-i2v 新版协议优先使用 media 数组；旧版 i2v 继续兼容 img_url
+            if (IsWan27I2vModel(request.Model))
+            {
+                input["media"] = new[]
+                {
+                    new Dictionary<String, Object?>
+                    {
+                        ["type"] = "first_frame",
+                        ["url"] = request.ImageUrl,
+                    },
+                };
+            }
+            else
+            {
+                input["img_url"] = request.ImageUrl;
+            }
+        }
+
         if (!String.IsNullOrEmpty(request.NegativePrompt))
             input["negative_prompt"] = request.NegativePrompt;
         return input;
+    }
+
+    /// <summary>是否为万相 2.7 图生视频模型</summary>
+    private static Boolean IsWan27I2vModel(String? model)
+    {
+        if (String.IsNullOrEmpty(model)) return false;
+        return model.StartsWith("wan2.7-i2v", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>构建 DashScope 视频生成 parameters 字段</summary>

@@ -154,7 +154,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
 
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.TotalTokens > 0, "Token 用量应大于 0");
@@ -174,7 +174,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class DashScopeIntegrationTests
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.Contains("{", content);
         Assert.Contains("}", content);
     }
@@ -229,7 +229,7 @@ public class DashScopeIntegrationTests
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.Contains("小明", content);
     }
 
@@ -249,7 +249,7 @@ public class DashScopeIntegrationTests
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.True(content.ToInt() > 0);
     }
 
@@ -343,9 +343,9 @@ public class DashScopeIntegrationTests
         Assert.NotNull(fr);
         Assert.True(fr == FinishReason.Stop || fr == FinishReason.Length, $"FinishReason 应为 stop 或 length，实际: {fr}");
         // Id / Object / Model
-        Assert.NotEmpty(response.Id);
+        Assert.False(String.IsNullOrEmpty(response.Id));
         Assert.Equal("chat.completion", response.Object);
-        Assert.NotEmpty(response.Model);
+        Assert.False(String.IsNullOrEmpty(response.Model));
         Assert.Contains("qwen", response.Model, StringComparison.OrdinalIgnoreCase);
         // Choices 结构
         Assert.NotNull(response.Messages);
@@ -984,7 +984,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response2.Messages);
 
         var finalContent = response2.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(finalContent);
+        Assert.False(String.IsNullOrEmpty(finalContent));
     }
 
     [Fact]
@@ -1214,7 +1214,7 @@ public class DashScopeIntegrationTests
 
         var message = response.Messages[0].Message;
         Assert.NotNull(message);
-        Assert.NotEmpty(message.Content as String);
+        Assert.False(String.IsNullOrEmpty(message.Content as String));
 
         // 支持思考的模型应返回 reasoning_content，有内容即视为正常，不限定具体文字
         if (!String.IsNullOrWhiteSpace(message.ReasoningContent))
@@ -1268,7 +1268,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     #endregion
@@ -1289,7 +1289,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -1391,7 +1391,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -1458,7 +1458,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -1529,7 +1529,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response.Messages);
         Assert.NotEmpty(response.Messages);
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -1593,7 +1593,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response!.Data);
         Assert.Single(response.Data!);
         var imageUrl = response.Data[0].Url;
-        Assert.NotEmpty(imageUrl);
+        Assert.False(String.IsNullOrEmpty(imageUrl));
 
         // 下载并保存到本地，供人工检查
         await SaveOutputFileAsync(imageUrl!, "t2i_wanx26t2i.jpg");
@@ -1617,7 +1617,7 @@ public class DashScopeIntegrationTests
 
         var submitResponse = await client.SubmitVideoGenerationAsync(request);
         Assert.NotNull(submitResponse);
-        Assert.NotEmpty(submitResponse.TaskId);
+        Assert.False(String.IsNullOrEmpty(submitResponse.TaskId));
 
         // 轮询等待任务完成（视频生成通常需要 1−5 分钟）
         var status = await WaitForVideoTaskAsync(client, submitResponse.TaskId!);
@@ -1641,13 +1641,13 @@ public class DashScopeIntegrationTests
         };
 
         var submitResponse = await client.SubmitVideoGenerationAsync(submitRequest);
-        Assert.NotEmpty(submitResponse.TaskId);
+        Assert.False(String.IsNullOrEmpty(submitResponse.TaskId));
 
         // 立即查询状态（任务刚提交，应处于 PENDING 或 RUNNING）
         var statusResponse = await client.GetVideoTaskAsync(submitResponse.TaskId!);
 
         Assert.NotNull(statusResponse);
-        Assert.NotEmpty(statusResponse.Status);
+        Assert.False(String.IsNullOrEmpty(statusResponse.Status));
         Assert.True(
             statusResponse.Status is "PENDING" or "RUNNING" or "SUCCEEDED" or "FAILED",
             $"任务状态应为有效值，实际: {statusResponse.Status}");
@@ -1667,7 +1667,7 @@ public class DashScopeIntegrationTests
 
         var submitResponse = await client.SubmitVideoGenerationAsync(request);
         Assert.NotNull(submitResponse);
-        Assert.NotEmpty(submitResponse.TaskId);
+        Assert.False(String.IsNullOrEmpty(submitResponse.TaskId));
 
         // 轮询等待任务完成
         var status = await WaitForVideoTaskAsync(client, submitResponse.TaskId!);
@@ -1694,7 +1694,7 @@ public class DashScopeIntegrationTests
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.True(content!.Contains("def") || content.Contains("fibonacci"), "代码生成结果应包含函数定义");
     }
 
@@ -1713,7 +1713,7 @@ public class DashScopeIntegrationTests
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         // 翻译结果应包含英文关键词
         Assert.True(content!.Contains("artificial", StringComparison.OrdinalIgnoreCase) ||
                     content.Contains("intelligence", StringComparison.OrdinalIgnoreCase) ||
@@ -1735,7 +1735,7 @@ public class DashScopeIntegrationTests
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.True(content!.Length < 200, "摘要应比原文短");
     }
 
@@ -1838,7 +1838,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response?.Messages);
         Assert.NotEmpty(response!.Messages!);
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -1880,7 +1880,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response?.Messages);
         Assert.NotEmpty(response!.Messages!);
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     #endregion

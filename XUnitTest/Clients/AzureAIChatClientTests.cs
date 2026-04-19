@@ -2,6 +2,7 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
@@ -90,6 +91,30 @@ public class AzureAIChatClientTests
         var url = method!.Invoke(client, [request]) as String;
 
         Assert.Contains("/deployments/custom-deploy/", url);
+    }
+
+    [Fact]
+    [DisplayName("SubmitVideoGenerationAsync_始终抛NotSupportedException")]
+    public async Task SubmitVideoGenerationAsync_ThrowsNotSupportedException()
+    {
+        var client = new AzureAIChatClient("test-key", "gpt-4o", "https://myresource.openai.azure.com");
+
+        var ex = await Assert.ThrowsAsync<NotSupportedException>(() =>
+            client.SubmitVideoGenerationAsync(new VideoGenerationRequest { Prompt = "生成测试视频" }));
+
+        Assert.Contains("不支持视频生成", ex.Message);
+    }
+
+    [Fact]
+    [DisplayName("GetVideoTaskAsync_始终抛NotSupportedException")]
+    public async Task GetVideoTaskAsync_ThrowsNotSupportedException()
+    {
+        var client = new AzureAIChatClient("test-key", "gpt-4o", "https://myresource.openai.azure.com");
+
+        var ex = await Assert.ThrowsAsync<NotSupportedException>(() =>
+            client.GetVideoTaskAsync("task_123"));
+
+        Assert.Contains("不支持视频生成", ex.Message);
     }
 
     #endregion

@@ -1,6 +1,6 @@
 using NewLife.AI.Models;
 
-namespace NewLife.AI.Clients.Capabilities;
+namespace NewLife.AI.Clients;
 
 /// <summary>语音识别（STT）能力接口。音频转文本</summary>
 /// <remarks>

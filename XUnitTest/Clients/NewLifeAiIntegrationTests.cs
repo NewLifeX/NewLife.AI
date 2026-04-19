@@ -123,7 +123,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     [DisplayName("元数据_Description非空")]
     public void Provider_Description_NotEmpty()
     {
-        Assert.NotEmpty(_descriptor.Description);
+        Assert.False(String.IsNullOrEmpty(_descriptor.Description));
     }
 
     #endregion
@@ -142,7 +142,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
 
         Assert.NotNull(response.Usage);
         Assert.True(response.Usage.TotalTokens > 0, "Token 数量应大于 0");
@@ -161,7 +161,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.Contains("{", content);
     }
 
@@ -186,7 +186,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
         Assert.Contains("小明", content);
     }
 
@@ -212,7 +212,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         var response = await ChatAsync(request);
 
         Assert.NotNull(response);
-        Assert.NotEmpty(response.Model);
+        Assert.False(String.IsNullOrEmpty(response.Model));
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         Assert.NotNull(response);
         var content = response.Messages?[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
             if (!String.IsNullOrEmpty(text)) fullContent += text;
         }
 
-        Assert.NotEmpty(fullContent);
+        Assert.False(String.IsNullOrEmpty(fullContent));
         Assert.Contains("2", fullContent);
     }
 
@@ -326,7 +326,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -361,7 +361,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -396,7 +396,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.NotEmpty(response.Messages);
 
         var content = response.Messages[0].Message?.Content as String;
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
     }
 
     [Fact]
@@ -461,7 +461,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 
         // 至少有一个模型包含完整的扩展信息
         var first = result.Data[0];
-        Assert.NotEmpty(first.Id);
+        Assert.False(String.IsNullOrEmpty(first.Id));
         Assert.True(first.ContextLength >= 0, "ContextLength 不应为负数");
     }
 
@@ -479,7 +479,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         // 验证所有返回的模型都能正确反序列化布尔能力字段（不抛出，字段值可为 true/false）
         foreach (var m in result.Data)
         {
-            Assert.NotEmpty(m.Id);
+            Assert.False(String.IsNullOrEmpty(m.Id));
             // Boolean 字段类型保证，只需能访问即可，不做业务值断言
             _ = m.SupportThinking;
             _ = m.SupportFunctionCalling;

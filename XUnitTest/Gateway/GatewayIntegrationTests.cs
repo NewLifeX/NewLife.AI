@@ -136,11 +136,11 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         Assert.True(doc["choices"]!.AsArray().Count > 0);
 
         var content = doc["choices"]![0]!["message"]?["content"]?.GetValue<String>();
-        Assert.NotEmpty(content);
+        Assert.False(String.IsNullOrEmpty(content));
 
         // 验证 finish_reason 为 snake_case（非 FinishReason PascalCase）
         var finishReason = doc["choices"]![0]!["finish_reason"]?.GetValue<String>();
-        Assert.NotEmpty(finishReason);
+        Assert.False(String.IsNullOrEmpty(finishReason));
 
         // 验证 usage.total_tokens 为 snake_case
         var totalTokens = doc["usage"]?["total_tokens"]?.GetValue<Int32>();
@@ -379,7 +379,7 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         Assert.NotNull(doc["content"]);
         Assert.True(doc["content"]!.AsArray().Count > 0, "Anthropic content 不应为空");
         var text = doc["content"]![0]?["text"]?.GetValue<String>();
-        Assert.NotEmpty(text);
+        Assert.False(String.IsNullOrEmpty(text));
     }
 
     #endregion

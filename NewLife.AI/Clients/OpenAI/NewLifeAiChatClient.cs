@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients.Anthropic;
-using NewLife.AI.Clients.Capabilities;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Models;
 using NewLife.Remoting;

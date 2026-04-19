@@ -75,4 +75,42 @@ public class DeepSeekChatClient : OpenAIChatClient
         return dic;
     }
     #endregion
+
+    #region 不支持能力（覆盖以明确告知调用者）
+    /// <summary>DeepSeek 不支持文生图，始终抛出异常</summary>
+    /// <param name="request">图像生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("DeepSeek 不支持文生图，请改用 OpenAI / DashScope / Gemini");
+
+    /// <summary>DeepSeek 不支持图像编辑，始终抛出异常</summary>
+    /// <param name="request">图像编辑请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<ImageGenerationResponse?> EditImageAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("DeepSeek 不支持图像编辑，请改用 OpenAI / DashScope");
+
+    /// <summary>DeepSeek 不支持语音合成（TTS），始终抛出异常</summary>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("DeepSeek 不支持语音合成（TTS），请改用 OpenAI / DashScope");
+
+    /// <summary>DeepSeek 不支持语音转文字（STT），始终抛出异常</summary>
+    /// <param name="request">语音转录请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<TranscriptionResponse> TranscribeAsync(TranscriptionRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("DeepSeek 不支持语音转文字（STT），请改用 OpenAI / DashScope");
+
+    /// <summary>DeepSeek 不支持视频生成，始终抛出异常</summary>
+    /// <param name="request">视频生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("DeepSeek 不支持视频生成，请改用 DashScope / OpenAI Sora");
+
+    /// <summary>DeepSeek 不支持视频任务查询，始终抛出异常</summary>
+    /// <param name="taskId">任务编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<VideoTaskStatusResponse> GetVideoTaskAsync(String taskId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("DeepSeek 不支持视频生成，请改用 DashScope / OpenAI Sora");
+    #endregion
 }

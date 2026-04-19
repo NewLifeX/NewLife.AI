@@ -1,11 +1,11 @@
 using NewLife.AI.Clients.OpenAI;
 
-namespace NewLife.AI.Clients.Capabilities;
+namespace NewLife.AI.Clients;
 
 /// <summary>图像生成能力接口。支持文生图与图像编辑</summary>
 /// <remarks>
 /// 按官方协议支持情况，仅在能力可用的客户端上实现。调用方通过 <c>client is IImageClient img</c> 模式匹配判断。
-/// 已实现：OpenAI、DashScope、NewLifeAI、Azure；不实现：DeepSeek、Anthropic、Ollama。
+/// 已实现：OpenAI、DashScope、NewLifeAI、Azure、Gemini（仅文生图）；不实现：DeepSeek、Anthropic、Ollama。
 /// </remarks>
 public interface IImageClient
 {

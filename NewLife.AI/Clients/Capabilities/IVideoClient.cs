@@ -1,6 +1,6 @@
 using NewLife.AI.Clients.OpenAI;
 
-namespace NewLife.AI.Clients.Capabilities;
+namespace NewLife.AI.Clients;
 
 /// <summary>视频生成能力接口。视频生成普遍采用异步任务模式：提交任务获取 TaskId，再轮询查询直至完成</summary>
 /// <remarks>

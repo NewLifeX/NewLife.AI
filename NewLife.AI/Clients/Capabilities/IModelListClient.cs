@@ -1,10 +1,10 @@
 using NewLife.AI.Clients.OpenAI;
 
-namespace NewLife.AI.Clients.Capabilities;
+namespace NewLife.AI.Clients;
 
 /// <summary>模型列表能力接口。查询当前账号/密钥可用的模型清单</summary>
 /// <remarks>
-/// 已实现：OpenAI、DashScope、Ollama、NewLifeAI；其余按官方文档支持情况扩展。
+/// 已实现：OpenAI、DashScope、Gemini、Ollama、NewLifeAI；其余按官方文档支持情况扩展。
 /// </remarks>
 public interface IModelListClient
 {

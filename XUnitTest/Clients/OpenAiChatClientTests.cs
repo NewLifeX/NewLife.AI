@@ -93,8 +93,9 @@ public class OpenAiChatClientTests
         //var json = client.JsonHost.Write(body, client.JsonHost.Options);
         var json = client.JsonHost.Write(body, false, false, false);
         var dic = JsonParser.Decode(json);
+        Assert.NotNull(dic);
 
-        Assert.False(dic.ContainsKey("stream_options"), $"非流式请求不应包含 stream_options, json={json}");
+        Assert.False(dic!.ContainsKey("stream_options"), $"非流式请求不应包含 stream_options, json={json}");
         Assert.False(dic.ContainsKey("stream"), $"非流式请求不应包含 stream, json={json}");
     }
 
@@ -129,8 +130,7 @@ public class OpenAiChatClientTests
         Assert.True(body.ContainsKey("stream"), "流式请求应包含 stream 字段");
         Assert.True(body.ContainsKey("stream_options"), "流式请求应包含 stream_options");
         var streamOptions = body["stream_options"] as IDictionary<String, Object>;
-        Assert.NotNull(streamOptions);
-        Assert.True(streamOptions.ContainsKey("include_usage"));
+        Assert.True(streamOptions?.ContainsKey("include_usage") == true);
     }
 
     #endregion

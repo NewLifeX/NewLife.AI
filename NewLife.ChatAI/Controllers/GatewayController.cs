@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
-using NewLife.AI.Clients.Capabilities;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;

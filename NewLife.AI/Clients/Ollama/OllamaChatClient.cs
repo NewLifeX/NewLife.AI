@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Ollama;
@@ -23,7 +24,7 @@ namespace NewLife.AI.Clients.Ollama;
 [AiClientModel("phi4", "Phi-4")]
 [AiClientModel("llava", "LLaVA", Vision = true, FunctionCalling = false)]
 [AiClientModel("gemma3", "Gemma 3", Vision = true)]
-public class OllamaChatClient : AiClientBase
+public class OllamaChatClient : AiClientBase, IModelListClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -79,7 +80,7 @@ public class OllamaChatClient : AiClientBase
     #endregion
 
     #region 方法
-    /// <summary>获取本地已安装的模型列表</summary>
+    /// <summary>获取本地已安装的模型列表（原生 Ollama 格式）</summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表，服务不可用时返回 null</returns>
     public virtual async Task<OllamaTagsResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -87,6 +88,30 @@ public class OllamaChatClient : AiClientBase
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/tags";
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
         return json?.ToJsonEntity<OllamaTagsResponse>(JsonOptions);
+    }
+
+    /// <summary>获取本地已安装的模型列表（IModelListClient 标准接口实现）</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>OpenAI 兼容格式的模型列表，服务不可用时返回 null</returns>
+    async Task<OpenAiModelListResponse?> IModelListClient.ListModelsAsync(CancellationToken cancellationToken)
+    {
+        var tags = await ListModelsAsync(cancellationToken).ConfigureAwait(false);
+        if (tags?.Models == null) return null;
+
+        var items = new OpenAiModelObject[tags.Models.Length];
+        for (var i = 0; i < tags.Models.Length; i++)
+        {
+            var m = tags.Models[i];
+            items[i] = new OpenAiModelObject
+            {
+                Id = m.Model ?? m.Name,
+                Name = m.Name ?? m.Model,
+                Object = "model",
+                OwnedBy = "ollama",
+            };
+        }
+
+        return new OpenAiModelListResponse { Object = "list", Data = items };
     }
 
     /// <summary>获取运行中的模型列表</summary>

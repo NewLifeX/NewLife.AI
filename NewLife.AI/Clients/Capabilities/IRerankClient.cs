@@ -1,6 +1,6 @@
 using NewLife.AI.Models;
 
-namespace NewLife.AI.Clients.Capabilities;
+namespace NewLife.AI.Clients;
 
 /// <summary>文档重排序能力接口。RAG 检索后对候选文档按相关度重排</summary>
 /// <remarks>

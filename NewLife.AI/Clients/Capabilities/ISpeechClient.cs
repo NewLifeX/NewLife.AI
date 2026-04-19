@@ -1,6 +1,6 @@
 using NewLife.AI.Clients.OpenAI;
 
-namespace NewLife.AI.Clients.Capabilities;
+namespace NewLife.AI.Clients;
 
 /// <summary>语音合成（TTS）能力接口。文本转语音字节流</summary>
 /// <remarks>
