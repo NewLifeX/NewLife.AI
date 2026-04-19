@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Ollama;
@@ -93,16 +93,16 @@ public class OllamaChatClient : AiClientBase, IModelListClient
     /// <summary>获取本地已安装的模型列表（IModelListClient 标准接口实现）</summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>OpenAI 兼容格式的模型列表，服务不可用时返回 null</returns>
-    async Task<OpenAiModelListResponse?> IModelListClient.ListModelsAsync(CancellationToken cancellationToken)
+    async Task<ModelListResponse?> IModelListClient.ListModelsAsync(CancellationToken cancellationToken)
     {
         var tags = await ListModelsAsync(cancellationToken).ConfigureAwait(false);
         if (tags?.Models == null) return null;
 
-        var items = new OpenAiModelObject[tags.Models.Length];
+        var items = new ModelInfo[tags.Models.Length];
         for (var i = 0; i < tags.Models.Length; i++)
         {
             var m = tags.Models[i];
-            items[i] = new OpenAiModelObject
+            items[i] = new ModelInfo
             {
                 Id = m.Model ?? m.Name,
                 Name = m.Name ?? m.Model,
@@ -111,7 +111,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
             };
         }
 
-        return new OpenAiModelListResponse { Object = "list", Data = items };
+        return new ModelListResponse { Object = "list", Data = items };
     }
 
     /// <summary>获取运行中的模型列表</summary>

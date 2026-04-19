@@ -1,4 +1,4 @@
-using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients;
 
@@ -11,5 +11,5 @@ public interface IModelListClient
     /// <summary>获取该服务商当前可用的模型列表</summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表，服务不可用时返回 null</returns>
-    Task<OpenAiModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default);
+    Task<ModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default);
 }

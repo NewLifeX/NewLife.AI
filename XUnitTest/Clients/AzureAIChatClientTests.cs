@@ -94,27 +94,23 @@ public class AzureAIChatClientTests
     }
 
     [Fact]
-    [DisplayName("SubmitVideoGenerationAsync_始终抛NotSupportedException")]
-    public async Task SubmitVideoGenerationAsync_ThrowsNotSupportedException()
+    [DisplayName("AzureAIChatClient_不实现IVideoClient能力接口")]
+    public Task AzureAIChatClient_DoesNotImplementIVideoClient()
     {
         var client = new AzureAIChatClient("test-key", "gpt-4o", "https://myresource.openai.azure.com");
 
-        var ex = await Assert.ThrowsAsync<NotSupportedException>(() =>
-            client.SubmitVideoGenerationAsync(new VideoGenerationRequest { Prompt = "生成测试视频" }));
-
-        Assert.Contains("不支持视频生成", ex.Message);
+        Assert.IsNotType<IVideoClient>(client);
+        return Task.CompletedTask;
     }
 
     [Fact]
-    [DisplayName("GetVideoTaskAsync_始终抛NotSupportedException")]
-    public async Task GetVideoTaskAsync_ThrowsNotSupportedException()
+    [DisplayName("AzureAIChatClient_不实现IVideoClient能力接口_instanceof")]
+    public Task AzureAIChatClient_IsNotIVideoClient()
     {
         var client = new AzureAIChatClient("test-key", "gpt-4o", "https://myresource.openai.azure.com");
 
-        var ex = await Assert.ThrowsAsync<NotSupportedException>(() =>
-            client.GetVideoTaskAsync("task_123"));
-
-        Assert.Contains("不支持视频生成", ex.Message);
+        Assert.False(client is IVideoClient, "AzureAIChatClient 继承自 OpenAIClientBase，不应实现 IVideoClient");
+        return Task.CompletedTask;
     }
 
     #endregion

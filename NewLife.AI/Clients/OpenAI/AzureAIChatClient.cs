@@ -12,7 +12,7 @@
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 即 deployment 名称）</param>
 [AiClient("AzureAI", "Azure OpenAI", "https://{resource}.openai.azure.com",
     Description = "微软 Azure 托管的 OpenAI 模型服务，使用 deployment 方式部署", Order = 3)]
-public class AzureAIChatClient(AiClientOptions options) : OpenAIChatClient(options)
+public class AzureAIChatClient(AiClientOptions options) : OpenAIClientBase(options)
 {
     #region 属性
     /// <inheritdoc/>
@@ -29,22 +29,6 @@ public class AzureAIChatClient(AiClientOptions options) : OpenAIChatClient(optio
     /// <param name="endpoint">Azure OpenAI 完整地址，如 https://myresource.openai.azure.com</param>
     public AzureAIChatClient(String apiKey, String? model = null, String? endpoint = null)
         : this(new AiClientOptions { ApiKey = apiKey, Model = model, Endpoint = endpoint }) { }
-    #endregion
-
-    #region 能力约束
-    /// <summary>AzureAI 客户端不提供视频生成任务提交能力，始终抛出异常</summary>
-    /// <param name="request">视频生成请求</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>不支持，始终抛出 NotSupportedException</returns>
-    public override Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Azure OpenAI 客户端暂不支持视频生成接口，请改用 OpenAI / DashScope / NewLifeAI");
-
-    /// <summary>AzureAI 客户端不提供视频任务查询能力，始终抛出异常</summary>
-    /// <param name="taskId">任务编号</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>不支持，始终抛出 NotSupportedException</returns>
-    public override Task<VideoTaskStatusResponse> GetVideoTaskAsync(String taskId, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Azure OpenAI 客户端暂不支持视频生成接口，请改用 OpenAI / DashScope / NewLifeAI");
     #endregion
 
     #region 辅助

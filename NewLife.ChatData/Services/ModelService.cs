@@ -1,6 +1,7 @@
-using NewLife.AI.Clients;
+﻿using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 using NewLife.ChatData.Entity;
 using NewLife.Log;
 using XCode.Membership;
@@ -385,7 +386,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
                 log?.Info("同步 {0} 模型：{1}", providerConfig.Name, modelCode);
             }
         }
-        return [..codes];
+        return [.. codes];
     }
 
     /// <summary>通用 OpenAI 兼容模型发现。通过创建 OpenAIChatClient 调用 ListModelsAsync 获取并同步模型列表</summary>
@@ -404,9 +405,9 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
         };
 
         using var client = descriptor?.Factory(opts) ?? new OpenAIChatClient(opts);
-        if (client is not OpenAIChatClient openAiClient) return [];
+        if (client is not IModelListClient listClient) return [];
 
-        var modelList = await openAiClient.ListModelsAsync().ConfigureAwait(false);
+        var modelList = await listClient.ListModelsAsync().ConfigureAwait(false);
         if (modelList?.Data == null || modelList.Data.Length == 0) return [];
 
         // 如果配置未启用但刚创建，发现可用模型则自动启用
@@ -417,7 +418,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             log?.Info("{0} 服务提供者已自动启用，发现 {1} 个可用模型", providerConfig.Name, modelList.Data.Length);
         }
 
-        return SyncModelsFromList(providerConfig, modelList, descriptor, openAiClient);
+        return SyncModelsFromList(providerConfig, modelList, descriptor, listClient);
     }
 
     /// <summary>将 OpenAI 兼容模型列表同步到模型配置表</summary>
@@ -426,7 +427,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
     /// <param name="descriptor">服务商描述符，用于查找已知模型能力</param>
     /// <param name="client">协议客户端，用于按命名规律推断模型能力</param>
     /// <returns>已处理的模型编码列表</returns>
-    private String[] SyncModelsFromList(ProviderConfig providerConfig, OpenAiModelListResponse modelList, AiClientDescriptor? descriptor = null, OpenAIChatClient? client = null)
+    private String[] SyncModelsFromList(ProviderConfig providerConfig, ModelListResponse modelList, AiClientDescriptor? descriptor = null, IModelListClient? client = null)
     {
         if (modelList.Data == null) return [];
 
@@ -471,7 +472,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动配置）
             if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration /*&& !config.SupportFunctionCalling*/))
             {
-                var caps = descriptor?.FindModelCapabilities(model.Id) ?? client?.InferModelCapabilities(model.Id);
+                var caps = descriptor?.FindModelCapabilities(model.Id) ?? (client as OpenAIClientBase)?.InferModelCapabilities(model.Id);
                 if (caps != null)
                 {
                     config.SupportThinking = caps.SupportThinking;
@@ -490,7 +491,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             if (config.Save() > 0)
                 log?.Info("同步 {0} 模型：{1}", providerConfig.Name, model.Id);
         }
-        return [..codes];
+        return [.. codes];
     }
     #endregion
 }

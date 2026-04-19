@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Gemini;
@@ -123,7 +124,7 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     /// </remarks>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表，服务不可用时返回 null</returns>
-    public virtual async Task<OpenAiModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<ModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
     {
         var apiKey = _options.ApiKey;
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
@@ -135,11 +136,11 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
         var dic = JsonParser.Decode(json);
         if (dic == null) return null;
 
-        var response = new OpenAiModelListResponse { Object = "list" };
+        var response = new ModelListResponse { Object = "list" };
 
         if (dic["models"] is IList<Object> modelList)
         {
-            var items = new List<OpenAiModelObject>(modelList.Count);
+            var items = new List<ModelInfo>(modelList.Count);
             foreach (var m in modelList)
             {
                 if (m is not IDictionary<String, Object> d) continue;
@@ -147,7 +148,7 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
                 var name = d["name"] as String ?? "";
                 var id = name.StartsWith("models/") ? name.Substring(7) : name;
 
-                items.Add(new OpenAiModelObject
+                items.Add(new ModelInfo
                 {
                     Id = id,
                     Name = d["displayName"] as String ?? id,

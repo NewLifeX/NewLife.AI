@@ -266,7 +266,7 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <summary>获取可用模型列表。使用兼容模式端点以保证返回完整模型目录</summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表，服务不可用时返回 null</returns>
-    public override async Task<OpenAiModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
+    public override async Task<ModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
     {
         var url = CompatibleEndpoint.TrimEnd('/') + "/v1/models";
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
@@ -275,15 +275,15 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         var dic = JsonParser.Decode(json);
         if (dic == null) return null;
 
-        var response = new OpenAiModelListResponse { Object = dic["object"] as String };
+        var response = new ModelListResponse { Object = dic["object"] as String };
 
         if (dic["data"] is IList<Object> dataList)
         {
-            var items = new List<OpenAiModelObject>(dataList.Count);
+            var items = new List<ModelInfo>(dataList.Count);
             foreach (var item in dataList)
             {
                 if (item is not IDictionary<String, Object> d) continue;
-                items.Add(new OpenAiModelObject
+                items.Add(new ModelInfo
                 {
                     Id = d["id"] as String,
                     Object = d["object"] as String,
