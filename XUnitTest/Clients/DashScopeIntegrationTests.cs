@@ -14,6 +14,7 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
+using Xunit.Sdk;
 using XUnitTest.Helpers;
 
 namespace XUnitTest.Clients;
@@ -82,9 +83,21 @@ public class DashScopeIntegrationTests
         MaxTokens = maxTokens,
         EnableThinking = false,
     };
-    /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
-    private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
+    /// <summary>确保已配置可用 ApiKey。未配置时跳过依赖真实服务的集成测试</summary>
+    private void EnsureConfiguredApiKeyAvailable(AiClientOptions? opts = null)
     {
+        var apiKey = opts?.ApiKey;
+        if (String.IsNullOrWhiteSpace(apiKey)) apiKey = _apiKey;
+
+        if (String.IsNullOrWhiteSpace(apiKey))
+            throw new SkipException("未检测到可用 API Key（config/DashScope.key 或 DASHSCOPE_API_KEY），跳过 DashScope 集成测试");
+    }
+
+    /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
+    private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null, Boolean ensureApiKey = true)
+    {
+        if (ensureApiKey) EnsureConfiguredApiKeyAvailable(opts);
+
         var retries = 2;
         while (true)
         {
@@ -105,8 +118,10 @@ public class DashScopeIntegrationTests
         ex.InnerException is System.Net.Sockets.SocketException or IOException;
 
     /// <summary>创建客户端并执行流式请求</summary>
-    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions? opts = null, Boolean ensureApiKey = true, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
+        if (ensureApiKey) EnsureConfiguredApiKeyAvailable(opts);
+
         using var client = new DashScopeChatClient(opts ?? CreateOptions());
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
             yield return chunk;
@@ -567,7 +582,7 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
-            await ChatAsync(request, options);
+            await ChatAsync(request, options, false);
         });
 
         Assert.Contains("Invalid", ex.Message);
@@ -586,7 +601,7 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
-            await foreach (var _ in ChatStreamAsync(request, options))
+            await foreach (var _ in ChatStreamAsync(request, options, false))
             {
             }
         });
@@ -606,7 +621,7 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
-            await ChatAsync(request, options);
+            await ChatAsync(request, options, false);
         });
 
         Assert.Contains("Invalid", ex.Message);
@@ -639,7 +654,7 @@ public class DashScopeIntegrationTests
 
         await Assert.ThrowsAnyAsync<Exception>(async () =>
         {
-            await ChatAsync(request, options);
+            await ChatAsync(request, options, false);
         });
     }
 
@@ -656,7 +671,7 @@ public class DashScopeIntegrationTests
 
         var ex = await Assert.ThrowsAsync<ApiException>(async () =>
         {
-            await foreach (var _ in ChatStreamAsync(request, options))
+            await foreach (var _ in ChatStreamAsync(request, options, false))
             {
             }
         });
@@ -1577,6 +1592,7 @@ public class DashScopeIntegrationTests
     [DisplayName("文生图_wan2.6-t2i_URL返回与负向提示词，并保存本地文件")]
     public async Task TextToImageAsync_Wanx26T2i_Complete()
     {
+        EnsureConfiguredApiKeyAvailable();
         using var client = new DashScopeChatClient(CreateOptions());
         // 基础文生图，附带负向提示词字段验证，N=1 只返回单张
         var request = new ImageGenerationRequest
@@ -1607,6 +1623,7 @@ public class DashScopeIntegrationTests
     [DisplayName("文生视频_wan2.7-t2v_等待完成并保存本地视频")]
     public async Task TextToVideoAsync_Wan27Turbo_CompletesAndSaves()
     {
+        EnsureConfiguredApiKeyAvailable();
         using var client = new DashScopeChatClient(CreateOptions());
         var request = new VideoGenerationRequest
         {
@@ -1633,6 +1650,7 @@ public class DashScopeIntegrationTests
     [DisplayName("文生视频_提交后立即查询状态应为有效值")]
     public async Task GetVideoTaskAsync_AfterSubmit_ReturnsValidStatus()
     {
+        EnsureConfiguredApiKeyAvailable();
         using var client = new DashScopeChatClient(CreateOptions());
         var submitRequest = new VideoGenerationRequest
         {
@@ -1657,6 +1675,7 @@ public class DashScopeIntegrationTests
     [DisplayName("图生视频_wan2.7-i2v_等待完成并保存本地视频")]
     public async Task ImageToVideoAsync_Wan27Turbo_CompletesAndSaves()
     {
+        EnsureConfiguredApiKeyAvailable();
         using var client = new DashScopeChatClient(CreateOptions());
         var request = new VideoGenerationRequest
         {
@@ -1771,6 +1790,7 @@ public class DashScopeIntegrationTests
     [DisplayName("重排序_gte-rerank-v2_文档排序")]
     public async Task RerankAsync_GteRerankV2_ReturnsRankedResults()
     {
+        EnsureConfiguredApiKeyAvailable();
         var options = CreateOptions();
         options.Protocol = "ChatCompletions";
         using var client = new DashScopeChatClient(options);
@@ -1802,6 +1822,7 @@ public class DashScopeIntegrationTests
     [DisplayName("模型列表_ListModelsAsync_返回可用模型")]
     public async Task ListModelsAsync_ReturnsAvailableModels()
     {
+        EnsureConfiguredApiKeyAvailable();
         using var client = new DashScopeChatClient(CreateOptions());
 
         var response = await client.ListModelsAsync();
