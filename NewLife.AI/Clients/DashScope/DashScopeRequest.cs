@@ -271,14 +271,22 @@ public class DashScopeRequest : IChatRequest
             // Content 可能是反序列化后的复杂对象（如网关转发 OpenAI 多模态请求），需先还原 Contents
             msg.ResolveContents();
 
+            var contents = msg.Contents;
+            var hasContents = contents != null && contents.Count > 0;
+            var hasToolCalls = msg.ToolCalls != null && msg.ToolCalls.Count > 0;
+            var allowEmptyContent = hasToolCalls || msg.Role.EqualIgnoreCase("tool");
+
+            if (!hasContents && !hasToolCalls && !HasRequiredContent(msg.Content))
+                continue;
+
             var m = new DashScopeMessage { Role = msg.Role };
 
-            if (msg.Contents != null && msg.Contents.Count > 0)
-                m.Content = BuildContent(msg.Contents, isMultimodal);
+            if (hasContents)
+                m.Content = BuildContent(contents!, isMultimodal);
             else if (isMultimodal)
-                m.Content = new List<Object> { new { text = msg.Content ?? "" } };
+                m.Content = new List<Object> { new { text = NormalizeTextContent(msg.Content, allowEmptyContent) } };
             else
-                m.Content = msg.Content;
+                m.Content = NormalizeTextContent(msg.Content, allowEmptyContent);
 
             if (msg.Name != null) m.Name = msg.Name;
             if (msg.ToolCallId != null) m.ToolCallId = msg.ToolCallId;
@@ -307,13 +315,40 @@ public class DashScopeRequest : IChatRequest
         return result;
     }
 
+    /// <summary>判断消息内容是否满足 DashScope 原生协议的 content 必填约束</summary>
+    /// <param name="content">消息内容</param>
+    /// <returns>存在可发送内容则返回 true</returns>
+    private static Boolean HasRequiredContent(Object? content)
+    {
+        if (content == null) return false;
+        if (content is String text) return !text.IsNullOrWhiteSpace();
+        if (content is IList<Object> list) return list.Count > 0;
+
+        return true;
+    }
+
+    /// <summary>归一化文本 content，必要时补空字符串，避免 DashScope 因缺失 content 字段报错</summary>
+    /// <param name="content">原始内容</param>
+    /// <param name="allowEmptyContent">是否允许返回空字符串</param>
+    /// <returns>归一化后的文本内容</returns>
+    private static String NormalizeTextContent(Object? content, Boolean allowEmptyContent)
+    {
+        if (content is String text)
+            return !text.IsNullOrWhiteSpace() ? text : (allowEmptyContent ? String.Empty : text);
+
+        if (content == null)
+            return allowEmptyContent ? String.Empty : String.Empty;
+
+        return content + String.Empty;
+    }
+
     /// <summary>构建多模态内容数组（DashScope 原生格式）</summary>
     /// <param name="contents">内容块列表</param>
     /// <param name="isMultimodal">是否多模态模型</param>
     internal static Object BuildContent(IList<AIContent> contents, Boolean isMultimodal)
     {
         if (!isMultimodal && contents.Count == 1 && contents[0] is TextContent singleText)
-            return singleText.Text!;
+            return singleText.Text ?? String.Empty;
 
         var parts = new List<Object>(contents.Count);
         foreach (var item in contents)

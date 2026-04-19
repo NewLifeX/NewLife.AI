@@ -51,7 +51,7 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
     /// <summary>类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService</summary>
     [DisplayName("类名")]
     [Description("类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService")]
-    [DataObjectField(false, false, true, 50)]
+    [DataObjectField(false, false, true, 200)]
     [BindColumn("ClassName", "类名。工具方法所在类的全限定类名，如NewLife.AI.Tools.BuiltinToolService", "")]
     public String? ClassName { get => _ClassName; set { if (OnPropertyChanging("ClassName", value)) { _ClassName = value; OnPropertyChanged("ClassName"); } } }
 

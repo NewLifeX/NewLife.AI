@@ -90,7 +90,7 @@ public class DashScopeIntegrationTests
         if (String.IsNullOrWhiteSpace(apiKey)) apiKey = _apiKey;
 
         if (String.IsNullOrWhiteSpace(apiKey))
-            throw new SkipException("未检测到可用 API Key（config/DashScope.key 或 DASHSCOPE_API_KEY），跳过 DashScope 集成测试");
+            throw new SkipException();
     }
 
     /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
@@ -481,7 +481,7 @@ public class DashScopeIntegrationTests
 
         try
         {
-            await foreach (var chunk in ChatStreamAsync(request, null, cts.Token))
+            await foreach (var chunk in ChatStreamAsync(request, null, true, cts.Token))
             {
                 chunks.Add(chunk);
                 if (chunks.Count >= 3)
