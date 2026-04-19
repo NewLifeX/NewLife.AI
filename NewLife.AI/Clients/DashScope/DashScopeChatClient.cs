@@ -24,6 +24,11 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
 [AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
+[AiClientModel("qwen-image", "Qwen Image", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-plus", "Qwen Image Plus", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-max", "Qwen Image Max", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-2.0", "Qwen Image 2.0", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-2.0-pro", "Qwen Image 2.0 Pro", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
 [AiClientModel("wan2.6-t2i", "Wan 文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
@@ -164,8 +169,8 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     {
         var modelId = request.Model ?? _options.Model ?? "";
 
-        // wan2.x-t2i 使用原生 DashScope 多模态端点（messages 格式），其余走兼容模式
-        if (IsWan2T2iModel(modelId))
+        // DashScope 原生文生图模型（wan2.x-t2i / qwen-image*）使用原生多模态端点（messages 格式），其余走兼容模式
+        if (IsNativeImageGenerationModel(modelId))
             return await TextToImageNativeAsync(request, cancellationToken).ConfigureAwait(false);
 
         var url = CompatibleEndpoint.TrimEnd('/') + "/v1/images/generations";
@@ -202,12 +207,23 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         return ParseWan2T2iResponse(json);
     }
 
-    /// <summary>判断是否为使用原生多模态端点的 wan2.x-t2i 系列（如 wan2.6-t2i、wan2.5-t2i-preview 等）</summary>
+    /// <summary>判断是否为使用原生多模态端点的 DashScope 文生图模型</summary>
+    /// <remarks>
+    /// 包含两类：
+    /// 1. wan2.x-t2i 系列（如 wan2.6-t2i、wan2.5-t2i-preview）
+    /// 2. qwen-image 系列（如 qwen-image、qwen-image-plus、qwen-image-max、qwen-image-2.0、qwen-image-2.0-pro）
+    /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>是则返回 true</returns>
-    private static Boolean IsWan2T2iModel(String modelId) =>
-        modelId.StartsWith("wan2.", StringComparison.OrdinalIgnoreCase) &&
-        modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
+    private static Boolean IsNativeImageGenerationModel(String modelId)
+    {
+        if (modelId.IsNullOrEmpty()) return false;
+
+        if (modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase)) return true;
+
+        return modelId.StartsWith("wan2.", StringComparison.OrdinalIgnoreCase) &&
+               modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
 
     /// <summary>构建 wan2.x-t2i 文生图 parameters 字典</summary>
     /// <param name="request">图像生成请求</param>

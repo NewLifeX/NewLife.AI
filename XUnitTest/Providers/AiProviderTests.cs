@@ -474,6 +474,11 @@ public class AiProviderTests
     [InlineData("wanx-v1", false, false, false, false, true, false)]
     [InlineData("wan2.6-t2i", false, false, false, false, true, false)]
     [InlineData("qwen-image-plus", false, false, false, false, true, false)]
+    [InlineData("qwen-image", false, false, false, false, true, false)]
+    [InlineData("qwen-image-max", false, false, false, false, true, false)]
+    [InlineData("qwen-image-2.0", false, false, false, false, true, false)]
+    [InlineData("qwen-image-2.0-pro", false, false, false, false, true, false)]
+    [InlineData("qwen-image-2.0-pro-2026-03-03", false, false, false, false, true, false)]
     [InlineData("z-image-turbo", false, false, false, false, true, false)]
     // 文生视频 / 图生视频
     [InlineData("wan2.7-t2v", false, false, false, false, false, true)]

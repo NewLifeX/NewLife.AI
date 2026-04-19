@@ -1615,6 +1615,33 @@ public class DashScopeIntegrationTests
         await SaveOutputFileAsync(imageUrl!, "t2i_wanx26t2i.jpg");
     }
 
+    [Fact]
+    [DisplayName("文生图_qwen-image-2.0-pro_URL返回并保存本地文件")]
+    public async Task TextToImageAsync_QwenImage20Pro_Complete()
+    {
+        EnsureConfiguredApiKeyAvailable();
+        using var client = new DashScopeChatClient(CreateOptions());
+
+        var request = new ImageGenerationRequest
+        {
+            Model = "qwen-image-2.0-pro",
+            Prompt = "冬日城市街景，电影感，柔和阴天光线，高清写实",
+            NegativePrompt = "低分辨率，低画质，构图混乱，文字模糊",
+            Size = "1024*1024",
+            N = 1,
+        };
+
+        var response = await client.TextToImageAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response!.Data);
+        Assert.Single(response.Data!);
+        var imageUrl = response.Data[0].Url;
+        Assert.False(String.IsNullOrEmpty(imageUrl));
+
+        await SaveOutputFileAsync(imageUrl!, "t2i_qwen_image_2_0_pro.jpg");
+    }
+
     #endregion
 
     #region 文生视频（Text-to-Video）

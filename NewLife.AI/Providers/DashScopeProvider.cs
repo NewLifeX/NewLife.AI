@@ -84,6 +84,11 @@ public class DashScopeProvider : OpenAiProvider
     /// <remarks>端点：POST /compatible-mode/v1/images/generations</remarks>
     public AiModelInfo[] ImageModels { get; } =
     [
+        new("qwen-image",         "千问文生图",      new(false, false, true, false)),
+        new("qwen-image-plus",    "千问文生图 Plus", new(false, false, true, false)),
+        new("qwen-image-max",     "千问文生图 Max",  new(false, false, true, false)),
+        new("qwen-image-2.0",     "千问文生图 2.0",  new(false, false, true, false)),
+        new("qwen-image-2.0-pro", "千问文生图 2.0 Pro", new(false, false, true, false)),
         new("wanx3.0-t2i-turbo", "万象3.0 Turbo", new(false, false, true, false)),
         new("wanx3.0-t2i-plus",  "万象3.0 Plus",  new(false, false, true, false)),
         new("wanx2.1-t2i-turbo", "万象2.1 Turbo", new(false, false, true, false)),
