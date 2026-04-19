@@ -108,6 +108,8 @@ public class ChatCompletionRequest : IChatRequest
         var messages = new List<ChatMessage>();
         foreach (var msg in request.Messages)
         {
+            if (ShouldSkipAssistantMessage(msg)) continue;
+
             var cm = new ChatMessage
             {
                 Role = msg.Role,
@@ -145,6 +147,8 @@ public class ChatCompletionRequest : IChatRequest
         var messages = new List<Object>(request.Messages.Count);
         foreach (var msg in request.Messages)
         {
+            if (ShouldSkipAssistantMessage(msg)) continue;
+
             var m = new Dictionary<String, Object> { ["role"] = msg.Role };
 
             // 多模态内容（Contents）优先于原始 Content 字段
@@ -214,6 +218,19 @@ public class ChatCompletionRequest : IChatRequest
         if (request.ParallelToolCalls != null) dic["parallel_tool_calls"] = request.ParallelToolCalls.Value;
 
         return dic;
+    }
+
+    /// <summary>判断是否应跳过非法 assistant 消息。某些服务商（如 DeepSeek）要求 assistant 至少提供 content 或 tool_calls</summary>
+    /// <param name="message">待检查消息</param>
+    /// <returns>应跳过返回 true，否则返回 false</returns>
+    private static Boolean ShouldSkipAssistantMessage(ChatMessage message)
+    {
+        if (!message.Role.EqualIgnoreCase("assistant")) return false;
+
+        var hasContent = message.Contents != null && message.Contents.Count > 0 || message.Content != null;
+        var hasToolCalls = message.ToolCalls != null && message.ToolCalls.Count > 0;
+
+        return !hasContent && !hasToolCalls;
     }
 
     /// <summary>将 AIContent 集合转换为 OpenAI 格式的 content 字段值</summary>

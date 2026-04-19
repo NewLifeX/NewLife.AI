@@ -200,6 +200,60 @@ public class ChatCompletionRequestTests
         var list = (IList<Object>)result;
         Assert.Equal(2, list.Count);
     }
+
+    [Fact]
+    [DisplayName("BuildBody—跳过空assistant占位消息")]
+    public void BuildBody_SkipsEmptyAssistantPlaceholder()
+    {
+        var request = new ChatRequest { Model = "deepseek-chat" };
+        request.Messages.Add(new ChatMessage { Role = "system", Content = "你是助手" });
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "你好" });
+        request.Messages.Add(new ChatMessage { Role = "assistant" });
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "继续" });
+
+        var body = ChatCompletionRequest.BuildBody(request);
+
+        Assert.True(body.TryGetValue("messages", out var value));
+        var messages = Assert.IsAssignableFrom<IList<Object>>(value);
+        Assert.Equal(3, messages.Count);
+        Assert.DoesNotContain(messages, item =>
+        {
+            var dic = Assert.IsAssignableFrom<IDictionary<String, Object>>(item);
+            return String.Equals(dic["role"] as String, "assistant", StringComparison.OrdinalIgnoreCase) &&
+                !dic.ContainsKey("content") && !dic.ContainsKey("tool_calls");
+        });
+    }
+
+    [Fact]
+    [DisplayName("BuildBody—保留仅含工具调用的assistant消息")]
+    public void BuildBody_KeepsAssistantWithToolCalls()
+    {
+        var request = new ChatRequest { Model = "deepseek-chat" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "帮我查天气" });
+        request.Messages.Add(new ChatMessage
+        {
+            Role = "assistant",
+            ToolCalls =
+            [
+                new ToolCall
+                {
+                    Id = "call_1",
+                    Type = "function",
+                    Function = new FunctionCall { Name = "get_weather", Arguments = "{\"city\":\"上海\"}" },
+                }
+            ]
+        });
+
+        var body = ChatCompletionRequest.BuildBody(request);
+
+        Assert.True(body.TryGetValue("messages", out var value));
+        var messages = Assert.IsAssignableFrom<IList<Object>>(value);
+        Assert.Equal(2, messages.Count);
+
+        var assistant = Assert.IsAssignableFrom<IDictionary<String, Object>>(messages[1]);
+        Assert.Equal("assistant", assistant["role"] as String);
+        Assert.True(assistant.ContainsKey("tool_calls"));
+    }
     #endregion
 
     #region JSON 序列化

@@ -657,6 +657,8 @@ public class MessageFlow
 
         foreach (var msg in beforeMessages)
         {
+            if (ShouldSkipHistoryMessage(msg)) continue;
+
             if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
             {
                 contextMessages.Add(BuildMultimodalUserMessage(msg.Attachments, msg.Content));
@@ -819,6 +821,8 @@ public class MessageFlow
 
         foreach (var msg in history)
         {
+            if (ShouldSkipHistoryMessage(msg)) continue;
+
             if (msg.Role == "assistant" && !msg.ToolCalls.IsNullOrEmpty())
             {
                 IList<ToolCallDto>? storedDtos = null;
@@ -951,6 +955,16 @@ public class MessageFlow
     /// <returns>多模态 AiChatMessage，基类默认退化为纯文本消息</returns>
     protected virtual AiChatMessage BuildMultimodalUserMessage(String attachmentsJson, String? textContent)
         => new() { Role = "user", Content = textContent };
+
+    /// <summary>判断是否应跳过历史消息。用于过滤预分配但尚未写入正文的 assistant 占位消息，避免发送非法上下文给上游模型</summary>
+    /// <param name="message">历史消息实体</param>
+    /// <returns>应跳过返回 true，否则返回 false</returns>
+    protected static Boolean ShouldSkipHistoryMessage(ChatMessage message)
+    {
+        if (!message.Role.EqualIgnoreCase("assistant")) return false;
+
+        return message.Content.IsNullOrEmpty() && message.ToolCalls.IsNullOrEmpty();
+    }
 
     /// <summary>解析附件ID列表 JSON。兼容字符串数组和整数数组两种格式</summary>
     /// <param name="json">附件ID列表 JSON</param>
