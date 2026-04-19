@@ -55,6 +55,10 @@ public class BackgroundGenerationService(ILog log)
         var index = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
+            // 关键：先快照等待句柄，再读取事件。否则若 AddEvent/Notify 发生在“读完事件”与“进入 WaitAsync”之间，
+            // _signal 已被 Exchange 为新 tcs，新 tcs 不会被本次 Notify 触发，导致订阅者永久挂起、错过事件
+            var waitTask = task.SignalTask;
+
             // 读取所有已有事件
             while (index < task.EventCount)
             {
@@ -64,8 +68,8 @@ public class BackgroundGenerationService(ILog log)
             // 任务已结束则退出
             if (task.Status != BackgroundTaskStatus.Running) yield break;
 
-            // 等待新事件通知
-            try { await task.WaitAsync(cancellationToken).ConfigureAwait(false); }
+            // 等待新事件通知（使用先前快照的句柄，避免丢失唤醒）
+            try { await task.WaitAsync(waitTask, cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) { yield break; }
         }
     }
@@ -229,6 +233,9 @@ public class BackgroundTask
     private readonly List<ChatStreamEvent> _events = [];
     private volatile TaskCompletionSource<Boolean> _signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    /// <summary>当前等待句柄的 Task 快照。订阅者必须在读取事件“之前”取此快照，避免 Notify 丢失</summary>
+    internal Task SignalTask => _signal.Task;
+
     /// <summary>事件总数</summary>
     public Int32 EventCount { get { lock (_events) return _events.Count; } }
 
@@ -252,13 +259,16 @@ public class BackgroundTask
         old.TrySetResult(true);
     }
 
-    /// <summary>等待新事件通知</summary>
+    /// <summary>等待事件通知。<paramref name="signalTask"/> 应为读取事件之前快照的 <see cref="SignalTask"/></summary>
+    /// <param name="signalTask">外部预先快照的等待句柄，避免与 Notify 产生丢失唤醒竞态</param>
     /// <param name="cancellationToken">取消令牌</param>
-    internal async Task WaitAsync(CancellationToken cancellationToken)
+    internal async Task WaitAsync(Task signalTask, CancellationToken cancellationToken)
     {
+        if (signalTask.IsCompleted) return;
+
         var tcs = new TaskCompletionSource<Boolean>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var _ = cancellationToken.Register(() => tcs.TrySetResult(default));
-        await Task.WhenAny(_signal.Task, tcs.Task).ConfigureAwait(false);
+        using var _ = cancellationToken.Register(static s => ((TaskCompletionSource<Boolean>)s!).TrySetResult(default), tcs);
+        await Task.WhenAny(signalTask, tcs.Task).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
     }
     #endregion
