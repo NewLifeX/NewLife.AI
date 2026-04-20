@@ -63,12 +63,13 @@ public class ChatApplicationService
     /// <summary>更新会话（重命名、切换模型等）</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="request">更新请求</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public Task<ConversationSummaryDto?> UpdateConversationAsync(Int64 conversationId, UpdateConversationRequest request, CancellationToken cancellationToken)
+    /// <returns>更新后的会话摘要，会话不存在或无权访问时返回 null</returns>
+    public Task<ConversationSummaryDto?> UpdateConversationAsync(Int64 conversationId, UpdateConversationRequest request, Int32 userId, CancellationToken cancellationToken)
     {
         var entity = Conversation.FindById(conversationId);
-        if (entity == null) return Task.FromResult<ConversationSummaryDto?>(null);
+        if (entity == null || entity.UserId != userId) return Task.FromResult<ConversationSummaryDto?>(null);
 
         if (!String.IsNullOrWhiteSpace(request.Title))
             entity.Title = request.Title.Trim();
@@ -85,12 +86,13 @@ public class ChatApplicationService
 
     /// <summary>删除会话</summary>
     /// <param name="conversationId">会话编号</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public Task<Boolean> DeleteConversationAsync(Int64 conversationId, CancellationToken cancellationToken)
+    /// <returns>删除成功返回 true，会话不存在或无权访问返回 false</returns>
+    public Task<Boolean> DeleteConversationAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
     {
         var entity = Conversation.FindById(conversationId);
-        if (entity == null) return Task.FromResult(false);
+        if (entity == null || entity.UserId != userId) return Task.FromResult(false);
 
         using var trans = ChatMessage.Meta.CreateTrans();
 
@@ -126,17 +128,40 @@ public class ChatApplicationService
     /// <summary>置顶/取消置顶</summary>
     /// <param name="conversationId">会话编号</param>
     /// <param name="isPinned">是否置顶</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public Task<Boolean> SetPinAsync(Int64 conversationId, Boolean isPinned, CancellationToken cancellationToken)
+    /// <returns>操作成功返回 true，会话不存在或无权访问返回 false</returns>
+    public Task<Boolean> SetPinAsync(Int64 conversationId, Boolean isPinned, Int32 userId, CancellationToken cancellationToken)
     {
         var entity = Conversation.FindById(conversationId);
-        if (entity == null) return Task.FromResult(false);
+        if (entity == null || entity.UserId != userId) return Task.FromResult(false);
 
         entity.IsPinned = isPinned;
         entity.Update();
 
         return Task.FromResult(true);
+    }
+
+    /// <summary>验证当前用户是否有权访问指定会话</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="userId">当前用户编号</param>
+    /// <returns>会话存在且属于该用户则返回 true</returns>
+    public Boolean CanAccessConversation(Int64 conversationId, Int32 userId)
+    {
+        var conv = Conversation.FindById(conversationId);
+        return conv != null && conv.UserId == userId;
+    }
+
+    /// <summary>验证当前用户是否有权访问指定消息（通过所属会话校验）</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="userId">当前用户编号</param>
+    /// <returns>消息及所属会话存在且属于该用户则返回 true</returns>
+    public Boolean CanAccessMessage(Int64 messageId, Int32 userId)
+    {
+        var msg = ChatMessage.FindById(messageId);
+        if (msg == null) return false;
+        var conv = Conversation.FindById(msg.ConversationId);
+        return conv != null && conv.UserId == userId;
     }
     #endregion
 
@@ -145,9 +170,12 @@ public class ChatApplicationService
     /// <param name="conversationId">会话编号</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
+    /// <returns>消息列表，会话不存在或无权访问时返回 null</returns>
+    public Task<IReadOnlyList<MessageDto>?> GetMessagesAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
     {
+        var conversation = Conversation.FindById(conversationId);
+        if (conversation == null || conversation.UserId != userId) return Task.FromResult<IReadOnlyList<MessageDto>?>(null);
+
         //var p = new PageParameter { PageSize = 0, Sort = ChatMessage._.CreateTime.Asc() };
         //var list = ChatMessage.Search(conversationId, default, DateTime.MinValue, DateTime.MinValue, null, p);
         var list = ChatMessage.FindAllByConversationIdOrdered(conversationId)
@@ -161,7 +189,7 @@ public class ChatApplicationService
             : [];
 
         var items = list.Select(e => ToMessageDto(e, feedbacks.TryGetValue(e.Id, out var ft) ? ft : default)).ToList();
-        return Task.FromResult<IReadOnlyList<MessageDto>>(items);
+        return Task.FromResult<IReadOnlyList<MessageDto>?>(items);
     }
 
     /// <summary>全文搜索消息内容。在当前用户的所有会话中按关键词搜索消息</summary>
@@ -199,12 +227,16 @@ public class ChatApplicationService
     /// <summary>编辑消息内容（仅修改文字，不重新生成）</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="request">编辑请求</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>更新后的消息 DTO，消息不存在时返回 null</returns>
-    public Task<MessageDto?> EditMessageAsync(Int64 messageId, EditMessageRequest request, CancellationToken cancellationToken)
+    /// <returns>更新后的消息 DTO，消息不存在或无权访问时返回 null</returns>
+    public Task<MessageDto?> EditMessageAsync(Int64 messageId, EditMessageRequest request, Int32 userId, CancellationToken cancellationToken)
     {
         var entity = ChatMessage.FindById(messageId);
         if (entity == null) return Task.FromResult<MessageDto?>(null);
+
+        var conv = Conversation.FindById(entity.ConversationId);
+        if (conv == null || conv.UserId != userId) return Task.FromResult<MessageDto?>(null);
 
         entity.Content = request.Content;
         entity.Update();
@@ -260,10 +292,11 @@ public class ChatApplicationService
     /// <param name="request">创建分享请求</param>
     /// <param name="user">当前操作用户</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>包含分享 URL 的 DTO</returns>
-    public Task<ShareLinkDto> CreateShareLinkAsync(Int64 conversationId, CreateShareRequest request, IUser user, CancellationToken cancellationToken)
+    /// <returns>包含分享 URL 的 DTO，会话不存在或无权访问时返回 null</returns>
+    public Task<ShareLinkDto?> CreateShareLinkAsync(Int64 conversationId, CreateShareRequest request, IUser user, CancellationToken cancellationToken)
     {
         var conversation = Conversation.FindById(conversationId);
+        if (conversation == null || conversation.UserId != user.ID) return Task.FromResult<ShareLinkDto?>(null);
 
         // 获取当前最后一条消息的编号作为快照截止点
         var snapshotMessageId = ChatMessage.FindLastByConversationId(conversationId)?.Id ?? 0;
@@ -276,7 +309,7 @@ public class ChatApplicationService
         {
             ConversationId = conversationId,
             ShareToken = Guid.NewGuid().ToString("N"),
-            SnapshotTitle = conversation?.Title,
+            SnapshotTitle = conversation.Title,
             SnapshotMessageId = snapshotMessageId,
             ExpireTime = expireTime ?? DateTime.MinValue,
             CreateUserID = user.ID,
@@ -285,7 +318,7 @@ public class ChatApplicationService
         entity.Insert();
 
         var dto = new ShareLinkDto($"/share/{entity.ShareToken}", entity.CreateTime, expireTime);
-        return Task.FromResult(dto);
+        return Task.FromResult<ShareLinkDto?>(dto);
     }
 
     /// <summary>获取共享对话内容</summary>
@@ -317,12 +350,13 @@ public class ChatApplicationService
 
     /// <summary>撤销共享链接</summary>
     /// <param name="token">分享令牌</param>
+    /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public Task<Boolean> RevokeShareLinkAsync(String token, CancellationToken cancellationToken)
+    /// <returns>撤销成功返回 true，链接不存在或无权操作返回 false</returns>
+    public Task<Boolean> RevokeShareLinkAsync(String token, Int32 userId, CancellationToken cancellationToken)
     {
         var share = SharedConversation.FindByShareToken(token);
-        if (share == null) return Task.FromResult(false);
+        if (share == null || share.CreateUserID != userId) return Task.FromResult(false);
 
         share.Delete();
         return Task.FromResult(true);

@@ -31,6 +31,7 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
     public async Task<ActionResult<IReadOnlyList<MessageDto>>> QueryAsync([FromRoute] Int64 conversationId, CancellationToken cancellationToken)
     {
         var result = await chatService.GetMessagesAsync(conversationId, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
+        if (result == null) return NotFound();
         return Ok(result);
     }
 
@@ -52,6 +53,13 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
             return;
         }
 
+        // 会话归属校验：必须在 SetSseHeaders() 之前，否则无法返回正确状态码
+        if (!chatService.CanAccessConversation(conversationId, userId))
+        {
+            Response.StatusCode = 404;
+            return;
+        }
+
         using var span = tracer?.NewSpan("ai:StreamSend", new { request.ModelId, request.SkillCode, request.ThinkingMode });
         span?.AppendTag(request.Content);
         SetSseHeaders();
@@ -66,7 +74,7 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
     [HttpPut("messages/{id:long}")]
     public async Task<ActionResult<MessageDto>> EditAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
     {
-        var result = await chatService.EditMessageAsync(id, request, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.EditMessageAsync(id, request, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (result == null) return NotFound();
         return Ok(result);
     }
@@ -79,9 +87,17 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
     [HttpPost("messages/{id:long}/edit-and-resend")]
     public async Task EditAndResendStreamAsync([FromRoute] Int64 id, [FromBody] EditMessageRequest request, CancellationToken cancellationToken)
     {
+        var userId = GetCurrentUserId();
+        // 消息归属校验：必须在 SetSseHeaders() 之前，否则无法返回正确状态码
+        if (!chatService.CanAccessMessage(id, userId))
+        {
+            Response.StatusCode = 404;
+            return;
+        }
+
         using var span = tracer?.NewSpan("ai:ResendStream", new { id, request.Content });
         SetSseHeaders();
-        await StreamEventsAsync(messageService.EditAndResendStreamAsync(id, request.Content, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
+        await StreamEventsAsync(messageService.EditAndResendStreamAsync(id, request.Content, userId, cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>重新生成回复（非流式）</summary>
@@ -104,9 +120,17 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
     [HttpPost("messages/{id:long}/regenerate/stream")]
     public async Task StreamRegenerateAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
+        var userId = GetCurrentUserId();
+        // 消息归属校验：必须在 SetSseHeaders() 之前，否则无法返回正确状态码
+        if (!chatService.CanAccessMessage(id, userId))
+        {
+            Response.StatusCode = 404;
+            return;
+        }
+
         using var span = tracer?.NewSpan("ai:StreamRegenerate", id);
         SetSseHeaders();
-        await StreamEventsAsync(messageService.RegenerateStreamAsync(id, GetCurrentUserId(), cancellationToken), cancellationToken).ConfigureAwait(false);
+        await StreamEventsAsync(messageService.RegenerateStreamAsync(id, userId, cancellationToken), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>停止生成</summary>
@@ -116,6 +140,7 @@ public class MessagesController(ChatApplicationService chatService, MessageServi
     [HttpPost("messages/{id:long}/stop")]
     public async Task<IActionResult> StopAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
+        if (!chatService.CanAccessMessage(id, GetCurrentUserId())) return NotFound();
         await messageService.StopGenerateAsync(id, cancellationToken).ConfigureAwait(false);
         return Accepted();
     }

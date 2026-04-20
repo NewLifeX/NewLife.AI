@@ -19,6 +19,7 @@ public class ShareController(ChatApplicationService chatService) : ChatApiContro
     {
         var user = ManageProvider2.User;
         var result = await chatService.CreateShareLinkAsync(conversationId, request, user, cancellationToken).ConfigureAwait(false);
+        if (result == null) return NotFound();
         return Ok(result);
     }
 
@@ -42,7 +43,7 @@ public class ShareController(ChatApplicationService chatService) : ChatApiContro
     [HttpDelete("api/share/{token}")]
     public async Task<IActionResult> DeleteAsync([FromRoute] String token, CancellationToken cancellationToken)
     {
-        var result = await chatService.RevokeShareLinkAsync(token, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.RevokeShareLinkAsync(token, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (!result) return NotFound();
         return NoContent();
     }

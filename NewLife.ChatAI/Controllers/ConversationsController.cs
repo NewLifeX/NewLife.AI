@@ -32,7 +32,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
     [HttpPut("{id:long}")]
     public async Task<ActionResult<ConversationSummaryDto>> UpdateAsync([FromRoute] Int64 id, [FromBody] UpdateConversationRequest request, CancellationToken cancellationToken)
     {
-        var result = await chatService.UpdateConversationAsync(id, request, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.UpdateConversationAsync(id, request, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (result == null) return NotFound();
         return Ok(result);
     }
@@ -41,7 +41,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
     {
-        var result = await chatService.DeleteConversationAsync(id, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.DeleteConversationAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (!result) return NotFound();
         return NoContent();
     }
@@ -50,7 +50,7 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
     [HttpPatch("{id:long}/pin")]
     public async Task<IActionResult> SetPinAsync([FromRoute] Int64 id, [FromQuery] Boolean isPinned, CancellationToken cancellationToken)
     {
-        var result = await chatService.SetPinAsync(id, isPinned, cancellationToken).ConfigureAwait(false);
+        var result = await chatService.SetPinAsync(id, isPinned, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
         if (!result) return NotFound();
         return NoContent();
     }
