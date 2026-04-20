@@ -79,8 +79,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     /// <returns>模型列表，服务不可用时返回 null</returns>
     public virtual async Task<ModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/v1/models";
+        var url = BuildApiUrl("/v1/models");
 
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
         if (json == null) return null;
@@ -126,7 +125,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径</summary>
     /// <param name="request">对话请求</param>
     /// <returns>完整请求 URL</returns>
-    protected override String BuildUrl(IChatRequest request) => _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + ChatPath;
+    protected override String BuildUrl(IChatRequest request) => BuildApiUrl(ChatPath);
 
     /// <summary>构建请求体。返回符合 OpenAI 格式的协议请求对象</summary>
     /// <param name="request">请求对象</param>

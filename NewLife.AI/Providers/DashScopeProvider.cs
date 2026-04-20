@@ -254,7 +254,7 @@ public class DashScopeProvider : OpenAiProvider
     public override async Task<OpenAiModelListResponse?> ListModelsAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         // 模型列表 API 使用兼容模式
-        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/models";
+        var url = AiClientBase.CombineApiUrl(CompatibleEndpoint, "/v1/models");
         var json = await TryGetAsync(url, options, cancellationToken).ConfigureAwait(false);
         if (json == null) return null;
 
@@ -302,7 +302,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <returns>file_id 字符串（如 "file-fe109bf8-xxxx"）</returns>
     public async Task<String> UploadFileAsync(String filePath, String? fileName, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/files";
+        var url = AiClientBase.CombineApiUrl(CompatibleEndpoint, "/v1/files");
         fileName ??= Path.GetFileName(filePath);
         var fileBytes = File.ReadAllBytes(filePath);
         return await UploadFileBytesAsync(fileBytes, fileName, options, cancellationToken).ConfigureAwait(false);
@@ -316,7 +316,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <returns>file_id 字符串（如 "file-fe109bf8-xxxx"）</returns>
     public async Task<String> UploadFileBytesAsync(Byte[] fileBytes, String fileName, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/files";
+        var url = AiClientBase.CombineApiUrl(CompatibleEndpoint, "/v1/files");
 
         using var form = new MultipartFormDataContent();
         var filePartContent = new ByteArrayContent(fileBytes);
@@ -351,7 +351,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <param name="cancellationToken">取消令牌</param>
     public async Task DeleteFileAsync(String fileId, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/files/" + fileId;
+        var url = AiClientBase.CombineApiUrl(CompatibleEndpoint, "/v1/files/" + fileId);
 
         using var req = new HttpRequestMessage(HttpMethod.Delete, url);
         SetHeaders(req, options);
@@ -399,7 +399,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <returns>重排序响应，Results 按相关度降序排列</returns>
     public async Task<RerankResponse> RerankAsync(RerankRequest request, AiProviderOptions options, CancellationToken cancellationToken = default)
     {
-        var url = CompatibleEndpoint.TrimEnd('/') + "/v1/reranks";
+        var url = AiClientBase.CombineApiUrl(CompatibleEndpoint, "/v1/reranks");
 
         var body = new Dictionary<String, Object?>
         {

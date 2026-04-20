@@ -21,7 +21,7 @@ public partial class OpenAIChatClient
         if (request.ImageStream == null) throw new ArgumentException("ImageStream 不能为空", nameof(request));
         if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException("Prompt 不能为空", nameof(request));
 
-        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/images/edits";
+        var url = BuildApiUrl("/v1/images/edits");
 
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(request.Prompt), "prompt");
@@ -63,7 +63,7 @@ public partial class OpenAIChatClient
         if (request.File == null)
             throw new ArgumentException("OpenAI Whisper 仅支持文件流上传，请通过 File 字段提供音频内容", nameof(request));
 
-        var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/v1/audio/transcriptions";
+        var url = BuildApiUrl("/v1/audio/transcriptions");
 
         using var form = new MultipartFormDataContent();
         var fileContent = new StreamContent(request.File);
