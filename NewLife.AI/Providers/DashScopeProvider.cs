@@ -80,15 +80,26 @@ public class DashScopeProvider : OpenAiProvider
         new("text-embedding-v1", "通用文本向量 V1", new(false, false, false, false)),
     ];
 
-    /// <summary>文生图模型列表。Wanx 万象系列，通过 <see cref="OpenAiProvider.TextToImageAsync"/> 调用</summary>
-    /// <remarks>端点：POST /compatible-mode/v1/images/generations</remarks>
+    /// <summary>文生图/图像编辑模型列表。通过 <see cref="OpenAiProvider.TextToImageAsync"/> 或 <see cref="OpenAiProvider.EditImageAsync"/> 调用</summary>
+    /// <remarks>
+    /// 原生多模态端点（qwen-image* / wan2.x-t2i）：POST /api/v1/services/aigc/multimodal-generation/generation<br/>
+    /// 兼容模式端点（wanx*）：POST /compatible-mode/v1/images/generations<br/>
+    /// qwen-image-2.0* 和 qwen-image-edit* 同时支持文生图与图像编辑
+    /// </remarks>
     public AiModelInfo[] ImageModels { get; } =
     [
-        new("qwen-image",         "千问文生图",      new(false, false, true, false)),
-        new("qwen-image-plus",    "千问文生图 Plus", new(false, false, true, false)),
-        new("qwen-image-max",     "千问文生图 Max",  new(false, false, true, false)),
-        new("qwen-image-2.0",     "千问文生图 2.0",  new(false, false, true, false)),
-        new("qwen-image-2.0-pro", "千问文生图 2.0 Pro", new(false, false, true, false)),
+        // qwen-image 旧款：仅文生图，兼容原生多模态端点
+        new("qwen-image",         "千问文生图",           new(false, false, true, false)),
+        new("qwen-image-plus",    "千问文生图 Plus",      new(false, false, true, false)),
+        new("qwen-image-max",     "千问文生图 Max",       new(false, false, true, false)),
+        // qwen-image-2.0 系列：文生图 + 图像编辑（原生多模态端点）
+        new("qwen-image-2.0",     "千问文生图/编辑 2.0",       new(false, false, true, false)),
+        new("qwen-image-2.0-pro", "千问文生图/编辑 2.0 Pro",   new(false, false, true, false)),
+        // qwen-image-edit 系列：专用图像编辑（原生多模态端点）
+        new("qwen-image-edit-max",  "千问图像编辑 Max",   new(false, false, true, false)),
+        new("qwen-image-edit-plus", "千问图像编辑 Plus",  new(false, false, true, false)),
+        new("qwen-image-edit",      "千问图像编辑",       new(false, false, true, false)),
+        // 万象系列：仅文生图，兼容模式端点
         new("wanx3.0-t2i-turbo", "万象3.0 Turbo", new(false, false, true, false)),
         new("wanx3.0-t2i-plus",  "万象3.0 Plus",  new(false, false, true, false)),
         new("wanx2.1-t2i-turbo", "万象2.1 Turbo", new(false, false, true, false)),

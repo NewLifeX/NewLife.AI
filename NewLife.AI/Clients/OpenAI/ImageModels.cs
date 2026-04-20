@@ -56,12 +56,18 @@ public class SpeechRequest
     public Double? Speed { get; set; }
 }
 
-/// <summary>图像编辑请求。对应 OpenAI /v1/images/edits（multipart/form-data）接口参数</summary>
-/// <remarks>含 Stream 字段，仅用于参数传递，不可 JSON 序列化</remarks>
+/// <summary>图像编辑请求。对应 OpenAI /v1/images/edits（multipart/form-data）接口参数，以及 DashScope 原生多模态图像编辑接口参数</summary>
+/// <remarks>
+/// 图像来源二选一：<see cref="ImageUrl"/>（URL 传图，DashScope 原生路径优先）或 <see cref="ImageStream"/>（流传图）。<br/>
+/// DashScope 原生路径（qwen-image-2.0* / qwen-image-edit*）走 JSON 格式；其余走 multipart/form-data。
+/// </remarks>
 public class ImageEditsRequest
 {
-    /// <summary>原始图像流（PNG 格式）</summary>
-    public Stream ImageStream { get; set; } = null!;
+    /// <summary>原始图像 URL。与 <see cref="ImageStream"/> 二选一；DashScope 原生路径时优先使用此字段</summary>
+    public String? ImageUrl { get; set; }
+
+    /// <summary>原始图像流（PNG 格式）。与 <see cref="ImageUrl"/> 二选一；未提供 ImageUrl 时使用此字段</summary>
+    public Stream? ImageStream { get; set; }
 
     /// <summary>图像文件名。默认 image.png</summary>
     public String ImageFileName { get; set; } = "image.png";
@@ -72,10 +78,16 @@ public class ImageEditsRequest
     /// <summary>模型名称，为 null 时使用默认</summary>
     public String? Model { get; set; }
 
-    /// <summary>输出尺寸，为 null 时使用服务端默认。如 1024x1024</summary>
+    /// <summary>输出尺寸，为 null 时使用服务端默认。如 1024x1024 或 1024*1024（两种分隔符均支持）</summary>
     public String? Size { get; set; }
 
-    /// <summary>蒙版图像流（可选，PNG 格式，透明区域为编辑区域）</summary>
+    /// <summary>生成图像数量。1~6，为 null 时使用服务端默认（通常为 1）。仅 DashScope 原生路径有效</summary>
+    public Int32? N { get; set; }
+
+    /// <summary>负向提示词。描述不希望出现的内容。仅 DashScope 原生路径有效</summary>
+    public String? NegativePrompt { get; set; }
+
+    /// <summary>蒙版图像流（可选，PNG 格式，透明区域为编辑区域）。仅 OpenAI 兼容路径（multipart/form-data）有效</summary>
     public Stream? MaskStream { get; set; }
 
     /// <summary>蒙版文件名。默认 mask.png</summary>

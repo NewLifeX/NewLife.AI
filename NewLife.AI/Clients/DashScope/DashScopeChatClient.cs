@@ -29,7 +29,10 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen-image-plus", "Qwen Image Plus", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen-image-max", "Qwen Image Max", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen-image-2.0", "Qwen Image 2.0", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-2.0-pro", "Qwen Image 2.0 Pro", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-2.0-pro",   "Qwen Image 2.0 Pro",     ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-edit-max", "Qwen Image Edit Max",    ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-edit-plus","Qwen Image Edit Plus",   ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-edit",     "Qwen Image Edit",        ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
 [AiClientModel("wan2.6-t2i", "Wan 文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
@@ -179,10 +182,12 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         return ParseImageGenerationResponse(json);
     }
 
-    /// <summary>图像编辑。DashScope 默认原生端点为 <c>/api/v1</c>，不兼容 OpenAI 的 <c>/v1/images/edits</c> 拼接规则。</summary>
+    /// <summary>图像编辑。根据模型自动选择 DashScope 原生多模态协议或 OpenAI 兼容 multipart/form-data 协议。</summary>
     /// <remarks>
-    /// 图像编辑统一走兼容模式端点，避免在原生端点上出现 <c>/api/v1/v1/images/edits</c> 的错误地址。
-    /// 若用户显式配置了兼容模式完整地址（含或不含末尾 <c>/v1</c>），也会自动归一化。
+    /// <list type="bullet">
+    /// <item><term>原生路径</term> qwen-image-2.0* / qwen-image-edit*：走 /api/v1/services/aigc/multimodal-generation/generation，JSON messages 格式，<see cref="ImageEditsRequest.ImageUrl"/> 与 <see cref="ImageEditsRequest.ImageStream"/> 二选一传图。</item>
+    /// <item><term>兼容路径</term> 其余模型：走 /compatible-mode/v1/images/edits，multipart/form-data 格式，需提供 <see cref="ImageEditsRequest.ImageStream"/>。</item>
+    /// </list>
     /// </remarks>
     /// <param name="request">图像编辑请求</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -190,12 +195,19 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     public override async Task<ImageGenerationResponse?> EditImageAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (request.ImageStream == null) throw new ArgumentException("ImageStream 不能为空", nameof(request));
         if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException("Prompt 不能为空", nameof(request));
+        if (request.ImageUrl == null && request.ImageStream == null)
+            throw new ArgumentException("ImageUrl 与 ImageStream 不能同时为空", nameof(request));
 
         var modelId = request.Model ?? _options.Model ?? String.Empty;
-        if (IsTextToImageOnlyModel(modelId))
-            throw new NotSupportedException($"模型 '{modelId}' 当前仅支持文生图，不支持图像编辑，请改用支持 /images/edits 的模型");
+
+        // qwen-image-2.0* / qwen-image-edit* 走原生多模态端点（JSON messages 格式）
+        if (IsNativeImageEditModel(modelId))
+            return await EditImageNativeAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // 其余模型走 OpenAI 兼容 multipart/form-data 端点
+        if (request.ImageStream == null)
+            throw new ArgumentException("该模型使用兼容路径，ImageStream 不能为空", nameof(request));
 
         var url = BuildImageEditUrl();
 
@@ -227,6 +239,56 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         return ParseImageGenerationResponse(json);
     }
 
+    /// <summary>qwen-image-2.0* / qwen-image-edit* 原生多模态图像编辑。端点与多模态对话相同，图片以 URL 或 Base64 传入 messages content 数组</summary>
+    /// <remarks>
+    /// 请求格式：input.messages[].content = [{image: url_or_base64}, {text: prompt}]<br/>
+    /// 优先使用 <see cref="ImageEditsRequest.ImageUrl"/>；无 URL 时从 <see cref="ImageEditsRequest.ImageStream"/> 转 Base64（data:image/png;base64,...）。
+    /// </remarks>
+    /// <param name="request">图像编辑请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应</returns>
+    private async Task<ImageGenerationResponse?> EditImageNativeAsync(ImageEditsRequest request, CancellationToken cancellationToken)
+    {
+        var url = NativeEndpoint.TrimEnd('/') + "/services/aigc/multimodal-generation/generation";
+
+        // 优先使用 URL，否则将 Stream 转 Base64
+        String imageValue;
+        if (!String.IsNullOrEmpty(request.ImageUrl))
+        {
+            imageValue = request.ImageUrl!;
+        }
+        else
+        {
+            var ms = new MemoryStream();
+            await request.ImageStream!.CopyToAsync(ms).ConfigureAwait(false);
+            imageValue = "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
+        }
+
+        var body = new Dictionary<String, Object?>
+        {
+            ["model"] = request.Model ?? _options.Model,
+            ["input"] = new Dictionary<String, Object>
+            {
+                ["messages"] = new[]
+                {
+                    new Dictionary<String, Object>
+                    {
+                        ["role"] = "user",
+                        ["content"] = new Object[]
+                        {
+                            new Dictionary<String, Object> { ["image"] = imageValue },
+                            new Dictionary<String, Object> { ["text"]  = request.Prompt },
+                        },
+                    },
+                },
+            },
+            ["parameters"] = BuildImageEditParameters(request),
+        };
+
+        var json = await PostAsync(url, body, null, _options, cancellationToken).ConfigureAwait(false);
+        return ParseNativeMultimodalResponse(json);
+    }
+
     /// <summary>wan2.x-t2i 原生多模态文生图。端点与多模态对话相同，请求格式用 messages 数组，图片 URL 在 output.choices[].message.content[].image</summary>
     /// <param name="request">图像生成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -253,7 +315,7 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         };
 
         var json = await PostAsync(url, body, null, _options, cancellationToken).ConfigureAwait(false);
-        return ParseWan2T2iResponse(json);
+        return ParseNativeMultimodalResponse(json);
     }
 
     /// <summary>判断是否为使用原生多模态端点的 DashScope 文生图模型</summary>
@@ -274,17 +336,21 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
                modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
-    /// <summary>判断是否为仅支持文生图、不支持图像编辑的 DashScope 模型</summary>
+    /// <summary>判断是否为支持原生多模态图像编辑的 DashScope 模型</summary>
+    /// <remarks>
+    /// 涵盖两类：
+    /// 1. qwen-image-2.0 系列（qwen-image-2.0、qwen-image-2.0-pro 等）：同时支持文生图与图像编辑
+    /// 2. qwen-image-edit 系列（qwen-image-edit、qwen-image-edit-max、qwen-image-edit-plus 等）：专用图像编辑模型
+    /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>是则返回 true</returns>
-    private static Boolean IsTextToImageOnlyModel(String modelId)
+    private static Boolean IsNativeImageEditModel(String modelId)
     {
         if (modelId.IsNullOrEmpty()) return false;
-        if (modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase)) return true;
-        if (modelId.StartsWith("wanx", StringComparison.OrdinalIgnoreCase)) return true;
+        if (modelId.StartsWith("qwen-image-edit", StringComparison.OrdinalIgnoreCase)) return true;
 
-        return modelId.StartsWith("wan2.", StringComparison.OrdinalIgnoreCase) &&
-               modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
+        // qwen-image-2.0 / qwen-image-2.0-pro 等（注意不匹配 qwen-image-plus/max 等纯文生图旧款）
+        return modelId.StartsWith("qwen-image-2.", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>构建 wan2.x-t2i 文生图 parameters 字典</summary>
@@ -299,10 +365,26 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         return p.Count > 0 ? p : null;
     }
 
-    /// <summary>解析 wan2.x-t2i 原生多模态响应，提取图片 URL 列表</summary>
+    /// <summary>构建 qwen-image-2.0* / qwen-image-edit* 原生图像编辑 parameters 字典</summary>
+    /// <param name="request">图像编辑请求</param>
+    /// <returns>parameters 字典；无可用参数时返回 null</returns>
+    private static Dictionary<String, Object?>? BuildImageEditParameters(ImageEditsRequest request)
+    {
+        var p = new Dictionary<String, Object?>();
+        if (!String.IsNullOrEmpty(request.NegativePrompt)) p["negative_prompt"] = request.NegativePrompt;
+        if (request.N.HasValue) p["n"] = request.N.Value;
+        if (!String.IsNullOrEmpty(request.Size))
+        {
+            // 统一分隔符：1024x1024 → 1024*1024（DashScope 原生接口要求 * 分隔）
+            p["size"] = request.Size.Replace('x', '*').Replace('X', '*');
+        }
+        return p.Count > 0 ? p : null;
+    }
+
+    /// <summary>解析 DashScope 原生多模态响应，提取图片 URL 列表。适用于文生图（wan2/qwen-image）和图像编辑（qwen-image-edit*）两类端点响应</summary>
     /// <param name="json">API 响应 JSON</param>
     /// <returns>图像生成响应；解析失败时返回 null</returns>
-    private static ImageGenerationResponse? ParseWan2T2iResponse(String json)
+    private static ImageGenerationResponse? ParseNativeMultimodalResponse(String json)
     {
         var dic = JsonParser.Decode(json);
         if (dic == null) return null;
