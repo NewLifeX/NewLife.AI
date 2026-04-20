@@ -4,6 +4,7 @@ using System.Text;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Collections;
+using NewLife.Remoting;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
@@ -178,6 +179,54 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         return ParseImageGenerationResponse(json);
     }
 
+    /// <summary>图像编辑。DashScope 默认原生端点为 <c>/api/v1</c>，不兼容 OpenAI 的 <c>/v1/images/edits</c> 拼接规则。</summary>
+    /// <remarks>
+    /// 图像编辑统一走兼容模式端点，避免在原生端点上出现 <c>/api/v1/v1/images/edits</c> 的错误地址。
+    /// 若用户显式配置了兼容模式完整地址（含或不含末尾 <c>/v1</c>），也会自动归一化。
+    /// </remarks>
+    /// <param name="request">图像编辑请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>图像生成响应</returns>
+    public override async Task<ImageGenerationResponse?> EditImageAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (request.ImageStream == null) throw new ArgumentException("ImageStream 不能为空", nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException("Prompt 不能为空", nameof(request));
+
+        var modelId = request.Model ?? _options.Model ?? String.Empty;
+        if (IsTextToImageOnlyModel(modelId))
+            throw new NotSupportedException($"模型 '{modelId}' 当前仅支持文生图，不支持图像编辑，请改用支持 /images/edits 的模型");
+
+        var url = BuildImageEditUrl();
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(request.Prompt), "prompt");
+        if (!String.IsNullOrEmpty(request.Model)) form.Add(new StringContent(request.Model), "model");
+        if (!String.IsNullOrEmpty(request.Size)) form.Add(new StringContent(request.Size), "size");
+
+        var imageContent = new StreamContent(request.ImageStream);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        form.Add(imageContent, "image", request.ImageFileName ?? "image.png");
+
+        if (request.MaskStream != null)
+        {
+            var maskContent = new StreamContent(request.MaskStream);
+            maskContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+            form.Add(maskContent, "mask", request.MaskFileName ?? "mask.png");
+        }
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };
+        SetHeaders(req, null, _options);
+
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+            throw new ApiException((Int32)resp.StatusCode, json);
+
+        return ParseImageGenerationResponse(json);
+    }
+
     /// <summary>wan2.x-t2i 原生多模态文生图。端点与多模态对话相同，请求格式用 messages 数组，图片 URL 在 output.choices[].message.content[].image</summary>
     /// <param name="request">图像生成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -220,6 +269,19 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         if (modelId.IsNullOrEmpty()) return false;
 
         if (modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase)) return true;
+
+        return modelId.StartsWith("wan2.", StringComparison.OrdinalIgnoreCase) &&
+               modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    /// <summary>判断是否为仅支持文生图、不支持图像编辑的 DashScope 模型</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>是则返回 true</returns>
+    private static Boolean IsTextToImageOnlyModel(String modelId)
+    {
+        if (modelId.IsNullOrEmpty()) return false;
+        if (modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase)) return true;
+        if (modelId.StartsWith("wanx", StringComparison.OrdinalIgnoreCase)) return true;
 
         return modelId.StartsWith("wan2.", StringComparison.OrdinalIgnoreCase) &&
                modelId.IndexOf("-t2i", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -275,6 +337,30 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         }
 
         return resp;
+    }
+
+    private String BuildImageEditUrl()
+    {
+        var endpoint = _options.Endpoint;
+        if (!endpoint.IsNullOrWhiteSpace())
+        {
+            if (endpoint.EndsWith("/images/edits", StringComparison.OrdinalIgnoreCase))
+                return endpoint.TrimEnd('/');
+
+            if (endpoint.IndexOf("compatible-mode", StringComparison.OrdinalIgnoreCase) >= 0)
+                return NormalizeOpenAiImagePath(endpoint);
+        }
+
+        return NormalizeOpenAiImagePath(CompatibleEndpoint);
+    }
+
+    private static String NormalizeOpenAiImagePath(String endpoint)
+    {
+        endpoint = endpoint.TrimEnd('/');
+        if (endpoint.EndsWith("/images/edits", StringComparison.OrdinalIgnoreCase)) return endpoint;
+        if (endpoint.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)) return endpoint + "/images/edits";
+
+        return endpoint + "/v1/images/edits";
     }
     #endregion
 

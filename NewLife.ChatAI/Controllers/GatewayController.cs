@@ -212,6 +212,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var prompt = form["prompt"].FirstOrDefault();
         var size = form["size"].FirstOrDefault() ?? chatSetting.DefaultImageSize;
         var imageFile = form.Files.GetFile("image");
+        var maskFile = form.Files.GetFile("mask");
 
         if (String.IsNullOrWhiteSpace(prompt))
             return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
@@ -231,54 +232,33 @@ public class GatewayController(GatewayService gatewayService, ModelService model
 
         try
         {
-            // 读取图片并编码为 base64 data URI
-            using var ms = new MemoryStream();
-            await imageFile.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-            var imageBase64 = Convert.ToBase64String(ms.ToArray());
-            var mimeType = imageFile.ContentType ?? "image/png";
-            var dataUri = $"data:{mimeType};base64,{imageBase64}";
-
-            // 读取 mask 文件（可选）
-            var maskFile = form.Files.GetFile("mask");
-            String? maskInfo = null;
-            if (maskFile != null && maskFile.Length > 0)
-            {
-                using var maskMs = new MemoryStream();
-                await maskFile.CopyToAsync(maskMs, cancellationToken).ConfigureAwait(false);
-                maskInfo = $"data:{maskFile.ContentType ?? "image/png"};base64,{Convert.ToBase64String(maskMs.ToArray())}";
-            }
-
-            // 构建多模态消息
-            var contentParts = new List<Object>
-            {
-                new { type = "text", text = $"Edit this image: {prompt}. Size: {size}" },
-                new { type = "image_url", image_url = new { url = dataUri } },
-            };
-            if (maskInfo != null)
-                contentParts.Add(new { type = "image_url", image_url = new { url = maskInfo } });
-
             using var editClient = modelService.CreateClient(config)!;
-            var response = await editClient.GetResponseAsync(
-                [new ChatMessage { Role = "user", Content = contentParts }],
-                null,
-                cancellationToken).ConfigureAwait(false);
+            if (editClient is not IImageClient imageClient)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{config.Code}' 不支持图像编辑" });
 
-            return Ok(new
+            using var imageStream = imageFile.OpenReadStream();
+            using var maskStream = maskFile != null && maskFile.Length > 0 ? maskFile.OpenReadStream() : null;
+
+            var response = await imageClient.EditImageAsync(new ImageEditsRequest
             {
-                created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                data = new[]
-                {
-                    new
-                    {
-                        revised_prompt = prompt,
-                        content = response.Messages?.FirstOrDefault()?.Message?.Content,
-                    }
-                }
-            });
+                Model = config.Code,
+                Prompt = prompt!,
+                Size = size,
+                ImageStream = imageStream,
+                ImageFileName = String.IsNullOrWhiteSpace(imageFile.FileName) ? "image.png" : imageFile.FileName,
+                MaskStream = maskStream,
+                MaskFileName = maskFile != null && !String.IsNullOrWhiteSpace(maskFile.FileName) ? maskFile.FileName : "mask.png",
+            }, cancellationToken).ConfigureAwait(false);
+
+            return Ok(NormalizeImageEditResponse(response, prompt!));
         }
-        catch (HttpRequestException ex)
+        catch (NotSupportedException ex)
         {
-            return StatusCode(502, new { code = "IMAGE_GENERATION_FAILED", message = ex.Message });
+            return BadRequest(new { code = "MODEL_UNSUPPORTED", message = ex.Message });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return StatusCode(502, new { code = "IMAGE_EDIT_FAILED", message = ex.Message });
         }
     }
     #endregion
@@ -684,6 +664,47 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             error["traceId"] = traceId;
 
         await Response.WriteAsync(JsonSerializer.Serialize(error, GatewayService.SnakeCaseOptions), Encoding.UTF8).ConfigureAwait(false);
+    }
+
+    private static Object NormalizeImageEditResponse(ImageGenerationResponse? response, String prompt)
+    {
+        var created = response?.Created > DateTime.MinValue
+            ? new DateTimeOffset(response.Created.ToUniversalTime()).ToUnixTimeSeconds()
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        var data = response?.Data?.Select(item => new
+        {
+            revised_prompt = item.RevisedPrompt ?? prompt,
+            content = GetImageContent(item),
+            url = item.Url,
+            b64_json = item.B64Json,
+        }).ToArray();
+
+        return new
+        {
+            created,
+            data = data is { Length: > 0 }
+                ? data
+                : new[]
+                {
+                    new
+                    {
+                        revised_prompt = prompt,
+                        content = (String?)null,
+                        url = (String?)null,
+                        b64_json = (String?)null,
+                    }
+                }
+        };
+    }
+
+    private static String? GetImageContent(ImageData item)
+    {
+        if (!String.IsNullOrWhiteSpace(item.Content)) return item.Content;
+        if (!String.IsNullOrWhiteSpace(item.Url)) return item.Url;
+        if (!String.IsNullOrWhiteSpace(item.B64Json)) return $"data:image/png;base64,{item.B64Json}";
+
+        return null;
     }
     #endregion
 }

@@ -90,7 +90,7 @@ public class DashScopeIntegrationTests
         if (String.IsNullOrWhiteSpace(apiKey)) apiKey = _apiKey;
 
         if (String.IsNullOrWhiteSpace(apiKey))
-            throw new SkipException();
+            throw SkipException.ForSkip("未检测到可用 API Key（config/DashScope.key 或 DASHSCOPE_API_KEY），跳过 DashScope 集成测试");
     }
 
     /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
