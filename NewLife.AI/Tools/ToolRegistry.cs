@@ -2,6 +2,7 @@
 using System.Reflection;
 using NewLife.AI.Models;
 using NewLife.ChatData.Entity;
+using NewLife.Model;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
@@ -18,18 +19,18 @@ namespace NewLife.AI.Tools;
 public class ToolRegistry : IToolProvider
 {
     #region 属性
-
     /// <summary>已注册工具的 ChatTool 定义列表，可直接注入到 ChatCompletionRequest.Tools</summary>
     public IReadOnlyList<ChatTool> Tools => _tools.AsReadOnly();
 
     /// <summary>已注册工具服务的类型列表，供数据预热等流程扫描工具元信息</summary>
     public IReadOnlyList<Type> RegisteredTypes => _registeredTypes.AsReadOnly();
 
+    /// <summary>服务提供者。用于解析内部工具对象</summary>
+    public IServiceProvider? ServiceProvider { get; set; }
+
     private readonly List<ChatTool> _tools = [];
     private readonly List<Type> _registeredTypes = [];
-    private readonly Dictionary<String, Func<String?, CancellationToken, Task<String>>> _handlers
-        = new(StringComparer.OrdinalIgnoreCase);
-
+    private readonly Dictionary<String, Func<String?, CancellationToken, Task<String>>> _handlers = new(StringComparer.OrdinalIgnoreCase);
     #endregion
 
     #region 注册方法
@@ -56,10 +57,10 @@ public class ToolRegistry : IToolProvider
 
     /// <summary>扫描类型 <typeparamref name="T"/> 中所有标注 <see cref="ToolDescriptionAttribute"/> 的公共方法并注册</summary>
     /// <typeparam name="T">包含工具方法的服务类型</typeparam>
-    /// <param name="instance">工具方法的宿主实例</param>
-    public void AddTools<T>(T instance) where T : notnull
+    public void AddTools<T>()
     {
-        AddToolsFromInstance(typeof(T), instance);
+        var instance = ServiceProvider?.CreateInstance(typeof(T)) ?? Activator.CreateInstance<T>();
+        AddToolsFromInstance(typeof(T), instance!);
     }
 
     /// <summary>扫描给定实例的类型中所有标注 <see cref="ToolDescriptionAttribute"/> 的公共方法并注册</summary>
