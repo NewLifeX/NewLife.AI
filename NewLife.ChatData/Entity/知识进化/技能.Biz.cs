@@ -79,72 +79,60 @@ public partial class Skill : Entity<Skill>
         return true;
     }
 
-    ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
-
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化Skill[技能]数据……");
-
-    //    var entity = new Skill();
-    //    entity.Code = "abc";
-    //    entity.Name = "abc";
-    //    entity.Icon = "abc";
-    //    entity.Category = "abc";
-    //    entity.Description = "abc";
-    //    entity.Content = "abc";
-    //    entity.Sort = 0;
-    //    entity.Enable = true;
-    //    entity.IsSystem = true;
-    //    entity.Version = 0;
-    //    entity.Insert();
-
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
-    //}
-
-    ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
-    ///// <returns></returns>
-    //public override Int32 Insert()
-    //{
-    //    return base.Insert();
-    //}
-
     /// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
     {
-        if (Meta.Session.Count > 0) return;
+        // 改为按 Code 逐个 upsert：表非空也会补齐缺失的内置技能；
+        // 已存在的内置技能仅在用户未自定义修改时补齐缺失字段，避免覆盖业务专家定制。
 
         if (XTrace.Debug) XTrace.WriteLine("开始初始化Skill[技能]数据……");
 
-        Add("general", "通用助手", "smart_toy", "通用", "通用AI对话助手", "你是一个知识渊博、乐于助人的AI助手。请用简洁清晰的语言回答用户的问题。", 100, false);
-        Add("coder", "编程助手", "code", "开发", "专业编程开发助手", "你是一个专业的编程助手。请提供准确、高质量的代码和技术解答。注意代码的可读性、性能和最佳实践。", 90, false);
-        Add("translator", "翻译助手", "translate", "通用", "多语言翻译助手", "你是一个专业翻译助手。请准确翻译用户提供的文本，保持原文语义和风格。如果用户输入中文，翻译为英文；如果输入英文或其他语言，翻译为中文。", 80, false);
-        Add("writer", "写作助手", "edit_note", "创作", "文案与内容创作助手", "你是一个专业的写作助手。请帮助用户完善文案、撰写文章、优化表达。注意逻辑清晰、语言流畅、风格得体。", 70, false);
-        Add("analyst", "数据分析", "analytics", "分析", "数据分析与洞察助手", "你是一个数据分析专家。请帮助用户分析数据、发现规律、提供洞察和建议。用清晰的逻辑和可视化描述呈现分析结果。", 60, false);
-        Add("researcher", "深度研究", "travel_explore", "分析", "复杂问题的深度调研与多角度分析", "你是一个专业的研究助手。请对复杂问题进行深度调研，提供多角度的分析，引用可靠来源，给出有据可查的结论和建议。", 50, false);
-        Add("case_teacher", "案例教学", "school", "教学", "从业务专家案例中提炼规则和分析流程，自动创建或更新技能", CaseTeachingContent, 40, false);
+        //Add("general", "通用助手", "smart_toy", "通用", "通用AI对话助手", "你是一个知识渊博、乐于助人的AI助手。请用简洁清晰的语言回答用户的问题。", 100);
+        //Add("coder", "编程助手", "code", "开发", "专业编程开发助手", "你是一个专业的编程助手。请提供准确、高质量的代码和技术解答。注意代码的可读性、性能和最佳实践。", 90);
+        Add("translator", "翻译助手", "translate", "通用", "多语言翻译助手", "你是一个专业翻译助手。请准确翻译用户提供的文本，保持原文语义和风格。如果用户输入中文，翻译为英文；如果输入英文或其他语言，翻译为中文。", 80);
+        //Add("writer", "写作助手", "edit_note", "创作", "文案与内容创作助手", "你是一个专业的写作助手。请帮助用户完善文案、撰写文章、优化表达。注意逻辑清晰、语言流畅、风格得体。", 70);
+        //Add("analyst", "数据分析", "analytics", "分析", "数据分析与洞察助手", "你是一个数据分析专家。请帮助用户分析数据、发现规律、提供洞察和建议。用清晰的逻辑和可视化描述呈现分析结果。", 60);
+        //Add("researcher", "深度研究", "travel_explore", "分析", "复杂问题的深度调研与多角度分析", "你是一个专业的研究助手。请对复杂问题进行深度调研，提供多角度的分析，引用可靠来源，给出有据可查的结论和建议。", 50);
+        Add("case_teacher", "案例教学", "school", "教学", "从业务专家案例中提炼规则和分析流程，自动创建或更新技能", CaseTeachingContent, 40);
+        Add("business_rule_template", "业务规则模板", "rule", "业务规则", "业务专家编写规则式技能的起点模板，每行一条if-then规则，自带强约束SystemPrompt", BusinessRuleTemplateContent, 30);
 
         if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
     }
 
-    private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort, Boolean isSystem)
+    /// <summary>新增或补齐内置技能（按 Code 幂等 upsert）。
+    /// 不存在时插入；存在且为系统内置（IsSystem=true）时仅补齐空字段，不覆盖用户已修改的值。</summary>
+    private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort)
     {
-        var entity = new Skill
+        var entity = FindByCode(code);
+        if (entity == null)
         {
-            Code = code,
-            Name = name,
-            Icon = icon,
-            Category = category,
-            Description = description,
-            Content = content,
-            Sort = sort,
-            Enable = true,
-            IsSystem = isSystem,
-        };
-        entity.Insert();
+            entity = new Skill
+            {
+                Code = code,
+                Name = name,
+                Icon = icon,
+                Category = category,
+                Description = description,
+                Content = content,
+                Sort = sort,
+                Enable = true,
+                IsSystem = true,
+            };
+            entity.Insert();
+            return;
+        }
+
+        // 已存在：只补齐空字段，不覆盖用户的定制
+        var dirty = false;
+        if (entity.Name.IsNullOrEmpty()) { entity.Name = name; dirty = true; }
+        if (entity.Icon.IsNullOrEmpty()) { entity.Icon = icon; dirty = true; }
+        if (entity.Category.IsNullOrEmpty()) { entity.Category = category; dirty = true; }
+        if (entity.Description.IsNullOrEmpty()) { entity.Description = description; dirty = true; }
+        if (entity.Content.IsNullOrEmpty()) { entity.Content = content; dirty = true; }
+        if (!entity.IsSystem) { entity.IsSystem = true; dirty = true; }
+
+        if (dirty) entity.Update();
     }
 
     /// <summary>案例教学技能的默认提示词内容</summary>
@@ -202,6 +190,46 @@ public partial class Skill : Entity<Skill>
         - 如果专家的描述与已有技能中的规则矛盾，明确指出并请专家确认
         - 对模糊描述務必追问清楚，不要猜测或脑补规则细节
         - 每个案例可能包含多条规则，要完整提炼
+        """;
+
+    /// <summary>业务规则模板技能内容（强约束，专为非工程业务专家设计）</summary>
+    private const String BusinessRuleTemplateContent = """
+        # 业务规则执行助手
+
+        你是一个**严格按规则办事**的业务执行助手。
+        你的任务不是发挥创造力，而是**忠实地按下面的规则手册做出判断和回答**。
+
+        ## 强制约束（最高优先级）
+        1. **只使用本技能中明确写出的规则**进行判断，不要根据自己的常识猜测
+        2. 当用户问题**不命中任何规则**时，必须明确回答："此场景未在规则手册中定义，请联系业务专家补充规则。"
+        3. 当多条规则**冲突**时，按 Sort 数字大的优先；若仍无法判定，列出所有冲突规则并请用户确认
+        4. 引用规则时**必须标注规则编号或名称**，例如：「依据 R-003 规则，……」
+        5. 不要回答与本规则手册无关的问题（即使用户追问），礼貌引导回业务话题
+
+        ## 规则手册（请业务专家在此处编写）
+
+        > **写规则的格式建议**（每条规则独立成段）：
+        >
+        > **R-001 规则名称**
+        > - **触发条件**：什么场景下使用本规则（关键词、用户意图、上下文特征）
+        > - **判断逻辑**：if 条件 then 结论 的明确表达
+        > - **输出模板**：给用户的标准回复模板（可使用 {变量} 占位符）
+        > - **示例**：1-2 个典型问答示例
+        > - **例外**：哪些场景不适用本规则
+
+        ### R-001 [示例：在此填写第一条业务规则]
+        - **触发条件**：（例如：用户咨询订单退款）
+        - **判断逻辑**：（例如：if 订单状态=已发货 and 距下单 < 7天 then 可全额退款；else 只退商品款）
+        - **输出模板**：（例如：「您的订单符合 {退款类型}，请提交退款申请。」）
+        - **示例**：（写 1 个真实问答）
+        - **例外**：（例如：定制商品不适用）
+
+        ### R-002 [继续添加更多规则……]
+
+        ## 使用建议
+        - 规则越细化、条件越明确，AI 表现越稳定
+        - 用真实业务术语，不要写抽象描述
+        - 定期由业务专家维护更新规则手册
         """;
     #endregion
 
