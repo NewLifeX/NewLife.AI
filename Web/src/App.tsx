@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatLayout } from '@/layouts/ChatLayout'
 import { WelcomePage } from '@/pages/WelcomePage'
@@ -57,6 +57,33 @@ function ChatApp() {
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
   const [draftInput, setDraftInput] = useState('')
+
+  // URL 参数直发：解析跳转参数（仅在组件挂载时初始化一次）
+  const [urlParams] = useState<{
+    prompt: string
+    model?: string
+    thinking?: 'fast' | 'auto' | 'think'
+    skill?: string
+    collapseSidebar: boolean
+  } | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const prompt = params.get('prompt')?.trim() ?? ''
+    if (!prompt) return null
+    const thinkingRaw = params.get('thinking')
+    const thinking =
+      thinkingRaw === 'fast' || thinkingRaw === 'auto' || thinkingRaw === 'think'
+        ? thinkingRaw
+        : undefined
+    return {
+      prompt: prompt.slice(0, 6000),
+      model: params.get('model') ?? undefined,
+      thinking,
+      skill: params.get('skill') ?? undefined,
+      collapseSidebar: params.get('sidebar') !== '1',
+    }
+  })
+  // 防止 appReady 多次触发时重复发送
+  const urlAutoSendDoneRef = useRef(false)
 
   const handleNewChat = useCallback(() => {
     newChat()
@@ -147,6 +174,48 @@ function ChatApp() {
       setThinkingMode('auto')
     }
   }, [supportsThinking, thinkingMode, setThinkingMode])
+
+  // URL 参数接入：预填充输入框、收起侧边栏、清理 URL 防止刷新重发
+  useEffect(() => {
+    if (!urlParams) return
+    newChat()
+    setDraftInput(urlParams.prompt)
+    if (urlParams.collapseSidebar) {
+      useUIStore.getState().setSidebarCollapsed(true)
+    }
+    // 替换历史记录，清除 query 参数，防止刷新页面重复触发
+    navigate('/chat', { replace: true })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // URL 参数接入：appReady 后应用模型和思考模式，延迟 500ms 自动发送
+  useEffect(() => {
+    if (!appReady || !urlParams || urlAutoSendDoneRef.current) return
+    urlAutoSendDoneRef.current = true
+
+    // 按 code 或 name 查找并应用模型
+    if (urlParams.model) {
+      const found = models.find(
+        (m) => m.code === urlParams.model || m.name === urlParams.model,
+      )
+      if (found) {
+        settings.update({ defaultModel: found.id })
+      }
+    }
+
+    // 应用思考模式
+    if (urlParams.thinking) {
+      setThinkingMode(urlParams.thinking)
+    }
+
+    // 延迟 500ms 自动发送，让用户看到输入框填充效果后再发出
+    const timer = setTimeout(() => {
+      sendMessage(urlParams.prompt)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appReady])
 
   if (!appReady) return <AppSkeleton />
 
