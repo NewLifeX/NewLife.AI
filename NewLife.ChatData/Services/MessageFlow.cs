@@ -248,9 +248,10 @@ public class MessageFlow
         var conversation = flow.Conversation;
 
         // 更新会话绑定的模型（首次发消息或 model_id=0 自动选模型时持久化实际使用的模型）
-        if (conversation.ModelId != flow.ModelConfig.Id)
+        var model = flow.ModelConfig;
+        if (conversation.ModelId != model.Id)
         {
-            conversation.ModelId = flow.ModelConfig.Id;
+            conversation.ModelId = model.Id;
             conversation.Update();
         }
 
@@ -261,7 +262,7 @@ public class MessageFlow
             Role = "user",
             Content = request.Content,
             ThinkingMode = request.ThinkingMode,
-            ModelName = flow.ModelConfig.Code,
+            ModelName = model.Code,
         };
         if (request.AttachmentIds is { Count: > 0 })
             userMsg.Attachments = request.AttachmentIds.ToJson();
@@ -293,7 +294,7 @@ public class MessageFlow
             ConversationId = conversationId,
             Role = "assistant",
             ThinkingMode = request.ThinkingMode,
-            ModelName = flow.ModelConfig.Code,
+            ModelName = model.Code,
         };
         assistantMsg.Insert();
 
@@ -306,8 +307,8 @@ public class MessageFlow
         await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
 
         // message_start
-        using var span = Tracer?.NewSpan($"ai:Stream:{flow.ModelConfig.Code}", request.Content);
-        yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, request.ThinkingMode);
+        using var span = Tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
+        yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, model.Code ?? String.Empty, request.ThinkingMode);
 
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         TryStartTitleGeneration(conversation, conversationId, request.Content, request.AttachmentIds is { Count: > 0 });
@@ -342,7 +343,7 @@ public class MessageFlow
 
         // 推荐问题缓存回写
         if (!flow.HasError && Setting.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
-            TryWriteBackSuggestedQuestionCache(request.Content, flow.ContentBuilder.ToString(), flow.ThinkingBuilder.Length > 0 ? flow.ThinkingBuilder.ToString() : null, flow.ModelConfig.Id);
+            TryWriteBackSuggestedQuestionCache(request.Content, flow.ContentBuilder.ToString(), flow.ThinkingBuilder.Length > 0 ? flow.ThinkingBuilder.ToString() : null, model.Id);
 
         // message_done
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
@@ -630,6 +631,8 @@ public class MessageFlow
 
         var contextMessages = BuildContextMessages(flow.UserId, flow.Conversation.Id, currentContent, flow.ModelConfig);
         flow.ContextMessages = contextMessages;
+        DefaultSpan.Current?.AppendTag(contextMessages.Join());
+
         return Task.FromResult(contextMessages);
     }
 

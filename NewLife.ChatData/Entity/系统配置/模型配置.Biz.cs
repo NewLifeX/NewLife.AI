@@ -190,14 +190,6 @@ public partial class ModelConfig : Entity<ModelConfig>
         return provider?.Provider ?? "";
     }
 
-    /// <summary>获取有效的API协议。从关联的提供商配置中获取</summary>
-    /// <returns></returns>
-    public String GetEffectiveApiProtocol()
-    {
-        var provider = ProviderInfo;
-        return provider?.ApiProtocol ?? "";
-    }
-
     /// <summary>检查用户是否有权限使用此模型</summary>
     /// <param name="roleIds">用户角色组</param>
     /// <param name="departmentId">用户部门编号</param>
