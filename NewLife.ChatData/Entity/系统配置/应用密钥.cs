@@ -19,6 +19,7 @@ namespace NewLife.ChatData.Entity;
 [Description("应用密钥。API网关访问凭证，用于外部系统调用模型服务")]
 [BindIndex("IU_AppKey_Secret", true, "Secret")]
 [BindIndex("IX_AppKey_UserId", false, "UserId")]
+[BindIndex("IX_AppKey_ProjectId", false, "ProjectId")]
 [BindTable("AppKey", Description = "应用密钥。API网关访问凭证，用于外部系统调用模型服务", ConnName = "ChatAI", DbType = DatabaseType.None)]
 public partial class AppKey : IAppKey, IEntity<IAppKey>
 {
@@ -38,6 +39,14 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户。密钥所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
+
+    private Int32 _ProjectId;
+    /// <summary>项目。所属项目，0=个人密鑰</summary>
+    [DisplayName("项目")]
+    [Description("项目。所属项目，0=个人密鑰")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ProjectId", "项目。所属项目，0=个人密鑰", "", DefaultValue = "0")]
+    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _Name;
     /// <summary>名称。用户自定义标识，如业务系统A</summary>
@@ -174,6 +183,7 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     {
         Id = model.Id;
         UserId = model.UserId;
+        ProjectId = model.ProjectId;
         Name = model.Name;
         Secret = model.Secret;
         Models = model.Models;
@@ -196,6 +206,7 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         {
             "Id" => _Id,
             "UserId" => _UserId,
+            "ProjectId" => _ProjectId,
             "Name" => _Name,
             "Secret" => _Secret,
             "Models" => _Models,
@@ -219,6 +230,7 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
             {
                 case "Id": _Id = value.ToInt(); break;
                 case "UserId": _UserId = value.ToInt(); break;
+                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "Secret": _Secret = Convert.ToString(value); break;
                 case "Models": _Models = Convert.ToString(value); break;
@@ -293,22 +305,37 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         return FindAll(_.UserId == userId);
     }
+
+    /// <summary>根据项目查找</summary>
+    /// <param name="projectId">项目</param>
+    /// <returns>实体列表</returns>
+    public static IList<AppKey> FindAllByProjectId(Int32 projectId)
+    {
+        if (projectId < 0) return [];
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ProjectId == projectId);
+
+        return FindAll(_.ProjectId == projectId);
+    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。密钥所属用户</param>
+    /// <param name="projectId">项目。所属项目，0=个人密鑰</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<AppKey> Search(Int32 userId, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<AppKey> Search(Int32 userId, Int32 projectId, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
+        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (enable != null) exp &= _.Enable == enable;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -326,6 +353,9 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>用户。密钥所属用户</summary>
         public static readonly Field UserId = FindByName("UserId");
+
+        /// <summary>项目。所属项目，0=个人密鑰</summary>
+        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>名称。用户自定义标识，如业务系统A</summary>
         public static readonly Field Name = FindByName("Name");
@@ -383,6 +413,9 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>用户。密钥所属用户</summary>
         public const String UserId = "UserId";
+
+        /// <summary>项目。所属项目，0=个人密鑰</summary>
+        public const String ProjectId = "ProjectId";
 
         /// <summary>名称。用户自定义标识，如业务系统A</summary>
         public const String Name = "Name";

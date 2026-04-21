@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -45,6 +45,7 @@
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Description="用户。会话所属用户" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目编号，0=个人对话" />
         <Column Name="UserName" DataType="String" Description="用户名" />
         <Column Name="Title" DataType="String" Master="True" Length="200" Description="标题。会话标题，显示在侧边栏" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@ModelName" Description="模型。当前使用的模型Id，引用ModelConfig.Id" />
@@ -72,6 +73,7 @@
       </Columns>
       <Indexes>
         <Index Columns="UserId,Id" />
+        <Index Columns="UserId,ProjectId,Id" />
         <Index Columns="UserId,IsPinned,Id" />
         <Index Columns="Source" />
       </Indexes>
@@ -153,6 +155,7 @@
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目编号，0=个人" />
         <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
         <Column Name="ConversationId" DataType="Int64" Description="会话" />
         <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
@@ -175,6 +178,7 @@
       </Columns>
       <Indexes>
         <Index Columns="UserId,Id" />
+        <Index Columns="ProjectId,Id" />
         <Index Columns="AppKeyId,Id" />
         <Index Columns="ModelId,Id" />
         <Index Columns="ConversationId" />
@@ -243,6 +247,7 @@
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。密钥所属用户" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目，0=个人密鑰" />
         <Column Name="Name" DataType="String" Master="True" Length="200" Description="名称。用户自定义标识，如业务系统A" />
         <Column Name="Secret" DataType="String" ShowIn="Auto,-List,-Search" Length="200" Description="密钥。sk-前缀的随机字符串，创建时仅展示一次" />
         <Column Name="Models" DataType="String" Length="200" Description="可用模型。逗号分隔的模型名称或编码，为空时不限制" />
@@ -262,6 +267,7 @@
       <Indexes>
         <Index Columns="Secret" Unique="True" />
         <Index Columns="UserId" />
+        <Index Columns="ProjectId" />
       </Indexes>
     </Table>
     <Table Name="UserSetting" Description="用户设置。用户的个性化配置" Output="系统配置">
@@ -326,6 +332,7 @@
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。0=系统级预设" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目，0=个人/系统预设" />
         <Column Name="Name" DataType="String" Master="True" Length="100" Description="名称。预设模板名称" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@$@Name" Description="模型。关联的模型配置Id" />
         <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
@@ -344,7 +351,7 @@
         <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
-        <Index Columns="UserId,Name" Unique="True" />
+        <Index Columns="UserId,ProjectId,Name" Unique="True" />
       </Indexes>
     </Table>
     <Table Name="McpServerConfig" Description="MCP服务配置。MCP Server列表及工具发现信息" Output="系统配置">
@@ -404,6 +411,8 @@
     <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="UserId" DataType="Int32" DefaultValue="0" Description="用户。0=系统内置" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=个人/系统" />
         <Column Name="Code" DataType="String" Description="编码。英文标识，唯一，如coder、translator" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。技能展示名称，同时也是@引用的标识" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如code、translate" />
@@ -428,7 +437,7 @@
         <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
       </Columns>
       <Indexes>
-        <Index Columns="Code" Unique="True" />
+        <Index Columns="UserId,ProjectId,Code" Unique="True" />
         <Index Columns="Category" />
       </Indexes>
     </Table>
@@ -436,6 +445,7 @@
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=全局记忆" />
         <Column Name="ConversationId" DataType="Int64" Description="来源会话。提取该记忆的会话编号" />
         <Column Name="Category" DataType="String" Description="分类。偏好/习惯/兴趣/背景" />
         <Column Name="Key" DataType="String" Master="True" Length="200" Description="主题。记忆的关键词/主题，如编程语言、工作行业" />
@@ -454,6 +464,7 @@
         <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
+        <Index Columns="UserId,ProjectId,Category,Key" />
         <Index Columns="UserId,Category,Key" />
         <Index Columns="UserId,Key" />
         <Index Columns="ConversationId" />

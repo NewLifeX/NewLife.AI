@@ -18,6 +18,7 @@ namespace NewLife.ChatData.Entity;
 [DataObject]
 [Description("用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计")]
 [BindIndex("IX_UsageRecord_UserId_Id", false, "UserId,Id")]
+[BindIndex("IX_UsageRecord_ProjectId_Id", false, "ProjectId,Id")]
 [BindIndex("IX_UsageRecord_AppKeyId_Id", false, "AppKeyId,Id")]
 [BindIndex("IX_UsageRecord_ModelId_Id", false, "ModelId,Id")]
 [BindIndex("IX_UsageRecord_ConversationId", false, "ConversationId")]
@@ -40,6 +41,14 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
+
+    private Int32 _ProjectId;
+    /// <summary>项目。所属项目编号，0=个人</summary>
+    [DisplayName("项目")]
+    [Description("项目。所属项目编号，0=个人")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ProjectId", "项目。所属项目编号，0=个人", "", DefaultValue = "0")]
+    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private Int32 _AppKeyId;
     /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
@@ -204,6 +213,7 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     {
         Id = model.Id;
         UserId = model.UserId;
+        ProjectId = model.ProjectId;
         AppKeyId = model.AppKeyId;
         ConversationId = model.ConversationId;
         MessageId = model.MessageId;
@@ -233,6 +243,7 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
         {
             "Id" => _Id,
             "UserId" => _UserId,
+            "ProjectId" => _ProjectId,
             "AppKeyId" => _AppKeyId,
             "ConversationId" => _ConversationId,
             "MessageId" => _MessageId,
@@ -260,6 +271,7 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
+                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "AppKeyId": _AppKeyId = value.ToInt(); break;
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
@@ -317,6 +329,16 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
         return FindAll(_.UserId == userId);
     }
 
+    /// <summary>根据项目查找</summary>
+    /// <param name="projectId">项目</param>
+    /// <returns>实体列表</returns>
+    public static IList<UsageRecord> FindAllByProjectId(Int32 projectId)
+    {
+        if (projectId < 0) return [];
+
+        return FindAll(_.ProjectId == projectId);
+    }
+
     /// <summary>根据应用密钥查找</summary>
     /// <param name="appKeyId">应用密钥</param>
     /// <returns>实体列表</returns>
@@ -351,6 +373,7 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户</param>
+    /// <param name="projectId">项目。所属项目编号，0=个人</param>
     /// <param name="appKeyId">应用密钥。通过API网关调用时关联的AppKey</param>
     /// <param name="conversationId">会话</param>
     /// <param name="modelId">模型。引用ModelConfig.Id</param>
@@ -359,11 +382,12 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UsageRecord> Search(Int32 userId, Int32 appKeyId, Int64 conversationId, Int32 modelId, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UsageRecord> Search(Int32 userId, Int32 projectId, Int32 appKeyId, Int64 conversationId, Int32 modelId, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
+        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (appKeyId >= 0) exp &= _.AppKeyId == appKeyId;
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (modelId >= 0) exp &= _.ModelId == modelId;
@@ -395,6 +419,9 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 
         /// <summary>用户</summary>
         public static readonly Field UserId = FindByName("UserId");
+
+        /// <summary>项目。所属项目编号，0=个人</summary>
+        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
         public static readonly Field AppKeyId = FindByName("AppKeyId");
@@ -464,6 +491,9 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 
         /// <summary>用户</summary>
         public const String UserId = "UserId";
+
+        /// <summary>项目。所属项目编号，0=个人</summary>
+        public const String ProjectId = "ProjectId";
 
         /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
         public const String AppKeyId = "AppKeyId";

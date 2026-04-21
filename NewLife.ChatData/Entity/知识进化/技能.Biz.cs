@@ -264,6 +264,11 @@ public partial class Skill : Entity<Skill>
     #endregion
 
     #region 业务操作
+    /// <summary>按编码查找系统内置技能（UserId=0, ProjectId=0）。向后兼容方法，业务层优先级查找请使用 SkillService</summary>
+    /// <param name="code">技能编码</param>
+    /// <returns></returns>
+    public static Skill? FindByCode(String code) => FindByUserIdAndProjectIdAndCode(0, 0, code);
+
     public static IList<Skill> GetSystemSkills()
     {
         if (Meta.Count < MaxCacheCount)

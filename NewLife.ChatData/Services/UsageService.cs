@@ -122,7 +122,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<DailyUsageDto> GetDailyUsage(Int32 userId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(userId, -1, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(userId, -1, -1, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)
@@ -184,7 +184,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<DailyUsageDto> GetAppKeyDailyUsage(Int32 appKeyId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(-1, appKeyId, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(-1, -1, appKeyId, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)

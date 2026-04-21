@@ -17,6 +17,9 @@ public partial interface IAppKey
     /// <summary>用户。密钥所属用户</summary>
     Int32 UserId { get; set; }
 
+    /// <summary>项目。所属项目，0=个人密鑰</summary>
+    Int32 ProjectId { get; set; }
+
     /// <summary>名称。用户自定义标识，如业务系统A</summary>
     String? Name { get; set; }
 

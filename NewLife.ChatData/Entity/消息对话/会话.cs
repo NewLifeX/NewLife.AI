@@ -18,6 +18,7 @@ namespace NewLife.ChatData.Entity;
 [DataObject]
 [Description("会话。一次完整的多轮对话上下文")]
 [BindIndex("IX_Conversation_UserId_Id", false, "UserId,Id")]
+[BindIndex("IX_Conversation_UserId_ProjectId_Id", false, "UserId,ProjectId,Id")]
 [BindIndex("IX_Conversation_UserId_IsPinned_Id", false, "UserId,IsPinned,Id")]
 [BindIndex("IX_Conversation_Source", false, "Source")]
 [BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "ChatAI", DbType = DatabaseType.None)]
@@ -39,6 +40,14 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户。会话所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
+
+    private Int32 _ProjectId;
+    /// <summary>项目。所属项目编号，0=个人对话</summary>
+    [DisplayName("项目")]
+    [Description("项目。所属项目编号，0=个人对话")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ProjectId", "项目。所属项目编号，0=个人对话", "", DefaultValue = "0")]
+    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _UserName;
     /// <summary>用户名</summary>
@@ -248,6 +257,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     {
         Id = model.Id;
         UserId = model.UserId;
+        ProjectId = model.ProjectId;
         UserName = model.UserName;
         Title = model.Title;
         ModelId = model.ModelId;
@@ -278,6 +288,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         {
             "Id" => _Id,
             "UserId" => _UserId,
+            "ProjectId" => _ProjectId,
             "UserName" => _UserName,
             "Title" => _Title,
             "ModelId" => _ModelId,
@@ -310,6 +321,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
+                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "UserName": _UserName = Convert.ToString(value); break;
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
@@ -372,6 +384,18 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         return FindAll(_.UserId == userId);
     }
 
+    /// <summary>根据用户、项目查找</summary>
+    /// <param name="userId">用户</param>
+    /// <param name="projectId">项目</param>
+    /// <returns>实体列表</returns>
+    public static IList<Conversation> FindAllByUserIdAndProjectId(Int32 userId, Int32 projectId)
+    {
+        if (userId < 0) return [];
+        if (projectId < 0) return [];
+
+        return FindAll(_.UserId == userId & _.ProjectId == projectId);
+    }
+
     /// <summary>根据来源查找</summary>
     /// <param name="source">来源</param>
     /// <returns>实体列表</returns>
@@ -386,6 +410,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。会话所属用户</param>
+    /// <param name="projectId">项目。所属项目编号，0=个人对话</param>
     /// <param name="isPinned">置顶。是否置顶显示</param>
     /// <param name="source">来源。Web/Gateway/Channel等，标识对话入口</param>
     /// <param name="modelId">模型。当前使用的模型Id，引用ModelConfig.Id</param>
@@ -396,11 +421,12 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Int32 projectId, Boolean? isPinned, String? source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
+        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (isPinned != null) exp &= _.IsPinned == isPinned;
         if (!source.IsNullOrEmpty()) exp &= _.Source == source;
         if (modelId >= 0) exp &= _.ModelId == modelId;
@@ -434,6 +460,9 @@ public partial class Conversation : IConversation, IEntity<IConversation>
 
         /// <summary>用户。会话所属用户</summary>
         public static readonly Field UserId = FindByName("UserId");
+
+        /// <summary>项目。所属项目编号，0=个人对话</summary>
+        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>用户名</summary>
         public static readonly Field UserName = FindByName("UserName");
@@ -518,6 +547,9 @@ public partial class Conversation : IConversation, IEntity<IConversation>
 
         /// <summary>用户。会话所属用户</summary>
         public const String UserId = "UserId";
+
+        /// <summary>项目。所属项目编号，0=个人对话</summary>
+        public const String ProjectId = "ProjectId";
 
         /// <summary>用户名</summary>
         public const String UserName = "UserName";

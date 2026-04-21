@@ -14,6 +14,12 @@ public partial interface ISkill
     /// <summary>编号</summary>
     Int32 Id { get; set; }
 
+    /// <summary>用户。0=系统内置</summary>
+    Int32 UserId { get; set; }
+
+    /// <summary>项目。0=个人/系统</summary>
+    Int32 ProjectId { get; set; }
+
     /// <summary>编码。英文标识，唯一，如coder、translator</summary>
     String? Code { get; set; }
 

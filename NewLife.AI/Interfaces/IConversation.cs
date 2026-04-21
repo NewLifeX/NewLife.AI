@@ -17,6 +17,9 @@ public partial interface IConversation
     /// <summary>用户。会话所属用户</summary>
     Int32 UserId { get; set; }
 
+    /// <summary>项目。所属项目编号，0=个人对话</summary>
+    Int32 ProjectId { get; set; }
+
     /// <summary>用户名</summary>
     String? UserName { get; set; }
 

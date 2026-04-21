@@ -17,6 +17,9 @@ public partial interface IUsageRecord
     /// <summary>用户</summary>
     Int32 UserId { get; set; }
 
+    /// <summary>项目。所属项目编号，0=个人</summary>
+    Int32 ProjectId { get; set; }
+
     /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
     Int32 AppKeyId { get; set; }
 

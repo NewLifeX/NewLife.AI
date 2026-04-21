@@ -17,6 +17,9 @@ public partial interface IChatPreset
     /// <summary>用户。0=系统级预设</summary>
     Int32 UserId { get; set; }
 
+    /// <summary>项目。所属项目，0=个人/系统预设</summary>
+    Int32 ProjectId { get; set; }
+
     /// <summary>名称。预设模板名称</summary>
     String? Name { get; set; }
 
