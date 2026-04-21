@@ -53,15 +53,15 @@ public static class ChatAIExtensions
         // 原生 .NET 工具注册（通过配置器模式，支持外部项目追加工具）
         services.ConfigureToolRegistry((sp, registry) =>
         {
-            registry.AddTools(new HolidayToolService());
-            registry.AddTools(new BuiltinToolService());
-            registry.AddTools(new NetworkToolService(sp));
-            registry.AddTools(new CurrentUserTool());
+            registry.AddTools<HolidayToolService>();
+            registry.AddTools<BuiltinToolService>();
+            registry.AddTools<NetworkToolService>();
+            registry.AddTools<CurrentUserTool>();
         });
 
         services.TryAddSingleton(sp =>
         {
-            var registry = new ToolRegistry();
+            var registry = new ToolRegistry { ServiceProvider = sp };
             foreach (var cfg in sp.GetServices<ToolRegistryConfigurator>())
             {
                 cfg.Configure(sp, registry);
