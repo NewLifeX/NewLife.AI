@@ -1,28 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
+﻿using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
-using NewLife;
-using NewLife.Data;
-using NewLife.Log;
-using NewLife.Model;
-using NewLife.Reflection;
-using NewLife.Threading;
-using NewLife.Web;
 using XCode;
 using XCode.Cache;
-using XCode.Configuration;
-using XCode.DataAccessLayer;
-using XCode.Membership;
-using XCode.Shards;
 
 namespace NewLife.ChatData.Entity;
 
@@ -34,7 +14,7 @@ public partial class UsageRecord : Entity<UsageRecord>
 
     static UsageRecord()
     {
-        Meta.Table.DataTable.InsertOnly = true;
+        //Meta.Table.DataTable.InsertOnly = true;
 
         // 累加字段，生成 Update xx Set Count=Count+1234 Where xxx
         //var df = Meta.Factory.AdditionalFields;
