@@ -44,8 +44,8 @@
     <Table Name="Conversation" Description="会话。一次完整的多轮对话上下文" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="UserId" DataType="Int32" Description="用户。会话所属用户" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目编号，0=个人对话" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。会话所属用户" />
+        <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。所属项目编号，0=个人对话" />
         <Column Name="UserName" DataType="String" Description="用户名" />
         <Column Name="Title" DataType="String" Master="True" Length="200" Description="标题。会话标题，显示在侧边栏" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@ModelName" Description="模型。当前使用的模型Id，引用ModelConfig.Id" />
@@ -53,14 +53,13 @@
         <Column Name="SkillId" DataType="Int32" Map="Skill@Id@SkillName" Description="技能。当前会话使用的技能，引用Skill.Id" />
         <Column Name="SkillName" DataType="String" Description="技能名称。冗余存储技能名称，方便历史数据检索" />
         <Column Name="ThinkingMode" DataType="Int32" Description="思考模式。Auto=0自动, Think=1思考, Fast=2快速" Type="NewLife.AI.Models.ThinkingMode" />
-        <Column Name="KnowledgeBases" DataType="String" Length="200" Description="知识库。逗号分隔的知识库ID列表，会话级绑定" />
         <Column Name="IsPinned" DataType="Boolean" Description="置顶。是否置顶显示" />
         <Column Name="MessageCount" DataType="Int32" Description="消息数" />
         <Column Name="LastMessageTime" DataType="DateTime" Description="最后消息时间。用于排序" />
         <Column Name="InputTokens" DataType="Int32" Description="输入Token数。会话累计消耗的输入Token数（含额外LLM调用）" />
         <Column Name="OutputTokens" DataType="Int32" Description="输出Token数。会话累计消耗的输出Token数（含额外LLM调用）" />
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数。会话累计消耗的总Token数（含额外LLM调用）" />
-        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="2" Description="总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="Source" DataType="String" Description="来源。Web/Gateway/Channel等，标识对话入口" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
@@ -82,7 +81,7 @@
     <Table Name="ChatMessage" Description="对话消息。会话中的单条发言，包括用户消息和AI回复" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="ConversationId" DataType="Int64" Description="会话。所属会话" />
+        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话。所属会话" />
         <Column Name="Role" DataType="String" Description="角色。User=用户, Assistant=AI助手" />
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。Markdown格式文本" />
         <Column Name="ThinkingContent" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="思考内容。role=assistant时存AI推理过程；role=user时存本轮注入的系统上下文全文（含技能提示词与记忆注入，调试用）" />
@@ -98,7 +97,7 @@
         <Column Name="InputTokens" DataType="Int32" Description="输入Token数" />
         <Column Name="OutputTokens" DataType="Int32" Description="输出Token数" />
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
-        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。本条消息消耗费用，单位：元" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="4" Description="总费用。本条消息消耗费用，单位：元" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
@@ -112,7 +111,7 @@
     <Table Name="MessageFeedback" Description="消息反馈。用户对AI回复的点赞或点踩" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="ConversationId" DataType="Int64" Description="会话。被反馈的会话" />
+        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话。被反馈的会话" />
         <Column Name="MessageId" DataType="Int64" Description="消息。被反馈的消息" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。反馈用户" />
         <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" Type="NewLife.AI.Models.FeedbackType" />
@@ -134,7 +133,7 @@
     <Table Name="SharedConversation" Description="共享会话。通过链接分享的对话快照" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="ConversationId" DataType="Int64" Description="会话。被分享的会话" />
+        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话。被分享的会话" />
         <Column Name="ShareToken" DataType="String" Description="分享令牌。唯一标识，用于生成分享URL" />
         <Column Name="SnapshotTitle" DataType="String" Description="快照标题" />
         <Column Name="SnapshotMessageId" DataType="Int64" Description="快照消息。截止到的最后一条消息编号" />
@@ -157,9 +156,9 @@
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目编号，0=个人" />
+        <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。所属项目编号，0=个人" />
         <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
-        <Column Name="ConversationId" DataType="Int64" Description="会话" />
+        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话" />
         <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
         <Column Name="ModelId" DataType="Int32" Description="模型。引用ModelConfig.Id" />
         <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
@@ -241,9 +240,9 @@
         <Column Name="InputPrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="2" Description="输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）" Category="计费" />
         <Column Name="OutputPrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="12" Description="输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）" Category="计费" />
         <Column Name="CachedInputPrice" DataType="Decimal" Precision="18" Scale="6" Description="缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算" Category="计费" />
-        <Column Name="ImagePrice" DataType="Decimal" Precision="18" Scale="6" Description="图片价格。文生图单价，单位：元/张" Category="计费" />
-        <Column Name="VideoPrice" DataType="Decimal" Precision="18" Scale="6" Description="视频价格。文生视频基准单价，单位：元/秒" Category="计费" />
-        <Column Name="EmbeddingPrice" DataType="Decimal" Precision="18" Scale="6" Description="向量化价格。Embedding单价，单位：元/百万Token" Category="计费" />
+        <Column Name="ImagePrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="0.2" Description="图片价格。文生图单价，单位：元/张" Category="计费" />
+        <Column Name="VideoPrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="0.6" Description="视频价格。文生视频基准单价，单位：元/秒" Category="计费" />
+        <Column Name="EmbeddingPrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="0.5" Description="向量化价格。Embedding单价，单位：元/百万Token" Category="计费" />
         <Column Name="PriceTiers" DataType="String" ItemType="json" Length="500" Description="分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution" Category="计费" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
@@ -267,7 +266,7 @@
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。密钥所属用户" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目，0=个人密鑰" />
+        <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。所属项目，0=个人密鑰" />
         <Column Name="Name" DataType="String" Master="True" Length="200" Description="名称。用户自定义标识，如业务系统A" />
         <Column Name="Secret" DataType="String" ShowIn="Auto,-List,-Search" Length="200" Description="密钥。sk-前缀的随机字符串，创建时仅展示一次" />
         <Column Name="Models" DataType="String" Length="200" Description="可用模型。逗号分隔的模型名称或编码，为空时不限制" />
@@ -342,6 +341,47 @@
         <Index Columns="UserId" Unique="True" />
       </Indexes>
     </Table>
+    <Table Name="AgentProject" Description="智能体项目。多用户协作的AI资源容器，统一管理对话、知识、技能、成员" Output="系统配置">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="OwnerId" DataType="Int32" Map="XCode.Membership.User@ID@$@OwnerName" Description="所有者。项目创建人/所有者" />
+        <Column Name="Code" DataType="String" Description="编码。英文唯一标识，#引用用" />
+        <Column Name="Name" DataType="String" Master="True" Description="名称。项目显示名称" />
+        <Column Name="Icon" DataType="String" Length="10" Description="图标。表情符号图标，最多2字符，如🚀📊💡" />
+        <Column Name="Color" DataType="String" Length="20" Description="颜色。预设颜色：blue/green/purple/orange/red/yellow/gray" />
+        <Column Name="Description" DataType="String" Length="500" Description="描述。项目用途说明" />
+        <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="1000" Description="系统提示词。项目级AI行为指令，注入System Prompt最高优先级" />
+        <Column Name="MemoryMode" DataType="Int32" DefaultValue="0" Description="记忆模式。0=共享全局记忆/1=项目独立隔离记忆" />
+        <Column Name="DefaultModel" DataType="Int32" Description="默认模型。新会话的默认模型配置Id" />
+        <Column Name="DocumentCount" DataType="Int32" Description="文档数。关联的知识文档总数" />
+        <Column Name="ArticleCount" DataType="Int32" Description="文章数。清洗生成的Wiki文章总数" />
+        <Column Name="TotalTokens" DataType="Int64" Description="总Token数。全部文章的Token累计 + 对话累计" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。累计消耗费用，单位：元，由用量记录汇总" Category="限额" />
+        <Column Name="DailyTokenLimit" DataType="Int64" Description="日Token限额。每日Token使用上限，0表示不限制" Category="限额" />
+        <Column Name="MonthlyTokenLimit" DataType="Int64" Description="月Token限额。每月Token使用上限，0表示不限制" Category="限额" />
+        <Column Name="TotalTokenLimit" DataType="Int64" Description="总Token限额。永久累计Token上限，0表示不限制" Category="限额" />
+        <Column Name="DailyCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="日费用限额。每日费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="MonthlyCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="月费用限额。每月费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="TotalCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="总费用限额。永久累计费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="RateLimitPerMinute" DataType="Int32" Description="分钟限流。每分钟请求上限，0表示不限制" Category="限额" />
+        <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
+        <Column Name="CreateUser" DataType="String" Description="创建者" Model="False" Category="扩展" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" />
+        <Column Name="UpdateUser" DataType="String" Description="更新者" Model="False" Category="扩展" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="Code" Unique="True" />
+        <Index Columns="OwnerId" />
+        <Index Columns="OwnerId,Enable,Sort" />
+      </Indexes>
+    </Table>
     <Table Name="SuggestedQuestion" Description="推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
@@ -369,7 +409,7 @@
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。0=系统级预设" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。所属项目，0=个人/系统预设" />
+        <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。所属项目，0=个人/系统预设" />
         <Column Name="Name" DataType="String" Master="True" Length="100" Description="名称。预设模板名称" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@$@Name" Description="模型。关联的模型配置Id" />
         <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
@@ -451,8 +491,8 @@
     <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="UserId" DataType="Int32" DefaultValue="0" Description="用户。0=系统内置" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=个人/系统" />
+        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。0=系统内置" />
+        <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。0=个人/系统" />
         <Column Name="Code" DataType="String" Description="编码。英文标识，唯一，如coder、translator" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。技能展示名称，同时也是@引用的标识" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如code、translate" />
@@ -488,8 +528,8 @@
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=全局记忆" />
-        <Column Name="ConversationId" DataType="Int64" Description="来源会话。提取该记忆的会话编号" />
+        <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。0=全局记忆" />
+        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="来源会话。提取该记忆的会话编号" />
         <Column Name="Category" DataType="String" Description="分类。偏好/习惯/兴趣/背景" />
         <Column Name="Key" DataType="String" Master="True" Length="200" Description="主题。记忆的关键词/主题，如编程语言、工作行业" />
         <Column Name="Value" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。提取到的具体信息" />

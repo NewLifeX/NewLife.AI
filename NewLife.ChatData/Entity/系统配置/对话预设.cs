@@ -43,7 +43,7 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
     [DisplayName("项目")]
     [Description("项目。所属项目，0=个人/系统预设")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目，0=个人/系统预设", "", DefaultValue = "0")]
+    [BindColumn("ProjectId", "项目。所属项目，0=个人/系统预设", "")]
     public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _Name;
@@ -268,6 +268,14 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
     /// <summary>用户</summary>
     [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
     public String? UserName => User?.ToString();
+
+    /// <summary>项目</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
+
+    /// <summary>项目</summary>
+    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
+    public String? ProjectName => Project?.ToString();
 
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]

@@ -163,7 +163,7 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
     [DisplayName("总费用")]
     [Description("总费用。本条消息消耗费用，单位：元")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。本条消息消耗费用，单位：元", "", Precision = 18, Scale = 6)]
+    [BindColumn("TotalCost", "总费用。本条消息消耗费用，单位：元", "", Precision = 18, Scale = 4)]
     public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
 
     private Int32 _ElapsedMs;
@@ -305,6 +305,14 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
     #endregion
 
     #region 关联映射
+    /// <summary>会话</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    /// <summary>会话</summary>
+    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    public String? Title => Conversation?.ToString();
+
     #endregion
 
     #region 扩展查询

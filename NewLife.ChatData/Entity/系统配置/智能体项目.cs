@@ -13,15 +13,15 @@ using XCode.DataAccessLayer;
 
 namespace NewLife.ChatData.Entity;
 
-/// <summary>应用密钥。API网关访问凭证，用于外部系统调用模型服务</summary>
+/// <summary>智能体项目。多用户协作的AI资源容器，统一管理对话、知识、技能、成员</summary>
 [Serializable]
 [DataObject]
-[Description("应用密钥。API网关访问凭证，用于外部系统调用模型服务")]
-[BindIndex("IU_AppKey_Secret", true, "Secret")]
-[BindIndex("IX_AppKey_UserId", false, "UserId")]
-[BindIndex("IX_AppKey_ProjectId", false, "ProjectId")]
-[BindTable("AppKey", Description = "应用密钥。API网关访问凭证，用于外部系统调用模型服务", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class AppKey : IAppKey, IEntity<IAppKey>
+[Description("智能体项目。多用户协作的AI资源容器，统一管理对话、知识、技能、成员")]
+[BindIndex("IU_AgentProject_Code", true, "Code")]
+[BindIndex("IX_AgentProject_OwnerId", false, "OwnerId")]
+[BindIndex("IX_AgentProject_OwnerId_Enable_Sort", false, "OwnerId,Enable,Sort")]
+[BindTable("AgentProject", Description = "智能体项目。多用户协作的AI资源容器，统一管理对话、知识、技能、成员", ConnName = "ChatAI", DbType = DatabaseType.None)]
+public partial class AgentProject : IAgentProject, IEntity<IAgentProject>
 {
     #region 属性
     private Int32 _Id;
@@ -32,92 +32,109 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
-    private Int32 _UserId;
-    /// <summary>用户。密钥所属用户</summary>
-    [DisplayName("用户")]
-    [Description("用户。密钥所属用户")]
+    private Int32 _OwnerId;
+    /// <summary>所有者。项目创建人/所有者</summary>
+    [DisplayName("所有者")]
+    [Description("所有者。项目创建人/所有者")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("UserId", "用户。密钥所属用户", "")]
-    public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
+    [BindColumn("OwnerId", "所有者。项目创建人/所有者", "")]
+    public Int32 OwnerId { get => _OwnerId; set { if (OnPropertyChanging("OwnerId", value)) { _OwnerId = value; OnPropertyChanged("OwnerId"); } } }
 
-    private Int32 _ProjectId;
-    /// <summary>项目。所属项目，0=个人密鑰</summary>
-    [DisplayName("项目")]
-    [Description("项目。所属项目，0=个人密鑰")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目，0=个人密鑰", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
+    private String? _Code;
+    /// <summary>编码。英文唯一标识，#引用用</summary>
+    [DisplayName("编码")]
+    [Description("编码。英文唯一标识，#引用用")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Code", "编码。英文唯一标识，#引用用", "")]
+    public String? Code { get => _Code; set { if (OnPropertyChanging("Code", value)) { _Code = value; OnPropertyChanged("Code"); } } }
 
     private String? _Name;
-    /// <summary>名称。用户自定义标识，如业务系统A</summary>
+    /// <summary>名称。项目显示名称</summary>
     [DisplayName("名称")]
-    [Description("名称。用户自定义标识，如业务系统A")]
-    [DataObjectField(false, false, true, 200)]
-    [BindColumn("Name", "名称。用户自定义标识，如业务系统A", "", Master = true)]
+    [Description("名称。项目显示名称")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Name", "名称。项目显示名称", "", Master = true)]
     public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
-    private String? _Secret;
-    /// <summary>密钥。sk-前缀的随机字符串，创建时仅展示一次</summary>
-    [DisplayName("密钥")]
-    [Description("密钥。sk-前缀的随机字符串，创建时仅展示一次")]
-    [DataObjectField(false, false, true, 200)]
-    [BindColumn("Secret", "密钥。sk-前缀的随机字符串，创建时仅展示一次", "", ShowIn = "Auto,-List,-Search")]
-    public String? Secret { get => _Secret; set { if (OnPropertyChanging("Secret", value)) { _Secret = value; OnPropertyChanged("Secret"); } } }
+    private String? _Icon;
+    /// <summary>图标。表情符号图标，最多2字符，如🚀📊💡</summary>
+    [DisplayName("图标")]
+    [Description("图标。表情符号图标，最多2字符，如🚀📊💡")]
+    [DataObjectField(false, false, true, 10)]
+    [BindColumn("Icon", "图标。表情符号图标，最多2字符，如🚀📊💡", "")]
+    public String? Icon { get => _Icon; set { if (OnPropertyChanging("Icon", value)) { _Icon = value; OnPropertyChanged("Icon"); } } }
 
-    private String? _Models;
-    /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
-    [DisplayName("可用模型")]
-    [Description("可用模型。逗号分隔的模型名称或编码，为空时不限制")]
-    [DataObjectField(false, false, true, 200)]
-    [BindColumn("Models", "可用模型。逗号分隔的模型名称或编码，为空时不限制", "")]
-    public String? Models { get => _Models; set { if (OnPropertyChanging("Models", value)) { _Models = value; OnPropertyChanged("Models"); } } }
+    private String? _Color;
+    /// <summary>颜色。预设颜色：blue/green/purple/orange/red/yellow/gray</summary>
+    [DisplayName("颜色")]
+    [Description("颜色。预设颜色：blue/green/purple/orange/red/yellow/gray")]
+    [DataObjectField(false, false, true, 20)]
+    [BindColumn("Color", "颜色。预设颜色：blue/green/purple/orange/red/yellow/gray", "")]
+    public String? Color { get => _Color; set { if (OnPropertyChanging("Color", value)) { _Color = value; OnPropertyChanged("Color"); } } }
 
-    private Boolean _Enable;
-    /// <summary>启用</summary>
-    [DisplayName("启用")]
-    [Description("启用")]
+    private String? _Description;
+    /// <summary>描述。项目用途说明</summary>
+    [DisplayName("描述")]
+    [Description("描述。项目用途说明")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Description", "描述。项目用途说明", "")]
+    public String? Description { get => _Description; set { if (OnPropertyChanging("Description", value)) { _Description = value; OnPropertyChanged("Description"); } } }
+
+    private String? _SystemPrompt;
+    /// <summary>系统提示词。项目级AI行为指令，注入System Prompt最高优先级</summary>
+    [DisplayName("系统提示词")]
+    [Description("系统提示词。项目级AI行为指令，注入System Prompt最高优先级")]
+    [DataObjectField(false, false, true, 1000)]
+    [BindColumn("SystemPrompt", "系统提示词。项目级AI行为指令，注入System Prompt最高优先级", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
+    public String? SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
+
+    private Int32 _MemoryMode;
+    /// <summary>记忆模式。0=共享全局记忆/1=项目独立隔离记忆</summary>
+    [DisplayName("记忆模式")]
+    [Description("记忆模式。0=共享全局记忆/1=项目独立隔离记忆")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("Enable", "启用", "")]
-    public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
+    [BindColumn("MemoryMode", "记忆模式。0=共享全局记忆/1=项目独立隔离记忆", "", DefaultValue = "0")]
+    public Int32 MemoryMode { get => _MemoryMode; set { if (OnPropertyChanging("MemoryMode", value)) { _MemoryMode = value; OnPropertyChanged("MemoryMode"); } } }
 
-    private DateTime _ExpireTime;
-    /// <summary>过期时间。null表示永不过期</summary>
-    [DisplayName("过期时间")]
-    [Description("过期时间。null表示永不过期")]
-    [DataObjectField(false, false, true, 0)]
-    [BindColumn("ExpireTime", "过期时间。null表示永不过期", "")]
-    public DateTime ExpireTime { get => _ExpireTime; set { if (OnPropertyChanging("ExpireTime", value)) { _ExpireTime = value; OnPropertyChanged("ExpireTime"); } } }
-
-    private DateTime _LastCallTime;
-    /// <summary>最后调用时间</summary>
-    [DisplayName("最后调用时间")]
-    [Description("最后调用时间")]
-    [DataObjectField(false, false, true, 0)]
-    [BindColumn("LastCallTime", "最后调用时间", "")]
-    public DateTime LastCallTime { get => _LastCallTime; set { if (OnPropertyChanging("LastCallTime", value)) { _LastCallTime = value; OnPropertyChanged("LastCallTime"); } } }
-
-    private Int64 _Calls;
-    /// <summary>调用次数。累计API请求数</summary>
-    [DisplayName("调用次数")]
-    [Description("调用次数。累计API请求数")]
+    private Int32 _DefaultModel;
+    /// <summary>默认模型。新会话的默认模型配置Id</summary>
+    [DisplayName("默认模型")]
+    [Description("默认模型。新会话的默认模型配置Id")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("Calls", "调用次数。累计API请求数", "")]
-    public Int64 Calls { get => _Calls; set { if (OnPropertyChanging("Calls", value)) { _Calls = value; OnPropertyChanged("Calls"); } } }
+    [BindColumn("DefaultModel", "默认模型。新会话的默认模型配置Id", "")]
+    public Int32 DefaultModel { get => _DefaultModel; set { if (OnPropertyChanging("DefaultModel", value)) { _DefaultModel = value; OnPropertyChanged("DefaultModel"); } } }
+
+    private Int32 _DocumentCount;
+    /// <summary>文档数。关联的知识文档总数</summary>
+    [DisplayName("文档数")]
+    [Description("文档数。关联的知识文档总数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("DocumentCount", "文档数。关联的知识文档总数", "")]
+    public Int32 DocumentCount { get => _DocumentCount; set { if (OnPropertyChanging("DocumentCount", value)) { _DocumentCount = value; OnPropertyChanged("DocumentCount"); } } }
+
+    private Int32 _ArticleCount;
+    /// <summary>文章数。清洗生成的Wiki文章总数</summary>
+    [DisplayName("文章数")]
+    [Description("文章数。清洗生成的Wiki文章总数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ArticleCount", "文章数。清洗生成的Wiki文章总数", "")]
+    public Int32 ArticleCount { get => _ArticleCount; set { if (OnPropertyChanging("ArticleCount", value)) { _ArticleCount = value; OnPropertyChanged("ArticleCount"); } } }
 
     private Int64 _TotalTokens;
-    /// <summary>总Token数。累计消耗Token</summary>
+    /// <summary>总Token数。全部文章的Token累计 + 对话累计</summary>
     [DisplayName("总Token数")]
-    [Description("总Token数。累计消耗Token")]
+    [Description("总Token数。全部文章的Token累计 + 对话累计")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokens", "总Token数。累计消耗Token", "")]
+    [BindColumn("TotalTokens", "总Token数。全部文章的Token累计 + 对话累计", "")]
     public Int64 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
     private Decimal _TotalCost;
-    /// <summary>总费用。累计消耗费用，单位：元</summary>
+    /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
+    [Category("限额")]
     [DisplayName("总费用")]
-    [Description("总费用。累计消耗费用，单位：元")]
+    [Description("总费用。累计消耗费用，单位：元，由用量记录汇总")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。累计消耗费用，单位：元", "", Precision = 18, Scale = 6)]
+    [BindColumn("TotalCost", "总费用。累计消耗费用，单位：元，由用量记录汇总", "", Precision = 18, Scale = 6)]
     public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
 
     private Int64 _DailyTokenLimit;
@@ -183,6 +200,31 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     [BindColumn("RateLimitPerMinute", "分钟限流。每分钟请求上限，0表示不限制", "")]
     public Int32 RateLimitPerMinute { get => _RateLimitPerMinute; set { if (OnPropertyChanging("RateLimitPerMinute", value)) { _RateLimitPerMinute = value; OnPropertyChanged("RateLimitPerMinute"); } } }
 
+    private Boolean _Enable;
+    /// <summary>启用</summary>
+    [DisplayName("启用")]
+    [Description("启用")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Enable", "启用", "")]
+    public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
+
+    private Int32 _Sort;
+    /// <summary>排序。越大越靠前</summary>
+    [DisplayName("排序")]
+    [Description("排序。越大越靠前")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Sort", "排序。越大越靠前", "")]
+    public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
+
+    private String? _CreateUser;
+    /// <summary>创建者</summary>
+    [Category("扩展")]
+    [DisplayName("创建者")]
+    [Description("创建者")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("CreateUser", "创建者", "")]
+    public String? CreateUser { get => _CreateUser; set { if (OnPropertyChanging("CreateUser", value)) { _CreateUser = value; OnPropertyChanged("CreateUser"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -209,6 +251,15 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     [DataObjectField(false, false, true, 0)]
     [BindColumn("CreateTime", "创建时间", "")]
     public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
+
+    private String? _UpdateUser;
+    /// <summary>更新者</summary>
+    [Category("扩展")]
+    [DisplayName("更新者")]
+    [Description("更新者")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("UpdateUser", "更新者", "")]
+    public String? UpdateUser { get => _UpdateUser; set { if (OnPropertyChanging("UpdateUser", value)) { _UpdateUser = value; OnPropertyChanged("UpdateUser"); } } }
 
     private Int32 _UpdateUserID;
     /// <summary>更新用户</summary>
@@ -250,18 +301,20 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     #region 拷贝
     /// <summary>拷贝模型对象</summary>
     /// <param name="model">模型</param>
-    public void Copy(IAppKey model)
+    public void Copy(IAgentProject model)
     {
         Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
+        OwnerId = model.OwnerId;
+        Code = model.Code;
         Name = model.Name;
-        Secret = model.Secret;
-        Models = model.Models;
-        Enable = model.Enable;
-        ExpireTime = model.ExpireTime;
-        LastCallTime = model.LastCallTime;
-        Calls = model.Calls;
+        Icon = model.Icon;
+        Color = model.Color;
+        Description = model.Description;
+        SystemPrompt = model.SystemPrompt;
+        MemoryMode = model.MemoryMode;
+        DefaultModel = model.DefaultModel;
+        DocumentCount = model.DocumentCount;
+        ArticleCount = model.ArticleCount;
         TotalTokens = model.TotalTokens;
         TotalCost = model.TotalCost;
         DailyTokenLimit = model.DailyTokenLimit;
@@ -271,6 +324,14 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         MonthlyCostLimit = model.MonthlyCostLimit;
         TotalCostLimit = model.TotalCostLimit;
         RateLimitPerMinute = model.RateLimitPerMinute;
+        Enable = model.Enable;
+        Sort = model.Sort;
+        CreateUserID = model.CreateUserID;
+        CreateIP = model.CreateIP;
+        CreateTime = model.CreateTime;
+        UpdateUserID = model.UpdateUserID;
+        UpdateIP = model.UpdateIP;
+        UpdateTime = model.UpdateTime;
         Remark = model.Remark;
     }
     #endregion
@@ -284,15 +345,17 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         get => name switch
         {
             "Id" => _Id,
-            "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
+            "OwnerId" => _OwnerId,
+            "Code" => _Code,
             "Name" => _Name,
-            "Secret" => _Secret,
-            "Models" => _Models,
-            "Enable" => _Enable,
-            "ExpireTime" => _ExpireTime,
-            "LastCallTime" => _LastCallTime,
-            "Calls" => _Calls,
+            "Icon" => _Icon,
+            "Color" => _Color,
+            "Description" => _Description,
+            "SystemPrompt" => _SystemPrompt,
+            "MemoryMode" => _MemoryMode,
+            "DefaultModel" => _DefaultModel,
+            "DocumentCount" => _DocumentCount,
+            "ArticleCount" => _ArticleCount,
             "TotalTokens" => _TotalTokens,
             "TotalCost" => _TotalCost,
             "DailyTokenLimit" => _DailyTokenLimit,
@@ -302,9 +365,13 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
             "MonthlyCostLimit" => _MonthlyCostLimit,
             "TotalCostLimit" => _TotalCostLimit,
             "RateLimitPerMinute" => _RateLimitPerMinute,
+            "Enable" => _Enable,
+            "Sort" => _Sort,
+            "CreateUser" => _CreateUser,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
+            "UpdateUser" => _UpdateUser,
             "UpdateUserID" => _UpdateUserID,
             "UpdateIP" => _UpdateIP,
             "UpdateTime" => _UpdateTime,
@@ -316,15 +383,17 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
-                case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
+                case "OwnerId": _OwnerId = value.ToInt(); break;
+                case "Code": _Code = Convert.ToString(value); break;
                 case "Name": _Name = Convert.ToString(value); break;
-                case "Secret": _Secret = Convert.ToString(value); break;
-                case "Models": _Models = Convert.ToString(value); break;
-                case "Enable": _Enable = value.ToBoolean(); break;
-                case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
-                case "LastCallTime": _LastCallTime = value.ToDateTime(); break;
-                case "Calls": _Calls = value.ToLong(); break;
+                case "Icon": _Icon = Convert.ToString(value); break;
+                case "Color": _Color = Convert.ToString(value); break;
+                case "Description": _Description = Convert.ToString(value); break;
+                case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
+                case "MemoryMode": _MemoryMode = value.ToInt(); break;
+                case "DefaultModel": _DefaultModel = value.ToInt(); break;
+                case "DocumentCount": _DocumentCount = value.ToInt(); break;
+                case "ArticleCount": _ArticleCount = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToLong(); break;
                 case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
                 case "DailyTokenLimit": _DailyTokenLimit = value.ToLong(); break;
@@ -334,9 +403,13 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
                 case "MonthlyCostLimit": _MonthlyCostLimit = Convert.ToDecimal(value); break;
                 case "TotalCostLimit": _TotalCostLimit = Convert.ToDecimal(value); break;
                 case "RateLimitPerMinute": _RateLimitPerMinute = value.ToInt(); break;
+                case "Enable": _Enable = value.ToBoolean(); break;
+                case "Sort": _Sort = value.ToInt(); break;
+                case "CreateUser": _CreateUser = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
+                case "UpdateUser": _UpdateUser = Convert.ToString(value); break;
                 case "UpdateUserID": _UpdateUserID = value.ToInt(); break;
                 case "UpdateIP": _UpdateIP = Convert.ToString(value); break;
                 case "UpdateTime": _UpdateTime = value.ToDateTime(); break;
@@ -348,21 +421,13 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     #endregion
 
     #region 关联映射
-    /// <summary>用户</summary>
+    /// <summary>所有者</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
+    public XCode.Membership.User? Owner => Extends.Get(nameof(Owner), k => XCode.Membership.User.FindByID(OwnerId));
 
-    /// <summary>用户</summary>
-    [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
-    public String? UserName => User?.ToString();
-
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
+    /// <summary>所有者</summary>
+    [Map(nameof(OwnerId), typeof(XCode.Membership.User), "ID")]
+    public String? OwnerName => Owner?.ToString();
 
     #endregion
 
@@ -370,7 +435,7 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     /// <summary>根据编号查找</summary>
     /// <param name="id">编号</param>
     /// <returns>实体对象</returns>
-    public static AppKey? FindById(Int32 id)
+    public static AgentProject? FindById(Int32 id)
     {
         if (id < 0) return null;
 
@@ -383,63 +448,52 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         //return Find(_.Id == id);
     }
 
-    /// <summary>根据密钥查找</summary>
-    /// <param name="secret">密钥</param>
+    /// <summary>根据编码查找</summary>
+    /// <param name="code">编码</param>
     /// <returns>实体对象</returns>
-    public static AppKey? FindBySecret(String? secret)
+    public static AgentProject? FindByCode(String? code)
     {
-        if (secret == null) return null;
+        if (code == null) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Secret.EqualIgnoreCase(secret));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Code.EqualIgnoreCase(code));
 
-        return Find(_.Secret == secret);
+        return Find(_.Code == code);
     }
 
-    /// <summary>根据用户查找</summary>
-    /// <param name="userId">用户</param>
+    /// <summary>根据所有者查找</summary>
+    /// <param name="ownerId">所有者</param>
     /// <returns>实体列表</returns>
-    public static IList<AppKey> FindAllByUserId(Int32 userId)
+    public static IList<AgentProject> FindAllByOwnerId(Int32 ownerId)
     {
-        if (userId < 0) return [];
+        if (ownerId < 0) return [];
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.OwnerId == ownerId);
 
-        return FindAll(_.UserId == userId);
-    }
-
-    /// <summary>根据项目查找</summary>
-    /// <param name="projectId">项目</param>
-    /// <returns>实体列表</returns>
-    public static IList<AppKey> FindAllByProjectId(Int32 projectId)
-    {
-        if (projectId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ProjectId == projectId);
-
-        return FindAll(_.ProjectId == projectId);
+        return FindAll(_.OwnerId == ownerId);
     }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
-    /// <param name="userId">用户。密钥所属用户</param>
-    /// <param name="projectId">项目。所属项目，0=个人密鑰</param>
+    /// <param name="ownerId">所有者。项目创建人/所有者</param>
+    /// <param name="code">编码。英文唯一标识，#引用用</param>
     /// <param name="enable">启用</param>
+    /// <param name="sort">排序。越大越靠前</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<AppKey> Search(Int32 userId, Int32 projectId, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<AgentProject> Search(Int32 ownerId, String? code, Boolean? enable, Int32 sort, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
-        if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
+        if (ownerId >= 0) exp &= _.OwnerId == ownerId;
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
         if (enable != null) exp &= _.Enable == enable;
+        if (sort >= 0) exp &= _.Sort == sort;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -448,43 +502,49 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     #endregion
 
     #region 字段名
-    /// <summary>取得应用密钥字段信息的快捷方式</summary>
+    /// <summary>取得智能体项目字段信息的快捷方式</summary>
     public partial class _
     {
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
 
-        /// <summary>用户。密钥所属用户</summary>
-        public static readonly Field UserId = FindByName("UserId");
+        /// <summary>所有者。项目创建人/所有者</summary>
+        public static readonly Field OwnerId = FindByName("OwnerId");
 
-        /// <summary>项目。所属项目，0=个人密鑰</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
+        /// <summary>编码。英文唯一标识，#引用用</summary>
+        public static readonly Field Code = FindByName("Code");
 
-        /// <summary>名称。用户自定义标识，如业务系统A</summary>
+        /// <summary>名称。项目显示名称</summary>
         public static readonly Field Name = FindByName("Name");
 
-        /// <summary>密钥。sk-前缀的随机字符串，创建时仅展示一次</summary>
-        public static readonly Field Secret = FindByName("Secret");
+        /// <summary>图标。表情符号图标，最多2字符，如🚀📊💡</summary>
+        public static readonly Field Icon = FindByName("Icon");
 
-        /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
-        public static readonly Field Models = FindByName("Models");
+        /// <summary>颜色。预设颜色：blue/green/purple/orange/red/yellow/gray</summary>
+        public static readonly Field Color = FindByName("Color");
 
-        /// <summary>启用</summary>
-        public static readonly Field Enable = FindByName("Enable");
+        /// <summary>描述。项目用途说明</summary>
+        public static readonly Field Description = FindByName("Description");
 
-        /// <summary>过期时间。null表示永不过期</summary>
-        public static readonly Field ExpireTime = FindByName("ExpireTime");
+        /// <summary>系统提示词。项目级AI行为指令，注入System Prompt最高优先级</summary>
+        public static readonly Field SystemPrompt = FindByName("SystemPrompt");
 
-        /// <summary>最后调用时间</summary>
-        public static readonly Field LastCallTime = FindByName("LastCallTime");
+        /// <summary>记忆模式。0=共享全局记忆/1=项目独立隔离记忆</summary>
+        public static readonly Field MemoryMode = FindByName("MemoryMode");
 
-        /// <summary>调用次数。累计API请求数</summary>
-        public static readonly Field Calls = FindByName("Calls");
+        /// <summary>默认模型。新会话的默认模型配置Id</summary>
+        public static readonly Field DefaultModel = FindByName("DefaultModel");
 
-        /// <summary>总Token数。累计消耗Token</summary>
+        /// <summary>文档数。关联的知识文档总数</summary>
+        public static readonly Field DocumentCount = FindByName("DocumentCount");
+
+        /// <summary>文章数。清洗生成的Wiki文章总数</summary>
+        public static readonly Field ArticleCount = FindByName("ArticleCount");
+
+        /// <summary>总Token数。全部文章的Token累计 + 对话累计</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
-        /// <summary>总费用。累计消耗费用，单位：元</summary>
+        /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
         public static readonly Field TotalCost = FindByName("TotalCost");
 
         /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
@@ -508,6 +568,15 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
         public static readonly Field RateLimitPerMinute = FindByName("RateLimitPerMinute");
 
+        /// <summary>启用</summary>
+        public static readonly Field Enable = FindByName("Enable");
+
+        /// <summary>排序。越大越靠前</summary>
+        public static readonly Field Sort = FindByName("Sort");
+
+        /// <summary>创建者</summary>
+        public static readonly Field CreateUser = FindByName("CreateUser");
+
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -516,6 +585,9 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>创建时间</summary>
         public static readonly Field CreateTime = FindByName("CreateTime");
+
+        /// <summary>更新者</summary>
+        public static readonly Field UpdateUser = FindByName("UpdateUser");
 
         /// <summary>更新用户</summary>
         public static readonly Field UpdateUserID = FindByName("UpdateUserID");
@@ -532,43 +604,49 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         static Field FindByName(String name) => Meta.Table.FindByName(name)!;
     }
 
-    /// <summary>取得应用密钥字段名称的快捷方式</summary>
+    /// <summary>取得智能体项目字段名称的快捷方式</summary>
     public partial class __
     {
         /// <summary>编号</summary>
         public const String Id = "Id";
 
-        /// <summary>用户。密钥所属用户</summary>
-        public const String UserId = "UserId";
+        /// <summary>所有者。项目创建人/所有者</summary>
+        public const String OwnerId = "OwnerId";
 
-        /// <summary>项目。所属项目，0=个人密鑰</summary>
-        public const String ProjectId = "ProjectId";
+        /// <summary>编码。英文唯一标识，#引用用</summary>
+        public const String Code = "Code";
 
-        /// <summary>名称。用户自定义标识，如业务系统A</summary>
+        /// <summary>名称。项目显示名称</summary>
         public const String Name = "Name";
 
-        /// <summary>密钥。sk-前缀的随机字符串，创建时仅展示一次</summary>
-        public const String Secret = "Secret";
+        /// <summary>图标。表情符号图标，最多2字符，如🚀📊💡</summary>
+        public const String Icon = "Icon";
 
-        /// <summary>可用模型。逗号分隔的模型名称或编码，为空时不限制</summary>
-        public const String Models = "Models";
+        /// <summary>颜色。预设颜色：blue/green/purple/orange/red/yellow/gray</summary>
+        public const String Color = "Color";
 
-        /// <summary>启用</summary>
-        public const String Enable = "Enable";
+        /// <summary>描述。项目用途说明</summary>
+        public const String Description = "Description";
 
-        /// <summary>过期时间。null表示永不过期</summary>
-        public const String ExpireTime = "ExpireTime";
+        /// <summary>系统提示词。项目级AI行为指令，注入System Prompt最高优先级</summary>
+        public const String SystemPrompt = "SystemPrompt";
 
-        /// <summary>最后调用时间</summary>
-        public const String LastCallTime = "LastCallTime";
+        /// <summary>记忆模式。0=共享全局记忆/1=项目独立隔离记忆</summary>
+        public const String MemoryMode = "MemoryMode";
 
-        /// <summary>调用次数。累计API请求数</summary>
-        public const String Calls = "Calls";
+        /// <summary>默认模型。新会话的默认模型配置Id</summary>
+        public const String DefaultModel = "DefaultModel";
 
-        /// <summary>总Token数。累计消耗Token</summary>
+        /// <summary>文档数。关联的知识文档总数</summary>
+        public const String DocumentCount = "DocumentCount";
+
+        /// <summary>文章数。清洗生成的Wiki文章总数</summary>
+        public const String ArticleCount = "ArticleCount";
+
+        /// <summary>总Token数。全部文章的Token累计 + 对话累计</summary>
         public const String TotalTokens = "TotalTokens";
 
-        /// <summary>总费用。累计消耗费用，单位：元</summary>
+        /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
         public const String TotalCost = "TotalCost";
 
         /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
@@ -592,6 +670,15 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
         public const String RateLimitPerMinute = "RateLimitPerMinute";
 
+        /// <summary>启用</summary>
+        public const String Enable = "Enable";
+
+        /// <summary>排序。越大越靠前</summary>
+        public const String Sort = "Sort";
+
+        /// <summary>创建者</summary>
+        public const String CreateUser = "CreateUser";
+
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";
 
@@ -600,6 +687,9 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>创建时间</summary>
         public const String CreateTime = "CreateTime";
+
+        /// <summary>更新者</summary>
+        public const String UpdateUser = "UpdateUser";
 
         /// <summary>更新用户</summary>
         public const String UpdateUserID = "UpdateUserID";

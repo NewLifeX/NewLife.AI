@@ -1,28 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-using System.Web.Script.Serialization;
-using System.Xml.Serialization;
-using NewLife;
-using NewLife.Data;
-using NewLife.Log;
-using NewLife.Model;
-using NewLife.Reflection;
-using NewLife.Threading;
-using NewLife.Web;
-using XCode;
-using XCode.Cache;
-using XCode.Configuration;
-using XCode.DataAccessLayer;
-using XCode.Membership;
-using XCode.Shards;
+﻿using XCode;
 
 namespace NewLife.ChatData.Entity;
 
@@ -115,13 +91,13 @@ public partial class SharedConversation : Entity<SharedConversation>
     #endregion
 
     #region 扩展属性
-    /// <summary>会话</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Conversation Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+    ///// <summary>会话</summary>
+    //[XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    //public Conversation Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
 
-    /// <summary>会话</summary>
-    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
-    public String ConversationTitle => Conversation?.Title;
+    ///// <summary>会话</summary>
+    //[Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    //public String ConversationTitle => Conversation?.Title;
     #endregion
 
     #region 高级查询

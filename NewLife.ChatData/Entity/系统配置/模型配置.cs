@@ -152,7 +152,7 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
     [DisplayName("图片价格")]
     [Description("图片价格。文生图单价，单位：元/张")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ImagePrice", "图片价格。文生图单价，单位：元/张", "", Precision = 18, Scale = 6)]
+    [BindColumn("ImagePrice", "图片价格。文生图单价，单位：元/张", "", Precision = 18, Scale = 6, DefaultValue = "0.2")]
     public Decimal ImagePrice { get => _ImagePrice; set { if (OnPropertyChanging("ImagePrice", value)) { _ImagePrice = value; OnPropertyChanged("ImagePrice"); } } }
 
     private Decimal _VideoPrice;
@@ -161,7 +161,7 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
     [DisplayName("视频价格")]
     [Description("视频价格。文生视频基准单价，单位：元/秒")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("VideoPrice", "视频价格。文生视频基准单价，单位：元/秒", "", Precision = 18, Scale = 6)]
+    [BindColumn("VideoPrice", "视频价格。文生视频基准单价，单位：元/秒", "", Precision = 18, Scale = 6, DefaultValue = "0.6")]
     public Decimal VideoPrice { get => _VideoPrice; set { if (OnPropertyChanging("VideoPrice", value)) { _VideoPrice = value; OnPropertyChanged("VideoPrice"); } } }
 
     private Decimal _EmbeddingPrice;
@@ -170,7 +170,7 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
     [DisplayName("向量化价格")]
     [Description("向量化价格。Embedding单价，单位：元/百万Token")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("EmbeddingPrice", "向量化价格。Embedding单价，单位：元/百万Token", "", Precision = 18, Scale = 6)]
+    [BindColumn("EmbeddingPrice", "向量化价格。Embedding单价，单位：元/百万Token", "", Precision = 18, Scale = 6, DefaultValue = "0.5")]
     public Decimal EmbeddingPrice { get => _EmbeddingPrice; set { if (OnPropertyChanging("EmbeddingPrice", value)) { _EmbeddingPrice = value; OnPropertyChanged("EmbeddingPrice"); } } }
 
     private String? _PriceTiers;

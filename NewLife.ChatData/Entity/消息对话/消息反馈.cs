@@ -197,6 +197,14 @@ public partial class MessageFeedback : IMessageFeedback, IEntity<IMessageFeedbac
     #endregion
 
     #region 关联映射
+    /// <summary>会话</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    /// <summary>会话</summary>
+    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    public String? Title => Conversation?.ToString();
+
     /// <summary>用户</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));

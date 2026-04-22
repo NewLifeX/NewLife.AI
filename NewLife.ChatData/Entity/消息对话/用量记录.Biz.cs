@@ -91,13 +91,14 @@ public partial class UsageRecord : Entity<UsageRecord>
     /// <summary>应用密钥</summary>
     [Map(nameof(AppKeyId), typeof(AppKey), "Id")]
     public String AppKeyName => AppKey?.Name;
-    /// <summary>会话</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Conversation Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
 
-    /// <summary>会话</summary>
-    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
-    public String ConversationTitle => Conversation?.Title;
+    ///// <summary>会话</summary>
+    //[XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    //public Conversation Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    ///// <summary>会话</summary>
+    //[Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    //public String ConversationTitle => Conversation?.Title;
     #endregion
 
     #region 高级查询

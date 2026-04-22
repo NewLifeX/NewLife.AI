@@ -46,7 +46,7 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     [DisplayName("项目")]
     [Description("项目。0=全局记忆")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。0=全局记忆", "", DefaultValue = "0")]
+    [BindColumn("ProjectId", "项目。0=全局记忆", "")]
     public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private Int64 _ConversationId;
@@ -271,6 +271,22 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     /// <summary>用户</summary>
     [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
     public String? UserName => User?.ToString();
+
+    /// <summary>项目</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
+
+    /// <summary>项目</summary>
+    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
+    public String? ProjectName => Project?.ToString();
+
+    /// <summary>来源会话</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    /// <summary>来源会话</summary>
+    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    public String? Title => Conversation?.ToString();
 
     #endregion
 

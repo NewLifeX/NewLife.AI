@@ -46,7 +46,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [DisplayName("项目")]
     [Description("项目。所属项目编号，0=个人对话")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目编号，0=个人对话", "", DefaultValue = "0")]
+    [BindColumn("ProjectId", "项目。所属项目编号，0=个人对话", "")]
     public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _UserName;
@@ -105,14 +105,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [BindColumn("ThinkingMode", "思考模式。Auto=0自动, Think=1思考, Fast=2快速", "")]
     public NewLife.AI.Models.ThinkingMode ThinkingMode { get => _ThinkingMode; set { if (OnPropertyChanging("ThinkingMode", value)) { _ThinkingMode = value; OnPropertyChanged("ThinkingMode"); } } }
 
-    private String? _KnowledgeBases;
-    /// <summary>知识库。逗号分隔的知识库ID列表，会话级绑定</summary>
-    [DisplayName("知识库")]
-    [Description("知识库。逗号分隔的知识库ID列表，会话级绑定")]
-    [DataObjectField(false, false, true, 200)]
-    [BindColumn("KnowledgeBases", "知识库。逗号分隔的知识库ID列表，会话级绑定", "")]
-    public String? KnowledgeBases { get => _KnowledgeBases; set { if (OnPropertyChanging("KnowledgeBases", value)) { _KnowledgeBases = value; OnPropertyChanged("KnowledgeBases"); } } }
-
     private Boolean _IsPinned;
     /// <summary>置顶。是否置顶显示</summary>
     [DisplayName("置顶")]
@@ -166,7 +158,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [DisplayName("总费用")]
     [Description("总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）", "", Precision = 18, Scale = 6)]
+    [BindColumn("TotalCost", "总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）", "", Precision = 18, Scale = 2)]
     public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
 
     private Int32 _ElapsedMs;
@@ -273,7 +265,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         SkillId = model.SkillId;
         SkillName = model.SkillName;
         ThinkingMode = model.ThinkingMode;
-        KnowledgeBases = model.KnowledgeBases;
         IsPinned = model.IsPinned;
         MessageCount = model.MessageCount;
         LastMessageTime = model.LastMessageTime;
@@ -305,7 +296,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
             "SkillId" => _SkillId,
             "SkillName" => _SkillName,
             "ThinkingMode" => _ThinkingMode,
-            "KnowledgeBases" => _KnowledgeBases,
             "IsPinned" => _IsPinned,
             "MessageCount" => _MessageCount,
             "LastMessageTime" => _LastMessageTime,
@@ -339,7 +329,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
                 case "SkillId": _SkillId = value.ToInt(); break;
                 case "SkillName": _SkillName = Convert.ToString(value); break;
                 case "ThinkingMode": _ThinkingMode = (NewLife.AI.Models.ThinkingMode)value.ToInt(); break;
-                case "KnowledgeBases": _KnowledgeBases = Convert.ToString(value); break;
                 case "IsPinned": _IsPinned = value.ToBoolean(); break;
                 case "MessageCount": _MessageCount = value.ToInt(); break;
                 case "LastMessageTime": _LastMessageTime = value.ToDateTime(); break;
@@ -364,6 +353,18 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     #endregion
 
     #region 关联映射
+    /// <summary>用户</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
+
+    /// <summary>项目</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
+
+    /// <summary>项目</summary>
+    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
+    public String? ProjectName => Project?.ToString();
+
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public ModelConfig? Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
@@ -496,9 +497,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public static readonly Field ThinkingMode = FindByName("ThinkingMode");
 
-        /// <summary>知识库。逗号分隔的知识库ID列表，会话级绑定</summary>
-        public static readonly Field KnowledgeBases = FindByName("KnowledgeBases");
-
         /// <summary>置顶。是否置顶显示</summary>
         public static readonly Field IsPinned = FindByName("IsPinned");
 
@@ -585,9 +583,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
 
         /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
         public const String ThinkingMode = "ThinkingMode";
-
-        /// <summary>知识库。逗号分隔的知识库ID列表，会话级绑定</summary>
-        public const String KnowledgeBases = "KnowledgeBases";
 
         /// <summary>置顶。是否置顶显示</summary>
         public const String IsPinned = "IsPinned";

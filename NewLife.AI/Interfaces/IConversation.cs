@@ -41,9 +41,6 @@ public partial interface IConversation
     /// <summary>思考模式。Auto=0自动, Think=1思考, Fast=2快速</summary>
     NewLife.AI.Models.ThinkingMode ThinkingMode { get; set; }
 
-    /// <summary>知识库。逗号分隔的知识库ID列表，会话级绑定</summary>
-    String? KnowledgeBases { get; set; }
-
     /// <summary>置顶。是否置顶显示</summary>
     Boolean IsPinned { get; set; }
 

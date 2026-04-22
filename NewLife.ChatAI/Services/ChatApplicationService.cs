@@ -215,7 +215,7 @@ public class ChatApplicationService
         {
             Id = e.Id,
             ConversationId = e.ConversationId,
-            ConversationTitle = e.ConversationTitle ?? "",
+            ConversationTitle = e.Title ?? "",
             Role = e.Role ?? "user",
             Content = e.Content ?? "",
             CreateTime = e.CreateTime,

@@ -36,7 +36,7 @@ public partial class Skill : ISkill, IEntity<ISkill>
     [DisplayName("用户")]
     [Description("用户。0=系统内置")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("UserId", "用户。0=系统内置", "", DefaultValue = "0")]
+    [BindColumn("UserId", "用户。0=系统内置", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
     private Int32 _ProjectId;
@@ -44,7 +44,7 @@ public partial class Skill : ISkill, IEntity<ISkill>
     [DisplayName("项目")]
     [Description("项目。0=个人/系统")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。0=个人/系统", "", DefaultValue = "0")]
+    [BindColumn("ProjectId", "项目。0=个人/系统", "")]
     public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _Code;
@@ -365,6 +365,22 @@ public partial class Skill : ISkill, IEntity<ISkill>
     #endregion
 
     #region 关联映射
+    /// <summary>用户</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
+
+    /// <summary>用户</summary>
+    [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
+    public String? UserName => User?.ToString();
+
+    /// <summary>项目</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
+
+    /// <summary>项目</summary>
+    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
+    public String? ProjectName => Project?.ToString();
+
     #endregion
 
     #region 扩展查询

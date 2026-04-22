@@ -197,6 +197,14 @@ public partial class SharedConversation : ISharedConversation, IEntity<ISharedCo
     #endregion
 
     #region 关联映射
+    /// <summary>会话</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    /// <summary>会话</summary>
+    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    public String? Title => Conversation?.ToString();
+
     #endregion
 
     #region 扩展查询
