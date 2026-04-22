@@ -189,14 +189,30 @@ public class UsageService(IChatSetting chatSetting, ILog log)
 
 #region DTO 定义
 /// <summary>用量摘要</summary>
-public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, DateTime LastActiveTime);
+public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, DateTime LastActiveTime, Decimal TotalCost = 0m);
 
 /// <summary>按日用量</summary>
-public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens);
+public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, Decimal Cost = 0m);
 
 /// <summary>模型使用分布</summary>
-public record ModelUsageDto(Int32 ModelId, Int32 Calls, Int32 TotalTokens);
+public record ModelUsageDto(Int32 ModelId, Int32 Calls, Int32 TotalTokens, String ModelName = "", Decimal Cost = 0m);
 
 /// <summary>AppKey 用量</summary>
 public record AppKeyUsageDto(Int32 AppKeyId, String Name, Int32 Calls, Int32 TotalTokens, DateTime LastCallTime);
+
+/// <summary>用量限额及当前已用量</summary>
+public record UsageQuotaDto(
+    Int64 DailyTokenUsed,
+    Int64 MonthlyTokenUsed,
+    Int64 TotalTokenUsed,
+    Decimal DailyCostUsed,
+    Decimal MonthlyCostUsed,
+    Decimal TotalCostUsed,
+    Int64 DailyTokenLimit,
+    Int64 MonthlyTokenLimit,
+    Int64 TotalTokenLimit,
+    Decimal DailyCostLimit,
+    Decimal MonthlyCostLimit,
+    Decimal TotalCostLimit,
+    Int32 RateLimitPerMinute);
 #endregion
