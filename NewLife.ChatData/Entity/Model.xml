@@ -57,9 +57,10 @@
         <Column Name="IsPinned" DataType="Boolean" Description="置顶。是否置顶显示" />
         <Column Name="MessageCount" DataType="Int32" Description="消息数" />
         <Column Name="LastMessageTime" DataType="DateTime" Description="最后消息时间。用于排序" />
-        <Column Name="InputTokens" DataType="Int32" Description="输入Token数。会话累计消耗的输入Token数" />
-        <Column Name="OutputTokens" DataType="Int32" Description="输出Token数。会话累计消耗的输出Token数" />
-        <Column Name="TotalTokens" DataType="Int32" Description="总Token数。会话累计消耗的总Token数" />
+        <Column Name="InputTokens" DataType="Int32" Description="输入Token数。会话累计消耗的输入Token数（含额外LLM调用）" />
+        <Column Name="OutputTokens" DataType="Int32" Description="输出Token数。会话累计消耗的输出Token数（含额外LLM调用）" />
+        <Column Name="TotalTokens" DataType="Int32" Description="总Token数。会话累计消耗的总Token数（含额外LLM调用）" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="Source" DataType="String" Description="来源。Web/Gateway/Channel等，标识对话入口" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
@@ -97,6 +98,7 @@
         <Column Name="InputTokens" DataType="Int32" Description="输入Token数" />
         <Column Name="OutputTokens" DataType="Int32" Description="输出Token数" />
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。本条消息消耗费用，单位：元" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
@@ -170,8 +172,16 @@
         <Column Name="InputTextTokens" DataType="Int32" Description="文本输入Token数" />
         <Column Name="OutputAudioTokens" DataType="Int32" Description="音频输出Token数" />
         <Column Name="OutputTextTokens" DataType="Int32" Description="文本输出Token数" />
+        <Column Name="InputCost" DataType="Decimal" Precision="18" Scale="6" Description="输入费用。单位：元" />
+        <Column Name="OutputCost" DataType="Decimal" Precision="18" Scale="6" Description="输出费用。单位：元" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。单位：元" />
+        <Column Name="ImageCount" DataType="Int32" Description="图片数量。本次生成图片数（多模态计费）" />
+        <Column Name="VideoSeconds" DataType="Int32" Description="视频时长。本次生成视频秒数（多模态计费）" />
+        <Column Name="EmbeddingCount" DataType="Int32" Description="向量化条数。Embedding 调用的批量条数" />
+        <Column Name="Resolution" DataType="String" Length="20" Description="分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers" />
+        <Column Name="ParentMessageId" DataType="Int64" Description="父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
-        <Column Name="Source" DataType="String" Description="请求来源。Chat=对话/Gateway=网关" />
+        <Column Name="Source" DataType="String" Description="请求来源。Chat=主对话/Gateway=网关/Title=标题生成/Compact=上下文压缩/Memory=记忆提取/Knowledge=知识分析/Image=图片生成/Video=视频生成/Embedding=向量化" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
@@ -182,6 +192,8 @@
         <Index Columns="AppKeyId,Id" />
         <Index Columns="ModelId,Id" />
         <Index Columns="ConversationId" />
+        <Index Columns="Source,Id" />
+        <Index Columns="ParentMessageId" />
       </Indexes>
     </Table>
     <Table Name="ProviderConfig" Description="提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例" Output="系统配置">
@@ -225,6 +237,14 @@
         <Column Name="SupportAudio" DataType="Boolean" Description="音频。是否支持音频输入输出" />
         <Column Name="SupportImageGeneration" DataType="Boolean" Description="图像。是否支持文生图" />
         <Column Name="SupportVideoGeneration" DataType="Boolean" Description="视频生成。是否支持文生视频" />
+        <Column Name="PricingMode" DataType="Int32" Description="计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化" Type="NewLife.AI.Models.PricingMode" Category="计费" />
+        <Column Name="InputPrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="2" Description="输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）" Category="计费" />
+        <Column Name="OutputPrice" DataType="Decimal" Precision="18" Scale="6" DefaultValue="12" Description="输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）" Category="计费" />
+        <Column Name="CachedInputPrice" DataType="Decimal" Precision="18" Scale="6" Description="缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算" Category="计费" />
+        <Column Name="ImagePrice" DataType="Decimal" Precision="18" Scale="6" Description="图片价格。文生图单价，单位：元/张" Category="计费" />
+        <Column Name="VideoPrice" DataType="Decimal" Precision="18" Scale="6" Description="视频价格。文生视频基准单价，单位：元/秒" Category="计费" />
+        <Column Name="EmbeddingPrice" DataType="Decimal" Precision="18" Scale="6" Description="向量化价格。Embedding单价，单位：元/百万Token" Category="计费" />
+        <Column Name="PriceTiers" DataType="String" ItemType="json" Length="500" Description="分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution" Category="计费" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
@@ -256,6 +276,14 @@
         <Column Name="LastCallTime" DataType="DateTime" Description="最后调用时间" />
         <Column Name="Calls" DataType="Int64" Description="调用次数。累计API请求数" />
         <Column Name="TotalTokens" DataType="Int64" Description="总Token数。累计消耗Token" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。累计消耗费用，单位：元" />
+        <Column Name="DailyTokenLimit" DataType="Int64" Description="日Token限额。每日Token使用上限，0表示不限制" Category="限额" />
+        <Column Name="MonthlyTokenLimit" DataType="Int64" Description="月Token限额。每月Token使用上限，0表示不限制" Category="限额" />
+        <Column Name="TotalTokenLimit" DataType="Int64" Description="总Token限额。永久累计Token上限，0表示不限制" Category="限额" />
+        <Column Name="DailyCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="日费用限额。每日费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="MonthlyCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="月费用限额。每月费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="TotalCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="总费用限额。永久累计费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="RateLimitPerMinute" DataType="Int32" Description="分钟限流。每分钟请求上限，0表示不限制" Category="限额" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
@@ -294,6 +322,15 @@
         <Column Name="LearningModel" DataType="String" Description="学习模型。用户自选的记忆提取模型，为空则使用系统配置" />
         <Column Name="MemoryInjectNum" DataType="Int32" Description="记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置" />
         <Column Name="ContentWidth" DataType="Int32" Description="内容区宽度。标准960/宽屏1200/自适应0" />
+        <Column Name="TotalTokens" DataType="Int64" Description="总Token数。累计消耗Token，由用量记录汇总" Category="限额" />
+        <Column Name="TotalCost" DataType="Decimal" Precision="18" Scale="6" Description="总费用。累计消耗费用，单位：元，由用量记录汇总" Category="限额" />
+        <Column Name="DailyTokenLimit" DataType="Int64" Description="日Token限额。每日Token使用上限，0表示不限制" Category="限额" />
+        <Column Name="MonthlyTokenLimit" DataType="Int64" Description="月Token限额。每月Token使用上限，0表示不限制" Category="限额" />
+        <Column Name="TotalTokenLimit" DataType="Int64" Description="总Token限额。永久累计Token上限，0表示不限制" Category="限额" />
+        <Column Name="DailyCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="日费用限额。每日费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="MonthlyCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="月费用限额。每月费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="TotalCostLimit" DataType="Decimal" Precision="18" Scale="6" Description="总费用限额。永久累计费用上限，单位：元，0表示不限制" Category="限额" />
+        <Column Name="RateLimitPerMinute" DataType="Int32" Description="分钟限流。每分钟请求上限，0表示不限制" Category="限额" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
@@ -391,6 +428,9 @@
         <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。是否启用此工具，禁用后不传给LLM调用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统工具。每次LLM请求自动携带，无需@引用，如当前时间、当前用户信息" />
         <Column Name="IsLocked" DataType="Boolean" Description="锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整" />
+        <Column Name="RoleIds" DataType="String" Length="500" Description="角色组。逗号分隔角色ID列表，命中即放行；为空时不限制" Category="安全" />
+        <Column Name="DepartmentIds" DataType="String" Length="500" Description="部门组。逗号分隔部门ID列表，命中即放行；为空时不限制" Category="安全" />
+        <Column Name="ProjectIds" DataType="String" Length="500" Description="项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制" Category="安全" />
         <Column Name="Providers" DataType="String" Description="服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo" />
         <Column Name="Endpoint" DataType="String" ItemType="url" Length="200" Description="远程地址。工具依赖的远程服务地址，如https://ai.newlifex.com" />
         <Column Name="ApiKey" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="API密钥。调用远程服务所需的访问密钥" />
@@ -426,6 +466,9 @@
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />
         <Column Name="Version" DataType="Int32" Description="版本。每次编辑自增" />
+        <Column Name="RoleIds" DataType="String" Length="500" Description="角色组。逗号分隔角色ID列表，命中即放行；为空时不限制" Category="安全" />
+        <Column Name="DepartmentIds" DataType="String" Length="500" Description="部门组。逗号分隔部门ID列表，命中即放行；为空时不限制" Category="安全" />
+        <Column Name="ProjectIds" DataType="String" Length="500" Description="项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制" Category="安全" />
         <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />

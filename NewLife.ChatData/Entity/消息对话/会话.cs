@@ -138,28 +138,36 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     public DateTime LastMessageTime { get => _LastMessageTime; set { if (OnPropertyChanging("LastMessageTime", value)) { _LastMessageTime = value; OnPropertyChanged("LastMessageTime"); } } }
 
     private Int32 _InputTokens;
-    /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+    /// <summary>输入Token数。会话累计消耗的输入Token数（含额外LLM调用）</summary>
     [DisplayName("输入Token数")]
-    [Description("输入Token数。会话累计消耗的输入Token数")]
+    [Description("输入Token数。会话累计消耗的输入Token数（含额外LLM调用）")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("InputTokens", "输入Token数。会话累计消耗的输入Token数", "")]
+    [BindColumn("InputTokens", "输入Token数。会话累计消耗的输入Token数（含额外LLM调用）", "")]
     public Int32 InputTokens { get => _InputTokens; set { if (OnPropertyChanging("InputTokens", value)) { _InputTokens = value; OnPropertyChanged("InputTokens"); } } }
 
     private Int32 _OutputTokens;
-    /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+    /// <summary>输出Token数。会话累计消耗的输出Token数（含额外LLM调用）</summary>
     [DisplayName("输出Token数")]
-    [Description("输出Token数。会话累计消耗的输出Token数")]
+    [Description("输出Token数。会话累计消耗的输出Token数（含额外LLM调用）")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("OutputTokens", "输出Token数。会话累计消耗的输出Token数", "")]
+    [BindColumn("OutputTokens", "输出Token数。会话累计消耗的输出Token数（含额外LLM调用）", "")]
     public Int32 OutputTokens { get => _OutputTokens; set { if (OnPropertyChanging("OutputTokens", value)) { _OutputTokens = value; OnPropertyChanged("OutputTokens"); } } }
 
     private Int32 _TotalTokens;
-    /// <summary>总Token数。会话累计消耗的总Token数</summary>
+    /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
     [DisplayName("总Token数")]
-    [Description("总Token数。会话累计消耗的总Token数")]
+    [Description("总Token数。会话累计消耗的总Token数（含额外LLM调用）")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokens", "总Token数。会话累计消耗的总Token数", "")]
+    [BindColumn("TotalTokens", "总Token数。会话累计消耗的总Token数（含额外LLM调用）", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
+
+    private Decimal _TotalCost;
+    /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
+    [DisplayName("总费用")]
+    [Description("总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("TotalCost", "总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）", "", Precision = 18, Scale = 6)]
+    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
 
     private Int32 _ElapsedMs;
     /// <summary>耗时。毫秒</summary>
@@ -272,6 +280,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         InputTokens = model.InputTokens;
         OutputTokens = model.OutputTokens;
         TotalTokens = model.TotalTokens;
+        TotalCost = model.TotalCost;
         ElapsedMs = model.ElapsedMs;
         Source = model.Source;
         Remark = model.Remark;
@@ -303,6 +312,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
             "InputTokens" => _InputTokens,
             "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
+            "TotalCost" => _TotalCost,
             "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
             "TraceId" => _TraceId,
@@ -336,6 +346,7 @@ public partial class Conversation : IConversation, IEntity<IConversation>
                 case "InputTokens": _InputTokens = value.ToInt(); break;
                 case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
+                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
@@ -497,14 +508,17 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         /// <summary>最后消息时间。用于排序</summary>
         public static readonly Field LastMessageTime = FindByName("LastMessageTime");
 
-        /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+        /// <summary>输入Token数。会话累计消耗的输入Token数（含额外LLM调用）</summary>
         public static readonly Field InputTokens = FindByName("InputTokens");
 
-        /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+        /// <summary>输出Token数。会话累计消耗的输出Token数（含额外LLM调用）</summary>
         public static readonly Field OutputTokens = FindByName("OutputTokens");
 
-        /// <summary>总Token数。会话累计消耗的总Token数</summary>
+        /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
+
+        /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
+        public static readonly Field TotalCost = FindByName("TotalCost");
 
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
@@ -584,14 +598,17 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         /// <summary>最后消息时间。用于排序</summary>
         public const String LastMessageTime = "LastMessageTime";
 
-        /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+        /// <summary>输入Token数。会话累计消耗的输入Token数（含额外LLM调用）</summary>
         public const String InputTokens = "InputTokens";
 
-        /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+        /// <summary>输出Token数。会话累计消耗的输出Token数（含额外LLM调用）</summary>
         public const String OutputTokens = "OutputTokens";
 
-        /// <summary>总Token数。会话累计消耗的总Token数</summary>
+        /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
         public const String TotalTokens = "TotalTokens";
+
+        /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
+        public const String TotalCost = "TotalCost";
 
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";

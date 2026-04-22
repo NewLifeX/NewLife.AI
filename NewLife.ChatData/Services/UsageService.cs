@@ -9,7 +9,11 @@ using UsageDetails = NewLife.AI.Models.UsageDetails;
 namespace NewLife.ChatData.Services;
 
 /// <summary>用量统计服务。记录和查询 AI 调用的 Token 消耗，支持按用户和 AppKey 双维度统计</summary>
-/// <remarks>实例化用量统计服务</remarks>
+/// <remarks>
+/// <para>本服务只负责把基础 Token 用量写入 UsageRecord，不做计费与配额校验。</para>
+/// <para>计费、配额扣减、超额拒绝等增强逻辑由 StarChat 商用版的 PricingService/QuotaService 完成；
+/// 开源版 ChatAI 仅保留最简单的用量记录能力。</para>
+/// </remarks>
 /// <param name="chatSetting">AI对话系统配置</param>
 /// <param name="log">日志</param>
 public class UsageService(IChatSetting chatSetting, ILog log)
@@ -22,8 +26,11 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <param name="messageId">消息编号</param>
     /// <param name="modelId">模型编号</param>
     /// <param name="usage">用量详情</param>
-    /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
-    public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId, Int32 modelId, UsageDetails usage, String source)
+    /// <param name="source">请求来源。Chat=对话/Gateway=网关/Title/Compact/Memory/Knowledge/Image/Video/Embedding</param>
+    /// <param name="projectId">项目编号，无则为0</param>
+    /// <param name="parentMessageId">触发本次调用的主消息编号，0=主调用本身</param>
+    public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId, Int32 modelId, UsageDetails usage, String source,
+        Int32 projectId = 0, Int64 parentMessageId = 0)
     {
         if (!chatSetting.EnableUsageStats) return;
 
@@ -32,9 +39,11 @@ public class UsageService(IChatSetting chatSetting, ILog log)
             var entity = new UsageRecord
             {
                 UserId = userId,
+                ProjectId = projectId,
                 AppKeyId = appKeyId,
                 ConversationId = conversationId,
                 MessageId = messageId,
+                ParentMessageId = parentMessageId,
                 ModelId = modelId,
                 ModelName = ModelConfig.FindById(modelId)?.Name,
                 InputTokens = usage.InputTokens,
@@ -69,31 +78,9 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
     public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId,
         Int32 modelId, Int32 inputTokens, Int32 outputTokens, Int32 totalTokens, String source)
-    {
-        if (!chatSetting.EnableUsageStats) return;
-
-        try
-        {
-            var entity = new UsageRecord
-            {
-                UserId = userId,
-                AppKeyId = appKeyId,
-                ConversationId = conversationId,
-                MessageId = messageId,
-                ModelId = modelId,
-                ModelName = ModelConfig.FindById(modelId)?.Name,
-                InputTokens = inputTokens,
-                OutputTokens = outputTokens,
-                TotalTokens = totalTokens,
-                Source = source,
-            };
-            entity.Insert();
-        }
-        catch (Exception ex)
-        {
-            log?.Error("写入用量记录失败: {0}", ex.Message);
-        }
-    }
+        => Record(userId, appKeyId, conversationId, messageId, modelId,
+            new UsageDetails { InputTokens = inputTokens, OutputTokens = outputTokens, TotalTokens = totalTokens },
+            source);
     #endregion
 
     #region 用户维度查询
@@ -122,7 +109,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<DailyUsageDto> GetDailyUsage(Int32 userId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(userId, -1, -1, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(userId, -1, -1, -1, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)
@@ -184,7 +171,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<DailyUsageDto> GetAppKeyDailyUsage(Int32 appKeyId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(-1, -1, appKeyId, -1, -1, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(-1, -1, appKeyId, -1, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)

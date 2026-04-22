@@ -158,6 +158,14 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
     [BindColumn("TotalTokens", "总Token数", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
+    private Decimal _TotalCost;
+    /// <summary>总费用。本条消息消耗费用，单位：元</summary>
+    [DisplayName("总费用")]
+    [Description("总费用。本条消息消耗费用，单位：元")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("TotalCost", "总费用。本条消息消耗费用，单位：元", "", Precision = 18, Scale = 6)]
+    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
+
     private Int32 _ElapsedMs;
     /// <summary>耗时。毫秒</summary>
     [DisplayName("耗时")]
@@ -225,6 +233,7 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
         InputTokens = model.InputTokens;
         OutputTokens = model.OutputTokens;
         TotalTokens = model.TotalTokens;
+        TotalCost = model.TotalCost;
         ElapsedMs = model.ElapsedMs;
     }
     #endregion
@@ -254,6 +263,7 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
             "InputTokens" => _InputTokens,
             "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
+            "TotalCost" => _TotalCost,
             "ElapsedMs" => _ElapsedMs,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
@@ -282,6 +292,7 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
                 case "InputTokens": _InputTokens = value.ToInt(); break;
                 case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
+                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -407,6 +418,9 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
         /// <summary>总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
+        /// <summary>总费用。本条消息消耗费用，单位：元</summary>
+        public static readonly Field TotalCost = FindByName("TotalCost");
+
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
 
@@ -478,6 +492,9 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
 
         /// <summary>总Token数</summary>
         public const String TotalTokens = "TotalTokens";
+
+        /// <summary>总费用。本条消息消耗费用，单位：元</summary>
+        public const String TotalCost = "TotalCost";
 
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";

@@ -62,6 +62,9 @@ public partial interface IChatMessage
     /// <summary>总Token数</summary>
     Int32 TotalTokens { get; set; }
 
+    /// <summary>总费用。本条消息消耗费用，单位：元</summary>
+    Decimal TotalCost { get; set; }
+
     /// <summary>耗时。毫秒</summary>
     Int32 ElapsedMs { get; set; }
     #endregion

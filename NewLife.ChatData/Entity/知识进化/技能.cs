@@ -151,6 +151,33 @@ public partial class Skill : ISkill, IEntity<ISkill>
     [BindColumn("Version", "版本。每次编辑自增", "")]
     public Int32 Version { get => _Version; set { if (OnPropertyChanging("Version", value)) { _Version = value; OnPropertyChanged("Version"); } } }
 
+    private String? _RoleIds;
+    /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+    [Category("安全")]
+    [DisplayName("角色组")]
+    [Description("角色组。逗号分隔角色ID列表，命中即放行；为空时不限制")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("RoleIds", "角色组。逗号分隔角色ID列表，命中即放行；为空时不限制", "")]
+    public String? RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
+
+    private String? _DepartmentIds;
+    /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+    [Category("安全")]
+    [DisplayName("部门组")]
+    [Description("部门组。逗号分隔部门ID列表，命中即放行；为空时不限制")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("DepartmentIds", "部门组。逗号分隔部门ID列表，命中即放行；为空时不限制", "")]
+    public String? DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
+
+    private String? _ProjectIds;
+    /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+    [Category("安全")]
+    [DisplayName("项目组")]
+    [Description("项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("ProjectIds", "项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制", "")]
+    public String? ProjectIds { get => _ProjectIds; set { if (OnPropertyChanging("ProjectIds", value)) { _ProjectIds = value; OnPropertyChanged("ProjectIds"); } } }
+
     private String? _CreateUser;
     /// <summary>创建者</summary>
     [Category("扩展")]
@@ -254,6 +281,9 @@ public partial class Skill : ISkill, IEntity<ISkill>
         Enable = model.Enable;
         IsSystem = model.IsSystem;
         Version = model.Version;
+        RoleIds = model.RoleIds;
+        DepartmentIds = model.DepartmentIds;
+        ProjectIds = model.ProjectIds;
         Remark = model.Remark;
     }
     #endregion
@@ -282,6 +312,9 @@ public partial class Skill : ISkill, IEntity<ISkill>
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
             "Version" => _Version,
+            "RoleIds" => _RoleIds,
+            "DepartmentIds" => _DepartmentIds,
+            "ProjectIds" => _ProjectIds,
             "CreateUser" => _CreateUser,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -313,6 +346,9 @@ public partial class Skill : ISkill, IEntity<ISkill>
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
                 case "Version": _Version = value.ToInt(); break;
+                case "RoleIds": _RoleIds = Convert.ToString(value); break;
+                case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
+                case "ProjectIds": _ProjectIds = Convert.ToString(value); break;
                 case "CreateUser": _CreateUser = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -489,6 +525,15 @@ public partial class Skill : ISkill, IEntity<ISkill>
         /// <summary>版本。每次编辑自增</summary>
         public static readonly Field Version = FindByName("Version");
 
+        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+        public static readonly Field RoleIds = FindByName("RoleIds");
+
+        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+        public static readonly Field DepartmentIds = FindByName("DepartmentIds");
+
+        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+        public static readonly Field ProjectIds = FindByName("ProjectIds");
+
         /// <summary>创建者</summary>
         public static readonly Field CreateUser = FindByName("CreateUser");
 
@@ -569,6 +614,15 @@ public partial class Skill : ISkill, IEntity<ISkill>
 
         /// <summary>版本。每次编辑自增</summary>
         public const String Version = "Version";
+
+        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+        public const String RoleIds = "RoleIds";
+
+        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+        public const String DepartmentIds = "DepartmentIds";
+
+        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+        public const String ProjectIds = "ProjectIds";
 
         /// <summary>创建者</summary>
         public const String CreateUser = "CreateUser";

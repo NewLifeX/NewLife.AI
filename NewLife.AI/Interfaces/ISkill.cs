@@ -59,6 +59,15 @@ public partial interface ISkill
     /// <summary>版本。每次编辑自增</summary>
     Int32 Version { get; set; }
 
+    /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+    String? RoleIds { get; set; }
+
+    /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+    String? DepartmentIds { get; set; }
+
+    /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+    String? ProjectIds { get; set; }
+
     /// <summary>备注</summary>
     String? Remark { get; set; }
     #endregion

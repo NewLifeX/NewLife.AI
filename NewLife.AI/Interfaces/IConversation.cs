@@ -53,14 +53,17 @@ public partial interface IConversation
     /// <summary>最后消息时间。用于排序</summary>
     DateTime LastMessageTime { get; set; }
 
-    /// <summary>输入Token数。会话累计消耗的输入Token数</summary>
+    /// <summary>输入Token数。会话累计消耗的输入Token数（含额外LLM调用）</summary>
     Int32 InputTokens { get; set; }
 
-    /// <summary>输出Token数。会话累计消耗的输出Token数</summary>
+    /// <summary>输出Token数。会话累计消耗的输出Token数（含额外LLM调用）</summary>
     Int32 OutputTokens { get; set; }
 
-    /// <summary>总Token数。会话累计消耗的总Token数</summary>
+    /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
     Int32 TotalTokens { get; set; }
+
+    /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
+    Decimal TotalCost { get; set; }
 
     /// <summary>耗时。毫秒</summary>
     Int32 ElapsedMs { get; set; }

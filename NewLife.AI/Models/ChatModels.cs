@@ -91,3 +91,23 @@ public enum ResponseStyle
     [Description("创意")]
     Creative = 3,
 }
+
+/// <summary>计费模式。控制 ModelConfig 上价格字段的解释方式</summary>
+public enum PricingMode
+{
+    /// <summary>按 Token。InputPrice/OutputPrice 单位：元/百万Token</summary>
+    [Description("按Token")]
+    Token = 0,
+
+    /// <summary>按张图片。ImagePrice 单位：元/张</summary>
+    [Description("按图片")]
+    Image = 1,
+
+    /// <summary>按视频秒数。VideoPrice 单位：元/秒，按 PriceTiers 不同分辨率区分</summary>
+    [Description("按视频")]
+    Video = 2,
+
+    /// <summary>按 Embedding 调用。EmbeddingPrice 单位：元/百万Token</summary>
+    [Description("按Embedding")]
+    Embedding = 3,
+}

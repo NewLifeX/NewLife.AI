@@ -76,5 +76,32 @@ public partial interface IUserSetting
 
     /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
     Int32 ContentWidth { get; set; }
+
+    /// <summary>总Token数。累计消耗Token，由用量记录汇总</summary>
+    Int64 TotalTokens { get; set; }
+
+    /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
+    Decimal TotalCost { get; set; }
+
+    /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
+    Int64 DailyTokenLimit { get; set; }
+
+    /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
+    Int64 MonthlyTokenLimit { get; set; }
+
+    /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
+    Int64 TotalTokenLimit { get; set; }
+
+    /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
+    Decimal DailyCostLimit { get; set; }
+
+    /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
+    Decimal MonthlyCostLimit { get; set; }
+
+    /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
+    Decimal TotalCostLimit { get; set; }
+
+    /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
+    Int32 RateLimitPerMinute { get; set; }
     #endregion
 }
