@@ -22,7 +22,35 @@ public record AiProviderCapabilities(
 /// <param name="Model">模型标识，即 API 请求中 model 字段的值，如 "gpt-4o"</param>
 /// <param name="DisplayName">模型显示名称，用于界面展示，如 "GPT-4o"</param>
 /// <param name="Capabilities">该模型支持的能力</param>
-public record AiModelInfo(String Model, String DisplayName, AiProviderCapabilities Capabilities);
+public record AiModelInfo(String Model, String DisplayName, AiProviderCapabilities Capabilities)
+{
+    /// <summary>计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化</summary>
+    public NewLife.AI.Models.PricingMode PricingMode { get; init; }
+
+    /// <summary>输入价格。单位：元/百万Token</summary>
+    public Decimal InputPrice { get; init; }
+
+    /// <summary>输出价格。单位：元/百万Token</summary>
+    public Decimal OutputPrice { get; init; }
+
+    /// <summary>缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算</summary>
+    public Decimal CachedInputPrice { get; init; }
+
+    /// <summary>图片价格。文生图单价，单位：元/张</summary>
+    public Decimal ImagePrice { get; init; }
+
+    /// <summary>视频价格。文生视频基准单价，单位：元/秒</summary>
+    public Decimal VideoPrice { get; init; }
+
+    /// <summary>向量化价格。Embedding单价，单位：元/百万Token</summary>
+    public Decimal EmbeddingPrice { get; init; }
+
+    /// <summary>分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价</summary>
+    public String? PriceTiers { get; init; }
+
+    /// <summary>币种。默认 CNY</summary>
+    public String? Currency { get; init; }
+}
 
 /// <summary>AI 客户端连接选项</summary>
 public class AiClientOptions
