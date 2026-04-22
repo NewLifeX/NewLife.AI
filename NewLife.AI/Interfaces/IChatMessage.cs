@@ -17,6 +17,12 @@ public partial interface IChatMessage
     /// <summary>会话。所属会话</summary>
     Int64 ConversationId { get; set; }
 
+    /// <summary>父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系</summary>
+    Int64 ParentId { get; set; }
+
+    /// <summary>分支序号。同一父节点下的分支序号，0=主线，1/2...=分叉支线</summary>
+    Int32 BranchIndex { get; set; }
+
     /// <summary>角色。User=用户, Assistant=AI助手</summary>
     String? Role { get; set; }
 

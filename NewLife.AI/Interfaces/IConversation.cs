@@ -68,6 +68,12 @@ public partial interface IConversation
     /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
     String? Source { get; set; }
 
+    /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
+    Int64 ForkConversationId { get; set; }
+
+    /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
+    Int64 ForkMessageId { get; set; }
+
     /// <summary>备注</summary>
     String? Remark { get; set; }
     #endregion

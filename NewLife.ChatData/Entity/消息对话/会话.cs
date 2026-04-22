@@ -177,6 +177,22 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [BindColumn("Source", "来源。Web/Gateway/Channel等，标识对话入口", "")]
     public String? Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
 
+    private Int64 _ForkConversationId;
+    /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
+    [DisplayName("分叉来源会话")]
+    [Description("分叉来源会话。从哪个会话分叉而来，0表示原始会话")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ForkConversationId", "分叉来源会话。从哪个会话分叉而来，0表示原始会话", "")]
+    public Int64 ForkConversationId { get => _ForkConversationId; set { if (OnPropertyChanging("ForkConversationId", value)) { _ForkConversationId = value; OnPropertyChanged("ForkConversationId"); } } }
+
+    private Int64 _ForkMessageId;
+    /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
+    [DisplayName("分叉来源消息")]
+    [Description("分叉来源消息。从哪条消息分叉而来，0表示未分叉")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ForkMessageId", "分叉来源消息。从哪条消息分叉而来，0表示未分叉", "")]
+    public Int64 ForkMessageId { get => _ForkMessageId; set { if (OnPropertyChanging("ForkMessageId", value)) { _ForkMessageId = value; OnPropertyChanged("ForkMessageId"); } } }
+
     private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
@@ -274,6 +290,8 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         TotalCost = model.TotalCost;
         ElapsedMs = model.ElapsedMs;
         Source = model.Source;
+        ForkConversationId = model.ForkConversationId;
+        ForkMessageId = model.ForkMessageId;
         Remark = model.Remark;
     }
     #endregion
@@ -305,6 +323,8 @@ public partial class Conversation : IConversation, IEntity<IConversation>
             "TotalCost" => _TotalCost,
             "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
+            "ForkConversationId" => _ForkConversationId,
+            "ForkMessageId" => _ForkMessageId,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -338,6 +358,8 @@ public partial class Conversation : IConversation, IEntity<IConversation>
                 case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
+                case "ForkConversationId": _ForkConversationId = value.ToLong(); break;
+                case "ForkMessageId": _ForkMessageId = value.ToLong(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -524,6 +546,12 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
         public static readonly Field Source = FindByName("Source");
 
+        /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
+        public static readonly Field ForkConversationId = FindByName("ForkConversationId");
+
+        /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
+        public static readonly Field ForkMessageId = FindByName("ForkMessageId");
+
         /// <summary>链路。方便问题排查</summary>
         public static readonly Field TraceId = FindByName("TraceId");
 
@@ -610,6 +638,12 @@ public partial class Conversation : IConversation, IEntity<IConversation>
 
         /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
         public const String Source = "Source";
+
+        /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
+        public const String ForkConversationId = "ForkConversationId";
+
+        /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
+        public const String ForkMessageId = "ForkMessageId";
 
         /// <summary>链路。方便问题排查</summary>
         public const String TraceId = "TraceId";
