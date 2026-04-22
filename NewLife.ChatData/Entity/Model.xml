@@ -157,7 +157,7 @@
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户" />
         <Column Name="ProjectId" DataType="Int32" Map="AgentProject@Id@$@ProjectName" Description="项目。所属项目编号，0=个人" />
-        <Column Name="AppKeyId" DataType="Int32" Description="应用密钥。通过API网关调用时关联的AppKey" />
+        <Column Name="AppKeyId" DataType="Int32" Map="AppKey@Id@$@AppKeyName" Description="应用密钥。通过API网关调用时关联的AppKey" />
         <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话" />
         <Column Name="MessageId" DataType="Int64" Description="消息。对应的AI回复消息" />
         <Column Name="ModelId" DataType="Int32" Description="模型。引用ModelConfig.Id" />

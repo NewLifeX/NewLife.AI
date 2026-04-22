@@ -404,6 +404,14 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
     public String? ProjectName => Project?.ToString();
 
+    /// <summary>应用密钥</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AppKey? AppKey => Extends.Get(nameof(AppKey), k => AppKey.FindById(AppKeyId));
+
+    /// <summary>应用密钥</summary>
+    [Map(nameof(AppKeyId), typeof(AppKey), "Id")]
+    public String? AppKeyName => AppKey?.ToString();
+
     /// <summary>会话</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));

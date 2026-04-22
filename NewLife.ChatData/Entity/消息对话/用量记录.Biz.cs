@@ -43,54 +43,16 @@ public partial class UsageRecord : Entity<UsageRecord>
 
         return true;
     }
-
-    ///// <summary>首次连接数据库时初始化数据，仅用于实体类重载，用户不应该调用该方法</summary>
-    //[EditorBrowsable(EditorBrowsableState.Never)]
-    //protected override void InitData()
-    //{
-    //    // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
-    //    if (Meta.Session.Count > 0) return;
-
-    //    if (XTrace.Debug) XTrace.WriteLine("开始初始化UsageRecord[用量记录]数据……");
-
-    //    var entity = new UsageRecord();
-    //    entity.UserId = 0;
-    //    entity.AppKeyId = 0;
-    //    entity.ConversationId = 0;
-    //    entity.MessageId = 0;
-    //    entity.ModelCode = "abc";
-    //    entity.InputTokens = 0;
-    //    entity.OutputTokens = 0;
-    //    entity.TotalTokens = 0;
-    //    entity.Source = "abc";
-    //    entity.Insert();
-
-    //    if (XTrace.Debug) XTrace.WriteLine("完成初始化UsageRecord[用量记录]数据！");
-    //}
-
-    ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
-    ///// <returns></returns>
-    //public override Int32 Insert()
-    //{
-    //    return base.Insert();
-    //}
-
-    ///// <summary>已重载。在事务保护范围内处理业务，位于Valid之后</summary>
-    ///// <returns></returns>
-    //protected override Int32 OnDelete()
-    //{
-    //    return base.OnDelete();
-    //}
     #endregion
 
     #region 扩展属性
-    /// <summary>应用密钥</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AppKey AppKey => Extends.Get(nameof(AppKey), k => AppKey.FindById(AppKeyId));
+    ///// <summary>应用密钥</summary>
+    //[XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    //public AppKey AppKey => Extends.Get(nameof(AppKey), k => AppKey.FindById(AppKeyId));
 
-    /// <summary>应用密钥</summary>
-    [Map(nameof(AppKeyId), typeof(AppKey), "Id")]
-    public String AppKeyName => AppKey?.Name;
+    ///// <summary>应用密钥</summary>
+    //[Map(nameof(AppKeyId), typeof(AppKey), "Id")]
+    //public String AppKeyName => AppKey?.Name;
 
     ///// <summary>会话</summary>
     //[XmlIgnore, IgnoreDataMember, ScriptIgnore]
