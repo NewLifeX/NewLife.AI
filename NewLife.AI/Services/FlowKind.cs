@@ -1,4 +1,4 @@
-namespace NewLife.ChatData.Services;
+namespace NewLife.AI.Services;
 
 /// <summary>消息生成入口类型。用于区分四大消息流（StreamMessage/Regenerate/RegenerateStream/EditAndResendStream）以及恢复后台流</summary>
 /// <remarks>

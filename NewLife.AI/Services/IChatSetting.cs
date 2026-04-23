@@ -1,7 +1,7 @@
-namespace NewLife.ChatData;
+namespace NewLife.AI.Services;
 
-/// <summary>AI对话系统核心配置接口。ChatData 层通过此接口取用配置项，与具体实现解耦，
-/// 由 ChatAI/StarChat 各自注册 &lt;IChatSetting, ChatSetting&gt; 实现注入</summary>
+/// <summary>AI 对话系统核心配置接口。NewLife.AI 通用编排层通过此接口取用配置项，
+/// 与具体实现解耦，由 ChatAI/StarChat 各自注册 &lt;IChatSetting, ChatSetting&gt; 实现注入</summary>
 public interface IChatSetting
 {
     #region 基本配置

@@ -2,7 +2,6 @@ using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Services;
 using NewLife.ChatData.Entity;
-using NewLife.ChatData.Models;
 using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
 
 namespace NewLife.ChatData.Services;
@@ -12,8 +11,9 @@ namespace NewLife.ChatData.Services;
 /// <remarks>
 /// 各 <see cref="IContextEnricher"/> 与 <see cref="IMessageFlowPostProcessor"/> 通过本上下文读取/修改状态，
 /// 无需互相感知。四大入口通过 <see cref="Kind"/> 区分。
+/// 实现 <see cref="IMessageFlowContext"/> 暴露给 NewLife.AI 通用编排层，派生项目内部仍可访问完整字段。
 /// </remarks>
-public class MessageFlowContext
+public class MessageFlowContext : IMessageFlowContext
 {
     #region 入口信息
 
@@ -101,6 +101,29 @@ public class MessageFlowContext
     {
         get => Items.TryGetValue(key, out var v) ? v : null;
         set => Items[key] = value;
+    }
+
+    #endregion
+
+    #region IMessageFlowContext 显式接口实现
+
+    /// <inheritdoc />
+    IConversation IMessageFlowContext.Conversation => Conversation;
+
+    /// <inheritdoc />
+    IModelConfig IMessageFlowContext.ModelConfig => ModelConfig;
+
+    /// <inheritdoc />
+    IChatMessage? IMessageFlowContext.UserMessage => UserMessage;
+
+    /// <inheritdoc />
+    IChatMessage IMessageFlowContext.AssistantMessage => AssistantMessage;
+
+    /// <inheritdoc />
+    IList<NewLife.AI.Models.ChatMessage> IMessageFlowContext.ContextMessages
+    {
+        get => ContextMessages;
+        set => ContextMessages = value;
     }
 
     #endregion

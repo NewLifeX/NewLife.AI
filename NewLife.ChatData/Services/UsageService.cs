@@ -1,4 +1,5 @@
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.ChatData.Entity;
 using NewLife.Data;
 using NewLife.Log;

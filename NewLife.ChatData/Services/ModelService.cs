@@ -2,6 +2,7 @@
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.ChatData.Entity;
 using NewLife.Log;
 using XCode.Membership;

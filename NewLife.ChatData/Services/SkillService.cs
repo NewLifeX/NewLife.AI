@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using NewLife.AI.Services;
 using NewLife.ChatData.Entity;
 using NewLife.Log;
 

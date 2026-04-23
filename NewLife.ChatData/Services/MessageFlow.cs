@@ -6,7 +6,6 @@ using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.AI.Services;
 using NewLife.ChatData.Entity;
-using NewLife.ChatData.Models;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -32,7 +31,7 @@ namespace NewLife.ChatData.Services;
 /// 不引入 Cube.Entity.Department 与 NewLife.Office 等上层依赖；派生类按需增强。
 /// </para>
 /// </remarks>
-public class MessageFlow
+public class MessageFlow : IMessageFlow
 {
     #region 字段
 
