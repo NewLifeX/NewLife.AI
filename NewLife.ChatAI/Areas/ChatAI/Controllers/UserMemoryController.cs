@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife;
 using NewLife.Cube;
@@ -63,6 +63,6 @@ public class UserMemoryController : ChatEntityController<UserMemory>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserMemory.Search(userId, -1, conversationId, category, enable, start, end, p["Q"], p);
+        return UserMemory.Search(userId, conversationId, category, enable, start, end, p["Q"], p);
     }
 }

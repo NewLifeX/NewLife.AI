@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -18,12 +17,11 @@ namespace NewLife.ChatAI.Entity;
 [Serializable]
 [DataObject]
 [Description("用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据")]
-[BindIndex("IX_UserMemory_UserId_ProjectId_Category_Key", false, "UserId,ProjectId,Category,Key")]
 [BindIndex("IX_UserMemory_UserId_Category_Key", false, "UserId,Category,Key")]
 [BindIndex("IX_UserMemory_UserId_Key", false, "UserId,Key")]
 [BindIndex("IX_UserMemory_ConversationId", false, "ConversationId")]
 [BindTable("UserMemory", Description = "用户记忆。AI从对话和反馈中提取的用户信息碎片，是自学习系统的原始数据", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
+public partial class UserMemory
 {
     #region 属性
     private Int64 _Id;
@@ -41,14 +39,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
-
-    private Int32 _ProjectId;
-    /// <summary>项目。0=全局记忆</summary>
-    [DisplayName("项目")]
-    [Description("项目。0=全局记忆")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。0=全局记忆", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private Int64 _ConversationId;
     /// <summary>来源会话。提取该记忆的会话编号</summary>
@@ -182,30 +172,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IUserMemory model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
-        ConversationId = model.ConversationId;
-        Category = model.Category;
-        Key = model.Key;
-        Value = model.Value;
-        Confidence = model.Confidence;
-        Scope = model.Scope;
-        Status = model.Status;
-        ReviewUserId = model.ReviewUserId;
-        ReviewTime = model.ReviewTime;
-        Version = model.Version;
-        ParentId = model.ParentId;
-        Enable = model.Enable;
-        ExpireTime = model.ExpireTime;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -216,7 +182,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
         {
             "Id" => _Id,
             "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
             "ConversationId" => _ConversationId,
             "Category" => _Category,
             "Key" => _Key,
@@ -241,7 +206,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "Category": _Category = Convert.ToString(value); break;
                 case "Key": _Key = Convert.ToString(value); break;
@@ -272,14 +236,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     /// <summary>用户</summary>
     [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
     public String? UserName => User?.ToString();
-
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
 
     /// <summary>来源会话</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
@@ -352,7 +308,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户</param>
-    /// <param name="projectId">项目。0=全局记忆</param>
     /// <param name="conversationId">来源会话。提取该记忆的会话编号</param>
     /// <param name="category">分类。偏好/习惯/兴趣/背景</param>
     /// <param name="enable">启用</param>
@@ -361,12 +316,11 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserMemory> Search(Int32 userId, Int32 projectId, Int64 conversationId, String? category, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserMemory> Search(Int32 userId, Int64 conversationId, String? category, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (!category.IsNullOrEmpty()) exp &= _.Category == category;
         if (enable != null) exp &= _.Enable == enable;
@@ -398,9 +352,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
 
         /// <summary>用户</summary>
         public static readonly Field UserId = FindByName("UserId");
-
-        /// <summary>项目。0=全局记忆</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>来源会话。提取该记忆的会话编号</summary>
         public static readonly Field ConversationId = FindByName("ConversationId");
@@ -461,9 +412,6 @@ public partial class UserMemory : IUserMemory, IEntity<IUserMemory>
 
         /// <summary>用户</summary>
         public const String UserId = "UserId";
-
-        /// <summary>项目。0=全局记忆</summary>
-        public const String ProjectId = "ProjectId";
 
         /// <summary>来源会话。提取该记忆的会话编号</summary>
         public const String ConversationId = "ConversationId";

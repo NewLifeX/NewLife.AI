@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -43,30 +43,6 @@ public partial interface IModelConfig
 
     /// <summary>视频生成。是否支持文生视频</summary>
     Boolean SupportVideoGeneration { get; set; }
-
-    /// <summary>计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化</summary>
-    NewLife.AI.Models.PricingMode PricingMode { get; set; }
-
-    /// <summary>输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）</summary>
-    Decimal InputPrice { get; set; }
-
-    /// <summary>输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）</summary>
-    Decimal OutputPrice { get; set; }
-
-    /// <summary>缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算</summary>
-    Decimal CachedInputPrice { get; set; }
-
-    /// <summary>图片价格。文生图单价，单位：元/张</summary>
-    Decimal ImagePrice { get; set; }
-
-    /// <summary>视频价格。文生视频基准单价，单位：元/秒</summary>
-    Decimal VideoPrice { get; set; }
-
-    /// <summary>向量化价格。Embedding单价，单位：元/百万Token</summary>
-    Decimal EmbeddingPrice { get; set; }
-
-    /// <summary>分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution</summary>
-    String? PriceTiers { get; set; }
 
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     String? SystemPrompt { get; set; }

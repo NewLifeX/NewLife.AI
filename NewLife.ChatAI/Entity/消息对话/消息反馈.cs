@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -22,7 +21,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_MessageFeedback_UserId", false, "UserId")]
 [BindIndex("IX_MessageFeedback_ConversationId", false, "ConversationId")]
 [BindTable("MessageFeedback", Description = "消息反馈。用户对AI回复的点赞或点踩", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class MessageFeedback : IMessageFeedback, IEntity<IMessageFeedback>
+public partial class MessageFeedback
 {
     #region 属性
     private Int32 _Id;
@@ -134,21 +133,6 @@ public partial class MessageFeedback : IMessageFeedback, IEntity<IMessageFeedbac
     [DataObjectField(false, false, true, 0)]
     [BindColumn("UpdateTime", "更新时间", "")]
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
-    #endregion
-
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IMessageFeedback model)
-    {
-        Id = model.Id;
-        ConversationId = model.ConversationId;
-        MessageId = model.MessageId;
-        UserId = model.UserId;
-        FeedbackType = model.FeedbackType;
-        Reason = model.Reason;
-        AllowTraining = model.AllowTraining;
-    }
     #endregion
 
     #region 获取/设置 字段值

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -16,9 +16,6 @@ public partial interface IUsageRecord
 
     /// <summary>用户</summary>
     Int32 UserId { get; set; }
-
-    /// <summary>项目。所属项目编号，0=个人</summary>
-    Int32 ProjectId { get; set; }
 
     /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
     Int32 AppKeyId { get; set; }
@@ -61,30 +58,6 @@ public partial interface IUsageRecord
 
     /// <summary>文本输出Token数</summary>
     Int32 OutputTextTokens { get; set; }
-
-    /// <summary>输入费用。单位：元</summary>
-    Decimal InputCost { get; set; }
-
-    /// <summary>输出费用。单位：元</summary>
-    Decimal OutputCost { get; set; }
-
-    /// <summary>总费用。单位：元</summary>
-    Decimal TotalCost { get; set; }
-
-    /// <summary>图片数量。本次生成图片数（多模态计费）</summary>
-    Int32 ImageCount { get; set; }
-
-    /// <summary>视频时长。本次生成视频秒数（多模态计费）</summary>
-    Int32 VideoSeconds { get; set; }
-
-    /// <summary>向量化条数。Embedding 调用的批量条数</summary>
-    Int32 EmbeddingCount { get; set; }
-
-    /// <summary>分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers</summary>
-    String? Resolution { get; set; }
-
-    /// <summary>父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用</summary>
-    Int64 ParentMessageId { get; set; }
 
     /// <summary>耗时。毫秒</summary>
     Int32 ElapsedMs { get; set; }

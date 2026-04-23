@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc.Filters;
+﻿using Microsoft.AspNetCore.Mvc.Filters;
 using NewLife.AI.Models;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;
@@ -74,6 +74,6 @@ public class ConversationController : ChatEntityController<Conversation>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Conversation.Search(userId, -1, isPinned, p["source"], modelId, skillId, thinkingMode, start, end, p["Q"], p);
+        return Conversation.Search(userId, isPinned, p["source"], modelId, skillId, thinkingMode, start, end, p["Q"], p);
     }
 }

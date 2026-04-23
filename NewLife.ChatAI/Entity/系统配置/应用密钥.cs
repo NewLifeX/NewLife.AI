@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -20,9 +19,8 @@ namespace NewLife.ChatAI.Entity;
 [Description("应用密钥。API网关访问凭证，用于外部系统调用模型服务")]
 [BindIndex("IU_AppKey_Secret", true, "Secret")]
 [BindIndex("IX_AppKey_UserId", false, "UserId")]
-[BindIndex("IX_AppKey_ProjectId", false, "ProjectId")]
 [BindTable("AppKey", Description = "应用密钥。API网关访问凭证，用于外部系统调用模型服务", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class AppKey : IAppKey, IEntity<IAppKey>
+public partial class AppKey
 {
     #region 属性
     private Int32 _Id;
@@ -40,14 +38,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户。密钥所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
-
-    private Int32 _ProjectId;
-    /// <summary>项目。所属项目，0=个人密鑰</summary>
-    [DisplayName("项目")]
-    [Description("项目。所属项目，0=个人密鑰")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目，0=个人密鑰", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _Name;
     /// <summary>名称。用户自定义标识，如业务系统A</summary>
@@ -113,77 +103,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     [BindColumn("TotalTokens", "总Token数。累计消耗Token", "")]
     public Int64 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
-    private Decimal _TotalCost;
-    /// <summary>总费用。累计消耗费用，单位：元</summary>
-    [DisplayName("总费用")]
-    [Description("总费用。累计消耗费用，单位：元")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。累计消耗费用，单位：元", "", Precision = 18, Scale = 6)]
-    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
-
-    private Int64 _DailyTokenLimit;
-    /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("日Token限额")]
-    [Description("日Token限额。每日Token使用上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("DailyTokenLimit", "日Token限额。每日Token使用上限，0表示不限制", "")]
-    public Int64 DailyTokenLimit { get => _DailyTokenLimit; set { if (OnPropertyChanging("DailyTokenLimit", value)) { _DailyTokenLimit = value; OnPropertyChanged("DailyTokenLimit"); } } }
-
-    private Int64 _MonthlyTokenLimit;
-    /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("月Token限额")]
-    [Description("月Token限额。每月Token使用上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("MonthlyTokenLimit", "月Token限额。每月Token使用上限，0表示不限制", "")]
-    public Int64 MonthlyTokenLimit { get => _MonthlyTokenLimit; set { if (OnPropertyChanging("MonthlyTokenLimit", value)) { _MonthlyTokenLimit = value; OnPropertyChanged("MonthlyTokenLimit"); } } }
-
-    private Int64 _TotalTokenLimit;
-    /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("总Token限额")]
-    [Description("总Token限额。永久累计Token上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokenLimit", "总Token限额。永久累计Token上限，0表示不限制", "")]
-    public Int64 TotalTokenLimit { get => _TotalTokenLimit; set { if (OnPropertyChanging("TotalTokenLimit", value)) { _TotalTokenLimit = value; OnPropertyChanged("TotalTokenLimit"); } } }
-
-    private Decimal _DailyCostLimit;
-    /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("日费用限额")]
-    [Description("日费用限额。每日费用上限，单位：元，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("DailyCostLimit", "日费用限额。每日费用上限，单位：元，0表示不限制", "", Precision = 18, Scale = 6)]
-    public Decimal DailyCostLimit { get => _DailyCostLimit; set { if (OnPropertyChanging("DailyCostLimit", value)) { _DailyCostLimit = value; OnPropertyChanged("DailyCostLimit"); } } }
-
-    private Decimal _MonthlyCostLimit;
-    /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("月费用限额")]
-    [Description("月费用限额。每月费用上限，单位：元，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("MonthlyCostLimit", "月费用限额。每月费用上限，单位：元，0表示不限制", "", Precision = 18, Scale = 6)]
-    public Decimal MonthlyCostLimit { get => _MonthlyCostLimit; set { if (OnPropertyChanging("MonthlyCostLimit", value)) { _MonthlyCostLimit = value; OnPropertyChanged("MonthlyCostLimit"); } } }
-
-    private Decimal _TotalCostLimit;
-    /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("总费用限额")]
-    [Description("总费用限额。永久累计费用上限，单位：元，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCostLimit", "总费用限额。永久累计费用上限，单位：元，0表示不限制", "", Precision = 18, Scale = 6)]
-    public Decimal TotalCostLimit { get => _TotalCostLimit; set { if (OnPropertyChanging("TotalCostLimit", value)) { _TotalCostLimit = value; OnPropertyChanged("TotalCostLimit"); } } }
-
-    private Int32 _RateLimitPerMinute;
-    /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("分钟限流")]
-    [Description("分钟限流。每分钟请求上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("RateLimitPerMinute", "分钟限流。每分钟请求上限，0表示不限制", "")]
-    public Int32 RateLimitPerMinute { get => _RateLimitPerMinute; set { if (OnPropertyChanging("RateLimitPerMinute", value)) { _RateLimitPerMinute = value; OnPropertyChanged("RateLimitPerMinute"); } } }
-
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -248,34 +167,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IAppKey model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
-        Name = model.Name;
-        Secret = model.Secret;
-        Models = model.Models;
-        Enable = model.Enable;
-        ExpireTime = model.ExpireTime;
-        LastCallTime = model.LastCallTime;
-        Calls = model.Calls;
-        TotalTokens = model.TotalTokens;
-        TotalCost = model.TotalCost;
-        DailyTokenLimit = model.DailyTokenLimit;
-        MonthlyTokenLimit = model.MonthlyTokenLimit;
-        TotalTokenLimit = model.TotalTokenLimit;
-        DailyCostLimit = model.DailyCostLimit;
-        MonthlyCostLimit = model.MonthlyCostLimit;
-        TotalCostLimit = model.TotalCostLimit;
-        RateLimitPerMinute = model.RateLimitPerMinute;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -286,7 +177,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         {
             "Id" => _Id,
             "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
             "Name" => _Name,
             "Secret" => _Secret,
             "Models" => _Models,
@@ -295,14 +185,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
             "LastCallTime" => _LastCallTime,
             "Calls" => _Calls,
             "TotalTokens" => _TotalTokens,
-            "TotalCost" => _TotalCost,
-            "DailyTokenLimit" => _DailyTokenLimit,
-            "MonthlyTokenLimit" => _MonthlyTokenLimit,
-            "TotalTokenLimit" => _TotalTokenLimit,
-            "DailyCostLimit" => _DailyCostLimit,
-            "MonthlyCostLimit" => _MonthlyCostLimit,
-            "TotalCostLimit" => _TotalCostLimit,
-            "RateLimitPerMinute" => _RateLimitPerMinute,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -318,7 +200,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
             {
                 case "Id": _Id = value.ToInt(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "Secret": _Secret = Convert.ToString(value); break;
                 case "Models": _Models = Convert.ToString(value); break;
@@ -327,14 +208,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
                 case "LastCallTime": _LastCallTime = value.ToDateTime(); break;
                 case "Calls": _Calls = value.ToLong(); break;
                 case "TotalTokens": _TotalTokens = value.ToLong(); break;
-                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
-                case "DailyTokenLimit": _DailyTokenLimit = value.ToLong(); break;
-                case "MonthlyTokenLimit": _MonthlyTokenLimit = value.ToLong(); break;
-                case "TotalTokenLimit": _TotalTokenLimit = value.ToLong(); break;
-                case "DailyCostLimit": _DailyCostLimit = Convert.ToDecimal(value); break;
-                case "MonthlyCostLimit": _MonthlyCostLimit = Convert.ToDecimal(value); break;
-                case "TotalCostLimit": _TotalCostLimit = Convert.ToDecimal(value); break;
-                case "RateLimitPerMinute": _RateLimitPerMinute = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -356,14 +229,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
     /// <summary>用户</summary>
     [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
     public String? UserName => User?.ToString();
-
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
 
     #endregion
 
@@ -409,37 +274,22 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         return FindAll(_.UserId == userId);
     }
-
-    /// <summary>根据项目查找</summary>
-    /// <param name="projectId">项目</param>
-    /// <returns>实体列表</returns>
-    public static IList<AppKey> FindAllByProjectId(Int32 projectId)
-    {
-        if (projectId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.ProjectId == projectId);
-
-        return FindAll(_.ProjectId == projectId);
-    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。密钥所属用户</param>
-    /// <param name="projectId">项目。所属项目，0=个人密鑰</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<AppKey> Search(Int32 userId, Int32 projectId, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<AppKey> Search(Int32 userId, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (enable != null) exp &= _.Enable == enable;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -457,9 +307,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>用户。密钥所属用户</summary>
         public static readonly Field UserId = FindByName("UserId");
-
-        /// <summary>项目。所属项目，0=个人密鑰</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>名称。用户自定义标识，如业务系统A</summary>
         public static readonly Field Name = FindByName("Name");
@@ -484,30 +331,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>总Token数。累计消耗Token</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
-
-        /// <summary>总费用。累计消耗费用，单位：元</summary>
-        public static readonly Field TotalCost = FindByName("TotalCost");
-
-        /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
-        public static readonly Field DailyTokenLimit = FindByName("DailyTokenLimit");
-
-        /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
-        public static readonly Field MonthlyTokenLimit = FindByName("MonthlyTokenLimit");
-
-        /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
-        public static readonly Field TotalTokenLimit = FindByName("TotalTokenLimit");
-
-        /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
-        public static readonly Field DailyCostLimit = FindByName("DailyCostLimit");
-
-        /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
-        public static readonly Field MonthlyCostLimit = FindByName("MonthlyCostLimit");
-
-        /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
-        public static readonly Field TotalCostLimit = FindByName("TotalCostLimit");
-
-        /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
-        public static readonly Field RateLimitPerMinute = FindByName("RateLimitPerMinute");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -542,9 +365,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
         /// <summary>用户。密钥所属用户</summary>
         public const String UserId = "UserId";
 
-        /// <summary>项目。所属项目，0=个人密鑰</summary>
-        public const String ProjectId = "ProjectId";
-
         /// <summary>名称。用户自定义标识，如业务系统A</summary>
         public const String Name = "Name";
 
@@ -568,30 +388,6 @@ public partial class AppKey : IAppKey, IEntity<IAppKey>
 
         /// <summary>总Token数。累计消耗Token</summary>
         public const String TotalTokens = "TotalTokens";
-
-        /// <summary>总费用。累计消耗费用，单位：元</summary>
-        public const String TotalCost = "TotalCost";
-
-        /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
-        public const String DailyTokenLimit = "DailyTokenLimit";
-
-        /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
-        public const String MonthlyTokenLimit = "MonthlyTokenLimit";
-
-        /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
-        public const String TotalTokenLimit = "TotalTokenLimit";
-
-        /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
-        public const String DailyCostLimit = "DailyCostLimit";
-
-        /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
-        public const String MonthlyCostLimit = "MonthlyCostLimit";
-
-        /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
-        public const String TotalCostLimit = "TotalCostLimit";
-
-        /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
-        public const String RateLimitPerMinute = "RateLimitPerMinute";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife;
 using NewLife.Cube;
@@ -63,6 +63,6 @@ public class ChatPresetController : ChatEntityController<ChatPreset>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ChatPreset.Search(userId, -1, modelId, thinkingMode, isDefault, enable, start, end, p["Q"], p);
+        return ChatPreset.Search(userId, modelId, thinkingMode, isDefault, enable, start, end, p["Q"], p);
     }
 }

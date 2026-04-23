@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife;
 using NewLife.Cube;
@@ -51,10 +51,11 @@ public class UsageRecordController : ChatEntityController<UsageRecord>
         var appKeyId = p["appKeyId"].ToInt(-1);
         var conversationId = p["conversationId"].ToLong(-1);
         var modelId = p["modelId"].ToInt(-1);
+        var source = p["source"];
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UsageRecord.Search(userId, -1, appKeyId, conversationId, modelId, -1, null, start, end, p["Q"], p);
+        return UsageRecord.Search(userId, appKeyId, conversationId, modelId, source, start, end, p["Q"], p);
     }
 }

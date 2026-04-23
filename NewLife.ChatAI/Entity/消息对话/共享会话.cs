@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -22,7 +21,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IX_SharedConversation_ConversationId_Id", false, "ConversationId,Id")]
 [BindIndex("IX_SharedConversation_CreateUserID_Id", false, "CreateUserID,Id")]
 [BindTable("SharedConversation", Description = "共享会话。通过链接分享的对话快照", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class SharedConversation : ISharedConversation, IEntity<ISharedConversation>
+public partial class SharedConversation
 {
     #region 属性
     private Int64 _Id;
@@ -137,20 +136,6 @@ public partial class SharedConversation : ISharedConversation, IEntity<ISharedCo
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(ISharedConversation model)
-    {
-        Id = model.Id;
-        ConversationId = model.ConversationId;
-        ShareToken = model.ShareToken;
-        SnapshotTitle = model.SnapshotTitle;
-        SnapshotMessageId = model.SnapshotMessageId;
-        ExpireTime = model.ExpireTime;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -198,14 +183,6 @@ public partial class SharedConversation : ISharedConversation, IEntity<ISharedCo
     #endregion
 
     #region 关联映射
-    /// <summary>会话</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
-
-    /// <summary>会话</summary>
-    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
-    public String? Title => Conversation?.ToString();
-
     #endregion
 
     #region 扩展查询

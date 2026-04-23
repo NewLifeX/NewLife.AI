@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -19,14 +18,12 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计")]
 [BindIndex("IX_UsageRecord_UserId_Id", false, "UserId,Id")]
-[BindIndex("IX_UsageRecord_ProjectId_Id", false, "ProjectId,Id")]
 [BindIndex("IX_UsageRecord_AppKeyId_Id", false, "AppKeyId,Id")]
 [BindIndex("IX_UsageRecord_ModelId_Id", false, "ModelId,Id")]
 [BindIndex("IX_UsageRecord_ConversationId", false, "ConversationId")]
 [BindIndex("IX_UsageRecord_Source_Id", false, "Source,Id")]
-[BindIndex("IX_UsageRecord_ParentMessageId", false, "ParentMessageId")]
 [BindTable("UsageRecord", Description = "用量记录。每次AI调用的Token消耗，支持按用户和AppKey双维度统计", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
+public partial class UsageRecord
 {
     #region 属性
     private Int64 _Id;
@@ -44,14 +41,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
-
-    private Int32 _ProjectId;
-    /// <summary>项目。所属项目编号，0=个人</summary>
-    [DisplayName("项目")]
-    [Description("项目。所属项目编号，0=个人")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目编号，0=个人", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private Int32 _AppKeyId;
     /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
@@ -165,70 +154,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     [BindColumn("OutputTextTokens", "文本输出Token数", "")]
     public Int32 OutputTextTokens { get => _OutputTextTokens; set { if (OnPropertyChanging("OutputTextTokens", value)) { _OutputTextTokens = value; OnPropertyChanged("OutputTextTokens"); } } }
 
-    private Decimal _InputCost;
-    /// <summary>输入费用。单位：元</summary>
-    [DisplayName("输入费用")]
-    [Description("输入费用。单位：元")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("InputCost", "输入费用。单位：元", "", Precision = 18, Scale = 6)]
-    public Decimal InputCost { get => _InputCost; set { if (OnPropertyChanging("InputCost", value)) { _InputCost = value; OnPropertyChanged("InputCost"); } } }
-
-    private Decimal _OutputCost;
-    /// <summary>输出费用。单位：元</summary>
-    [DisplayName("输出费用")]
-    [Description("输出费用。单位：元")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("OutputCost", "输出费用。单位：元", "", Precision = 18, Scale = 6)]
-    public Decimal OutputCost { get => _OutputCost; set { if (OnPropertyChanging("OutputCost", value)) { _OutputCost = value; OnPropertyChanged("OutputCost"); } } }
-
-    private Decimal _TotalCost;
-    /// <summary>总费用。单位：元</summary>
-    [DisplayName("总费用")]
-    [Description("总费用。单位：元")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。单位：元", "", Precision = 18, Scale = 6)]
-    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
-
-    private Int32 _ImageCount;
-    /// <summary>图片数量。本次生成图片数（多模态计费）</summary>
-    [DisplayName("图片数量")]
-    [Description("图片数量。本次生成图片数（多模态计费）")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ImageCount", "图片数量。本次生成图片数（多模态计费）", "")]
-    public Int32 ImageCount { get => _ImageCount; set { if (OnPropertyChanging("ImageCount", value)) { _ImageCount = value; OnPropertyChanged("ImageCount"); } } }
-
-    private Int32 _VideoSeconds;
-    /// <summary>视频时长。本次生成视频秒数（多模态计费）</summary>
-    [DisplayName("视频时长")]
-    [Description("视频时长。本次生成视频秒数（多模态计费）")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("VideoSeconds", "视频时长。本次生成视频秒数（多模态计费）", "")]
-    public Int32 VideoSeconds { get => _VideoSeconds; set { if (OnPropertyChanging("VideoSeconds", value)) { _VideoSeconds = value; OnPropertyChanged("VideoSeconds"); } } }
-
-    private Int32 _EmbeddingCount;
-    /// <summary>向量化条数。Embedding 调用的批量条数</summary>
-    [DisplayName("向量化条数")]
-    [Description("向量化条数。Embedding 调用的批量条数")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("EmbeddingCount", "向量化条数。Embedding 调用的批量条数", "")]
-    public Int32 EmbeddingCount { get => _EmbeddingCount; set { if (OnPropertyChanging("EmbeddingCount", value)) { _EmbeddingCount = value; OnPropertyChanged("EmbeddingCount"); } } }
-
-    private String? _Resolution;
-    /// <summary>分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers</summary>
-    [DisplayName("分辨率")]
-    [Description("分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers")]
-    [DataObjectField(false, false, true, 20)]
-    [BindColumn("Resolution", "分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers", "")]
-    public String? Resolution { get => _Resolution; set { if (OnPropertyChanging("Resolution", value)) { _Resolution = value; OnPropertyChanged("Resolution"); } } }
-
-    private Int64 _ParentMessageId;
-    /// <summary>父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用</summary>
-    [DisplayName("父消息")]
-    [Description("父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ParentMessageId", "父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用", "")]
-    public Int64 ParentMessageId { get => _ParentMessageId; set { if (OnPropertyChanging("ParentMessageId", value)) { _ParentMessageId = value; OnPropertyChanged("ParentMessageId"); } } }
-
     private Int32 _ElapsedMs;
     /// <summary>耗时。毫秒</summary>
     [DisplayName("耗时")]
@@ -273,41 +198,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IUsageRecord model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
-        AppKeyId = model.AppKeyId;
-        ConversationId = model.ConversationId;
-        MessageId = model.MessageId;
-        ModelId = model.ModelId;
-        ModelName = model.ModelName;
-        InputTokens = model.InputTokens;
-        OutputTokens = model.OutputTokens;
-        TotalTokens = model.TotalTokens;
-        CachedInputTokens = model.CachedInputTokens;
-        ReasoningTokens = model.ReasoningTokens;
-        InputAudioTokens = model.InputAudioTokens;
-        InputTextTokens = model.InputTextTokens;
-        OutputAudioTokens = model.OutputAudioTokens;
-        OutputTextTokens = model.OutputTextTokens;
-        InputCost = model.InputCost;
-        OutputCost = model.OutputCost;
-        TotalCost = model.TotalCost;
-        ImageCount = model.ImageCount;
-        VideoSeconds = model.VideoSeconds;
-        EmbeddingCount = model.EmbeddingCount;
-        Resolution = model.Resolution;
-        ParentMessageId = model.ParentMessageId;
-        ElapsedMs = model.ElapsedMs;
-        Source = model.Source;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -318,7 +208,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
         {
             "Id" => _Id,
             "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
             "AppKeyId" => _AppKeyId,
             "ConversationId" => _ConversationId,
             "MessageId" => _MessageId,
@@ -333,14 +222,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
             "InputTextTokens" => _InputTextTokens,
             "OutputAudioTokens" => _OutputAudioTokens,
             "OutputTextTokens" => _OutputTextTokens,
-            "InputCost" => _InputCost,
-            "OutputCost" => _OutputCost,
-            "TotalCost" => _TotalCost,
-            "ImageCount" => _ImageCount,
-            "VideoSeconds" => _VideoSeconds,
-            "EmbeddingCount" => _EmbeddingCount,
-            "Resolution" => _Resolution,
-            "ParentMessageId" => _ParentMessageId,
             "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
             "TraceId" => _TraceId,
@@ -354,7 +235,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "AppKeyId": _AppKeyId = value.ToInt(); break;
                 case "ConversationId": _ConversationId = value.ToLong(); break;
                 case "MessageId": _MessageId = value.ToLong(); break;
@@ -369,14 +249,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
                 case "InputTextTokens": _InputTextTokens = value.ToInt(); break;
                 case "OutputAudioTokens": _OutputAudioTokens = value.ToInt(); break;
                 case "OutputTextTokens": _OutputTextTokens = value.ToInt(); break;
-                case "InputCost": _InputCost = Convert.ToDecimal(value); break;
-                case "OutputCost": _OutputCost = Convert.ToDecimal(value); break;
-                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
-                case "ImageCount": _ImageCount = value.ToInt(); break;
-                case "VideoSeconds": _VideoSeconds = value.ToInt(); break;
-                case "EmbeddingCount": _EmbeddingCount = value.ToInt(); break;
-                case "Resolution": _Resolution = Convert.ToString(value); break;
-                case "ParentMessageId": _ParentMessageId = value.ToLong(); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
@@ -396,14 +268,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
     /// <summary>用户</summary>
     [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
     public String? UserName => User?.ToString();
-
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
 
     /// <summary>应用密钥</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
@@ -442,16 +306,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
         if (userId < 0) return [];
 
         return FindAll(_.UserId == userId);
-    }
-
-    /// <summary>根据项目查找</summary>
-    /// <param name="projectId">项目</param>
-    /// <returns>实体列表</returns>
-    public static IList<UsageRecord> FindAllByProjectId(Int32 projectId)
-    {
-        if (projectId < 0) return [];
-
-        return FindAll(_.ProjectId == projectId);
     }
 
     /// <summary>根据应用密钥查找</summary>
@@ -493,42 +347,28 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 
         return FindAll(_.Source == source);
     }
-
-    /// <summary>根据父消息查找</summary>
-    /// <param name="parentMessageId">父消息</param>
-    /// <returns>实体列表</returns>
-    public static IList<UsageRecord> FindAllByParentMessageId(Int64 parentMessageId)
-    {
-        if (parentMessageId < 0) return [];
-
-        return FindAll(_.ParentMessageId == parentMessageId);
-    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户</param>
-    /// <param name="projectId">项目。所属项目编号，0=个人</param>
     /// <param name="appKeyId">应用密钥。通过API网关调用时关联的AppKey</param>
     /// <param name="conversationId">会话</param>
     /// <param name="modelId">模型。引用ModelConfig.Id</param>
-    /// <param name="parentMessageId">父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用</param>
     /// <param name="source">请求来源。Chat=主对话/Gateway=网关/Title=标题生成/Compact=上下文压缩/Memory=记忆提取/Knowledge=知识分析/Image=图片生成/Video=视频生成/Embedding=向量化</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UsageRecord> Search(Int32 userId, Int32 projectId, Int32 appKeyId, Int64 conversationId, Int32 modelId, Int64 parentMessageId, String? source, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UsageRecord> Search(Int32 userId, Int32 appKeyId, Int64 conversationId, Int32 modelId, String? source, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (appKeyId >= 0) exp &= _.AppKeyId == appKeyId;
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (modelId >= 0) exp &= _.ModelId == modelId;
-        if (parentMessageId >= 0) exp &= _.ParentMessageId == parentMessageId;
         if (!source.IsNullOrEmpty()) exp &= _.Source == source;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -558,9 +398,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 
         /// <summary>用户</summary>
         public static readonly Field UserId = FindByName("UserId");
-
-        /// <summary>项目。所属项目编号，0=个人</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
         public static readonly Field AppKeyId = FindByName("AppKeyId");
@@ -604,30 +441,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
         /// <summary>文本输出Token数</summary>
         public static readonly Field OutputTextTokens = FindByName("OutputTextTokens");
 
-        /// <summary>输入费用。单位：元</summary>
-        public static readonly Field InputCost = FindByName("InputCost");
-
-        /// <summary>输出费用。单位：元</summary>
-        public static readonly Field OutputCost = FindByName("OutputCost");
-
-        /// <summary>总费用。单位：元</summary>
-        public static readonly Field TotalCost = FindByName("TotalCost");
-
-        /// <summary>图片数量。本次生成图片数（多模态计费）</summary>
-        public static readonly Field ImageCount = FindByName("ImageCount");
-
-        /// <summary>视频时长。本次生成视频秒数（多模态计费）</summary>
-        public static readonly Field VideoSeconds = FindByName("VideoSeconds");
-
-        /// <summary>向量化条数。Embedding 调用的批量条数</summary>
-        public static readonly Field EmbeddingCount = FindByName("EmbeddingCount");
-
-        /// <summary>分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers</summary>
-        public static readonly Field Resolution = FindByName("Resolution");
-
-        /// <summary>父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用</summary>
-        public static readonly Field ParentMessageId = FindByName("ParentMessageId");
-
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
 
@@ -654,9 +467,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 
         /// <summary>用户</summary>
         public const String UserId = "UserId";
-
-        /// <summary>项目。所属项目编号，0=个人</summary>
-        public const String ProjectId = "ProjectId";
 
         /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
         public const String AppKeyId = "AppKeyId";
@@ -699,30 +509,6 @@ public partial class UsageRecord : IUsageRecord, IEntity<IUsageRecord>
 
         /// <summary>文本输出Token数</summary>
         public const String OutputTextTokens = "OutputTextTokens";
-
-        /// <summary>输入费用。单位：元</summary>
-        public const String InputCost = "InputCost";
-
-        /// <summary>输出费用。单位：元</summary>
-        public const String OutputCost = "OutputCost";
-
-        /// <summary>总费用。单位：元</summary>
-        public const String TotalCost = "TotalCost";
-
-        /// <summary>图片数量。本次生成图片数（多模态计费）</summary>
-        public const String ImageCount = "ImageCount";
-
-        /// <summary>视频时长。本次生成视频秒数（多模态计费）</summary>
-        public const String VideoSeconds = "VideoSeconds";
-
-        /// <summary>向量化条数。Embedding 调用的批量条数</summary>
-        public const String EmbeddingCount = "EmbeddingCount";
-
-        /// <summary>分辨率。如720P/1080P/4K，匹配ModelConfig.PriceTiers</summary>
-        public const String Resolution = "Resolution";
-
-        /// <summary>父消息。额外LLM调用（标题/压缩/记忆/知识等）关联到主对话消息编号，0表示主调用</summary>
-        public const String ParentMessageId = "ParentMessageId";
 
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";

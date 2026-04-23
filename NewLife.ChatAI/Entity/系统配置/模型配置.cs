@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -20,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("模型配置。后端接入的大语言模型，关联到具体的提供商实例")]
 [BindIndex("IU_ModelConfig_ProviderId_Code", true, "ProviderId,Code")]
 [BindTable("ModelConfig", Description = "模型配置。后端接入的大语言模型，关联到具体的提供商实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
+public partial class ModelConfig
 {
     #region 属性
     private Int32 _Id;
@@ -110,78 +109,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("SupportVideoGeneration", "视频生成。是否支持文生视频", "")]
     public Boolean SupportVideoGeneration { get => _SupportVideoGeneration; set { if (OnPropertyChanging("SupportVideoGeneration", value)) { _SupportVideoGeneration = value; OnPropertyChanged("SupportVideoGeneration"); } } }
-
-    private NewLife.AI.Models.PricingMode _PricingMode;
-    /// <summary>计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化</summary>
-    [Category("计费")]
-    [DisplayName("计费模式")]
-    [Description("计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("PricingMode", "计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化", "")]
-    public NewLife.AI.Models.PricingMode PricingMode { get => _PricingMode; set { if (OnPropertyChanging("PricingMode", value)) { _PricingMode = value; OnPropertyChanged("PricingMode"); } } }
-
-    private Decimal _InputPrice;
-    /// <summary>输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）</summary>
-    [Category("计费")]
-    [DisplayName("输入价格")]
-    [Description("输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("InputPrice", "输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）", "", Precision = 18, Scale = 6, DefaultValue = "2")]
-    public Decimal InputPrice { get => _InputPrice; set { if (OnPropertyChanging("InputPrice", value)) { _InputPrice = value; OnPropertyChanged("InputPrice"); } } }
-
-    private Decimal _OutputPrice;
-    /// <summary>输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）</summary>
-    [Category("计费")]
-    [DisplayName("输出价格")]
-    [Description("输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("OutputPrice", "输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）", "", Precision = 18, Scale = 6, DefaultValue = "12")]
-    public Decimal OutputPrice { get => _OutputPrice; set { if (OnPropertyChanging("OutputPrice", value)) { _OutputPrice = value; OnPropertyChanged("OutputPrice"); } } }
-
-    private Decimal _CachedInputPrice;
-    /// <summary>缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算</summary>
-    [Category("计费")]
-    [DisplayName("缓存输入价格")]
-    [Description("缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("CachedInputPrice", "缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算", "", Precision = 18, Scale = 6)]
-    public Decimal CachedInputPrice { get => _CachedInputPrice; set { if (OnPropertyChanging("CachedInputPrice", value)) { _CachedInputPrice = value; OnPropertyChanged("CachedInputPrice"); } } }
-
-    private Decimal _ImagePrice;
-    /// <summary>图片价格。文生图单价，单位：元/张</summary>
-    [Category("计费")]
-    [DisplayName("图片价格")]
-    [Description("图片价格。文生图单价，单位：元/张")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ImagePrice", "图片价格。文生图单价，单位：元/张", "", Precision = 18, Scale = 6, DefaultValue = "0.2")]
-    public Decimal ImagePrice { get => _ImagePrice; set { if (OnPropertyChanging("ImagePrice", value)) { _ImagePrice = value; OnPropertyChanged("ImagePrice"); } } }
-
-    private Decimal _VideoPrice;
-    /// <summary>视频价格。文生视频基准单价，单位：元/秒</summary>
-    [Category("计费")]
-    [DisplayName("视频价格")]
-    [Description("视频价格。文生视频基准单价，单位：元/秒")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("VideoPrice", "视频价格。文生视频基准单价，单位：元/秒", "", Precision = 18, Scale = 6, DefaultValue = "0.6")]
-    public Decimal VideoPrice { get => _VideoPrice; set { if (OnPropertyChanging("VideoPrice", value)) { _VideoPrice = value; OnPropertyChanged("VideoPrice"); } } }
-
-    private Decimal _EmbeddingPrice;
-    /// <summary>向量化价格。Embedding单价，单位：元/百万Token</summary>
-    [Category("计费")]
-    [DisplayName("向量化价格")]
-    [Description("向量化价格。Embedding单价，单位：元/百万Token")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("EmbeddingPrice", "向量化价格。Embedding单价，单位：元/百万Token", "", Precision = 18, Scale = 6, DefaultValue = "0.5")]
-    public Decimal EmbeddingPrice { get => _EmbeddingPrice; set { if (OnPropertyChanging("EmbeddingPrice", value)) { _EmbeddingPrice = value; OnPropertyChanged("EmbeddingPrice"); } } }
-
-    private String? _PriceTiers;
-    /// <summary>分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution</summary>
-    [Category("计费")]
-    [DisplayName("分辨率_规格分档价格")]
-    [Description("分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("PriceTiers", "分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution", "", ItemType = "json")]
-    public String? PriceTiers { get => _PriceTiers; set { if (OnPropertyChanging("PriceTiers", value)) { _PriceTiers = value; OnPropertyChanged("PriceTiers"); } } }
 
     private String? _SystemPrompt;
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
@@ -295,40 +222,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IModelConfig model)
-    {
-        Id = model.Id;
-        ProviderId = model.ProviderId;
-        Code = model.Code;
-        Name = model.Name;
-        ContextLength = model.ContextLength;
-        SupportThinking = model.SupportThinking;
-        SupportFunctionCalling = model.SupportFunctionCalling;
-        SupportVision = model.SupportVision;
-        SupportAudio = model.SupportAudio;
-        SupportImageGeneration = model.SupportImageGeneration;
-        SupportVideoGeneration = model.SupportVideoGeneration;
-        PricingMode = model.PricingMode;
-        InputPrice = model.InputPrice;
-        OutputPrice = model.OutputPrice;
-        CachedInputPrice = model.CachedInputPrice;
-        ImagePrice = model.ImagePrice;
-        VideoPrice = model.VideoPrice;
-        EmbeddingPrice = model.EmbeddingPrice;
-        PriceTiers = model.PriceTiers;
-        SystemPrompt = model.SystemPrompt;
-        RoleIds = model.RoleIds;
-        DepartmentIds = model.DepartmentIds;
-        ModelTime = model.ModelTime;
-        Enable = model.Enable;
-        Sort = model.Sort;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -348,14 +241,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
             "SupportAudio" => _SupportAudio,
             "SupportImageGeneration" => _SupportImageGeneration,
             "SupportVideoGeneration" => _SupportVideoGeneration,
-            "PricingMode" => _PricingMode,
-            "InputPrice" => _InputPrice,
-            "OutputPrice" => _OutputPrice,
-            "CachedInputPrice" => _CachedInputPrice,
-            "ImagePrice" => _ImagePrice,
-            "VideoPrice" => _VideoPrice,
-            "EmbeddingPrice" => _EmbeddingPrice,
-            "PriceTiers" => _PriceTiers,
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
@@ -386,14 +271,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
                 case "SupportAudio": _SupportAudio = value.ToBoolean(); break;
                 case "SupportImageGeneration": _SupportImageGeneration = value.ToBoolean(); break;
                 case "SupportVideoGeneration": _SupportVideoGeneration = value.ToBoolean(); break;
-                case "PricingMode": _PricingMode = (NewLife.AI.Models.PricingMode)value.ToInt(); break;
-                case "InputPrice": _InputPrice = Convert.ToDecimal(value); break;
-                case "OutputPrice": _OutputPrice = Convert.ToDecimal(value); break;
-                case "CachedInputPrice": _CachedInputPrice = Convert.ToDecimal(value); break;
-                case "ImagePrice": _ImagePrice = Convert.ToDecimal(value); break;
-                case "VideoPrice": _VideoPrice = Convert.ToDecimal(value); break;
-                case "EmbeddingPrice": _EmbeddingPrice = Convert.ToDecimal(value); break;
-                case "PriceTiers": _PriceTiers = Convert.ToString(value); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
@@ -470,44 +347,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
     }
     #endregion
 
-    #region 高级查询
-    /// <summary>高级查询</summary>
-    /// <param name="providerId">提供商。关联的提供商实例ID</param>
-    /// <param name="code">编码。模型唯一标识</param>
-    /// <param name="supportThinking">思考。是否支持思考模式</param>
-    /// <param name="supportFunctionCalling">函数调用。是否支持Function Calling</param>
-    /// <param name="supportVision">视觉。是否支持图片输入</param>
-    /// <param name="supportAudio">音频。是否支持音频输入输出</param>
-    /// <param name="supportImageGeneration">图像。是否支持文生图</param>
-    /// <param name="supportVideoGeneration">视频生成。是否支持文生视频</param>
-    /// <param name="pricingMode">计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化</param>
-    /// <param name="enable">启用</param>
-    /// <param name="start">更新时间开始</param>
-    /// <param name="end">更新时间结束</param>
-    /// <param name="key">关键字</param>
-    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
-    /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, NewLife.AI.Models.PricingMode pricingMode, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
-    {
-        var exp = new WhereExpression();
-
-        if (providerId >= 0) exp &= _.ProviderId == providerId;
-        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
-        if (supportThinking != null) exp &= _.SupportThinking == supportThinking;
-        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling;
-        if (supportVision != null) exp &= _.SupportVision == supportVision;
-        if (supportAudio != null) exp &= _.SupportAudio == supportAudio;
-        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration;
-        if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration;
-        if (pricingMode >= 0) exp &= _.PricingMode == pricingMode;
-        if (enable != null) exp &= _.Enable == enable;
-        exp &= _.UpdateTime.Between(start, end);
-        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
-
-        return FindAll(exp, page);
-    }
-    #endregion
-
     #region 字段名
     /// <summary>取得模型配置字段信息的快捷方式</summary>
     public partial class _
@@ -544,30 +383,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
 
         /// <summary>视频生成。是否支持文生视频</summary>
         public static readonly Field SupportVideoGeneration = FindByName("SupportVideoGeneration");
-
-        /// <summary>计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化</summary>
-        public static readonly Field PricingMode = FindByName("PricingMode");
-
-        /// <summary>输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）</summary>
-        public static readonly Field InputPrice = FindByName("InputPrice");
-
-        /// <summary>输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）</summary>
-        public static readonly Field OutputPrice = FindByName("OutputPrice");
-
-        /// <summary>缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算</summary>
-        public static readonly Field CachedInputPrice = FindByName("CachedInputPrice");
-
-        /// <summary>图片价格。文生图单价，单位：元/张</summary>
-        public static readonly Field ImagePrice = FindByName("ImagePrice");
-
-        /// <summary>视频价格。文生视频基准单价，单位：元/秒</summary>
-        public static readonly Field VideoPrice = FindByName("VideoPrice");
-
-        /// <summary>向量化价格。Embedding单价，单位：元/百万Token</summary>
-        public static readonly Field EmbeddingPrice = FindByName("EmbeddingPrice");
-
-        /// <summary>分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution</summary>
-        public static readonly Field PriceTiers = FindByName("PriceTiers");
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
@@ -646,30 +461,6 @@ public partial class ModelConfig : IModelConfig, IEntity<IModelConfig>
 
         /// <summary>视频生成。是否支持文生视频</summary>
         public const String SupportVideoGeneration = "SupportVideoGeneration";
-
-        /// <summary>计费模式。Token=0按Token/Image=1按图片/Video=2按视频/Embedding=3按向量化</summary>
-        public const String PricingMode = "PricingMode";
-
-        /// <summary>输入价格。单位：元/百万Token，默认2元（对标Qwen3.6 Plus）</summary>
-        public const String InputPrice = "InputPrice";
-
-        /// <summary>输出价格。单位：元/百万Token，默认12元（对标Qwen3.6 Plus）</summary>
-        public const String OutputPrice = "OutputPrice";
-
-        /// <summary>缓存输入价格。命中前缀缓存的输入价格，单位：元/百万Token，0时按InputPrice计算</summary>
-        public const String CachedInputPrice = "CachedInputPrice";
-
-        /// <summary>图片价格。文生图单价，单位：元/张</summary>
-        public const String ImagePrice = "ImagePrice";
-
-        /// <summary>视频价格。文生视频基准单价，单位：元/秒</summary>
-        public const String VideoPrice = "VideoPrice";
-
-        /// <summary>向量化价格。Embedding单价，单位：元/百万Token</summary>
-        public const String EmbeddingPrice = "EmbeddingPrice";
-
-        /// <summary>分辨率/规格分档价格。JSON对象，键为分辨率(如720P/1080P/4K)，值为元/秒或元/张单价，匹配UsageRecord.Resolution</summary>
-        public const String PriceTiers = "PriceTiers";
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";

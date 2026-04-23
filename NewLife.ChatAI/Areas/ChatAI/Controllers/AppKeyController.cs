@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife;
 using NewLife.Cube;
@@ -60,6 +60,6 @@ public class AppKeyController : ChatEntityController<AppKey>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return AppKey.Search(userId, -1, enable, start, end, p["Q"], p);
+        return AppKey.Search(userId, enable, start, end, p["Q"], p);
     }
 }

@@ -1,20 +1,12 @@
-using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Entity;
-using NewLife.Data;
+﻿using NewLife.Data;
 using NewLife.Log;
 using XCode;
-using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
 
 namespace NewLife.ChatAI.Services;
 
 /// <summary>用量统计服务。记录和查询 AI 调用的 Token 消耗，支持按用户和 AppKey 双维度统计</summary>
-/// <remarks>
-/// <para>本服务只负责把基础 Token 用量写入 UsageRecord，不做计费与配额校验。</para>
-/// <para>计费、配额扣减、超额拒绝等增强逻辑由 StarChat 商用版的 PricingService/QuotaService 完成；
-/// 开源版 ChatAI 仅保留最简单的用量记录能力。</para>
-/// </remarks>
+/// <remarks>实例化用量统计服务</remarks>
 /// <param name="chatSetting">AI对话系统配置</param>
 /// <param name="log">日志</param>
 public class UsageService(IChatSetting chatSetting, ILog log)
@@ -27,11 +19,8 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <param name="messageId">消息编号</param>
     /// <param name="modelId">模型编号</param>
     /// <param name="usage">用量详情</param>
-    /// <param name="source">请求来源。Chat=对话/Gateway=网关/Title/Compact/Memory/Knowledge/Image/Video/Embedding</param>
-    /// <param name="projectId">项目编号，无则为0</param>
-    /// <param name="parentMessageId">触发本次调用的主消息编号，0=主调用本身</param>
-    public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId, Int32 modelId, UsageDetails usage, String source,
-        Int32 projectId = 0, Int64 parentMessageId = 0)
+    /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
+    public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId, Int32 modelId, UsageDetails usage, String source)
     {
         if (!chatSetting.EnableUsageStats) return;
 
@@ -40,11 +29,9 @@ public class UsageService(IChatSetting chatSetting, ILog log)
             var entity = new UsageRecord
             {
                 UserId = userId,
-                ProjectId = projectId,
                 AppKeyId = appKeyId,
                 ConversationId = conversationId,
                 MessageId = messageId,
-                ParentMessageId = parentMessageId,
                 ModelId = modelId,
                 ModelName = ModelConfig.FindById(modelId)?.Name,
                 InputTokens = usage.InputTokens,
@@ -79,9 +66,31 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
     public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId,
         Int32 modelId, Int32 inputTokens, Int32 outputTokens, Int32 totalTokens, String source)
-        => Record(userId, appKeyId, conversationId, messageId, modelId,
-            new UsageDetails { InputTokens = inputTokens, OutputTokens = outputTokens, TotalTokens = totalTokens },
-            source);
+    {
+        if (!chatSetting.EnableUsageStats) return;
+
+        try
+        {
+            var entity = new UsageRecord
+            {
+                UserId = userId,
+                AppKeyId = appKeyId,
+                ConversationId = conversationId,
+                MessageId = messageId,
+                ModelId = modelId,
+                ModelName = ModelConfig.FindById(modelId)?.Name,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
+                TotalTokens = totalTokens,
+                Source = source,
+            };
+            entity.Insert();
+        }
+        catch (Exception ex)
+        {
+            log?.Error("写入用量记录失败: {0}", ex.Message);
+        }
+    }
     #endregion
 
     #region 用户维度查询
@@ -91,17 +100,16 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     public UsageSummaryDto GetSummary(Int32 userId)
     {
         var conversations = (Int32)Conversation.FindCount(Conversation._.UserId == userId);
-        var messages = (Int32)ChatMessage.FindCount(
-            ChatMessage._.ConversationId.In(Conversation.FindSQLWithKey(Conversation._.UserId == userId)));
+        var messages = (Int32)DbChatMessage.FindCount(
+            DbChatMessage._.ConversationId.In(Conversation.FindSQLWithKey(Conversation._.UserId == userId)));
 
         var records = UsageRecord.FindAllByUserId(userId);
         var totalPrompt = records.Sum(e => e.InputTokens);
         var totalCompletion = records.Sum(e => e.OutputTokens);
         var totalTokens = records.Sum(e => e.TotalTokens);
-        var totalCost = records.Sum(e => e.TotalCost);
         var lastActive = records.Count > 0 ? records.Max(e => e.CreateTime) : DateTime.MinValue;
 
-        return new UsageSummaryDto(conversations, messages, totalPrompt, totalCompletion, totalTokens, lastActive, totalCost);
+        return new UsageSummaryDto(conversations, messages, totalPrompt, totalCompletion, totalTokens, lastActive);
     }
 
     /// <summary>获取按日用量明细</summary>
@@ -111,7 +119,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<DailyUsageDto> GetDailyUsage(Int32 userId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(userId, -1, -1, -1, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(userId, -1, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)
@@ -121,8 +129,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
                 g.Count(),
                 g.Sum(e => e.InputTokens),
                 g.Sum(e => e.OutputTokens),
-                g.Sum(e => e.TotalTokens),
-                g.Sum(e => e.TotalCost)))
+                g.Sum(e => e.TotalTokens)))
             .ToList();
     }
 
@@ -138,9 +145,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
             .Select(g => new ModelUsageDto(
                 g.Key,
                 g.Count(),
-                g.Sum(e => e.TotalTokens),
-                g.First().ModelName ?? "",
-                g.Sum(e => e.TotalCost)))
+                g.Sum(e => e.TotalTokens)))
             .OrderByDescending(e => e.Calls)
             .ToList();
     }
@@ -176,7 +181,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<DailyUsageDto> GetAppKeyDailyUsage(Int32 appKeyId, DateTime start, DateTime end)
     {
-        var list = UsageRecord.Search(-1, -1, appKeyId, -1, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
+        var list = UsageRecord.Search(-1, appKeyId, -1, -1, null, start, end, null, new PageParameter { PageSize = 0 });
 
         return list
             .GroupBy(e => e.CreateTime.Date)
@@ -194,30 +199,14 @@ public class UsageService(IChatSetting chatSetting, ILog log)
 
 #region DTO 定义
 /// <summary>用量摘要</summary>
-public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, DateTime LastActiveTime, Decimal TotalCost = 0m);
+public record UsageSummaryDto(Int32 Conversations, Int32 Messages, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, DateTime LastActiveTime);
 
 /// <summary>按日用量</summary>
-public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens, Decimal Cost = 0m);
+public record DailyUsageDto(DateTime Date, Int32 Calls, Int32 InputTokens, Int32 OutputTokens, Int32 TotalTokens);
 
 /// <summary>模型使用分布</summary>
-public record ModelUsageDto(Int32 ModelId, Int32 Calls, Int32 TotalTokens, String ModelName = "", Decimal Cost = 0m);
+public record ModelUsageDto(Int32 ModelId, Int32 Calls, Int32 TotalTokens);
 
 /// <summary>AppKey 用量</summary>
 public record AppKeyUsageDto(Int32 AppKeyId, String Name, Int32 Calls, Int32 TotalTokens, DateTime LastCallTime);
-
-/// <summary>用量限额及当前已用量</summary>
-public record UsageQuotaDto(
-    Int64 DailyTokenUsed,
-    Int64 MonthlyTokenUsed,
-    Int64 TotalTokenUsed,
-    Decimal DailyCostUsed,
-    Decimal MonthlyCostUsed,
-    Decimal TotalCostUsed,
-    Int64 DailyTokenLimit,
-    Int64 MonthlyTokenLimit,
-    Int64 TotalTokenLimit,
-    Decimal DailyCostLimit,
-    Decimal MonthlyCostLimit,
-    Decimal TotalCostLimit,
-    Int32 RateLimitPerMinute);
 #endregion

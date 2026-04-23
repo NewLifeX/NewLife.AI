@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -21,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_ProviderConfig_Code", true, "Code")]
 [BindIndex("IX_ProviderConfig_Provider", false, "Provider")]
 [BindTable("ProviderConfig", Description = "提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ProviderConfig : IProviderConfig, IEntity<IProviderConfig>
+public partial class ProviderConfig
 {
     #region 属性
     private Int32 _Id;
@@ -190,28 +189,6 @@ public partial class ProviderConfig : IProviderConfig, IEntity<IProviderConfig>
     [DataObjectField(false, false, true, 500)]
     [BindColumn("Remark", "备注", "")]
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
-    #endregion
-
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IProviderConfig model)
-    {
-        Id = model.Id;
-        Code = model.Code;
-        Name = model.Name;
-        Provider = model.Provider;
-        Endpoint = model.Endpoint;
-        ApiKey = model.ApiKey;
-        ApiProtocol = model.ApiProtocol;
-        ModelFilter = model.ModelFilter;
-        ModelLimit = model.ModelLimit;
-        RoleIds = model.RoleIds;
-        DepartmentIds = model.DepartmentIds;
-        Enable = model.Enable;
-        Sort = model.Sort;
-        Remark = model.Remark;
-    }
     #endregion
 
     #region 获取/设置 字段值

@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
@@ -42,12 +42,11 @@ public class ChatMessageController : ChatEntityController<ChatMessage>
     protected override IEnumerable<ChatMessage> Search(Pager p)
     {
         var conversationId = p["conversationId"].ToLong(-1);
-        var parentId = p["parentId"].ToLong(-1);
         var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ChatMessage.Search(conversationId, parentId, thinkingMode, start, end, p["Q"], p);
+        return ChatMessage.Search(conversationId, thinkingMode, start, end, p["Q"], p);
     }
 }

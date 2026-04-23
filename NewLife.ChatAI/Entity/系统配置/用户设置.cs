@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -20,7 +19,7 @@ namespace NewLife.ChatAI.Entity;
 [Description("用户设置。用户的个性化配置")]
 [BindIndex("IU_UserSetting_UserId", true, "UserId")]
 [BindTable("UserSetting", Description = "用户设置。用户的个性化配置", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
+public partial class UserSetting
 {
     #region 属性
     private Int32 _Id;
@@ -199,87 +198,6 @@ public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
     [BindColumn("ContentWidth", "内容区宽度。标准960/宽屏1200/自适应0", "")]
     public Int32 ContentWidth { get => _ContentWidth; set { if (OnPropertyChanging("ContentWidth", value)) { _ContentWidth = value; OnPropertyChanged("ContentWidth"); } } }
 
-    private Int64 _TotalTokens;
-    /// <summary>总Token数。累计消耗Token，由用量记录汇总</summary>
-    [Category("限额")]
-    [DisplayName("总Token数")]
-    [Description("总Token数。累计消耗Token，由用量记录汇总")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokens", "总Token数。累计消耗Token，由用量记录汇总", "")]
-    public Int64 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
-
-    private Decimal _TotalCost;
-    /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
-    [Category("限额")]
-    [DisplayName("总费用")]
-    [Description("总费用。累计消耗费用，单位：元，由用量记录汇总")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。累计消耗费用，单位：元，由用量记录汇总", "", Precision = 18, Scale = 6)]
-    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
-
-    private Int64 _DailyTokenLimit;
-    /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("日Token限额")]
-    [Description("日Token限额。每日Token使用上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("DailyTokenLimit", "日Token限额。每日Token使用上限，0表示不限制", "")]
-    public Int64 DailyTokenLimit { get => _DailyTokenLimit; set { if (OnPropertyChanging("DailyTokenLimit", value)) { _DailyTokenLimit = value; OnPropertyChanged("DailyTokenLimit"); } } }
-
-    private Int64 _MonthlyTokenLimit;
-    /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("月Token限额")]
-    [Description("月Token限额。每月Token使用上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("MonthlyTokenLimit", "月Token限额。每月Token使用上限，0表示不限制", "")]
-    public Int64 MonthlyTokenLimit { get => _MonthlyTokenLimit; set { if (OnPropertyChanging("MonthlyTokenLimit", value)) { _MonthlyTokenLimit = value; OnPropertyChanged("MonthlyTokenLimit"); } } }
-
-    private Int64 _TotalTokenLimit;
-    /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("总Token限额")]
-    [Description("总Token限额。永久累计Token上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokenLimit", "总Token限额。永久累计Token上限，0表示不限制", "")]
-    public Int64 TotalTokenLimit { get => _TotalTokenLimit; set { if (OnPropertyChanging("TotalTokenLimit", value)) { _TotalTokenLimit = value; OnPropertyChanged("TotalTokenLimit"); } } }
-
-    private Decimal _DailyCostLimit;
-    /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("日费用限额")]
-    [Description("日费用限额。每日费用上限，单位：元，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("DailyCostLimit", "日费用限额。每日费用上限，单位：元，0表示不限制", "", Precision = 18, Scale = 6)]
-    public Decimal DailyCostLimit { get => _DailyCostLimit; set { if (OnPropertyChanging("DailyCostLimit", value)) { _DailyCostLimit = value; OnPropertyChanged("DailyCostLimit"); } } }
-
-    private Decimal _MonthlyCostLimit;
-    /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("月费用限额")]
-    [Description("月费用限额。每月费用上限，单位：元，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("MonthlyCostLimit", "月费用限额。每月费用上限，单位：元，0表示不限制", "", Precision = 18, Scale = 6)]
-    public Decimal MonthlyCostLimit { get => _MonthlyCostLimit; set { if (OnPropertyChanging("MonthlyCostLimit", value)) { _MonthlyCostLimit = value; OnPropertyChanged("MonthlyCostLimit"); } } }
-
-    private Decimal _TotalCostLimit;
-    /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("总费用限额")]
-    [Description("总费用限额。永久累计费用上限，单位：元，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCostLimit", "总费用限额。永久累计费用上限，单位：元，0表示不限制", "", Precision = 18, Scale = 6)]
-    public Decimal TotalCostLimit { get => _TotalCostLimit; set { if (OnPropertyChanging("TotalCostLimit", value)) { _TotalCostLimit = value; OnPropertyChanged("TotalCostLimit"); } } }
-
-    private Int32 _RateLimitPerMinute;
-    /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
-    [Category("限额")]
-    [DisplayName("分钟限流")]
-    [Description("分钟限流。每分钟请求上限，0表示不限制")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("RateLimitPerMinute", "分钟限流。每分钟请求上限，0表示不限制", "")]
-    public Int32 RateLimitPerMinute { get => _RateLimitPerMinute; set { if (OnPropertyChanging("RateLimitPerMinute", value)) { _RateLimitPerMinute = value; OnPropertyChanged("RateLimitPerMinute"); } } }
-
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -335,45 +253,6 @@ public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IUserSetting model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        Language = model.Language;
-        Theme = model.Theme;
-        FontSize = model.FontSize;
-        SendShortcut = model.SendShortcut;
-        DefaultModel = model.DefaultModel;
-        DefaultThinkingMode = model.DefaultThinkingMode;
-        ContextRounds = model.ContextRounds;
-        Nickname = model.Nickname;
-        UserBackground = model.UserBackground;
-        ResponseStyle = model.ResponseStyle;
-        SystemPrompt = model.SystemPrompt;
-        AllowTraining = model.AllowTraining;
-        McpEnabled = model.McpEnabled;
-        ShowToolCalls = model.ShowToolCalls;
-        DefaultSkill = model.DefaultSkill;
-        StreamingSpeed = model.StreamingSpeed;
-        EnableLearning = model.EnableLearning;
-        LearningModel = model.LearningModel;
-        MemoryInjectNum = model.MemoryInjectNum;
-        ContentWidth = model.ContentWidth;
-        TotalTokens = model.TotalTokens;
-        TotalCost = model.TotalCost;
-        DailyTokenLimit = model.DailyTokenLimit;
-        MonthlyTokenLimit = model.MonthlyTokenLimit;
-        TotalTokenLimit = model.TotalTokenLimit;
-        DailyCostLimit = model.DailyCostLimit;
-        MonthlyCostLimit = model.MonthlyCostLimit;
-        TotalCostLimit = model.TotalCostLimit;
-        RateLimitPerMinute = model.RateLimitPerMinute;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -404,15 +283,6 @@ public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
             "LearningModel" => _LearningModel,
             "MemoryInjectNum" => _MemoryInjectNum,
             "ContentWidth" => _ContentWidth,
-            "TotalTokens" => _TotalTokens,
-            "TotalCost" => _TotalCost,
-            "DailyTokenLimit" => _DailyTokenLimit,
-            "MonthlyTokenLimit" => _MonthlyTokenLimit,
-            "TotalTokenLimit" => _TotalTokenLimit,
-            "DailyCostLimit" => _DailyCostLimit,
-            "MonthlyCostLimit" => _MonthlyCostLimit,
-            "TotalCostLimit" => _TotalCostLimit,
-            "RateLimitPerMinute" => _RateLimitPerMinute,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -447,15 +317,6 @@ public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
                 case "LearningModel": _LearningModel = Convert.ToString(value); break;
                 case "MemoryInjectNum": _MemoryInjectNum = value.ToInt(); break;
                 case "ContentWidth": _ContentWidth = value.ToInt(); break;
-                case "TotalTokens": _TotalTokens = value.ToLong(); break;
-                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
-                case "DailyTokenLimit": _DailyTokenLimit = value.ToLong(); break;
-                case "MonthlyTokenLimit": _MonthlyTokenLimit = value.ToLong(); break;
-                case "TotalTokenLimit": _TotalTokenLimit = value.ToLong(); break;
-                case "DailyCostLimit": _DailyCostLimit = Convert.ToDecimal(value); break;
-                case "MonthlyCostLimit": _MonthlyCostLimit = Convert.ToDecimal(value); break;
-                case "TotalCostLimit": _TotalCostLimit = Convert.ToDecimal(value); break;
-                case "RateLimitPerMinute": _RateLimitPerMinute = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -612,33 +473,6 @@ public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
         /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
         public static readonly Field ContentWidth = FindByName("ContentWidth");
 
-        /// <summary>总Token数。累计消耗Token，由用量记录汇总</summary>
-        public static readonly Field TotalTokens = FindByName("TotalTokens");
-
-        /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
-        public static readonly Field TotalCost = FindByName("TotalCost");
-
-        /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
-        public static readonly Field DailyTokenLimit = FindByName("DailyTokenLimit");
-
-        /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
-        public static readonly Field MonthlyTokenLimit = FindByName("MonthlyTokenLimit");
-
-        /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
-        public static readonly Field TotalTokenLimit = FindByName("TotalTokenLimit");
-
-        /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
-        public static readonly Field DailyCostLimit = FindByName("DailyCostLimit");
-
-        /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
-        public static readonly Field MonthlyCostLimit = FindByName("MonthlyCostLimit");
-
-        /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
-        public static readonly Field TotalCostLimit = FindByName("TotalCostLimit");
-
-        /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
-        public static readonly Field RateLimitPerMinute = FindByName("RateLimitPerMinute");
-
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -728,33 +562,6 @@ public partial class UserSetting : IUserSetting, IEntity<IUserSetting>
 
         /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
         public const String ContentWidth = "ContentWidth";
-
-        /// <summary>总Token数。累计消耗Token，由用量记录汇总</summary>
-        public const String TotalTokens = "TotalTokens";
-
-        /// <summary>总费用。累计消耗费用，单位：元，由用量记录汇总</summary>
-        public const String TotalCost = "TotalCost";
-
-        /// <summary>日Token限额。每日Token使用上限，0表示不限制</summary>
-        public const String DailyTokenLimit = "DailyTokenLimit";
-
-        /// <summary>月Token限额。每月Token使用上限，0表示不限制</summary>
-        public const String MonthlyTokenLimit = "MonthlyTokenLimit";
-
-        /// <summary>总Token限额。永久累计Token上限，0表示不限制</summary>
-        public const String TotalTokenLimit = "TotalTokenLimit";
-
-        /// <summary>日费用限额。每日费用上限，单位：元，0表示不限制</summary>
-        public const String DailyCostLimit = "DailyCostLimit";
-
-        /// <summary>月费用限额。每月费用上限，单位：元，0表示不限制</summary>
-        public const String MonthlyCostLimit = "MonthlyCostLimit";
-
-        /// <summary>总费用限额。永久累计费用上限，单位：元，0表示不限制</summary>
-        public const String TotalCostLimit = "TotalCostLimit";
-
-        /// <summary>分钟限流。每分钟请求上限，0表示不限制</summary>
-        public const String RateLimitPerMinute = "RateLimitPerMinute";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

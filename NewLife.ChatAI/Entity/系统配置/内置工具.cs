@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -21,7 +20,7 @@ namespace NewLife.ChatAI.Entity;
 [BindIndex("IU_NativeTool_Name", true, "Name")]
 [BindIndex("IX_NativeTool_Enable", false, "Enable")]
 [BindTable("NativeTool", Description = "内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class NativeTool : INativeTool, IEntity<INativeTool>
+public partial class NativeTool
 {
     #region 属性
     private Int32 _Id;
@@ -111,33 +110,6 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("IsLocked", "锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整", "")]
     public Boolean IsLocked { get => _IsLocked; set { if (OnPropertyChanging("IsLocked", value)) { _IsLocked = value; OnPropertyChanged("IsLocked"); } } }
-
-    private String? _RoleIds;
-    /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
-    [Category("安全")]
-    [DisplayName("角色组")]
-    [Description("角色组。逗号分隔角色ID列表，命中即放行；为空时不限制")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("RoleIds", "角色组。逗号分隔角色ID列表，命中即放行；为空时不限制", "")]
-    public String? RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
-
-    private String? _DepartmentIds;
-    /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
-    [Category("安全")]
-    [DisplayName("部门组")]
-    [Description("部门组。逗号分隔部门ID列表，命中即放行；为空时不限制")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("DepartmentIds", "部门组。逗号分隔部门ID列表，命中即放行；为空时不限制", "")]
-    public String? DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
-
-    private String? _ProjectIds;
-    /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
-    [Category("安全")]
-    [DisplayName("项目组")]
-    [Description("项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("ProjectIds", "项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制", "")]
-    public String? ProjectIds { get => _ProjectIds; set { if (OnPropertyChanging("ProjectIds", value)) { _ProjectIds = value; OnPropertyChanged("ProjectIds"); } } }
 
     private String? _Providers;
     /// <summary>服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo</summary>
@@ -235,33 +207,6 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(INativeTool model)
-    {
-        Id = model.Id;
-        Name = model.Name;
-        DisplayName = model.DisplayName;
-        ClassName = model.ClassName;
-        MethodName = model.MethodName;
-        Description = model.Description;
-        Parameters = model.Parameters;
-        Triggers = model.Triggers;
-        Enable = model.Enable;
-        IsSystem = model.IsSystem;
-        IsLocked = model.IsLocked;
-        RoleIds = model.RoleIds;
-        DepartmentIds = model.DepartmentIds;
-        ProjectIds = model.ProjectIds;
-        Providers = model.Providers;
-        Endpoint = model.Endpoint;
-        ApiKey = model.ApiKey;
-        Sort = model.Sort;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -281,9 +226,6 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
             "IsLocked" => _IsLocked,
-            "RoleIds" => _RoleIds,
-            "DepartmentIds" => _DepartmentIds,
-            "ProjectIds" => _ProjectIds,
             "Providers" => _Providers,
             "Endpoint" => _Endpoint,
             "ApiKey" => _ApiKey,
@@ -312,9 +254,6 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
                 case "IsLocked": _IsLocked = value.ToBoolean(); break;
-                case "RoleIds": _RoleIds = Convert.ToString(value); break;
-                case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
-                case "ProjectIds": _ProjectIds = Convert.ToString(value); break;
                 case "Providers": _Providers = Convert.ToString(value); break;
                 case "Endpoint": _Endpoint = Convert.ToString(value); break;
                 case "ApiKey": _ApiKey = Convert.ToString(value); break;
@@ -430,15 +369,6 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
         /// <summary>锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整</summary>
         public static readonly Field IsLocked = FindByName("IsLocked");
 
-        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
-        public static readonly Field RoleIds = FindByName("RoleIds");
-
-        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
-        public static readonly Field DepartmentIds = FindByName("DepartmentIds");
-
-        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
-        public static readonly Field ProjectIds = FindByName("ProjectIds");
-
         /// <summary>服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo</summary>
         public static readonly Field Providers = FindByName("Providers");
 
@@ -510,15 +440,6 @@ public partial class NativeTool : INativeTool, IEntity<INativeTool>
 
         /// <summary>锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整</summary>
         public const String IsLocked = "IsLocked";
-
-        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
-        public const String RoleIds = "RoleIds";
-
-        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
-        public const String DepartmentIds = "DepartmentIds";
-
-        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
-        public const String ProjectIds = "ProjectIds";
 
         /// <summary>服务提供者。多个逗号分隔，按顺序尝试，如pconline,ipapi或bing,duckduckgo</summary>
         public const String Providers = "Providers";

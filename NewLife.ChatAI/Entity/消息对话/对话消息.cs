@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -19,9 +18,8 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("对话消息。会话中的单条发言，包括用户消息和AI回复")]
 [BindIndex("IX_ChatMessage_ConversationId_Id", false, "ConversationId,Id")]
-[BindIndex("IX_ChatMessage_ParentId", false, "ParentId")]
 [BindTable("ChatMessage", Description = "对话消息。会话中的单条发言，包括用户消息和AI回复", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
+public partial class ChatMessage
 {
     #region 属性
     private Int64 _Id;
@@ -39,22 +37,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ConversationId", "会话。所属会话", "")]
     public Int64 ConversationId { get => _ConversationId; set { if (OnPropertyChanging("ConversationId", value)) { _ConversationId = value; OnPropertyChanged("ConversationId"); } } }
-
-    private Int64 _ParentId;
-    /// <summary>父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系</summary>
-    [DisplayName("父消息")]
-    [Description("父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ParentId", "父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系", "")]
-    public Int64 ParentId { get => _ParentId; set { if (OnPropertyChanging("ParentId", value)) { _ParentId = value; OnPropertyChanged("ParentId"); } } }
-
-    private Int32 _BranchIndex;
-    /// <summary>分支序号。同一父节点下的分支序号，0=主线，1/2...=分叉支线</summary>
-    [DisplayName("分支序号")]
-    [Description("分支序号。同一父节点下的分支序号，0=主线，1/2...=分叉支线")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("BranchIndex", "分支序号。同一父节点下的分支序号，0=主线，1/2...=分叉支线", "")]
-    public Int32 BranchIndex { get => _BranchIndex; set { if (OnPropertyChanging("BranchIndex", value)) { _BranchIndex = value; OnPropertyChanged("BranchIndex"); } } }
 
     private String? _Role;
     /// <summary>角色。User=用户, Assistant=AI助手</summary>
@@ -176,14 +158,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
     [BindColumn("TotalTokens", "总Token数", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
-    private Decimal _TotalCost;
-    /// <summary>总费用。本条消息消耗费用，单位：元</summary>
-    [DisplayName("总费用")]
-    [Description("总费用。本条消息消耗费用，单位：元")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。本条消息消耗费用，单位：元", "", Precision = 18, Scale = 4)]
-    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
-
     private Int32 _ElapsedMs;
     /// <summary>耗时。毫秒</summary>
     [DisplayName("耗时")]
@@ -229,35 +203,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
     public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IChatMessage model)
-    {
-        Id = model.Id;
-        ConversationId = model.ConversationId;
-        ParentId = model.ParentId;
-        BranchIndex = model.BranchIndex;
-        Role = model.Role;
-        Content = model.Content;
-        ThinkingContent = model.ThinkingContent;
-        ThinkingMode = model.ThinkingMode;
-        Attachments = model.Attachments;
-        SkillNames = model.SkillNames;
-        ToolNames = model.ToolNames;
-        ToolCalls = model.ToolCalls;
-        ModelName = model.ModelName;
-        MaxTokens = model.MaxTokens;
-        Temperature = model.Temperature;
-        FinishReason = model.FinishReason;
-        InputTokens = model.InputTokens;
-        OutputTokens = model.OutputTokens;
-        TotalTokens = model.TotalTokens;
-        TotalCost = model.TotalCost;
-        ElapsedMs = model.ElapsedMs;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -268,8 +213,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
         {
             "Id" => _Id,
             "ConversationId" => _ConversationId,
-            "ParentId" => _ParentId,
-            "BranchIndex" => _BranchIndex,
             "Role" => _Role,
             "Content" => _Content,
             "ThinkingContent" => _ThinkingContent,
@@ -285,7 +228,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
             "InputTokens" => _InputTokens,
             "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
-            "TotalCost" => _TotalCost,
             "ElapsedMs" => _ElapsedMs,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
@@ -299,8 +241,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "ConversationId": _ConversationId = value.ToLong(); break;
-                case "ParentId": _ParentId = value.ToLong(); break;
-                case "BranchIndex": _BranchIndex = value.ToInt(); break;
                 case "Role": _Role = Convert.ToString(value); break;
                 case "Content": _Content = Convert.ToString(value); break;
                 case "ThinkingContent": _ThinkingContent = Convert.ToString(value); break;
@@ -316,7 +256,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
                 case "InputTokens": _InputTokens = value.ToInt(); break;
                 case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
-                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -359,34 +298,22 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
 
         return FindAll(_.ConversationId == conversationId);
     }
-
-    /// <summary>根据父消息查找</summary>
-    /// <param name="parentId">父消息</param>
-    /// <returns>实体列表</returns>
-    public static IList<ChatMessage> FindAllByParentId(Int64 parentId)
-    {
-        if (parentId < 0) return [];
-
-        return FindAll(_.ParentId == parentId);
-    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="conversationId">会话。所属会话</param>
-    /// <param name="parentId">父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatMessage> Search(Int64 conversationId, Int64 parentId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
-        if (parentId >= 0) exp &= _.ParentId == parentId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -416,12 +343,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
 
         /// <summary>会话。所属会话</summary>
         public static readonly Field ConversationId = FindByName("ConversationId");
-
-        /// <summary>父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系</summary>
-        public static readonly Field ParentId = FindByName("ParentId");
-
-        /// <summary>分支序号。同一父节点下的分支序号，0=主线，1/2...=分叉支线</summary>
-        public static readonly Field BranchIndex = FindByName("BranchIndex");
 
         /// <summary>角色。User=用户, Assistant=AI助手</summary>
         public static readonly Field Role = FindByName("Role");
@@ -468,9 +389,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
         /// <summary>总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
-        /// <summary>总费用。本条消息消耗费用，单位：元</summary>
-        public static readonly Field TotalCost = FindByName("TotalCost");
-
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
 
@@ -497,12 +415,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
 
         /// <summary>会话。所属会话</summary>
         public const String ConversationId = "ConversationId";
-
-        /// <summary>父消息。消息树父节点ID，0表示对话根节点。用于对话分叉时记录消息的层级关系</summary>
-        public const String ParentId = "ParentId";
-
-        /// <summary>分支序号。同一父节点下的分支序号，0=主线，1/2...=分叉支线</summary>
-        public const String BranchIndex = "BranchIndex";
 
         /// <summary>角色。User=用户, Assistant=AI助手</summary>
         public const String Role = "Role";
@@ -548,9 +460,6 @@ public partial class ChatMessage : IChatMessage, IEntity<IChatMessage>
 
         /// <summary>总Token数</summary>
         public const String TotalTokens = "TotalTokens";
-
-        /// <summary>总费用。本条消息消耗费用，单位：元</summary>
-        public const String TotalCost = "TotalCost";
 
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";

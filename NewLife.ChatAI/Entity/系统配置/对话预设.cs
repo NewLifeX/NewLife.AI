@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -18,9 +17,9 @@ namespace NewLife.ChatAI.Entity;
 [Serializable]
 [DataObject]
 [Description("对话预设。保存模型+技能+SystemPrompt组合为预设模板")]
-[BindIndex("IU_ChatPreset_UserId_ProjectId_Name", true, "UserId,ProjectId,Name")]
+[BindIndex("IU_ChatPreset_UserId_Name", true, "UserId,Name")]
 [BindTable("ChatPreset", Description = "对话预设。保存模型+技能+SystemPrompt组合为预设模板", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
+public partial class ChatPreset
 {
     #region 属性
     private Int32 _Id;
@@ -38,14 +37,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户。0=系统级预设", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
-
-    private Int32 _ProjectId;
-    /// <summary>项目。所属项目，0=个人/系统预设</summary>
-    [DisplayName("项目")]
-    [Description("项目。所属项目，0=个人/系统预设")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目，0=个人/系统预设", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _Name;
     /// <summary>名称。预设模板名称</summary>
@@ -182,27 +173,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
     public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IChatPreset model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
-        Name = model.Name;
-        ModelId = model.ModelId;
-        ModelName = model.ModelName;
-        SkillCode = model.SkillCode;
-        SystemPrompt = model.SystemPrompt;
-        Prompt = model.Prompt;
-        ThinkingMode = model.ThinkingMode;
-        IsDefault = model.IsDefault;
-        Sort = model.Sort;
-        Enable = model.Enable;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -213,7 +183,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
         {
             "Id" => _Id,
             "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
             "Name" => _Name,
             "ModelId" => _ModelId,
             "ModelName" => _ModelName,
@@ -238,7 +207,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
             {
                 case "Id": _Id = value.ToInt(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
                 case "ModelName": _ModelName = Convert.ToString(value); break;
@@ -270,14 +238,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
     [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
     public String? UserName => User?.ToString();
 
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
-
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public ModelConfig? Model => Extends.Get(nameof(Model), k => ModelConfig.FindById(ModelId));
@@ -301,21 +261,19 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
         //return Find(_.Id == id);
     }
 
-    /// <summary>根据用户、项目、名称查找</summary>
+    /// <summary>根据用户、名称查找</summary>
     /// <param name="userId">用户</param>
-    /// <param name="projectId">项目</param>
     /// <param name="name">名称</param>
     /// <returns>实体对象</returns>
-    public static ChatPreset? FindByUserIdAndProjectIdAndName(Int32 userId, Int32 projectId, String? name)
+    public static ChatPreset? FindByUserIdAndName(Int32 userId, String? name)
     {
         if (userId < 0) return null;
-        if (projectId < 0) return null;
         if (name == null) return null;
 
         // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.UserId == userId && e.ProjectId == projectId && e.Name.EqualIgnoreCase(name));
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.UserId == userId && e.Name.EqualIgnoreCase(name));
 
-        return Find(_.UserId == userId & _.ProjectId == projectId & _.Name == name);
+        return Find(_.UserId == userId & _.Name == name);
     }
 
     /// <summary>根据用户查找</summary>
@@ -330,27 +288,11 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
 
         return FindAll(_.UserId == userId);
     }
-
-    /// <summary>根据用户、项目查找</summary>
-    /// <param name="userId">用户</param>
-    /// <param name="projectId">项目</param>
-    /// <returns>实体列表</returns>
-    public static IList<ChatPreset> FindAllByUserIdAndProjectId(Int32 userId, Int32 projectId)
-    {
-        if (userId < 0) return [];
-        if (projectId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId && e.ProjectId == projectId);
-
-        return FindAll(_.UserId == userId & _.ProjectId == projectId);
-    }
     #endregion
 
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。0=系统级预设</param>
-    /// <param name="projectId">项目。所属项目，0=个人/系统预设</param>
     /// <param name="modelId">模型。关联的模型配置Id</param>
     /// <param name="thinkingMode">思考模式。Auto=0, Think=1, Fast=2</param>
     /// <param name="isDefault">默认预设。是否为用户的默认预设</param>
@@ -360,12 +302,11 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatPreset> Search(Int32 userId, Int32 projectId, Int32 modelId, NewLife.AI.Models.ThinkingMode thinkingMode, Boolean? isDefault, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatPreset> Search(Int32 userId, Int32 modelId, NewLife.AI.Models.ThinkingMode thinkingMode, Boolean? isDefault, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (modelId >= 0) exp &= _.ModelId == modelId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         if (isDefault != null) exp &= _.IsDefault == isDefault;
@@ -386,9 +327,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
 
         /// <summary>用户。0=系统级预设</summary>
         public static readonly Field UserId = FindByName("UserId");
-
-        /// <summary>项目。所属项目，0=个人/系统预设</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>名称。预设模板名称</summary>
         public static readonly Field Name = FindByName("Name");
@@ -449,9 +387,6 @@ public partial class ChatPreset : IChatPreset, IEntity<IChatPreset>
 
         /// <summary>用户。0=系统级预设</summary>
         public const String UserId = "UserId";
-
-        /// <summary>项目。所属项目，0=个人/系统预设</summary>
-        public const String ProjectId = "ProjectId";
 
         /// <summary>名称。预设模板名称</summary>
         public const String Name = "Name";

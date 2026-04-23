@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -18,10 +17,10 @@ namespace NewLife.ChatAI.Entity;
 [Serializable]
 [DataObject]
 [Description("技能。可复用的AI行为指令，Markdown格式的结构化提示文本")]
-[BindIndex("IU_Skill_UserId_ProjectId_Code", true, "UserId,ProjectId,Code")]
+[BindIndex("IU_Skill_Code", true, "Code")]
 [BindIndex("IX_Skill_Category", false, "Category")]
 [BindTable("Skill", Description = "技能。可复用的AI行为指令，Markdown格式的结构化提示文本", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class Skill : ISkill, IEntity<ISkill>
+public partial class Skill
 {
     #region 属性
     private Int32 _Id;
@@ -31,22 +30,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
     [DataObjectField(true, true, false, 0)]
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
-
-    private Int32 _UserId;
-    /// <summary>用户。0=系统内置</summary>
-    [DisplayName("用户")]
-    [Description("用户。0=系统内置")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("UserId", "用户。0=系统内置", "")]
-    public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
-
-    private Int32 _ProjectId;
-    /// <summary>项目。0=个人/系统</summary>
-    [DisplayName("项目")]
-    [Description("项目。0=个人/系统")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。0=个人/系统", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _Code;
     /// <summary>编码。英文标识，唯一，如coder、translator</summary>
@@ -152,33 +135,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
     [BindColumn("Version", "版本。每次编辑自增", "")]
     public Int32 Version { get => _Version; set { if (OnPropertyChanging("Version", value)) { _Version = value; OnPropertyChanged("Version"); } } }
 
-    private String? _RoleIds;
-    /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
-    [Category("安全")]
-    [DisplayName("角色组")]
-    [Description("角色组。逗号分隔角色ID列表，命中即放行；为空时不限制")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("RoleIds", "角色组。逗号分隔角色ID列表，命中即放行；为空时不限制", "")]
-    public String? RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
-
-    private String? _DepartmentIds;
-    /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
-    [Category("安全")]
-    [DisplayName("部门组")]
-    [Description("部门组。逗号分隔部门ID列表，命中即放行；为空时不限制")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("DepartmentIds", "部门组。逗号分隔部门ID列表，命中即放行；为空时不限制", "")]
-    public String? DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
-
-    private String? _ProjectIds;
-    /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
-    [Category("安全")]
-    [DisplayName("项目组")]
-    [Description("项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制")]
-    [DataObjectField(false, false, true, 500)]
-    [BindColumn("ProjectIds", "项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制", "")]
-    public String? ProjectIds { get => _ProjectIds; set { if (OnPropertyChanging("ProjectIds", value)) { _ProjectIds = value; OnPropertyChanged("ProjectIds"); } } }
-
     private String? _CreateUser;
     /// <summary>创建者</summary>
     [Category("扩展")]
@@ -261,34 +217,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(ISkill model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
-        Code = model.Code;
-        Name = model.Name;
-        Icon = model.Icon;
-        Category = model.Category;
-        Description = model.Description;
-        Content = model.Content;
-        Triggers = model.Triggers;
-        ContinueHints = model.ContinueHints;
-        ExitHints = model.ExitHints;
-        Sort = model.Sort;
-        Enable = model.Enable;
-        IsSystem = model.IsSystem;
-        Version = model.Version;
-        RoleIds = model.RoleIds;
-        DepartmentIds = model.DepartmentIds;
-        ProjectIds = model.ProjectIds;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -298,8 +226,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
         get => name switch
         {
             "Id" => _Id,
-            "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
             "Code" => _Code,
             "Name" => _Name,
             "Icon" => _Icon,
@@ -313,9 +239,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
             "Version" => _Version,
-            "RoleIds" => _RoleIds,
-            "DepartmentIds" => _DepartmentIds,
-            "ProjectIds" => _ProjectIds,
             "CreateUser" => _CreateUser,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -332,8 +255,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
-                case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "Code": _Code = Convert.ToString(value); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "Icon": _Icon = Convert.ToString(value); break;
@@ -347,9 +268,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
                 case "Version": _Version = value.ToInt(); break;
-                case "RoleIds": _RoleIds = Convert.ToString(value); break;
-                case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
-                case "ProjectIds": _ProjectIds = Convert.ToString(value); break;
                 case "CreateUser": _CreateUser = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -366,22 +284,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
     #endregion
 
     #region 关联映射
-    /// <summary>用户</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
-
-    /// <summary>用户</summary>
-    [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
-    public String? UserName => User?.ToString();
-
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
-
     #endregion
 
     #region 扩展查询
@@ -401,51 +303,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
         //return Find(_.Id == id);
     }
 
-    /// <summary>根据用户、项目、编码查找</summary>
-    /// <param name="userId">用户</param>
-    /// <param name="projectId">项目</param>
-    /// <param name="code">编码</param>
-    /// <returns>实体对象</returns>
-    public static Skill? FindByUserIdAndProjectIdAndCode(Int32 userId, Int32 projectId, String? code)
-    {
-        if (userId < 0) return null;
-        if (projectId < 0) return null;
-        if (code == null) return null;
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.UserId == userId && e.ProjectId == projectId && e.Code.EqualIgnoreCase(code));
-
-        return Find(_.UserId == userId & _.ProjectId == projectId & _.Code == code);
-    }
-
-    /// <summary>根据用户查找</summary>
-    /// <param name="userId">用户</param>
-    /// <returns>实体列表</returns>
-    public static IList<Skill> FindAllByUserId(Int32 userId)
-    {
-        if (userId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
-
-        return FindAll(_.UserId == userId);
-    }
-
-    /// <summary>根据用户、项目查找</summary>
-    /// <param name="userId">用户</param>
-    /// <param name="projectId">项目</param>
-    /// <returns>实体列表</returns>
-    public static IList<Skill> FindAllByUserIdAndProjectId(Int32 userId, Int32 projectId)
-    {
-        if (userId < 0) return [];
-        if (projectId < 0) return [];
-
-        // 实体缓存
-        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId && e.ProjectId == projectId);
-
-        return FindAll(_.UserId == userId & _.ProjectId == projectId);
-    }
-
     /// <summary>根据分类查找</summary>
     /// <param name="category">分类</param>
     /// <returns>实体列表</returns>
@@ -462,8 +319,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
 
     #region 高级查询
     /// <summary>高级查询</summary>
-    /// <param name="userId">用户。0=系统内置</param>
-    /// <param name="projectId">项目。0=个人/系统</param>
     /// <param name="code">编码。英文标识，唯一，如coder、translator</param>
     /// <param name="category">分类。通用/开发/创作/分析</param>
     /// <param name="isSystem">系统。是否系统内置，内置技能不可删除</param>
@@ -473,12 +328,10 @@ public partial class Skill : ISkill, IEntity<ISkill>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Skill> Search(Int32 userId, Int32 projectId, String? code, String? category, Boolean? isSystem, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Skill> Search(String? code, String? category, Boolean? isSystem, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
-        if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (!code.IsNullOrEmpty()) exp &= _.Code == code;
         if (!category.IsNullOrEmpty()) exp &= _.Category == category;
         if (isSystem != null) exp &= _.IsSystem == isSystem;
@@ -496,12 +349,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
     {
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
-
-        /// <summary>用户。0=系统内置</summary>
-        public static readonly Field UserId = FindByName("UserId");
-
-        /// <summary>项目。0=个人/系统</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>编码。英文标识，唯一，如coder、translator</summary>
         public static readonly Field Code = FindByName("Code");
@@ -542,15 +389,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
         /// <summary>版本。每次编辑自增</summary>
         public static readonly Field Version = FindByName("Version");
 
-        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
-        public static readonly Field RoleIds = FindByName("RoleIds");
-
-        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
-        public static readonly Field DepartmentIds = FindByName("DepartmentIds");
-
-        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
-        public static readonly Field ProjectIds = FindByName("ProjectIds");
-
         /// <summary>创建者</summary>
         public static readonly Field CreateUser = FindByName("CreateUser");
 
@@ -586,12 +424,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
     {
         /// <summary>编号</summary>
         public const String Id = "Id";
-
-        /// <summary>用户。0=系统内置</summary>
-        public const String UserId = "UserId";
-
-        /// <summary>项目。0=个人/系统</summary>
-        public const String ProjectId = "ProjectId";
 
         /// <summary>编码。英文标识，唯一，如coder、translator</summary>
         public const String Code = "Code";
@@ -631,15 +463,6 @@ public partial class Skill : ISkill, IEntity<ISkill>
 
         /// <summary>版本。每次编辑自增</summary>
         public const String Version = "Version";
-
-        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
-        public const String RoleIds = "RoleIds";
-
-        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
-        public const String DepartmentIds = "DepartmentIds";
-
-        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
-        public const String ProjectIds = "ProjectIds";
 
         /// <summary>创建者</summary>
         public const String CreateUser = "CreateUser";

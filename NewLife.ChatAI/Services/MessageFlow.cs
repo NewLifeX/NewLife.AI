@@ -9,7 +9,6 @@ using NewLife.Serialization;
 using XCode.Membership;
 using AiFunctionCall = NewLife.AI.Models.FunctionCall;
 using AiToolCall = NewLife.AI.Models.ToolCall;
-using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
@@ -153,7 +152,7 @@ public class MessageFlow : IMessageFlow
         flow.UserMessage.Update();
 
         // 预分配 AI 回复消息
-        var assistantMsg = new ChatMessage
+        var assistantMsg = new DbChatMessage
         {
             ConversationId = flow.UserMessage.ConversationId,
             Role = "assistant",
@@ -251,7 +250,7 @@ public class MessageFlow : IMessageFlow
         }
 
         // 保存用户消息
-        var userMsg = new ChatMessage
+        var userMsg = new DbChatMessage
         {
             ConversationId = conversationId,
             Role = "user",
@@ -284,7 +283,7 @@ public class MessageFlow : IMessageFlow
         }
 
         // 预分配AI回复消息编号
-        var assistantMsg = new ChatMessage
+        var assistantMsg = new DbChatMessage
         {
             ConversationId = conversationId,
             Role = "assistant",
@@ -488,13 +487,13 @@ public class MessageFlow : IMessageFlow
     {
         using var span = Tracer?.NewSpan("ai:CreateFlowContext", new { messageId, expectedRole, conversationId, modelId, userId });
 
-        ChatMessage? entity = null;
+        DbChatMessage? entity = null;
         Conversation? conversation;
 
         if (messageId > 0)
         {
             // 按消息查找
-            entity = ChatMessage.FindById(messageId.Value);
+            entity = DbChatMessage.FindById(messageId.Value);
             if (entity == null || (!expectedRole.IsNullOrEmpty() && !entity.Role.EqualIgnoreCase(expectedRole)))
                 return new MessageFlowContext { Error = new ChatException("MESSAGE_NOT_FOUND", "消息不存在或角色不匹配") };
 
@@ -640,7 +639,7 @@ public class MessageFlow : IMessageFlow
         using var span = Tracer?.NewSpan("ai:BuildContextForRegenerate");
 
         var entity = flow.AssistantMessage;
-        var beforeMessages = ChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
+        var beforeMessages = DbChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
 
         var setting = Setting;
         var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
@@ -758,7 +757,7 @@ public class MessageFlow : IMessageFlow
 
         // 记录用量
         if (flow.Usage != null)
-            UsageService?.Record(flow.UserId, 0, assistantMsg.ConversationId, assistantMsg.Id, flow.ModelConfig.Id, flow.Usage, "Chat", flow.Conversation.ProjectId);
+            UsageService?.Record(flow.UserId, 0, assistantMsg.ConversationId, assistantMsg.Id, flow.ModelConfig.Id, flow.Usage, "Chat");
     }
 
     /// <summary>持久化非流式生成结果。写入 AI 回复内容、用量统计和会话累计</summary>
@@ -782,7 +781,7 @@ public class MessageFlow : IMessageFlow
 
         if (response.Usage != null)
         {
-            UsageService?.Record(flow.UserId, 0, entity.ConversationId, entity.Id, flow.ModelConfig.Id, response.Usage, "Chat", flow.Conversation.ProjectId);
+            UsageService?.Record(flow.UserId, 0, entity.ConversationId, entity.Id, flow.ModelConfig.Id, response.Usage, "Chat");
             conversation.InputTokens += response.Usage.InputTokens;
             conversation.OutputTokens += response.Usage.OutputTokens;
             conversation.TotalTokens += response.Usage.TotalTokens;
@@ -806,7 +805,7 @@ public class MessageFlow : IMessageFlow
         var setting = Setting;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
 
-        var history = ChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
+        var history = DbChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
         //history.Reverse();
         //!!! 不能使用 Reverse ，它未能让列表完全倒置
         history = history.OrderBy(e => e.Id).ToList();
@@ -957,7 +956,7 @@ public class MessageFlow : IMessageFlow
     /// <summary>判断是否应跳过历史消息。用于过滤预分配但尚未写入正文的 assistant 占位消息，避免发送非法上下文给上游模型</summary>
     /// <param name="message">历史消息实体</param>
     /// <returns>应跳过返回 true，否则返回 false</returns>
-    protected static Boolean ShouldSkipHistoryMessage(ChatMessage message)
+    protected static Boolean ShouldSkipHistoryMessage(DbChatMessage message)
     {
         if (!message.Role.EqualIgnoreCase("assistant")) return false;
 
@@ -993,7 +992,7 @@ public class MessageFlow : IMessageFlow
     /// <param name="cancellationToken">取消令牌</param>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> StreamSuggestedCacheAsync(Int64 conversationId, Conversation conversation, SuggestedQuestion cached, ThinkingMode thinkingMode, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var cachedMsg = new ChatMessage
+        var cachedMsg = new DbChatMessage
         {
             ConversationId = conversationId,
             Role = "assistant",
@@ -1033,7 +1032,7 @@ public class MessageFlow : IMessageFlow
 
         // 更新会话
         conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
+        conversation.MessageCount = (Int32)DbChatMessage.FindCount(DbChatMessage._.ConversationId == conversationId);
         conversation.Update();
 
         yield return new ChatStreamEvent { Type = "message_done", MessageId = cachedMsg.Id };
@@ -1276,7 +1275,7 @@ public class MessageFlow : IMessageFlow
     /// <param name="usage">用量统计</param>
     /// <param name="hasError">是否有错误</param>
     /// <param name="errorDetail">错误详情</param>
-    protected static void ApplyUsageToMessage(ChatMessage msg, UsageDetails? usage, Boolean hasError, String? errorDetail = null)
+    protected static void ApplyUsageToMessage(DbChatMessage msg, UsageDetails? usage, Boolean hasError, String? errorDetail = null)
     {
         if (msg.Content.IsNullOrEmpty())
         {
@@ -1307,7 +1306,7 @@ public class MessageFlow : IMessageFlow
     /// <param name="msg">消息实体</param>
     /// <param name="modelConfig">模型配置</param>
     /// <param name="context">管道上下文（携带 MaxTokens/Temperature/FinishReason）</param>
-    protected static void ApplyRequestParams(ChatMessage msg, ModelConfig modelConfig, ChatPipelineContext context)
+    protected static void ApplyRequestParams(DbChatMessage msg, ModelConfig modelConfig, ChatPipelineContext context)
     {
         msg.ModelName = modelConfig.Code;
         if (context.MaxTokens > 0) msg.MaxTokens = context.MaxTokens;
@@ -1322,7 +1321,7 @@ public class MessageFlow : IMessageFlow
     protected static void ApplyUsageToConversation(Conversation conversation, Int64 conversationId, UsageDetails? usage)
     {
         conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)ChatMessage.FindCount(ChatMessage._.ConversationId == conversationId);
+        conversation.MessageCount = (Int32)DbChatMessage.FindCount(DbChatMessage._.ConversationId == conversationId);
         if (usage != null)
         {
             conversation.InputTokens += usage.InputTokens;
@@ -1335,7 +1334,7 @@ public class MessageFlow : IMessageFlow
     /// <summary>转换消息实体为 DTO。供派生类在 <see cref="RegenerateMessageAsync"/> 等场景转出</summary>
     /// <param name="entity">消息实体</param>
     /// <returns>消息 DTO</returns>
-    protected static MessageDto ToMessageDto(ChatMessage entity)
+    protected static MessageDto ToMessageDto(DbChatMessage entity)
     {
         IReadOnlyList<ToolCallDto>? toolCalls = null;
         if (!String.IsNullOrEmpty(entity.ToolCalls))

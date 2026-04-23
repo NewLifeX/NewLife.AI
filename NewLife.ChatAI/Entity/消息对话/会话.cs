@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,7 +10,6 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
-using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatAI.Entity;
 
@@ -19,11 +18,10 @@ namespace NewLife.ChatAI.Entity;
 [DataObject]
 [Description("会话。一次完整的多轮对话上下文")]
 [BindIndex("IX_Conversation_UserId_Id", false, "UserId,Id")]
-[BindIndex("IX_Conversation_UserId_ProjectId_Id", false, "UserId,ProjectId,Id")]
 [BindIndex("IX_Conversation_UserId_IsPinned_Id", false, "UserId,IsPinned,Id")]
 [BindIndex("IX_Conversation_Source", false, "Source")]
 [BindTable("Conversation", Description = "会话。一次完整的多轮对话上下文", ConnName = "ChatAI", DbType = DatabaseType.None)]
-public partial class Conversation : IConversation, IEntity<IConversation>
+public partial class Conversation
 {
     #region 属性
     private Int64 _Id;
@@ -41,14 +39,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [DataObjectField(false, false, false, 0)]
     [BindColumn("UserId", "用户。会话所属用户", "")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
-
-    private Int32 _ProjectId;
-    /// <summary>项目。所属项目编号，0=个人对话</summary>
-    [DisplayName("项目")]
-    [Description("项目。所属项目编号，0=个人对话")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ProjectId", "项目。所属项目编号，0=个人对话", "")]
-    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
 
     private String? _UserName;
     /// <summary>用户名</summary>
@@ -154,14 +144,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [BindColumn("TotalTokens", "总Token数。会话累计消耗的总Token数（含额外LLM调用）", "")]
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
-    private Decimal _TotalCost;
-    /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
-    [DisplayName("总费用")]
-    [Description("总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalCost", "总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）", "", Precision = 18, Scale = 2)]
-    public Decimal TotalCost { get => _TotalCost; set { if (OnPropertyChanging("TotalCost", value)) { _TotalCost = value; OnPropertyChanged("TotalCost"); } } }
-
     private Int32 _ElapsedMs;
     /// <summary>耗时。毫秒</summary>
     [DisplayName("耗时")]
@@ -177,22 +159,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     [DataObjectField(false, false, true, 50)]
     [BindColumn("Source", "来源。Web/Gateway/Channel等，标识对话入口", "")]
     public String? Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
-
-    private Int64 _ForkConversationId;
-    /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
-    [DisplayName("分叉来源会话")]
-    [Description("分叉来源会话。从哪个会话分叉而来，0表示原始会话")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ForkConversationId", "分叉来源会话。从哪个会话分叉而来，0表示原始会话", "")]
-    public Int64 ForkConversationId { get => _ForkConversationId; set { if (OnPropertyChanging("ForkConversationId", value)) { _ForkConversationId = value; OnPropertyChanged("ForkConversationId"); } } }
-
-    private Int64 _ForkMessageId;
-    /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
-    [DisplayName("分叉来源消息")]
-    [Description("分叉来源消息。从哪条消息分叉而来，0表示未分叉")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ForkMessageId", "分叉来源消息。从哪条消息分叉而来，0表示未分叉", "")]
-    public Int64 ForkMessageId { get => _ForkMessageId; set { if (OnPropertyChanging("ForkMessageId", value)) { _ForkMessageId = value; OnPropertyChanged("ForkMessageId"); } } }
 
     private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
@@ -267,36 +233,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
     #endregion
 
-    #region 拷贝
-    /// <summary>拷贝模型对象</summary>
-    /// <param name="model">模型</param>
-    public void Copy(IConversation model)
-    {
-        Id = model.Id;
-        UserId = model.UserId;
-        ProjectId = model.ProjectId;
-        UserName = model.UserName;
-        Title = model.Title;
-        ModelId = model.ModelId;
-        ModelName = model.ModelName;
-        SkillId = model.SkillId;
-        SkillName = model.SkillName;
-        ThinkingMode = model.ThinkingMode;
-        IsPinned = model.IsPinned;
-        MessageCount = model.MessageCount;
-        LastMessageTime = model.LastMessageTime;
-        InputTokens = model.InputTokens;
-        OutputTokens = model.OutputTokens;
-        TotalTokens = model.TotalTokens;
-        TotalCost = model.TotalCost;
-        ElapsedMs = model.ElapsedMs;
-        Source = model.Source;
-        ForkConversationId = model.ForkConversationId;
-        ForkMessageId = model.ForkMessageId;
-        Remark = model.Remark;
-    }
-    #endregion
-
     #region 获取/设置 字段值
     /// <summary>获取/设置 字段值</summary>
     /// <param name="name">字段名</param>
@@ -307,7 +243,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         {
             "Id" => _Id,
             "UserId" => _UserId,
-            "ProjectId" => _ProjectId,
             "UserName" => _UserName,
             "Title" => _Title,
             "ModelId" => _ModelId,
@@ -321,11 +256,8 @@ public partial class Conversation : IConversation, IEntity<IConversation>
             "InputTokens" => _InputTokens,
             "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
-            "TotalCost" => _TotalCost,
             "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
-            "ForkConversationId" => _ForkConversationId,
-            "ForkMessageId" => _ForkMessageId,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -342,7 +274,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
             {
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
-                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "UserName": _UserName = Convert.ToString(value); break;
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
@@ -356,11 +287,8 @@ public partial class Conversation : IConversation, IEntity<IConversation>
                 case "InputTokens": _InputTokens = value.ToInt(); break;
                 case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
-                case "TotalCost": _TotalCost = Convert.ToDecimal(value); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
-                case "ForkConversationId": _ForkConversationId = value.ToLong(); break;
-                case "ForkMessageId": _ForkMessageId = value.ToLong(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -379,14 +307,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     /// <summary>用户</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
-
-    /// <summary>项目</summary>
-    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
-    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
-
-    /// <summary>项目</summary>
-    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
-    public String? ProjectName => Project?.ToString();
 
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
@@ -419,18 +339,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         return FindAll(_.UserId == userId);
     }
 
-    /// <summary>根据用户、项目查找</summary>
-    /// <param name="userId">用户</param>
-    /// <param name="projectId">项目</param>
-    /// <returns>实体列表</returns>
-    public static IList<Conversation> FindAllByUserIdAndProjectId(Int32 userId, Int32 projectId)
-    {
-        if (userId < 0) return [];
-        if (projectId < 0) return [];
-
-        return FindAll(_.UserId == userId & _.ProjectId == projectId);
-    }
-
     /// <summary>根据来源查找</summary>
     /// <param name="source">来源</param>
     /// <returns>实体列表</returns>
@@ -445,7 +353,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     #region 高级查询
     /// <summary>高级查询</summary>
     /// <param name="userId">用户。会话所属用户</param>
-    /// <param name="projectId">项目。所属项目编号，0=个人对话</param>
     /// <param name="isPinned">置顶。是否置顶显示</param>
     /// <param name="source">来源。Web/Gateway/Channel等，标识对话入口</param>
     /// <param name="modelId">模型。当前使用的模型Id，引用ModelConfig.Id</param>
@@ -456,12 +363,11 @@ public partial class Conversation : IConversation, IEntity<IConversation>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Int32 projectId, Boolean? isPinned, String? source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
-        if (projectId >= 0) exp &= _.ProjectId == projectId;
         if (isPinned != null) exp &= _.IsPinned == isPinned;
         if (!source.IsNullOrEmpty()) exp &= _.Source == source;
         if (modelId >= 0) exp &= _.ModelId == modelId;
@@ -495,9 +401,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
 
         /// <summary>用户。会话所属用户</summary>
         public static readonly Field UserId = FindByName("UserId");
-
-        /// <summary>项目。所属项目编号，0=个人对话</summary>
-        public static readonly Field ProjectId = FindByName("ProjectId");
 
         /// <summary>用户名</summary>
         public static readonly Field UserName = FindByName("UserName");
@@ -538,20 +441,11 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
-        /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
-        public static readonly Field TotalCost = FindByName("TotalCost");
-
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
 
         /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
         public static readonly Field Source = FindByName("Source");
-
-        /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
-        public static readonly Field ForkConversationId = FindByName("ForkConversationId");
-
-        /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
-        public static readonly Field ForkMessageId = FindByName("ForkMessageId");
 
         /// <summary>链路。方便问题排查</summary>
         public static readonly Field TraceId = FindByName("TraceId");
@@ -588,9 +482,6 @@ public partial class Conversation : IConversation, IEntity<IConversation>
 
         /// <summary>用户。会话所属用户</summary>
         public const String UserId = "UserId";
-
-        /// <summary>项目。所属项目编号，0=个人对话</summary>
-        public const String ProjectId = "ProjectId";
 
         /// <summary>用户名</summary>
         public const String UserName = "UserName";
@@ -631,20 +522,11 @@ public partial class Conversation : IConversation, IEntity<IConversation>
         /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
         public const String TotalTokens = "TotalTokens";
 
-        /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
-        public const String TotalCost = "TotalCost";
-
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";
 
         /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
         public const String Source = "Source";
-
-        /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
-        public const String ForkConversationId = "ForkConversationId";
-
-        /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
-        public const String ForkMessageId = "ForkMessageId";
 
         /// <summary>链路。方便问题排查</summary>
         public const String TraceId = "TraceId";

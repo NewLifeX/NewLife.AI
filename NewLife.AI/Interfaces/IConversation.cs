@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -16,9 +16,6 @@ public partial interface IConversation
 
     /// <summary>用户。会话所属用户</summary>
     Int32 UserId { get; set; }
-
-    /// <summary>项目。所属项目编号，0=个人对话</summary>
-    Int32 ProjectId { get; set; }
 
     /// <summary>用户名</summary>
     String? UserName { get; set; }
@@ -59,20 +56,11 @@ public partial interface IConversation
     /// <summary>总Token数。会话累计消耗的总Token数（含额外LLM调用）</summary>
     Int32 TotalTokens { get; set; }
 
-    /// <summary>总费用。会话累计消耗的总费用，单位：元（含标题/压缩/记忆等额外LLM调用）</summary>
-    Decimal TotalCost { get; set; }
-
     /// <summary>耗时。毫秒</summary>
     Int32 ElapsedMs { get; set; }
 
     /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
     String? Source { get; set; }
-
-    /// <summary>分叉来源会话。从哪个会话分叉而来，0表示原始会话</summary>
-    Int64 ForkConversationId { get; set; }
-
-    /// <summary>分叉来源消息。从哪条消息分叉而来，0表示未分叉</summary>
-    Int64 ForkMessageId { get; set; }
 
     /// <summary>备注</summary>
     String? Remark { get; set; }

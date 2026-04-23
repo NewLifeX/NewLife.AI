@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife;
 using NewLife.Cube;
@@ -62,6 +62,6 @@ public class SkillController : EntityController<Skill>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Skill.Search(-1, -1, code, category, isSystem, enable, start, end, p["Q"], p);
+        return Skill.Search(code, category, isSystem, enable, start, end, p["Q"], p);
     }
 }

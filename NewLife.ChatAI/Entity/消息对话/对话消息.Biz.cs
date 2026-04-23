@@ -1,12 +1,10 @@
-using System.Runtime.Serialization;
-using System.Web.Script.Serialization;
-using System.Xml.Serialization;
+﻿using NewLife.AI.Interfaces;
 using NewLife.Data;
 using XCode;
 
 namespace NewLife.ChatAI.Entity;
 
-public partial class ChatMessage : Entity<ChatMessage>
+public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
 {
     #region 对象操作
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存

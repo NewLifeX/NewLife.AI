@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -16,9 +16,6 @@ public partial interface IUserMemory
 
     /// <summary>用户</summary>
     Int32 UserId { get; set; }
-
-    /// <summary>项目。0=全局记忆</summary>
-    Int32 ProjectId { get; set; }
 
     /// <summary>来源会话。提取该记忆的会话编号</summary>
     Int64 ConversationId { get; set; }
