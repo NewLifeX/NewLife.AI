@@ -1,4 +1,4 @@
-namespace NewLife.AI.Services;
+﻿namespace NewLife.AI.Services;
 
 /// <summary>消息生成入口类型。用于区分四大消息流（StreamMessage/Regenerate/RegenerateStream/EditAndResendStream）以及恢复后台流</summary>
 /// <remarks>
@@ -25,6 +25,6 @@ public enum FlowKind
     /// <summary>编辑用户消息后重新发送（流式）</summary>
     EditAndResendStream = 4,
 
-    /// <summary>恢复后台流式生成（断线重连）</summary>
-    ResumeBackgroundStream = 5,
+    ///// <summary>恢复后台流式生成（断线重连）</summary>
+    //ResumeBackgroundStream = 5,
 }

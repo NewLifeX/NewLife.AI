@@ -97,7 +97,6 @@ public class MessageFlow : IMessageFlow
         // Step1: 验证参数与准备
         var flow = CreateFlowContext(messageId, "assistant", null, null, userId);
         flow.Kind = FlowKind.Regenerate;
-        flow.OriginalMessageId = messageId;
         if (flow.Error != null) return null;
 
         try
@@ -139,8 +138,7 @@ public class MessageFlow : IMessageFlow
         // Step 1: 验证参数与准备
         var flow = CreateFlowContext(messageId, "user", null, null, userId);
         flow.Kind = FlowKind.EditAndResendStream;
-        flow.OriginalMessageId = messageId;
-        flow.NewUserContent = newContent;
+        flow["NewUserContent"] = newContent;
         if (flow.Error != null)
         {
             yield return ChatStreamEvent.ErrorEvent(flow.Error.Code, flow.Error.Message);
@@ -192,7 +190,6 @@ public class MessageFlow : IMessageFlow
         // Step 1: 验证参数与准备
         var flow = CreateFlowContext(messageId, "assistant", null, null, userId);
         flow.Kind = FlowKind.RegenerateStream;
-        flow.OriginalMessageId = messageId;
         if (flow.Error != null)
         {
             yield return ChatStreamEvent.ErrorEvent(flow.Error.Code, flow.Error.Message);
@@ -295,7 +292,7 @@ public class MessageFlow : IMessageFlow
         flow.UserMessage = userMsg;
         flow.AssistantMessage = assistantMsg;
         flow.SkillId = skillId;
-        flow.SkillName = skillName;
+        flow["SkillName"] = skillName;
 
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
@@ -530,8 +527,8 @@ public class MessageFlow : IMessageFlow
             ModelConfig = modelConfig,
             UserId = userId,
             SkillId = conversation.SkillId,
-            SkillName = conversation.SkillName,
         };
+        flow["SkillName"] = conversation.SkillName;
 
         // 按消息模式：自动填充 UserMessage 或 AssistantMessage
         if (entity != null)
@@ -733,8 +730,9 @@ public class MessageFlow : IMessageFlow
 
         // 技能名称（ResolvedSkillNames 为 ISet 已自动去重）
         var skillNames = new HashSet<String>(pipelineCtx.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
-        if (flow.SkillId > 0 && !flow.SkillName.IsNullOrEmpty())
-            skillNames.Add(flow.SkillName);
+        var skillName = flow["SkillName"] as String;
+        if (flow.SkillId > 0 && !skillName.IsNullOrEmpty())
+            skillNames.Add(skillName);
 
         ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
         ApplyRequestParams(assistantMsg, flow.ModelConfig, pipelineCtx);

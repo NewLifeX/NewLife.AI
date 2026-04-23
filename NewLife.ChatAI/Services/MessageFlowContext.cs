@@ -23,15 +23,6 @@ public class MessageFlowContext : IMessageFlowContext
     /// <summary>技能编号（0 表示无技能）</summary>
     public Int32 SkillId { get; set; }
 
-    /// <summary>技能名称（PrepareContext 后填充）</summary>
-    public String? SkillName { get; set; }
-
-    /// <summary>编辑重发时的新用户消息内容（仅 EditAndResendStream 使用）</summary>
-    public String? NewUserContent { get; set; }
-
-    /// <summary>原始消息编号（Regenerate/RegenerateStream/EditAndResendStream 场景使用）</summary>
-    public Int64 OriginalMessageId { get; set; }
-
     #endregion
 
     #region 实体引用
