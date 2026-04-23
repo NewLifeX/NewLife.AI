@@ -26,8 +26,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewLife.AI.Extensions", "Ne
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewLife.ChatAI", "NewLife.ChatAI\NewLife.ChatAI.csproj", "{F538883F-4536-56ED-DC69-242B5FA72558}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewLife.ChatData", "NewLife.ChatData\NewLife.ChatData.csproj", "{C9E79F6D-0B21-DEEF-0B33-557CD267BB1C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,10 +52,6 @@ Global
 		{F538883F-4536-56ED-DC69-242B5FA72558}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F538883F-4536-56ED-DC69-242B5FA72558}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F538883F-4536-56ED-DC69-242B5FA72558}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C9E79F6D-0B21-DEEF-0B33-557CD267BB1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C9E79F6D-0B21-DEEF-0B33-557CD267BB1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C9E79F6D-0B21-DEEF-0B33-557CD267BB1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C9E79F6D-0B21-DEEF-0B33-557CD267BB1C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
