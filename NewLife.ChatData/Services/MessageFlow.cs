@@ -763,7 +763,7 @@ public class MessageFlow
 
         // 记录用量
         if (flow.Usage != null)
-            UsageService?.Record(flow.UserId, 0, assistantMsg.ConversationId, assistantMsg.Id, flow.ModelConfig.Id, flow.Usage, "Chat");
+            UsageService?.Record(flow.UserId, 0, assistantMsg.ConversationId, assistantMsg.Id, flow.ModelConfig.Id, flow.Usage, "Chat", flow.Conversation.ProjectId);
     }
 
     /// <summary>持久化非流式生成结果。写入 AI 回复内容、用量统计和会话累计</summary>
@@ -787,7 +787,7 @@ public class MessageFlow
 
         if (response.Usage != null)
         {
-            UsageService?.Record(flow.UserId, 0, entity.ConversationId, entity.Id, flow.ModelConfig.Id, response.Usage, "Chat");
+            UsageService?.Record(flow.UserId, 0, entity.ConversationId, entity.Id, flow.ModelConfig.Id, response.Usage, "Chat", flow.Conversation.ProjectId);
             conversation.InputTokens += response.Usage.InputTokens;
             conversation.OutputTokens += response.Usage.OutputTokens;
             conversation.TotalTokens += response.Usage.TotalTokens;

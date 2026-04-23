@@ -97,9 +97,10 @@ public class UsageService(IChatSetting chatSetting, ILog log)
         var totalPrompt = records.Sum(e => e.InputTokens);
         var totalCompletion = records.Sum(e => e.OutputTokens);
         var totalTokens = records.Sum(e => e.TotalTokens);
+        var totalCost = records.Sum(e => e.TotalCost);
         var lastActive = records.Count > 0 ? records.Max(e => e.CreateTime) : DateTime.MinValue;
 
-        return new UsageSummaryDto(conversations, messages, totalPrompt, totalCompletion, totalTokens, lastActive);
+        return new UsageSummaryDto(conversations, messages, totalPrompt, totalCompletion, totalTokens, lastActive, totalCost);
     }
 
     /// <summary>获取按日用量明细</summary>
@@ -119,7 +120,8 @@ public class UsageService(IChatSetting chatSetting, ILog log)
                 g.Count(),
                 g.Sum(e => e.InputTokens),
                 g.Sum(e => e.OutputTokens),
-                g.Sum(e => e.TotalTokens)))
+                g.Sum(e => e.TotalTokens),
+                g.Sum(e => e.TotalCost)))
             .ToList();
     }
 
@@ -135,7 +137,9 @@ public class UsageService(IChatSetting chatSetting, ILog log)
             .Select(g => new ModelUsageDto(
                 g.Key,
                 g.Count(),
-                g.Sum(e => e.TotalTokens)))
+                g.Sum(e => e.TotalTokens),
+                g.First().ModelName ?? "",
+                g.Sum(e => e.TotalCost)))
             .OrderByDescending(e => e.Calls)
             .ToList();
     }
