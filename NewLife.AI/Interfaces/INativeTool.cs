@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatData.Entity;
+namespace NewLife.AI.Interfaces;
 
 /// <summary>内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理</summary>
 public partial interface INativeTool

@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatData.Entity;
+namespace NewLife.AI.Interfaces;
 
 /// <summary>智能体项目。多用户协作的AI资源容器，统一管理对话、知识、技能、成员</summary>
 public partial interface IAgentProject

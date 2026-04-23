@@ -1,10 +1,10 @@
-﻿using NewLife.AI.Models;
+using NewLife.AI.Models;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
 using NewLife.Web;
 using XCode.Membership;
-using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
+using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 

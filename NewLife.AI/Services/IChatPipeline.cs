@@ -1,5 +1,5 @@
 ﻿using NewLife.AI.Models;
-using NewLife.ChatData.Entity;
+using NewLife.AI.Interfaces;
 using NewLife.Data;
 
 namespace NewLife.AI.Services;

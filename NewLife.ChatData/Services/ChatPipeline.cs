@@ -4,6 +4,7 @@ using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Filters;
 using NewLife.AI.Models;
+using NewLife.AI.Interfaces;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using NewLife.ChatData.Entity;

@@ -466,7 +466,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     /// <summary>校验 AppKey 与模型可用性。返回 (错误响应, 模型配置)，错误响应不为空时调用方应直接 return</summary>
     /// <param name="modelCode">模型编码</param>
     /// <returns>错误响应或模型配置</returns>
-    private (IActionResult? error, NewLife.ChatData.Entity.ModelConfig? config) ValidateAndResolve(String? modelCode)
+    private (IActionResult? error, NewLife.ChatAI.Entity.ModelConfig? config) ValidateAndResolve(String? modelCode)
     {
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
         if (appKey == null)

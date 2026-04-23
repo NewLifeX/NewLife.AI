@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatData.Entity;
+namespace NewLife.AI.Interfaces;
 
 /// <summary>模型配置。后端接入的大语言模型，关联到具体的提供商实例</summary>
 public partial interface IModelConfig

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -7,12 +7,12 @@ using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using NewLife.Collections;
 using NewLife.Serialization;
 using XCode.Membership;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;
-using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
+using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;

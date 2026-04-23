@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 
-namespace NewLife.ChatData.Entity;
+namespace NewLife.AI.Interfaces;
 
 /// <summary>对话消息。会话中的单条发言，包括用户消息和AI回复</summary>
 public partial interface IChatMessage

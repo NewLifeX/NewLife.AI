@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -10,6 +10,7 @@ using XCode;
 using XCode.Cache;
 using XCode.Configuration;
 using XCode.DataAccessLayer;
+using NewLife.AI.Interfaces;
 
 namespace NewLife.ChatData.Entity;
 

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
 

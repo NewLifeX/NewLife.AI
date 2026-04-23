@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Reflection;
 using NewLife.AI.Models;
-using NewLife.ChatData.Entity;
+using NewLife.AI.Interfaces;
 using NewLife.Model;
 using NewLife.Serialization;
 

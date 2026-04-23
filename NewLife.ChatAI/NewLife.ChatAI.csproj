@@ -75,26 +75,14 @@
 
   <ItemGroup>
     <PackageReference Include="NewLife.Cube.Core" Version="6.10.2026.404" />
+    <PackageReference Include="NewLife.Holiday" Version="1.4.2026.206" />
     <PackageReference Include="NewLife.MySql" Version="1.0.2026.402" />
     <PackageReference Include="NewLife.XCode" Version="11.25.2026.403" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
-    <ProjectReference Include="..\NewLife.ChatData\NewLife.ChatData.csproj">
-      <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeChatDataBuildOutput</TargetsForTfmSpecificBuildOutput>
-  </PropertyGroup>
-  <Target Name="IncludeChatDataBuildOutput">
-    <ItemGroup>
-      <BuildOutputInPackage Include="$(OutputPath)NewLife.ChatData.dll" />
-      <BuildOutputInPackage Include="$(OutputPath)NewLife.ChatData.xml" Condition="Exists('$(OutputPath)NewLife.ChatData.xml')" />
-    </ItemGroup>
-  </Target>
 
   <ItemGroup>
     <None Update="appsettings.json">

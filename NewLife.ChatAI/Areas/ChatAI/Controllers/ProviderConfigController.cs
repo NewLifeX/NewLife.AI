@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatData.Entity;
+using Microsoft.AspNetCore.Mvc;
+using NewLife.ChatAI.Entity;
 using NewLife.Cube;
 using NewLife.Cube.ViewModels;
 using NewLife.Web;

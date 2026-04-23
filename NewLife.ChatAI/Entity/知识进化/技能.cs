@@ -1,0 +1,672 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Runtime.Serialization;
+using System.Web.Script.Serialization;
+using System.Xml.Serialization;
+using NewLife;
+using NewLife.Data;
+using XCode;
+using XCode.Cache;
+using XCode.Configuration;
+using XCode.DataAccessLayer;
+using NewLife.AI.Interfaces;
+
+namespace NewLife.ChatAI.Entity;
+
+/// <summary>技能。可复用的AI行为指令，Markdown格式的结构化提示文本</summary>
+[Serializable]
+[DataObject]
+[Description("技能。可复用的AI行为指令，Markdown格式的结构化提示文本")]
+[BindIndex("IU_Skill_UserId_ProjectId_Code", true, "UserId,ProjectId,Code")]
+[BindIndex("IX_Skill_Category", false, "Category")]
+[BindTable("Skill", Description = "技能。可复用的AI行为指令，Markdown格式的结构化提示文本", ConnName = "ChatAI", DbType = DatabaseType.None)]
+public partial class Skill : ISkill, IEntity<ISkill>
+{
+    #region 属性
+    private Int32 _Id;
+    /// <summary>编号</summary>
+    [DisplayName("编号")]
+    [Description("编号")]
+    [DataObjectField(true, true, false, 0)]
+    [BindColumn("Id", "编号", "")]
+    public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
+
+    private Int32 _UserId;
+    /// <summary>用户。0=系统内置</summary>
+    [DisplayName("用户")]
+    [Description("用户。0=系统内置")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("UserId", "用户。0=系统内置", "")]
+    public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
+
+    private Int32 _ProjectId;
+    /// <summary>项目。0=个人/系统</summary>
+    [DisplayName("项目")]
+    [Description("项目。0=个人/系统")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ProjectId", "项目。0=个人/系统", "")]
+    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
+
+    private String? _Code;
+    /// <summary>编码。英文标识，唯一，如coder、translator</summary>
+    [DisplayName("编码")]
+    [Description("编码。英文标识，唯一，如coder、translator")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Code", "编码。英文标识，唯一，如coder、translator", "")]
+    public String? Code { get => _Code; set { if (OnPropertyChanging("Code", value)) { _Code = value; OnPropertyChanged("Code"); } } }
+
+    private String? _Name;
+    /// <summary>名称。技能展示名称，同时也是@引用的标识</summary>
+    [DisplayName("名称")]
+    [Description("名称。技能展示名称，同时也是@引用的标识")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Name", "名称。技能展示名称，同时也是@引用的标识", "", Master = true)]
+    public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
+
+    private String? _Icon;
+    /// <summary>图标。Material Icon名称，如code、translate</summary>
+    [DisplayName("图标")]
+    [Description("图标。Material Icon名称，如code、translate")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Icon", "图标。Material Icon名称，如code、translate", "")]
+    public String? Icon { get => _Icon; set { if (OnPropertyChanging("Icon", value)) { _Icon = value; OnPropertyChanged("Icon"); } } }
+
+    private String? _Category;
+    /// <summary>分类。通用/开发/创作/分析</summary>
+    [DisplayName("分类")]
+    [Description("分类。通用/开发/创作/分析")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Category", "分类。通用/开发/创作/分析", "")]
+    public String? Category { get => _Category; set { if (OnPropertyChanging("Category", value)) { _Category = value; OnPropertyChanged("Category"); } } }
+
+    private String? _Description;
+    /// <summary>描述。一句话说明该技能做什么</summary>
+    [DisplayName("描述")]
+    [Description("描述。一句话说明该技能做什么")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Description", "描述。一句话说明该技能做什么", "")]
+    public String? Description { get => _Description; set { if (OnPropertyChanging("Description", value)) { _Description = value; OnPropertyChanged("Description"); } } }
+
+    private String? _Content;
+    /// <summary>技能正文。Markdown格式，包含完整的行为指令、规则和示例</summary>
+    [DisplayName("技能正文")]
+    [Description("技能正文。Markdown格式，包含完整的行为指令、规则和示例")]
+    [DataObjectField(false, false, true, -1)]
+    [BindColumn("Content", "技能正文。Markdown格式，包含完整的行为指令、规则和示例", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
+    public String? Content { get => _Content; set { if (OnPropertyChanging("Content", value)) { _Content = value; OnPropertyChanged("Content"); } } }
+
+    private String? _Triggers;
+    /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+    [DisplayName("触发词")]
+    [Description("触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译", "")]
+    public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
+
+    private String? _ContinueHints;
+    /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+    [DisplayName("延续提示词")]
+    [Description("延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("ContinueHints", "延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段", "")]
+    public String? ContinueHints { get => _ContinueHints; set { if (OnPropertyChanging("ContinueHints", value)) { _ContinueHints = value; OnPropertyChanged("ContinueHints"); } } }
+
+    private String? _ExitHints;
+    /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+    [DisplayName("退出提示词")]
+    [Description("退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("ExitHints", "退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题", "")]
+    public String? ExitHints { get => _ExitHints; set { if (OnPropertyChanging("ExitHints", value)) { _ExitHints = value; OnPropertyChanged("ExitHints"); } } }
+
+    private Int32 _Sort;
+    /// <summary>排序。越大越靠前</summary>
+    [DisplayName("排序")]
+    [Description("排序。越大越靠前")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Sort", "排序。越大越靠前", "")]
+    public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
+
+    private Boolean _Enable;
+    /// <summary>启用</summary>
+    [DisplayName("启用")]
+    [Description("启用")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Enable", "启用", "")]
+    public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
+
+    private Boolean _IsSystem;
+    /// <summary>系统。是否系统内置，内置技能不可删除</summary>
+    [DisplayName("系统")]
+    [Description("系统。是否系统内置，内置技能不可删除")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("IsSystem", "系统。是否系统内置，内置技能不可删除", "")]
+    public Boolean IsSystem { get => _IsSystem; set { if (OnPropertyChanging("IsSystem", value)) { _IsSystem = value; OnPropertyChanged("IsSystem"); } } }
+
+    private Int32 _Version;
+    /// <summary>版本。每次编辑自增</summary>
+    [DisplayName("版本")]
+    [Description("版本。每次编辑自增")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Version", "版本。每次编辑自增", "")]
+    public Int32 Version { get => _Version; set { if (OnPropertyChanging("Version", value)) { _Version = value; OnPropertyChanged("Version"); } } }
+
+    private String? _RoleIds;
+    /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+    [Category("安全")]
+    [DisplayName("角色组")]
+    [Description("角色组。逗号分隔角色ID列表，命中即放行；为空时不限制")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("RoleIds", "角色组。逗号分隔角色ID列表，命中即放行；为空时不限制", "")]
+    public String? RoleIds { get => _RoleIds; set { if (OnPropertyChanging("RoleIds", value)) { _RoleIds = value; OnPropertyChanged("RoleIds"); } } }
+
+    private String? _DepartmentIds;
+    /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+    [Category("安全")]
+    [DisplayName("部门组")]
+    [Description("部门组。逗号分隔部门ID列表，命中即放行；为空时不限制")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("DepartmentIds", "部门组。逗号分隔部门ID列表，命中即放行；为空时不限制", "")]
+    public String? DepartmentIds { get => _DepartmentIds; set { if (OnPropertyChanging("DepartmentIds", value)) { _DepartmentIds = value; OnPropertyChanged("DepartmentIds"); } } }
+
+    private String? _ProjectIds;
+    /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+    [Category("安全")]
+    [DisplayName("项目组")]
+    [Description("项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("ProjectIds", "项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制", "")]
+    public String? ProjectIds { get => _ProjectIds; set { if (OnPropertyChanging("ProjectIds", value)) { _ProjectIds = value; OnPropertyChanged("ProjectIds"); } } }
+
+    private String? _CreateUser;
+    /// <summary>创建者</summary>
+    [Category("扩展")]
+    [DisplayName("创建者")]
+    [Description("创建者")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("CreateUser", "创建者", "")]
+    public String? CreateUser { get => _CreateUser; set { if (OnPropertyChanging("CreateUser", value)) { _CreateUser = value; OnPropertyChanged("CreateUser"); } } }
+
+    private Int32 _CreateUserID;
+    /// <summary>创建用户</summary>
+    [Category("扩展")]
+    [DisplayName("创建用户")]
+    [Description("创建用户")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("CreateUserID", "创建用户", "")]
+    public Int32 CreateUserID { get => _CreateUserID; set { if (OnPropertyChanging("CreateUserID", value)) { _CreateUserID = value; OnPropertyChanged("CreateUserID"); } } }
+
+    private String? _CreateIP;
+    /// <summary>创建地址</summary>
+    [Category("扩展")]
+    [DisplayName("创建地址")]
+    [Description("创建地址")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("CreateIP", "创建地址", "")]
+    public String? CreateIP { get => _CreateIP; set { if (OnPropertyChanging("CreateIP", value)) { _CreateIP = value; OnPropertyChanged("CreateIP"); } } }
+
+    private DateTime _CreateTime;
+    /// <summary>创建时间</summary>
+    [Category("扩展")]
+    [DisplayName("创建时间")]
+    [Description("创建时间")]
+    [DataObjectField(false, false, true, 0)]
+    [BindColumn("CreateTime", "创建时间", "")]
+    public DateTime CreateTime { get => _CreateTime; set { if (OnPropertyChanging("CreateTime", value)) { _CreateTime = value; OnPropertyChanged("CreateTime"); } } }
+
+    private String? _UpdateUser;
+    /// <summary>更新者</summary>
+    [Category("扩展")]
+    [DisplayName("更新者")]
+    [Description("更新者")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("UpdateUser", "更新者", "")]
+    public String? UpdateUser { get => _UpdateUser; set { if (OnPropertyChanging("UpdateUser", value)) { _UpdateUser = value; OnPropertyChanged("UpdateUser"); } } }
+
+    private Int32 _UpdateUserID;
+    /// <summary>更新用户</summary>
+    [Category("扩展")]
+    [DisplayName("更新用户")]
+    [Description("更新用户")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("UpdateUserID", "更新用户", "")]
+    public Int32 UpdateUserID { get => _UpdateUserID; set { if (OnPropertyChanging("UpdateUserID", value)) { _UpdateUserID = value; OnPropertyChanged("UpdateUserID"); } } }
+
+    private String? _UpdateIP;
+    /// <summary>更新地址</summary>
+    [Category("扩展")]
+    [DisplayName("更新地址")]
+    [Description("更新地址")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("UpdateIP", "更新地址", "")]
+    public String? UpdateIP { get => _UpdateIP; set { if (OnPropertyChanging("UpdateIP", value)) { _UpdateIP = value; OnPropertyChanged("UpdateIP"); } } }
+
+    private DateTime _UpdateTime;
+    /// <summary>更新时间</summary>
+    [Category("扩展")]
+    [DisplayName("更新时间")]
+    [Description("更新时间")]
+    [DataObjectField(false, false, true, 0)]
+    [BindColumn("UpdateTime", "更新时间", "")]
+    public DateTime UpdateTime { get => _UpdateTime; set { if (OnPropertyChanging("UpdateTime", value)) { _UpdateTime = value; OnPropertyChanged("UpdateTime"); } } }
+
+    private String? _Remark;
+    /// <summary>备注</summary>
+    [Category("扩展")]
+    [DisplayName("备注")]
+    [Description("备注")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("Remark", "备注", "")]
+    public String? Remark { get => _Remark; set { if (OnPropertyChanging("Remark", value)) { _Remark = value; OnPropertyChanged("Remark"); } } }
+    #endregion
+
+    #region 拷贝
+    /// <summary>拷贝模型对象</summary>
+    /// <param name="model">模型</param>
+    public void Copy(ISkill model)
+    {
+        Id = model.Id;
+        UserId = model.UserId;
+        ProjectId = model.ProjectId;
+        Code = model.Code;
+        Name = model.Name;
+        Icon = model.Icon;
+        Category = model.Category;
+        Description = model.Description;
+        Content = model.Content;
+        Triggers = model.Triggers;
+        ContinueHints = model.ContinueHints;
+        ExitHints = model.ExitHints;
+        Sort = model.Sort;
+        Enable = model.Enable;
+        IsSystem = model.IsSystem;
+        Version = model.Version;
+        RoleIds = model.RoleIds;
+        DepartmentIds = model.DepartmentIds;
+        ProjectIds = model.ProjectIds;
+        Remark = model.Remark;
+    }
+    #endregion
+
+    #region 获取/设置 字段值
+    /// <summary>获取/设置 字段值</summary>
+    /// <param name="name">字段名</param>
+    /// <returns></returns>
+    public override Object? this[String name]
+    {
+        get => name switch
+        {
+            "Id" => _Id,
+            "UserId" => _UserId,
+            "ProjectId" => _ProjectId,
+            "Code" => _Code,
+            "Name" => _Name,
+            "Icon" => _Icon,
+            "Category" => _Category,
+            "Description" => _Description,
+            "Content" => _Content,
+            "Triggers" => _Triggers,
+            "ContinueHints" => _ContinueHints,
+            "ExitHints" => _ExitHints,
+            "Sort" => _Sort,
+            "Enable" => _Enable,
+            "IsSystem" => _IsSystem,
+            "Version" => _Version,
+            "RoleIds" => _RoleIds,
+            "DepartmentIds" => _DepartmentIds,
+            "ProjectIds" => _ProjectIds,
+            "CreateUser" => _CreateUser,
+            "CreateUserID" => _CreateUserID,
+            "CreateIP" => _CreateIP,
+            "CreateTime" => _CreateTime,
+            "UpdateUser" => _UpdateUser,
+            "UpdateUserID" => _UpdateUserID,
+            "UpdateIP" => _UpdateIP,
+            "UpdateTime" => _UpdateTime,
+            "Remark" => _Remark,
+            _ => base[name]
+        };
+        set
+        {
+            switch (name)
+            {
+                case "Id": _Id = value.ToInt(); break;
+                case "UserId": _UserId = value.ToInt(); break;
+                case "ProjectId": _ProjectId = value.ToInt(); break;
+                case "Code": _Code = Convert.ToString(value); break;
+                case "Name": _Name = Convert.ToString(value); break;
+                case "Icon": _Icon = Convert.ToString(value); break;
+                case "Category": _Category = Convert.ToString(value); break;
+                case "Description": _Description = Convert.ToString(value); break;
+                case "Content": _Content = Convert.ToString(value); break;
+                case "Triggers": _Triggers = Convert.ToString(value); break;
+                case "ContinueHints": _ContinueHints = Convert.ToString(value); break;
+                case "ExitHints": _ExitHints = Convert.ToString(value); break;
+                case "Sort": _Sort = value.ToInt(); break;
+                case "Enable": _Enable = value.ToBoolean(); break;
+                case "IsSystem": _IsSystem = value.ToBoolean(); break;
+                case "Version": _Version = value.ToInt(); break;
+                case "RoleIds": _RoleIds = Convert.ToString(value); break;
+                case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
+                case "ProjectIds": _ProjectIds = Convert.ToString(value); break;
+                case "CreateUser": _CreateUser = Convert.ToString(value); break;
+                case "CreateUserID": _CreateUserID = value.ToInt(); break;
+                case "CreateIP": _CreateIP = Convert.ToString(value); break;
+                case "CreateTime": _CreateTime = value.ToDateTime(); break;
+                case "UpdateUser": _UpdateUser = Convert.ToString(value); break;
+                case "UpdateUserID": _UpdateUserID = value.ToInt(); break;
+                case "UpdateIP": _UpdateIP = Convert.ToString(value); break;
+                case "UpdateTime": _UpdateTime = value.ToDateTime(); break;
+                case "Remark": _Remark = Convert.ToString(value); break;
+                default: base[name] = value; break;
+            }
+        }
+    }
+    #endregion
+
+    #region 关联映射
+    /// <summary>用户</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
+
+    /// <summary>用户</summary>
+    [Map(nameof(UserId), typeof(XCode.Membership.User), "ID")]
+    public String? UserName => User?.ToString();
+
+    /// <summary>项目</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AgentProject? Project => Extends.Get(nameof(Project), k => AgentProject.FindById(ProjectId));
+
+    /// <summary>项目</summary>
+    [Map(nameof(ProjectId), typeof(AgentProject), "Id")]
+    public String? ProjectName => Project?.ToString();
+
+    #endregion
+
+    #region 扩展查询
+    /// <summary>根据编号查找</summary>
+    /// <param name="id">编号</param>
+    /// <returns>实体对象</returns>
+    public static Skill? FindById(Int32 id)
+    {
+        if (id < 0) return null;
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.Id == id);
+
+        // 单对象缓存
+        return Meta.SingleCache[id];
+
+        //return Find(_.Id == id);
+    }
+
+    /// <summary>根据用户、项目、编码查找</summary>
+    /// <param name="userId">用户</param>
+    /// <param name="projectId">项目</param>
+    /// <param name="code">编码</param>
+    /// <returns>实体对象</returns>
+    public static Skill? FindByUserIdAndProjectIdAndCode(Int32 userId, Int32 projectId, String? code)
+    {
+        if (userId < 0) return null;
+        if (projectId < 0) return null;
+        if (code == null) return null;
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.Find(e => e.UserId == userId && e.ProjectId == projectId && e.Code.EqualIgnoreCase(code));
+
+        return Find(_.UserId == userId & _.ProjectId == projectId & _.Code == code);
+    }
+
+    /// <summary>根据用户查找</summary>
+    /// <param name="userId">用户</param>
+    /// <returns>实体列表</returns>
+    public static IList<Skill> FindAllByUserId(Int32 userId)
+    {
+        if (userId < 0) return [];
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId);
+
+        return FindAll(_.UserId == userId);
+    }
+
+    /// <summary>根据用户、项目查找</summary>
+    /// <param name="userId">用户</param>
+    /// <param name="projectId">项目</param>
+    /// <returns>实体列表</returns>
+    public static IList<Skill> FindAllByUserIdAndProjectId(Int32 userId, Int32 projectId)
+    {
+        if (userId < 0) return [];
+        if (projectId < 0) return [];
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.UserId == userId && e.ProjectId == projectId);
+
+        return FindAll(_.UserId == userId & _.ProjectId == projectId);
+    }
+
+    /// <summary>根据分类查找</summary>
+    /// <param name="category">分类</param>
+    /// <returns>实体列表</returns>
+    public static IList<Skill> FindAllByCategory(String? category)
+    {
+        if (category == null) return [];
+
+        // 实体缓存
+        if (Meta.Session.Count < MaxCacheCount) return Meta.Cache.FindAll(e => e.Category.EqualIgnoreCase(category));
+
+        return FindAll(_.Category == category);
+    }
+    #endregion
+
+    #region 高级查询
+    /// <summary>高级查询</summary>
+    /// <param name="userId">用户。0=系统内置</param>
+    /// <param name="projectId">项目。0=个人/系统</param>
+    /// <param name="code">编码。英文标识，唯一，如coder、translator</param>
+    /// <param name="category">分类。通用/开发/创作/分析</param>
+    /// <param name="isSystem">系统。是否系统内置，内置技能不可删除</param>
+    /// <param name="enable">启用</param>
+    /// <param name="start">更新时间开始</param>
+    /// <param name="end">更新时间结束</param>
+    /// <param name="key">关键字</param>
+    /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
+    /// <returns>实体列表</returns>
+    public static IList<Skill> Search(Int32 userId, Int32 projectId, String? code, String? category, Boolean? isSystem, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    {
+        var exp = new WhereExpression();
+
+        if (userId >= 0) exp &= _.UserId == userId;
+        if (projectId >= 0) exp &= _.ProjectId == projectId;
+        if (!code.IsNullOrEmpty()) exp &= _.Code == code;
+        if (!category.IsNullOrEmpty()) exp &= _.Category == category;
+        if (isSystem != null) exp &= _.IsSystem == isSystem;
+        if (enable != null) exp &= _.Enable == enable;
+        exp &= _.UpdateTime.Between(start, end);
+        if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
+
+        return FindAll(exp, page);
+    }
+    #endregion
+
+    #region 字段名
+    /// <summary>取得技能字段信息的快捷方式</summary>
+    public partial class _
+    {
+        /// <summary>编号</summary>
+        public static readonly Field Id = FindByName("Id");
+
+        /// <summary>用户。0=系统内置</summary>
+        public static readonly Field UserId = FindByName("UserId");
+
+        /// <summary>项目。0=个人/系统</summary>
+        public static readonly Field ProjectId = FindByName("ProjectId");
+
+        /// <summary>编码。英文标识，唯一，如coder、translator</summary>
+        public static readonly Field Code = FindByName("Code");
+
+        /// <summary>名称。技能展示名称，同时也是@引用的标识</summary>
+        public static readonly Field Name = FindByName("Name");
+
+        /// <summary>图标。Material Icon名称，如code、translate</summary>
+        public static readonly Field Icon = FindByName("Icon");
+
+        /// <summary>分类。通用/开发/创作/分析</summary>
+        public static readonly Field Category = FindByName("Category");
+
+        /// <summary>描述。一句话说明该技能做什么</summary>
+        public static readonly Field Description = FindByName("Description");
+
+        /// <summary>技能正文。Markdown格式，包含完整的行为指令、规则和示例</summary>
+        public static readonly Field Content = FindByName("Content");
+
+        /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+        public static readonly Field Triggers = FindByName("Triggers");
+
+        /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+        public static readonly Field ContinueHints = FindByName("ContinueHints");
+
+        /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+        public static readonly Field ExitHints = FindByName("ExitHints");
+
+        /// <summary>排序。越大越靠前</summary>
+        public static readonly Field Sort = FindByName("Sort");
+
+        /// <summary>启用</summary>
+        public static readonly Field Enable = FindByName("Enable");
+
+        /// <summary>系统。是否系统内置，内置技能不可删除</summary>
+        public static readonly Field IsSystem = FindByName("IsSystem");
+
+        /// <summary>版本。每次编辑自增</summary>
+        public static readonly Field Version = FindByName("Version");
+
+        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+        public static readonly Field RoleIds = FindByName("RoleIds");
+
+        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+        public static readonly Field DepartmentIds = FindByName("DepartmentIds");
+
+        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+        public static readonly Field ProjectIds = FindByName("ProjectIds");
+
+        /// <summary>创建者</summary>
+        public static readonly Field CreateUser = FindByName("CreateUser");
+
+        /// <summary>创建用户</summary>
+        public static readonly Field CreateUserID = FindByName("CreateUserID");
+
+        /// <summary>创建地址</summary>
+        public static readonly Field CreateIP = FindByName("CreateIP");
+
+        /// <summary>创建时间</summary>
+        public static readonly Field CreateTime = FindByName("CreateTime");
+
+        /// <summary>更新者</summary>
+        public static readonly Field UpdateUser = FindByName("UpdateUser");
+
+        /// <summary>更新用户</summary>
+        public static readonly Field UpdateUserID = FindByName("UpdateUserID");
+
+        /// <summary>更新地址</summary>
+        public static readonly Field UpdateIP = FindByName("UpdateIP");
+
+        /// <summary>更新时间</summary>
+        public static readonly Field UpdateTime = FindByName("UpdateTime");
+
+        /// <summary>备注</summary>
+        public static readonly Field Remark = FindByName("Remark");
+
+        static Field FindByName(String name) => Meta.Table.FindByName(name)!;
+    }
+
+    /// <summary>取得技能字段名称的快捷方式</summary>
+    public partial class __
+    {
+        /// <summary>编号</summary>
+        public const String Id = "Id";
+
+        /// <summary>用户。0=系统内置</summary>
+        public const String UserId = "UserId";
+
+        /// <summary>项目。0=个人/系统</summary>
+        public const String ProjectId = "ProjectId";
+
+        /// <summary>编码。英文标识，唯一，如coder、translator</summary>
+        public const String Code = "Code";
+
+        /// <summary>名称。技能展示名称，同时也是@引用的标识</summary>
+        public const String Name = "Name";
+
+        /// <summary>图标。Material Icon名称，如code、translate</summary>
+        public const String Icon = "Icon";
+
+        /// <summary>分类。通用/开发/创作/分析</summary>
+        public const String Category = "Category";
+
+        /// <summary>描述。一句话说明该技能做什么</summary>
+        public const String Description = "Description";
+
+        /// <summary>技能正文。Markdown格式，包含完整的行为指令、规则和示例</summary>
+        public const String Content = "Content";
+
+        /// <summary>触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译</summary>
+        public const String Triggers = "Triggers";
+
+        /// <summary>延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段</summary>
+        public const String ContinueHints = "ContinueHints";
+
+        /// <summary>退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题</summary>
+        public const String ExitHints = "ExitHints";
+
+        /// <summary>排序。越大越靠前</summary>
+        public const String Sort = "Sort";
+
+        /// <summary>启用</summary>
+        public const String Enable = "Enable";
+
+        /// <summary>系统。是否系统内置，内置技能不可删除</summary>
+        public const String IsSystem = "IsSystem";
+
+        /// <summary>版本。每次编辑自增</summary>
+        public const String Version = "Version";
+
+        /// <summary>角色组。逗号分隔角色ID列表，命中即放行；为空时不限制</summary>
+        public const String RoleIds = "RoleIds";
+
+        /// <summary>部门组。逗号分隔部门ID列表，命中即放行；为空时不限制</summary>
+        public const String DepartmentIds = "DepartmentIds";
+
+        /// <summary>项目组。逗号分隔项目ID列表，用户在该项目内即放行；为空时不限制</summary>
+        public const String ProjectIds = "ProjectIds";
+
+        /// <summary>创建者</summary>
+        public const String CreateUser = "CreateUser";
+
+        /// <summary>创建用户</summary>
+        public const String CreateUserID = "CreateUserID";
+
+        /// <summary>创建地址</summary>
+        public const String CreateIP = "CreateIP";
+
+        /// <summary>创建时间</summary>
+        public const String CreateTime = "CreateTime";
+
+        /// <summary>更新者</summary>
+        public const String UpdateUser = "UpdateUser";
+
+        /// <summary>更新用户</summary>
+        public const String UpdateUserID = "UpdateUserID";
+
+        /// <summary>更新地址</summary>
+        public const String UpdateIP = "UpdateIP";
+
+        /// <summary>更新时间</summary>
+        public const String UpdateTime = "UpdateTime";
+
+        /// <summary>备注</summary>
+        public const String Remark = "Remark";
+    }
+    #endregion
+}

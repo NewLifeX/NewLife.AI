@@ -1,4 +1,4 @@
-﻿namespace NewLife.ChatData.Entity;
+namespace NewLife.AI.Interfaces;
 
 /// <summary>模型配置接口扩展。承载导航属性与有效参数方法，供抽象层（IChatPipeline 等）访问提供商信息而无需依赖具体实体</summary>
 /// <remarks>

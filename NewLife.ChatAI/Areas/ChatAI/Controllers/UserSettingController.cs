@@ -1,5 +1,5 @@
-﻿using NewLife.AI.Models;
-using NewLife.ChatData.Entity;
+using NewLife.AI.Models;
+using NewLife.ChatAI.Entity;
 using NewLife.Cube;
 using NewLife.Cube.ViewModels;
 using NewLife.Web;

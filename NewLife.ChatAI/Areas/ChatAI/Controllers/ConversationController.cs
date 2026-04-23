@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Filters;
 using NewLife.AI.Models;
 using NewLife.Cube;
 using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using NewLife.Web;
 using XCode.Membership;
 

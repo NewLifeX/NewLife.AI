@@ -1,7 +1,7 @@
 using System.Text;
 using NewLife.AI.Models;
 using NewLife.AI.Services;
-using NewLife.ChatData.Services;
+using NewLife.ChatAI.Services;
 using NewLife.Collections;
 using NewLife.Cube.Entity;
 using NewLife.Log;
@@ -18,7 +18,7 @@ namespace NewLife.ChatAI.Services;
 /// 仅在基类降级实现上补充 <b>Cube 部门信息</b> 与 <b>NewLife.Office 文档解析</b> 两项增强。</summary>
 /// <remarks>
 /// <para>核心流程（Validate → Prepare → Execute → Persist → PostProcess 五段式模板、4 大 public 入口）完全由基类提供，本类只需 override 扩展点。</para>
-/// <para>业务数据模型 <see cref="MessageDto"/> / <see cref="SendMessageRequest"/> / <see cref="ToolCallDto"/> 位于 <c>NewLife.ChatData.Models</c>。</para>
+/// <para>业务数据模型 <see cref="MessageDto"/> / <see cref="SendMessageRequest"/> / <see cref="ToolCallDto"/> 位于 <c>NewLife.ChatAI.Models</c>。</para>
 /// </remarks>
 /// <param name="pipeline">已装配好三层能力的对话执行管道</param>
 /// <param name="modelService">模型服务（用于模型解析和客户端创建）</param>

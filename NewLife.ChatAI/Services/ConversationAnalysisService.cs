@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using NewLife.Log;
 using NewLife.Serialization;
 using AiChatMessage = NewLife.AI.Models.ChatMessage;

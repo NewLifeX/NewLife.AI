@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatData.Entity;
+using Microsoft.AspNetCore.Mvc;
+using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Services;
 using NewLife.Serialization;
 using NewLife.AI.Models;

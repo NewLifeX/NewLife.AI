@@ -1,4 +1,4 @@
-﻿using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using NewLife.Cube;
 using NewLife.Web;
 using XCode.Membership;

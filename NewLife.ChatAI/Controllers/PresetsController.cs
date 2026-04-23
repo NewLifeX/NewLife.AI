@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Models;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 
 namespace NewLife.ChatAI.Controllers;
 

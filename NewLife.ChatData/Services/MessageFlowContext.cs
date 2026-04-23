@@ -1,5 +1,6 @@
 using System.Text;
 using NewLife.AI.Models;
+using NewLife.AI.Interfaces;
 using NewLife.AI.Services;
 using NewLife.ChatData.Entity;
 using ChatMessage = NewLife.ChatData.Entity.ChatMessage;
