@@ -65,6 +65,7 @@ function ChatApp() {
     thinking?: 'fast' | 'auto' | 'think'
     skill?: string
     collapseSidebar: boolean
+    autoSend: boolean
   } | null>(() => {
     const params = new URLSearchParams(window.location.search)
     const prompt = params.get('prompt')?.trim() ?? ''
@@ -80,6 +81,8 @@ function ChatApp() {
       thinking,
       skill: params.get('skill') ?? undefined,
       collapseSidebar: params.get('sidebar') !== '1',
+      // autoSend=0 时只填充输入框，不自动发送；默认自动发送（向后兼容）
+      autoSend: params.get('autoSend') !== '0',
     }
   })
   // 防止 appReady 多次触发时重复发送
@@ -209,6 +212,8 @@ function ChatApp() {
     }
 
     // 延迟 500ms 自动发送，让用户看到输入框填充效果后再发出
+    // autoSend=false 时仅填充输入框，由用户手动修改后发送
+    if (!urlParams.autoSend) return
     const timer = setTimeout(() => {
       sendMessage(urlParams.prompt)
     }, 500)
