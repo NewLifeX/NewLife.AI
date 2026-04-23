@@ -129,7 +129,7 @@
     <Table Name="SharedConversation" Description="共享会话。通过链接分享的对话快照" Output="消息对话">
       <Columns>
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
-        <Column Name="ConversationId" DataType="Int64" Description="会话。被分享的会话" />
+        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话。被分享的会话" />
         <Column Name="ShareToken" DataType="String" Description="分享令牌。唯一标识，用于生成分享URL" />
         <Column Name="SnapshotTitle" DataType="String" Description="快照标题" />
         <Column Name="SnapshotMessageId" DataType="Int64" Description="快照消息。截止到的最后一条消息编号" />
@@ -302,7 +302,8 @@
     <Table Name="SuggestedQuestion" Description="推荐问题。欢迎页展示的推荐问题，支持缓存响应以加速体验" Output="系统配置">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="Question" DataType="String" Master="True" Length="200" Description="问题。推荐问题文本" />
+        <Column Name="Title" DataType="String" Master="True" Length="100" Description="标题。欢迎页按钮显示的短标题" />
+        <Column Name="Question" DataType="String" Length="200" Description="问题。点击后发送给AI的完整提示词" />
         <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
         <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />

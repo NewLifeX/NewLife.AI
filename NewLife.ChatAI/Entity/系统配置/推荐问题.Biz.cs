@@ -86,15 +86,15 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
 
         var items = new[]
         {
-            new { Question = "帮我写一封邮件", Icon = "edit_note", Color = "text-green-500" },
-            new { Question = "解释量子计算", Icon = "science", Color = "text-purple-500" },
-            new { Question = "用C#写一个排序算法", Icon = "code", Color = "text-blue-500" },
-            new { Question = "帮我翻译一段英文", Icon = "translate", Color = "text-cyan-500" },
-            new { Question = "推荐几本好书", Icon = "menu_book", Color = "text-orange-500" },
-            new { Question = "如何提高工作效率？", Icon = "bolt", Color = "text-yellow-500" },
-            new { Question = "写一首关于春天的诗", Icon = "brush", Color = "text-pink-500" },
-            new { Question = "解析一段JSON数据", Icon = "data_object", Color = "text-teal-500" },
-            new { Question = "制定一份健身计划", Icon = "fitness_center", Color = "text-red-500" },
+            new { Title = "写C#代码", Question = "请帮我用C#实现一个线程安全的单例模式，要求支持懒加载并分析其适用场景", Icon = "code", Color = "text-blue-500" },
+            new { Title = "解释技术原理", Question = "请详细解释HTTP/2相比HTTP/1.1的主要改进，包括多路复用、头部压缩等核心特性", Icon = "science", Color = "text-purple-500" },
+            new { Title = "数据库优化", Question = "帮我分析常见的SQL慢查询场景，并给出索引优化和查询重写的最佳实践", Icon = "storage", Color = "text-orange-500" },
+            new { Title = "讲解设计模式", Question = "请用C#示例讲解单例、工厂、观察者和策略这四种常用设计模式，说明各自的适用场景", Icon = "architecture", Color = "text-teal-500" },
+            new { Title = "制定学习路线", Question = "我想系统学习全栈开发，请帮我制定一份详细的学习计划，包括前后端和数据库的学习路径", Icon = "school", Color = "text-green-500" },
+            new { Title = "代码审查", Question = "请帮我审查以下代码的潜在问题，包括性能、安全性和可维护性方面的改进建议", Icon = "rate_review", Color = "text-amber-500" },
+            new { Title = "分析错误日志", Question = "帮我分析以下程序错误日志，找出根本原因并给出修复方案和预防措施", Icon = "bug_report", Color = "text-red-500" },
+            new { Title = "系统架构建议", Question = "我需要设计一个支持高并发的消息推送系统，请从架构角度分析技术选型和关键设计决策", Icon = "hub", Color = "text-yellow-500" },
+            new { Title = "技术概念对比", Question = "请对比解释微服务架构、SOA和单体架构的优缺点，以及各自适用的业务场景", Icon = "compare_arrows", Color = "text-pink-500" },
         };
 
         for (var i = 0; i < items.Length; i++)
@@ -102,6 +102,7 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
             var item = items[i];
             var entity = new SuggestedQuestion
             {
+                Title = item.Title,
                 Question = item.Question,
                 Icon = item.Icon,
                 Color = item.Color,

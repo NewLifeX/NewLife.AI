@@ -694,6 +694,7 @@ export async function fetchModelUsage(): Promise<ModelUsage[]> {
 // ── System Config ──
 
 export interface SuggestedQuestion {
+  title?: string
   question: string
   icon?: string
   color?: string

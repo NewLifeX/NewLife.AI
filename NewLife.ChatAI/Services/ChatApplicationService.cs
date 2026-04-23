@@ -438,8 +438,6 @@ public class ChatApplicationService
         entity.ShowToolCalls = settings.ShowToolCalls;
         entity.DefaultSkill = settings.DefaultSkill;
         entity.EnableLearning = settings.EnableLearning;
-        entity.LearningModel = settings.LearningModel;
-        entity.MemoryInjectNum = settings.MemoryInjectNum;
         entity.ContentWidth = settings.ContentWidth;
         entity.Save();
 
@@ -659,8 +657,6 @@ public class ChatApplicationService
             ShowToolCalls = entity.ShowToolCalls,
             DefaultSkill = entity.DefaultSkill ?? "general",
             EnableLearning = entity.EnableLearning,
-            LearningModel = entity.LearningModel ?? String.Empty,
-            MemoryInjectNum = entity.MemoryInjectNum,
             ContentWidth = entity.ContentWidth,
         };
     #endregion

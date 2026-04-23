@@ -23,6 +23,7 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
             .ThenByDescending(q => q.Id)
             .Select(q => new SuggestedQuestionDto
             {
+                Title = q.Title,
                 Question = q.Question,
                 Icon = q.Icon,
                 Color = q.Color,

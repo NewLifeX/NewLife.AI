@@ -86,6 +86,9 @@ public class SystemConfigDto
 /// <summary>推荐问题信息</summary>
 public class SuggestedQuestionDto
 {
+    /// <summary>标题。欢迎页按钮显示的短标题</summary>
+    public String? Title { get; set; }
+
     /// <summary>问题文本</summary>
     public String Question { get; set; } = "";
 

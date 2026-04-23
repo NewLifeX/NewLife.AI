@@ -31,12 +31,20 @@ public partial class SuggestedQuestion
     [BindColumn("Id", "编号", "")]
     public Int32 Id { get => _Id; set { if (OnPropertyChanging("Id", value)) { _Id = value; OnPropertyChanged("Id"); } } }
 
+    private String? _Title;
+    /// <summary>标题。欢迎页按钮显示的短标题</summary>
+    [DisplayName("标题")]
+    [Description("标题。欢迎页按钮显示的短标题")]
+    [DataObjectField(false, false, true, 100)]
+    [BindColumn("Title", "标题。欢迎页按钮显示的短标题", "", Master = true)]
+    public String? Title { get => _Title; set { if (OnPropertyChanging("Title", value)) { _Title = value; OnPropertyChanged("Title"); } } }
+
     private String? _Question;
-    /// <summary>问题。推荐问题文本</summary>
+    /// <summary>问题。点击后发送给AI的完整提示词</summary>
     [DisplayName("问题")]
-    [Description("问题。推荐问题文本")]
+    [Description("问题。点击后发送给AI的完整提示词")]
     [DataObjectField(false, false, true, 200)]
-    [BindColumn("Question", "问题。推荐问题文本", "", Master = true)]
+    [BindColumn("Question", "问题。点击后发送给AI的完整提示词", "")]
     public String? Question { get => _Question; set { if (OnPropertyChanging("Question", value)) { _Question = value; OnPropertyChanged("Question"); } } }
 
     private String? _Response;
@@ -159,6 +167,7 @@ public partial class SuggestedQuestion
         get => name switch
         {
             "Id" => _Id,
+            "Title" => _Title,
             "Question" => _Question,
             "Response" => _Response,
             "ThinkingResponse" => _ThinkingResponse,
@@ -180,6 +189,7 @@ public partial class SuggestedQuestion
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
+                case "Title": _Title = Convert.ToString(value); break;
                 case "Question": _Question = Convert.ToString(value); break;
                 case "Response": _Response = Convert.ToString(value); break;
                 case "ThinkingResponse": _ThinkingResponse = Convert.ToString(value); break;
@@ -273,7 +283,10 @@ public partial class SuggestedQuestion
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
 
-        /// <summary>问题。推荐问题文本</summary>
+        /// <summary>标题。欢迎页按钮显示的短标题</summary>
+        public static readonly Field Title = FindByName("Title");
+
+        /// <summary>问题。点击后发送给AI的完整提示词</summary>
         public static readonly Field Question = FindByName("Question");
 
         /// <summary>响应。缓存的AI回复内容，Markdown格式</summary>
@@ -324,7 +337,10 @@ public partial class SuggestedQuestion
         /// <summary>编号</summary>
         public const String Id = "Id";
 
-        /// <summary>问题。推荐问题文本</summary>
+        /// <summary>标题。欢迎页按钮显示的短标题</summary>
+        public const String Title = "Title";
+
+        /// <summary>问题。点击后发送给AI的完整提示词</summary>
         public const String Question = "Question";
 
         /// <summary>响应。缓存的AI回复内容，Markdown格式</summary>

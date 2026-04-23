@@ -78,7 +78,7 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
                     <span style={q.color ? { color: q.color } : undefined}>
                       <Icon name={q.icon || 'chat_bubble_outline'} className={q.color ? undefined : 'text-primary'} />
                     </span>
-                    <span className="line-clamp-2">{q.question}</span>
+                    <span className="line-clamp-2">{q.title || q.question}</span>
                   </button>
                 ))
               : defaultSuggestions.map((s) => (
