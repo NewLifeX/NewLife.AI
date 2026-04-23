@@ -90,7 +90,6 @@ export interface UserSettings {
   systemPrompt: string
   mcpEnabled: boolean
   showToolCalls: boolean
-  streamingSpeed: number
   allowTraining: boolean
   defaultSkill?: string
   contentWidth?: number

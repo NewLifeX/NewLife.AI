@@ -47,7 +47,6 @@ const defaults: UserSettings = {
   systemPrompt: '',
   mcpEnabled: true,
   showToolCalls: false,
-  streamingSpeed: 3,
   allowTraining: false,
   contentWidth: 960,
 }

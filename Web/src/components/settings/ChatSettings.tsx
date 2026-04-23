@@ -13,8 +13,6 @@ interface ChatSettingsProps {
   onDefaultThinkingModeChange: (v: number) => void
   contextRounds: number
   onContextRoundsChange: (v: number) => void
-  streamingSpeed: number
-  onStreamingSpeedChange: (speed: number) => void
   models: ModelInfo[]
 }
 
@@ -38,19 +36,9 @@ export function ChatSettings({
   onDefaultThinkingModeChange,
   contextRounds,
   onContextRoundsChange,
-  streamingSpeed,
-  onStreamingSpeedChange,
   models,
 }: ChatSettingsProps) {
   const { t } = useTranslation()
-
-  const speedLabels: Record<number, string> = {
-    1: t('settings.speedSlow'),
-    2: t('settings.speedStandard'),
-    3: t('settings.speedBalanced'),
-    4: t('settings.speedFast'),
-    5: t('settings.speedMax'),
-  }
 
   const modelOptions = models.map((m) => ({ value: String(m.id), label: m.name }))
 
@@ -118,24 +106,6 @@ export function ChatSettings({
           <Slider value={contextRounds} onChange={onContextRoundsChange} min={1} max={30} labelLeft="1" labelRight="30" />
         </div>
 
-        <div className="border-b border-gray-100 dark:border-gray-800" />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.streamingSpeed')}</div>
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-              {speedLabels[streamingSpeed] ?? t('settings.speedBalanced')}
-            </span>
-          </div>
-          <Slider
-            value={streamingSpeed}
-            onChange={onStreamingSpeedChange}
-            min={1}
-            max={5}
-            labelLeft={t('settings.speedSlow')}
-            labelRight={t('settings.speedMax')}
-          />
-        </div>
       </div>
     </div>
   )

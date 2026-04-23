@@ -127,8 +127,6 @@ export function SettingsModal({
             onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
             contextRounds={settings.contextRounds}
             onContextRoundsChange={(v) => update({ contextRounds: v })}
-            streamingSpeed={settings.streamingSpeed}
-            onStreamingSpeedChange={(v) => update({ streamingSpeed: v })}
             models={models}
           />
         )}

@@ -453,7 +453,6 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     systemPrompt: dto.systemPrompt,
     mcpEnabled: dto.mcpEnabled,
     showToolCalls: dto.showToolCalls ?? false,
-    streamingSpeed: dto.streamingSpeed,
     allowTraining: dto.allowTraining,
     contentWidth: dto.contentWidth || 960,
   }
@@ -482,7 +481,6 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       allowTraining: settings.allowTraining ?? false,
       mcpEnabled: settings.mcpEnabled,
       showToolCalls: settings.showToolCalls ?? false,
-      streamingSpeed: settings.streamingSpeed,
       contentWidth: settings.contentWidth ?? 960,
     }),
   })

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -283,10 +283,7 @@
         <Column Name="McpEnabled" DataType="Boolean" Description="启用MCP。是否启用MCP工具调用" />
         <Column Name="ShowToolCalls" DataType="Boolean" Description="显示工具调用。是否在对话中显示工具调用的入参和出参详情" />
         <Column Name="DefaultSkill" DataType="String" Description="默认技能。新会话的默认技能编码" />
-        <Column Name="StreamingSpeed" DataType="Int32" Description="流式速度。流式输出速度等级，1~5，默认3" />
         <Column Name="EnableLearning" DataType="Boolean" DefaultValue="true" Description="启用个人学习。用户级自学习开关，全局开关开启后此项生效" />
-        <Column Name="LearningModel" DataType="String" Description="学习模型。用户自选的记忆提取模型，为空则使用系统配置" />
-        <Column Name="MemoryInjectNum" DataType="Int32" Description="记忆注入条数。用户自定义每次对话注入的记忆上限，0 表示使用系统配置" />
         <Column Name="ContentWidth" DataType="Int32" Description="内容区宽度。标准960/宽屏1200/自适应0" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
