@@ -1,9 +1,5 @@
-using System.Text;
-using NewLife.AI.Models;
+﻿using System.Text;
 using NewLife.AI.Interfaces;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Entity;
-using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 
 namespace NewLife.ChatAI.Services;
 
@@ -47,10 +43,10 @@ public class MessageFlowContext : IMessageFlowContext
     public ModelConfig ModelConfig { get; set; } = null!;
 
     /// <summary>用户消息（StreamMessage/EditResend 场景有值；Regenerate 场景可能为 null）</summary>
-    public ChatMessage? UserMessage { get; set; }
+    public DbChatMessage? UserMessage { get; set; }
 
     /// <summary>AI 回复消息（新建或复用原消息）</summary>
-    public ChatMessage AssistantMessage { get; set; } = null!;
+    public DbChatMessage AssistantMessage { get; set; } = null!;
 
     #endregion
 

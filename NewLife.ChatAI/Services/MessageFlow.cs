@@ -1,16 +1,12 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Entity;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
 using XCode.Membership;
-using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using AiFunctionCall = NewLife.AI.Models.FunctionCall;
 using AiToolCall = NewLife.AI.Models.ToolCall;
 using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;

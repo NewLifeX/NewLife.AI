@@ -1,12 +1,10 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using NewLife.AI.ModelContextProtocol;
-using NewLife.AI.Models;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Entity;
 using NewLife.Log;
 using NewLife.Serialization;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatAI.Tools;
 
 /// <summary>MCP 客户端服务。连接远程 MCP Server，发现工具并执行工具调用。实现 <see cref="IToolProvider"/> 以供 <c>ToolChatClient</c> 直接集成</summary>
 /// <remarks>实例化 MCP 客户端服务</remarks>

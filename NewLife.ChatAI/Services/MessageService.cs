@@ -1,14 +1,8 @@
-using System.Text;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Services;
+﻿using System.Text;
 using NewLife.Collections;
-using NewLife.Cube.Entity;
 using NewLife.Log;
 using NewLife.Office;
 using NewLife.Serialization;
-using XCode.Membership;
-using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using Attachment = NewLife.Cube.Entity.Attachment;
 using ILog = NewLife.Log.ILog;
 

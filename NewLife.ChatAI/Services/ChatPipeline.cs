@@ -3,18 +3,14 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Filters;
-using NewLife.AI.Models;
 using NewLife.AI.Interfaces;
-using NewLife.AI.Services;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Entity;
+using NewLife.ChatAI.Tools;
 using NewLife.Log;
 using NewLife.Serialization;
-using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
-using NewLife.ChatAI.Tools;
 
 namespace NewLife.ChatAI.Services;
 
