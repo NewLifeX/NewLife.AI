@@ -2,6 +2,7 @@
 using NewLife.AI.Models;
 using NewLife.ChatAI.Services;
 using NewLife.Log;
+using ChatMessage = NewLife.AI.Models.ChatMessage;
 
 namespace NewLife.ChatAI.Filters;
 

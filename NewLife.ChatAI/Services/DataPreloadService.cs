@@ -1,6 +1,5 @@
-using NewLife.AI.Tools;
+﻿using NewLife.AI.Tools;
 using NewLife.ChatAI.Entity;
-using NewLife.ChatAI.Services;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Services;
@@ -34,7 +33,7 @@ public class DataPreloadService(ToolRegistry registry, ModelService modelService
         // 同步内置工具元数据
         try
         {
-            var count = registry.SyncNativeTools<NativeTool>(NativeTool.FindByName, static e => e.Save(), XTrace.WriteException);
+            var count = registry.SyncNativeTools(NativeTool.FindByName, static e => e.Save(), XTrace.WriteException);
             if (count > 0)
                 XTrace.WriteLine("内置工具同步完成，处理 {0} 个工具", count);
         }

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients;
@@ -14,6 +14,7 @@ using AiChatMessage = NewLife.AI.Models.ChatMessage;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
 using ChatStreamEvent = NewLife.AI.Models.ChatStreamEvent;
 using UsageDetails = NewLife.AI.Models.UsageDetails;
+using NewLife.ChatAI.Tools;
 
 namespace NewLife.ChatAI.Services;
 
