@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Clients.OpenAI;
 
@@ -8,7 +8,7 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <list type="bullet">
 /// <item>思考控制：<see cref="IChatRequest.EnableThinking"/> 映射为 <c>thinking: {type: "enabled"|"disabled"}</c>，而非 OpenAI 不支持的 <c>enable_thinking</c></item>
 /// <item>deepseek-reasoner 始终输出 <c>reasoning_content</c> 思维链，不支持 temperature/top_p/presence_penalty/frequency_penalty 及 Function Calling</item>
-/// <item>reasoning_content 字段由基类 <see cref="OpenAIChatClient.ParseChatMessage"/> 负责解析，无需额外处理</item>
+/// <item>reasoning_content 字段由基类 <see cref="OpenAIClientBase.ParseChatMessage"/> 负责解析，无需额外处理</item>
 /// </list>
 /// </remarks>
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
