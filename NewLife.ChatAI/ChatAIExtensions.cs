@@ -122,7 +122,7 @@ public static class ChatAIExtensions
     {
         // 嵌入在 DLL 中的 wwwroot 文件，作为静态资源
         var env = app.Environment;
-        var assembly = typeof(ChatAiStaticFilesService).Assembly;
+        var assembly = typeof(ChatAIExtensions).Assembly;
         var embeddedProvider = new CubeEmbeddedFileProvider(assembly, "NewLife.ChatAI.wwwroot");
 
         if (!env.WebRootPath.IsNullOrEmpty() && Directory.Exists(env.WebRootPath) && env.WebRootFileProvider != null)
