@@ -1,9 +1,9 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using NewLife.AI.Tools;
 using NewLife.Collections;
 using NewLife.Holiday;
 
-namespace NewLife.ChatAI.Services;
+namespace NewLife.ChatAI.Tools;
 
 /// <summary>日期信息工具服务。集成 NewLife.Holiday 组件，按指定日期查询农历、24节气、工作日状态等中国特色日历信息</summary>
 public class HolidayToolService

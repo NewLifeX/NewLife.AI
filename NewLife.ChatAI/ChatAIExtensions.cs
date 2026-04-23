@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -9,8 +9,8 @@ using NewLife.AI.Tools;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI;
 using NewLife.ChatAI.Filters;
-using NewLife.ChatAI.Services;
 using NewLife.Cube.Extensions;
+using NewLife.ChatAI.Tools;
 
 namespace NewLife.ChatAI;
 
