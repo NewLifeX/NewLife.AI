@@ -5,6 +5,98 @@ namespace NewLife.ChatAI.Models;
 /// <summary>模型信息</summary>
 public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunctionCalling, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImageGeneration, Boolean SupportVideoGeneration, Int32 ContextLength = 0, String Provider = "");
 
+#region 提供商管理 DTO
+/// <summary>提供商配置（管理视图）。ApiKey 已脱敏</summary>
+public class ProviderDto
+{
+    /// <summary>编号</summary>
+    public Int32 Id { get; set; }
+    /// <summary>编码</summary>
+    public String Code { get; set; } = "";
+    /// <summary>名称</summary>
+    public String Name { get; set; } = "";
+    /// <summary>实现类描述符（如 OpenAI、Anthropic）</summary>
+    public String Provider { get; set; } = "";
+    /// <summary>接口地址</summary>
+    public String Endpoint { get; set; } = "";
+    /// <summary>脱敏密钥（前4位***后4位，无密钥时为空）</summary>
+    public String ApiKeyMasked { get; set; } = "";
+    /// <summary>启用</summary>
+    public Boolean Enable { get; set; }
+    /// <summary>排序</summary>
+    public Int32 Sort { get; set; }
+    /// <summary>备注</summary>
+    public String Remark { get; set; } = "";
+}
+
+/// <summary>提供商更新请求。仅允许修改 Enable/ApiKey/Remark 三个字段</summary>
+public class ProviderUpdateDto
+{
+    /// <summary>启用</summary>
+    public Boolean Enable { get; set; }
+    /// <summary>新密钥，为空时保持不变</summary>
+    public String? ApiKey { get; set; }
+    /// <summary>备注</summary>
+    public String? Remark { get; set; }
+}
+#endregion
+
+#region 模型管理 DTO
+/// <summary>模型配置（管理视图）。含提供商名称及启停状态</summary>
+public class ModelManageDto
+{
+    /// <summary>编号</summary>
+    public Int32 Id { get; set; }
+    /// <summary>所属提供商 ID</summary>
+    public Int32 ProviderId { get; set; }
+    /// <summary>所属提供商名称</summary>
+    public String ProviderName { get; set; } = "";
+    /// <summary>模型编码</summary>
+    public String Code { get; set; } = "";
+    /// <summary>显示名称</summary>
+    public String Name { get; set; } = "";
+    /// <summary>启用</summary>
+    public Boolean Enable { get; set; }
+    /// <summary>排序</summary>
+    public Int32 Sort { get; set; }
+    /// <summary>上下文长度（Token）</summary>
+    public Int32 ContextLength { get; set; }
+    /// <summary>支持思考模式</summary>
+    public Boolean SupportThinking { get; set; }
+    /// <summary>支持函数调用</summary>
+    public Boolean SupportFunctionCalling { get; set; }
+    /// <summary>支持视觉（图片输入）</summary>
+    public Boolean SupportVision { get; set; }
+    /// <summary>支持音频</summary>
+    public Boolean SupportAudio { get; set; }
+    /// <summary>支持文生图</summary>
+    public Boolean SupportImageGeneration { get; set; }
+    /// <summary>支持文生视频</summary>
+    public Boolean SupportVideoGeneration { get; set; }
+}
+
+/// <summary>模型设置更新请求。含 Enable 及特性标记</summary>
+public class ModelSettingsDto
+{
+    /// <summary>启用</summary>
+    public Boolean Enable { get; set; }
+    /// <summary>上下文长度（Token）</summary>
+    public Int32 ContextLength { get; set; }
+    /// <summary>支持思考模式</summary>
+    public Boolean SupportThinking { get; set; }
+    /// <summary>支持函数调用</summary>
+    public Boolean SupportFunctionCalling { get; set; }
+    /// <summary>支持视觉（图片输入）</summary>
+    public Boolean SupportVision { get; set; }
+    /// <summary>支持音频</summary>
+    public Boolean SupportAudio { get; set; }
+    /// <summary>支持文生图</summary>
+    public Boolean SupportImageGeneration { get; set; }
+    /// <summary>支持文生视频</summary>
+    public Boolean SupportVideoGeneration { get; set; }
+}
+#endregion
+
 /// <summary>会话摘要</summary>
 public record ConversationSummaryDto(Int64 Id, String Title, Int32 ModelId, DateTime LastMessageTime, Boolean IsPinned)
 {

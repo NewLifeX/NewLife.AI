@@ -94,3 +94,33 @@ export interface UserSettings {
   defaultSkill?: string
   contentWidth?: number
 }
+
+
+export interface ProviderItem {
+  id: number
+  name: string
+  protocol: string
+  endpoint?: string
+  apiKeyMasked?: string
+  enable: boolean
+  sort: number
+  remark?: string
+  modelCount?: number
+}
+
+export interface ModelManageItem {
+  id: number
+  providerId: number
+  code: string
+  name: string
+  enable: boolean
+  sort: number
+  contextLength: number
+  supportThinking: boolean
+  supportFunctionCalling: boolean
+  supportVision: boolean
+  supportAudio: boolean
+  supportImageGeneration: boolean
+  supportVideoGeneration: boolean
+  remark?: string
+}

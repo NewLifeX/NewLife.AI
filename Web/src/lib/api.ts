@@ -929,3 +929,46 @@ export async function deleteAppKey(id: number): Promise<void> {
   await request<void>(`/api/appkeys/${id}`, { method: 'DELETE' })
 }
 
+
+// -- Providers & Models Management (admin only) --
+
+export async function fetchProviders(): Promise<import('@/types').ProviderItem[]> {
+  return request<import('@/types').ProviderItem[]>('/api/providers')
+}
+
+export async function updateProvider(
+  id: number,
+  data: { enable?: boolean; apiKey?: string; remark?: string },
+): Promise<import('@/types').ProviderItem> {
+  return request<import('@/types').ProviderItem>(`/api/providers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function refreshProviderModels(id: number): Promise<void> {
+  await request<void>(`/api/providers/${id}/refresh`, { method: 'POST' })
+}
+
+export async function fetchModelsManage(): Promise<import('@/types').ModelManageItem[]> {
+  return request<import('@/types').ModelManageItem[]>('/api/models/manage')
+}
+
+export async function updateModelSettings(
+  id: number,
+  data: {
+    enable?: boolean
+    contextLength?: number
+    supportThinking?: boolean
+    supportFunctionCalling?: boolean
+    supportVision?: boolean
+    supportAudio?: boolean
+    supportImageGeneration?: boolean
+    supportVideoGeneration?: boolean
+  },
+): Promise<void> {
+  await request<void>(`/api/models/${id}/settings`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}

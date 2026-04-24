@@ -13,8 +13,9 @@ import { GatewaySettings } from './system/GatewaySettings'
 import { ToolsCapabilitySettings } from './system/ToolsCapabilitySettings'
 import { SystemFeaturesSettings } from './system/SystemFeaturesSettings'
 import { SystemLearningSettings } from './system/SystemLearningSettings'
+import { ProvidersSettings } from './system/ProvidersSettings'
 
-type SystemTab = 'siteConfig' | 'dialogDefault' | 'upload' | 'gateway' | 'tools' | 'features' | 'learning'
+type SystemTab = 'siteConfig' | 'dialogDefault' | 'upload' | 'gateway' | 'providers' | 'tools' | 'features' | 'learning'
 
 interface SystemSettingsModalProps {
   open: boolean
@@ -94,6 +95,7 @@ export function SystemSettingsModal({ open, onClose }: SystemSettingsModalProps)
     { id: 'dialogDefault', icon: 'chat', label: t('systemSettings.tabs.dialogDefault') },
     { id: 'upload', icon: 'upload_file', label: t('systemSettings.tabs.upload') },
     { id: 'gateway', icon: 'hub', label: t('systemSettings.tabs.gateway') },
+    { id: 'providers', icon: 'dns', label: t('systemSettings.tabs.providers') },
     { id: 'tools', icon: 'build', label: t('systemSettings.tabs.tools') },
     { id: 'features', icon: 'settings_applications', label: t('systemSettings.tabs.features') },
     { id: 'learning', icon: 'psychology', label: t('systemSettings.tabs.learning') },
@@ -145,6 +147,9 @@ export function SystemSettingsModal({ open, onClose }: SystemSettingsModalProps)
                 {activeTab === 'gateway' && (
                   <GatewaySettings settings={settings} onChange={handleChange} />
                 )}
+                {activeTab === 'providers' && (
+                  <ProvidersSettings />
+                )}
                 {activeTab === 'tools' && (
                   <ToolsCapabilitySettings settings={settings} onChange={handleChange} />
                 )}
@@ -158,7 +163,8 @@ export function SystemSettingsModal({ open, onClose }: SystemSettingsModalProps)
             )}
           </ScrollArea>
 
-          {/* 底部保存栏 */}
+          {/* 底部保存栏（提供商管理页不需要全局保存） */}
+          {activeTab !== 'providers' && (
           <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 px-6 py-3 flex justify-end">
             <button
               onClick={handleSave}
@@ -168,6 +174,7 @@ export function SystemSettingsModal({ open, onClose }: SystemSettingsModalProps)
               {t('common.save')}
             </button>
           </div>
+          )}
         </div>
         </div>
       </div>
