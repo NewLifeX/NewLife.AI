@@ -83,10 +83,12 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             if (++iterations > MaxIterations) break;
 
             // 追加 assistant 消息（含工具调用）
+            // DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传，否则 API 返回 400
             workMessages.Add(new ChatMessage
             {
                 Role = "assistant",
                 Content = assistantMessage?.Content,
+                ReasoningContent = assistantMessage?.ReasoningContent,
                 ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
             });
 
@@ -129,6 +131,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             var toolCallCollector = new List<ToolCall>();
             String? finishReason = null;
             var assistantContent = (String?)null;
+            var assistantReasoningContent = (String?)null;
 
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(ChatRequest.Create(workMessages, workOptions, stream: true), cancellationToken).ConfigureAwait(false))
             {
@@ -143,6 +146,10 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
                         var text = delta.Content as String;
                         if (!String.IsNullOrEmpty(text))
                             assistantContent = (assistantContent ?? String.Empty) + text;
+
+                        // 累积思维链内容（DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传）
+                        if (!String.IsNullOrEmpty(delta.ReasoningContent))
+                            assistantReasoningContent = (assistantReasoningContent ?? String.Empty) + delta.ReasoningContent;
 
                         // 合并流式 tool_calls 增量
                         if (delta.ToolCalls != null)
@@ -167,6 +174,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             {
                 Role = "assistant",
                 Content = assistantContent,
+                ReasoningContent = assistantReasoningContent,
                 ToolCalls = toolCallCollector.ToList(),
             });
 

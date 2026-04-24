@@ -116,6 +116,7 @@ public class ChatCompletionRequest : IChatRequest
                 Name = msg.Name,
                 ToolCallId = msg.ToolCallId,
                 ToolCalls = msg.ToolCalls,
+                ReasoningContent = msg.ReasoningContent,
             };
 
             if (msg.Contents != null && msg.Contents.Count > 0)
@@ -159,6 +160,8 @@ public class ChatCompletionRequest : IChatRequest
 
             if (!msg.Name.IsNullOrEmpty()) m["name"] = msg.Name!;
             if (!msg.ToolCallId.IsNullOrEmpty()) m["tool_call_id"] = msg.ToolCallId!;
+            // DeepSeek 思考模式：有工具调用的 assistant 轮次必须回传 reasoning_content，否则返回 400
+            if (!msg.ReasoningContent.IsNullOrEmpty()) m["reasoning_content"] = msg.ReasoningContent!;
 
             if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
             {
