@@ -5,16 +5,16 @@ using XCode.Membership;
 
 namespace NewLife.ChatAI.Tools;
 
-/// <summary>当前用户工具服务。提供当前请求用户的详细档案，作为系统工具自动注入每次 LLM 请求，供 AI 按需查询</summary>
+/// <summary>当前用户工具服务。提供当前请求用户的详细档案（含 IP 地址、所在城市与地理地址），作为系统工具自动注入每次 LLM 请求，供 AI 按需查询</summary>
 /// <remarks>初始化当前用户工具服务</remarks>
 public class CurrentUserTool
 {
     #region 工具方法
 
-    /// <summary>获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、地区城市、性别、年龄、生日、备注等档案数据。当用户询问"我是谁"或需要个人信息时调用</summary>
-    [ToolDescription("get_current_user", Triggers = "我是谁,我的信息,我的档案", IsSystem = true)]
+    /// <summary>获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、性别、年龄、生日、备注，以及来访 IP 地址、所在城市和详细地理地址等档案数据。当用户询问"我是谁"、"我的IP"、"我在哪"或需要个人信息时调用</summary>
+    [ToolDescription("get_current_user", Triggers = "我是谁,我的信息,我的档案,我的IP,我在哪", IsSystem = true)]
     [DisplayName("当前用户信息")]
-    [Description("获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、地区城市、性别、年龄、生日、备注等档案数据")]
+    [Description("获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、性别、年龄、生日、备注，以及来访 IP 地址、所在城市和详细地理地址等档案数据")]
     public String GetCurrentUser()
     {
         var user = ManageProvider.User;
@@ -43,6 +43,24 @@ public class CurrentUserTool
 
         var area = Area.FindByID(user.AreaId);
         if (area != null) sb.AppendLine($"area: {area.Path}");
+
+        var ip = ManageProvider.UserHost;
+        if (!ip.IsNullOrEmpty())
+        {
+            sb.AppendLine($"ip: {ip}");
+            var addr = ip.IPToAddress();
+            if (!addr.IsNullOrEmpty() && !addr.Contains("局域网") && !addr.Contains("本地"))
+            {
+                var p = addr.IndexOf(' ');
+                if (p > 0)
+                {
+                    sb.AppendLine($"city: {addr[..p]}");
+                    sb.AppendLine($"address: {addr[(p + 1)..]}");
+                }
+                else
+                    sb.AppendLine($"address: {addr}");
+            }
+        }
 
         if (user.Sex > 0) sb.AppendLine($"sex: {user.Sex}");
         if (user.Age > 0) sb.AppendLine($"age: {user.Age}");
