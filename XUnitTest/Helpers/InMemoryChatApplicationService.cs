@@ -7,14 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Int32 = System.Int32;
-using Int64 = System.Int64;
-using String = System.String;
-using Boolean = System.Boolean;
-using CancellationToken = System.Threading.CancellationToken;
-using NewLife.AI.Models;
-using NewLife.ChatAI.Models;
-using NewLife.ChatData.Models;
 
 namespace NewLife.ChatAI.Services;
 

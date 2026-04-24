@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using XCode.DataAccessLayer;
 
 namespace XUnitTest.Gateway;

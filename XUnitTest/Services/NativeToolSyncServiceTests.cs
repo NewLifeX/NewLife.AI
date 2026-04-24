@@ -1,11 +1,10 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using NewLife;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Services;
+using NewLife.ChatAI.Tools;
 using Xunit;
 
 namespace XUnitTest.Services;
