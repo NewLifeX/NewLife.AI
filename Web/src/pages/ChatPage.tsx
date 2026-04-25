@@ -230,14 +230,14 @@ export function ChatPage({
       {showBackToBottom && (
         <button
           onClick={handleBackToBottom}
-          className="absolute bottom-32 right-6 z-30 w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          className="absolute bottom-32 right-6 z-20 w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
           title={t('chat.backToBottom')}
         >
           <Icon name="keyboard_arrow_down" variant="outlined" size="xl" />
         </button>
       )}
 
-      <div className="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-20">
+      <div className="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-30">
         <input
           ref={fileInputRef}
           type="file"

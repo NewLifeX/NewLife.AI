@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import type { ModelInfo } from '@/types'
@@ -31,7 +32,10 @@ export function ModelSelector({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const MENU_WIDTH = 288 // w-72
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   // 模型超过 8 个时启用服务商分组
   const manyModels = models.length > 8
@@ -72,10 +76,25 @@ export function ModelSelector({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const inTrigger = ref.current?.contains(e.target as Node)
+      const inDropdown = dropdownRef.current?.contains(e.target as Node)
+      if (!inTrigger && !inDropdown) setOpen(false)
     }
     if (open) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  // 计算下拉框位置，防止超出视口右边缘
+  useLayoutEffect(() => {
+    if (open && ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setPos({
+        top: rect.bottom + 4,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - MENU_WIDTH - 8)),
+      })
+    } else {
+      setPos(null)
+    }
   }, [open])
 
   // 打开下拉时自动聚焦搜索框
@@ -94,10 +113,11 @@ export function ModelSelector({
         <Icon name="expand_more" size="base" className={cn('transition-transform', open && 'rotate-180')} />
       </button>
 
-      {open && (
+      {open && pos !== null && createPortal(
         <div
-          className="fixed z-[200] animate-slide-up"
-          style={{ top: (ref.current?.getBoundingClientRect().bottom ?? 0) + 4, left: ref.current?.getBoundingClientRect().left ?? 0 }}
+          ref={dropdownRef}
+          className="fixed z-[9999] animate-slide-up"
+          style={{ top: pos.top, left: pos.left }}
         >
           <div
             className="w-72 bg-white dark:bg-gray-800 rounded-xl shadow-menu dark:shadow-black/40 border border-gray-100 dark:border-gray-700 flex flex-col"
@@ -192,7 +212,8 @@ export function ModelSelector({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
