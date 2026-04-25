@@ -56,6 +56,7 @@ function ChatApp() {
   const [systemSettingsOpen, setSystemSettingsOpen] = useState(false)
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
+  const [welcomeMessage, setWelcomeMessage] = useState<string | undefined>(undefined)
   const [draftInput, setDraftInput] = useState('')
 
   // URL 参数直发：解析跳转参数（仅在组件挂载时初始化一次）
@@ -110,6 +111,7 @@ function ChatApp() {
           setSiteTitle(cfg.siteTitle)
           document.title = cfg.siteTitle
           setSuggestedQuestions(cfg.suggestedQuestions)
+          if (cfg.welcomeMessage) setWelcomeMessage(cfg.welcomeMessage)
         })
         .catch(() => {}),
     ]).finally(() => setAppReady(true))
@@ -286,6 +288,7 @@ function ChatApp() {
           <WelcomePage
             onSend={sendMessage}
             siteTitle={siteTitle}
+            welcomeMessage={welcomeMessage}
             suggestedQuestions={suggestedQuestions}
             attachments={pendingAttachments}
             onAttachmentAdd={addAttachment}

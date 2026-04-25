@@ -35,6 +35,7 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
             AppName = chatSetting.Name,
             SiteTitle = chatSetting.SiteTitle,
             LogoUrl = chatSetting.LogoUrl,
+            WelcomeMessage = chatSetting.WelcomeMessage.IsNullOrEmpty() ? null : chatSetting.WelcomeMessage,
             SuggestedQuestions = questions,
         });
     }

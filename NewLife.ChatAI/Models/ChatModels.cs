@@ -166,6 +166,9 @@ public class SystemConfigDto
     /// <summary>Logo地址。欢迎页自定义Logo图片URL</summary>
     public String? LogoUrl { get; set; }
 
+    /// <summary>欢迎语。欢迎页大标题，为空时前端使用默认文案</summary>
+    public String? WelcomeMessage { get; set; }
+
     /// <summary>欢迎页推荐问题列表</summary>
     public SuggestedQuestionDto[] SuggestedQuestions { get; set; } = [];
 }

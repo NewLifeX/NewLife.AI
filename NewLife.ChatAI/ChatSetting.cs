@@ -30,6 +30,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("Logo地址。欢迎页自定义Logo图片URL，为空时显示默认图标")]
     public String LogoUrl { get; set; } = "";
 
+    /// <summary>欢迎语。欢迎页大标题，为空时使用前端默认文案"有什么我能帮你的吗？"</summary>
+    [Category("基本配置")]
+    [Description("欢迎语。欢迎页大标题，为空时使用前端默认文案")]
+    public String WelcomeMessage { get; set; } = "";
+
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     [Category("基本配置")]
     [Description("自动生成标题。首条消息后是否自动生成会话标题")]

@@ -9,6 +9,7 @@ import type { SuggestedQuestion } from '@/lib/api'
 interface WelcomePageProps {
   onSend: (message: string) => void
   siteTitle?: string
+  welcomeMessage?: string
   suggestedQuestions?: SuggestedQuestion[]
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
@@ -17,7 +18,7 @@ interface WelcomePageProps {
   onPrefillConsumed?: () => void
 }
 
-export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove, prefillValue, onPrefillConsumed }: WelcomePageProps) {
+export function WelcomePage({ onSend, siteTitle, welcomeMessage, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove, prefillValue, onPrefillConsumed }: WelcomePageProps) {
   const { t } = useTranslation()
   const sendShortcut = useSettingsStore((s) => s.sendShortcut)
   const contentWidth = useSettingsStore((s) => s.contentWidth)
@@ -60,7 +61,7 @@ export function WelcomePage({ onSend, siteTitle, suggestedQuestions, attachments
               </p>
             )}
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
-              {t('welcome.greeting')}
+              {welcomeMessage || t('welcome.greeting')}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
               {t('welcome.subtitle')}

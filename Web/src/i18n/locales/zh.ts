@@ -173,6 +173,8 @@ export default {
       siteTitleDesc: '浏览器标签页标题',
       logoUrl: 'Logo 地址',
       logoUrlDesc: '自定义 Logo 图片 URL',
+      welcomeMessage: '欢迎语',
+      welcomeMessageDesc: '欢迎页大标题文案，为空时使用前端默认文案',
       autoGenerateTitle: '自动生成对话标题',
       autoGenerateTitleDesc: '根据首条消息自动生成简洁的对话标题',
     },

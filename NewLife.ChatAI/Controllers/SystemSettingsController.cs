@@ -31,6 +31,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             Name = chatSetting.Name,
             SiteTitle = chatSetting.SiteTitle,
             LogoUrl = chatSetting.LogoUrl,
+            WelcomeMessage = chatSetting.WelcomeMessage,
             AutoGenerateTitle = chatSetting.AutoGenerateTitle,
             // 对话默认
             DefaultModel = chatSetting.DefaultModel,
@@ -80,6 +81,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.Name != null) chatSetting.Name = dto.Name;
         if (dto.SiteTitle != null) chatSetting.SiteTitle = dto.SiteTitle;
         if (dto.LogoUrl != null) chatSetting.LogoUrl = dto.LogoUrl;
+        if (dto.WelcomeMessage != null) chatSetting.WelcomeMessage = dto.WelcomeMessage;
         if (dto.AutoGenerateTitle.HasValue) chatSetting.AutoGenerateTitle = dto.AutoGenerateTitle.Value;
         // 对话默认
         if (dto.DefaultModel.HasValue) chatSetting.DefaultModel = dto.DefaultModel.Value;

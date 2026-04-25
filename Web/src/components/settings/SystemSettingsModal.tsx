@@ -26,6 +26,7 @@ const defaultSettings: SystemSettings = {
   name: '',
   siteTitle: '',
   logoUrl: '',
+  welcomeMessage: '',
   autoGenerateTitle: true,
   defaultModel: 0,
   defaultThinkingMode: 0,

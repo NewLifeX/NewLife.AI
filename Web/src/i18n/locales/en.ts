@@ -173,6 +173,8 @@ export default {
       siteTitleDesc: 'Browser tab title',
       logoUrl: 'Logo URL',
       logoUrlDesc: 'Custom logo image URL',
+      welcomeMessage: 'Welcome Message',
+      welcomeMessageDesc: 'Heading text on the welcome page. Leave empty to use the frontend default.',
       autoGenerateTitle: 'Auto-generate Chat Title',
       autoGenerateTitleDesc: 'Automatically generate a concise title from the first message',
     },

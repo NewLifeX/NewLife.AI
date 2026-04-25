@@ -701,6 +701,8 @@ export interface SuggestedQuestion {
 export interface SystemConfig {
   appName: string
   siteTitle: string
+  /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
+  welcomeMessage?: string
   suggestedQuestions: SuggestedQuestion[]
 }
 
@@ -715,6 +717,8 @@ export interface SystemSettings {
   name: string
   siteTitle: string
   logoUrl: string
+  /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
+  welcomeMessage: string
   autoGenerateTitle: boolean
   // 对话默认
   defaultModel: number

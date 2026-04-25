@@ -179,6 +179,8 @@ export default {
       siteTitleDesc: '瀏覽器分頁標題',
       logoUrl: 'Logo 位址',
       logoUrlDesc: '自訂 Logo 圖片 URL',
+      welcomeMessage: '歡迎語',
+      welcomeMessageDesc: '歡迎頁大標題文案，為空時使用前端預設文案',
       autoGenerateTitle: '自動生成對話標題',
       autoGenerateTitleDesc: '根據首條訊息自動生成簡潔的對話標題',
     },
