@@ -1,7 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
+using NewLife.AI.Interfaces;
 using NewLife.AI.Tools;
-using NewLife.ChatData.Entity;
+using NewLife.ChatAI.Entity;
 using Xunit;
 
 namespace XUnitTest.Tools;
