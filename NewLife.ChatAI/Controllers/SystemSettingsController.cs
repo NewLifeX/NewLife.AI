@@ -45,7 +45,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             ShareExpireDays = chatSetting.ShareExpireDays,
             // API 网关
             EnableGateway = chatSetting.EnableGateway,
-            EnableGatewayPipeline = chatSetting.EnableGatewayPipeline,
             GatewayRateLimit = chatSetting.GatewayRateLimit,
             UpstreamRetryCount = chatSetting.UpstreamRetryCount,
             EnableGatewayRecording = chatSetting.EnableGatewayRecording,
@@ -95,7 +94,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.ShareExpireDays.HasValue) chatSetting.ShareExpireDays = dto.ShareExpireDays.Value;
         // API 网关
         if (dto.EnableGateway.HasValue) chatSetting.EnableGateway = dto.EnableGateway.Value;
-        if (dto.EnableGatewayPipeline.HasValue) chatSetting.EnableGatewayPipeline = dto.EnableGatewayPipeline.Value;
         if (dto.GatewayRateLimit.HasValue) chatSetting.GatewayRateLimit = dto.GatewayRateLimit.Value;
         if (dto.UpstreamRetryCount.HasValue) chatSetting.UpstreamRetryCount = dto.UpstreamRetryCount.Value;
         if (dto.EnableGatewayRecording.HasValue) chatSetting.EnableGatewayRecording = dto.EnableGatewayRecording.Value;

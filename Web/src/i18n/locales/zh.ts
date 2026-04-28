@@ -204,8 +204,6 @@ export default {
     gateway: {
       enableGateway: '启用网关',
       enableGatewayDesc: '开启模型网关路由与负载均衡',
-      enableGatewayPipeline: '启用网关流水线',
-      enableGatewayPipelineDesc: '启用请求预处理与后处理流水线',
       gatewayRateLimit: '网关限流（次/分钟）',
       gatewayRateLimitDesc: '每分钟每用户最大请求次数',
       upstreamRetryCount: '上游重试次数',

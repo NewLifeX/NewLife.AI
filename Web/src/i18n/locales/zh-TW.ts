@@ -210,8 +210,7 @@ export default {
     gateway: {
       enableGateway: '啟用閘道',
       enableGatewayDesc: '開啟模型閘道路由與負載均衡',
-      enableGatewayPipeline: '啟用閘道流水線',
-      enableGatewayPipelineDesc: '啟用請求預處理與後處理流水線',
+
       gatewayRateLimit: '閘道限流（次/分鐘）',
       gatewayRateLimitDesc: '每分鐘每使用者最大請求次數',
       upstreamRetryCount: '上游重試次數',

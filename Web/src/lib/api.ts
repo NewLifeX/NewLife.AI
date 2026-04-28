@@ -732,7 +732,6 @@ export interface SystemSettings {
   shareExpireDays: number
   // 网关
   enableGateway: boolean
-  enableGatewayPipeline: boolean
   gatewayRateLimit: number
   upstreamRetryCount: number
   enableGatewayRecording: boolean

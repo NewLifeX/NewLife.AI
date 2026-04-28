@@ -204,8 +204,6 @@ export default {
     gateway: {
       enableGateway: 'Enable Gateway',
       enableGatewayDesc: 'Enable model gateway routing and load balancing',
-      enableGatewayPipeline: 'Enable Gateway Pipeline',
-      enableGatewayPipelineDesc: 'Enable request pre/post-processing pipeline',
       gatewayRateLimit: 'Gateway Rate Limit (req/min)',
       gatewayRateLimitDesc: 'Maximum requests per user per minute',
       upstreamRetryCount: 'Upstream Retry Count',

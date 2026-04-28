@@ -37,7 +37,6 @@ const defaultSettings: SystemSettings = {
   defaultImageSize: '1024x1024',
   shareExpireDays: 7,
   enableGateway: false,
-  enableGatewayPipeline: false,
   gatewayRateLimit: 0,
   upstreamRetryCount: 2,
   enableGatewayRecording: false,

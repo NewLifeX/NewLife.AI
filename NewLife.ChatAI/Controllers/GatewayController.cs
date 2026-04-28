@@ -543,28 +543,22 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                     await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                if (false)
+                // 网关侧暂走直通转发（IChatPipeline 体系下架后，IChatHandler 链路尚未适配无持久化场景）
+                await foreach (var chunk in gatewayService.ChatStreamAsync(request, config, appKey, cancellationToken).ConfigureAwait(false))
                 {
-                    // 网关完整能力管道已随 IChatPipeline 下架，后续将重构为 IChatHandler 链调用
-                }
-                else
-                {
-                    await foreach (var chunk in gatewayService.ChatStreamAsync(request, config, appKey, cancellationToken).ConfigureAwait(false))
+                    // 收集内容用于网关对话记录
+                    if (enableRecording)
                     {
-                        // 收集内容用于网关对话记录
-                        if (enableRecording)
-                        {
-                            var text = chunk.Text;
-                            if (text != null) contentBuilder!.Append(text);
-                            var thinking = chunk.Messages?.FirstOrDefault()?.Delta?.ReasoningContent;
-                            if (thinking != null) thinkingBuilder!.Append(thinking);
-                        }
-
-                        // 收集最后一次用量
-                        if (chunk.Usage != null) lastUsage = chunk.Usage;
-
-                        await WriteStreamChunkAsync(chunk, protocol, cancellationToken).ConfigureAwait(false);
+                        var text = chunk.Text;
+                        if (text != null) contentBuilder!.Append(text);
+                        var thinking = chunk.Messages?.FirstOrDefault()?.Delta?.ReasoningContent;
+                        if (thinking != null) thinkingBuilder!.Append(thinking);
                     }
+
+                    // 收集最后一次用量
+                    if (chunk.Usage != null) lastUsage = chunk.Usage;
+
+                    await WriteStreamChunkAsync(chunk, protocol, cancellationToken).ConfigureAwait(false);
                 }
 
                 // 输出流式结束标记

@@ -48,12 +48,6 @@ export function GatewaySettings({ settings, onChange }: Props) {
         description={t('systemSettings.gateway.enableGatewayDesc')}
       />
       <Toggle
-        checked={settings.enableGatewayPipeline}
-        onChange={(v) => onChange({ enableGatewayPipeline: v })}
-        label={t('systemSettings.gateway.enableGatewayPipeline')}
-        description={t('systemSettings.gateway.enableGatewayPipelineDesc')}
-      />
-      <Toggle
         checked={settings.enableGatewayRecording}
         onChange={(v) => onChange({ enableGatewayRecording: v })}
         label={t('systemSettings.gateway.enableGatewayRecording')}

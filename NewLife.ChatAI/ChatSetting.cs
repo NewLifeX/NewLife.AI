@@ -91,11 +91,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("启用 API 网关")]
     public Boolean EnableGateway { get; set; } = true;
 
-    /// <summary>API网关管道增强。API网关请求是否走完整能力扩展管道（技能/工具/提示词注入等），关闭后退回到直接代理转发</summary>
-    [Category("API 网关")]
-    [Description("API网关管道增强。API网关请求是否走完整能力扩展管道（技能/工具/提示词注入等），关闭后退回到直接代理转发")]
-    public Boolean EnableGatewayPipeline { get; set; } = true;
-
     /// <summary>网关限流。每分钟每用户最大请求次数</summary>
     [Category("API 网关")]
     [Description("网关限流。每分钟每用户最大请求次数")]

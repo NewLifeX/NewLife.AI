@@ -52,9 +52,6 @@ public class SystemSettingsDto
     /// <summary>启用 API 网关</summary>
     public Boolean EnableGateway { get; set; }
 
-    /// <summary>API网关管道增强</summary>
-    public Boolean EnableGatewayPipeline { get; set; }
-
     /// <summary>网关限流（每分钟每用户）</summary>
     public Int32 GatewayRateLimit { get; set; }
 
@@ -159,9 +156,6 @@ public class SystemSettingsUpdateDto
     #region API 网关
     /// <summary>启用 API 网关</summary>
     public Boolean? EnableGateway { get; set; }
-
-    /// <summary>API网关管道增强</summary>
-    public Boolean? EnableGatewayPipeline { get; set; }
 
     /// <summary>网关限流</summary>
     public Int32? GatewayRateLimit { get; set; }
