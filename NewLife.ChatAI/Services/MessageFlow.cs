@@ -471,65 +471,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         return flow;
     }
 
-    /// <summary>处理技能激活。根据请求中的 SkillCode 切换或清除会话绑定技能</summary>
-    /// <param name="conversation">当前会话</param>
-    /// <param name="skillCode">请求指定的技能编码（null/空=不变，"none"=清除，其他=切换）</param>
-    /// <returns>本轮激活的技能编号和技能名称</returns>
-    protected virtual (Int32 SkillId, String? SkillName) ResolveSkillActivation(Conversation conversation, String? skillCode)
-    {
-        var skillId = conversation.SkillId;
-        var skillName = conversation.SkillName;
-
-        if (String.IsNullOrEmpty(skillCode)) return (skillId, skillName);
-
-        if (skillCode.EqualIgnoreCase("none"))
-        {
-            // 清除技能绑定，回到通用对话
-            skillId = 0;
-            skillName = null;
-            if (conversation.SkillId != 0)
-            {
-                conversation.SkillId = 0;
-                conversation.SkillName = null;
-                conversation.Update();
-            }
-        }
-        else
-        {
-            var skill = Skill.FindByCode(skillCode);
-            if (skill != null && skill.Enable)
-            {
-                skillId = skill.Id;
-                skillName = skill.Name;
-                if (conversation.SkillId != skillId)
-                {
-                    conversation.SkillId = skillId;
-                    conversation.SkillName = skillName;
-                    conversation.Update();
-                }
-            }
-        }
-
-        return (skillId, skillName);
-    }
-
-    /// <summary>启动异步标题生成（仅会话首条消息且启用自动标题时触发）</summary>
-    /// <param name="conversation">当前会话</param>
-    /// <param name="conversationId">会话编号</param>
-    /// <param name="content">用户消息内容</param>
-    /// <param name="hasAttachments">是否包含附件</param>
-    protected virtual void TryStartTitleGeneration(Conversation conversation, Int64 conversationId, String content, Boolean hasAttachments)
-    {
-        if (conversation.MessageCount != 0 || !setting.AutoGenerateTitle) return;
-
-        var titleText = ExtractTitleText(content);
-        if (titleText.IsNullOrEmpty() && hasAttachments)
-            titleText = "[图片] 对话";
-
-        if (!titleText.IsNullOrEmpty())
-            _ = Task.Run(() => GenerateTitleAsync(conversationId, titleText, CancellationToken.None));
-    }
-
     /// <summary>构建对话上下文。从历史消息构建 AI 对话上下文，包含系统提示词注入</summary>
     /// <param name="flow">流程上下文</param>
     /// <param name="currentContent">当前用户消息内容</param>
@@ -616,7 +557,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 3. OnAfter 倒序（已经过的 Handler）
         for (var i = lastBeforeIndex; i >= 0; i--)
+        {
             await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>核心阶段。装配 <see cref="IChatInterceptor"/> 洋葱链（最内层为 <see cref="InvokeLlmAsync"/>），
@@ -1114,108 +1057,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
     #endregion
 
-    #region 流事件 Drain
-
-    /// <summary>枚举管道流，收集 content/thinking/usage，将可透传事件实时 yield，并在循环结束后写入收集结果</summary>
-    /// <param name="source">管道事件流</param>
-    /// <param name="contentBuilder">正文内容收集器</param>
-    /// <param name="thinkingBuilder">思考内容收集器</param>
-    /// <param name="toolCallsCollector">工具调用收集器（可为 null）</param>
-    /// <param name="setFinalUsage">用量回调：收到 message_done 事件时调用</param>
-    /// <param name="setErrorState">错误回调：发生异常时调用，传入 (hasError, deferredErrorEvent)</param>
-    /// <param name="errorLogPrefix">错误日志前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    protected async IAsyncEnumerable<ChatStreamEvent> DrainPipelineAsync(
-        IAsyncEnumerable<ChatStreamEvent> source,
-        StringBuilder contentBuilder,
-        StringBuilder thinkingBuilder,
-        List<ToolCallDto>? toolCallsCollector,
-        Action<UsageDetails?> setFinalUsage,
-        Action<Boolean, ChatStreamEvent?> setErrorState,
-        String errorLogPrefix,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var artifactDetector = new ArtifactDetector();
-
-        var enumerator = source.GetAsyncEnumerator(cancellationToken);
-        try
-        {
-            while (true)
-            {
-                Boolean moved;
-                try
-                {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    log?.Error("{0}: {1}", errorLogPrefix, ex.Message);
-                    setErrorState(true, ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message));
-                    break;
-                }
-
-                if (!moved) break;
-
-                var ev = enumerator.Current;
-                switch (ev.Type)
-                {
-                    case "thinking_delta":
-                        thinkingBuilder.Append(ev.Content);
-                        yield return ev;
-                        break;
-                    case "content_delta":
-                        contentBuilder.Append(ev.Content);
-
-                        // Artifact 检测：识别可预览代码块（html/svg/mermaid）
-                        var artifactEvents = artifactDetector.Process(ev.Content!);
-                        foreach (var ae in artifactEvents)
-                        {
-                            switch (ae.Kind)
-                            {
-                                case ArtifactEventKind.ArtifactStart:
-                                    yield return ChatStreamEvent.ArtifactStart(ae.Language!);
-                                    break;
-                                case ArtifactEventKind.ArtifactDelta:
-                                    yield return ChatStreamEvent.ArtifactDelta(ae.Content!);
-                                    break;
-                                case ArtifactEventKind.ArtifactEnd:
-                                    yield return ChatStreamEvent.ArtifactEnd();
-                                    break;
-                            }
-                        }
-
-                        yield return ev;
-                        break;
-                    case "message_done":
-                        setFinalUsage(ev.Usage);
-                        break;
-                    case "error":
-                        setErrorState(true, ev);
-                        break;
-                    case "tool_call_start" when toolCallsCollector != null:
-                        toolCallsCollector.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments));
-                        yield return ev;
-                        break;
-                    case "tool_call_done" when toolCallsCollector != null:
-                        UpdateToolCallStatus(toolCallsCollector, ev.ToolCallId, ToolCallStatus.Done, ev.Result);
-                        yield return ev;
-                        break;
-                    case "tool_call_error" when toolCallsCollector != null:
-                        UpdateToolCallStatus(toolCallsCollector, ev.ToolCallId, ToolCallStatus.Error, ev.Error);
-                        yield return ev;
-                        break;
-                    default:
-                        yield return ev;
-                        break;
-                }
-            }
-        }
-        finally
-        {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
-        }
-    }
+    #region 实体映射
 
     /// <summary>更新工具调用列表中指定 id 的状态与结果</summary>
     /// <param name="collector">工具调用收集器</param>
@@ -1234,10 +1076,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             }
         }
     }
-
-    #endregion
-
-    #region 实体映射
 
     /// <summary>转换消息实体为 DTO。供派生类在 <see cref="RegenerateMessageAsync"/> 等场景转出</summary>
     /// <param name="entity">消息实体</param>
