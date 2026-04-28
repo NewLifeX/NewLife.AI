@@ -96,16 +96,16 @@ public class MessageFlowContext : IMessageFlowContext
     #region IMessageFlowContext 显式接口实现
 
     /// <inheritdoc />
-    IConversation IMessageFlowContext.Conversation => Conversation;
+    IConversation IMessageFlowContext.Conversation { get => Conversation; set => Conversation = (Conversation)value; }
 
     /// <inheritdoc />
-    IModelConfig IMessageFlowContext.ModelConfig => ModelConfig;
+    IModelConfig IMessageFlowContext.ModelConfig { get => ModelConfig; set => ModelConfig = (ModelConfig)value; }
 
     /// <inheritdoc />
-    IChatMessage? IMessageFlowContext.UserMessage => UserMessage;
+    IChatMessage? IMessageFlowContext.UserMessage { get => UserMessage; set => UserMessage = (DbChatMessage?)value; }
 
     /// <inheritdoc />
-    IChatMessage IMessageFlowContext.AssistantMessage => AssistantMessage;
+    IChatMessage IMessageFlowContext.AssistantMessage { get => AssistantMessage; set => AssistantMessage = (DbChatMessage)value; }
 
     /// <inheritdoc />
     IList<AiChatMessage> IMessageFlowContext.ContextMessages

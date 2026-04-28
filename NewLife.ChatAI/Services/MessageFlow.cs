@@ -26,63 +26,23 @@ namespace NewLife.ChatAI.Services;
 /// 不引入 Cube.Entity.Department 与 NewLife.Office 等上层依赖；派生类按需增强。
 /// </para>
 /// </remarks>
-public class MessageFlow : IMessageFlow
+/// <remarks>实例化消息流基类</remarks>
+/// <param name="pipeline">对话执行管道</param>
+/// <param name="modelService">模型服务</param>
+/// <param name="backgroundService">后台生成服务</param>
+/// <param name="usageService">用量统计服务</param>
+/// <param name="tracer">追踪器</param>
+/// <param name="log">日志</param>
+/// <param name="enrichers">上下文增强器链（可选）</param>
+/// <param name="postProcessors">消息流后处理器链（可选）</param>
+public class MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null) : IMessageFlow
 {
     #region 字段
-
-    /// <summary>对话执行管道</summary>
-    protected readonly IChatPipeline Pipeline;
-
-    /// <summary>模型服务（模型解析与客户端创建）</summary>
-    protected readonly ModelService ModelService;
-
-    /// <summary>后台生成服务（支持断线重连恢复）</summary>
-    protected readonly BackgroundGenerationService? BackgroundService;
-
-    /// <summary>用量统计服务</summary>
-    protected readonly UsageService? UsageService;
-
-    /// <summary>追踪器</summary>
-    protected readonly ITracer? Tracer;
-
-    /// <summary>日志</summary>
-    protected readonly ILog? Log;
-
     /// <summary>上下文增强器链（DI 注册的 <see cref="IContextEnricher"/>，按 Order 升序执行）</summary>
-    protected readonly IReadOnlyList<IContextEnricher> Enrichers;
+    protected readonly IReadOnlyList<IContextEnricher> Enrichers = enrichers?.OrderBy(e => e.Order).ToArray() ?? [];
 
     /// <summary>消息流后处理器链（DI 注册的 <see cref="IMessageFlowPostProcessor"/>，按 Order 升序执行）</summary>
-    protected readonly IReadOnlyList<IMessageFlowPostProcessor> PostProcessors;
-
-    /// <summary>AI对话配置</summary>
-    protected readonly IChatSetting Setting;
-
-    #endregion
-
-    #region 构造
-
-    /// <summary>实例化消息流基类</summary>
-    /// <param name="pipeline">对话执行管道</param>
-    /// <param name="modelService">模型服务</param>
-    /// <param name="backgroundService">后台生成服务</param>
-    /// <param name="usageService">用量统计服务</param>
-    /// <param name="tracer">追踪器</param>
-    /// <param name="log">日志</param>
-    /// <param name="enrichers">上下文增强器链（可选）</param>
-    /// <param name="postProcessors">消息流后处理器链（可选）</param>
-    public MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null)
-    {
-        Pipeline = pipeline;
-        ModelService = modelService;
-        BackgroundService = backgroundService;
-        UsageService = usageService;
-        Setting = setting;
-        Tracer = tracer;
-        Log = log;
-        Enrichers = enrichers?.OrderBy(e => e.Order).ToArray() ?? [];
-        PostProcessors = postProcessors?.OrderBy(p => p.Order).ToArray() ?? [];
-    }
-
+    protected readonly IReadOnlyList<IMessageFlowPostProcessor> PostProcessors = postProcessors?.OrderBy(p => p.Order).ToArray() ?? [];
     #endregion
 
     #region 生成入口
@@ -108,7 +68,7 @@ public class MessageFlow : IMessageFlow
             InitPipelineContext(flow);
             await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
             var sw = Stopwatch.StartNew();
-            var response = await Pipeline.CompleteAsync(flow.ContextMessages, flow.ModelConfig, flow.PipelineContext, cancellationToken).ConfigureAwait(false);
+            var response = await pipeline.CompleteAsync(flow.ContextMessages, flow.ModelConfig, flow.PipelineContext, cancellationToken).ConfigureAwait(false);
             sw.Stop();
 
             // Step4: 持久化结果
@@ -122,7 +82,7 @@ public class MessageFlow : IMessageFlow
         catch (Exception ex)
         {
             DefaultSpan.Current?.SetError(ex);
-            Log?.Error("重新生成回复失败: {0}", ex.Message);
+            log?.Error("重新生成回复失败: {0}", ex.Message);
             return null;
         }
     }
@@ -264,7 +224,7 @@ public class MessageFlow : IMessageFlow
         var cached = MatchSuggestedCache(request.Content);
         if (cached != null)
         {
-            using var span2 = Tracer?.NewSpan("ai:SuggestedCache", cached.Question);
+            using var span2 = tracer?.NewSpan("ai:SuggestedCache", cached.Question);
             await foreach (var ev in StreamSuggestedCacheAsync(conversationId, conversation, cached, request.ThinkingMode, cancellationToken))
                 yield return ev;
             yield break;
@@ -299,7 +259,7 @@ public class MessageFlow : IMessageFlow
         await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
 
         // message_start
-        using var span = Tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
+        using var span = tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!, request.ThinkingMode);
 
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
@@ -310,7 +270,7 @@ public class MessageFlow : IMessageFlow
         await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 预处理：注入技能提示词、解析@引用，生成 SystemPrompt
-        Pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
+        pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
 
         // 注册系统消息就绪回调
         flow.PipelineContext.OnSystemReady = sysContent =>
@@ -334,7 +294,7 @@ public class MessageFlow : IMessageFlow
         await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 推荐问题缓存回写
-        if (!flow.HasError && Setting.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
+        if (!flow.HasError && setting.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
             TryWriteBackSuggestedQuestionCache(request.Content, flow.ContentBuilder.ToString(), flow.ThinkingBuilder.Length > 0 ? flow.ThinkingBuilder.ToString() : null, model.Id);
 
         // message_done
@@ -350,14 +310,14 @@ public class MessageFlow : IMessageFlow
     /// <returns></returns>
     public virtual Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken)
     {
-        BackgroundService?.Stop(messageId);
+        backgroundService?.Stop(messageId);
         return Task.CompletedTask;
     }
 
     /// <summary>获取后台生成任务状态。用户切换会话再切回时，可获取后台已生成的内容</summary>
     /// <param name="messageId">消息编号</param>
     /// <returns>后台任务状态信息，不存在返回 null</returns>
-    public virtual BackgroundTask? GetBackgroundTask(Int64 messageId) => BackgroundService?.GetTask(messageId);
+    public virtual BackgroundTask? GetBackgroundTask(Int64 messageId) => backgroundService?.GetTask(messageId);
 
     /// <summary>异步生成会话标题。根据用户首条消息内容，调用模型生成简短标题</summary>
     /// <param name="conversationId">会话编号</param>
@@ -384,13 +344,13 @@ public class MessageFlow : IMessageFlow
             return cleanMsg;
         }
 
-        using var span = Tracer?.NewSpan("ai:GenerateTitle");
+        using var span = tracer?.NewSpan("ai:GenerateTitle");
 
         // 尝试通过模型生成标题
-        var modelConfig = ModelService.ResolveModel(conversation.ModelId);
+        var modelConfig = modelService.ResolveModel(conversation.ModelId);
         if (modelConfig != null)
         {
-            using var titleClient = ModelService.CreateClient(modelConfig);
+            using var titleClient = modelService.CreateClient(modelConfig);
             if (titleClient != null)
             {
                 try
@@ -415,7 +375,7 @@ public class MessageFlow : IMessageFlow
                 catch (Exception ex)
                 {
                     span?.SetError(ex);
-                    Log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
+                    log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
                 }
             }
         }
@@ -483,7 +443,7 @@ public class MessageFlow : IMessageFlow
     /// <returns>初始化后的流程上下文，验证失败时 <see cref="MessageFlowContext.Error"/> 不为 null</returns>
     protected virtual MessageFlowContext CreateFlowContext(Int64? messageId, String? expectedRole, Int64? conversationId, Int32? modelId, Int32 userId)
     {
-        using var span = Tracer?.NewSpan("ai:CreateFlowContext", new { messageId, expectedRole, conversationId, modelId, userId });
+        using var span = tracer?.NewSpan("ai:CreateFlowContext", new { messageId, expectedRole, conversationId, modelId, userId });
 
         DbChatMessage? entity = null;
         Conversation? conversation;
@@ -510,14 +470,14 @@ public class MessageFlow : IMessageFlow
         ModelConfig? modelConfig;
         if (messageId > 0)
         {
-            modelConfig = ModelService.ResolveModel(conversation.ModelId);
-            if (modelConfig == null || !ModelService.IsAvailable(modelConfig))
+            modelConfig = modelService.ResolveModel(conversation.ModelId);
+            if (modelConfig == null || !modelService.IsAvailable(modelConfig))
                 return new MessageFlowContext { Error = new ChatException("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelName}' 不可用") };
         }
         else
         {
             var effectiveModelId = modelId > 0 ? modelId.Value : conversation.ModelId;
-            modelConfig = ModelService.ResolveModelOrDefault(effectiveModelId);
+            modelConfig = modelService.ResolveModelOrDefault(effectiveModelId);
             if (modelConfig == null)
                 return new MessageFlowContext { Error = new ChatException("MODEL_UNAVAILABLE", "系统暂无可用模型，请先在管理后台配置并启用至少一个模型") };
         }
@@ -548,7 +508,7 @@ public class MessageFlow : IMessageFlow
     /// <returns>匹配到的缓存记录，未命中返回 null</returns>
     protected virtual SuggestedQuestion? MatchSuggestedCache(String content)
     {
-        if (!Setting.EnableSuggestedQuestionCache) return null;
+        if (!setting.EnableSuggestedQuestionCache) return null;
 
         return SuggestedQuestion.FindCachedTodayByQuestion(content);
     }
@@ -602,7 +562,7 @@ public class MessageFlow : IMessageFlow
     /// <param name="hasAttachments">是否包含附件</param>
     protected virtual void TryStartTitleGeneration(Conversation conversation, Int64 conversationId, String content, Boolean hasAttachments)
     {
-        if (conversation.MessageCount != 0 || !Setting.AutoGenerateTitle) return;
+        if (conversation.MessageCount != 0 || !setting.AutoGenerateTitle) return;
 
         var titleText = ExtractTitleText(content);
         if (titleText.IsNullOrEmpty() && hasAttachments)
@@ -619,7 +579,7 @@ public class MessageFlow : IMessageFlow
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
     protected virtual Task<IList<AiChatMessage>> BuildContextAsync(MessageFlowContext flow, String currentContent, CancellationToken cancellationToken)
     {
-        using var span = Tracer?.NewSpan("ai:BuildContext");
+        using var span = tracer?.NewSpan("ai:BuildContext");
 
         var contextMessages = BuildContextMessages(flow.UserId, flow.Conversation.Id, currentContent, flow.ModelConfig);
         flow.ContextMessages = contextMessages;
@@ -634,12 +594,11 @@ public class MessageFlow : IMessageFlow
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
     protected virtual Task<IList<AiChatMessage>> BuildContextForRegenerateAsync(MessageFlowContext flow, CancellationToken cancellationToken)
     {
-        using var span = Tracer?.NewSpan("ai:BuildContextForRegenerate");
+        using var span = tracer?.NewSpan("ai:BuildContextForRegenerate");
 
         var entity = flow.AssistantMessage;
         var beforeMessages = DbChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
 
-        var setting = Setting;
         var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
         if (beforeMessages.Count > maxCount)
             beforeMessages = beforeMessages.Skip(beforeMessages.Count - maxCount).ToList();
@@ -687,7 +646,7 @@ public class MessageFlow : IMessageFlow
     /// <returns>SSE 事件流</returns>
     protected virtual IAsyncEnumerable<ChatStreamEvent> ExecuteStreamAsync(MessageFlowContext flow, IList<AiChatMessage> contextMessages, CancellationToken cancellationToken)
     {
-        var eventSource = Pipeline.StreamAsync(contextMessages, flow.ModelConfig, flow.AssistantMessage.ThinkingMode, flow.PipelineContext, cancellationToken);
+        var eventSource = pipeline.StreamAsync(contextMessages, flow.ModelConfig, flow.AssistantMessage.ThinkingMode, flow.PipelineContext, cancellationToken);
         return ExecuteStreamAsync(flow, eventSource, cancellationToken);
     }
 
@@ -713,7 +672,7 @@ public class MessageFlow : IMessageFlow
     /// <param name="flow">流程上下文（包含 Content/Thinking/ToolCalls/Usage/Error 等收集结果）</param>
     protected virtual void PersistStreamResult(MessageFlowContext flow)
     {
-        using var span = Tracer?.NewSpan("ai:PersistStreamResult");
+        using var span = tracer?.NewSpan("ai:PersistStreamResult");
 
         var assistantMsg = flow.AssistantMessage;
         var conversation = flow.Conversation;
@@ -757,7 +716,7 @@ public class MessageFlow : IMessageFlow
 
         // 记录用量
         if (flow.Usage != null)
-            UsageService?.Record(conversation, assistantMsg.Id, flow.ModelConfig.Id, flow.Usage, "Chat");
+            usageService?.Record(conversation, assistantMsg.Id, flow.ModelConfig.Id, flow.Usage, "Chat");
     }
 
     /// <summary>持久化非流式生成结果。写入 AI 回复内容、用量统计和会话累计</summary>
@@ -766,7 +725,7 @@ public class MessageFlow : IMessageFlow
     /// <param name="elapsedMs">执行耗时（毫秒）</param>
     protected virtual void PersistCompleteResult(MessageFlowContext flow, ChatResponse response, Int32 elapsedMs)
     {
-        using var span = Tracer?.NewSpan("ai:PersistCompleteResult");
+        using var span = tracer?.NewSpan("ai:PersistCompleteResult");
 
         var entity = flow.AssistantMessage;
         var conversation = flow.Conversation;
@@ -781,7 +740,7 @@ public class MessageFlow : IMessageFlow
 
         if (response.Usage != null)
         {
-            UsageService?.Record(conversation, entity.Id, flow.ModelConfig.Id, response.Usage, "Chat");
+            usageService?.Record(conversation, entity.Id, flow.ModelConfig.Id, response.Usage, "Chat");
             conversation.InputTokens += response.Usage.InputTokens;
             conversation.OutputTokens += response.Usage.OutputTokens;
             conversation.TotalTokens += response.Usage.TotalTokens;
@@ -802,7 +761,6 @@ public class MessageFlow : IMessageFlow
     /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
     protected virtual IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
     {
-        var setting = Setting;
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
 
         var history = DbChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
@@ -887,7 +845,7 @@ public class MessageFlow : IMessageFlow
     /// <returns>系统消息，无提示词时返回 null</returns>
     protected virtual AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig, Int32 historyCount = 0)
     {
-        using var span = Tracer?.NewSpan("ai:BuildSystemMessage", new { userId, modelConfig?.Name, historyCount });
+        using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, modelConfig?.Name, historyCount });
         var parts = new List<String>();
 
         // 0. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
@@ -1001,7 +959,7 @@ public class MessageFlow : IMessageFlow
         };
         cachedMsg.Insert();
 
-        var streamingSpeed = Setting.StreamingSpeed;
+        var streamingSpeed = setting.StreamingSpeed;
 
         yield return ChatStreamEvent.MessageStart(cachedMsg.Id, cached.Model?.Code!, thinkingMode);
 
@@ -1131,7 +1089,7 @@ public class MessageFlow : IMessageFlow
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    Log?.Error("{0}: {1}", errorLogPrefix, ex.Message);
+                    log?.Error("{0}: {1}", errorLogPrefix, ex.Message);
                     setErrorState(true, ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message));
                     break;
                 }
@@ -1227,7 +1185,7 @@ public class MessageFlow : IMessageFlow
     protected virtual async Task InvokeContextEnrichersAsync(MessageFlowContext flow, CancellationToken cancellationToken)
     {
         if (Enrichers.Count == 0) return;
-        using var span = Tracer?.NewSpan("ai:InvokeEnrichers", Enrichers.Count);
+        using var span = tracer?.NewSpan("ai:InvokeEnrichers", Enrichers.Count);
         foreach (var enricher in Enrichers)
         {
             if (!enricher.IsApplicable(flow)) continue;
@@ -1238,7 +1196,7 @@ public class MessageFlow : IMessageFlow
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                Log?.Warn("上下文增强器 {0} 执行失败：{1}", enricher.GetType().Name, ex.Message);
+                log?.Warn("上下文增强器 {0} 执行失败：{1}", enricher.GetType().Name, ex.Message);
             }
         }
     }
@@ -1250,7 +1208,7 @@ public class MessageFlow : IMessageFlow
     protected virtual async Task InvokePostProcessorsAsync(MessageFlowContext flow, CancellationToken cancellationToken)
     {
         if (PostProcessors.Count == 0) return;
-        using var span = Tracer?.NewSpan("ai:InvokePostProcessors", PostProcessors.Count);
+        using var span = tracer?.NewSpan("ai:InvokePostProcessors", PostProcessors.Count);
         foreach (var processor in PostProcessors)
         {
             if (!processor.IsApplicable(flow)) continue;
@@ -1261,7 +1219,7 @@ public class MessageFlow : IMessageFlow
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                Log?.Warn("消息流后处理器 {0} 执行失败：{1}", processor.GetType().Name, ex.Message);
+                log?.Warn("消息流后处理器 {0} 执行失败：{1}", processor.GetType().Name, ex.Message);
             }
         }
     }

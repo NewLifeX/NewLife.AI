@@ -17,30 +17,30 @@ namespace NewLife.AI.Services;
 public interface IMessageFlowContext : IExtend
 {
     /// <summary>入口类型。区分 Stream/Regenerate/RegenerateStream/EditAndResendStream/ResumeBackground</summary>
-    FlowKind Kind { get; }
+    FlowKind Kind { get; set; }
 
     /// <summary>当前用户编号</summary>
-    Int32 UserId { get; }
+    Int32 UserId { get; set; }
 
     /// <summary>技能编号（0 表示无技能）</summary>
-    Int32 SkillId { get; }
+    Int32 SkillId { get; set; }
 
     /// <summary>会话实体（接口形式）</summary>
-    IConversation Conversation { get; }
+    IConversation Conversation { get; set; }
 
     /// <summary>模型配置（接口形式）</summary>
-    IModelConfig ModelConfig { get; }
+    IModelConfig ModelConfig { get; set; }
 
     /// <summary>用户消息（StreamMessage/EditResend 场景有值；Regenerate 场景可能为 null）</summary>
-    IChatMessage? UserMessage { get; }
+    IChatMessage? UserMessage { get; set; }
 
     /// <summary>AI 回复消息（新建或复用原消息）</summary>
-    IChatMessage AssistantMessage { get; }
+    IChatMessage AssistantMessage { get; set; }
 
     /// <summary>对话上下文消息列表。Prepare 阶段由 BuildContextAsync 填充，
     /// IContextEnricher 可在此基础上追加/修改/截断，管道执行时据此发起模型调用</summary>
     IList<ChatMessage> ContextMessages { get; set; }
 
     /// <summary>是否出现可恢复错误。Persist 阶段会据此调整落库策略</summary>
-    Boolean HasError { get; }
+    Boolean HasError { get; set; }
 }
