@@ -163,7 +163,7 @@ public class MessageFlow : IMessageFlow
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
 
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code ?? String.Empty, userMessage.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!, userMessage.ThinkingMode);
 
         // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow);
@@ -202,7 +202,7 @@ public class MessageFlow : IMessageFlow
 
         // message_start
         var assistantMessage = flow.AssistantMessage;
-        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, assistantMessage.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!, assistantMessage.ThinkingMode);
 
         // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow);
@@ -238,10 +238,9 @@ public class MessageFlow : IMessageFlow
             yield break;
         }
 
-        var conversation = flow.Conversation;
-
         // 更新会话绑定的模型（首次发消息或 model_id=0 自动选模型时持久化实际使用的模型）
         var model = flow.ModelConfig;
+        var conversation = flow.Conversation;
         if (conversation.ModelId != model.Id)
         {
             conversation.ModelId = model.Id;
@@ -301,7 +300,7 @@ public class MessageFlow : IMessageFlow
 
         // message_start
         using var span = Tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code ?? String.Empty, request.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!, request.ThinkingMode);
 
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         TryStartTitleGeneration(conversation, conversationId, request.Content, request.AttachmentIds is { Count: > 0 });
@@ -1004,7 +1003,7 @@ public class MessageFlow : IMessageFlow
 
         var streamingSpeed = Setting.StreamingSpeed;
 
-        yield return ChatStreamEvent.MessageStart(cachedMsg.Id, cached.Model?.Code ?? String.Empty, thinkingMode);
+        yield return ChatStreamEvent.MessageStart(cachedMsg.Id, cached.Model?.Code!, thinkingMode);
 
         if (!cached.ThinkingResponse.IsNullOrEmpty())
         {
@@ -1033,7 +1032,7 @@ public class MessageFlow : IMessageFlow
 
         // 更新会话
         conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)DbChatMessage.FindCount(DbChatMessage._.ConversationId == conversationId);
+        conversation.MessageCount = DbChatMessage.CountByConversationId(conversationId);
         conversation.Update();
 
         yield return new ChatStreamEvent { Type = "message_done", MessageId = cachedMsg.Id };
@@ -1322,7 +1321,7 @@ public class MessageFlow : IMessageFlow
     protected static void ApplyUsageToConversation(Conversation conversation, Int64 conversationId, UsageDetails? usage)
     {
         conversation.LastMessageTime = DateTime.Now;
-        conversation.MessageCount = (Int32)DbChatMessage.FindCount(DbChatMessage._.ConversationId == conversationId);
+        conversation.MessageCount = DbChatMessage.CountByConversationId(conversationId);
         if (usage != null)
         {
             conversation.InputTokens += usage.InputTokens;

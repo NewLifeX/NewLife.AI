@@ -177,6 +177,31 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
 
         return FindAll(_.ConversationId.In(convIds));
     }
+
+    /// <summary>查询指定日期内有效的 assistant 消息（有 TotalTokens 且非错误结束）</summary>
+    /// <param name="date">日期（仅取日期部分）</param>
+    /// <returns>当日有效 assistant 消息列表</returns>
+    public static IList<ChatMessage> FindAllAssistantByDate(DateTime date)
+    {
+        var start = date.Date;
+        var end = start.AddDays(1);
+
+        return FindAll(
+            _.Id.Between(start, end, Meta.Factory.Snow)
+            & _.Role == "assistant"
+            & _.TotalTokens > 0
+        //& _.FinishReason != "error"
+        );
+    }
+
+    /// <summary>统计会话的消息数量</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <returns>消息数量</returns>
+    public static Int32 CountByConversationId(Int64 conversationId)
+    {
+        if (conversationId <= 0) return 0;
+        return (Int32)FindCount(_.ConversationId == conversationId);
+    }
     #endregion
 
     #region 业务操作

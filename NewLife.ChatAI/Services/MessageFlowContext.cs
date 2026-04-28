@@ -48,7 +48,7 @@ public class MessageFlowContext : IMessageFlowContext
 
     /// <summary>对话上下文消息列表。<b>Prepare</b> 阶段由 <c>BuildContextAsync</c> 填充，
     /// <see cref="IContextEnricher"/> 可在此基础上追加/修改/截断，管道执行时据此发起模型调用</summary>
-    public IList<NewLife.AI.Models.ChatMessage> ContextMessages { get; set; } = [];
+    public IList<AiChatMessage> ContextMessages { get; set; } = [];
 
     /// <summary>正文内容收集器</summary>
     public StringBuilder ContentBuilder { get; } = new();
@@ -108,7 +108,7 @@ public class MessageFlowContext : IMessageFlowContext
     IChatMessage IMessageFlowContext.AssistantMessage => AssistantMessage;
 
     /// <inheritdoc />
-    IList<NewLife.AI.Models.ChatMessage> IMessageFlowContext.ContextMessages
+    IList<AiChatMessage> IMessageFlowContext.ContextMessages
     {
         get => ContextMessages;
         set => ContextMessages = value;
