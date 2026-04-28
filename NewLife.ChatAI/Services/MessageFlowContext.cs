@@ -6,7 +6,7 @@ namespace NewLife.ChatAI.Services;
 /// <summary>消息流处理上下文。在 Validate → Prepare → Execute → Persist → PostProcess 五段式模板间流转，
 /// 统一承载 DB 实体、执行过程中的收集结果、以及跨阶段的扩展数据</summary>
 /// <remarks>
-/// 各 <see cref="IContextEnricher"/> 与 <see cref="IMessageFlowPostProcessor"/> 通过本上下文读取/修改状态，
+/// 各 <see cref="IChatHandler"/> 通过本上下文读取/修改状态，
 /// 无需互相感知。四大入口通过 <see cref="Kind"/> 区分。
 /// 同时实现 <see cref="IMessageFlowContext"/>（旧抽象）与 <see cref="IChatContext"/>（新中间件抽象），
 /// 便于平滑过渡到 <see cref="IChatHandler"/> 链路。
@@ -48,7 +48,7 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     public ChatPipelineContext PipelineContext { get; set; } = null!;
 
     /// <summary>对话上下文消息列表。<b>Prepare</b> 阶段由 <c>BuildContextAsync</c> 填充，
-    /// <see cref="IContextEnricher"/> 可在此基础上追加/修改/截断，管道执行时据此发起模型调用</summary>
+    /// <see cref="IChatHandler"/> 可在此基础上追加/修改/截断，管道执行时据此发起模型调用</summary>
     public IList<AiChatMessage> ContextMessages { get; set; } = [];
 
     /// <summary>正文内容收集器</summary>
@@ -80,7 +80,7 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
 
     #region 扩展数据
 
-    /// <summary>跨阶段扩展数据。供自定义 <see cref="IContextEnricher"/>/<see cref="IMessageFlowPostProcessor"/> 在阶段间传递状态，避免继承 MessageFlowContext</summary>
+    /// <summary>跨阶段扩展数据。供自定义 <see cref="IChatHandler"/> 在阶段间传递状态，避免继承 MessageFlowContext</summary>
     public IDictionary<String, Object?> Items { get; } = new Dictionary<String, Object?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>获取或设置扩展数据项</summary>

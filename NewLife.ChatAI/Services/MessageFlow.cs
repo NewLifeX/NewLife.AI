@@ -33,22 +33,15 @@ namespace NewLife.ChatAI.Services;
 /// <param name="modelService">模型服务</param>
 /// <param name="backgroundService">后台生成服务</param>
 /// <param name="usageService">用量统计服务</param>
+/// <param name="setting">对话配置</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-/// <param name="enrichers">上下文增强器链（可选）</param>
-/// <param name="postProcessors">消息流后处理器链（可选）</param>
-/// <param name="services">服务提供者，用于解析 <see cref="IChatHandler"/> 链；为 null 时回退到旧 Enricher/PostProcessor 路径</param>
-public class MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null, IServiceProvider? services = null) : IMessageFlow
+/// <param name="services">服务提供者，用于解析 <see cref="IChatHandler"/> 链；为 null 时使用空链路（仅 Pipeline 直连，仅用于测试场景）</param>
+public class MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null) : IMessageFlow
 {
     #region 字段
-    /// <summary>上下文增强器链（DI 注册的 <see cref="IContextEnricher"/>，按 Order 升序执行）</summary>
-    protected readonly IReadOnlyList<IContextEnricher> Enrichers = enrichers?.OrderBy(e => e.Order).ToArray() ?? [];
-
-    /// <summary>消息流后处理器链（DI 注册的 <see cref="IMessageFlowPostProcessor"/>，按 Order 升序执行）</summary>
-    protected readonly IReadOnlyList<IMessageFlowPostProcessor> PostProcessors = postProcessors?.OrderBy(p => p.Order).ToArray() ?? [];
-
     /// <summary>对话处理器链（DI 注册的 <see cref="IChatHandler"/>，<b>按注册顺序即外→内顺序</b>）。
-    /// 为空时表示走旧 Enricher/PostProcessor 路径</summary>
+    /// 为空时直接走 Pipeline 路径（仅供未启用新链路的测试场景使用）</summary>
     protected readonly IReadOnlyList<IChatHandler> Handlers = services?.GetServices<IChatHandler>().ToArray() ?? [];
     #endregion
 
@@ -71,18 +64,14 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
             // Step2: 构建对话上下文
             await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
 
-            // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行
+            // Step3: 初始化管道上下文 + 执行（非流式，仍直接走 Pipeline.CompleteAsync）
             InitPipelineContext(flow);
-            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
             var sw = Stopwatch.StartNew();
             var response = await pipeline.CompleteAsync(flow.ContextMessages, flow.ModelConfig, flow.PipelineContext, cancellationToken).ConfigureAwait(false);
             sw.Stop();
 
             // Step4: 持久化结果
             PersistCompleteResult(flow, response, (Int32)sw.ElapsedMilliseconds);
-
-            // Step5: 后处理链
-            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
             return ToMessageDto(flow.AssistantMessage);
         }
@@ -144,8 +133,7 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         }
         else
         {
-            // 回退路径
-            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+            // 回退路径（DI 未注册 IChatHandler 的测试场景）
             await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
             {
                 yield return ev;
@@ -154,10 +142,6 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
-
-        // Step5: 后处理链（仅当 Handler 链未启用时由此处兜底）
-        if (Handlers.Count == 0)
-            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
             yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = flow.Usage, };
@@ -198,8 +182,7 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         }
         else
         {
-            // 回退路径
-            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+            // 回退路径（DI 未注册 IChatHandler 的测试场景）
             await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
             {
                 yield return ev;
@@ -208,10 +191,6 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
-
-        // Step5: 后处理链（仅当 Handler 链未启用时由此处兜底）
-        if (Handlers.Count == 0)
-            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // message_done
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
@@ -326,8 +305,7 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         }
         else
         {
-            // 回退路径（DI 未注册 IChatHandler 时）：原 Enricher → Prepare → ExecuteStream 链路
-            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+            // 回退路径（DI 未注册 IChatHandler 的测试场景）
             pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
 
             await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
@@ -338,10 +316,6 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
         // Step4: 持久化结果（PersistMessageHandler 当前仅做事件收集，写库仍由此处统一执行）
         PersistStreamResult(flow);
-
-        // Step5: 后处理链（仅当 Handler 链未启用时由此处兜底；启用时由 PostProcessorHandler 在事后阶段完成）
-        if (Handlers.Count == 0)
-            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 推荐问题缓存回写
         if (!flow.HasError && setting.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
@@ -1252,56 +1226,6 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
                 var orig = collector[i];
                 collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value);
                 break;
-            }
-        }
-    }
-
-    #endregion
-
-    #region Enricher / PostProcessor 调用
-
-    /// <summary>遍历上下文增强器链。按 Order 升序依次调用，单个 Enricher 失败只记录日志，不影响后续与主流程</summary>
-    /// <param name="flow">流程上下文</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>异步任务</returns>
-    protected virtual async Task InvokeContextEnrichersAsync(MessageFlowContext flow, CancellationToken cancellationToken)
-    {
-        if (Enrichers.Count == 0) return;
-        using var span = tracer?.NewSpan("ai:InvokeEnrichers", Enrichers.Count);
-        foreach (var enricher in Enrichers)
-        {
-            if (!enricher.IsApplicable(flow)) continue;
-            try
-            {
-                await enricher.EnrichAsync(flow, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                span?.SetError(ex);
-                log?.Warn("上下文增强器 {0} 执行失败：{1}", enricher.GetType().Name, ex.Message);
-            }
-        }
-    }
-
-    /// <summary>遍历消息流后处理器链。按 Order 升序依次调用；单个 PostProcessor 失败只记录日志，不影响后续执行与主流程返回</summary>
-    /// <param name="flow">流程上下文</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>异步任务</returns>
-    protected virtual async Task InvokePostProcessorsAsync(MessageFlowContext flow, CancellationToken cancellationToken)
-    {
-        if (PostProcessors.Count == 0) return;
-        using var span = tracer?.NewSpan("ai:InvokePostProcessors", PostProcessors.Count);
-        foreach (var processor in PostProcessors)
-        {
-            if (!processor.IsApplicable(flow)) continue;
-            try
-            {
-                await processor.ProcessAsync(flow, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                span?.SetError(ex);
-                log?.Warn("消息流后处理器 {0} 执行失败：{1}", processor.GetType().Name, ex.Message);
             }
         }
     }

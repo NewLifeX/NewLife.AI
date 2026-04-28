@@ -2,7 +2,7 @@
 
 /// <summary>消息生成入口类型。用于区分四大消息流（StreamMessage/Regenerate/RegenerateStream/EditAndResendStream）以及恢复后台流</summary>
 /// <remarks>
-/// IContextEnricher 与 IMessageFlowPostProcessor 可根据 FlowKind 决定是否生效：
+/// IChatHandler 可根据 FlowKind 决定是否生效：
 /// <list type="bullet">
 /// <item>Stream：用户发送新消息，SSE 流式返回</item>
 /// <item>Regenerate：非流式重新生成（用于后台任务或测试）</item>
