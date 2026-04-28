@@ -1,146 +1,102 @@
-using System.Runtime.CompilerServices;
-using NewLife.AI.Models;
 using NewLife.AI.Services;
+using NewLife.ChatAI.Services;
 using NewLife.Log;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Handlers;
 
-/// <summary>消息持久化处理器。事中收集流事件到 <see cref="IChatContext"/> 各 Builder 与 Usage 字段，
-/// 事后由消息流入口统一写库。本 Handler 一般置于链路靠外位置（事前最先、事后最后），与 <see cref="LlmCoreHandler"/> 配合</summary>
+/// <summary>消息持久化处理器。事后将 <see cref="IChatContext"/> 收集器中的内容写入 DbChatMessage / Conversation</summary>
 /// <remarks>
-/// <para>事中职责（透传 next 时）：
-/// <list type="bullet">
-///   <item><c>thinking_delta</c> → <see cref="IChatContext.ThinkingBuilder"/></item>
-///   <item><c>content_delta</c> → <see cref="IChatContext.ContentBuilder"/> 并触发 ArtifactDetector</item>
-///   <item><c>message_done</c> → <see cref="IChatContext.Usage"/></item>
-///   <item><c>tool_call_*</c> → <see cref="IChatContext.ToolCalls"/></item>
-///   <item><c>error</c> → 设置 <see cref="IChatContext.HasError"/>，停止迭代</item>
-/// </list>
-/// </para>
-/// <para>事后职责：当前留空。Step 5 时将 MessageFlow.PersistStreamResult 的 XCode 持久化逻辑迁移过来。</para>
+/// <para>事后职责：从 <see cref="IChatContext.ContentBuilder"/>、<see cref="IChatContext.ThinkingBuilder"/>、
+/// <see cref="IChatContext.ToolCalls"/>、<see cref="IChatContext.Usage"/> 等收集字段读取最终结果，
+/// 写入 <c>flow.AssistantMessage</c> / <c>flow.UserMessage</c> / <c>flow.Conversation</c> 实体。</para>
+/// <para>注意：会话级 Token 累加由 <c>ConversationStatsHandler</c> 负责，UsageService.Record 由 <c>UsageRecordHandler</c> 负责。</para>
 /// </remarks>
 /// <param name="tracer">追踪器</param>
-/// <param name="log">日志</param>
-public class PersistMessageHandler(ITracer tracer, ILog log) : IChatHandler
+public class PersistMessageHandler(ITracer? tracer) : IChatHandler
 {
     /// <inheritdoc/>
-    public async IAsyncEnumerable<ChatStreamEvent> InvokeAsync(IChatContext context, ChatHandlerDelegate next, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
+        if (context is not MessageFlowContext flow) return Task.CompletedTask;
         using var span = tracer?.NewSpan("handler:PersistMessage");
 
-        var contentBuilder = context.ContentBuilder;
-        var thinkingBuilder = context.ThinkingBuilder;
-        var toolCalls = context.ToolCalls;
-        var artifactDetector = new ArtifactDetector();
+        var assistantMsg = flow.AssistantMessage;
+        if (assistantMsg == null) return Task.CompletedTask;
 
-        var enumerator = next(cancellationToken).GetAsyncEnumerator(cancellationToken);
-        try
+        // 写入消息内容
+        assistantMsg.Content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
+        if (flow.ThinkingBuilder.Length > 0)
+            assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
+        if (flow.ToolCalls.Count > 0)
         {
-            while (true)
-            {
-                Boolean moved;
-                ChatStreamEvent? errorEvent = null;
-                try
-                {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    log?.Error("流式生成失败: {0}", ex.Message);
-                    context.HasError = true;
-                    errorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
-                    moved = false;
-                }
-
-                if (errorEvent != null)
-                {
-                    yield return errorEvent;
-                    break;
-                }
-                if (!moved) break;
-
-                var ev = enumerator.Current;
-                switch (ev.Type)
-                {
-                    case "thinking_delta":
-                        thinkingBuilder.Append(ev.Content);
-                        yield return ev;
-                        break;
-                    case "content_delta":
-                        contentBuilder.Append(ev.Content);
-
-                        // Artifact 检测：识别可预览代码块（html/svg/mermaid）
-                        var artifactEvents = artifactDetector.Process(ev.Content!);
-                        foreach (var ae in artifactEvents)
-                        {
-                            switch (ae.Kind)
-                            {
-                                case ArtifactEventKind.ArtifactStart:
-                                    yield return ChatStreamEvent.ArtifactStart(ae.Language!);
-                                    break;
-                                case ArtifactEventKind.ArtifactDelta:
-                                    yield return ChatStreamEvent.ArtifactDelta(ae.Content!);
-                                    break;
-                                case ArtifactEventKind.ArtifactEnd:
-                                    yield return ChatStreamEvent.ArtifactEnd();
-                                    break;
-                            }
-                        }
-
-                        yield return ev;
-                        break;
-                    case "message_done":
-                        context.Usage = ev.Usage;
-                        yield return ev;
-                        break;
-                    case "error":
-                        context.HasError = true;
-                        yield return ev;
-                        break;
-                    case "tool_call_start":
-                        toolCalls.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments));
-                        yield return ev;
-                        break;
-                    case "tool_call_done":
-                        UpdateToolCallStatus(toolCalls, ev.ToolCallId, ToolCallStatus.Done, ev.Result);
-                        yield return ev;
-                        break;
-                    case "tool_call_error":
-                        UpdateToolCallStatus(toolCalls, ev.ToolCallId, ToolCallStatus.Error, ev.Error);
-                        yield return ev;
-                        break;
-                    default:
-                        yield return ev;
-                        break;
-                }
-
-                if (context.HasError) break;
-            }
-        }
-        finally
-        {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
+            assistantMsg.ToolCalls = flow.ToolCalls.ToJson();
+            assistantMsg.ToolNames = String.Join(",", flow.ToolCalls.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase));
         }
 
-        // Step 5 待迁移：MessageFlow.PersistStreamResult 中的 XCode 写库逻辑
+        // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
+        ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
+        ApplyRequestParams(assistantMsg, flow.ModelConfig, flow);
+        assistantMsg.Update();
+
+        // 用户消息追加技能名称与可用工具
+        var userMessage = flow.UserMessage;
+        if (userMessage != null)
+        {
+            var skillNames = new HashSet<String>(flow.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
+            var skillName = flow["SkillName"] as String;
+            if (flow.SkillId > 0 && !skillName.IsNullOrEmpty())
+                skillNames.Add(skillName);
+
+            if (skillNames.Count > 0)
+                userMessage.SkillNames = String.Join(",", skillNames);
+            if (flow.AvailableToolNames.Count > 0)
+                userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
+            userMessage.Update();
+        }
+
+        return Task.CompletedTask;
     }
 
-    /// <summary>更新工具调用列表中指定 id 的状态与结果</summary>
-    /// <param name="collector">工具调用收集器</param>
-    /// <param name="toolCallId">工具调用编号</param>
-    /// <param name="status">新状态</param>
-    /// <param name="value">结果或错误信息</param>
-    private static void UpdateToolCallStatus(List<ToolCallDto> collector, String? toolCallId, ToolCallStatus status, String? value)
+    /// <summary>将用量统计写入 AI 回复消息实体（不保存）</summary>
+    /// <param name="msg">消息实体</param>
+    /// <param name="usage">用量统计</param>
+    /// <param name="hasError">是否有错误</param>
+    /// <param name="errorDetail">错误详情</param>
+    private static void ApplyUsageToMessage(DbChatMessage msg, AI.Models.UsageDetails? usage, Boolean hasError, String? errorDetail = null)
     {
-        for (var i = collector.Count - 1; i >= 0; i--)
+        if (msg.Content.IsNullOrEmpty())
         {
-            if (collector[i].Id == toolCallId)
-            {
-                var orig = collector[i];
-                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value);
-                break;
-            }
+            if (hasError)
+                msg.Content = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
+            else if (msg.ThinkingContent.IsNullOrEmpty())
+                msg.Content = "[已中断]";
         }
+        else if (hasError && !errorDetail.IsNullOrEmpty())
+        {
+            msg.Content += $"\n\n[错误] {errorDetail}";
+        }
+        if (usage != null)
+        {
+            msg.InputTokens = usage.InputTokens;
+            msg.OutputTokens = usage.OutputTokens;
+            msg.TotalTokens = usage.TotalTokens;
+            msg.ElapsedMs = usage.ElapsedMs;
+        }
+    }
+
+    /// <summary>将请求参数写入消息实体（不保存）</summary>
+    /// <param name="msg">消息实体</param>
+    /// <param name="modelConfig">模型配置</param>
+    /// <param name="context">对话上下文</param>
+    private static void ApplyRequestParams(DbChatMessage msg, ModelConfig modelConfig, IChatContext context)
+    {
+        msg.ModelName = modelConfig.Code;
+        if (context.MaxTokens > 0) msg.MaxTokens = context.MaxTokens;
+        if (context.Temperature != null) msg.Temperature = context.Temperature.Value;
+        if (!context.FinishReason.IsNullOrEmpty()) msg.FinishReason = context.FinishReason;
     }
 }

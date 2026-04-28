@@ -67,6 +67,15 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <summary>是否出现可恢复错误。Persist 阶段会据此调整落库策略</summary>
     public Boolean HasError { get; set; }
 
+    /// <summary>是否取消执行（事前短路）。OnBefore 阶段任一处理器置 true 即跳过后续 OnBefore 与核心阶段</summary>
+    public Boolean Cancel { get; set; }
+
+    /// <summary>取消代码</summary>
+    public String? CancelCode { get; set; }
+
+    /// <summary>取消消息</summary>
+    public String? CancelMessage { get; set; }
+
     /// <summary>延迟错误事件。SSE 推送后在 Persist 阶段落库用</summary>
     public ChatStreamEvent? DeferredError { get; set; }
 

@@ -42,12 +42,16 @@ public static class ChatAIExtensions
         services.AddSingleton<ModelService>();
         services.AddSingleton<GatewayService>();
 
-        // IChatHandler 链（按注册顺序为外→内：先注册 = 最外层）
-        // ChatAI 社区版默认链：SystemPrompt(事前) → PersistMessage(事中收集) → LlmCore(终点)
-        // 派生项目（如 StarChat）可通过 RemoveAll<IChatHandler>() 后重排，插入 Enricher / PostProcessor / 自定义 Handler
+        // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 倒序）
+        // 派生项目（如 StarChat）可通过 services.RemoveAll<IChatHandler>() 重排，或针对特定 Handler 实现替换
+        // 顺序意义：见 Doc/IChatHandler-架构.md
+        services.AddSingleton<IChatHandler, Handlers.SkillActivationHandler>();
+        services.AddSingleton<IChatHandler, Handlers.SuggestedCacheHandler>();
         services.AddSingleton<IChatHandler, Handlers.SystemPromptHandler>();
+        services.AddSingleton<IChatHandler, Handlers.ConversationStatsHandler>();
+        services.AddSingleton<IChatHandler, Handlers.UsageRecordHandler>();
+        services.AddSingleton<IChatHandler, Handlers.TitleGenerationHandler>();
         services.AddSingleton<IChatHandler, Handlers.PersistMessageHandler>();
-        services.AddSingleton<IChatHandler, Handlers.LlmCoreHandler>();
 
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);

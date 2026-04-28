@@ -107,5 +107,14 @@ public interface IChatContext : IExtend
     /// <summary>是否出现可恢复错误。事后处理器可据此调整持久化策略</summary>
     Boolean HasError { get; set; }
 
+    /// <summary>是否取消执行（事前短路）。由 OnBefore 阶段任一处理器置 true，MessageFlow 将跳过后续 OnBefore 与整个核心阶段，但仍按注册倒序执行已经过的所有处理器（含本处理器）的 OnAfter，便于资源回收/扣减回滚</summary>
+    Boolean Cancel { get; set; }
+
+    /// <summary>取消代码。短路时填写，便于客户端识别（如 quota_exceeded、content_blocked 等）</summary>
+    String? CancelCode { get; set; }
+
+    /// <summary>取消消息。短路时填写，将作为错误事件文本回写给客户端</summary>
+    String? CancelMessage { get; set; }
+
     #endregion
 }
