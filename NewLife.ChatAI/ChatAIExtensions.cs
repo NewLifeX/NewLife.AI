@@ -47,6 +47,13 @@ public static class ChatAIExtensions
         // IEnumerable<IToolProvider> 由 DI 自动聚合所有注册的 IToolProvider 实现（DbToolProvider、McpClientService 等）
         services.AddSingleton<IChatPipeline, ChatPipeline>();
 
+        // IChatHandler 链（按注册顺序为外→内：先注册 = 最外层）
+        // ChatAI 社区版默认链：SystemPrompt(事前) → PersistMessage(事中收集) → LlmCore(终点)
+        // 派生项目（如 StarChat）可通过 RemoveAll<IChatHandler>() 后重排，插入 Enricher / PostProcessor / 自定义 Handler
+        services.AddSingleton<IChatHandler, Handlers.SystemPromptHandler>();
+        services.AddSingleton<IChatHandler, Handlers.PersistMessageHandler>();
+        services.AddSingleton<IChatHandler, Handlers.LlmCoreHandler>();
+
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);
 

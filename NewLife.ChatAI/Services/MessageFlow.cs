@@ -2,7 +2,9 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using NewLife.AI.Clients;
+using NewLife.AI.Services;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -35,7 +37,8 @@ namespace NewLife.ChatAI.Services;
 /// <param name="log">日志</param>
 /// <param name="enrichers">上下文增强器链（可选）</param>
 /// <param name="postProcessors">消息流后处理器链（可选）</param>
-public class MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null) : IMessageFlow
+/// <param name="services">服务提供者，用于解析 <see cref="IChatHandler"/> 链；为 null 时回退到旧 Enricher/PostProcessor 路径</param>
+public class MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IEnumerable<IContextEnricher>? enrichers = null, IEnumerable<IMessageFlowPostProcessor>? postProcessors = null, IServiceProvider? services = null) : IMessageFlow
 {
     #region 字段
     /// <summary>上下文增强器链（DI 注册的 <see cref="IContextEnricher"/>，按 Order 升序执行）</summary>
@@ -43,6 +46,10 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
     /// <summary>消息流后处理器链（DI 注册的 <see cref="IMessageFlowPostProcessor"/>，按 Order 升序执行）</summary>
     protected readonly IReadOnlyList<IMessageFlowPostProcessor> PostProcessors = postProcessors?.OrderBy(p => p.Order).ToArray() ?? [];
+
+    /// <summary>对话处理器链（DI 注册的 <see cref="IChatHandler"/>，<b>按注册顺序即外→内顺序</b>）。
+    /// 为空时表示走旧 Enricher/PostProcessor 路径</summary>
+    protected readonly IReadOnlyList<IChatHandler> Handlers = services?.GetServices<IChatHandler>().ToArray() ?? [];
     #endregion
 
     #region 生成入口
@@ -265,14 +272,12 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         TryStartTitleGeneration(conversation, conversationId, request.Content, request.AttachmentIds is { Count: > 0 });
 
-        // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
+        // Step3: 初始化管道上下文 + 执行 IChatHandler 链（注册顺序即外→内）
+        // 链中 Handler 依次承担：PostProcessor(最外) → Enricher → SystemPrompt → PersistMessage → LlmCore(终点)
+        // 若链未注册（Handlers 为空），回退到旧 Enricher/Prepare/Stream/PostProcessor 路径
         InitPipelineContext(flow, request.Options);
-        await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
 
-        // 预处理：注入技能提示词、解析@引用，生成 SystemPrompt
-        pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
-
-        // 注册系统消息就绪回调
+        // 注册系统消息就绪回调（在 SystemPromptHandler/Pipeline 触发后被调用）
         flow.PipelineContext.OnSystemReady = sysContent =>
         {
             if (!sysContent.IsNullOrEmpty())
@@ -282,16 +287,31 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
             }
         };
 
-        await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
+        if (Handlers.Count > 0)
         {
-            yield return ev;
+            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
+            {
+                yield return ev;
+            }
+        }
+        else
+        {
+            // 回退路径（DI 未注册 IChatHandler 时）：原 Enricher → Prepare → ExecuteStream 链路
+            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+            pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
+
+            await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
+            {
+                yield return ev;
+            }
         }
 
-        // Step4: 持久化结果
+        // Step4: 持久化结果（PersistMessageHandler 当前仅做事件收集，写库仍由此处统一执行）
         PersistStreamResult(flow);
 
-        // Step5: 后处理链
-        await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
+        // Step5: 后处理链（仅当 Handler 链未启用时由此处兜底；启用时由 PostProcessorHandler 在事后阶段完成）
+        if (Handlers.Count == 0)
+            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // 推荐问题缓存回写
         if (!flow.HasError && setting.EnableSuggestedQuestionCache && flow.ContentBuilder.Length > 0)
@@ -637,6 +657,38 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
             SkillId = flow.SkillId
         };
         if (options != null) flow.PipelineContext.Items = options;
+    }
+
+    /// <summary>执行 <see cref="IChatHandler"/> 链。按注册顺序构建洋葱：先注册 = 最外层；
+    /// 链路终点为空委托（实际终点在核心 LLM Handler，由其内部不调用 next 实现）</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>事件流</returns>
+    /// <remarks>
+    /// 任意 Handler 抛出的异常将沿 await foreach 栈展开，向调用方传播；
+    /// 入口方法负责捕获并 yield ErrorEvent，符合 IChatHandler 文档约定。
+    /// </remarks>
+    protected virtual IAsyncEnumerable<ChatStreamEvent> InvokeHandlersAsync(IChatContext context, CancellationToken cancellationToken)
+    {
+        var handlers = Handlers;
+        // 链路终点：空事件流（LlmCoreHandler 不调用 next，故此终点实际不会被触达）
+        ChatHandlerDelegate next = static _ => EmptyEventsAsync();
+
+        // 倒序构建：注册顺序 [0, 1, 2, ...] 对应外→内，所以从末尾向前包装
+        for (var i = handlers.Count - 1; i >= 0; i--)
+        {
+            var current = handlers[i];
+            var captured = next;
+            next = ct => current.InvokeAsync(context, captured, ct);
+        }
+        return next(cancellationToken);
+    }
+
+    /// <summary>空事件流。<see cref="InvokeHandlersAsync"/> 链路终点</summary>
+    private static async IAsyncEnumerable<ChatStreamEvent> EmptyEventsAsync()
+    {
+        await Task.CompletedTask.ConfigureAwait(false);
+        yield break;
     }
 
     /// <summary>执行流式对话管道。创建管道流并消费事件，结果写入 flow</summary>
