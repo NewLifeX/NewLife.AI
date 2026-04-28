@@ -8,9 +8,10 @@ namespace NewLife.ChatAI.Services;
 /// <remarks>
 /// 各 <see cref="IContextEnricher"/> 与 <see cref="IMessageFlowPostProcessor"/> 通过本上下文读取/修改状态，
 /// 无需互相感知。四大入口通过 <see cref="Kind"/> 区分。
-/// 实现 <see cref="IMessageFlowContext"/> 暴露给 NewLife.AI 通用编排层，派生项目内部仍可访问完整字段。
+/// 同时实现 <see cref="IMessageFlowContext"/>（旧抽象）与 <see cref="IChatContext"/>（新中间件抽象），
+/// 便于平滑过渡到 <see cref="IChatHandler"/> 链路。
 /// </remarks>
-public class MessageFlowContext : IMessageFlowContext
+public class MessageFlowContext : IMessageFlowContext, IChatContext
 {
     #region 入口信息
 
@@ -113,6 +114,56 @@ public class MessageFlowContext : IMessageFlowContext
         get => ContextMessages;
         set => ContextMessages = value;
     }
+
+    #endregion
+
+    #region IChatContext 新增字段（向新中间件抽象过渡，独立存储）
+
+    /// <summary>思考模式（IChatContext 新增）</summary>
+    public ThinkingMode ThinkingMode { get; set; }
+
+    /// <summary>系统提示词内容</summary>
+    public String? SystemPrompt { get; set; }
+
+    /// <summary>系统消息就绪回调</summary>
+    public Action<String>? OnSystemReady { get; set; }
+
+    /// <summary>消息中 @ToolName 显式引用的工具名称集合</summary>
+    public ISet<String> SelectedTools { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>本轮实际注入给模型的工具名称集合</summary>
+    public ISet<String> AvailableToolNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>本轮实际注入的技能名称集合（Code/Name 格式）</summary>
+    public ISet<String> ResolvedSkillNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>实际使用的最大 Token 数</summary>
+    public Int32 MaxTokens { get; set; }
+
+    /// <summary>实际使用的采样温度</summary>
+    public Double? Temperature { get; set; }
+
+    /// <summary>完成原因</summary>
+    public String? FinishReason { get; set; }
+
+    #endregion
+
+    #region IChatContext 显式接口实现
+
+    /// <inheritdoc />
+    IConversation IChatContext.Conversation { get => Conversation; set => Conversation = (Conversation)value; }
+
+    /// <inheritdoc />
+    IModelConfig IChatContext.ModelConfig { get => ModelConfig; set => ModelConfig = (ModelConfig)value; }
+
+    /// <inheritdoc />
+    IChatMessage? IChatContext.UserMessage { get => UserMessage; set => UserMessage = (DbChatMessage?)value; }
+
+    /// <inheritdoc />
+    IChatMessage IChatContext.AssistantMessage { get => AssistantMessage; set => AssistantMessage = (DbChatMessage)value; }
+
+    /// <inheritdoc />
+    IList<AiChatMessage> IChatContext.ContextMessages { get => ContextMessages; set => ContextMessages = value; }
 
     #endregion
 }

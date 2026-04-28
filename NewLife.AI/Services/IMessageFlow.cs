@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Services;
 
@@ -50,11 +50,4 @@ public interface IMessageFlow
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>
     Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken);
-
-    /// <summary>根据用户消息自动生成会话标题</summary>
-    /// <param name="conversationId">会话编号</param>
-    /// <param name="userMessage">用户消息内容</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>生成的标题，失败返回 null</returns>
-    Task<String?> GenerateTitleAsync(Int64 conversationId, String userMessage, CancellationToken cancellationToken);
 }
