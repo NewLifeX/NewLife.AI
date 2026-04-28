@@ -132,17 +132,32 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!, userMessage.ThinkingMode);
 
-        // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
+        // Step3: 初始化管道上下文 + 执行 IChatHandler 链（注册顺序即外→内）
         InitPipelineContext(flow);
-        await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
-        await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
-            yield return ev;
+
+        if (Handlers.Count > 0)
+        {
+            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
+            {
+                yield return ev;
+            }
+        }
+        else
+        {
+            // 回退路径
+            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+            await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
+            {
+                yield return ev;
+            }
+        }
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
 
-        // Step5: 后处理链
-        await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
+        // Step5: 后处理链（仅当 Handler 链未启用时由此处兜底）
+        if (Handlers.Count == 0)
+            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
             yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = flow.Usage, };
@@ -171,17 +186,32 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         var assistantMessage = flow.AssistantMessage;
         yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!, assistantMessage.ThinkingMode);
 
-        // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
+        // Step3: 初始化管道上下文 + 执行 IChatHandler 链（注册顺序即外→内）
         InitPipelineContext(flow);
-        await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
-        await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
-            yield return ev;
+
+        if (Handlers.Count > 0)
+        {
+            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
+            {
+                yield return ev;
+            }
+        }
+        else
+        {
+            // 回退路径
+            await InvokeContextEnrichersAsync(flow, cancellationToken).ConfigureAwait(false);
+            await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
+            {
+                yield return ev;
+            }
+        }
 
         // Step4: 持久化结果
         PersistStreamResult(flow);
 
-        // Step5: 后处理链
-        await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
+        // Step5: 后处理链（仅当 Handler 链未启用时由此处兜底）
+        if (Handlers.Count == 0)
+            await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // message_done
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
