@@ -68,12 +68,13 @@ public class ConversationController : ChatEntityController<Conversation>
         var userId = p["userId"].ToInt(-1);
         var isPinned = p["isPinned"]?.ToBoolean();
         var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
+        var appKeyId = p["appKeyId"].ToInt(-1);
         var modelId = p["modelId"].ToInt(-1);
         var skillId = p["skillId"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Conversation.Search(userId, isPinned, p["source"], modelId, skillId, thinkingMode, start, end, p["Q"], p);
+        return Conversation.Search(userId, isPinned, p["source"], appKeyId, modelId, skillId, thinkingMode, start, end, p["Q"], p);
     }
 }

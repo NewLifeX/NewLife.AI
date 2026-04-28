@@ -20,6 +20,9 @@ public partial interface IConversation
     /// <summary>用户名</summary>
     String? UserName { get; set; }
 
+    /// <summary>应用密钥编号。通过API网关调用时关联的AppKey</summary>
+    Int32 AppKeyId { get; set; }
+
     /// <summary>标题。会话标题，显示在侧边栏</summary>
     String? Title { get; set; }
 

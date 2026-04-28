@@ -48,6 +48,14 @@ public partial class Conversation
     [BindColumn("UserName", "用户名", "")]
     public String? UserName { get => _UserName; set { if (OnPropertyChanging("UserName", value)) { _UserName = value; OnPropertyChanged("UserName"); } } }
 
+    private Int32 _AppKeyId;
+    /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
+    [DisplayName("应用密钥")]
+    [Description("应用密钥。通过API网关调用时关联的AppKey")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("AppKeyId", "应用密钥。通过API网关调用时关联的AppKey", "")]
+    public Int32 AppKeyId { get => _AppKeyId; set { if (OnPropertyChanging("AppKeyId", value)) { _AppKeyId = value; OnPropertyChanged("AppKeyId"); } } }
+
     private String? _Title;
     /// <summary>标题。会话标题，显示在侧边栏</summary>
     [DisplayName("标题")]
@@ -244,6 +252,7 @@ public partial class Conversation
             "Id" => _Id,
             "UserId" => _UserId,
             "UserName" => _UserName,
+            "AppKeyId" => _AppKeyId,
             "Title" => _Title,
             "ModelId" => _ModelId,
             "ModelName" => _ModelName,
@@ -275,6 +284,7 @@ public partial class Conversation
                 case "Id": _Id = value.ToLong(); break;
                 case "UserId": _UserId = value.ToInt(); break;
                 case "UserName": _UserName = Convert.ToString(value); break;
+                case "AppKeyId": _AppKeyId = value.ToInt(); break;
                 case "Title": _Title = Convert.ToString(value); break;
                 case "ModelId": _ModelId = value.ToInt(); break;
                 case "ModelName": _ModelName = Convert.ToString(value); break;
@@ -307,6 +317,14 @@ public partial class Conversation
     /// <summary>用户</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
     public XCode.Membership.User? User => Extends.Get(nameof(User), k => XCode.Membership.User.FindByID(UserId));
+
+    /// <summary>应用密钥</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public AppKey? AppKey => Extends.Get(nameof(AppKey), k => AppKey.FindById(AppKeyId));
+
+    /// <summary>应用密钥</summary>
+    [Map(nameof(AppKeyId), typeof(AppKey), "Id")]
+    public String? AppKeyName => AppKey?.ToString();
 
     /// <summary>模型</summary>
     [XmlIgnore, IgnoreDataMember, ScriptIgnore]
@@ -355,6 +373,7 @@ public partial class Conversation
     /// <param name="userId">用户。会话所属用户</param>
     /// <param name="isPinned">置顶。是否置顶显示</param>
     /// <param name="source">来源。Web/Gateway/Channel等，标识对话入口</param>
+    /// <param name="appKeyId">应用密钥。通过API网关调用时关联的AppKey</param>
     /// <param name="modelId">模型。当前使用的模型Id，引用ModelConfig.Id</param>
     /// <param name="skillId">技能。当前会话使用的技能，引用Skill.Id</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
@@ -363,13 +382,14 @@ public partial class Conversation
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 appKeyId, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (userId >= 0) exp &= _.UserId == userId;
         if (isPinned != null) exp &= _.IsPinned == isPinned;
         if (!source.IsNullOrEmpty()) exp &= _.Source == source;
+        if (appKeyId >= 0) exp &= _.AppKeyId == appKeyId;
         if (modelId >= 0) exp &= _.ModelId == modelId;
         if (skillId >= 0) exp &= _.SkillId == skillId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
@@ -404,6 +424,9 @@ public partial class Conversation
 
         /// <summary>用户名</summary>
         public static readonly Field UserName = FindByName("UserName");
+
+        /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
+        public static readonly Field AppKeyId = FindByName("AppKeyId");
 
         /// <summary>标题。会话标题，显示在侧边栏</summary>
         public static readonly Field Title = FindByName("Title");
@@ -485,6 +508,9 @@ public partial class Conversation
 
         /// <summary>用户名</summary>
         public const String UserName = "UserName";
+
+        /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
+        public const String AppKeyId = "AppKeyId";
 
         /// <summary>标题。会话标题，显示在侧边栏</summary>
         public const String Title = "Title";

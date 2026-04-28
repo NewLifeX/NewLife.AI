@@ -46,6 +46,7 @@
         <Column Name="Id" DataType="Int64" PrimaryKey="True" DataScale="time" Description="编号" />
         <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。会话所属用户" />
         <Column Name="UserName" DataType="String" Description="用户名" />
+        <Column Name="AppKeyId" DataType="Int32" Map="AppKey@Id@$@AppKeyName" Description="应用密钥。通过API网关调用时关联的AppKey" />
         <Column Name="Title" DataType="String" Master="True" Length="200" Description="标题。会话标题，显示在侧边栏" />
         <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@ModelName" Description="模型。当前使用的模型Id，引用ModelConfig.Id" />
         <Column Name="ModelName" DataType="String" Description="模型名称。冗余存储模型名称，方便历史数据检索" />
