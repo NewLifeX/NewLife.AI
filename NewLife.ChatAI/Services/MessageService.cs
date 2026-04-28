@@ -14,15 +14,14 @@ namespace NewLife.ChatAI.Services;
 /// <para>核心流程（Validate → Prepare → Execute → Persist → PostProcess 五段式模板、4 大 public 入口）完全由基类提供，本类只需 override 扩展点。</para>
 /// <para>业务数据模型 <see cref="MessageDto"/> / <see cref="SendMessageRequest"/> / <see cref="ToolCallDto"/> 位于 <c>NewLife.ChatAI.Models</c>。</para>
 /// </remarks>
-/// <param name="pipeline">已装配好三层能力的对话执行管道</param>
 /// <param name="modelService">模型服务（用于模型解析和客户端创建）</param>
 /// <param name="backgroundService">后台生成服务</param>
 /// <param name="usageService">用量统计服务</param>
 /// <param name="setting">AI对话系统配置</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-public class MessageService(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ChatSetting setting, ITracer tracer, ILog log)
-    : MessageFlow(pipeline, modelService, backgroundService, usageService, setting, tracer, log)
+public class MessageService(ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, ChatSetting setting, ITracer tracer, ILog log)
+    : MessageFlow(modelService, backgroundService, usageService, setting, tracer, log)
 {
     #region 覆盖：完整多模态（图片 + Office 文档）
 

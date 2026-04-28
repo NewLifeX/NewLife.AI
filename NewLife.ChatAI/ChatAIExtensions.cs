@@ -42,11 +42,6 @@ public static class ChatAIExtensions
         services.AddSingleton<ModelService>();
         services.AddSingleton<GatewayService>();
 
-        // 对话执行管道：将能力扩展层（工具调用、技能注入）与知识进化层（记忆注入、自学习、事件智能体）装配为统一执行入口
-        // ChatApplicationService 通过 IChatPipeline 驱动执行，对各层实现细节保持透明
-        // IEnumerable<IToolProvider> 由 DI 自动聚合所有注册的 IToolProvider 实现（DbToolProvider、McpClientService 等）
-        services.AddSingleton<IChatPipeline, ChatPipeline>();
-
         // IChatHandler 链（按注册顺序为外→内：先注册 = 最外层）
         // ChatAI 社区版默认链：SystemPrompt(事前) → PersistMessage(事中收集) → LlmCore(终点)
         // 派生项目（如 StarChat）可通过 RemoveAll<IChatHandler>() 后重排，插入 Enricher / PostProcessor / 自定义 Handler

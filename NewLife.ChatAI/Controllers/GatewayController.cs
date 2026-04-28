@@ -19,7 +19,7 @@ namespace NewLife.ChatAI.Controllers;
 /// 通过 Authorization: Bearer {appkey} 进行认证。
 /// </remarks>
 [ApiController]
-public class GatewayController(GatewayService gatewayService, ModelService modelService, IChatPipeline pipeline, ChatSetting chatSetting) : ControllerBase
+public class GatewayController(GatewayService gatewayService, ModelService modelService, ChatSetting chatSetting) : ControllerBase
 {
     #region 模型列表
     /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
@@ -543,34 +543,9 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                     await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                if (chatSetting.EnableGatewayPipeline)
+                if (false)
                 {
-                    // 完整能力管道路径：技能注入 + 工具调用 + 提示词管理
-                    var contextMessages = gatewayService.BuildContextMessages(request, appKey, config);
-                    var pipelineContext = new ChatPipelineContext { UserId = appKey.UserId.ToString(), ConversationId = request.ConversationId };
-
-                    await foreach (var evt in pipeline.StreamAsync(contextMessages, config, ThinkingMode.Auto, pipelineContext, cancellationToken).ConfigureAwait(false))
-                    {
-                        // 收集内容用于网关对话记录
-                        if (enableRecording)
-                        {
-                            if (evt.Type == "content_delta")
-                                contentBuilder!.Append(evt.Content);
-                            else if (evt.Type == "thinking_delta")
-                                thinkingBuilder!.Append(evt.Content);
-                        }
-
-                        // 收集最后一次用量
-                        if (evt.Usage != null) lastUsage = evt.Usage;
-
-                        var evtChunk = GatewayService.ConvertEventToChunk(evt, request.Model ?? config.Code);
-                        if (evtChunk != null)
-                            await WriteStreamChunkAsync(evtChunk, protocol, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    // 管道路径：在此写入用量记录（非管道路径由 ChatStreamAsync 内部写入）
-                    if (enableRecording)
-                        gatewayService.RecordUsage(appKey, config.Id, request.ConversationId.ToLong(), lastUsage);
+                    // 网关完整能力管道已随 IChatPipeline 下架，后续将重构为 IChatHandler 链调用
                 }
                 else
                 {

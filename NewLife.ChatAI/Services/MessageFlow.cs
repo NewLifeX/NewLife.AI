@@ -21,7 +21,7 @@ namespace NewLife.ChatAI.Services;
 /// <remarks>
 /// <para>
 /// 所有关键步骤方法均为 <c>protected virtual</c>，派生类（ChatAI 社区版 / StarChat 商用版）可按需覆盖以注入差异化逻辑。
-/// 能力扩展（工具调用、技能注入）与知识进化（记忆、自学习）通过 <see cref="IChatPipeline"/> 透明接入。
+/// 能力扩展（工具调用、技能注入）与知识进化（记忆、自学习）通过 <see cref="IChatHandler"/> 链透明接入。
 /// </para>
 /// <para>
 /// 本基类提供 <b>简化版</b> 系统提示词与多模态构建，仅依赖 NewLife.Core / XCode / ChatData 实体，
@@ -29,15 +29,14 @@ namespace NewLife.ChatAI.Services;
 /// </para>
 /// </remarks>
 /// <remarks>实例化消息流基类</remarks>
-/// <param name="pipeline">对话执行管道</param>
 /// <param name="modelService">模型服务</param>
 /// <param name="backgroundService">后台生成服务</param>
 /// <param name="usageService">用量统计服务</param>
 /// <param name="setting">对话配置</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-/// <param name="services">服务提供者，用于解析 <see cref="IChatHandler"/> 链；为 null 时使用空链路（仅 Pipeline 直连，仅用于测试场景）</param>
-public class MessageFlow(IChatPipeline pipeline, ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null) : IMessageFlow
+/// <param name="services">服务提供者，用于解析 <see cref="IChatHandler"/> 链；为 null 时使用空链路（仅用于测试场景）</param>
+public class MessageFlow(ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null) : IMessageFlow
 {
     #region 字段
     /// <summary>对话处理器链（DI 注册的 <see cref="IChatHandler"/>，<b>按注册顺序即外→内顺序</b>）。
@@ -47,7 +46,8 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
     #region 生成入口
 
-    /// <summary>非流式重新生成 AI 回复。构建上下文后委托管道完成，结果直接写回消息记录</summary>
+    /// <summary>非流式重新生成 AI 回复。构建上下文后通过 <see cref="IChatHandler"/> 链流式执行，
+    /// 在本函数内部聚合为完整响应后写回消息记录</summary>
     /// <param name="messageId">消息编号（必须为 AI 回复）</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -64,13 +64,16 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
             // Step2: 构建对话上下文
             await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
 
-            // Step3: 初始化管道上下文 + 执行（非流式，仍直接走 Pipeline.CompleteAsync）
-            InitPipelineContext(flow);
+            // Step3: 通过 Handler 链流式执行并聚合为完整响应
             var sw = Stopwatch.StartNew();
-            var response = await pipeline.CompleteAsync(flow.ContextMessages, flow.ModelConfig, flow.PipelineContext, cancellationToken).ConfigureAwait(false);
+            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
+            {
+                CollectStreamEvent(flow, ev);
+            }
             sw.Stop();
 
-            // Step4: 持久化结果
+            // Step4: 持久化结果（包含从收集器重建的 ChatResponse）
+            var response = BuildResponseFromFlow(flow);
             PersistCompleteResult(flow, response, (Int32)sw.ElapsedMilliseconds);
 
             return ToMessageDto(flow.AssistantMessage);
@@ -121,23 +124,10 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!, userMessage.ThinkingMode);
 
-        // Step3: 初始化管道上下文 + 执行 IChatHandler 链（注册顺序即外→内）
-        InitPipelineContext(flow);
-
-        if (Handlers.Count > 0)
+        // Step3: 执行 IChatHandler 链（注册顺序即外→内）
+        await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
         {
-            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
-        }
-        else
-        {
-            // 回退路径（DI 未注册 IChatHandler 的测试场景）
-            await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
+            yield return ev;
         }
 
         // Step4: 持久化结果
@@ -170,23 +160,10 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         var assistantMessage = flow.AssistantMessage;
         yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!, assistantMessage.ThinkingMode);
 
-        // Step3: 初始化管道上下文 + 执行 IChatHandler 链（注册顺序即外→内）
-        InitPipelineContext(flow);
-
-        if (Handlers.Count > 0)
+        // Step3: 执行 IChatHandler 链（注册顺序即外→内）
+        await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
         {
-            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
-        }
-        else
-        {
-            // 回退路径（DI 未注册 IChatHandler 的测试场景）
-            await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
+            yield return ev;
         }
 
         // Step4: 持久化结果
@@ -281,13 +258,11 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         TryStartTitleGeneration(conversation, conversationId, request.Content, request.AttachmentIds is { Count: > 0 });
 
-        // Step3: 初始化管道上下文 + 执行 IChatHandler 链（注册顺序即外→内）
+        // Step3: 执行 IChatHandler 链（注册顺序即外→内）
         // 链中 Handler 依次承担：PostProcessor(最外) → Enricher → SystemPrompt → PersistMessage → LlmCore(终点)
-        // 若链未注册（Handlers 为空），回退到旧 Enricher/Prepare/Stream/PostProcessor 路径
-        InitPipelineContext(flow, request.Options);
 
-        // 注册系统消息就绪回调（在 SystemPromptHandler/Pipeline 触发后被调用）
-        flow.PipelineContext.OnSystemReady = sysContent =>
+        // 注册系统消息就绪回调（在 LlmCoreHandler 收到首个 chunk 时被调用）
+        flow.OnSystemReady = sysContent =>
         {
             if (!sysContent.IsNullOrEmpty())
             {
@@ -296,22 +271,16 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
             }
         };
 
-        if (Handlers.Count > 0)
+        // 记录请求选项供 Handler 读取
+        if (request.Options is { Count: > 0 })
         {
-            await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
+            foreach (var kv in request.Options)
+                flow.Items[kv.Key] = kv.Value;
         }
-        else
-        {
-            // 回退路径（DI 未注册 IChatHandler 的测试场景）
-            pipeline.PrepareContext(flow.ContextMessages, flow.PipelineContext);
 
-            await foreach (var ev in ExecuteStreamAsync(flow, flow.ContextMessages, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
+        await foreach (var ev in InvokeHandlersAsync(flow, cancellationToken).ConfigureAwait(false))
+        {
+            yield return ev;
         }
 
         // Step4: 持久化结果（PersistMessageHandler 当前仅做事件收集，写库仍由此处统一执行）
@@ -649,18 +618,47 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         return Task.FromResult<IList<AiChatMessage>>(contextMessages);
     }
 
-    /// <summary>初始化管道执行上下文。从 flow 提取 UserId/ConversationId/SkillId 创建 ChatPipelineContext</summary>
+    /// <summary>将收集器中的流式事件写入 flow（content/thinking/tool_call/usage/error）。
+    /// 供 RegenerateMessageAsync 等非流式入口在内部聚合 Handler 链事件使用</summary>
     /// <param name="flow">流程上下文</param>
-    /// <param name="options">请求选项（可选）</param>
-    protected virtual void InitPipelineContext(MessageFlowContext flow, IDictionary<String, Object?>? options = null)
+    /// <param name="ev">事件</param>
+    protected virtual void CollectStreamEvent(MessageFlowContext flow, ChatStreamEvent ev)
     {
-        flow.PipelineContext = new ChatPipelineContext
+        switch (ev.Type)
         {
-            UserId = flow.UserId + "",
-            ConversationId = flow.Conversation.Id + "",
-            SkillId = flow.SkillId
+            case "content_delta":
+                if (ev.Content != null) flow.ContentBuilder.Append(ev.Content);
+                break;
+            case "thinking_delta":
+                if (ev.Content != null) flow.ThinkingBuilder.Append(ev.Content);
+                break;
+            case "tool_call_done":
+                if (ev.ToolCallId != null)
+                    flow.ToolCalls.Add(new ToolCallDto(ev.ToolCallId, ev.Name ?? String.Empty, ToolCallStatus.Done, ev.Arguments, ev.Result));
+                break;
+            case "message_done":
+                if (ev.Usage != null) flow.Usage = ev.Usage;
+                break;
+            case "error":
+                flow.HasError = true;
+                flow.DeferredError = ev;
+                break;
+        }
+    }
+
+    /// <summary>从流程上下文重建为 <see cref="ChatResponse"/>（供 PersistCompleteResult 使用）</summary>
+    /// <param name="flow">流程上下文</param>
+    /// <returns>赋予收集内容与 Usage 的 ChatResponse</returns>
+    protected virtual ChatResponse BuildResponseFromFlow(MessageFlowContext flow)
+    {
+        var content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
+        var reasoning = flow.ThinkingBuilder.Length > 0 ? flow.ThinkingBuilder.ToString() : null;
+        var msg = new AiChatMessage { Role = "assistant", Content = content, ReasoningContent = reasoning };
+        return new ChatResponse
+        {
+            Messages = [new ChatChoice { Message = msg }],
+            Usage = flow.Usage,
         };
-        if (options != null) flow.PipelineContext.Items = options;
     }
 
     /// <summary>执行 <see cref="IChatHandler"/> 链。按注册顺序构建洋葱：先注册 = 最外层；
@@ -695,20 +693,9 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         yield break;
     }
 
-    /// <summary>执行流式对话管道。创建管道流并消费事件，结果写入 flow</summary>
-    /// <param name="flow">流程上下文</param>
-    /// <param name="contextMessages">对话上下文消息列表</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>SSE 事件流</returns>
-    protected virtual IAsyncEnumerable<ChatStreamEvent> ExecuteStreamAsync(MessageFlowContext flow, IList<AiChatMessage> contextMessages, CancellationToken cancellationToken)
-    {
-        var eventSource = pipeline.StreamAsync(contextMessages, flow.ModelConfig, flow.AssistantMessage.ThinkingMode, flow.PipelineContext, cancellationToken);
-        return ExecuteStreamAsync(flow, eventSource, cancellationToken);
-    }
-
     /// <summary>消费流式事件源。将事件透传给调用方，同时将 content/thinking/usage/error 写入 flow</summary>
     /// <param name="flow">流程上下文</param>
-    /// <param name="eventSource">事件流源（来自管道或后台服务）</param>
+    /// <param name="eventSource">事件流源（来自后台服务）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>SSE 事件流</returns>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> ExecuteStreamAsync(MessageFlowContext flow, IAsyncEnumerable<ChatStreamEvent> eventSource, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -732,7 +719,6 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
 
         var assistantMsg = flow.AssistantMessage;
         var conversation = flow.Conversation;
-        var pipelineCtx = flow.PipelineContext;
 
         // 写入消息内容
         assistantMsg.Content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
@@ -745,13 +731,13 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         }
 
         // 技能名称（ResolvedSkillNames 为 ISet 已自动去重）
-        var skillNames = new HashSet<String>(pipelineCtx.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
+        var skillNames = new HashSet<String>(flow.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
         var skillName = flow["SkillName"] as String;
         if (flow.SkillId > 0 && !skillName.IsNullOrEmpty())
             skillNames.Add(skillName);
 
         ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
-        ApplyRequestParams(assistantMsg, flow.ModelConfig, pipelineCtx);
+        ApplyRequestParams(assistantMsg, flow.ModelConfig, flow);
         assistantMsg.Update();
 
         // 技能名称与可用工具名称写入用户消息
@@ -760,8 +746,8 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
         {
             if (skillNames.Count > 0)
                 userMessage.SkillNames = String.Join(",", skillNames);
-            if (pipelineCtx.AvailableToolNames.Count > 0)
-                userMessage.ToolNames = String.Join(",", pipelineCtx.AvailableToolNames);
+            if (flow.AvailableToolNames.Count > 0)
+                userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
             userMessage.Update();
         }
 
@@ -1269,8 +1255,8 @@ public class MessageFlow(IChatPipeline pipeline, ModelService modelService, Back
     /// <summary>将请求参数写入 AI 回复消息实体（不保存，调用方负责 Update）</summary>
     /// <param name="msg">消息实体</param>
     /// <param name="modelConfig">模型配置</param>
-    /// <param name="context">管道上下文（携带 MaxTokens/Temperature/FinishReason）</param>
-    protected static void ApplyRequestParams(DbChatMessage msg, ModelConfig modelConfig, ChatPipelineContext context)
+    /// <param name="context">对话上下文（携带 MaxTokens/Temperature/FinishReason）</param>
+    protected static void ApplyRequestParams(DbChatMessage msg, ModelConfig modelConfig, IChatContext context)
     {
         msg.ModelName = modelConfig.Code;
         if (context.MaxTokens > 0) msg.MaxTokens = context.MaxTokens;

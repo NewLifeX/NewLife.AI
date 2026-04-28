@@ -44,9 +44,6 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
 
     #region 执行产物
 
-    /// <summary>管道执行上下文。由主流程初始化，传递给 <see cref="IChatPipeline"/></summary>
-    public ChatPipelineContext PipelineContext { get; set; } = null!;
-
     /// <summary>对话上下文消息列表。<b>Prepare</b> 阶段由 <c>BuildContextAsync</c> 填充，
     /// <see cref="IChatHandler"/> 可在此基础上追加/修改/截断，管道执行时据此发起模型调用</summary>
     public IList<AiChatMessage> ContextMessages { get; set; } = [];
