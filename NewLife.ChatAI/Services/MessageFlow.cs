@@ -146,15 +146,16 @@ public class MessageFlow : IMessageFlow
         }
 
         // 更新消息内容
-        flow.UserMessage!.Content = newContent;
-        flow.UserMessage.Update();
+        var userMessage = flow.UserMessage!;
+        userMessage.Content = newContent;
+        userMessage.Update();
 
         // 预分配 AI 回复消息
         var assistantMsg = new DbChatMessage
         {
-            ConversationId = flow.UserMessage.ConversationId,
+            ConversationId = userMessage.ConversationId,
             Role = "assistant",
-            ThinkingMode = flow.UserMessage.ThinkingMode,
+            ThinkingMode = userMessage.ThinkingMode,
         };
         assistantMsg.Insert();
         flow.AssistantMessage = assistantMsg;
@@ -162,7 +163,7 @@ public class MessageFlow : IMessageFlow
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
 
-        yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, flow.UserMessage!.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code ?? String.Empty, userMessage.ThinkingMode);
 
         // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow);
@@ -177,7 +178,7 @@ public class MessageFlow : IMessageFlow
         await InvokePostProcessorsAsync(flow, cancellationToken).ConfigureAwait(false);
 
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
-            yield return new ChatStreamEvent { Type = "message_done", MessageId = flow.AssistantMessage.Id, Usage = flow.Usage, };
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = flow.Usage, };
     }
 
     /// <summary>流式重新生成 AI 回复。替换当前 AI 回复并通过 SSE 事件流返回新内容</summary>
@@ -200,7 +201,8 @@ public class MessageFlow : IMessageFlow
         await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
 
         // message_start
-        yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, flow.AssistantMessage.ThinkingMode);
+        var assistantMessage = flow.AssistantMessage;
+        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code ?? String.Empty, assistantMessage.ThinkingMode);
 
         // Step3: 初始化管道上下文 + 执行 Enricher 链 + 执行流式生成
         InitPipelineContext(flow);
@@ -216,7 +218,7 @@ public class MessageFlow : IMessageFlow
 
         // message_done
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
-            yield return new ChatStreamEvent { Type = "message_done", MessageId = flow.AssistantMessage.Id, Usage = flow.Usage };
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMessage.Id, Usage = flow.Usage };
     }
 
     /// <summary>流式发送消息并获取 AI 回复。依次：保存用户消息 → 构建上下文 → 委托管道流式生成 → 持久化结果 → 推送 SSE 事件</summary>
@@ -299,7 +301,7 @@ public class MessageFlow : IMessageFlow
 
         // message_start
         using var span = Tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
-        yield return ChatStreamEvent.MessageStart(flow.AssistantMessage.Id, model.Code ?? String.Empty, request.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code ?? String.Empty, request.ThinkingMode);
 
         // 提前启动标题生成（与流式内容并行执行，不阻塞 SSE 流）
         TryStartTitleGeneration(conversation, conversationId, request.Content, request.AttachmentIds is { Count: > 0 });
@@ -316,8 +318,8 @@ public class MessageFlow : IMessageFlow
         {
             if (!sysContent.IsNullOrEmpty())
             {
-                flow.UserMessage!.ThinkingContent = sysContent;
-                flow.UserMessage.Update();
+                userMsg.ThinkingContent = sysContent;
+                userMsg.Update();
             }
         };
 
@@ -339,7 +341,7 @@ public class MessageFlow : IMessageFlow
         // message_done
         if (!flow.HasError && !cancellationToken.IsCancellationRequested)
         {
-            yield return new ChatStreamEvent { Type = "message_done", MessageId = flow.AssistantMessage.Id, Usage = flow.Usage, };
+            yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = flow.Usage, };
         }
     }
 
@@ -739,13 +741,14 @@ public class MessageFlow : IMessageFlow
         assistantMsg.Update();
 
         // 技能名称与可用工具名称写入用户消息
-        if (flow.UserMessage != null)
+        var userMessage = flow.UserMessage;
+        if (userMessage != null)
         {
             if (skillNames.Count > 0)
-                flow.UserMessage.SkillNames = String.Join(",", skillNames);
+                userMessage.SkillNames = String.Join(",", skillNames);
             if (pipelineCtx.AvailableToolNames.Count > 0)
-                flow.UserMessage.ToolNames = String.Join(",", pipelineCtx.AvailableToolNames);
-            flow.UserMessage.Update();
+                userMessage.ToolNames = String.Join(",", pipelineCtx.AvailableToolNames);
+            userMessage.Update();
         }
 
         // 更新会话
