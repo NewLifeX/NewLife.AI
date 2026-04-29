@@ -1,5 +1,4 @@
-using NewLife.AI.Services;
-using NewLife.ChatAI.Services;
+﻿using NewLife.ChatAI.Services;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NewLife.AI.Clients;
@@ -10,7 +11,6 @@ using NewLife.AI.Filters;
 using NewLife.Collections;
 using NewLife.Serialization;
 using XCode.Membership;
-using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
@@ -33,15 +33,13 @@ public enum GatewayProtocol
 /// <param name="usageService">用量统计服务</param>
 /// <param name="modelService">模型服务。统一负责模型可用性判断与 IChatClient 创建</param>
 /// <param name="chatFilters">对话过滤器链（日志、监控等横切关注点；ConversationId=0 时过滤器应 graceful no-op）</param>
+/// <param name="chatSetting">对话配置</param>
 /// <param name="log">日志</param>
-public class GatewayService(UsageService? usageService, ModelService modelService, IEnumerable<IChatFilter>? chatFilters, ILog log)
+public class GatewayService(UsageService usageService, ModelService modelService, IEnumerable<IChatFilter>? chatFilters, ChatSetting chatSetting, ILog log)
 {
     #region 属性
     /// <summary>对话过滤器链（日志、监控等横切关注点），由 DI 解析</summary>
     private readonly IReadOnlyList<IChatFilter> _chatFilters = chatFilters?.ToArray() ?? [];
-
-    /// <summary>上游重试最大次数</summary>
-    private const Int32 MaxRetryCount = 5;
 
     /// <summary>重试最大等待时间（秒）</summary>
     private const Int32 MaxRetryDelaySec = 30;
@@ -51,13 +49,16 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
 
     /// <summary>camelCase 序列化选项。用于写出符合 Gemini 协议的响应体</summary>
     public static readonly JsonSerializerOptions CamelCaseOptions;
+    #endregion
 
+    #region 构造
     static GatewayService()
     {
         var snake = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
         SystemJson.Apply(snake, true);
         SnakeCaseOptions = snake;
@@ -66,6 +67,7 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
         SystemJson.Apply(camel, true);
         CamelCaseOptions = camel;
@@ -98,6 +100,7 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
 
         return appKey;
     }
+
     #endregion
 
     #region 系统提示词
@@ -209,14 +212,15 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
         using var client = clientBuilder.Build();
 
         ChatResponse? response = null;
-        for (var i = 0; i <= MaxRetryCount; i++)
+        var maxRetry = chatSetting.UpstreamRetryCount;
+        for (var i = 0; i <= maxRetry; i++)
         {
             try
             {
                 response = ChatResponse.From(await client.GetResponseAsync(request, cancellationToken).ConfigureAwait(false));
                 break;
             }
-            catch (HttpRequestException ex) when (Is429(ex) && i < MaxRetryCount)
+            catch (HttpRequestException ex) when (Is429(ex) && i < maxRetry)
             {
                 var delay = GetRetryDelay(i);
                 log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
@@ -227,11 +231,8 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
         if (response == null)
             throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
 
-        // 更新 AppKey 统计
-        UpdateAppKeyUsage(appKey, response.Usage);
-
-        // 写入用量记录
-        RecordUsage(appKey, config.Id, request.ConversationId.ToLong(), response.Usage);
+        // 写入用量记录（内部完成费用计算 + 配额累加）
+        RecordUsage(appKey, config, request.ConversationId.ToLong(), response.Usage);
 
         return response;
     }
@@ -255,14 +256,15 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
         using var streamClient = streamBuilder.Build();
 
         IAsyncEnumerable<IChatResponse>? stream = null;
-        for (var i = 0; i <= MaxRetryCount; i++)
+        var maxRetry = chatSetting.UpstreamRetryCount;
+        for (var i = 0; i <= maxRetry; i++)
         {
             try
             {
                 stream = streamClient.GetStreamingResponseAsync(request, cancellationToken);
                 break;
             }
-            catch (HttpRequestException ex) when (Is429(ex) && i < MaxRetryCount)
+            catch (HttpRequestException ex) when (Is429(ex) && i < maxRetry)
             {
                 var delay = GetRetryDelay(i);
                 log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
@@ -281,11 +283,8 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
             yield return chunk;
         }
 
-        // 更新 AppKey 统计
-        UpdateAppKeyUsage(appKey, lastUsage);
-
-        // 写入用量记录
-        RecordUsage(appKey, config.Id, request.ConversationId.ToLong(), lastUsage);
+        // 写入用量记录（费用与配额累加一起完成）
+        RecordUsage(appKey, config, request.ConversationId.ToLong(), lastUsage);
     }
     #endregion
 
@@ -432,47 +431,22 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
         return baseDelay + jitter;
     }
 
-    /// <summary>写入用量记录到 UsageRecord 表</summary>
+    /// <summary>写入用量记录到 UsageRecord 表，并完成费用计算与配额累加</summary>
     /// <param name="appKey">应用密钥</param>
-    /// <param name="modelId">模型编号</param>
+    /// <param name="model">模型配置</param>
     /// <param name="conversationId">关联会话编号</param>
     /// <param name="usage">用量统计</param>
-    internal void RecordUsage(AppKey? appKey, Int32 modelId, Int64 conversationId, UsageDetails? usage)
+    protected virtual void RecordUsage(AppKey? appKey, ModelConfig model, Int64 conversationId, UsageDetails? usage)
     {
-        if (usage == null) return;
+        if (usage == null || model == null) return;
 
-        usageService?.Record(
-            appKey?.UserId ?? 0,
-            appKey?.Id ?? 0,
-            conversationId, 0,
-            modelId,
-            usage.InputTokens,
-            usage.OutputTokens,
-            usage.TotalTokens,
-            "Gateway");
-    }
-
-    /// <summary>更新 AppKey 的调用次数和 Token 用量</summary>
-    /// <param name="appKey">应用密钥</param>
-    /// <param name="usage">用量统计</param>
-    private void UpdateAppKeyUsage(AppKey? appKey, UsageDetails? usage)
-    {
-        if (appKey == null) return;
-
-        appKey.Calls++;
-        appKey.LastCallTime = DateTime.Now;
-
-        if (usage != null)
-            appKey.TotalTokens += usage.TotalTokens;
-
-        try
+        var conv = new Conversation
         {
-            appKey.Update();
-        }
-        catch (Exception ex)
-        {
-            log?.Error("更新 AppKey 用量失败: {0}", ex.Message);
-        }
+            Id = conversationId,
+            UserId = appKey?.UserId ?? 0,
+            AppKeyId = appKey?.Id ?? 0,
+        };
+        usageService.Record(conv, 0, model.Id, usage, "Gateway");
     }
 
     /// <summary>从 AI 消息中提取纯文本内容。支持多模态消息（Contents 列表中提取 TextContent）</summary>
@@ -599,7 +573,7 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
             if (conversation == null) return;
 
             // 创建用户消息
-            var userMsg = new ChatMessage
+            var userMsg = new DbChatMessage
             {
                 ConversationId = conversation.Id,
                 Role = "user",
@@ -611,7 +585,7 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
             // 创建 AI 回复消息
             if (!responseContent.IsNullOrEmpty())
             {
-                var assistantMsg = new ChatMessage
+                var assistantMsg = new DbChatMessage
                 {
                     ConversationId = conversation.Id,
                     Role = "assistant",

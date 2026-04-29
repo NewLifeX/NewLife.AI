@@ -52,44 +52,6 @@ public class UsageService(IChatSetting chatSetting, ILog log)
             log?.Error("写入用量记录失败: {0}", ex.Message);
         }
     }
-
-    /// <summary>记录一次 AI 调用的用量</summary>
-    /// <param name="userId">用户编号</param>
-    /// <param name="appKeyId">应用密钥编号，无则为0</param>
-    /// <param name="conversationId">会话编号</param>
-    /// <param name="messageId">消息编号</param>
-    /// <param name="modelId">模型编号</param>
-    /// <param name="inputTokens">输入Token数</param>
-    /// <param name="outputTokens">输出Token数</param>
-    /// <param name="totalTokens">总Token数</param>
-    /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
-    public void Record(Int32 userId, Int32 appKeyId, Int64 conversationId, Int64 messageId,
-        Int32 modelId, Int32 inputTokens, Int32 outputTokens, Int32 totalTokens, String source)
-    {
-        if (!chatSetting.EnableUsageStats) return;
-
-        try
-        {
-            var entity = new UsageRecord
-            {
-                UserId = userId,
-                AppKeyId = appKeyId,
-                ConversationId = conversationId,
-                MessageId = messageId,
-                ModelId = modelId,
-                ModelName = ModelConfig.FindById(modelId)?.Name,
-                InputTokens = inputTokens,
-                OutputTokens = outputTokens,
-                TotalTokens = totalTokens,
-                Source = source,
-            };
-            entity.Insert();
-        }
-        catch (Exception ex)
-        {
-            log?.Error("写入用量记录失败: {0}", ex.Message);
-        }
-    }
     #endregion
 
     #region 用户维度查询
