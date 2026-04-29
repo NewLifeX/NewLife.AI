@@ -26,7 +26,7 @@ namespace NewLife.ChatAI.Services;
 /// 能力扩展（工具调用、技能注入）与知识进化（记忆、自学习）通过 <see cref="IChatHandler"/> 链透明接入。
 /// </para>
 /// <para>
-/// 本基类提供 <b>简化版</b> 系统提示词与多模态构建，仅依赖 NewLife.Core / XCode / ChatData 实体，
+/// 本基类提供 <b>简化版</b> 系统提示词与多模态构建，仅依赖 NewLife.Core / XCode / 实体，
 /// 不引入 Cube.Entity.Department 与 NewLife.Office 等上层依赖；派生类按需增强。
 /// </para>
 /// </remarks>

@@ -26,6 +26,7 @@ public class OllamaIntegrationTests
 {
     private const String LightModel = "qwen3.5:0.8b";
     private const String HeavyModel = "qwen3.5:latest";
+    private const String EmbedModel = "nomic-embed-text";
     private const String DefaultEndpoint = "http://localhost:11434";
 
     #region 工厂方法
@@ -531,11 +532,11 @@ public class OllamaIntegrationTests
         // 单条嵌入
         var singleResp = await client.EmbedAsync(new OllamaEmbedRequest
         {
-            Model = LightModel,
+            Model = EmbedModel,
             Input = "Hello world",
         });
         Assert.NotNull(singleResp);
-        Assert.Equal(LightModel, singleResp.Model);
+        Assert.Equal(EmbedModel, singleResp.Model);
         Assert.NotNull(singleResp.Embeddings);
         Assert.Single(singleResp.Embeddings);
         var dim = singleResp.Embeddings[0].Length;
@@ -545,7 +546,7 @@ public class OllamaIntegrationTests
         // 批量嵌入
         var batchResp = await client.EmbedAsync(new OllamaEmbedRequest
         {
-            Model = LightModel,
+            Model = EmbedModel,
             Input = new[] { "first text", "second text", "third text" },
         });
         Assert.NotNull(batchResp?.Embeddings);
