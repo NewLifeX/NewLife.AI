@@ -34,6 +34,10 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen-image-edit-plus","Qwen Image Edit Plus",   ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen-image-edit",     "Qwen Image Edit",        ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
+[AiClientModel("qwen3.5-omni-plus",  "Qwen3.5 Omni Plus",  Vision = true, Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-omni-flash",   "Qwen3 Omni Flash",   Vision = true, Audio = true, Thinking = true, FunctionCalling = false)]
+[AiClientModel("qwen-omni-turbo",    "Qwen Omni Turbo",    Vision = true, Audio = true, FunctionCalling = false)]
 [AiClientModel("wan2.6-t2i", "Wan 文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "Wanx 图生视频", Vision = true, VideoGeneration = true, FunctionCalling = false)]
@@ -80,9 +84,139 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     #endregion
 
     #region 对话（重写）
+    /// <summary>判断是否为 Omni 全模态非实时模型。Omni 模型强制走兼容模式接口，stream=true 为必填</summary>
+    /// <param name="model">模型标识</param>
+    /// <returns>是则返回 true</returns>
+    private static Boolean IsOmniModel(String? model)
+    {
+        if (model.IsNullOrEmpty()) return false;
+        return model.Contains("-omni", StringComparison.OrdinalIgnoreCase) &&
+               !model.Contains("-realtime", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>判断是否为 qwen3.5-omni 系列（支持联网搜索）</summary>
+    /// <param name="model">模型标识</param>
+    /// <returns>是则返回 true</returns>
+    private static Boolean IsQwen35OmniModel(String? model) =>
+        !model.IsNullOrEmpty() && model!.StartsWith("qwen3.5-omni", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>构建 Omni 兼容模式请求体。在标准 OpenAI 请求体基础上注入 modalities、audio 等 Omni 专属字段</summary>
+    /// <param name="request">统一请求</param>
+    /// <returns>可直接序列化的请求字典</returns>
+    private IDictionary<String, Object> BuildOmniBody(IChatRequest request)
+    {
+        var dic = ChatCompletionRequest.BuildBody(request);
+
+        // Omni 模型 API 强制要求 stream=true
+        dic["stream"] = true;
+        dic["stream_options"] = new Dictionary<String, Object> { ["include_usage"] = true };
+
+        // modalities：默认纯文本输出；调用方通过 request["OmniModalities"] 传入 string[] 可启用音频输出
+        var modalities = request["OmniModalities"] as String[] ?? request["Modalities"] as String[];
+        if (modalities == null)
+        {
+            var omniVoice = request["OmniVoice"] as String;
+            modalities = String.IsNullOrEmpty(omniVoice) ? ["text"] : ["text", "audio"];
+        }
+        dic["modalities"] = modalities;
+
+        // audio output config（voice + format）：当 modalities 含 "audio" 时生效
+        if (Array.IndexOf(modalities, "audio") >= 0)
+        {
+            var voice = request["OmniVoice"] as String ?? "Tina";
+            var format = request["OmniAudioFormat"] as String ?? "wav";
+            dic["audio"] = new Dictionary<String, Object> { ["voice"] = voice, ["format"] = format };
+        }
+
+        // enable_search：仅 qwen3.5-omni 系列支持联网搜索
+        var enableSearch = request["EnableSearch"];
+        if (enableSearch != null && IsQwen35OmniModel(request.Model))
+            dic["enable_search"] = enableSearch.ToBoolean();
+
+        return dic;
+    }
+
+    /// <summary>Omni 模型流式对话。走兼容模式端点，强制 stream=true，使用 OpenAI 协议解析 SSE 块</summary>
+    private async IAsyncEnumerable<IChatResponse> ChatOmniStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        request.Stream = true;
+        var body = BuildOmniBody(request);
+        var url = CombineApiUrl(CompatibleEndpoint, "/v1/chat/completions");
+
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (!reader.EndOfStream)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            if (line == null) break;
+            if (!line.StartsWith("data:")) continue;
+
+            var data = line.Substring(5).Trim();
+            if (data.Length == 0 || data == "[DONE]") continue;
+
+            IChatResponse? chunk = null;
+            try { chunk = base.ParseChunk(data, request, null); } catch { }
+
+            if (chunk != null)
+            {
+                chunk.Model ??= request.Model;
+                yield return chunk;
+            }
+        }
+    }
+
+    /// <summary>Omni 模型非流式对话。内部通过 <see cref="ChatOmniStreamAsync"/> 流式收集后聚合返回</summary>
+    private async Task<IChatResponse> ChatOmniAggregateAsync(IChatRequest request, CancellationToken cancellationToken)
+    {
+        var sb = Pool.StringBuilder.Get();
+        var reasoningSb = Pool.StringBuilder.Get();
+        IChatResponse? last = null;
+
+        await foreach (var chunk in ChatOmniStreamAsync(request, cancellationToken).ConfigureAwait(false))
+        {
+            last = chunk;
+            foreach (var choice in chunk.Messages ?? [])
+            {
+                if (choice.Delta?.Content is String text && text.Length > 0)
+                    sb.Append(text);
+                if (choice.Delta?.ReasoningContent is String reasoning && reasoning.Length > 0)
+                    reasoningSb.Append(reasoning);
+            }
+        }
+
+        var content = sb.Return(true);
+        var reasoningContent = reasoningSb.Return(true);
+
+        return new ChatCompletionResponse
+        {
+            Object = "chat.completion",
+            Id = last?.Id,
+            Model = last?.Model ?? request.Model,
+            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Choices =
+            [
+                new CompletionChoice
+                {
+                    Index = 0,
+                    FinishReason = "stop",
+                    Message = new ChatMessage { Role = "assistant", Content = content, ReasoningContent = reasoningContent.Length > 0 ? reasoningContent : null },
+                }
+            ],
+            Usage = last?.Usage is { } u ? new CompletionUsage { PromptTokens = u.InputTokens, CompletionTokens = u.OutputTokens, TotalTokens = u.TotalTokens } : null,
+        };
+    }
+
     /// <summary>非流式对话。原生协议走 DashScope 格式，兼容模式委托基类</summary>
     protected override async Task<IChatResponse> ChatAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
+        // Omni 全模态模型强制走兼容模式（API 要求 stream=true）；内部流式聚合为非流式响应
+        if (IsOmniModel(request.Model ?? _options.Model))
+            return await ChatOmniAggregateAsync(request, cancellationToken).ConfigureAwait(false);
+
         if (!IsNativeProtocol)
             return await base.ChatAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -104,6 +238,14 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <summary>流式对话。原生协议走 DashScope SSE 格式，兼容模式委托基类</summary>
     protected override async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        // Omni 全模态模型强制走兼容模式流式接口
+        if (IsOmniModel(request.Model ?? _options.Model))
+        {
+            await foreach (var chunk in ChatOmniStreamAsync(request, cancellationToken).ConfigureAwait(false))
+                yield return chunk;
+            yield break;
+        }
+
         if (!IsNativeProtocol)
         {
             await foreach (var chunk in base.ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))
@@ -601,10 +743,12 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
     private static Boolean IsMultimodalModel(String? model)
     {
         if (String.IsNullOrEmpty(model)) return false;
+        // Omni 全模态模型不走原生多模态端点，走兼容模式
+        if (IsOmniModel(model)) return false;
         if (model.IndexOf("-vl", StringComparison.OrdinalIgnoreCase) >= 0) return true;
         if (model.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase)) return true;
         if (model.StartsWithIgnoreCase("qwen3.5-", "qwen3.")) return true;
-        // 音频理解模型（qwen-audio-chat、qwen-audio-turbo、qwen2-audio-instruct 等）使用多模态端点
+        // 音频理解模型（qwen-audio-chat、qwen2-audio-instruct 等）使用多模态端点
         if (model.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase)) return true;
         if (model.StartsWith("qwen2-audio", StringComparison.OrdinalIgnoreCase)) return true;
         return false;
@@ -723,7 +867,14 @@ public class DashScopeChatClient : OpenAIChatClient, IRerankClient
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(false, false, false, false, true, false, 0);
 
-        // 全模态模型 omni：视觉+音频输入输出，使用专用 API，不支持标准函数调用
+        // === 全模态 Omni 模型 ===
+        // qwen3.5-omni-* 系列：视觉+音频，支持联网搜索，不支持思考和函数调用
+        if (modelId.StartsWith("qwen3.5-omni", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, false, true, true, false, false, 131_072);
+        // qwen3-omni-* 系列（如 qwen3-omni-flash）：视觉+音频+思考模式，不支持函数调用
+        if (modelId.StartsWith("qwen3-omni", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(true, false, true, true, false, false, 131_072);
+        // 旧版 Omni 模型（如 qwen-omni-turbo）：视觉+音频，不支持思考和函数调用
         if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(false, false, true, true, false, false, 32_768);
 

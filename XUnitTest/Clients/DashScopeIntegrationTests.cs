@@ -1516,13 +1516,13 @@ public class DashScopeIntegrationTests
     #region 音频输入（Audio Input）
 
     [Fact]
-    [DisplayName("音频_qwen-audio-turbo_识别公网音频内容")]
-    public async Task ChatAsync_AudioInput_QwenAudioTurbo_ReturnsTranscription()
+    [DisplayName("音频_qwen-omni-turbo_识别公网音频内容")]
+    public async Task ChatAsync_AudioInput_QwenOmniTurbo_ReturnsTranscription()
     {
         // DashScope 官方示例音频：https://dashscope.oss-cn-beijing.aliyuncs.com/audios/welcome.mp3
         var request = new ChatRequest
         {
-            Model = "qwen-audio-turbo",
+            Model = "qwen-omni-turbo",
             Messages =
             [
                 new ChatMessage
@@ -1548,12 +1548,12 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
-    [DisplayName("音频_qwen2-audio-instruct_流式音频理解")]
+    [DisplayName("音频_qwen-omni-turbo_流式音频理解")]
     public async Task ChatStreamAsync_AudioInput_Qwen2Audio_StreamsResponse()
     {
         var request = new ChatRequest
         {
-            Model = "qwen2-audio-instruct",
+            Model = "qwen-omni-turbo",
             Messages =
             [
                 new ChatMessage

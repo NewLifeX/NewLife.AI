@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -489,7 +489,7 @@ public class AiProviderTests
     [InlineData("text-embedding-v4", false, false, false, false, false, false)]
     [InlineData("cosyvoice-v3-plus", false, false, false, false, false, false)]
     [InlineData("fun-asr-realtime", false, false, false, false, false, false)]
-    [InlineData("qwen-audio-turbo", false, false, false, false, false, false)]
+    [InlineData("qwen-omni-turbo", false, false, false, false, false, false)]
     // omni 全模态
     [InlineData("qwen3.5-omni-plus", false, false, true, true, false, false)]
     [InlineData("qwen3-omni-flash", false, false, true, true, false, false)]

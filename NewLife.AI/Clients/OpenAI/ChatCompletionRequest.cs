@@ -263,6 +263,22 @@ public class ChatCompletionRequest : IChatRequest
                 if (img.Detail != null) imgDic["detail"] = img.Detail;
                 parts.Add(new Dictionary<String, Object> { ["type"] = "image_url", ["image_url"] = imgDic });
             }
+            else if (item is AudioContent audio)
+            {
+                // Omni 模型音频输入格式：{"type":"input_audio","input_audio":{"data":"...","format":"wav"}}
+                String audioData;
+                if (audio.Data != null && audio.Data.Length > 0)
+                    audioData = Convert.ToBase64String(audio.Data);
+                else
+                    audioData = audio.Uri ?? "";
+
+                // MediaType 如 "audio/wav" → "wav"；MediaType 为空则默认 "wav"
+                var mediaType = audio.MediaType ?? "audio/wav";
+                var format = mediaType.Contains('/') ? mediaType.Split('/')[^1] : mediaType;
+
+                var audioDic = new Dictionary<String, Object> { ["data"] = audioData, ["format"] = format };
+                parts.Add(new Dictionary<String, Object> { ["type"] = "input_audio", ["input_audio"] = audioDic });
+            }
         }
         return parts;
     }
