@@ -1,9 +1,6 @@
-using NewLife.AI.Clients;
+﻿using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Entity;
 using NewLife.Log;
 using XCode.Membership;
 using ILog = NewLife.Log.ILog;
