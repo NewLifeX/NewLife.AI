@@ -50,4 +50,9 @@ public interface IMessageFlow
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>
     Task StopGenerateAsync(Int64 messageId, CancellationToken cancellationToken);
+
+    /// <summary>获取后台生成任务状态。用户切换会话再切回时，可获取后台已生成的内容</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <returns>后台任务状态信息，不存在返回 null</returns>
+    BackgroundTask? GetBackgroundTask(Int64 messageId);
 }

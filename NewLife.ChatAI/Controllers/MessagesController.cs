@@ -1,13 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Models;
-using NewLife.ChatAI.Services;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>消息控制器</summary>
 [Route("api")]
-public class MessagesController(ChatApplicationService chatService, MessageService messageService, MessageRateLimiter rateLimiter, ITracer tracer, ChatSetting chatSetting) : ChatApiControllerBase
+public class MessagesController(ChatApplicationService chatService, IMessageFlow messageService, MessageRateLimiter rateLimiter, ITracer tracer, ChatSetting chatSetting) : ChatApiControllerBase
 {
     /// <summary>全文搜索消息内容。在当前用户的所有会话中按关键词检索</summary>
     /// <param name="keyword">搜索关键词</param>

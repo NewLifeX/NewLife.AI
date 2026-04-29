@@ -33,7 +33,7 @@ public static class ChatAIExtensions
     public static IServiceCollection AddChatAI(this IServiceCollection services)
     {
         services.AddScoped<ChatApplicationService>();
-        services.AddScoped<MessageService>();
+        services.AddScoped<IMessageFlow, MessageService>();
         services.AddSingleton<IChatSetting>(_ => ChatSetting.Current);
         services.AddSingleton(_ => ChatSetting.Current);
         services.AddSingleton<SkillService>();
