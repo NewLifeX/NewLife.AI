@@ -6,6 +6,7 @@ using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Filters;
 using NewLife.Collections;
 using NewLife.Serialization;
 using XCode.Membership;
@@ -31,10 +32,14 @@ public enum GatewayProtocol
 /// <remarks>实例化网关服务</remarks>
 /// <param name="usageService">用量统计服务</param>
 /// <param name="modelService">模型服务。统一负责模型可用性判断与 IChatClient 创建</param>
+/// <param name="chatFilters">对话过滤器链（日志、监控等横切关注点；ConversationId=0 时过滤器应 graceful no-op）</param>
 /// <param name="log">日志</param>
-public class GatewayService(UsageService? usageService, ModelService modelService, ILog log)
+public class GatewayService(UsageService? usageService, ModelService modelService, IEnumerable<IChatFilter>? chatFilters, ILog log)
 {
     #region 属性
+    /// <summary>对话过滤器链（日志、监控等横切关注点），由 DI 解析</summary>
+    private readonly IReadOnlyList<IChatFilter> _chatFilters = chatFilters?.ToArray() ?? [];
+
     /// <summary>上游重试最大次数</summary>
     private const Int32 MaxRetryCount = 5;
 
@@ -193,9 +198,15 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
     /// <returns></returns>
     public async Task<ChatResponse> ChatAsync(IChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
     {
-        using var client = modelService.CreateClient(config);
-        if (client == null)
+        using var rawClient = modelService.CreateClient(config);
+        if (rawClient == null)
             throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
+
+        // 应用 IChatFilter 链（通用横切：日志、监控等；网关场景 ConversationId=0，filter 实现需自行处理）
+        var clientBuilder = rawClient.AsBuilder();
+        foreach (var f in _chatFilters)
+            clientBuilder = clientBuilder.UseFilters(f);
+        using var client = clientBuilder.Build();
 
         ChatResponse? response = null;
         for (var i = 0; i <= MaxRetryCount; i++)
@@ -233,9 +244,15 @@ public class GatewayService(UsageService? usageService, ModelService modelServic
     /// <returns></returns>
     public async IAsyncEnumerable<ChatResponse> ChatStreamAsync(IChatRequest request, ModelConfig config, AppKey? appKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using var streamClient = modelService.CreateClient(config);
-        if (streamClient == null)
+        using var rawStreamClient = modelService.CreateClient(config);
+        if (rawStreamClient == null)
             throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
+
+        // 应用 IChatFilter 链
+        var streamBuilder = rawStreamClient.AsBuilder();
+        foreach (var f in _chatFilters)
+            streamBuilder = streamBuilder.UseFilters(f);
+        using var streamClient = streamBuilder.Build();
 
         IAsyncEnumerable<IChatResponse>? stream = null;
         for (var i = 0; i <= MaxRetryCount; i++)

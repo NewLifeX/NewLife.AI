@@ -1,6 +1,4 @@
 ﻿using NewLife.AI.Filters;
-using NewLife.AI.Models;
-using NewLife.ChatAI.Services;
 using NewLife.Log;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
 

@@ -55,8 +55,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
     #region 生成入口
 
-    /// <summary>非流式重新生成 AI 回复。构建上下文后通过 <see cref="IChatHandler"/> 链流式执行，
-    /// 在本函数内部聚合为完整响应后写回消息记录</summary>
+    /// <summary>非流式重新生成 AI 回复。构建上下文后通过非流式 Handler 三段式调用链执行（OnBefore → InvokeLlmDirectAsync → OnAfter），
+    /// 结果直接写入上下文收集器后由事后 Handler 持久化。<see cref="IChatInterceptor"/> 仅适用于流式路径，此方法不经过拦截器洋葱</summary>
     /// <param name="messageId">消息编号（必须为 AI 回复）</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -73,14 +73,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             // Step2: 构建对话上下文
             await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
 
-            // Step3: 通过 Handler 三段式调用链执行（事件透传到 flow 收集器；持久化由事后 Handler 完成）
-            var sw = Stopwatch.StartNew();
-            await foreach (var _ in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
-            {
-                // 仅遍历以驱动事件收集；实际收集由 CoreStreamAsync 内部完成
-            }
-            sw.Stop();
-            flow.AssistantMessage.ElapsedMs = (Int32)sw.ElapsedMilliseconds;
+            // Step3: 通过非流式 Handler 三段式调用链执行（持久化由事后 Handler 完成）
+            await InvokeNonStreamAsync(flow, cancellationToken).ConfigureAwait(false);
+
+            flow.AssistantMessage.ElapsedMs = (Int32)(flow.Usage?.ElapsedMs ?? 0);
 
             return ToMessageDto(flow.AssistantMessage);
         }
@@ -566,7 +562,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <returns>事件流</returns>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> InvokeLlmAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        using var span = tracer?.NewSpan("flow:InvokeLlm", new { messages = context.ContextMessages.Count });
+        using var span = tracer?.NewSpan("ai:flowInvokeLlm", new { messages = context.ContextMessages.Count });
 
         var contextMessages = context.ContextMessages;
         var modelConfig = (ModelConfig)context.ModelConfig;
@@ -680,6 +676,110 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         context.FinishReason = lastFinishReason;
 
         yield return ChatStreamEvent.MessageDone(lastUsage, finishReason: lastFinishReason);
+    }
+
+    /// <summary>非流式 LLM 调用。链路最内层节点（非流式路径专用）：组装过滤器链 + 工具装配 + 单次 GetResponseAsync。
+    /// <see cref="IChatInterceptor"/> 洋葱仅适用于流式路径，此方法不经过拦截器；
+    /// <see cref="IChatFilter"/> 链（<see cref="ChatFilters"/>）仍通过 <c>UseFilters</c> 正常生效</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    protected virtual async Task InvokeLlmDirectAsync(IChatContext context, CancellationToken cancellationToken)
+    {
+        using var span = tracer?.NewSpan("ai:flowInvokeLlmDirect", new { messages = context.ContextMessages.Count });
+
+        var contextMessages = context.ContextMessages;
+        var modelConfig = (ModelConfig)context.ModelConfig;
+
+        using var rawClient = modelService.CreateClient(modelConfig);
+        if (rawClient == null)
+        {
+            context.HasError = true;
+            return;
+        }
+
+        var clientBuilder = rawClient.AsBuilder();
+        foreach (var filter in ChatFilters)
+            clientBuilder = clientBuilder.UseFilters(filter);
+        var providers = BuildScopedProviders(context.SelectedTools).ToArray();
+        ApplyTools(ref clientBuilder, contextMessages, providers);
+
+        foreach (var p in providers)
+            foreach (var t in p.GetTools())
+                if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
+
+        var userId = context.UserId > 0 ? context.UserId.ToString() : null;
+        var conversationId = context.Conversation?.Id > 0 ? context.Conversation.Id.ToString() : null;
+        var chatOptions = new ChatOptions
+        {
+            Model = modelConfig.Code,
+            EnableThinking = context.ThinkingMode switch
+            {
+                ThinkingMode.Think => true,
+                ThinkingMode.Fast => false,
+                _ => modelConfig.SupportThinking ? true : null,
+            },
+            UserId = userId,
+            ConversationId = conversationId,
+        };
+        if (context.Items.Count > 0) chatOptions.Items = context.Items;
+        ApplyResponseStyle(chatOptions, userId);
+
+        context.MaxTokens = chatOptions.MaxTokens ?? 0;
+        context.Temperature = chatOptions.Temperature;
+
+        using var directClient = clientBuilder.Build();
+
+        var sw = Stopwatch.StartNew();
+        var response = ChatResponse.From(await directClient.GetResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false));
+        sw.Stop();
+
+        // 提取系统提示词（首个 system 消息）
+        context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+        context.OnSystemReady?.Invoke(context.SystemPrompt!);
+
+        // 写入正文
+        var msg = response.Messages?.FirstOrDefault()?.Message;
+        if (msg != null)
+        {
+            if (!String.IsNullOrEmpty(msg.ReasoningContent))
+                context.ThinkingBuilder.Append(msg.ReasoningContent);
+            var text = msg.Content as String;
+            if (!String.IsNullOrEmpty(text))
+                context.ContentBuilder.Append(text);
+        }
+
+        // 写入用量
+        var usage = response.Usage ?? new UsageDetails();
+        usage.ElapsedMs = (Int32)sw.ElapsedMilliseconds;
+        context.Usage = usage;
+
+        context.FinishReason = response.Messages?.FirstOrDefault()?.FinishReason?.ToApiString();
+    }
+
+    /// <summary>非流式 Handler 三段式调用链：OnBefore（注册顺序） → <see cref="InvokeLlmDirectAsync"/> → OnAfter（注册倒序）。
+    /// 与 <see cref="InvokeChainAsync"/> 的区别：核心阶段调用非流式 LLM，<see cref="IChatInterceptor"/> 不参与</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    protected virtual async Task InvokeNonStreamAsync(IChatContext context, CancellationToken cancellationToken)
+    {
+        var handlers = Handlers;
+        var lastBeforeIndex = -1;
+
+        // 1. OnBefore 正序
+        for (var i = 0; i < handlers.Count; i++)
+        {
+            await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+            lastBeforeIndex = i;
+            if (context.Cancel) break;
+        }
+
+        // 2. 核心阶段（短路时跳过）
+        if (!context.Cancel)
+            await InvokeLlmDirectAsync(context, cancellationToken).ConfigureAwait(false);
+
+        // 3. OnAfter 倒序（已经过的 Handler）
+        for (var i = lastBeforeIndex; i >= 0; i--)
+            await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>将工具提供者应用到客户端构建器。派生类可覆盖以实现渐进式工具发现、结果截断等策略</summary>
@@ -894,13 +994,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
 
         if (parts.Count == 0) return null;
-        span?.AppendTag(parts.Count);
+        span?.AppendTag(null!, parts.Count);
 
-        return new AiChatMessage
-        {
-            Role = "system",
-            Content = String.Join("\n\n", parts),
-        };
+        return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
     }
 
     /// <summary>将用户消息的附件与文本内容组合为多模态消息。基类为**降级实现**：仅保留文本内容，

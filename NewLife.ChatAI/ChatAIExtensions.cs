@@ -4,13 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using NewLife.AI.Filters;
-using NewLife.AI.Services;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Entity;
-using NewLife.ChatAI;
 using NewLife.ChatAI.Filters;
-using NewLife.Cube.Extensions;
+using NewLife.ChatAI.Handlers;
 using NewLife.ChatAI.Tools;
+using NewLife.Cube.Extensions;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI;
 
@@ -36,7 +35,7 @@ public static class ChatAIExtensions
         services.AddScoped<ChatApplicationService>();
         services.AddScoped<MessageService>();
         services.AddSingleton<IChatSetting>(_ => ChatSetting.Current);
-        services.AddSingleton<ChatSetting>(_ => ChatSetting.Current);
+        services.AddSingleton(_ => ChatSetting.Current);
         services.AddSingleton<SkillService>();
         services.AddSingleton<UsageService>();
         services.AddSingleton<ModelService>();
@@ -45,13 +44,12 @@ public static class ChatAIExtensions
         // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 倒序）
         // 派生项目（如 StarChat）可通过 services.RemoveAll<IChatHandler>() 重排，或针对特定 Handler 实现替换
         // 顺序意义：见 Doc/IChatHandler-架构.md
-        services.AddSingleton<IChatHandler, Handlers.SkillActivationHandler>();
-        services.AddSingleton<IChatHandler, Handlers.SuggestedCacheHandler>();
-        services.AddSingleton<IChatHandler, Handlers.SystemPromptHandler>();
-        services.AddSingleton<IChatHandler, Handlers.ConversationStatsHandler>();
-        services.AddSingleton<IChatHandler, Handlers.UsageRecordHandler>();
-        services.AddSingleton<IChatHandler, Handlers.TitleGenerationHandler>();
-        services.AddSingleton<IChatHandler, Handlers.PersistMessageHandler>();
+        services.AddSingleton<IChatHandler, SkillActivationHandler>();
+        services.AddSingleton<IChatHandler, SuggestedCacheHandler>();
+        services.AddSingleton<IChatHandler, ConversationStatsHandler>();
+        services.AddSingleton<IChatHandler, UsageRecordHandler>();
+        services.AddSingleton<IChatHandler, TitleGenerationHandler>();
+        services.AddSingleton<IChatHandler, PersistMessageHandler>();
 
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);
@@ -83,7 +81,6 @@ public static class ChatAIExtensions
         services.AddSingleton<MemoryService>();
         services.AddSingleton<ConversationAnalysisService>();
         services.AddSingleton<IChatFilter, LearningFilter>();
-        services.AddHostedService<DataPreloadService>();
         services.AddHttpClient("McpClient");
 
         // 消息频率限制器
@@ -96,9 +93,11 @@ public static class ChatAIExtensions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             };
-            NewLife.Serialization.SystemJson.Apply(defaultJsonOptions, true);
+            SystemJson.Apply(defaultJsonOptions, true);
             options.InputFormatters.Insert(0, new GatewayJsonInputFormatter(defaultJsonOptions));
         });
+
+        services.AddHostedService<DataPreloadService>();
 
         return services;
     }
