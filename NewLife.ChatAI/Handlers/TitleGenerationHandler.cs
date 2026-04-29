@@ -1,6 +1,7 @@
 using NewLife.AI.Clients;
 using NewLife.AI.Services;
 using NewLife.ChatAI.Services;
+using NewLife.Collections;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;
@@ -43,7 +44,7 @@ public class TitleGenerationHandler(
         if (conversation.MessageCount > 0) return Task.CompletedTask;
 
         var userContent = flow.UserMessage?.Content;
-        var titleText = MessageFlow.ExtractTitleText(userContent);
+        var titleText = ExtractTitleText(userContent);
         if (titleText.IsNullOrEmpty() && !flow.UserMessage?.Attachments.IsNullOrEmpty() == true)
             titleText = "[图片] 对话";
 
@@ -63,7 +64,7 @@ public class TitleGenerationHandler(
         var conversation = Conversation.FindById(conversationId);
         if (conversation == null) return null;
 
-        userMessage = MessageFlow.ExtractTitleText(userMessage) ?? userMessage;
+        userMessage = ExtractTitleText(userMessage) ?? userMessage;
         var cleanMsg = userMessage.Replace("\n", " ").Replace("\r", "").Trim();
         if (cleanMsg.Length <= 16)
         {
@@ -117,5 +118,34 @@ public class TitleGenerationHandler(
             conversation.Update();
         }
         return fallbackTitle;
+    }
+
+    /// <summary>从用户消息中提取纯文本，支持 JSON 编码的多模态内容数组。用于标题生成等场景</summary>
+    /// <param name="userMessage">用户消息文本，可能是纯文本或 JSON 多模态内容数组</param>
+    /// <returns>提取到的纯文本，无文本时返回 null</returns>
+    public static String? ExtractTitleText(String? userMessage)
+    {
+        if (userMessage.IsNullOrEmpty()) return null;
+
+        // 快速判断：不以 [ 开头则视为普通文本
+        if (!userMessage.StartsWith('[')) return userMessage;
+
+        // 尝试按 OpenAI 多模态格式解析 [{"type":"text","text":"..."},...] 提取文本片段
+        var contents = AiChatMessage.ParseMultimodalContent(userMessage);
+        if (contents == null || contents.Count == 0) return userMessage;
+
+        var sb = Pool.StringBuilder.Get();
+        foreach (var item in contents)
+        {
+            if (item is TextContent text && !String.IsNullOrEmpty(text.Text))
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(text.Text);
+            }
+        }
+        var result = sb.Return(true);
+
+        // 有文本则返回；全是图片等非文本内容时返回 null
+        return !result.IsNullOrEmpty() ? result : null;
     }
 }

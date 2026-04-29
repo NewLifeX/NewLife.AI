@@ -1,11 +1,8 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using NewLife.AI.Clients;
 using NewLife.AI.Filters;
-using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using NewLife.ChatAI.Tools;
 using NewLife.Collections;
@@ -36,12 +33,11 @@ namespace NewLife.ChatAI.Services;
 /// <remarks>实例化消息流基类</remarks>
 /// <param name="modelService">模型服务</param>
 /// <param name="backgroundService">后台生成服务</param>
-/// <param name="usageService">用量统计服务</param>
 /// <param name="setting">对话配置</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
 /// <param name="services">服务提供者，用于解析 <see cref="IChatHandler"/> 链；为 null 时使用空链路（仅用于测试场景）</param>
-public class MessageFlow(ModelService modelService, BackgroundGenerationService? backgroundService, UsageService? usageService, IChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null) : IMessageFlow
+public class MessageFlow(ModelService modelService, BackgroundGenerationService? backgroundService, IChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null) : IMessageFlow
 {
     #region 字段
     /// <summary>对话处理器链（DI 注册的 <see cref="IChatHandler"/>，<b>按注册顺序即外→内顺序</b>）。
@@ -54,8 +50,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <summary>聊天过滤器链（日志、学习、Agent 触发等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
     protected readonly IReadOnlyList<IChatFilter> ChatFilters = services?.GetServices<IChatFilter>().ToArray() ?? [];
 
-    /// <summary>用量统计服务（供派生类在自定义生成路径上记录用量）。可为空</summary>
-    protected readonly UsageService? UsageService = usageService;
+
     #endregion
 
     #region 生成入口
@@ -247,6 +242,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         {
             if (!sysContent.IsNullOrEmpty())
             {
+                // 借用用户消息的思考字段来保存系统提示词内容
                 userMsg.ThinkingContent = sysContent;
                 userMsg.Update();
             }
@@ -286,109 +282,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="messageId">消息编号</param>
     /// <returns>后台任务状态信息，不存在返回 null</returns>
     public virtual BackgroundTask? GetBackgroundTask(Int64 messageId) => backgroundService?.GetTask(messageId);
-
-    /// <summary>异步生成会话标题。根据用户首条消息内容，调用模型生成简短标题</summary>
-    /// <param name="conversationId">会话编号</param>
-    /// <param name="userMessage">用户首条消息内容（已提取纯文本）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns></returns>
-    public virtual async Task<String?> GenerateTitleAsync(Int64 conversationId, String userMessage, CancellationToken cancellationToken)
-    {
-        var conversation = Conversation.FindById(conversationId);
-        if (conversation == null) return null;
-
-        // 防御：若调用方未预处理，再做一次多模态文本提取
-        userMessage = ExtractTitleText(userMessage) ?? userMessage;
-
-        // 短文本无需调用模型，直接用作标题
-        var cleanMsg = userMessage.Replace("\n", " ").Replace("\r", "").Trim();
-        if (cleanMsg.Length <= 16)
-        {
-            if (!String.IsNullOrWhiteSpace(cleanMsg) && cleanMsg != conversation.Title)
-            {
-                conversation.Title = cleanMsg;
-                conversation.Update();
-            }
-            return cleanMsg;
-        }
-
-        using var span = tracer?.NewSpan("ai:GenerateTitle");
-
-        // 尝试通过模型生成标题
-        var modelConfig = modelService.ResolveModel(conversation.ModelId);
-        if (modelConfig != null)
-        {
-            using var titleClient = modelService.CreateClient(modelConfig);
-            if (titleClient != null)
-            {
-                try
-                {
-                    var prompt = "请用16个字以内为以下对话生成一个简短标题，只输出标题文字，不要加任何标点和引号：";
-                    var title = await titleClient.ChatAsync(
-                        $"{prompt}\n{userMessage}",
-                        new ChatOptions { MaxTokens = 30, Temperature = 0.3 },
-                        cancellationToken).ConfigureAwait(false);
-
-                    if (!String.IsNullOrWhiteSpace(title))
-                    {
-                        title = title.Trim().Trim('"', '\u201c', '\u201d', '\'', '\u300a', '\u300b');
-                        if (title.Length > 30) title = title[..30];
-                        span?.AppendTag(title!);
-
-                        conversation.Title = title;
-                        conversation.Update();
-                        return title;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    span?.SetError(ex);
-                    log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
-                }
-            }
-        }
-
-        // 回退：截取前16个字符
-        var fallbackTitle = userMessage.Length > 16 ? userMessage[..16] : userMessage;
-        fallbackTitle = fallbackTitle.Replace("\n", " ").Replace("\r", "").Trim();
-
-        if (!String.IsNullOrWhiteSpace(fallbackTitle) && fallbackTitle != conversation.Title)
-        {
-            conversation.Title = fallbackTitle;
-            conversation.Update();
-        }
-
-        return fallbackTitle;
-    }
-
-    /// <summary>从用户消息中提取纯文本，支持 JSON 编码的多模态内容数组。用于标题生成等场景</summary>
-    /// <param name="userMessage">用户消息文本，可能是纯文本或 JSON 多模态内容数组</param>
-    /// <returns>提取到的纯文本，无文本时返回 null</returns>
-    public static String? ExtractTitleText(String? userMessage)
-    {
-        if (userMessage.IsNullOrEmpty()) return null;
-
-        // 快速判断：不以 [ 开头则视为普通文本
-        if (!userMessage.StartsWith('[')) return userMessage;
-
-        // 尝试按 OpenAI 多模态格式解析 [{"type":"text","text":"..."},...]，提取文本片段
-        var contents = AiChatMessage.ParseMultimodalContent(userMessage);
-        if (contents == null || contents.Count == 0) return userMessage;
-
-        var sb = Pool.StringBuilder.Get();
-        foreach (var item in contents)
-        {
-            if (item is TextContent text && !String.IsNullOrEmpty(text.Text))
-            {
-                if (sb.Length > 0) sb.Append(' ');
-                sb.Append(text.Text);
-            }
-        }
-        var result = sb.Return(true);
-
-        // 有文本则返回；全是图片等非文本内容时返回 "[图片] 对话"
-        return !result.IsNullOrEmpty() ? result : null;
-    }
 
     #endregion
 
@@ -567,7 +460,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>事件流</returns>
-    protected virtual IAsyncEnumerable<ChatStreamEvent> CoreStreamAsync(IChatContext context, CancellationToken cancellationToken)
+    protected virtual async IAsyncEnumerable<ChatStreamEvent> CoreStreamAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // 仅过滤实现 IChatInterceptor 的 Handler；DI 单注册（IChatHandler）即可同时获得两面
         var interceptors = Handlers.OfType<IChatInterceptor>().ToArray();
@@ -583,17 +476,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             next = ct => current.InvokeAsync(context, captured, ct);
         }
 
-        return CollectAndYieldAsync(context, next(cancellationToken), cancellationToken);
-    }
-
-    /// <summary>包装核心事件流：将事件透传给调用方，同时写入上下文的 ContentBuilder / ThinkingBuilder / ToolCalls / Usage 等收集器，
-    /// 供后续 OnAfter 阶段读取最终结果（持久化、统计、配额扣减等）。包含 ArtifactDetector 副产物事件转换</summary>
-    /// <param name="context">对话上下文</param>
-    /// <param name="source">原始核心事件流</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>事件流</returns>
-    protected async IAsyncEnumerable<ChatStreamEvent> CollectAndYieldAsync(IChatContext context, IAsyncEnumerable<ChatStreamEvent> source, [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
+        var source = next(cancellationToken);
         var artifactDetector = new ArtifactDetector();
         var contentBuilder = context.ContentBuilder;
         var thinkingBuilder = context.ThinkingBuilder;
@@ -1036,23 +919,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (!message.Role.EqualIgnoreCase("assistant")) return false;
 
         return message.Content.IsNullOrEmpty() && message.ToolCalls.IsNullOrEmpty();
-    }
-
-    /// <summary>解析附件ID列表 JSON。兼容字符串数组和整数数组两种格式</summary>
-    /// <param name="json">附件ID列表 JSON</param>
-    /// <returns>ID 列表，解析失败返回 null</returns>
-    protected static IList<Int64>? ParseAttachmentIds(String json)
-    {
-        // 优先尝试 Int64 数组
-        var ids = json.ToJsonEntity<List<Int64>>();
-        if (ids != null && ids.Count > 0 && ids[0] != 0) return ids;
-
-        // 前端 attachmentIds.map(String) 产生字符串数组 ["123","456"]
-        var strIds = json.ToJsonEntity<List<String>>();
-        if (strIds != null && strIds.Count > 0)
-            return strIds.Select(s => s.ToLong()).Where(v => v > 0).ToList();
-
-        return null;
     }
 
     #endregion
