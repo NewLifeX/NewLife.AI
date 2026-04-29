@@ -1,7 +1,5 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Entity;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Services;
@@ -381,10 +379,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         var skill = Skill.FindByCode(name);
         if (skill != null) return skill;
 
-        if (Skill.Meta.Session.Count < 1000)
-            return Skill.Meta.Cache.Find(e => e.Name == name);
-
-        return Skill.Find(Skill._.Name == name);
+        return Skill.FindByName(name);
     }
     #endregion
 }
