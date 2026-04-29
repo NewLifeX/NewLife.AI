@@ -90,6 +90,8 @@ public class ChatCompletionResponse : IChatResponse
                     InputTokens = Usage.PromptTokens,
                     OutputTokens = Usage.CompletionTokens,
                     TotalTokens = Usage.TotalTokens,
+                    CachedInputTokens = Usage.PromptTokensDetails?.CachedTokens ?? 0,
+                    CacheCreationTokens = Usage.PromptTokensDetails?.CacheCreationInputTokens ?? 0,
                 };
             }
             return _usageDetails;
@@ -147,6 +149,8 @@ public class ChatCompletionResponse : IChatResponse
                 InputTokens = Usage.PromptTokens,
                 OutputTokens = Usage.CompletionTokens,
                 TotalTokens = Usage.TotalTokens,
+                CachedInputTokens = Usage.PromptTokensDetails?.CachedTokens ?? 0,
+                CacheCreationTokens = Usage.PromptTokensDetails?.CacheCreationInputTokens ?? 0,
             };
         }
 
@@ -251,6 +255,9 @@ public class CompletionUsage
     /// <summary>总令牌数</summary>
     public Int32 TotalTokens { get; set; }
 
+    /// <summary>提示令牌详细信息。含缓存命中与缓存创建 Token 数</summary>
+    public PromptTokensDetails? PromptTokensDetails { get; set; }
+
     /// <summary>从内部用量统计转换</summary>
     /// <param name="usage">内部用量统计</param>
     /// <returns>OpenAI 格式用量</returns>
@@ -260,4 +267,14 @@ public class CompletionUsage
         CompletionTokens = usage.OutputTokens,
         TotalTokens = usage.TotalTokens,
     };
+}
+
+/// <summary>提示令牌详细信息。包含上下文缓存相关 Token 数</summary>
+public class PromptTokensDetails
+{
+    /// <summary>命中缓存的 Token 数（隐式缓存或显式缓存命中时）</summary>
+    public Int32 CachedTokens { get; set; }
+
+    /// <summary>创建显式缓存消耗的额外 Token 数（首次命中缓存标记时，按标准价格 125% 计费）</summary>
+    public Int32 CacheCreationInputTokens { get; set; }
 }

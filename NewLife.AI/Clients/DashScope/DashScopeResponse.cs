@@ -345,6 +345,12 @@ public class DashScopeUsageData
     /// <summary>音频 Token 数</summary>
     public Int32 AudioTokens { get; set; }
 
+    /// <summary>命中缓存的输入 Token 数（隐式缓存或显式缓存命中时）</summary>
+    public Int32 CachedTokens { get; set; }
+
+    /// <summary>创建显式缓存消耗的 Token 数（首次命中缓存标记时）</summary>
+    public Int32 CacheCreationTokens { get; set; }
+
     /// <summary>转换为内部统一 UsageDetails</summary>
     /// <returns>等效的 UsageDetails 实例</returns>
     public UsageDetails ToUsageDetails() => new DashScopeUsage
@@ -355,5 +361,7 @@ public class DashScopeUsageData
         ImageTokens = ImageTokens,
         VideoTokens = VideoTokens,
         AudioTokens = AudioTokens,
+        CachedInputTokens = CachedTokens,
+        CacheCreationTokens = CacheCreationTokens,
     };
 }

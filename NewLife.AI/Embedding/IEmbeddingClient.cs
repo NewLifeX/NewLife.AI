@@ -30,7 +30,7 @@ public class EmbeddingClientMetadata
     public String? Endpoint { get; init; }
 
     /// <summary>默认模型编码</summary>
-    public String? DefaultModelId { get; init; }
+    public String? DefaultModel { get; init; }
 }
 
 /// <summary>嵌入请求。兼容 OpenAI Embeddings API</summary>

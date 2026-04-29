@@ -17,6 +17,10 @@ public class TextContent(String text) : AIContent
     /// <summary>文本内容</summary>
     public String Text { get; set; } = text;
 
+    /// <summary>上下文缓存控制。设为 <c>"ephemeral"</c> 启用显式缓存（DashScope / OpenAI 兼容模式）；null 表示不缓存</summary>
+    /// <remarks>最小可缓存 Token 数为 1024，有效期 5 分钟，单次请求最多 4 个标记。详见 https://help.aliyun.com/zh/model-studio/context-cache</remarks>
+    public String? CacheControl { get; set; }
+
     /// <summary>返回文本内容</summary>
     public override String ToString() => Text;
 }

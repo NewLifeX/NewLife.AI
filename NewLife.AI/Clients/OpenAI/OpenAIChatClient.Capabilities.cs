@@ -158,7 +158,7 @@ public partial class OpenAIChatClient
     {
         ProviderName = Name,
         Endpoint = _options.GetEndpoint(DefaultEndpoint),
-        DefaultModelId = _options.Model,
+        DefaultModel = _options.Model,
     };
 
     private OpenAiEmbeddingClient? _embeddingClient;

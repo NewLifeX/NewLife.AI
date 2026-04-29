@@ -138,8 +138,11 @@ public class UsageDetails
     /// <summary>总Token数</summary>
     public Int32 TotalTokens { get; set; }
 
-    /// <summary>缓存输入Token数</summary>
+    /// <summary>命中缓存的输入Token数（隐式缓存或显式缓存命中）</summary>
     public Int32 CachedInputTokens { get; set; }
+
+    /// <summary>创建显式缓存消耗的Token数（首次命中缓存标记时）</summary>
+    public Int32 CacheCreationTokens { get; set; }
 
     /// <summary>推理Token数</summary>
     public Int32 ReasoningTokens { get; set; }

@@ -241,7 +241,8 @@ public class ChatCompletionRequest : IChatRequest
     /// <returns>字符串（单一文本）或内容数组（多模态）</returns>
     public static Object BuildContent(IList<AIContent> contents)
     {
-        if (contents.Count == 1 && contents[0] is TextContent singleText)
+        // 单一纯文本且无缓存标记时直接返回字符串，省去数组封装
+        if (contents.Count == 1 && contents[0] is TextContent singleText && singleText.CacheControl.IsNullOrEmpty())
             return singleText.Text;
 
         var parts = new List<Object>(contents.Count);
@@ -249,7 +250,10 @@ public class ChatCompletionRequest : IChatRequest
         {
             if (item is TextContent text)
             {
-                parts.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = text.Text });
+                var textDic = new Dictionary<String, Object> { ["type"] = "text", ["text"] = text.Text };
+                if (!text.CacheControl.IsNullOrEmpty())
+                    textDic["cache_control"] = new Dictionary<String, Object> { ["type"] = text.CacheControl! };
+                parts.Add(textDic);
             }
             else if (item is ImageContent img)
             {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using NewLife.AI.Clients;
@@ -201,7 +201,7 @@ public class EmbeddingModelTests
         var opts = new AiClientOptions { ApiKey = "sk-test" };
         var client = new OpenAiEmbeddingClient("Test", "https://x.com", opts);
         // DefaultModelId 在 OpenAiEmbeddingClient 构造时不设置
-        Assert.Null(client.Metadata.DefaultModelId);
+        Assert.Null(client.Metadata.DefaultModel);
     }
 
     #endregion
