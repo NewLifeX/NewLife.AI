@@ -41,14 +41,15 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 {
     #region 字段
     /// <summary>对话处理器链（DI 注册的 <see cref="IChatHandler"/>，<b>按注册顺序即外→内顺序</b>）。
-    /// 为空时核心仍会执行（仅 LLM 调用，无任何事前/事后扩展）</summary>
-    protected readonly IReadOnlyList<IChatHandler> Handlers = services?.GetServices<IChatHandler>().ToArray() ?? [];
+    /// 为空时核心仍会执行（仅 LLM 调用，无任何事前/事后扩展）。
+    /// 派生类可在构造函数体内赋值，以注入专属 Handler 子集（如 GatewayMessageFlow）</summary>
+    protected IReadOnlyList<IChatHandler> Handlers = services?.GetServices<IChatHandler>().ToArray() ?? [];
 
     /// <summary>工具提供者集合（DbToolProvider / McpClientService 等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
-    protected readonly IReadOnlyList<IToolProvider> ToolProviders = services?.GetServices<IToolProvider>().ToArray() ?? [];
+    protected IReadOnlyList<IToolProvider> ToolProviders = services?.GetServices<IToolProvider>().ToArray() ?? [];
 
     /// <summary>聊天过滤器链（日志、学习、Agent 触发等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
-    protected readonly IReadOnlyList<IChatFilter> ChatFilters = services?.GetServices<IChatFilter>().ToArray() ?? [];
+    protected IReadOnlyList<IChatFilter> ChatFilters = services?.GetServices<IChatFilter>().ToArray() ?? [];
 
 
     #endregion
@@ -369,7 +370,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     {
         using var span = tracer?.NewSpan("ai:BuildContext");
 
-        var contextMessages = BuildContextMessages(flow.UserId, flow.Conversation.Id, currentContent, flow.ModelConfig);
+        var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
+        var history = LoadHistoryMessages(flow.Conversation.Id, maxRounds);
+        var contextMessages = BuildContextMessages(flow.UserId, flow.ModelConfig, history, currentContent);
         flow.ContextMessages = contextMessages;
         DefaultSpan.Current?.AppendTag(contextMessages.Join());
 
@@ -391,26 +394,74 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (beforeMessages.Count > maxCount)
             beforeMessages = beforeMessages.Skip(beforeMessages.Count - maxCount).ToList();
 
-        var contextMessages = new List<AiChatMessage>();
+        var contextMessages = BuildContextMessages(flow.UserId, flow.ModelConfig, beforeMessages);
+        flow.ContextMessages = contextMessages;
+        return Task.FromResult<IList<AiChatMessage>>(contextMessages);
+    }
 
-        // 注入系统提示词（技能提示词由管道注入）
-        var systemMsg = BuildSystemMessage(flow.UserId, flow.ModelConfig, beforeMessages.Count(e => e.Role == "user"));
-        if (systemMsg != null) contextMessages.Add(systemMsg);
+    /// <summary>构建上下文消息列表。注入系统提示词、展开 ToolCalls，并在历史消息较多时追加最新问题优先级提示</summary>
+    /// <param name="userId">当前用户编号</param>
+    /// <param name="modelConfig">模型配置（可选，用于注入模型级系统提示词）</param>
+    /// <param name="history">已按时间升序排列的历史消息列表</param>
+    /// <param name="currentContent">当前用户消息内容（有值且历史超过 4 条时追加优先级提示）</param>
+    /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
+    protected virtual IList<AiChatMessage> BuildContextMessages(Int32 userId, ModelConfig? modelConfig, IList<DbChatMessage> history, String? currentContent = null)
+    {
+        var messages = new List<AiChatMessage>();
 
-        foreach (var msg in beforeMessages)
+        // 注入系统提示词
+        var systemMsg = BuildSystemMessage(userId, modelConfig, history.Count);
+        if (systemMsg != null) messages.Add(systemMsg);
+
+        foreach (var msg in history)
         {
             if (ShouldSkipHistoryMessage(msg)) continue;
 
-            if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
+            if (msg.Role == "assistant" && !msg.ToolCalls.IsNullOrEmpty())
             {
-                contextMessages.Add(BuildMultimodalUserMessage(msg.Attachments, msg.Content));
-                continue;
+                IList<ToolCallDto>? storedDtos = null;
+                try { storedDtos = msg.ToolCalls.ToJsonEntity<List<ToolCallDto>>(); } catch { }
+                if (storedDtos != null && storedDtos.Count > 0)
+                {
+                    messages.Add(new AiChatMessage
+                    {
+                        Role = "assistant",
+                        Content = null,
+                        ToolCalls = storedDtos.Select(tc => new AiToolCall
+                        {
+                            Id = tc.Id,
+                            Function = new AiFunctionCall { Name = tc.Name, Arguments = tc.Arguments },
+                        }).ToList(),
+                    });
+                    foreach (var tc in storedDtos)
+                    {
+                        messages.Add(new AiChatMessage
+                        {
+                            Role = "tool",
+                            ToolCallId = tc.Id,
+                            Content = tc.Result ?? String.Empty,
+                        });
+                    }
+                    if (!String.IsNullOrEmpty(msg.Content))
+                        messages.Add(new AiChatMessage { Role = "assistant", Content = msg.Content });
+                    continue;
+                }
             }
-            contextMessages.Add(new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content });
+
+            var histMsg = BuildHistoryMessage(msg);
+            if (histMsg != null) messages.Add(histMsg);
         }
 
-        flow.ContextMessages = contextMessages;
-        return Task.FromResult<IList<AiChatMessage>>(contextMessages);
+        if (!currentContent.IsNullOrEmpty() && history.Count > 4)
+        {
+            messages.Add(new AiChatMessage
+            {
+                Role = "system",
+                Content = $"请直接针对用户最新的问题进行回答：{currentContent}",
+            });
+        }
+
+        return messages;
     }
 
     /// <summary>执行 <see cref="IChatHandler"/> 三段式调用链：OnBefore（注册顺序） → 核心阶段（含 LLM 调用与可选拦截器洋葱） → OnAfter（注册倒序）。
@@ -853,87 +904,30 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
     #region 上下文构建
 
-    /// <summary>构建上下文消息列表。按配置的轮数截取历史消息，并注入系统提示词</summary>
-    /// <param name="userId">当前用户编号</param>
+    /// <summary>从数据库加载历史消息并按时间升序排列。派生类可覆写以修改加载来源（如网关路径不从 DB 加载）</summary>
     /// <param name="conversationId">会话编号</param>
-    /// <param name="currentContent">当前用户消息内容</param>
-    /// <param name="modelConfig">模型配置（可选，用于注入模型级系统提示词）</param>
-    /// <returns>OpenAI ChatMessage 格式的消息列表</returns>
-    protected virtual IList<AiChatMessage> BuildContextMessages(Int32 userId, Int64 conversationId, String currentContent, ModelConfig? modelConfig = null)
+    /// <param name="maxRounds">最大保留轮数（对话轮数，非消息条数）</param>
+    /// <returns>按 Id 升序排列的历史消息列表</returns>
+    protected virtual IList<DbChatMessage> LoadHistoryMessages(Int64 conversationId, Int32 maxRounds)
     {
-        var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
-
         var history = DbChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
         //history.Reverse();
         //!!! 不能使用 Reverse ，它未能让列表完全倒置
         history = history.OrderBy(e => e.Id).ToList();
+        return history;
+    }
 
-        var messages = new List<AiChatMessage>();
-
-        // 注入系统提示词
-        var systemMsg = BuildSystemMessage(userId, modelConfig, history.Count);
-        if (systemMsg != null) messages.Add(systemMsg);
-
-        foreach (var msg in history)
-        {
-            if (ShouldSkipHistoryMessage(msg)) continue;
-
-            if (msg.Role == "assistant" && !msg.ToolCalls.IsNullOrEmpty())
-            {
-                IList<ToolCallDto>? storedDtos = null;
-                try
-                {
-                    storedDtos = msg.ToolCalls.ToJsonEntity<List<ToolCallDto>>();
-                }
-                catch { }
-                if (storedDtos != null && storedDtos.Count > 0)
-                {
-                    messages.Add(new AiChatMessage
-                    {
-                        Role = "assistant",
-                        Content = null,
-                        ToolCalls = storedDtos.Select(tc => new AiToolCall
-                        {
-                            Id = tc.Id,
-                            Function = new AiFunctionCall { Name = tc.Name, Arguments = tc.Arguments },
-                        }).ToList(),
-                    });
-                    foreach (var tc in storedDtos)
-                    {
-                        messages.Add(new AiChatMessage
-                        {
-                            Role = "tool",
-                            ToolCallId = tc.Id,
-                            Content = tc.Result ?? String.Empty,
-                        });
-                    }
-                    if (!String.IsNullOrEmpty(msg.Content))
-                        messages.Add(new AiChatMessage { Role = "assistant", Content = msg.Content });
-                    continue;
-                }
-            }
-            if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
-            {
-                messages.Add(BuildMultimodalUserMessage(msg.Attachments, msg.Content));
-                continue;
-            }
-            messages.Add(new AiChatMessage
-            {
-                Role = msg.Role!,
-                Content = msg.Content,
-            });
-        }
-
-        if (history.Count > 4 && !currentContent.IsNullOrEmpty())
-        {
-            messages.Add(new AiChatMessage
-            {
-                Role = "system",
-                Content = $"请直接针对用户最新的问题进行回答：{currentContent}",
-            });
-        }
-
-        return messages;
+    /// <summary>将单条历史消息转换为 AI 请求消息。统一扩展点：派生类覆写此方法即可对<b>所有</b>历史消息统一定制多模态构建逻辑（<see cref="BuildContextMessages"/> 负责统一调用）</summary>
+    /// <remarks>基类实现：user 消息有附件时仅保留文本（丢弃附件，与原存根行为一致）；其他情况返回普通 AiChatMessage。
+    /// assistant ToolCalls 展开逻辑由调用方 inline 处理，不经过此方法。</remarks>
+    /// <param name="msg">历史消息实体</param>
+    /// <returns>AI 请求消息；返回 null 表示跳过该条消息</returns>
+    protected virtual AiChatMessage? BuildHistoryMessage(DbChatMessage msg)
+    {
+        if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
+            // 基类降级：仅保留文本，附件内容被丢弃；派生类（如 MessageService）覆写以支持完整多模态
+            return new AiChatMessage { Role = "user", Content = msg.Content };
+        return new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content };
     }
 
     /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词（技能提示词由管道注入）</summary>
@@ -998,14 +992,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
     }
-
-    /// <summary>将用户消息的附件与文本内容组合为多模态消息。基类为**降级实现**：仅保留文本内容，
-    /// 不解析任何附件。派生类（例如 ChatAI 社区版读取 Cube <c>Attachment</c> 实体 + NewLife.Office 解析文档）应 override 增强</summary>
-    /// <param name="attachmentsJson">附件ID列表 JSON（Int64/String 数组）</param>
-    /// <param name="textContent">文本内容</param>
-    /// <returns>多模态 AiChatMessage，基类默认退化为纯文本消息</returns>
-    protected virtual AiChatMessage BuildMultimodalUserMessage(String attachmentsJson, String? textContent)
-        => new() { Role = "user", Content = textContent };
 
     /// <summary>判断是否应跳过历史消息。用于过滤预分配但尚未写入正文的 assistant 占位消息，避免发送非法上下文给上游模型</summary>
     /// <param name="message">历史消息实体</param>
