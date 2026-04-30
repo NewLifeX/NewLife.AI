@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
@@ -6,9 +6,7 @@ using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
-using NewLife.AI.Models;
 using NewLife.ChatAI.Filters;
-using NewLife.ChatAI.Services;
 using ChatMessage = NewLife.AI.Models.ChatMessage;
 
 namespace NewLife.ChatAI.Controllers;
@@ -19,7 +17,7 @@ namespace NewLife.ChatAI.Controllers;
 /// 通过 Authorization: Bearer {appkey} 进行认证。
 /// </remarks>
 [ApiController]
-public class GatewayController(GatewayService gatewayService, ModelService modelService, ChatSetting chatSetting) : ControllerBase
+public class GatewayController(GatewayService gatewayService, ModelService modelService, ChatSetting chatSetting, GatewayMessageFlow gatewayMessageFlow) : ControllerBase
 {
     #region 模型列表
     /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
@@ -518,7 +516,6 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var enableRecording = chatSetting.EnableGatewayRecording;
         var contentBuilder = enableRecording ? new StringBuilder() : null;
         var thinkingBuilder = enableRecording ? new StringBuilder() : null;
-        UsageDetails? lastUsage = null;
 
         try
         {
@@ -528,6 +525,9 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 var conversationId = gatewayService.CreateGatewayConversation(request, config, appKey);
                 if (conversationId > 0) request.ConversationId = conversationId.ToString();
             }
+
+            var messages = gatewayService.BuildContextMessages(request, appKey, config);
+            var convId = request.ConversationId.ToLong();
 
             if (request.Stream)
             {
@@ -543,22 +543,21 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                     await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                // 网关侧暂走直通转发（IChatPipeline 体系下架后，IChatHandler 链路尚未适配无持久化场景）
-                await foreach (var chunk in gatewayService.ChatStreamAsync(request, config, appKey, cancellationToken).ConfigureAwait(false))
+                UsageDetails? lastUsage = null;
+                await foreach (var ev in gatewayMessageFlow.StreamGatewayAsync(messages, config, appKey.UserId, convId, cancellationToken).ConfigureAwait(false))
                 {
-                    // 收集内容用于网关对话记录
                     if (enableRecording)
                     {
-                        var text = chunk.Text;
-                        if (text != null) contentBuilder!.Append(text);
-                        var thinking = chunk.Messages?.FirstOrDefault()?.Delta?.ReasoningContent;
-                        if (thinking != null) thinkingBuilder!.Append(thinking);
+                        if (ev.Type == "content_delta")
+                            contentBuilder!.Append(ev.Content);
+                        else if (ev.Type == "thinking_delta")
+                            thinkingBuilder!.Append(ev.Content);
                     }
+                    if (ev.Usage != null) lastUsage = ev.Usage;
 
-                    // 收集最后一次用量
-                    if (chunk.Usage != null) lastUsage = chunk.Usage;
-
-                    await WriteStreamChunkAsync(chunk, protocol, cancellationToken).ConfigureAwait(false);
+                    var chunk = GatewayService.ConvertEventToChunk(ev, request.Model ?? config.Code);
+                    if (chunk != null)
+                        await WriteStreamChunkAsync(chunk, protocol, cancellationToken).ConfigureAwait(false);
                 }
 
                 // 输出流式结束标记
@@ -567,17 +566,20 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                     await Response.WriteAsync(endMarker, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
                 await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
 
-                // 网关对话记录
+                // 用量记录 + 网关对话记录
+                gatewayService.RecordUsage(appKey, config, convId, lastUsage);
                 if (enableRecording)
                     gatewayService.RecordGatewayConversation(request, config, appKey, contentBuilder!.ToString(), thinkingBuilder!.ToString(), lastUsage);
             }
             else
             {
-                var result = await gatewayService.ChatAsync(request, config, appKey, cancellationToken).ConfigureAwait(false);
+                // 非流式：聚合完整响应 → 写出 JSON → 用量/对话记录
+                var result = await gatewayMessageFlow.CompletionGatewayAsync(messages, config, appKey.UserId, convId, cancellationToken).ConfigureAwait(false);
                 Response.ContentType = "application/json";
                 await Response.WriteAsync(GatewayService.FormatResponse(result, protocol), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
 
-                // 网关对话记录
+                // 用量记录 + 网关对话记录
+                gatewayService.RecordUsage(appKey, config, convId, result.Usage);
                 if (enableRecording)
                 {
                     var thinking = result.Messages?.FirstOrDefault()?.Message?.ReasoningContent;

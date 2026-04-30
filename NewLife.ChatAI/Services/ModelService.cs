@@ -38,17 +38,17 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
 
     /// <summary>检查 AppKey 是否允许访问指定模型。若未配置模型限制则放行</summary>
     /// <param name="appKey">应用密钥</param>
-    /// <param name="config">模型配置</param>
+    /// <param name="model">模型配置</param>
     /// <returns>true 表示允许访问</returns>
-    public Boolean IsModelAllowed(AppKey appKey, ModelConfig config)
+    public Boolean IsModelAllowed(AppKey appKey, ModelConfig model)
     {
-        if (appKey == null || config == null) return false;
+        if (appKey == null || model == null) return false;
 
         var set = appKey.GetAllowedModels();
         if (set.Count == 0) return true;
 
-        if (!config.Code.IsNullOrEmpty() && set.Contains(config.Code)) return true;
-        if (!config.Name.IsNullOrEmpty() && set.Contains(config.Name)) return true;
+        if (!model.Code.IsNullOrEmpty() && set.Contains(model.Code)) return true;
+        if (!model.Name.IsNullOrEmpty() && set.Contains(model.Name)) return true;
 
         return false;
     }

@@ -410,7 +410,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var messages = new List<AiChatMessage>();
 
         // 注入系统提示词
-        var systemMsg = BuildSystemMessage(userId, modelConfig, history.Count);
+        var systemMsg = BuildSystemMessage(userId, modelConfig, history.Count, tracer);
         if (systemMsg != null) messages.Add(systemMsg);
 
         foreach (var msg in history)
@@ -931,15 +931,16 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     }
 
     /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词（技能提示词由管道注入）</summary>
-    /// <remarks>基类提供简化版：只拼接 IUser 基础信息与 UserSetting 个性化。
-    /// 派生类可 override 增强（例如 ChatAI 社区版注入部门信息，StarChat 商用版注入三明治等）。</remarks>
+    /// <remarks>静态公共实现：只拼接 IUser 基础信息与 UserSetting 个性化；
+    /// <see cref="GatewayService"/> 与 <see cref="MessageFlow"/> 均调用此方法，避免逻辑重复。</remarks>
     /// <param name="userId">当前用户编号</param>
-    /// <param name="modelConfig">模型配置（可选）</param>
+    /// <param name="model">模型配置（可选）</param>
     /// <param name="historyCount">当前上下文中历史消息条数，大于 0 时才注入多轮优先级提示</param>
+    /// <param name="tracer">追踪器（可选）</param>
     /// <returns>系统消息，无提示词时返回 null</returns>
-    protected virtual AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? modelConfig, Int32 historyCount = 0)
+    public static AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? model, Int32 historyCount = 0, ITracer? tracer = null)
     {
-        using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, modelConfig?.Name, historyCount });
+        using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, model?.Name, historyCount });
         var parts = new List<String>();
 
         // 0. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
@@ -980,8 +981,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             parts.Add(userSetting.SystemPrompt.Trim());
 
         // 3. 模型级系统提示词
-        if (modelConfig != null && !String.IsNullOrWhiteSpace(modelConfig.SystemPrompt))
-            parts.Add(modelConfig.SystemPrompt.Trim());
+        if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
+            parts.Add(model.SystemPrompt.Trim());
 
         // 4. 多轮对话时强调最新消息优先级
         if (historyCount > 1)

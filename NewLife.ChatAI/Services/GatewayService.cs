@@ -10,7 +10,6 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Filters;
 using NewLife.Collections;
 using NewLife.Serialization;
-using XCode.Membership;
 using ILog = NewLife.Log.ILog;
 
 namespace NewLife.ChatAI.Services;
@@ -103,71 +102,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
     #endregion
 
-    #region 系统提示词
-    /// <summary>为网关请求构建系统提示词。拼接：用户基本信息→UserSetting.SystemPrompt→ModelConfig.SystemPrompt</summary>
-    /// <param name="appKey">应用密鑰</param>
-    /// <param name="config">模型配置</param>
-    /// <returns>系统消息，无内容时返回 null</returns>
-    public AiChatMessage? BuildSystemMessage(AppKey appKey, ModelConfig config)
-    {
-        var parts = new List<String>();
-
-        // 0. 当前用户基础信息
-        if (appKey.UserId > 0)
-        {
-            var iuser = ManageProvider.Provider?.FindByID(appKey.UserId) as IUser;
-            if (iuser != null)
-            {
-                var sb = Pool.StringBuilder.Get();
-                sb.Append($"当前用户：{iuser.DisplayName}（{iuser.Name}）");
-                var roleIds = iuser.RoleIds?.SplitAsInt();
-                if (roleIds?.Length > 0)
-                {
-                    var roleNames = roleIds.Select(id => Role.FindByID(id)?.Name).Where(n => !n.IsNullOrEmpty()).Join(",");
-                    if (!roleNames.IsNullOrEmpty()) sb.Append($"，角色：{roleNames}");
-                }
-                if (iuser.DepartmentID > 0)
-                {
-                    var dept = Department.FindByID(iuser.DepartmentID);
-                    if (dept != null) sb.Append($"，部门：{dept.Name}");
-                }
-                parts.Add(sb.Return(true));
-            }
-        }
-
-        // 1. 个性化定制
-        var userSetting = appKey.UserId > 0 ? UserSetting.FindByUserId(appKey.UserId) : null;
-        if (userSetting != null)
-        {
-            if (!String.IsNullOrWhiteSpace(userSetting.Nickname))
-                parts.Add($"用户希望你称呼他为「{userSetting.Nickname.Trim()}」");
-
-            if (!String.IsNullOrWhiteSpace(userSetting.UserBackground))
-                parts.Add($"## 用户背景信息\n{userSetting.UserBackground.Trim()}");
-
-            var stylePrompt = userSetting.ResponseStyle switch
-            {
-                ResponseStyle.Precise => "请给出准确、确定性高的回答。优先引用事实和数据，避免模糊表述和不确定的推测。回答简洁有条理。",
-                ResponseStyle.Vivid => "请用丰富的表达方式回答，善于使用类比、举例和故事来解释概念。让回答有温度、易于理解，适当展开讨论。",
-                ResponseStyle.Creative => "请大胆发散思维，提供新颖独特的视角和创意方案。鼓励联想、跨界类比和非常规思路，不必拘泥于常规答案。",
-                _ => null
-            };
-            if (stylePrompt != null) parts.Add(stylePrompt);
-        }
-
-        // 2. 用户自定义指令
-        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
-            parts.Add(userSetting.SystemPrompt.Trim());
-
-        // 3. 模型级系统提示词
-        if (!String.IsNullOrWhiteSpace(config.SystemPrompt))
-            parts.Add(config.SystemPrompt.Trim());
-
-        if (parts.Count == 0) return null;
-
-        return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
-    }
-
+    #region 消息构建
     /// <summary>为网关请求构建上下文消息列表。注入系统提示词（用户信息+UserSetting+ModelConfig），过滤请求中原有系统消息</summary>
     /// <param name="request">网关请求</param>
     /// <param name="appKey">应用密钥</param>
@@ -178,7 +113,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         var messages = new List<AiChatMessage>();
 
         // 构建系统消息（包含用户信息 + UserSetting + ModelConfig SystemPrompt）
-        var sysMsg = BuildSystemMessage(appKey, config);
+        var sysMsg = MessageFlow.BuildSystemMessage(appKey.UserId, config);
         if (sysMsg != null) messages.Add(sysMsg);
 
         // 添加请求中的对话消息（跳过系统消息，已由管道注入）
@@ -436,7 +371,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     /// <param name="model">模型配置</param>
     /// <param name="conversationId">关联会话编号</param>
     /// <param name="usage">用量统计</param>
-    protected virtual void RecordUsage(AppKey? appKey, ModelConfig model, Int64 conversationId, UsageDetails? usage)
+    public virtual void RecordUsage(AppKey? appKey, ModelConfig model, Int64 conversationId, UsageDetails? usage)
     {
         if (usage == null || model == null) return;
 

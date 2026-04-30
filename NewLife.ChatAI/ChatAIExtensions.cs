@@ -40,6 +40,7 @@ public static class ChatAIExtensions
         services.AddSingleton<UsageService>();
         services.AddSingleton<ModelService>();
         services.AddSingleton<GatewayService>();
+        services.AddSingleton<GatewayMessageFlow>();
 
         // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 倒序）
         // 派生项目（如 StarChat）可通过 services.RemoveAll<IChatHandler>() 重排，或针对特定 Handler 实现替换
