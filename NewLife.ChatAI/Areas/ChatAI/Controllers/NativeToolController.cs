@@ -1,26 +1,22 @@
-using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Entity;
-using NewLife;
+﻿using Microsoft.AspNetCore.Mvc;
+using NewLife.AI.Tools;
 using NewLife.Cube;
-using NewLife.Cube.Extensions;
-using NewLife.Cube.ViewModels;
 using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.NativeTool;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理</summary>
 [Menu(100, true, Icon = "fa-table")]
 [ChatAIArea]
-public class NativeToolController : EntityController<NativeTool>
+public class NativeToolController(ToolRegistry registry) : EntityController<NativeTool>
 {
     static NativeToolController()
     {
         LogOnChange = true;
 
-        ListFields.RemoveField("ClassName");
+        ListFields.RemoveField("ClassName", "RoleIds", "DepartmentIds", "Providers", "Endpoint", "ApiKey");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{
@@ -48,6 +44,16 @@ public class NativeToolController : EntityController<NativeTool>
     //{
     //    _tracer = tracer;
     //}
+
+    /// <summary>重新扫描并同步所有内置工具元数据到数据库。可在修改工具代码后手动触发，无需重启应用</summary>
+    /// <returns></returns>
+    [EntityAuthorize(PermissionFlags.Update)]
+    public ActionResult Resync()
+    {
+        var count = registry.SyncNativeTools(NativeTool.FindByName, static e => e.Save(), XTrace.WriteException);
+        XTrace.WriteLine("手动触发内置工具重新扫描，处理 {0} 个工具", count);
+        return JsonRefresh($"重新扫描完成，处理 {count} 个工具");
+    }
 
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>
     /// <param name="p">分页器。包含分页排序参数，以及Http请求参数</param>

@@ -1,33 +1,24 @@
-﻿using System.Collections.Concurrent;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Reflection;
-using System.Xml;
 using NewLife.AI.Models;
 
 namespace NewLife.AI.Tools;
 
-/// <summary>工具 Schema 构建器。通过反射和 XML 文档注释将 C# 方法转换为标准 <see cref="ChatTool"/> 定义</summary>
+/// <summary>工具 Schema 构建器。通过反射将 C# 方法转换为标准 <see cref="ChatTool"/> 定义</summary>
 /// <remarks>
-/// 转换规则（优先级：代码特性标注 &gt; XML 文档注释）：
+/// 转换规则（代码特性标注 ）：
 /// <list type="bullet">
-/// <item>方法 <see cref="DescriptionAttribute"/> 或 <c>&lt;summary&gt;</c> → <c>description</c></item>
-/// <item>参数 <see cref="DescriptionAttribute"/> 或 <c>&lt;param name="x"&gt;</c> → 参数的 <c>description</c></item>
+/// <item>方法 <see cref="DescriptionAttribute"/> → <c>description</c></item>
+/// <item>参数 <see cref="DescriptionAttribute"/> → 参数的 <c>description</c></item>
 /// <item>有默认值的参数 → 从 <c>required</c> 数组排除</item>
 /// <item>复杂类型参数 → 递归展开 <c>object</c> + <c>properties</c></item>
 /// </list>
 /// </remarks>
 public static class ToolSchemaBuilder
 {
-    #region 静态
-
-    /// <summary>XML 文档缓存。键为程序集位置路径</summary>
-    private static readonly ConcurrentDictionary<String, XmlDocument?> _xmlCache = new(StringComparer.OrdinalIgnoreCase);
-
-    #endregion
-
     #region 方法
 
-    /// <summary>从方法信息构建 <see cref="ChatTool"/>，提取 XML 注释作为描述</summary>
+    /// <summary>从方法信息构建 <see cref="ChatTool"/></summary>
     /// <param name="method">目标方法</param>
     /// <returns>ChatTool 定义</returns>
     public static ChatTool BuildFromMethod(MethodInfo method)
@@ -37,20 +28,13 @@ public static class ToolSchemaBuilder
         var attr = method.GetCustomAttribute<ToolDescriptionAttribute>();
         var toolName = (attr != null && attr.HasExplicitName)
             ? attr.Name
-            : ToSnakeCase(method.Name.EndsWith("Async", StringComparison.Ordinal)
-                ? method.Name[..^5]
-                : method.Name);
+            : ToSnakeCase(method.Name.TrimSuffix("Async"));
 
-        var xmlDoc = LoadXmlDoc(method.DeclaringType?.Assembly);
-        var memberKey = GetMemberKey(method);
-        // 优先使用方法上的 [Description] 标注，无则从 XML 文档加载
+        // 使用方法上的 [Description] 标注
         var descAttr = method.GetCustomAttribute<DescriptionAttribute>();
-        var methodSummary = !String.IsNullOrEmpty(descAttr?.Description)
-            ? descAttr!.Description
-            : (xmlDoc != null ? GetSummary(xmlDoc, memberKey) : null);
-        var paramDocs = xmlDoc != null ? GetParamDocs(xmlDoc, memberKey) : null;
+        var methodSummary = descAttr!.Description;
 
-        var schema = BuildParameterSchema(method, paramDocs);
+        var schema = BuildParameterSchema(method);
 
         return new ChatTool
         {
@@ -69,7 +53,7 @@ public static class ToolSchemaBuilder
     #region 辅助
 
     /// <summary>构建方法参数的 JSON Schema 对象</summary>
-    private static Object? BuildParameterSchema(MethodInfo method, IDictionary<String, String>? paramDocs)
+    private static Object? BuildParameterSchema(MethodInfo method)
     {
         var parameters = method.GetParameters();
         if (parameters.Length == 0) return null;
@@ -83,11 +67,9 @@ public static class ToolSchemaBuilder
             // 跳过 CancellationToken 参数
             if (p.ParameterType == typeof(CancellationToken)) continue;
 
-            // 优先使用参数的 [Description] 标注，无则从 XML 文档加载
+            // 优先使用参数的 [Description] 标注
             var pDescAttr = p.GetCustomAttribute<DescriptionAttribute>();
-            var description = !String.IsNullOrEmpty(pDescAttr?.Description)
-                ? pDescAttr!.Description
-                : (paramDocs != null && paramDocs.TryGetValue(p.Name, out var d) ? d : null);
+            var description = pDescAttr!.Description;
             properties[p.Name] = BuildTypeSchema(p.ParameterType, description);
 
             if (!p.HasDefaultValue && !p.IsOptional)
@@ -154,63 +136,6 @@ public static class ToolSchemaBuilder
             schema["type"] = "object";
 
         return schema;
-    }
-
-    /// <summary>加载程序集对应的 XML 文档（同目录下同名 .xml 文件）</summary>
-    private static XmlDocument? LoadXmlDoc(Assembly? assembly)
-    {
-        if (assembly == null) return null;
-        var location = assembly.Location;
-        if (String.IsNullOrEmpty(location)) return null;
-
-        return _xmlCache.GetOrAdd(location, path =>
-        {
-            var xmlPath = Path.ChangeExtension(path, ".xml");
-            if (!File.Exists(xmlPath)) return null;
-
-            var doc = new XmlDocument();
-            try { doc.Load(xmlPath); return doc; }
-            catch { return null; }
-        });
-    }
-
-    /// <summary>从 XML 文档提取成员的 <c>&lt;summary&gt;</c> 文本</summary>
-    private static String? GetSummary(XmlDocument xmlDoc, String memberKey)
-    {
-        var node = xmlDoc.SelectSingleNode($"//member[@name='{memberKey}']");
-        var summary = node?.SelectSingleNode("summary")?.InnerText;
-        return summary?.Trim();
-    }
-
-    /// <summary>从 XML 文档提取成员所有 <c>&lt;param&gt;</c> 注释，返回参数名→描述字典</summary>
-    private static IDictionary<String, String>? GetParamDocs(XmlDocument xmlDoc, String memberKey)
-    {
-        var node = xmlDoc.SelectSingleNode($"//member[@name='{memberKey}']");
-        if (node == null) return null;
-
-        var paramNodes = node.SelectNodes("param");
-        if (paramNodes == null || paramNodes.Count == 0) return null;
-
-        var dict = new Dictionary<String, String>(StringComparer.Ordinal);
-        foreach (XmlNode p in paramNodes)
-        {
-            var name = p.Attributes?["name"]?.Value;
-            var text = p.InnerText?.Trim();
-            if (!String.IsNullOrEmpty(name) && !String.IsNullOrEmpty(text))
-                dict[name] = text!;
-        }
-        return dict.Count > 0 ? dict : null;
-    }
-
-    /// <summary>生成方法的 XML 文档成员键，格式为 <c>M:Namespace.Class.Method(ParamType)</c></summary>
-    private static String GetMemberKey(MethodInfo method)
-    {
-        var typeName = method.DeclaringType?.FullName ?? String.Empty;
-        var paramList = String.Join(",", method.GetParameters()
-            .Select(p => p.ParameterType.FullName ?? p.ParameterType.Name));
-        return String.IsNullOrEmpty(paramList)
-            ? $"M:{typeName}.{method.Name}"
-            : $"M:{typeName}.{method.Name}({paramList})";
     }
 
     /// <summary>将 PascalCase 方法名转换为 snake_case 工具名</summary>

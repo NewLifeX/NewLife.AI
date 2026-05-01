@@ -64,11 +64,11 @@ public partial class NativeTool
     public String? MethodName { get => _MethodName; set { if (OnPropertyChanging("MethodName", value)) { _MethodName = value; OnPropertyChanged("MethodName"); } } }
 
     private String? _Description;
-    /// <summary>描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖</summary>
+    /// <summary>描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖</summary>
     [DisplayName("描述")]
-    [Description("描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖")]
+    [Description("描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖")]
     [DataObjectField(false, false, true, 2000)]
-    [BindColumn("Description", "描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖", "", ItemType = "markdown")]
+    [BindColumn("Description", "描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖", "", ItemType = "markdown")]
     public String? Description { get => _Description; set { if (OnPropertyChanging("Description", value)) { _Description = value; OnPropertyChanged("Description"); } } }
 
     private String? _Parameters;
@@ -351,7 +351,7 @@ public partial class NativeTool
         /// <summary>方法名。工具对应的C#方法名，如GetCurrentTime</summary>
         public static readonly Field MethodName = FindByName("MethodName");
 
-        /// <summary>描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖</summary>
+        /// <summary>描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖</summary>
         public static readonly Field Description = FindByName("Description");
 
         /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>
@@ -423,7 +423,7 @@ public partial class NativeTool
         /// <summary>方法名。工具对应的C#方法名，如GetCurrentTime</summary>
         public const String MethodName = "MethodName";
 
-        /// <summary>描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖</summary>
+        /// <summary>描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖</summary>
         public const String Description = "Description";
 
         /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>

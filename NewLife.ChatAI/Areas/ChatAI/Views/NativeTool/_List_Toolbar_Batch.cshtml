@@ -1,0 +1,9 @@
+@using NewLife.Common;
+@{
+    var user = ViewBag.User as IUser ?? User.Identity as IUser;
+    var fact = ViewBag.Factory as IEntityFactory;
+    var set = ViewBag.PageSetting as PageSetting ?? PageSetting.Global;
+}
+<button type="button" class="btn btn-info btn-sm" data-action="action" data-url="@Url.Action("Resync")">
+    重新扫描
+</button>

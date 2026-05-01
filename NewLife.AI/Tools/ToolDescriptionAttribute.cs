@@ -2,7 +2,7 @@
 
 /// <summary>工具描述特性。标注在 C# 方法上，使其可被 <see cref="ToolRegistry"/> 注册为 AI 可调用工具</summary>
 /// <remarks>
-/// 方法的 XML 文档注释（<c>&lt;summary&gt;</c> 和 <c>&lt;param&gt;</c>）会被自动提取为工具描述。
+/// 方法的 <c>&lt;param&gt;</c>）会被自动提取为工具描述。
 /// <code>
 /// [ToolDescription("get_weather")]
 /// public async Task&lt;String&gt; GetWeatherAsync(String city)

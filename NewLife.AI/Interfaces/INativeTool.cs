@@ -26,7 +26,7 @@ public partial interface INativeTool
     /// <summary>方法名。工具对应的C#方法名，如GetCurrentTime</summary>
     String? MethodName { get; set; }
 
-    /// <summary>描述。工具功能说明，自动从XML注释提取，锁定后不再覆盖</summary>
+    /// <summary>描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖</summary>
     String? Description { get; set; }
 
     /// <summary>参数Schema。JSON格式的函数参数定义，锁定后不再覆盖</summary>
