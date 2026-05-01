@@ -105,6 +105,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("API 网关")]
     [Description("网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析")]
     public Boolean EnableGatewayRecording { get; set; } = false;
+
+    /// <summary>网关处理器链。开启后网关对话与 Web 对话走完全相同的 IChatHandler 链（含知识进化、记忆图谱等高级能力），默认关闭（轻量直连 LLM）</summary>
+    [Category("API 网关")]
+    [Description("网关处理器链。开启后网关对话与 Web 对话走完全相同的 IChatHandler 链（含知识进化、记忆图谱等高级能力），默认关闭（轻量直连 LLM）")]
+    public Boolean EnableGatewayHandlers { get; set; } = false;
     #endregion
 
     #region 工具与能力

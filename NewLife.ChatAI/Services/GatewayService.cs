@@ -74,6 +74,12 @@ public class GatewayService(UsageService usageService, ModelService modelService
     #endregion
 
     #region 认证
+    /// <summary>校验配额是否允许调用。超限时抛出 QuotaExceededException；通过时返回软警告信息（null 表示无警告）。
+    /// 基类不做任何检查（ChatAI 无配额功能），由 StarChat GatewayService2 重写实现商用配额逻辑</summary>
+    /// <param name="appKey">应用密钥</param>
+    /// <returns>软警告信息，用于写入 X-RateLimit-Warning 响应头；null 表示无警告</returns>
+    public virtual String? ValidateQuota(AppKey? appKey) => null;
+
     /// <summary>校验 AppKey 并返回对应实体</summary>
     /// <param name="authorization">Authorization 头的值，格式为 Bearer sk-xxx</param>
     /// <returns>有效的 AppKey 实体，无效时返回 null</returns>

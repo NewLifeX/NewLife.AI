@@ -166,7 +166,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
     /// <summary>构建服务商连接选项。从关联的 ProviderConfig 获取 Endpoint/ApiKey，从 ModelConfig 获取默认模型和协议</summary>
     /// <param name="config">模型配置</param>
     /// <returns>连接选项</returns>
-    public static AiClientOptions BuildOptions(ModelConfig config)
+    protected virtual AiClientOptions BuildOptions(ModelConfig config)
     {
         var providerConfig = config.ProviderInfo;
         return new AiClientOptions
