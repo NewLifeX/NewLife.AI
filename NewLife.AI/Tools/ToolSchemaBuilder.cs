@@ -32,7 +32,7 @@ public static class ToolSchemaBuilder
 
         // 使用方法上的 [Description] 标注
         var descAttr = method.GetCustomAttribute<DescriptionAttribute>();
-        var methodSummary = descAttr!.Description;
+        var methodSummary = descAttr?.Description;
 
         var schema = BuildParameterSchema(method);
 
@@ -69,7 +69,7 @@ public static class ToolSchemaBuilder
 
             // 优先使用参数的 [Description] 标注
             var pDescAttr = p.GetCustomAttribute<DescriptionAttribute>();
-            var description = pDescAttr!.Description;
+            var description = pDescAttr?.Description;
             properties[p.Name] = BuildTypeSchema(p.ParameterType, description);
 
             if (!p.HasDefaultValue && !p.IsOptional)

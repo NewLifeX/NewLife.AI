@@ -489,10 +489,10 @@ public class AiProviderTests
     [InlineData("text-embedding-v4", false, false, false, false, false, false)]
     [InlineData("cosyvoice-v3-plus", false, false, false, false, false, false)]
     [InlineData("fun-asr-realtime", false, false, false, false, false, false)]
-    [InlineData("qwen-omni-turbo", false, false, false, false, false, false)]
     // omni 全模态
+    [InlineData("qwen-omni-turbo", false, false, true, true, false, false)]
     [InlineData("qwen3.5-omni-plus", false, false, true, true, false, false)]
-    [InlineData("qwen3-omni-flash", false, false, true, true, false, false)]
+    [InlineData("qwen3-omni-flash", true, false, true, true, false, false)]
     // 专用模型不支持函数调用
     [InlineData("farui-plus", false, false, false, false, false, false)]
     [InlineData("qwen-mt-plus", false, false, false, false, false, false)]

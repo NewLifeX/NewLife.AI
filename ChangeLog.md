@@ -1,22 +1,71 @@
 # NewLife.AI 版本更新记录
 
-## Unreleased
+## v1.2.2026.0502 (2026-05-02)
 
-### 测试稳定性与兼容性修复
-- **DashScope 集成测试收敛**：
-  - `qwq-plus` 相关用例改为流式验证（该模型当前仅支持 stream）
-  - 视频生成相关用例在服务侧返回 `url error` 时按环境差异处理，避免误报
-  - `Rerank` 用例兼容部分账号未开通权限的场景
-  - 模型注册表断言放宽为“至少包含 qwen 族模型”，避免厂商模型清单动态变化导致误报
-- **Ollama 集成测试增强**：
-  - 重量模型 `think=true` 场景放宽为“正文或思考内容至少其一非空”，兼容不同版本输出差异
-  - 嵌入测试对“不支持 embeddings”的本地模型做环境差异处理
-- **服务内置工具触发词测试修复**：天气触发词断言改为兼容当前触发词集合，减少脆弱性
-- **DeepSeek 元数据断言对齐实现**：客户端名称断言与当前实现保持一致
+### IChatHandler 架构重构
+- **对话内核升级**：引入 IChatHandler/IChatContext 三段式架构（OnBefore/OnAfter），替代 IChatPipeline 体系，实现 LlmCoreHandler/SystemPromptHandler/PersistHandler 等核心处理器；网关与应用层共用同一处理链
+- **IChatInterceptor**：新增拦截器接口，Enricher/PostProcessor 原生化为 IChatHandler，删除独立适配层
+- **内容安全过滤**：上下文截断/压缩重构为独立 IChatFilter，增强内容安全与审计日志能力
+- **TraceId 链路追踪**：新增 TraceId 字段及链路追踪拦截器，支持全链路请求追踪
 
-### 验证结果
-- `XUnitTest` 全量测试：**1049/1049 通过**
-- 测试命令耗时：约 **4 分 51 秒**（Windows 本地环境）
+### DashScope 多模态增强
+- **Omni 全模态与实时对话**：支持 DashScope Omni 模型，新增实时对话能力
+- **Files API 文件上传**：新增 FileContent 类，支持通过 DashScope Files API 上传文件并在对话中引用
+- **图像编辑协议升级**：DashScopeChatClient 多模态重构，图像编辑支持原生多模态协议，用量字段扩展
+
+### DeepSeek 专属支持
+- **DeepSeekChatClient**：新增 DeepSeek 专属客户端，适配 reasoning_content 回传与 DeepSeek v4 参数
+- **Qwen3 系列**：新增 qwen3.6 等系列模型能力标记与测试覆盖
+
+### 网关能力增强
+- **Anthropic/Gemini 兼容**：增强对 Anthropic 与 Gemini 协议的认证与响应格式适配
+- **JSON 自动适配**：网关支持 snake_case/camelCase JSON 自动转换
+- **配额校验**：网关处理链集成配额校验，支持资源授权与 ACL 过滤
+- **进程内集成测试**：集成测试切换为进程内自托管网关模式，提升回归可靠性
+
+### ChatAI 应用功能
+- **对话预设**：新增对话预设功能，支持一键切换多场景配置，自动填充输入框引导文本
+- **Artifact 预览**：支持代码块一键预览（HTML/SVG/Mermaid）及流式 Artifact 实时渲染与视频生成展示
+- **对话分叉**：支持从任意历史消息创建分叉新会话
+- **用户数据导入**：支持 JSON 格式用户数据批量导入，前后端功能完善
+- **个性化定制**：AI 称呼/背景风格/指令自定义，全链路适配
+- **工具调用可视化**：新增 ShowToolCalls 用户设置，支持 AI 工具调用事件流展示
+- **系统欢迎语**：支持系统欢迎语自定义，前后端全链路适配
+- **模型名称显示**：消息气泡支持显示当前对话所用模型名称
+- **推理计时**：前端支持显示模型推理耗时
+- **推荐问题**：推荐问题支持配置短标题展示
+
+### 知识库与多项目
+- **项目隔离**：核心实体增加 ProjectId 字段，支持多项目数据隔离
+- **知识库重构**：AgentProject 重构为知识库，支持文档批量上传与网页递归爬取任务
+- **自学习系统**：新增自学习过滤器与对话分析服务，可配置最低字数阈值
+
+### 用量计费与配额
+- **计费系统**：用量记录统一费用统计，前端展示费用明细；Conversation 增加 AppKeyId 字段
+- **配额限制**：引入配额与资源授权系统，支持 Token 用量限额管理
+
+### 模型能力扩展
+- **多模态能力**：扩展模型能力体系，支持音频/视频生成、上下文长度等字段
+- **OpenAI 兼容路由**：支持多模态能力接口与 OpenAI 兼容 API 路由
+- **模型服务统一**：重构为 ModelService 统一模型与客户端管理，支持批量发现与同步
+
+### 架构重构
+- **删除 ChatData 子项目**：将 NewLife.ChatData 合并回 ChatAI，简化项目结构
+- **IChatSetting 解耦**：引入 IChatSetting 接口，实现三层配置分离，ChatSetting 全面 DI 化
+- **统一工具描述**：工具描述统一为 Description 特性，支持后台重新扫描注册
+
+### 测试质量
+- **集成测试增强**：新增 E2E 与 WireMock 离线录制，DashScope/Ollama/DeepSeek 集成测试全面收敛（1049/1049 通过）
+- **OllamaFactAttribute**：本地服务不可用时自动跳过，兼容 CI 环境
+
+### Bug 修复
+- **[fix]** 修正 ExtendableConverter 序列化 null 值问题，修复阿里百炼 OpenAI 兼容协议 stream_options 传输错误
+- **[fix]** 修正 GLM-5.1 调用错误，修复 DeepSeek 协议客户端参数
+- **[fix]** 修复 RemoveAsync 空集合内存泄漏
+- **[fix]** 修复 BackgroundGenerationService 流式订阅 race condition，避免订阅者永久挂起
+- **[fix]** 修复 DeepSeek 工具调用需回传 reasoning_content
+
+---
 
 ## v1.1.2026.0404 (2026-04-04)
 

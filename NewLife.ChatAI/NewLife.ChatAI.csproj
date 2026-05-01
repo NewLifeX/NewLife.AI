@@ -8,7 +8,7 @@
     <Description>集对话前端、统一 AI 网关、Agent 平台于一身的完整 AI 应用。支持多轮对话、流式输出、函数调用、图像生成、会话管理与使用量统计</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 NewLife</Copyright>
-    <VersionPrefix>1.1</VersionPrefix>
+    <VersionPrefix>1.2</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -35,7 +35,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>新增技能系统与用户记忆自动提取；支持图片拖拽/粘贴上传多模态对话；思考模式 Auto/Think/Fast 三档切换；推荐问题引导；AppKey 管理与模型限制；全文消息/会话搜索；用量记录统计；MCP 服务器配置；消息删除与纯编辑；内置网络/翻译工具</PackageReleaseNotes>
+    <PackageReleaseNotes>对话预设一键切换多场景；Artifact 代码块实时预览（HTML/SVG/Mermaid）；对话分叉功能；个性化 AI 定制（称呼/背景/指令）；工具调用可视化；知识库文档批量上传与网页爬取；多项目隔离（ProjectId）；用量计费与配额限制；自学习过滤器；删除 ChatData 子项目简化架构</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
