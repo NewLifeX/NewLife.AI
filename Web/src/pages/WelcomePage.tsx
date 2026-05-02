@@ -96,7 +96,7 @@ export function WelcomePage({ onSend, siteTitle, welcomeMessage, suggestedQuesti
         </div>
       </div>
 
-      <div className="pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark">
+      <div className="relative z-20 pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark">
         <input
           ref={fileInputRef}
           type="file"
