@@ -136,15 +136,15 @@ public class GatewayService(UsageService usageService, ModelService modelService
     #region 请求转发
     /// <summary>非流式对话转发。支持上游 429 限流重试</summary>
     /// <param name="request">对话请求</param>
-    /// <param name="config">模型配置</param>
+    /// <param name="model">模型配置</param>
     /// <param name="appKey">应用密钥（可选）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public async Task<ChatResponse> ChatAsync(IChatRequest request, ModelConfig config, AppKey? appKey, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> ChatAsync(IChatRequest request, ModelConfig model, AppKey? appKey, CancellationToken cancellationToken = default)
     {
-        using var rawClient = modelService.CreateClient(config);
+        using var rawClient = modelService.CreateClient(model);
         if (rawClient == null)
-            throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
+            throw new InvalidOperationException($"未找到服务商，模型 '{model.Code}' 关联的提供商类型 '{model.ProviderInfo?.Provider}' 未注册");
 
         // 应用 IChatFilter 链（通用横切：日志、监控等；网关场景 ConversationId=0，filter 实现需自行处理）
         var clientBuilder = rawClient.AsBuilder();
@@ -173,7 +173,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
 
         // 写入用量记录（内部完成费用计算 + 配额累加）
-        RecordUsage(appKey, config, request.ConversationId.ToLong(), response.Usage);
+        RecordUsage(appKey, model, request.ConversationId.ToLong(), response.Usage);
 
         return response;
     }

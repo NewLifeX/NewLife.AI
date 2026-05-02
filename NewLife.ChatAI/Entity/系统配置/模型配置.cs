@@ -54,6 +54,14 @@ public partial class ModelConfig
     [BindColumn("Name", "名称。显示名称", "", Master = true)]
     public String? Name { get => _Name; set { if (OnPropertyChanging("Name", value)) { _Name = value; OnPropertyChanged("Name"); } } }
 
+    private String? _UpstreamModel;
+    /// <summary>上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）</summary>
+    [DisplayName("上游模型")]
+    [Description("上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("UpstreamModel", "上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）", "")]
+    public String? UpstreamModel { get => _UpstreamModel; set { if (OnPropertyChanging("UpstreamModel", value)) { _UpstreamModel = value; OnPropertyChanged("UpstreamModel"); } } }
+
     private Int32 _ContextLength;
     /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
     [DisplayName("上下文长度")]
@@ -234,6 +242,7 @@ public partial class ModelConfig
             "ProviderId" => _ProviderId,
             "Code" => _Code,
             "Name" => _Name,
+            "UpstreamModel" => _UpstreamModel,
             "ContextLength" => _ContextLength,
             "SupportThinking" => _SupportThinking,
             "SupportFunctionCalling" => _SupportFunctionCalling,
@@ -264,6 +273,7 @@ public partial class ModelConfig
                 case "ProviderId": _ProviderId = value.ToInt(); break;
                 case "Code": _Code = Convert.ToString(value); break;
                 case "Name": _Name = Convert.ToString(value); break;
+                case "UpstreamModel": _UpstreamModel = Convert.ToString(value); break;
                 case "ContextLength": _ContextLength = value.ToInt(); break;
                 case "SupportThinking": _SupportThinking = value.ToBoolean(); break;
                 case "SupportFunctionCalling": _SupportFunctionCalling = value.ToBoolean(); break;
@@ -363,6 +373,9 @@ public partial class ModelConfig
         /// <summary>名称。显示名称</summary>
         public static readonly Field Name = FindByName("Name");
 
+        /// <summary>上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）</summary>
+        public static readonly Field UpstreamModel = FindByName("UpstreamModel");
+
         /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
         public static readonly Field ContextLength = FindByName("ContextLength");
 
@@ -440,6 +453,9 @@ public partial class ModelConfig
 
         /// <summary>名称。显示名称</summary>
         public const String Name = "Name";
+
+        /// <summary>上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）</summary>
+        public const String UpstreamModel = "UpstreamModel";
 
         /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
         public const String ContextLength = "ContextLength";

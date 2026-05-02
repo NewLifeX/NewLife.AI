@@ -219,27 +219,27 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return BadRequest(new { code = "INVALID_REQUEST", message = "image 文件不能为空" });
 
         // 路由到模型
-        var config = modelService.ResolveModelByCode(modelCode);
-        if (config == null)
+        var model = modelService.ResolveModelByCode(modelCode);
+        if (model == null)
             return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
-        if (!modelService.IsModelAllowed(appKey, config))
+        if (!modelService.IsModelAllowed(appKey, model))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
 
-        if (!modelService.IsAvailable(config))
-            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
+        if (!modelService.IsAvailable(model))
+            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{model.GetEffectiveProvider()}'" });
 
         try
         {
-            using var editClient = modelService.CreateClient(config)!;
+            using var editClient = modelService.CreateClient(model)!;
             if (editClient is not IImageClient imageClient)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{config.Code}' 不支持图像编辑" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{model.Code}' 不支持图像编辑" });
 
             using var imageStream = imageFile.OpenReadStream();
             using var maskStream = maskFile != null && maskFile.Length > 0 ? maskFile.OpenReadStream() : null;
 
             var response = await imageClient.EditImageAsync(new ImageEditsRequest
             {
-                Model = config.Code,
+                Model = model.GetEffectiveModelCode(),
                 Prompt = prompt!,
                 Size = size,
                 ImageStream = imageStream,

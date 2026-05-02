@@ -215,6 +215,7 @@
         <Column Name="ProviderId" DataType="Int32" Map="ProviderConfig@Id@Name" Description="提供商。关联的提供商实例ID" />
         <Column Name="Code" DataType="String" Description="编码。模型唯一标识" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。显示名称" />
+        <Column Name="UpstreamModel" DataType="String" Description="上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）" />
         <Column Name="ContextLength" DataType="Int32" Description="上下文长度。模型支持的上下文窗口大小（令牌数）" />
         <Column Name="SupportThinking" DataType="Boolean" Description="思考。是否支持思考模式" />
         <Column Name="SupportFunctionCalling" DataType="Boolean" Description="函数调用。是否支持Function Calling" />

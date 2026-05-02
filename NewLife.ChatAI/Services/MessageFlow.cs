@@ -616,12 +616,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:flowInvokeLlm", new { messages = context.ContextMessages.Count });
 
         var contextMessages = context.ContextMessages;
-        var modelConfig = (ModelConfig)context.ModelConfig;
+        var model = (ModelConfig)context.ModelConfig;
 
-        using var rawClient = modelService.CreateClient(modelConfig);
+        using var rawClient = modelService.CreateClient(model);
         if (rawClient == null)
         {
-            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{modelConfig.GetEffectiveProvider()}'");
+            yield return ChatStreamEvent.ErrorEvent("MODEL_UNAVAILABLE", $"未找到服务商 '{model.GetEffectiveProvider()}'");
             yield break;
         }
 
@@ -646,12 +646,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var conversationId = context.Conversation?.Id > 0 ? context.Conversation.Id.ToString() : null;
         var chatOptions = new ChatOptions
         {
-            Model = modelConfig.Code,
+            Model = model.GetEffectiveModelCode(),
             EnableThinking = context.ThinkingMode switch
             {
                 ThinkingMode.Think => true,
                 ThinkingMode.Fast => false,
-                _ => modelConfig.SupportThinking ? true : null,
+                _ => model.SupportThinking ? true : null,
             },
             UserId = userId,
             ConversationId = conversationId,
@@ -739,9 +739,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:flowInvokeLlmDirect", new { messages = context.ContextMessages.Count });
 
         var contextMessages = context.ContextMessages;
-        var modelConfig = (ModelConfig)context.ModelConfig;
+        var model = (ModelConfig)context.ModelConfig;
 
-        using var rawClient = modelService.CreateClient(modelConfig);
+        using var rawClient = modelService.CreateClient(model);
         if (rawClient == null)
         {
             context.HasError = true;
@@ -762,12 +762,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var conversationId = context.Conversation?.Id > 0 ? context.Conversation.Id.ToString() : null;
         var chatOptions = new ChatOptions
         {
-            Model = modelConfig.Code,
+            Model = model.GetEffectiveModelCode(),
             EnableThinking = context.ThinkingMode switch
             {
                 ThinkingMode.Think => true,
                 ThinkingMode.Fast => false,
-                _ => modelConfig.SupportThinking ? true : null,
+                _ => model.SupportThinking ? true : null,
             },
             UserId = userId,
             ConversationId = conversationId,

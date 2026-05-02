@@ -191,6 +191,15 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
         return provider?.Provider ?? "";
     }
 
+    /// <summary>获取有效模型编码。优先返回上游模型，为空时回退到内部编码</summary>
+    /// <returns></returns>
+    public String GetEffectiveModelCode()
+    {
+        if (!UpstreamModel.IsNullOrEmpty()) return UpstreamModel;
+
+        return Code ?? "";
+    }
+
     /// <summary>检查用户是否有权限使用此模型</summary>
     /// <param name="roleIds">用户角色组</param>
     /// <param name="departmentId">用户部门编号</param>
