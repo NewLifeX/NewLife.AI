@@ -51,11 +51,11 @@ export interface ModelInfo {
   name: string
   provider?: string
   supportThinking?: boolean
-  supportFunctionCalling?: boolean
+  supportFunction?: boolean
   supportVision?: boolean
   supportAudio?: boolean
-  supportImageGeneration?: boolean
-  supportVideoGeneration?: boolean
+  supportImage?: boolean
+  supportVideo?: boolean
   contextLength?: number
 }
 
@@ -117,10 +117,10 @@ export interface ModelManageItem {
   sort: number
   contextLength: number
   supportThinking: boolean
-  supportFunctionCalling: boolean
+  supportFunction: boolean
   supportVision: boolean
   supportAudio: boolean
-  supportImageGeneration: boolean
-  supportVideoGeneration: boolean
+  supportImage: boolean
+  supportVideo: boolean
   remark?: string
 }

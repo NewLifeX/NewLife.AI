@@ -392,11 +392,11 @@ interface ModelInfoDto {
   name: string
   provider?: string
   supportThinking: boolean
-  supportFunctionCalling: boolean
+  supportFunction: boolean
   supportVision: boolean
   supportAudio: boolean
-  supportImageGeneration: boolean
-  supportVideoGeneration: boolean
+  supportImage: boolean
+  supportVideo: boolean
   contextLength: number
 }
 
@@ -408,11 +408,11 @@ export async function fetchModels(): Promise<ModelInfo[]> {
     name: d.name,
     provider: d.provider || undefined,
     supportThinking: d.supportThinking,
-    supportFunctionCalling: d.supportFunctionCalling,
+    supportFunction: d.supportFunction,
     supportVision: d.supportVision,
     supportAudio: d.supportAudio,
-    supportImageGeneration: d.supportImageGeneration,
-    supportVideoGeneration: d.supportVideoGeneration,
+    supportImage: d.supportImage,
+    supportVideo: d.supportVideo,
     contextLength: d.contextLength || undefined,
   }))
 }
@@ -963,11 +963,11 @@ export async function updateModelSettings(
     enable?: boolean
     contextLength?: number
     supportThinking?: boolean
-    supportFunctionCalling?: boolean
+    supportFunction?: boolean
     supportVision?: boolean
     supportAudio?: boolean
-    supportImageGeneration?: boolean
-    supportVideoGeneration?: boolean
+    supportImage?: boolean
+    supportVideo?: boolean
   },
 ): Promise<void> {
   await request<void>(`/api/models/${id}/settings`, {

@@ -445,12 +445,12 @@ public class ModelTests
     [DisplayName("AiModelInfo—record 属性正确存储")]
     public void AiModelInfo_Record_Properties()
     {
-        var caps = new AiProviderCapabilities(SupportThinking: true, SupportFunctionCalling: true, SupportVision: false, SupportImageGeneration: false);
+        var caps = new AiProviderCapabilities(SupportThinking: true, SupportFunction: true, SupportVision: false, SupportImage: false);
         var info = new AiModelInfo("gpt-4o", "GPT-4o", caps);
         Assert.Equal("gpt-4o", info.Model);
         Assert.Equal("GPT-4o", info.DisplayName);
         Assert.True(info.Capabilities.SupportThinking);
-        Assert.True(info.Capabilities.SupportFunctionCalling);
+        Assert.True(info.Capabilities.SupportFunction);
         Assert.False(info.Capabilities.SupportVision);
     }
 
@@ -460,9 +460,9 @@ public class ModelTests
     {
         var caps = new AiProviderCapabilities();
         Assert.False(caps.SupportThinking);
-        Assert.False(caps.SupportFunctionCalling);
+        Assert.False(caps.SupportFunction);
         Assert.False(caps.SupportVision);
-        Assert.False(caps.SupportImageGeneration);
+        Assert.False(caps.SupportImage);
         Assert.Equal(0, caps.ContextLength);
     }
 

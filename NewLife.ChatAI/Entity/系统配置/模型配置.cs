@@ -78,13 +78,13 @@ public partial class ModelConfig
     [BindColumn("SupportThinking", "思考。是否支持思考模式", "")]
     public Boolean SupportThinking { get => _SupportThinking; set { if (OnPropertyChanging("SupportThinking", value)) { _SupportThinking = value; OnPropertyChanged("SupportThinking"); } } }
 
-    private Boolean _SupportFunctionCalling;
+    private Boolean _SupportFunction;
     /// <summary>函数调用。是否支持Function Calling</summary>
     [DisplayName("函数调用")]
     [Description("函数调用。是否支持Function Calling")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("SupportFunctionCalling", "函数调用。是否支持Function Calling", "")]
-    public Boolean SupportFunctionCalling { get => _SupportFunctionCalling; set { if (OnPropertyChanging("SupportFunctionCalling", value)) { _SupportFunctionCalling = value; OnPropertyChanged("SupportFunctionCalling"); } } }
+    [BindColumn("SupportFunction", "函数调用。是否支持Function Calling", "")]
+    public Boolean SupportFunction { get => _SupportFunction; set { if (OnPropertyChanging("SupportFunction", value)) { _SupportFunction = value; OnPropertyChanged("SupportFunction"); } } }
 
     private Boolean _SupportVision;
     /// <summary>视觉。是否支持图片输入</summary>
@@ -102,21 +102,21 @@ public partial class ModelConfig
     [BindColumn("SupportAudio", "音频。是否支持音频输入输出", "")]
     public Boolean SupportAudio { get => _SupportAudio; set { if (OnPropertyChanging("SupportAudio", value)) { _SupportAudio = value; OnPropertyChanged("SupportAudio"); } } }
 
-    private Boolean _SupportImageGeneration;
+    private Boolean _SupportImage;
     /// <summary>图像。是否支持文生图</summary>
     [DisplayName("图像")]
     [Description("图像。是否支持文生图")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("SupportImageGeneration", "图像。是否支持文生图", "")]
-    public Boolean SupportImageGeneration { get => _SupportImageGeneration; set { if (OnPropertyChanging("SupportImageGeneration", value)) { _SupportImageGeneration = value; OnPropertyChanged("SupportImageGeneration"); } } }
+    [BindColumn("SupportImage", "图像。是否支持文生图", "")]
+    public Boolean SupportImage { get => _SupportImage; set { if (OnPropertyChanging("SupportImage", value)) { _SupportImage = value; OnPropertyChanged("SupportImage"); } } }
 
-    private Boolean _SupportVideoGeneration;
+    private Boolean _SupportVideo;
     /// <summary>视频生成。是否支持文生视频</summary>
     [DisplayName("视频生成")]
     [Description("视频生成。是否支持文生视频")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("SupportVideoGeneration", "视频生成。是否支持文生视频", "")]
-    public Boolean SupportVideoGeneration { get => _SupportVideoGeneration; set { if (OnPropertyChanging("SupportVideoGeneration", value)) { _SupportVideoGeneration = value; OnPropertyChanged("SupportVideoGeneration"); } } }
+    [BindColumn("SupportVideo", "视频生成。是否支持文生视频", "")]
+    public Boolean SupportVideo { get => _SupportVideo; set { if (OnPropertyChanging("SupportVideo", value)) { _SupportVideo = value; OnPropertyChanged("SupportVideo"); } } }
 
     private String? _SystemPrompt;
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
@@ -245,11 +245,11 @@ public partial class ModelConfig
             "UpstreamModel" => _UpstreamModel,
             "ContextLength" => _ContextLength,
             "SupportThinking" => _SupportThinking,
-            "SupportFunctionCalling" => _SupportFunctionCalling,
+            "SupportFunction" => _SupportFunction,
             "SupportVision" => _SupportVision,
             "SupportAudio" => _SupportAudio,
-            "SupportImageGeneration" => _SupportImageGeneration,
-            "SupportVideoGeneration" => _SupportVideoGeneration,
+            "SupportImage" => _SupportImage,
+            "SupportVideo" => _SupportVideo,
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
@@ -276,11 +276,11 @@ public partial class ModelConfig
                 case "UpstreamModel": _UpstreamModel = Convert.ToString(value); break;
                 case "ContextLength": _ContextLength = value.ToInt(); break;
                 case "SupportThinking": _SupportThinking = value.ToBoolean(); break;
-                case "SupportFunctionCalling": _SupportFunctionCalling = value.ToBoolean(); break;
+                case "SupportFunction": _SupportFunction = value.ToBoolean(); break;
                 case "SupportVision": _SupportVision = value.ToBoolean(); break;
                 case "SupportAudio": _SupportAudio = value.ToBoolean(); break;
-                case "SupportImageGeneration": _SupportImageGeneration = value.ToBoolean(); break;
-                case "SupportVideoGeneration": _SupportVideoGeneration = value.ToBoolean(); break;
+                case "SupportImage": _SupportImage = value.ToBoolean(); break;
+                case "SupportVideo": _SupportVideo = value.ToBoolean(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
@@ -383,7 +383,7 @@ public partial class ModelConfig
         public static readonly Field SupportThinking = FindByName("SupportThinking");
 
         /// <summary>函数调用。是否支持Function Calling</summary>
-        public static readonly Field SupportFunctionCalling = FindByName("SupportFunctionCalling");
+        public static readonly Field SupportFunction = FindByName("SupportFunction");
 
         /// <summary>视觉。是否支持图片输入</summary>
         public static readonly Field SupportVision = FindByName("SupportVision");
@@ -392,10 +392,10 @@ public partial class ModelConfig
         public static readonly Field SupportAudio = FindByName("SupportAudio");
 
         /// <summary>图像。是否支持文生图</summary>
-        public static readonly Field SupportImageGeneration = FindByName("SupportImageGeneration");
+        public static readonly Field SupportImage = FindByName("SupportImage");
 
         /// <summary>视频生成。是否支持文生视频</summary>
-        public static readonly Field SupportVideoGeneration = FindByName("SupportVideoGeneration");
+        public static readonly Field SupportVideo = FindByName("SupportVideo");
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
@@ -464,7 +464,7 @@ public partial class ModelConfig
         public const String SupportThinking = "SupportThinking";
 
         /// <summary>函数调用。是否支持Function Calling</summary>
-        public const String SupportFunctionCalling = "SupportFunctionCalling";
+        public const String SupportFunction = "SupportFunction";
 
         /// <summary>视觉。是否支持图片输入</summary>
         public const String SupportVision = "SupportVision";
@@ -473,10 +473,10 @@ public partial class ModelConfig
         public const String SupportAudio = "SupportAudio";
 
         /// <summary>图像。是否支持文生图</summary>
-        public const String SupportImageGeneration = "SupportImageGeneration";
+        public const String SupportImage = "SupportImage";
 
         /// <summary>视频生成。是否支持文生视频</summary>
-        public const String SupportVideoGeneration = "SupportVideoGeneration";
+        public const String SupportVideo = "SupportVideo";
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";

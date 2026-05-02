@@ -45,11 +45,11 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
                 Sort = m.Sort,
                 ContextLength = m.ContextLength,
                 SupportThinking = m.SupportThinking,
-                SupportFunctionCalling = m.SupportFunctionCalling,
+                SupportFunctionCalling = m.SupportFunction,
                 SupportVision = m.SupportVision,
                 SupportAudio = m.SupportAudio,
-                SupportImageGeneration = m.SupportImageGeneration,
-                SupportVideoGeneration = m.SupportVideoGeneration,
+                SupportImageGeneration = m.SupportImage,
+                SupportVideoGeneration = m.SupportVideo,
             })
             .ToArray();
 
@@ -72,11 +72,11 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
         model.Enable = dto.Enable;
         model.ContextLength = dto.ContextLength;
         model.SupportThinking = dto.SupportThinking;
-        model.SupportFunctionCalling = dto.SupportFunctionCalling;
+        model.SupportFunction = dto.SupportFunctionCalling;
         model.SupportVision = dto.SupportVision;
         model.SupportAudio = dto.SupportAudio;
-        model.SupportImageGeneration = dto.SupportImageGeneration;
-        model.SupportVideoGeneration = dto.SupportVideoGeneration;
+        model.SupportImage = dto.SupportImageGeneration;
+        model.SupportVideo = dto.SupportVideoGeneration;
         model.Save();
 
         return Ok(new ModelManageDto
@@ -90,11 +90,11 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
             Sort = model.Sort,
             ContextLength = model.ContextLength,
             SupportThinking = model.SupportThinking,
-            SupportFunctionCalling = model.SupportFunctionCalling,
+            SupportFunctionCalling = model.SupportFunction,
             SupportVision = model.SupportVision,
             SupportAudio = model.SupportAudio,
-            SupportImageGeneration = model.SupportImageGeneration,
-            SupportVideoGeneration = model.SupportVideoGeneration,
+            SupportImageGeneration = model.SupportImage,
+            SupportVideoGeneration = model.SupportVideo,
         });
     }
 }

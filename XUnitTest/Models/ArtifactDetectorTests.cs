@@ -138,11 +138,11 @@ public class ArtifactDetectorTests
         // 位置参数按新顺序：Thinking, FunctionCalling, Vision, Audio, ImageGen, VideoGen
         var caps = new NewLife.AI.Clients.AiProviderCapabilities(true, true, false, false, false, false);
         Assert.True(caps.SupportThinking);
-        Assert.True(caps.SupportFunctionCalling);
+        Assert.True(caps.SupportFunction);
         Assert.False(caps.SupportVision);
         Assert.False(caps.SupportAudio);
-        Assert.False(caps.SupportImageGeneration);
-        Assert.False(caps.SupportVideoGeneration);
+        Assert.False(caps.SupportImage);
+        Assert.False(caps.SupportVideo);
         Assert.Equal(0, caps.ContextLength);
     }
 
@@ -153,11 +153,11 @@ public class ArtifactDetectorTests
         // Vision=true, Audio=true 位于第3、4位
         var caps = new NewLife.AI.Clients.AiProviderCapabilities(false, false, true, true, true, true);
         Assert.False(caps.SupportThinking);
-        Assert.False(caps.SupportFunctionCalling);
+        Assert.False(caps.SupportFunction);
         Assert.True(caps.SupportVision);
         Assert.True(caps.SupportAudio);
-        Assert.True(caps.SupportImageGeneration);
-        Assert.True(caps.SupportVideoGeneration);
+        Assert.True(caps.SupportImage);
+        Assert.True(caps.SupportVideo);
         Assert.Equal(0, caps.ContextLength);
     }
 
@@ -167,7 +167,7 @@ public class ArtifactDetectorTests
     {
         var caps = new NewLife.AI.Clients.AiProviderCapabilities(true, true, true, false, false, false, 131_072);
         Assert.True(caps.SupportThinking);
-        Assert.True(caps.SupportFunctionCalling);
+        Assert.True(caps.SupportFunction);
         Assert.True(caps.SupportVision);
         Assert.Equal(131_072, caps.ContextLength);
     }

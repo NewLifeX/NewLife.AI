@@ -103,11 +103,11 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
                 if (model.Capabilities != null)
                 {
                     entity.SupportThinking = model.Capabilities.SupportThinking;
-                    entity.SupportFunctionCalling = model.Capabilities.SupportFunctionCalling;
+                    entity.SupportFunction = model.Capabilities.SupportFunction;
                     entity.SupportVision = model.Capabilities.SupportVision;
                     entity.SupportAudio = model.Capabilities.SupportAudio;
-                    entity.SupportImageGeneration = model.Capabilities.SupportImageGeneration;
-                    entity.SupportVideoGeneration = model.Capabilities.SupportVideoGeneration;
+                    entity.SupportImage = model.Capabilities.SupportImage;
+                    entity.SupportVideo = model.Capabilities.SupportVideo;
                 }
 
                 count += entity.Save();
@@ -266,29 +266,29 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
     /// <param name="providerId">提供商编号</param>
     /// <param name="code">编码</param>
     /// <param name="supportThinking">支持思考</param>
-    /// <param name="supportFunctionCalling">支持函数调用</param>
+    /// <param name="supportFunction">支持函数调用</param>
     /// <param name="supportVision">支持视觉</param>
     /// <param name="supportAudio">支持音频</param>
-    /// <param name="supportImageGeneration">支持图像生成</param>
-    /// <param name="supportVideoGeneration">支持视频生成</param>
+    /// <param name="supportImage">支持图像生成</param>
+    /// <param name="supportVideo">支持视频生成</param>
     /// <param name="enable">启用</param>
     /// <param name="start">创建时间开始</param>
     /// <param name="end">创建时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数</param>
     /// <returns></returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunctionCalling, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImageGeneration, Boolean? supportVideoGeneration, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ModelConfig> Search(Int32 providerId, String code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImage, Boolean? supportVideo, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (providerId >= 0) exp &= _.ProviderId == providerId;
         if (!code.IsNullOrEmpty()) exp &= _.Code == code;
         if (supportThinking != null) exp &= _.SupportThinking == supportThinking.Value;
-        if (supportFunctionCalling != null) exp &= _.SupportFunctionCalling == supportFunctionCalling.Value;
+        if (supportFunction != null) exp &= _.SupportFunction == supportFunction.Value;
         if (supportVision != null) exp &= _.SupportVision == supportVision.Value;
         if (supportAudio != null) exp &= _.SupportAudio == supportAudio.Value;
-        if (supportImageGeneration != null) exp &= _.SupportImageGeneration == supportImageGeneration.Value;
-        if (supportVideoGeneration != null) exp &= _.SupportVideoGeneration == supportVideoGeneration.Value;
+        if (supportImage != null) exp &= _.SupportImage == supportImage.Value;
+        if (supportVideo != null) exp &= _.SupportVideo == supportVideo.Value;
         if (enable != null) exp &= _.Enable == enable.Value;
 
         exp &= _.CreateTime.Between(start, end);

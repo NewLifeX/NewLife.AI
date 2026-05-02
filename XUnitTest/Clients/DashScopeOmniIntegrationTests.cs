@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -55,7 +55,7 @@ public class DashScopeOmniIntegrationTests
         Assert.True(cap.SupportVision);
         Assert.True(cap.SupportAudio);
         Assert.False(cap.SupportThinking);
-        Assert.False(cap.SupportFunctionCalling);
+        Assert.False(cap.SupportFunction);
         Assert.Equal(131_072, cap.ContextLength);
     }
 
@@ -69,7 +69,7 @@ public class DashScopeOmniIntegrationTests
         Assert.True(cap.SupportVision);
         Assert.True(cap.SupportAudio);
         Assert.True(cap.SupportThinking);
-        Assert.False(cap.SupportFunctionCalling);
+        Assert.False(cap.SupportFunction);
         Assert.Equal(131_072, cap.ContextLength);
     }
 
@@ -83,7 +83,7 @@ public class DashScopeOmniIntegrationTests
         Assert.True(cap.SupportVision);
         Assert.True(cap.SupportAudio);
         Assert.False(cap.SupportThinking);
-        Assert.False(cap.SupportFunctionCalling);
+        Assert.False(cap.SupportFunction);
         Assert.Equal(32_768, cap.ContextLength);
     }
 
@@ -96,7 +96,7 @@ public class DashScopeOmniIntegrationTests
         Assert.NotNull(cap);
         Assert.True(cap.SupportVision);
         Assert.True(cap.SupportAudio);
-        Assert.False(cap.SupportFunctionCalling);
+        Assert.False(cap.SupportFunction);
     }
 
     [Fact]

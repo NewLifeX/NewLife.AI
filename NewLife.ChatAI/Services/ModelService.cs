@@ -363,17 +363,17 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             if (model.ModifiedAt > DateTime.MinValue) config.ModelTime = model.ModifiedAt;
 
             // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动设置）
-            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration /*&& !config.SupportFunctionCalling*/))
+            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImage /*&& !config.SupportFunctionCalling*/))
             {
                 var caps = descriptor?.FindModelCapabilities(modelCode) ?? client?.InferModelCapabilities(modelCode, model.Details);
                 if (caps != null)
                 {
                     config.SupportThinking = caps.SupportThinking;
-                    config.SupportFunctionCalling = caps.SupportFunctionCalling;
+                    config.SupportFunction = caps.SupportFunction;
                     config.SupportVision = caps.SupportVision;
                     config.SupportAudio = caps.SupportAudio;
-                    config.SupportImageGeneration = caps.SupportImageGeneration;
-                    config.SupportVideoGeneration = caps.SupportVideoGeneration;
+                    config.SupportImage = caps.SupportImage;
+                    config.SupportVideo = caps.SupportVideo;
                     if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
                 }
             }
@@ -468,17 +468,17 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
 
             // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动配置）
-            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImageGeneration /*&& !config.SupportFunctionCalling*/))
+            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImage /*&& !config.SupportFunctionCalling*/))
             {
                 var caps = descriptor?.FindModelCapabilities(model.Id) ?? (client as OpenAIClientBase)?.InferModelCapabilities(model.Id);
                 if (caps != null)
                 {
                     config.SupportThinking = caps.SupportThinking;
-                    config.SupportFunctionCalling = caps.SupportFunctionCalling;
+                    config.SupportFunction = caps.SupportFunction;
                     config.SupportVision = caps.SupportVision;
                     config.SupportAudio = caps.SupportAudio;
-                    config.SupportImageGeneration = caps.SupportImageGeneration;
-                    config.SupportVideoGeneration = caps.SupportVideoGeneration;
+                    config.SupportImage = caps.SupportImage;
+                    config.SupportVideo = caps.SupportVideo;
                     if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
                 }
             }

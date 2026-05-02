@@ -128,11 +128,11 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
     enable: model.enable,
     contextLength: model.contextLength,
     supportThinking: model.supportThinking,
-    supportFunctionCalling: model.supportFunctionCalling,
+    supportFunction: model.supportFunction,
     supportVision: model.supportVision,
     supportAudio: model.supportAudio,
-    supportImageGeneration: model.supportImageGeneration,
-    supportVideoGeneration: model.supportVideoGeneration,
+    supportImage: model.supportImage,
+    supportVideo: model.supportVideo,
   })
   const [saving, setSaving] = useState(false)
 
@@ -155,11 +155,11 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
 
   const featureKeys = [
     ['supportThinking', 'providers.modelEdit.thinking'],
-    ['supportFunctionCalling', 'providers.modelEdit.functionCalling'],
+    ['supportFunction', 'providers.modelEdit.functionCalling'],
     ['supportVision', 'providers.modelEdit.vision'],
     ['supportAudio', 'providers.modelEdit.audio'],
-    ['supportImageGeneration', 'providers.modelEdit.imageGeneration'],
-    ['supportVideoGeneration', 'providers.modelEdit.videoGeneration'],
+    ['supportImage', 'providers.modelEdit.imageGeneration'],
+    ['supportVideo', 'providers.modelEdit.videoGeneration'],
   ] as const
 
   return (
@@ -408,7 +408,7 @@ export function ProvidersSettings() {
                             <Icon name="psychology" size="xs" />
                           </span>
                         )}
-                        {model.supportFunctionCalling && (
+                        {model.supportFunction && (
                           <span title={t('providers.modelEdit.functionCalling')} className="text-blue-500">
                             <Icon name="build" size="xs" />
                           </span>
@@ -423,12 +423,12 @@ export function ProvidersSettings() {
                             <Icon name="volume_up" size="xs" />
                           </span>
                         )}
-                        {model.supportImageGeneration && (
+                        {model.supportImage && (
                           <span title={t('providers.modelEdit.imageGeneration')} className="text-pink-500">
                             <Icon name="brush" size="xs" />
                           </span>
                         )}
-                        {model.supportVideoGeneration && (
+                        {model.supportVideo && (
                           <span title={t('providers.modelEdit.videoGeneration')} className="text-red-500">
                             <Icon name="videocam" size="xs" />
                           </span>

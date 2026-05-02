@@ -415,8 +415,8 @@ public class AiProviderTests
         // qwen3.5-plus 支持思考模式、视觉，不支持文生图，支持函数调用
         Assert.True(qwenPlus.Capabilities!.SupportThinking);
         Assert.True(qwenPlus.Capabilities.SupportVision);
-        Assert.False(qwenPlus.Capabilities.SupportImageGeneration);
-        Assert.True(qwenPlus.Capabilities.SupportFunctionCalling);
+        Assert.False(qwenPlus.Capabilities.SupportImage);
+        Assert.True(qwenPlus.Capabilities.SupportFunction);
     }
 
     [Fact]
@@ -429,9 +429,9 @@ public class AiProviderTests
         var caps = client.InferModelCapabilities("qwen3.6-plus");
         Assert.NotNull(caps);
         Assert.True(caps!.SupportThinking);
-        Assert.True(caps.SupportFunctionCalling);
+        Assert.True(caps.SupportFunction);
         Assert.True(caps.SupportVision);
-        Assert.False(caps.SupportImageGeneration);
+        Assert.False(caps.SupportImage);
     }
 
     [Theory]
@@ -504,11 +504,11 @@ public class AiProviderTests
         var caps = client.InferModelCapabilities(modelId);
         Assert.NotNull(caps);
         Assert.Equal(expectThinking, caps!.SupportThinking);
-        Assert.Equal(expectFuncCall, caps.SupportFunctionCalling);
+        Assert.Equal(expectFuncCall, caps.SupportFunction);
         Assert.Equal(expectVision, caps.SupportVision);
         Assert.Equal(expectAudio, caps.SupportAudio);
-        Assert.Equal(expectImageGen, caps.SupportImageGeneration);
-        Assert.Equal(expectVideoGen, caps.SupportVideoGeneration);
+        Assert.Equal(expectImageGen, caps.SupportImage);
+        Assert.Equal(expectVideoGen, caps.SupportVideo);
     }
 
     #endregion

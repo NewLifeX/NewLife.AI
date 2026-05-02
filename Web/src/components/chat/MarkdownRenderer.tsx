@@ -247,7 +247,7 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
       {editImageUrl && (
         <ImageEditDialog
           imageUrl={editImageUrl}
-          models={useChatStore.getState().models.filter((m) => m.supportImageGeneration)}
+          models={useChatStore.getState().models.filter((m) => m.supportImage)}
           onClose={() => setEditImageUrl(null)}
           onSubmit={async (image, mask, prompt, model) => {
             try {

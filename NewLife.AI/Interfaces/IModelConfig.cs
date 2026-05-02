@@ -30,7 +30,7 @@ public partial interface IModelConfig
     Boolean SupportThinking { get; set; }
 
     /// <summary>函数调用。是否支持Function Calling</summary>
-    Boolean SupportFunctionCalling { get; set; }
+    Boolean SupportFunction { get; set; }
 
     /// <summary>视觉。是否支持图片输入</summary>
     Boolean SupportVision { get; set; }
@@ -39,10 +39,10 @@ public partial interface IModelConfig
     Boolean SupportAudio { get; set; }
 
     /// <summary>图像。是否支持文生图</summary>
-    Boolean SupportImageGeneration { get; set; }
+    Boolean SupportImage { get; set; }
 
     /// <summary>视频生成。是否支持文生视频</summary>
-    Boolean SupportVideoGeneration { get; set; }
+    Boolean SupportVideo { get; set; }
 
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     String? SystemPrompt { get; set; }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -1132,7 +1132,7 @@ public class DeepSeekIntegrationTests
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
         Assert.NotNull(descriptor);
-        Assert.Contains(descriptor!.Models, m => m.Capabilities.SupportFunctionCalling);
+        Assert.Contains(descriptor!.Models, m => m.Capabilities.SupportFunction);
     }
 
     [Fact]

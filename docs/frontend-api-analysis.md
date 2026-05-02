@@ -268,7 +268,7 @@
 ### 核心类型
 - `Conversation`: id, title, modelId, isPinned, icon, iconColor, updatedAt
 - `Message`: id, conversationId, role, content, status, thinkingContent, thinkingSegments, toolCalls, usage, feedbackType
-- `ModelInfo`: id, code, name, supportThinking, supportVision, supportImageGeneration, supportFunctionCalling
+- `ModelInfo`: id, code, name, supportThinking, supportVision, supportImage, supportFunction
 - `Attachment`: id, name, size, type(pdf/image/file), previewUrl
 - `UserSettings`: theme, language, fontSize, sendShortcut, defaultModel, defaultThinkingMode, contextRounds, systemPrompt, mcpEnabled, streamingSpeed, allowTraining
 - `ToolCall`: id, name, status(calling/done/error), arguments, result

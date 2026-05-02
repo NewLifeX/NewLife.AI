@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -143,7 +143,7 @@ public class OllamaIntegrationTests
         // qwen3 系列：支持思考 + 函数调用，不支持视觉
         var caps = client.InferModelCapabilities("qwen3:8b", null);
         Assert.True(caps.SupportThinking, "qwen3 应支持思考");
-        Assert.True(caps.SupportFunctionCalling, "qwen3 应支持函数调用");
+        Assert.True(caps.SupportFunction, "qwen3 应支持函数调用");
         Assert.False(caps.SupportVision, "qwen3 不应支持视觉");
 
         // deepseek-r1：支持思考，不支持视觉
@@ -168,13 +168,13 @@ public class OllamaIntegrationTests
         caps = client.InferModelCapabilities("unknown-model-xyz", null);
         Assert.False(caps.SupportThinking, "未知模型不应支持思考");
         Assert.False(caps.SupportVision, "未知模型不应支持视觉");
-        Assert.False(caps.SupportFunctionCalling, "未知模型不应支持函数调用");
+        Assert.False(caps.SupportFunction, "未知模型不应支持函数调用");
 
         // null 模型 ID：全部为 false
         caps = client.InferModelCapabilities(null, null);
         Assert.False(caps.SupportThinking, "null 模型不应支持思考");
         Assert.False(caps.SupportVision, "null 模型不应支持视觉");
-        Assert.False(caps.SupportFunctionCalling, "null 模型不应支持函数调用");
+        Assert.False(caps.SupportFunction, "null 模型不应支持函数调用");
     }
 
     #endregion

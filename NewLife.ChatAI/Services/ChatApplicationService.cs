@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using NewLife.AI.Models;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Entity;
@@ -384,7 +384,7 @@ public class ChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunctionCalling, e.SupportVision, e.SupportAudio, e.SupportImageGeneration, e.SupportVideoGeneration, e.ContextLength, e.ProviderInfo?.Name ?? "")).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunction, e.SupportVision, e.SupportAudio, e.SupportImage, e.SupportVideo, e.ContextLength, e.ProviderInfo?.Name ?? "")).ToArray();
         return Task.FromResult(models);
     }
     #endregion
