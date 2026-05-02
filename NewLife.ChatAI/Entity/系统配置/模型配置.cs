@@ -118,6 +118,14 @@ public partial class ModelConfig
     [BindColumn("SupportVideo", "视频生成。是否支持文生视频", "")]
     public Boolean SupportVideo { get => _SupportVideo; set { if (OnPropertyChanging("SupportVideo", value)) { _SupportVideo = value; OnPropertyChanged("SupportVideo"); } } }
 
+    private Boolean _SupportEmbedding;
+    /// <summary>嵌入向量。是否支持Embedding向量化接口</summary>
+    [DisplayName("嵌入向量")]
+    [Description("嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SupportEmbedding", "嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景", "")]
+    public Boolean SupportEmbedding { get => _SupportEmbedding; set { if (OnPropertyChanging("SupportEmbedding", value)) { _SupportEmbedding = value; OnPropertyChanged("SupportEmbedding"); } } }
+
     private String? _SystemPrompt;
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     [DisplayName("系统提示词")]
@@ -250,6 +258,7 @@ public partial class ModelConfig
             "SupportAudio" => _SupportAudio,
             "SupportImage" => _SupportImage,
             "SupportVideo" => _SupportVideo,
+            "SupportEmbedding" => _SupportEmbedding,
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
@@ -281,6 +290,7 @@ public partial class ModelConfig
                 case "SupportAudio": _SupportAudio = value.ToBoolean(); break;
                 case "SupportImage": _SupportImage = value.ToBoolean(); break;
                 case "SupportVideo": _SupportVideo = value.ToBoolean(); break;
+                case "SupportEmbedding": _SupportEmbedding = value.ToBoolean(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
@@ -397,6 +407,9 @@ public partial class ModelConfig
         /// <summary>视频生成。是否支持文生视频</summary>
         public static readonly Field SupportVideo = FindByName("SupportVideo");
 
+        /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
+        public static readonly Field SupportEmbedding = FindByName("SupportEmbedding");
+
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
 
@@ -477,6 +490,9 @@ public partial class ModelConfig
 
         /// <summary>视频生成。是否支持文生视频</summary>
         public const String SupportVideo = "SupportVideo";
+
+        /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
+        public const String SupportEmbedding = "SupportEmbedding";
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";

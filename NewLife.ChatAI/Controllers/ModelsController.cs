@@ -45,11 +45,12 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
                 Sort = m.Sort,
                 ContextLength = m.ContextLength,
                 SupportThinking = m.SupportThinking,
-                SupportFunctionCalling = m.SupportFunction,
+                SupportFunction = m.SupportFunction,
                 SupportVision = m.SupportVision,
                 SupportAudio = m.SupportAudio,
-                SupportImageGeneration = m.SupportImage,
-                SupportVideoGeneration = m.SupportVideo,
+                SupportImage = m.SupportImage,
+                SupportVideo = m.SupportVideo,
+                SupportEmbedding = m.SupportEmbedding,
             })
             .ToArray();
 
@@ -72,11 +73,12 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
         model.Enable = dto.Enable;
         model.ContextLength = dto.ContextLength;
         model.SupportThinking = dto.SupportThinking;
-        model.SupportFunction = dto.SupportFunctionCalling;
+        model.SupportFunction = dto.SupportFunction;
         model.SupportVision = dto.SupportVision;
         model.SupportAudio = dto.SupportAudio;
-        model.SupportImage = dto.SupportImageGeneration;
-        model.SupportVideo = dto.SupportVideoGeneration;
+        model.SupportImage = dto.SupportImage;
+        model.SupportVideo = dto.SupportVideo;
+        model.SupportEmbedding = dto.SupportEmbedding;
         model.Save();
 
         return Ok(new ModelManageDto
@@ -90,11 +92,12 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
             Sort = model.Sort,
             ContextLength = model.ContextLength,
             SupportThinking = model.SupportThinking,
-            SupportFunctionCalling = model.SupportFunction,
+            SupportFunction = model.SupportFunction,
             SupportVision = model.SupportVision,
             SupportAudio = model.SupportAudio,
-            SupportImageGeneration = model.SupportImage,
-            SupportVideoGeneration = model.SupportVideo,
+            SupportImage = model.SupportImage,
+            SupportVideo = model.SupportVideo,
+            SupportEmbedding = model.SupportEmbedding,
         });
     }
 }

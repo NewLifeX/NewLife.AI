@@ -128,28 +128,25 @@ public partial class DashScopeChatClient
             modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("z-image", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, false, false, true, false, 0);
-
-        // 文生视频 / 图生视频：wan2*-t2v* / wan2*-i2v*
+            return new AiProviderCapabilities(false, false, false, false, true, false, false, 0);
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase) &&
             (modelId.Contains("-t2v", StringComparison.OrdinalIgnoreCase) ||
              modelId.Contains("-i2v", StringComparison.OrdinalIgnoreCase)))
-            return new AiProviderCapabilities(false, false, false, false, false, true, 0);
+            return new AiProviderCapabilities(false, false, false, false, false, true, false, 0);
 
         // 文生图：wan2 其他系列（如 wan2*-t2i*）
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, false, false, true, false, 0);
+            return new AiProviderCapabilities(false, false, false, false, true, false, false, 0);
 
         // === 全模态 Omni 模型 ===
         // qwen3.5-omni-* 系列：视觉+音频，支持联网搜索，不支持思考和函数调用
         if (modelId.StartsWith("qwen3.5-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, true, true, false, false, 131_072);
-        // qwen3-omni-* 系列（如 qwen3-omni-flash）：视觉+音频+思考模式，不支持函数调用
+            return new AiProviderCapabilities(false, false, true, true, false, false, false, 131_072);
         if (modelId.StartsWith("qwen3-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(true, false, true, true, false, false, 131_072);
+            return new AiProviderCapabilities(true, false, true, true, false, false, false, 131_072);
         // 旧版 Omni 模型（如 qwen-omni-turbo）：视觉+音频，不支持思考和函数调用
         if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, true, true, false, false, 32_768);
+            return new AiProviderCapabilities(false, false, true, true, false, false, false, 32_768);
 
         // === 视觉能力 ===
         // VL 系列和 QVQ 视觉推理模型
@@ -228,7 +225,7 @@ public partial class DashScopeChatClient
             contextLength = 196_608;
         // 其余对话模型默认 32K（已在变量初始化时设置）
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, contextLength);
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, false, contextLength);
     }
     #endregion
 }

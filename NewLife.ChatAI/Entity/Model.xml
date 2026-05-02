@@ -223,6 +223,7 @@
         <Column Name="SupportAudio" DataType="Boolean" Description="音频。是否支持音频输入输出" />
         <Column Name="SupportImage" DataType="Boolean" Description="图像。是否支持文生图" />
         <Column Name="SupportVideo" DataType="Boolean" Description="视频生成。是否支持文生视频" />
+        <Column Name="SupportEmbedding" DataType="Boolean" Description="嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -482,11 +482,11 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
             Assert.False(String.IsNullOrEmpty(m.Id));
             // Boolean 字段类型保证，只需能访问即可，不做业务值断言
             _ = m.SupportThinking;
-            _ = m.SupportFunctionCalling;
+            _ = m.SupportFunction;
             _ = m.SupportVision;
             _ = m.SupportAudio;
-            _ = m.SupportImageGeneration;
-            _ = m.SupportVideoGeneration;
+            _ = m.SupportImage;
+            _ = m.SupportVideo;
         }
     }
 

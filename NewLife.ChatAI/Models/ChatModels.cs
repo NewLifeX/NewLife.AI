@@ -1,9 +1,7 @@
-﻿using NewLife.AI.Models;
-
-namespace NewLife.ChatAI.Models;
+﻿namespace NewLife.ChatAI.Models;
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunctionCalling, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImageGeneration, Boolean SupportVideoGeneration, Int32 ContextLength = 0, String Provider = "");
+public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunction, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImage, Boolean SupportVideo, Boolean SupportEmbedding = false, Int32 ContextLength = 0, String Provider = "");
 
 #region 提供商管理 DTO
 /// <summary>提供商配置（管理视图）。ApiKey 已脱敏</summary>
@@ -64,15 +62,17 @@ public class ModelManageDto
     /// <summary>支持思考模式</summary>
     public Boolean SupportThinking { get; set; }
     /// <summary>支持函数调用</summary>
-    public Boolean SupportFunctionCalling { get; set; }
+    public Boolean SupportFunction { get; set; }
     /// <summary>支持视觉（图片输入）</summary>
     public Boolean SupportVision { get; set; }
     /// <summary>支持音频</summary>
     public Boolean SupportAudio { get; set; }
     /// <summary>支持文生图</summary>
-    public Boolean SupportImageGeneration { get; set; }
+    public Boolean SupportImage { get; set; }
     /// <summary>支持文生视频</summary>
-    public Boolean SupportVideoGeneration { get; set; }
+    public Boolean SupportVideo { get; set; }
+    /// <summary>支持嵌入向量</summary>
+    public Boolean SupportEmbedding { get; set; }
 }
 
 /// <summary>模型设置更新请求。含 Enable 及特性标记</summary>
@@ -85,15 +85,17 @@ public class ModelSettingsDto
     /// <summary>支持思考模式</summary>
     public Boolean SupportThinking { get; set; }
     /// <summary>支持函数调用</summary>
-    public Boolean SupportFunctionCalling { get; set; }
+    public Boolean SupportFunction { get; set; }
     /// <summary>支持视觉（图片输入）</summary>
     public Boolean SupportVision { get; set; }
     /// <summary>支持音频</summary>
     public Boolean SupportAudio { get; set; }
     /// <summary>支持文生图</summary>
-    public Boolean SupportImageGeneration { get; set; }
+    public Boolean SupportImage { get; set; }
     /// <summary>支持文生视频</summary>
-    public Boolean SupportVideoGeneration { get; set; }
+    public Boolean SupportVideo { get; set; }
+    /// <summary>支持嵌入向量</summary>
+    public Boolean SupportEmbedding { get; set; }
 }
 #endregion
 

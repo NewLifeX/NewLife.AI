@@ -8,6 +8,7 @@
 /// <param name="SupportAudio">是否支持音频输入输出。如 GPT-4o-audio、Qwen-Omni</param>
 /// <param name="SupportImage">是否支持文生图。如 DALL·E、Qwen 的图像生成</param>
 /// <param name="SupportVideo">是否支持文生视频。如 Sora、Wan2</param>
+/// <param name="SupportEmbedding">是否支持嵌入向量。如 text-embedding-3、text-embedding-v3，可用于 RAG/知识库场景</param>
 /// <param name="ContextLength">上下文窗口大小（Token 数）。0 表示未知</param>
 public record AiProviderCapabilities(
     Boolean SupportThinking = false,
@@ -16,6 +17,7 @@ public record AiProviderCapabilities(
     Boolean SupportAudio = false,
     Boolean SupportImage = false,
     Boolean SupportVideo = false,
+    Boolean SupportEmbedding = false,
     Int32 ContextLength = 0);
 
 /// <summary>AI 模型信息。描述服务商旗下某具体模型的标识与能力</summary>

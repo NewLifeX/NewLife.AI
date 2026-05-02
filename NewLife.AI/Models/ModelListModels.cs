@@ -1,4 +1,4 @@
-namespace NewLife.AI.Models;
+﻿namespace NewLife.AI.Models;
 
 /// <summary>中性模型列表响应。統一表示各服务商 /v1/models 或等效接口的返回结构</summary>
 public class ModelListResponse
@@ -35,7 +35,7 @@ public class ModelInfo
     public Boolean SupportThinking { get; set; }
 
     /// <summary>是否支持 Function Calling / Tool Use</summary>
-    public Boolean SupportFunctionCalling { get; set; }
+    public Boolean SupportFunction { get; set; }
 
     /// <summary>是否支持图片输入（视觉多模态）</summary>
     public Boolean SupportVision { get; set; }
@@ -44,8 +44,8 @@ public class ModelInfo
     public Boolean SupportAudio { get; set; }
 
     /// <summary>是否支持文生图（图像生成）</summary>
-    public Boolean SupportImageGeneration { get; set; }
+    public Boolean SupportImage { get; set; }
 
     /// <summary>是否支持文生视频（视频生成）</summary>
-    public Boolean SupportVideoGeneration { get; set; }
+    public Boolean SupportVideo { get; set; }
 }

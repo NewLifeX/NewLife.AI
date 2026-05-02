@@ -86,15 +86,15 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
 
         var items = new[]
         {
-            new { Title = "写C#代码", Question = "请帮我用C#实现一个线程安全的单例模式，要求支持懒加载并分析其适用场景", Icon = "code", Color = "text-blue-500" },
-            new { Title = "解释技术原理", Question = "请详细解释HTTP/2相比HTTP/1.1的主要改进，包括多路复用、头部压缩等核心特性", Icon = "science", Color = "text-purple-500" },
-            new { Title = "数据库优化", Question = "帮我分析常见的SQL慢查询场景，并给出索引优化和查询重写的最佳实践", Icon = "storage", Color = "text-orange-500" },
-            new { Title = "讲解设计模式", Question = "请用C#示例讲解单例、工厂、观察者和策略这四种常用设计模式，说明各自的适用场景", Icon = "architecture", Color = "text-teal-500" },
-            new { Title = "制定学习路线", Question = "我想系统学习全栈开发，请帮我制定一份详细的学习计划，包括前后端和数据库的学习路径", Icon = "school", Color = "text-green-500" },
-            new { Title = "代码审查", Question = "请帮我审查以下代码的潜在问题，包括性能、安全性和可维护性方面的改进建议", Icon = "rate_review", Color = "text-amber-500" },
-            new { Title = "分析错误日志", Question = "帮我分析以下程序错误日志，找出根本原因并给出修复方案和预防措施", Icon = "bug_report", Color = "text-red-500" },
-            new { Title = "系统架构建议", Question = "我需要设计一个支持高并发的消息推送系统，请从架构角度分析技术选型和关键设计决策", Icon = "hub", Color = "text-yellow-500" },
-            new { Title = "技术概念对比", Question = "请对比解释微服务架构、SOA和单体架构的优缺点，以及各自适用的业务场景", Icon = "compare_arrows", Color = "text-pink-500" },
+            new { Title = "写C#单例模式", Question = "请帮我用C#实现一个线程安全的单例模式，要求支持懒加载并分析适用场景", Icon = "code", Color = "text-blue-500" },
+            new { Title = "写一首春天的诗", Question = "请帮我写一首关于春天的诗，表达春意盎然的美好，风格清新自然", Icon = "brush", Color = "text-pink-500" },
+            new { Title = "解释量子计算", Question = "请通俗地解释量子计算的基本原理，以及它与传统计算机的本质区别", Icon = "science", Color = "text-purple-500" },
+            new { Title = "推荐几本好书", Question = "请推荐几本值得精读的经典好书，涵盖思维提升和人文社科方面，并说明各自的理由", Icon = "menu_book", Color = "text-orange-500" },
+            new { Title = "制定健身计划", Question = "请帮我制定一份适合上班族的周健身计划，包含有氧和力量训练，每次控制在30分钟内", Icon = "fitness_center", Color = "text-red-500" },
+            new { Title = "查询我这里天气", Question = "请查询我当前所在位置的天气情况，并给出今日出行建议", Icon = "cloud", Color = "text-cyan-500" },
+            new { Title = "我在哪里", Question = "请帮我查询我的当前位置，我在哪个城市？附近有哪些值得去的地方？", Icon = "location_on", Color = "text-teal-500" },
+            new { Title = "写一封请假邮件", Question = "请帮我写一封请病假的邮件，收件人是部门主管，语气正式得体，简明扼要", Icon = "edit_note", Color = "text-green-500" },
+            new { Title = "分析投资理财策略", Question = "对于普通投资者，请分析当前经济环境下有哪些稳健的理财和投资策略，如何做好风险控制", Icon = "trending_up", Color = "text-yellow-500" },
         };
 
         for (var i = 0; i < items.Length; i++)

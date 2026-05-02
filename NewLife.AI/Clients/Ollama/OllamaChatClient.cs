@@ -298,7 +298,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
         }
 
         // Ollama 本地模型无法通过名称准确推断上下文长度，由 /api/show 接口补充
-        return new AiProviderCapabilities(thinking, funcCall, vision, false, false, false, 0);
+        return new AiProviderCapabilities(thinking, funcCall, vision, false, false, false, false, 0);
     }
     #endregion
 }

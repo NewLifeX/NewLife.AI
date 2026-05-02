@@ -37,6 +37,9 @@ public sealed class AiClientModelAttribute(String model, String displayName) : A
     /// <summary>是否支持文生视频（如 Sora、Wan2）</summary>
     public Boolean VideoGeneration { get; set; }
 
+    /// <summary>是否支持嵌入向量（如 text-embedding-3、text-embedding-v3）</summary>
+    public Boolean Embedding { get; set; }
+
     /// <summary>上下文窗口大小（Token 数）。0 表示未知</summary>
     public Int32 ContextLength { get; set; }
 }

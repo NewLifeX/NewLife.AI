@@ -378,13 +378,13 @@ public class ChatApplicationService
         {
             return Task.FromResult(new[]
             {
-                new ModelInfoDto(0, "qwen-max", "Qwen-Max", true, true, true, false, false, false, 131_072),
-                new ModelInfoDto(0, "deepseek-r1", "DeepSeek-R1", true, true, false, false, false, false, 65_536),
-                new ModelInfoDto(0, "gpt-4o", "GPT-4o", true, true, true, false, false, false, 128_000),
+                new ModelInfoDto(0, "qwen-max", "Qwen-Max", true, true, true, false, false, false, false, 131_072),
+                new ModelInfoDto(0, "deepseek-r1", "DeepSeek-R1", true, true, false, false, false, false, false, 65_536),
+                new ModelInfoDto(0, "gpt-4o", "GPT-4o", true, true, true, false, false, false, false, 128_000),
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunction, e.SupportVision, e.SupportAudio, e.SupportImage, e.SupportVideo, e.ContextLength, e.ProviderInfo?.Name ?? "")).ToArray();
+        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunction, e.SupportVision, e.SupportAudio, e.SupportImage, e.SupportVideo, e.SupportEmbedding, e.ContextLength, e.ProviderInfo?.Name ?? "")).ToArray();
         return Task.FromResult(models);
     }
     #endregion
