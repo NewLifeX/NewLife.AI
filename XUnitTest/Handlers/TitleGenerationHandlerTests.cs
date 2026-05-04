@@ -13,7 +13,7 @@ using Xunit;
 
 namespace XUnitTest.Handlers;
 
-/// <summary>TitleGenerationHandler 单元测试：ExtractTitleText 纯函数 + OnAfter 跳过条件</summary>
+/// <summary>TitleGenerationHandler 单元测试：ExtractTitleText 纯函数 + OnBefore 跳过条件</summary>
 [DisplayName("TitleGenerationHandler 测试")]
 public class TitleGenerationHandlerTests
 {
@@ -97,27 +97,27 @@ public class TitleGenerationHandlerTests
 
     #endregion
 
-    #region OnAfter — 跳过条件（无 DB 依赖）
+    #region OnBefore — 跳过条件（无 DB 依赖）
 
     [Fact]
-    [DisplayName("OnAfter—非 MessageFlowContext 时立即返回")]
-    public async Task OnAfter_NotMessageFlowContext_ReturnsImmediately()
+    [DisplayName("OnBefore—非 MessageFlowContext 时立即返回")]
+    public async Task OnBefore_NotMessageFlowContext_ReturnsImmediately()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         // 传入一个不是 MessageFlowContext 的假上下文
         var fakeContext = new FakeContext();
-        await handler.OnAfter(fakeContext, CancellationToken.None);
+        await handler.OnBefore(fakeContext, CancellationToken.None);
         // 无异常即通过（早返回路径）
     }
 
     [Fact]
-    [DisplayName("OnAfter—AutoGenerateTitle=false 时跳过")]
-    public async Task OnAfter_AutoGenerateTitleFalse_Skips()
+    [DisplayName("OnBefore—AutoGenerateTitle=false 时跳过")]
+    public async Task OnBefore_AutoGenerateTitleFalse_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = false };
-        var handler = new TitleGenerationHandler(null!, setting, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
@@ -125,45 +125,45 @@ public class TitleGenerationHandlerTests
             HasError = false,
         };
         // 不会抛异常（无后台任务启动）
-        await handler.OnAfter(flow, CancellationToken.None);
+        await handler.OnBefore(flow, CancellationToken.None);
     }
 
     [Fact]
-    [DisplayName("OnAfter—HasError=true 时跳过")]
-    public async Task OnAfter_HasError_Skips()
+    [DisplayName("OnBefore—HasError=true 时跳过")]
+    public async Task OnBefore_HasError_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
             Conversation = new Conversation { MessageCount = 0 },
             HasError = true,
         };
-        await handler.OnAfter(flow, CancellationToken.None);
+        await handler.OnBefore(flow, CancellationToken.None);
     }
 
     [Fact]
-    [DisplayName("OnAfter—会话 MessageCount > 0 时跳过（非首轮）")]
-    public async Task OnAfter_MessageCountGtZero_Skips()
+    [DisplayName("OnBefore—会话 MessageCount > 0 时跳过（非首轮）")]
+    public async Task OnBefore_MessageCountGtZero_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
             Conversation = new Conversation { MessageCount = 5 },
             HasError = false,
         };
-        await handler.OnAfter(flow, CancellationToken.None);
+        await handler.OnBefore(flow, CancellationToken.None);
     }
 
     [Fact]
-    [DisplayName("OnAfter—用户消息内容为空时跳过")]
-    public async Task OnAfter_EmptyUserContent_Skips()
+    [DisplayName("OnBefore—用户消息内容为空时跳过")]
+    public async Task OnBefore_EmptyUserContent_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
@@ -171,7 +171,7 @@ public class TitleGenerationHandlerTests
             HasError = false,
             UserMessage = new DbChatMessage { Content = null },
         };
-        await handler.OnAfter(flow, CancellationToken.None);
+        await handler.OnBefore(flow, CancellationToken.None);
     }
 
     #endregion
@@ -183,7 +183,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_AlwaysReturnsImmediately()
     {
         var setting = new ChatSetting();
-        var handler = new TitleGenerationHandler(null!, setting, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
         await handler.OnBefore(new FakeContext(), CancellationToken.None);
     }
 

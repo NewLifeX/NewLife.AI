@@ -1,15 +1,18 @@
-﻿using NewLife.AI.Clients;
+﻿using System.Collections.Concurrent;
+using NewLife.AI.Clients;
+using NewLife.Caching;
 using NewLife.Collections;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;
 
-/// <summary>会话标题异步生成处理器。事后在会话首条消息且开启自动标题时启动后台任务，由模型生成简短标题</summary>
+/// <summary>会话标题异步生成处理器。事前在会话无标题时启动后台任务，与主 LLM 调用并行生成简短标题，内置内容指纹去重缓存</summary>
 /// <param name="modelService">模型服务（用于建模型客户端）</param>
 /// <param name="setting">对话配置</param>
+/// <param name="cacheProvider"></param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ITracer? tracer, ILog? log) : IChatHandler
+public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : IChatHandler
 {
     /// <summary>模型服务（供派生类访问）</summary>
     protected readonly ModelService ModelServiceInstance = modelService;
@@ -20,21 +23,22 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
     /// <summary>日志（供派生类访问）</summary>
     protected readonly ILog? Log = log;
 
-    /// <inheritdoc/>
-    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;
+    // 内容指纹（GetHashCode）→ 已生成标题；避免相同内容在短时间内重复调用 LLM（超出上限后全量清空）
+    private static readonly ConcurrentDictionary<Int32, String> _titleCache = new();
+    private const Int32 CacheSizeLimit = 1000;
 
     /// <inheritdoc/>
-    public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before;
 
     /// <inheritdoc/>
-    public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
+    public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
-        if (context.HasError || !setting.AutoGenerateTitle) return Task.CompletedTask;
+        if (!setting.AutoGenerateTitle) return Task.CompletedTask;
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
 
         var conversation = flow.Conversation;
-        // 仅在首轮对话（Insert 用户消息后 MessageCount 仍为 0）触发
-        if (conversation.MessageCount > 0) return Task.CompletedTask;
+        // 已有标题则跳过（标题一旦生成就保持，不重复生成）
+        if (!conversation.Title.IsNullOrEmpty()) return Task.CompletedTask;
 
         var userContent = flow.UserMessage?.Content;
         var titleText = ExtractTitleText(userContent);
@@ -43,9 +47,13 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
 
         if (titleText.IsNullOrEmpty()) return Task.CompletedTask;
 
+        // 异步生成：与主 LLM 调用并行执行，不阻塞响应流
         _ = Task.Run(() => GenerateTitleAsync(conversation, titleText, CancellationToken.None));
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc/>
+    public Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>异步生成会话标题。短文本直接采用，否则调用模型生成。派生类可覆盖以增强</summary>
     /// <param name="conversation">会话</param>
@@ -67,6 +75,18 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
                 conversation.Update();
             }
             return cleanMsg;
+        }
+
+        // 命中内容缓存：直接写回，跳过 LLM 调用
+        if (cleanMsg.Length < 64)
+        {
+            var cachedTitle = cacheProvider.Cache.Get<String>($"ai:title:{cleanMsg}");
+            if (cachedTitle != conversation.Title)
+            {
+                conversation.Title = cachedTitle;
+                conversation.Update();
+            }
+            return cachedTitle;
         }
 
         using var span = Tracer?.NewSpan("ai:GenerateTitle");
@@ -91,6 +111,11 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
                         title = title.Trim().Trim('"', '\u201c', '\u201d', '\'', '\u300a', '\u300b');
                         if (title.Length > 30) title = title[..30];
                         span?.AppendTag(title!);
+
+                        // 写入内容缓存
+                        if (cleanMsg.Length < 64 && !title.IsNullOrEmpty())
+                            cacheProvider.Cache.Set($"ai:title:{cleanMsg}", title, TimeSpan.FromHours(1));
+
                         conversation.Title = title;
                         conversation.Update();
                         return title;
