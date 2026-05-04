@@ -140,9 +140,6 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <summary>本轮实际注入给模型的工具名称集合</summary>
     public ISet<String> AvailableToolNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>本轮实际注入的技能名称集合（Code/Name 格式）</summary>
-    public ISet<String> ResolvedSkillNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>实际使用的最大 Token 数</summary>
     public Int32 MaxTokens { get; set; }
 

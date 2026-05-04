@@ -17,7 +17,7 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
 {
     /// <inheritdoc/>
     public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
- 
+
     /// <summary>派生类访问 <see cref="SkillService"/> 实例</summary>
     protected SkillService? SkillServiceInstance => skillService;
 
@@ -40,7 +40,6 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
                     conversation.Update();
                 }
                 flow.SkillId = 0;
-                flow["SkillName"] = null;
             }
             else
             {
@@ -54,7 +53,6 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
                         conversation.Update();
                     }
                     flow.SkillId = skill.Id;
-                    flow["SkillName"] = skill.Name;
                 }
             }
         }
@@ -78,7 +76,8 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
         }
 
         // 注入技能 Prompt
-        var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools, context.ResolvedSkillNames);
+        var skillNames = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools, skillNames);
         if (skillPrompt.IsNullOrWhiteSpace()) return Task.CompletedTask;
 
         var systemMsg = context.ContextMessages.FirstOrDefault(m => m.Role == "system");
@@ -90,6 +89,18 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
         else
         {
             context.ContextMessages.Insert(0, new AiChatMessage { Role = "system", Content = skillPrompt.Trim() });
+        }
+
+        // 用户消息追加技能名称与可用工具
+        if (context.UserMessage is DbChatMessage userMessage)
+        {
+            var skillName = context.Conversation.SkillName;
+            if (!skillName.IsNullOrEmpty() && !skillNames.Contains(skillName))
+                skillNames.Add(skillName);
+
+            if (skillNames.Count > 0)
+                userMessage.SkillNames = String.Join(",", skillNames);
+            userMessage.Update();
         }
 
         return Task.CompletedTask;

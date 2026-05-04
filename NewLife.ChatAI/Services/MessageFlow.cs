@@ -223,7 +223,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.UserMessage = userMsg;
         flow.AssistantMessage = assistantMsg;
         flow.SkillId = conversation.SkillId;
-        flow["SkillName"] = conversation.SkillName;
         flow["RequestSkillCode"] = request.SkillCode;
         flow.ThinkingMode = request.ThinkingMode;
 
@@ -347,7 +346,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             UserId = userId,
             SkillId = conversation.SkillId,
         };
-        flow["SkillName"] = conversation.SkillName;
 
         // 按消息模式：自动填充 UserMessage 或 AssistantMessage
         if (entity != null)

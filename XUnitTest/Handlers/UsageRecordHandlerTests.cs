@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
@@ -91,7 +91,6 @@ public class UsageRecordHandlerTests
         public Action<String>? OnSystemReady { get; set; }
         public ISet<String> SelectedTools { get; } = new HashSet<String>();
         public ISet<String> AvailableToolNames { get; } = new HashSet<String>();
-        public ISet<String> ResolvedSkillNames { get; } = new HashSet<String>();
         public Int32 MaxTokens { get; set; }
         public Double? Temperature { get; set; }
         public String? FinishReason { get; set; }

@@ -25,9 +25,10 @@ public class PersistMessageHandler(ITracer? tracer) : IChatHandler
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
         //using var span = tracer?.NewSpan("handler:PersistMessage");
 
+        // 助手消息
         var assistantMsg = flow.AssistantMessage;
-        if (assistantMsg == null) return Task.CompletedTask;
-
+        if (assistantMsg != null)
+        {
         // 写入消息内容
         assistantMsg.Content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
         if (flow.ThinkingBuilder.Length > 0)
@@ -42,18 +43,12 @@ public class PersistMessageHandler(ITracer? tracer) : IChatHandler
         ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
         ApplyRequestParams(assistantMsg, flow.ModelConfig, flow);
         assistantMsg.Update();
+        }
 
-        // 用户消息追加技能名称与可用工具
+        // 用户消息追加可用工具
         var userMessage = flow.UserMessage;
         if (userMessage != null)
         {
-            var skillNames = new HashSet<String>(flow.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
-            var skillName = flow["SkillName"] as String;
-            if (flow.SkillId > 0 && !skillName.IsNullOrEmpty() && !skillNames.Contains(skillName))
-                skillNames.Add(skillName);
-
-            if (skillNames.Count > 0)
-                userMessage.SkillNames = String.Join(",", skillNames);
             if (flow.AvailableToolNames.Count > 0)
                 userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
             userMessage.Update();

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using NewLife.AI.Interfaces;
 using NewLife.AI.Models;
 using NewLife.Data;
@@ -67,9 +67,6 @@ public interface IChatContext : IExtend
 
     /// <summary>本轮实际注入给模型的工具名称集合。由核心处理器在构建工具提供者后填充</summary>
     ISet<String> AvailableToolNames { get; }
-
-    /// <summary>本轮实际注入的技能名称集合（Code/Name 格式）。由 SystemPrompt 处理器填充</summary>
-    ISet<String> ResolvedSkillNames { get; }
 
     #endregion
 
