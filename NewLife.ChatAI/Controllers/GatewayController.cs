@@ -46,11 +46,11 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 ["owned_by"] = ownedBy,
                 ["context_length"] = m.ContextLength,
                 ["support_thinking"] = m.SupportThinking,
-                ["support_function_calling"] = m.SupportFunction,
+                ["support_function"] = m.SupportFunction,
                 ["support_vision"] = m.SupportVision,
                 ["support_audio"] = m.SupportAudio,
-                ["support_image_generation"] = m.SupportImage,
-                ["support_video_generation"] = m.SupportVideo,
+                ["support_image"] = m.SupportImage,
+                ["support_video"] = m.SupportVideo,
             };
         }).ToList();
 

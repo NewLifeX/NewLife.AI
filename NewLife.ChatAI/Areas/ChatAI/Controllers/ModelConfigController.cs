@@ -14,7 +14,7 @@ public class ModelConfigController : EntityController<ModelConfig>
     {
         //LogOnChange = true;
 
-        //ListFields.RemoveField("Id", "Creator");
+        ListFields.RemoveField("UpstreamModel", "PriceTiers", "RoleIds", "DepartmentIds", "RoleNames", "DepartmentNames", "ModelTime");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         {
