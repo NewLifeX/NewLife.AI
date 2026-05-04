@@ -8,7 +8,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <para>事后职责：从 <see cref="IChatContext.ContentBuilder"/>、<see cref="IChatContext.ThinkingBuilder"/>、
 /// <see cref="IChatContext.ToolCalls"/>、<see cref="IChatContext.Usage"/> 等收集字段读取最终结果，
 /// 写入 <c>flow.AssistantMessage</c> / <c>flow.UserMessage</c> / <c>flow.Conversation</c> 实体。</para>
-/// <para>注意：会话级 Token 累加由 <c>ConversationStatsHandler</c> 负责，UsageService.Record 由 <c>UsageRecordHandler</c> 负责。</para>
+/// <para>注意：UsageService.Record 由 <c>UsageRecordHandler</c> 负责，本处理器仅写入消息/会话字段。</para>
 /// </remarks>
 /// <param name="tracer">追踪器</param>
 public class PersistMessageHandler(ITracer? tracer) : IChatHandler
@@ -29,20 +29,20 @@ public class PersistMessageHandler(ITracer? tracer) : IChatHandler
         var assistantMsg = flow.AssistantMessage;
         if (assistantMsg != null)
         {
-        // 写入消息内容
-        assistantMsg.Content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
-        if (flow.ThinkingBuilder.Length > 0)
-            assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
-        if (flow.ToolCalls.Count > 0)
-        {
-            assistantMsg.ToolCalls = flow.ToolCalls.ToJson();
-            assistantMsg.ToolNames = String.Join(",", flow.ToolCalls.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase));
-        }
+            // 写入消息内容
+            assistantMsg.Content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
+            if (flow.ThinkingBuilder.Length > 0)
+                assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
+            if (flow.ToolCalls.Count > 0)
+            {
+                assistantMsg.ToolCalls = flow.ToolCalls.ToJson();
+                assistantMsg.ToolNames = String.Join(",", flow.ToolCalls.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase));
+            }
 
-        // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
-        ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
-        ApplyRequestParams(assistantMsg, flow.ModelConfig, flow);
-        assistantMsg.Update();
+            // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
+            ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
+            ApplyRequestParams(assistantMsg, flow.ModelConfig, flow);
+            assistantMsg.Update();
         }
 
         // 用户消息追加可用工具
@@ -52,6 +52,23 @@ public class PersistMessageHandler(ITracer? tracer) : IChatHandler
             if (flow.AvailableToolNames.Count > 0)
                 userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
             userMessage.Update();
+        }
+
+        // 会话
+        var conversation = flow.Conversation;
+        if (conversation != null)
+        {
+            conversation.LastMessageTime = DateTime.Now;
+            conversation.MessageCount = DbChatMessage.CountByConversationId(conversation.Id);
+            if (flow.Usage != null)
+            {
+                conversation.InputTokens += flow.Usage.InputTokens;
+                conversation.OutputTokens += flow.Usage.OutputTokens;
+                conversation.TotalTokens += flow.Usage.TotalTokens;
+                conversation.ElapsedMs += flow.Usage.ElapsedMs;
+            }
+            if (flow.ModelConfig != null) conversation.ModelName = flow.ModelConfig.Name;
+            conversation.Update();
         }
 
         return Task.CompletedTask;

@@ -471,9 +471,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     protected virtual async IAsyncEnumerable<ChatStreamEvent> InvokeChainAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var handlers = Handlers;
-        var lastBeforeIndex = -1;
 
-        // 1. OnBefore 正序（无 Before 能力的 Handler 跳过调用，但仍推进 lastBeforeIndex 确保 OnAfter 回滚覆盖）
+        // ranBefore[i] = true 表示 handlers[i].OnBefore 确实被执行过（短路时后续的 Before 不会推进此集合）
+        // After-only 的 Handler（无 Before 能力）不在此集合内，但 OnAfter 阶段会无条件调用
+        var ranBefore = new Boolean[handlers.Count];
+
+        // 1. OnBefore 正序（无 Before 能力的 Handler 跳过调用）
         for (var i = 0; i < handlers.Count; i++)
         {
             if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before)) continue;
@@ -490,7 +493,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 throw;
             }
 
-            lastBeforeIndex = i;
+            ranBefore[i] = true;
             if (context.Cancel) break;
         }
 
@@ -506,10 +509,14 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             yield return ChatStreamEvent.ErrorEvent(context.CancelCode ?? "CANCELED", context.CancelMessage ?? "请求已取消");
         }
 
-        // 3. OnAfter 倒序（已经过的 Handler，无 After 能力的跳过）
-        for (var i = lastBeforeIndex; i >= 0; i--)
+        // 3. OnAfter 正序（与 OnBefore 同向，注册顺序即执行顺序）
+        // 调用规则：After-only（无 Before 能力）的 Handler 无条件调用；Before+After 的 Handler 仅当其 OnBefore 确实执行过才调用
+        for (var i = 0; i < handlers.Count; i++)
         {
             if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.After)) continue;
+
+            var hasBefore = handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before);
+            if (hasBefore && !ranBefore[i]) continue;
 
             var name = handlers[i].GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnAfter:{name}");

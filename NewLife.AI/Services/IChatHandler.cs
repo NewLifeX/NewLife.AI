@@ -26,12 +26,14 @@ public enum ChatHandlerCapabilities
     Interceptor = 4,
 }
 
-/// <summary>对话处理器（三段式：事前 / 事件流拦截 / 事后）。<b>注册顺序即执行顺序</b>：OnBefore 按注册正序；OnAfter 按注册倒序</summary>
+/// <summary>对话处理器（三段式：事前 / 事件流拦截 / 事后）。<b>注册顺序即执行顺序</b>：OnBefore 与 OnAfter 均按注册正序执行</summary>
 /// <remarks>
 /// <para>通过 <see cref="Capabilities"/> 属性声明本处理器实现了哪些阶段，调度器据此跳过未声明阶段的调用。</para>
+/// <para><b>OnAfter 调用规则</b>：After-only（无 <see cref="ChatHandlerCapabilities.Before"/>）的处理器<b>无条件</b>执行 OnAfter；
+/// 同时声明 Before+After 的处理器仅当其 OnBefore 确实被调用过时才执行 OnAfter（短路时未执行的 OnBefore 对应的 OnAfter 不会被调用）。</para>
 /// <para><b>事前短路</b>：在 <see cref="OnBefore"/> 中将 <see cref="IChatContext.Cancel"/> 置 true 并填充
 /// <see cref="IChatContext.CancelCode"/> / <see cref="IChatContext.CancelMessage"/>，<c>MessageFlow</c> 将：
-/// 跳过后续 Handler 的 OnBefore、跳过整个核心阶段（含 LLM 调用），但仍按注册倒序执行 OnAfter（便于资源回收/扣减回滚）。</para>
+/// 跳过后续 Handler 的 OnBefore、跳过整个核心阶段（含 LLM 调用），仍按注册正序执行所有已运行 OnBefore 的 Handler 的 OnAfter 以及所有 After-only Handler 的 OnAfter。</para>
 /// <para><b>异常</b>：实现者抛出的异常将向上传播。<b>不要</b>静默吞噬。</para>
 /// <para><b>事件流拦截</b>（如推荐缓存命中后直接回放缓存内容）：在 <see cref="Capabilities"/> 中追加
 /// <see cref="ChatHandlerCapabilities.Interceptor"/> 并覆写 <see cref="InvokeAsync"/>；
@@ -52,7 +54,8 @@ public interface IChatHandler
     Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>事后处理。可读取 <see cref="IChatContext.ContentBuilder"/> / <see cref="IChatContext.Usage"/> 等收集结果，
-    /// 用于持久化、配额扣减、统计累加、用量入库等。<b>按注册倒序执行</b></summary>
+    /// 用于持久化、配额扣减、统计累加、用量入库等。<b>按注册正序执行</b>
+    /// （After-only 处理器无条件执行；Before+After 处理器仅当 OnBefore 确实运行过时才执行）</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>

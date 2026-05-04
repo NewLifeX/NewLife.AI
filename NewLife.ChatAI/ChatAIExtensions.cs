@@ -42,15 +42,13 @@ public static class ChatAIExtensions
         services.AddSingleton<GatewayService>();
         services.AddSingleton<GatewayMessageFlow>();
 
-        // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 倒序）
-        // 派生项目（如 StarChat）可通过 services.RemoveAll<IChatHandler>() 重排，或针对特定 Handler 实现替换
-        // 顺序意义：见 Doc/IChatHandler-架构.md
-        services.AddSingleton<IChatHandler, SkillActivationHandler>();
-        services.AddSingleton<IChatHandler, SuggestedCacheHandler>();
-        services.AddSingleton<IChatHandler, ConversationStatsHandler>();
-        services.AddSingleton<IChatHandler, UsageRecordHandler>();
-        services.AddSingleton<IChatHandler, TitleGenerationHandler>();
-        services.AddSingleton<IChatHandler, PersistMessageHandler>();
+        // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 正序）
+        // OnBefore 与 OnAfter 均按注册顺序正序执行，顺序意义：见 Doc/IChatHandler-架构.md
+        services.AddSingleton<IChatHandler, SuggestedCacheHandler>();   // 1. OnBefore 命中缓存时 Interceptor 短路 LLM
+        services.AddSingleton<IChatHandler, SkillActivationHandler>();  // 2. OnBefore 技能解析与注入 / OnAfter 技能计数
+        services.AddSingleton<IChatHandler, TitleGenerationHandler>();  // 3. OnBefore 异步生成标题（与 LLM 并行）
+        services.AddSingleton<IChatHandler, UsageRecordHandler>();      // 4. OnAfter 用量入库
+        services.AddSingleton<IChatHandler, PersistMessageHandler>();   // 5. OnAfter 最后落库消息/会话
 
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);
