@@ -1,6 +1,4 @@
-using NewLife.AI.Services;
-using NewLife.ChatAI.Services;
-using NewLife.Log;
+﻿using NewLife.Log;
 using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Handlers;
@@ -66,7 +64,7 @@ public class PersistMessageHandler(ITracer? tracer) : IChatHandler
     /// <param name="usage">用量统计</param>
     /// <param name="hasError">是否有错误</param>
     /// <param name="errorDetail">错误详情</param>
-    private static void ApplyUsageToMessage(DbChatMessage msg, AI.Models.UsageDetails? usage, Boolean hasError, String? errorDetail = null)
+    private static void ApplyUsageToMessage(DbChatMessage msg, UsageDetails? usage, Boolean hasError, String? errorDetail = null)
     {
         if (msg.Content.IsNullOrEmpty())
         {

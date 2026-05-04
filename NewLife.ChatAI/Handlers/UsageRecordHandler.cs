@@ -1,5 +1,4 @@
-﻿using NewLife.ChatAI.Services;
-using NewLife.Log;
+﻿using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;
 
@@ -19,7 +18,8 @@ public class UsageRecordHandler(UsageService? usageService, ITracer? tracer) : I
         if (flow.Usage == null) return Task.CompletedTask;
 
         using var span = tracer?.NewSpan("handler:UsageRecord");
-        usageService.Record(flow.Conversation, flow.AssistantMessage.Id, flow.ModelConfig.Id, flow.Usage, "Chat");
+        usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, flow.Usage, "Chat");
+
         return Task.CompletedTask;
     }
 }

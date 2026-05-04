@@ -14,25 +14,25 @@ public class UsageService(IChatSetting chatSetting, ILog log)
 {
     #region 写入用量
     /// <summary>记录一次 AI 调用的用量（携带 UsageDetails，自动填充所有 Token 详情字段）</summary>
-    /// <param name="conversation">会话对象</param>
-    /// <param name="messageId">消息编号</param>
-    /// <param name="modelId">模型编号</param>
+    /// <param name="conversation">会话</param>
+    /// <param name="message">消息</param>
+    /// <param name="model">模型</param>
     /// <param name="usage">用量详情</param>
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
-    public void Record(IConversation conversation, Int64 messageId, Int32 modelId, UsageDetails usage, String source)
+    public void Record(IConversation conversation, IChatMessage? message, IModelConfig? model, UsageDetails usage, String source)
     {
         if (!chatSetting.EnableUsageStats) return;
 
         try
         {
-            var entity = new UsageRecord
+            var rec = new UsageRecord
             {
                 UserId = conversation.UserId,
                 AppKeyId = conversation.AppKeyId,
                 ConversationId = conversation.Id,
-                MessageId = messageId,
-                ModelId = modelId,
-                ModelName = ModelConfig.FindById(modelId)?.Name,
+                MessageId = message?.Id ?? 0,
+                ModelId = model?.Id ?? 0,
+                ModelName = model?.Name,
                 InputTokens = usage.InputTokens,
                 OutputTokens = usage.OutputTokens,
                 TotalTokens = usage.TotalTokens,
@@ -45,7 +45,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
                 ElapsedMs = usage.ElapsedMs,
                 Source = source,
             };
-            entity.Insert();
+            rec.Insert();
         }
         catch (Exception ex)
         {

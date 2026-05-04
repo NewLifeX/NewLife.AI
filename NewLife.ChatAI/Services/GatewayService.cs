@@ -387,7 +387,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             UserId = appKey?.UserId ?? 0,
             AppKeyId = appKey?.Id ?? 0,
         };
-        usageService.Record(conv, 0, model.Id, usage, "Gateway");
+        usageService.Record(conv, null, model, usage, "Gateway");
     }
 
     /// <summary>从 AI 消息中提取纯文本内容。支持多模态消息（Contents 列表中提取 TextContent）</summary>
