@@ -5,8 +5,7 @@ using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;
 
-/// <summary>推荐问题缓存处理器。同时实现 <see cref="IChatHandler"/>（事前匹配 + 事后回写）和
-/// <see cref="IChatInterceptor"/>（核心阶段命中时短路回放缓存内容）</summary>
+/// <summary>推荐问题缓存处理器。同时实现 <see cref="IChatHandler"/>（事前匹配 + 事后回写）（核心阶段命中时短路回放缓存内容）</summary>
 /// <remarks>
 /// <para>事前 (<see cref="OnBefore"/>)：精确匹配当天缓存。命中则写入 <c>Items["SuggestedHit"]</c> 标记。</para>
 /// <para>核心 (<see cref="InvokeAsync"/>)：检查标记。命中则插入 assistant 消息、流式回放缓存内容（按 StreamingSpeed 节流）；
@@ -30,7 +29,12 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
         if (content.IsNullOrEmpty()) return Task.CompletedTask;
 
         var cached = SuggestedQuestion.FindCachedTodayByQuestion(content);
-        if (cached != null) context[HitKey] = cached;
+        if (cached != null)
+        {
+            context[HitKey] = cached;
+            DefaultSpan.Current?.AppendTag(cached.Title!);
+        }
+
         return Task.CompletedTask;
     }
 

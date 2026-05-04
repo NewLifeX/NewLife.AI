@@ -101,6 +101,8 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
             if (skillNames.Count > 0)
                 userMessage.SkillNames = String.Join(",", skillNames);
             userMessage.Update();
+
+            DefaultSpan.Current?.AppendTag(userMessage.SkillNames!);
         }
 
         return Task.CompletedTask;

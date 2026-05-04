@@ -101,7 +101,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         if (userId <= 0 || skillId <= 0) return;
 
         var p = XCode.Membership.Parameter.GetOrAdd(userId, "ChatAI", "RecentSkills");
-        var ids = p.Value.IsNullOrEmpty() ? new List<Int32>() : p.Value.Split(',').Select(e => e.ToInt()).Where(id => id > 0).ToList();
+        var ids = p.GetList<Int32>().ToList();
 
         ids.Remove(skillId);
         ids.Insert(0, skillId);

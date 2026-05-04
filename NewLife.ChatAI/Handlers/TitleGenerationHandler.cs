@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using NewLife.AI.Clients;
+﻿using NewLife.AI.Clients;
 using NewLife.Caching;
 using NewLife.Collections;
 using NewLife.Log;
@@ -22,10 +21,6 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
 
     /// <summary>日志（供派生类访问）</summary>
     protected readonly ILog? Log = log;
-
-    // 内容指纹（GetHashCode）→ 已生成标题；避免相同内容在短时间内重复调用 LLM（超出上限后全量清空）
-    private static readonly ConcurrentDictionary<Int32, String> _titleCache = new();
-    private const Int32 CacheSizeLimit = 1000;
 
     /// <inheritdoc/>
     public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before;
