@@ -14,13 +14,16 @@ namespace NewLife.ChatAI.Handlers;
 public class PersistMessageHandler(ITracer? tracer) : IChatHandler
 {
     /// <inheritdoc/>
+    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;
+
+    /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
-        using var span = tracer?.NewSpan("handler:PersistMessage");
+        //using var span = tracer?.NewSpan("handler:PersistMessage");
 
         var assistantMsg = flow.AssistantMessage;
         if (assistantMsg == null) return Task.CompletedTask;

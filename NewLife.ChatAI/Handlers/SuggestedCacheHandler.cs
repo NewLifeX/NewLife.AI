@@ -15,9 +15,12 @@ namespace NewLife.ChatAI.Handlers;
 /// </remarks>
 /// <param name="setting">对话配置</param>
 /// <param name="tracer">追踪器</param>
-public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : IChatHandler, IChatInterceptor
+public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : IChatHandler
 {
     private const String HitKey = "SuggestedHit";
+
+    /// <inheritdoc/>
+    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After | ChatHandlerCapabilities.Interceptor;
 
     /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
@@ -42,7 +45,7 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
         }
 
         // 命中：直接回放
-        using var span = tracer?.NewSpan("handler:SuggestedCache", cached.Question);
+        //using var span = tracer?.NewSpan("handler:SuggestedCache", cached.Question);
 
         if (context is MessageFlowContext flow)
         {

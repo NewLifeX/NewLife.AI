@@ -7,13 +7,16 @@ namespace NewLife.ChatAI.Handlers;
 public class ConversationStatsHandler(ITracer? tracer) : IChatHandler
 {
     /// <inheritdoc/>
+    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;
+
+    /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
-        using var span = tracer?.NewSpan("handler:ConversationStats");
+        //using var span = tracer?.NewSpan("handler:ConversationStats");
 
         var conversation = flow.Conversation;
         if (conversation == null) return Task.CompletedTask;

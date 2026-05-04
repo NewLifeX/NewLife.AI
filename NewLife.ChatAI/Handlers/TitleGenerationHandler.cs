@@ -21,6 +21,9 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
     protected readonly ILog? Log = log;
 
     /// <inheritdoc/>
+    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;
+
+    /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc/>

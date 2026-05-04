@@ -8,6 +8,9 @@ namespace NewLife.ChatAI.Handlers;
 public class UsageRecordHandler(UsageService? usageService, ITracer? tracer) : IChatHandler
 {
     /// <inheritdoc/>
+    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;
+
+    /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc/>
@@ -17,7 +20,7 @@ public class UsageRecordHandler(UsageService? usageService, ITracer? tracer) : I
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
         if (flow.Usage == null) return Task.CompletedTask;
 
-        using var span = tracer?.NewSpan("handler:UsageRecord");
+        //using var span = tracer?.NewSpan("handler:UsageRecord");
         usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, flow.Usage, "Chat");
 
         return Task.CompletedTask;

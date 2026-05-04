@@ -16,10 +16,16 @@ namespace NewLife.ChatAI.Handlers;
 public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, SkillService? skillService, ITracer? tracer) : IChatHandler
 {
     /// <inheritdoc/>
+    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
+ 
+    /// <summary>派生类访问 <see cref="SkillService"/> 实例</summary>
+    protected SkillService? SkillServiceInstance => skillService;
+
+    /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         if (skillService == null) return Task.CompletedTask;
-        using var span = tracer?.NewSpan("handler:SkillActivation");
+        //using var span = tracer?.NewSpan("handler:SkillActivation");
 
         // 1. 处理请求中显式指定的技能切换（"none" 清除；其它编码切换；未指定则不变）
         if (context is MessageFlowContext flow && flow["RequestSkillCode"] is String skillCode && !skillCode.IsNullOrEmpty())
@@ -104,7 +110,4 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
     /// <param name="context">对话上下文</param>
     /// <param name="lastUserContent">最后一条用户消息文本</param>
     protected virtual void ResolveSkillByContent(IChatContext context, String? lastUserContent) { }
-
-    /// <summary>派生类访问 <see cref="SkillService"/> 实例</summary>
-    protected SkillService? SkillServiceInstance => skillService;
 }

@@ -57,7 +57,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     #region 生成入口
 
     /// <summary>非流式重新生成 AI 回复。构建上下文后通过非流式 Handler 三段式调用链执行（OnBefore → InvokeLlmDirectAsync → OnAfter），
-    /// 结果直接写入上下文收集器后由事后 Handler 持久化。<see cref="IChatInterceptor"/> 仅适用于流式路径，此方法不经过拦截器洋葱</summary>
+    /// 结果直接写入上下文收集器后由事后 Handler 持久化。拦截器洋葱（<see cref="ChatHandlerCapabilities.Interceptor"/>）仅适用于流式路径，此方法不经过拦截器洋葱</summary>
     /// <param name="messageId">消息编号（必须为 AI 回复）</param>
     /// <param name="userId">当前用户编号</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -475,10 +475,23 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var handlers = Handlers;
         var lastBeforeIndex = -1;
 
-        // 1. OnBefore 正序
+        // 1. OnBefore 正序（无 Before 能力的 Handler 跳过调用，但仍推进 lastBeforeIndex 确保 OnAfter 回滚覆盖）
         for (var i = 0; i < handlers.Count; i++)
         {
-            await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before)) continue;
+
+            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            using var span = tracer?.NewSpan($"handler:OnBefore:{name}");
+            try
+            {
+                await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                throw;
+            }
+
             lastBeforeIndex = i;
             if (context.Cancel) break;
         }
@@ -495,32 +508,56 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             yield return ChatStreamEvent.ErrorEvent(context.CancelCode ?? "CANCELED", context.CancelMessage ?? "请求已取消");
         }
 
-        // 3. OnAfter 倒序（已经过的 Handler）
+        // 3. OnAfter 倒序（已经过的 Handler，无 After 能力的跳过）
         for (var i = lastBeforeIndex; i >= 0; i--)
         {
-            await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.After)) continue;
+
+            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            using var span = tracer?.NewSpan($"handler:OnAfter:{name}");
+            try
+            {
+                await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                throw;
+            }
         }
     }
 
-    /// <summary>核心阶段。装配 <see cref="IChatInterceptor"/> 洋葱链（最内层为 <see cref="InvokeLlmAsync"/>），
+    /// <summary>核心阶段。装配声明 <see cref="ChatHandlerCapabilities.Interceptor"/> 能力的 Handler 洋葱链（最内层为 <see cref="InvokeLlmAsync"/>），
     /// 并将事件透传给调用方的同时，写入上下文 ContentBuilder/ThinkingBuilder/ToolCalls/Usage 收集器</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>事件流</returns>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> CoreStreamAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // 仅过滤实现 IChatInterceptor 的 Handler；DI 单注册（IChatHandler）即可同时获得两面
-        var interceptors = Handlers.OfType<IChatInterceptor>().ToArray();
-
         // 链路终点：LLM 调用
         ChatNextDelegate next = ct => InvokeLlmAsync(context, ct);
 
         // 倒序构建：注册顺序 [0, 1, 2, ...] = 外→内
-        for (var i = interceptors.Length - 1; i >= 0; i--)
+        for (var i = Handlers.Count - 1; i >= 0; i--)
         {
-            var current = interceptors[i];
+            var current = Handlers[i];
+            if (!current.Capabilities.HasFlag(ChatHandlerCapabilities.Interceptor)) continue;
+
             var captured = next;
-            next = ct => current.InvokeAsync(context, captured, ct);
+            next = ct =>
+            {
+                var name = current.GetType().Name.TrimSuffix("Handler");
+                using var span = tracer?.NewSpan($"handler:Invoke:{name}", context.ContextMessages);
+                try
+                {
+                    return current.InvokeAsync(context, captured, ct);
+                }
+                catch (Exception ex)
+                {
+                    span?.SetError(ex);
+                    throw;
+                }
+            };
         }
 
         var source = next(cancellationToken);
@@ -730,7 +767,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     }
 
     /// <summary>非流式 LLM 调用。链路最内层节点（非流式路径专用）：组装过滤器链 + 工具装配 + 单次 GetResponseAsync。
-    /// <see cref="IChatInterceptor"/> 洋葱仅适用于流式路径，此方法不经过拦截器；
+    /// 拦截器洋葱（<see cref="ChatHandlerCapabilities.Interceptor"/>）仅适用于流式路径，此方法不经过拦截器；
     /// <see cref="IChatFilter"/> 链（<see cref="ChatFilters"/>）仍通过 <c>UseFilters</c> 正常生效</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -808,7 +845,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     }
 
     /// <summary>非流式 Handler 三段式调用链：OnBefore（注册顺序） → <see cref="InvokeLlmDirectAsync"/> → OnAfter（注册倒序）。
-    /// 与 <see cref="InvokeChainAsync"/> 的区别：核心阶段调用非流式 LLM，<see cref="IChatInterceptor"/> 不参与</summary>
+    /// 与 <see cref="InvokeChainAsync"/> 的区别：核心阶段调用非流式 LLM，拦截器洋葱（<see cref="ChatHandlerCapabilities.Interceptor"/>）不参与</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     protected virtual async Task InvokeNonStreamAsync(IChatContext context, CancellationToken cancellationToken)
@@ -819,7 +856,20 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 1. OnBefore 正序
         for (var i = 0; i < handlers.Count; i++)
         {
-            await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before)) continue;
+
+            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            using var span = tracer?.NewSpan($"handler:OnBefore:{name}");
+            try
+            {
+                await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                throw;
+            }
+
             lastBeforeIndex = i;
             if (context.Cancel) break;
         }
@@ -830,7 +880,21 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 3. OnAfter 倒序（已经过的 Handler）
         for (var i = lastBeforeIndex; i >= 0; i--)
-            await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+        {
+            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.After)) continue;
+
+            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            using var span = tracer?.NewSpan($"handler:OnAfter:{name}");
+            try
+            {
+                await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                throw;
+            }
+        }
     }
 
     /// <summary>将工具提供者应用到客户端构建器。派生类可覆盖以实现渐进式工具发现、结果截断等策略</summary>
