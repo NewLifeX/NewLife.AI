@@ -53,13 +53,13 @@ export function ToolCallBadge({ name, status, arguments: args, result, showDetai
           {args && (
             <div className="px-3 py-2 border-b border-gray-700/50">
               <div className="text-gray-400 mb-1 text-[10px] uppercase tracking-wider">Arguments</div>
-              <pre className="whitespace-pre-wrap break-words leading-relaxed">{formatJson(args)}</pre>
+              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{formatJson(args)}</pre>
             </div>
           )}
           {result && (
             <div className="px-3 py-2">
               <div className="text-gray-400 mb-1 text-[10px] uppercase tracking-wider">Result</div>
-              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">{formatJson(result)}</pre>
+              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{formatJson(result)}</pre>
             </div>
           )}
         </div>
