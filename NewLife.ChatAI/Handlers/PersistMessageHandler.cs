@@ -46,7 +46,7 @@ public class PersistMessageHandler(ITracer? tracer) : IChatHandler
         {
             var skillNames = new HashSet<String>(flow.ResolvedSkillNames, StringComparer.OrdinalIgnoreCase);
             var skillName = flow["SkillName"] as String;
-            if (flow.SkillId > 0 && !skillName.IsNullOrEmpty())
+            if (flow.SkillId > 0 && !skillName.IsNullOrEmpty() && !skillNames.Contains(skillName))
                 skillNames.Add(skillName);
 
             if (skillNames.Count > 0)

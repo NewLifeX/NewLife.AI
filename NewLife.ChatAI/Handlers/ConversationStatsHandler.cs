@@ -1,6 +1,4 @@
-using NewLife.AI.Services;
-using NewLife.ChatAI.Services;
-using NewLife.Log;
+﻿using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;
 
@@ -31,6 +29,7 @@ public class ConversationStatsHandler(ITracer? tracer) : IChatHandler
         }
         if (flow.ModelConfig != null) conversation.ModelName = flow.ModelConfig.Name;
         conversation.Update();
+
         return Task.CompletedTask;
     }
 }

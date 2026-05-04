@@ -1,9 +1,6 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.ChatAI.Services;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Handlers;
@@ -30,14 +27,14 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
         if (content.IsNullOrEmpty()) return Task.CompletedTask;
 
         var cached = SuggestedQuestion.FindCachedTodayByQuestion(content);
-        if (cached != null) context.Items[HitKey] = cached;
+        if (cached != null) context[HitKey] = cached;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async IAsyncEnumerable<ChatStreamEvent> InvokeAsync(IChatContext context, ChatNextDelegate next, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (context.Items[HitKey] is not SuggestedQuestion cached)
+        if (context[HitKey] is not SuggestedQuestion cached)
         {
             await foreach (var ev in next(cancellationToken).ConfigureAwait(false))
                 yield return ev;
@@ -45,7 +42,7 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
         }
 
         // 命中：直接回放
-        using var span = tracer?.NewSpan("handler:SuggestedCache:hit", cached.Question);
+        using var span = tracer?.NewSpan("handler:SuggestedCache", cached.Question);
 
         if (context is MessageFlowContext flow)
         {
@@ -54,7 +51,7 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
                 ConversationId = flow.Conversation.Id,
                 Role = "assistant",
                 Content = cached.Response,
-                ThinkingContent = cached.ThinkingResponse.IsNullOrEmpty() ? null : cached.ThinkingResponse,
+                ThinkingContent = cached.ThinkingResponse,
             };
             cachedMsg.Insert();
             flow.AssistantMessage = cachedMsg;
@@ -95,18 +92,19 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
     {
         if (!setting.EnableSuggestedQuestionCache) return Task.CompletedTask;
         if (context.HasError || context.ContentBuilder.Length == 0) return Task.CompletedTask;
-        if (context.Items[HitKey] is SuggestedQuestion) return Task.CompletedTask; // 命中场景不回写
+        if (context[HitKey] is SuggestedQuestion) return Task.CompletedTask; // 命中场景不回写
 
         var question = context.UserMessage?.Content;
         if (question.IsNullOrEmpty()) return Task.CompletedTask;
 
         var sq = SuggestedQuestion.FindCachedByQuestion(question);
-        if (sq == null || (!sq.Response.IsNullOrEmpty() && sq.UpdateTime.Date >= DateTime.Today)) return Task.CompletedTask;
+        if (sq == null) return Task.CompletedTask;
 
         sq.Response = context.ContentBuilder.ToString();
-        sq.ThinkingResponse = context.ThinkingBuilder.Length > 0 ? context.ThinkingBuilder.ToString() : null;
-        if (context.ModelConfig is ModelConfig mc) sq.ModelId = mc.Id;
+        sq.ThinkingResponse = context.ThinkingBuilder.ToString();
+        sq.ModelId = context.ModelConfig.Id;
         sq.Update();
+
         return Task.CompletedTask;
     }
 
@@ -122,6 +120,7 @@ public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : ICha
     private static async IAsyncEnumerable<String> ThrottleTextAsync(String text, Int32 chunkSize, Int32 delayMs, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (text.IsNullOrEmpty()) yield break;
+
         var enumerator = StringInfo.GetTextElementEnumerator(text);
         var buf = new StringBuilder(chunkSize * 4);
         var count = 0;

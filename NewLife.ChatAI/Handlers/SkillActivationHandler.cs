@@ -1,6 +1,4 @@
-using NewLife.AI.Services;
-using NewLife.AI.Tools;
-using NewLife.ChatAI.Services;
+﻿using NewLife.AI.Tools;
 using NewLife.ChatAI.Tools;
 using NewLife.Log;
 
@@ -15,10 +13,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="toolProviders">工具提供者集合（用于 MCP 触发词匹配）</param>
 /// <param name="skillService">技能服务（可为 null）</param>
 /// <param name="tracer">追踪器</param>
-public class SkillActivationHandler(
-    IEnumerable<IToolProvider> toolProviders,
-    SkillService? skillService,
-    ITracer? tracer) : IChatHandler
+public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, SkillService? skillService, ITracer? tracer) : IChatHandler
 {
     /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
@@ -99,7 +94,9 @@ public class SkillActivationHandler(
     {
         if (skillService == null || context.SkillId <= 0 || context.UserId <= 0) return Task.CompletedTask;
         if (context.HasError) return Task.CompletedTask;
+
         skillService.RecordUsage(context.UserId, context.SkillId);
+
         return Task.CompletedTask;
     }
 
