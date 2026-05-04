@@ -189,6 +189,8 @@ export default {
       defaultModelDesc: '新建對話時使用的預設 AI 模型',
       defaultThinkingMode: '預設思考模式',
       defaultThinkingModeDesc: '對話的預設推理模式',
+      thinkingCollapsed: '預設收縮思考過程',
+      thinkingCollapsedDesc: '開啟後，AI思考過程預設收縮顯示，點擊可展開。收縮時標題框會即時顯示當前思考步驟。',
       thinkingAuto: '自動',
       thinkingThink: '深度思考',
       thinkingFast: '快速',

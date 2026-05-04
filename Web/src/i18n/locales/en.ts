@@ -183,6 +183,8 @@ export default {
       defaultModelDesc: 'Default AI model used when creating a new conversation',
       defaultThinkingMode: 'Default Thinking Mode',
       defaultThinkingModeDesc: 'Default reasoning mode for conversations',
+      thinkingCollapsed: 'Collapse Thinking by Default',
+      thinkingCollapsedDesc: 'When enabled, the AI thinking process is collapsed by default. Click to expand. While collapsed, the header shows the current thinking step in real time.',
       thinkingAuto: 'Auto',
       thinkingThink: 'Deep Think',
       thinkingFast: 'Fast',

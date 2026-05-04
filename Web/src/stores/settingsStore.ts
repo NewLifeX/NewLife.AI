@@ -49,6 +49,7 @@ const defaults: UserSettings = {
   showToolCalls: false,
   allowTraining: false,
   contentWidth: 960,
+  thinkingCollapsed: false,
 }
 
 export const useSettingsStore = create<SettingsState>()(

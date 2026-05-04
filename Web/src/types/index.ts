@@ -93,6 +93,7 @@ export interface UserSettings {
   allowTraining: boolean
   defaultSkill?: string
   contentWidth?: number
+  thinkingCollapsed?: boolean
 }
 
 

@@ -436,6 +436,7 @@ public class ChatApplicationService
         entity.AllowTraining = settings.AllowTraining;
         entity.McpEnabled = settings.McpEnabled;
         entity.ShowToolCalls = settings.ShowToolCalls;
+        entity.ThinkingCollapsed = settings.ThinkingCollapsed;
         entity.DefaultSkill = settings.DefaultSkill;
         entity.EnableLearning = settings.EnableLearning;
         entity.ContentWidth = settings.ContentWidth;
@@ -655,6 +656,7 @@ public class ChatApplicationService
         {
             McpEnabled = entity.McpEnabled,
             ShowToolCalls = entity.ShowToolCalls,
+            ThinkingCollapsed = entity.ThinkingCollapsed,
             DefaultSkill = entity.DefaultSkill ?? "general",
             EnableLearning = entity.EnableLearning,
             ContentWidth = entity.ContentWidth,

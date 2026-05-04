@@ -150,6 +150,14 @@ public partial class UserSetting
     [BindColumn("ShowToolCalls", "显示工具调用。是否在对话中显示工具调用的入参和出参详情", "")]
     public Boolean ShowToolCalls { get => _ShowToolCalls; set { if (OnPropertyChanging("ShowToolCalls", value)) { _ShowToolCalls = value; OnPropertyChanged("ShowToolCalls"); } } }
 
+    private Boolean _ThinkingCollapsed;
+    /// <summary>思考过程收缩。默认是否收缩展示思考过程，默认展开</summary>
+    [DisplayName("思考过程收缩")]
+    [Description("思考过程收缩。默认是否收缩展示思考过程，默认展开")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ThinkingCollapsed", "思考过程收缩。默认是否收缩展示思考过程，默认展开", "")]
+    public Boolean ThinkingCollapsed { get => _ThinkingCollapsed; set { if (OnPropertyChanging("ThinkingCollapsed", value)) { _ThinkingCollapsed = value; OnPropertyChanged("ThinkingCollapsed"); } } }
+
     private String? _DefaultSkill;
     /// <summary>默认技能。新会话的默认技能编码</summary>
     [DisplayName("默认技能")]
@@ -253,6 +261,7 @@ public partial class UserSetting
             "AllowTraining" => _AllowTraining,
             "McpEnabled" => _McpEnabled,
             "ShowToolCalls" => _ShowToolCalls,
+            "ThinkingCollapsed" => _ThinkingCollapsed,
             "DefaultSkill" => _DefaultSkill,
             "EnableLearning" => _EnableLearning,
             "ContentWidth" => _ContentWidth,
@@ -284,6 +293,7 @@ public partial class UserSetting
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
                 case "ShowToolCalls": _ShowToolCalls = value.ToBoolean(); break;
+                case "ThinkingCollapsed": _ThinkingCollapsed = value.ToBoolean(); break;
                 case "DefaultSkill": _DefaultSkill = Convert.ToString(value); break;
                 case "EnableLearning": _EnableLearning = value.ToBoolean(); break;
                 case "ContentWidth": _ContentWidth = value.ToInt(); break;
@@ -425,6 +435,9 @@ public partial class UserSetting
         /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
         public static readonly Field ShowToolCalls = FindByName("ShowToolCalls");
 
+        /// <summary>思考过程收缩。默认是否收缩展示思考过程，默认展开</summary>
+        public static readonly Field ThinkingCollapsed = FindByName("ThinkingCollapsed");
+
         /// <summary>默认技能。新会话的默认技能编码</summary>
         public static readonly Field DefaultSkill = FindByName("DefaultSkill");
 
@@ -505,6 +518,9 @@ public partial class UserSetting
 
         /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
         public const String ShowToolCalls = "ShowToolCalls";
+
+        /// <summary>思考过程收缩。默认是否收缩展示思考过程，默认展开</summary>
+        public const String ThinkingCollapsed = "ThinkingCollapsed";
 
         /// <summary>默认技能。新会话的默认技能编码</summary>
         public const String DefaultSkill = "DefaultSkill";

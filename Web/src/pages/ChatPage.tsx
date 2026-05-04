@@ -74,6 +74,8 @@ export function ChatPage({
   const userScrolledRef = useRef(false)
   const [showBackToBottom, setShowBackToBottom] = useState(false)
   const contentWidth = useSettingsStore((s) => s.contentWidth) ?? 960
+  const thinkingCollapsed = useSettingsStore((s) => s.thinkingCollapsed) ?? false
+  const updateSettings = useSettingsStore((s) => s.update)
   const artifactOpen = useArtifactStore((s) => s.current !== null)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -153,6 +155,8 @@ export function ChatPage({
                         content={seg.content}
                         isStreaming={isLastSegmentStreaming && i === msg.thinkingSegments!.length - 1}
                         thinkingTime={seg.thinkingTime}
+                        defaultCollapsed={thinkingCollapsed}
+                        onCollapsedChange={(v) => updateSettings({ thinkingCollapsed: v })}
                       />
                       {i === 0 && msg.toolCalls && msg.toolCalls.length > 0 && (
                         <div className="flex items-center flex-wrap gap-2 mb-4">
@@ -172,6 +176,8 @@ export function ChatPage({
                   content={msg.thinkingContent}
                   isStreaming={msg.status === 'streaming' && !msg.content}
                   thinkingTime={msg.thinkingTime}
+                  defaultCollapsed={thinkingCollapsed}
+                  onCollapsedChange={(v) => updateSettings({ thinkingCollapsed: v })}
                 />
               )
             }

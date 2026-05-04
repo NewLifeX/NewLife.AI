@@ -285,6 +285,7 @@
         <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许反馈数据用于模型改进" />
         <Column Name="McpEnabled" DataType="Boolean" Description="启用MCP。是否启用MCP工具调用" />
         <Column Name="ShowToolCalls" DataType="Boolean" Description="显示工具调用。是否在对话中显示工具调用的入参和出参详情" />
+        <Column Name="ThinkingCollapsed" DataType="Boolean" Description="思考过程收缩。默认是否收缩展示思考过程，默认展开" />
         <Column Name="DefaultSkill" DataType="String" Description="默认技能。新会话的默认技能编码" />
         <Column Name="EnableLearning" DataType="Boolean" DefaultValue="true" Description="启用个人学习。用户级自学习开关，全局开关开启后此项生效" />
         <Column Name="ContentWidth" DataType="Int32" Description="内容区宽度。标准960/宽屏1200/自适应0" />

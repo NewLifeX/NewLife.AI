@@ -8,6 +8,8 @@ interface ThinkingBlockProps {
   isStreaming?: boolean
   thinkingTime?: number
   className?: string
+  defaultCollapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
 /** 流式推理时的实时计时器 */
@@ -23,30 +25,65 @@ function LiveTimer() {
   return <span className="ml-1 tabular-nums opacity-70">({(elapsed / 1000).toFixed(1)}s)</span>
 }
 
+/** 从思考内容中提取最后一个关键步骤标题 */
+function extractKeyStep(content: string): string {
+  const boldRe = /\*\*([^*\n]{1,60})\*\*/g
+  let last = ''
+  let m: RegExpExecArray | null
+  while ((m = boldRe.exec(content)) !== null) {
+    last = m[1].trim()
+  }
+  if (last) return last
+  // 回退：最后一段首句
+  const paras = content.split(/\n{2,}/)
+  const lastPara = paras[paras.length - 1]?.trim()
+  if (lastPara) {
+    const firstSentence = lastPara.split(/[。！？.!?\n]/)[0].trim()
+    if (firstSentence && firstSentence.length <= 40) return firstSentence
+  }
+  return ''
+}
+
 export function ThinkingBlock({
   content,
   isStreaming = false,
   thinkingTime,
   className,
+  defaultCollapsed,
+  onCollapsedChange,
 }: ThinkingBlockProps) {
   const { t } = useTranslation()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(defaultCollapsed ?? false)
+
+  const handleToggle = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    onCollapsedChange?.(next)
+  }
+
+  const streamingLabel = isStreaming && collapsed
+    ? (extractKeyStep(content) || t('chat.thinkingInProgress'))
+    : undefined
 
   return (
     <div className={cn('mb-4', className)}>
       <button
-        onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center space-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg select-none hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors w-fit"
+        onClick={handleToggle}
+        className="flex items-center space-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg select-none hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors w-fit max-w-full"
       >
         {isStreaming ? (
           <>
-            <Icon name="cyclone" variant="symbols" size="sm" className="animate-spin" />
-            <span className="animate-pulse">{t('chat.thinkingInProgress')}</span>
-            <LiveTimer />
+            <Icon name="cyclone" variant="symbols" size="sm" className="animate-spin flex-shrink-0" />
+            {collapsed ? (
+              <span className="max-w-[16rem] truncate animate-pulse">{streamingLabel}</span>
+            ) : (
+              <span className="animate-pulse">{t('chat.thinkingInProgress')}</span>
+            )}
+            {!collapsed && <LiveTimer />}
           </>
         ) : (
           <>
-            <Icon name="psychology" variant="outlined" size="sm" />
+            <Icon name="psychology" variant="outlined" size="sm" className="flex-shrink-0" />
             <span>
               {t('chat.thinkingProcess')}
               {thinkingTime != null && thinkingTime > 0 && (
@@ -57,7 +94,7 @@ export function ThinkingBlock({
               name={collapsed ? 'expand_more' : 'expand_less'}
               variant="outlined"
               size="sm"
-              className="text-blue-400"
+              className="text-blue-400 flex-shrink-0"
             />
           </>
         )}

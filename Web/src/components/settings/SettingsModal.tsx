@@ -127,6 +127,8 @@ export function SettingsModal({
             onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
             contextRounds={settings.contextRounds}
             onContextRoundsChange={(v) => update({ contextRounds: v })}
+            thinkingCollapsed={settings.thinkingCollapsed ?? false}
+            onThinkingCollapsedChange={(v) => update({ thinkingCollapsed: v })}
             models={models}
           />
         )}
