@@ -165,8 +165,8 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <inheritdoc />
     IChatMessage IChatContext.AssistantMessage { get => AssistantMessage; set => AssistantMessage = (DbChatMessage)value; }
 
-    /// <inheritdoc />
-    IList<AiChatMessage> IChatContext.ContextMessages { get => ContextMessages; set => ContextMessages = value; }
+    ///// <inheritdoc />
+    //IList<AiChatMessage> IChatContext.ContextMessages { get => ContextMessages; set => ContextMessages = value; }
 
     #endregion
 }
