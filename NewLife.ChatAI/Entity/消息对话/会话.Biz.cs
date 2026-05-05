@@ -152,6 +152,16 @@ public partial class Conversation : Entity<Conversation>, IConversation
 
         return FindAll(_.UserId == userId, _.LastMessageTime.Desc(), null, 0, maxCount);
     }
+
+    /// <summary>统计用户的会话总数</summary>
+    /// <param name="userId">用户编号</param>
+    /// <returns>会话总数</returns>
+    public static Int32 CountByUserId(Int32 userId)
+    {
+        if (userId <= 0) return 0;
+
+        return (Int32)FindCount(_.UserId == userId);
+    }
     #endregion
 
     #region 业务操作

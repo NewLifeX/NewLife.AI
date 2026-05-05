@@ -2,7 +2,6 @@
 using NewLife.Data;
 using NewLife.Log;
 using XCode;
-using UsageDetails = NewLife.AI.Models.UsageDetails;
 
 namespace NewLife.ChatAI.Services;
 
@@ -60,9 +59,8 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public UsageSummaryDto GetSummary(Int32 userId)
     {
-        var conversations = (Int32)Conversation.FindCount(Conversation._.UserId == userId);
-        var messages = (Int32)DbChatMessage.FindCount(
-            DbChatMessage._.ConversationId.In(Conversation.FindSQLWithKey(Conversation._.UserId == userId)));
+        var conversations = Conversation.CountByUserId(userId);
+        var messages = DbChatMessage.CountByUserId(userId);
 
         var records = UsageRecord.FindAllByUserId(userId);
         var totalPrompt = records.Sum(e => e.InputTokens);

@@ -213,6 +213,16 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
         if (conversationId <= 0) return 0;
         return (Int32)FindCount(_.ConversationId == conversationId);
     }
+
+    /// <summary>统计指定用户下的消息总数（通过会话子查询）</summary>
+    /// <param name="userId">用户编号</param>
+    /// <returns>消息总数</returns>
+    public static Int32 CountByUserId(Int32 userId)
+    {
+        if (userId <= 0) return 0;
+
+        return (Int32)FindCount(_.ConversationId.In(Conversation.FindSQLWithKey(Conversation._.UserId == userId)));
+    }
     #endregion
 
     #region 业务操作
