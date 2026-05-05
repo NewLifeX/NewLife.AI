@@ -1,6 +1,7 @@
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 
-namespace NewLife.AI.Services;
+namespace NewLife.AI.Handlers;
 
 /// <summary>对话事件流委托。调用链中的下一个节点（最末端为 <c>MessageFlow</c> 内核 LLM 调用），返回事件流</summary>
 /// <param name="cancellationToken">取消令牌</param>

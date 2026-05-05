@@ -40,10 +40,11 @@ namespace NewLife.ChatAI.Services;
 public class MessageFlow(ModelService modelService, BackgroundGenerationService? backgroundService, IChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null) : IMessageFlow
 {
     #region 字段
-    /// <summary>对话处理器链（DI 注册的 <see cref="IChatHandler"/>，<b>按注册顺序即外→内顺序</b>）。
-    /// 为空时核心仍会执行（仅 LLM 调用，无任何事前/事后扩展）。
-    /// 派生类可在构造函数体内赋值，以注入专属 Handler 子集（如 GatewayMessageFlow）</summary>
-    protected IReadOnlyList<IChatHandler> Handlers = services?.GetServices<IChatHandler>().ToArray() ?? [];
+    /// <summary>对话处理器调用链管理器。根据 <see cref="ChatHandlerOrderAttribute"/> 属性排序 Handler，
+    /// 对外暴露 <see cref="ChatHandlerChain.BeforeHandlers"/> / <see cref="ChatHandlerChain.AfterHandlers"/> / <see cref="ChatHandlerChain.Interceptors"/> 三个有序视图。
+    /// 为空链时核心仍会执行（仅 LLM 调用，无任何事前/事后扩展）。
+    /// 派生类可在构造函数体内覆盖，以注入专属 Handler 子集（如 GatewayMessageFlow）</summary>
+    protected ChatHandlerChain Chain = services?.GetService<ChatHandlerChain>() ?? new ChatHandlerChain(services?.GetServices<IChatHandler>() ?? []);
 
     /// <summary>工具提供者集合（DbToolProvider / McpClientService 等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
     protected IReadOnlyList<IToolProvider> ToolProviders = services?.GetServices<IToolProvider>().ToArray() ?? [];
@@ -462,30 +463,26 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         return messages;
     }
 
-    /// <summary>执行 <see cref="IChatHandler"/> 三段式调用链：OnBefore（注册顺序） → 核心阶段（含 LLM 调用与可选拦截器洋葱） → OnAfter（注册倒序）。
-    /// 任一 OnBefore 将 <see cref="IChatContext.Cancel"/> 置 true 即跳过后续 OnBefore 与整个核心阶段，但已经过的 OnAfter 仍会按倒序执行。
+    /// <summary>执行 <see cref="IChatHandler"/> 三段式调用链：OnBefore（BeforeOrder 升序） → 核心阶段（含 LLM 调用与可选拦截器洋葱） → OnAfter（AfterOrder 升序）。
+    /// 任一 OnBefore 将 <see cref="IChatContext.Cancel"/> 置 true 即跳过后续 OnBefore 与整个核心阶段，但已经过的 OnAfter 仍会按序执行。
     /// OnBefore/OnAfter 抛出的异常将向上传播，不在此处捕获</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>事件流</returns>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> InvokeChainAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var handlers = Handlers;
+        // ranBefore：记录哪些处理器的 OnBefore 确实被执行过（短路时后续的 Before 不推入此集合）
+        // After-only（无 Before 能力）的处理器不在此集合内，OnAfter 阶段无条件调用
+        var ranBefore = new HashSet<IChatHandler>(ReferenceEqualityComparer.Instance);
 
-        // ranBefore[i] = true 表示 handlers[i].OnBefore 确实被执行过（短路时后续的 Before 不会推进此集合）
-        // After-only 的 Handler（无 Before 能力）不在此集合内，但 OnAfter 阶段会无条件调用
-        var ranBefore = new Boolean[handlers.Count];
-
-        // 1. OnBefore 正序（无 Before 能力的 Handler 跳过调用）
-        for (var i = 0; i < handlers.Count; i++)
+        // 1. OnBefore 按 BeforeOrder 升序执行
+        foreach (var handler in Chain.BeforeHandlers)
         {
-            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before)) continue;
-
-            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            var name = handler.GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnBefore:{name}");
             try
             {
-                await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+                await handler.OnBefore(context, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -493,7 +490,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 throw;
             }
 
-            ranBefore[i] = true;
+            ranBefore.Add(handler);
             if (context.Cancel) break;
         }
 
@@ -509,20 +506,18 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             yield return ChatStreamEvent.ErrorEvent(context.CancelCode ?? "CANCELED", context.CancelMessage ?? "请求已取消");
         }
 
-        // 3. OnAfter 正序（与 OnBefore 同向，注册顺序即执行顺序）
-        // 调用规则：After-only（无 Before 能力）的 Handler 无条件调用；Before+After 的 Handler 仅当其 OnBefore 确实执行过才调用
-        for (var i = 0; i < handlers.Count; i++)
+        // 3. OnAfter 按 AfterOrder 升序执行
+        // 调用规则：After-only（无 Before 能力）的处理器无条件调用；Before+After 的处理器仅当其 OnBefore 确实执行过才调用
+        foreach (var handler in Chain.AfterHandlers)
         {
-            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.After)) continue;
+            var hasBefore = handler.Capabilities.HasFlag(ChatHandlerCapabilities.Before);
+            if (hasBefore && !ranBefore.Contains(handler)) continue;
 
-            var hasBefore = handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before);
-            if (hasBefore && !ranBefore[i]) continue;
-
-            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            var name = handler.GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnAfter:{name}");
             try
             {
-                await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+                await handler.OnAfter(context, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -532,7 +527,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
     }
 
-    /// <summary>核心阶段。装配声明 <see cref="ChatHandlerCapabilities.Interceptor"/> 能力的 Handler 洋葱链（最内层为 <see cref="InvokeLlmAsync"/>），
+    /// <summary>核心阶段。按 <see cref="ChatHandlerChain.Interceptors"/> 列表（注册序）倒序包裹 <see cref="InvokeLlmAsync"/> 构建洋葱链，
     /// 并将事件透传给调用方的同时，写入上下文 ContentBuilder/ThinkingBuilder/ToolCalls/Usage 收集器</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -542,20 +537,20 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 链路终点：LLM 调用
         ChatNextDelegate next = ct => InvokeLlmAsync(context, ct);
 
-        // 倒序构建：注册顺序 [0, 1, 2, ...] = 外→内
-        for (var i = Handlers.Count - 1; i >= 0; i--)
+        // 倒序包裹：Interceptors[0] 为最外层，Interceptors[^1] 为最内层（紧挨 LLM 调用）
+        var interceptors = Chain.Interceptors;
+        for (var i = interceptors.Count - 1; i >= 0; i--)
         {
-            var current = Handlers[i];
-            if (!current.Capabilities.HasFlag(ChatHandlerCapabilities.Interceptor)) continue;
+            var handler = interceptors[i];
 
             var captured = next;
             next = ct =>
             {
-                var name = current.GetType().Name.TrimSuffix("Handler");
+                var name = handler.GetType().Name.TrimSuffix("Handler");
                 using var span = tracer?.NewSpan($"handler:Invoke:{name}", context.ContextMessages);
                 try
                 {
-                    return current.InvokeAsync(context, captured, ct);
+                    return handler.InvokeAsync(context, captured, ct);
                 }
                 catch (Exception ex)
                 {
@@ -855,19 +850,16 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="cancellationToken">取消令牌</param>
     protected virtual async Task InvokeNonStreamAsync(IChatContext context, CancellationToken cancellationToken)
     {
-        var handlers = Handlers;
-        var lastBeforeIndex = -1;
+        var ranBefore = new HashSet<IChatHandler>(ReferenceEqualityComparer.Instance);
 
-        // 1. OnBefore 正序
-        for (var i = 0; i < handlers.Count; i++)
+        // 1. OnBefore 按 BeforeOrder 升序执行
+        foreach (var handler in Chain.BeforeHandlers)
         {
-            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.Before)) continue;
-
-            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            var name = handler.GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnBefore:{name}");
             try
             {
-                await handlers[i].OnBefore(context, cancellationToken).ConfigureAwait(false);
+                await handler.OnBefore(context, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -875,7 +867,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 throw;
             }
 
-            lastBeforeIndex = i;
+            ranBefore.Add(handler);
             if (context.Cancel) break;
         }
 
@@ -883,16 +875,18 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (!context.Cancel)
             await InvokeLlmDirectAsync(context, cancellationToken).ConfigureAwait(false);
 
-        // 3. OnAfter 倒序（已经过的 Handler）
-        for (var i = lastBeforeIndex; i >= 0; i--)
+        // 3. OnAfter 按 AfterOrder 升序执行
+        // 调用规则：After-only（无 Before 能力）的处理器无条件调用；Before+After 的处理器仅当其 OnBefore 确实执行过才调用
+        foreach (var handler in Chain.AfterHandlers)
         {
-            if (!handlers[i].Capabilities.HasFlag(ChatHandlerCapabilities.After)) continue;
+            var hasBefore = handler.Capabilities.HasFlag(ChatHandlerCapabilities.Before);
+            if (hasBefore && !ranBefore.Contains(handler)) continue;
 
-            var name = handlers[i].GetType().Name.TrimSuffix("Handler");
+            var name = handler.GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnAfter:{name}");
             try
             {
-                await handlers[i].OnAfter(context, cancellationToken).ConfigureAwait(false);
+                await handler.OnAfter(context, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

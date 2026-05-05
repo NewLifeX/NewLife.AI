@@ -13,8 +13,8 @@ namespace NewLife.ChatAI.Handlers;
 /// <para>事后 (<see cref="OnAfter"/>)：未命中且生成成功时回写本次回复到缓存。</para>
 /// </remarks>
 /// <param name="setting">对话配置</param>
-/// <param name="tracer">追踪器</param>
-public class SuggestedCacheHandler(IChatSetting setting, ITracer? tracer) : IChatHandler
+[ChatHandlerOrder(10)]
+public class SuggestedCacheHandler(IChatSetting setting) : IChatHandler
 {
     private const String HitKey = "SuggestedHit";
 

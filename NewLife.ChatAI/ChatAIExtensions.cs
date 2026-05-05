@@ -50,6 +50,16 @@ public static class ChatAIExtensions
         services.AddSingleton<IChatHandler, UsageRecordHandler>();      // 4. OnAfter 用量入库
         services.AddSingleton<IChatHandler, PersistMessageHandler>();   // 5. OnAfter 最后落库消息/会话
 
+        // Web UI 主调用链：收集全部已注册的 IChatHandler，按 [ChatHandlerOrder] 特性构建有序视图
+        // TryAdd 语义：上层项目已注册时不重复注册
+        services.TryAddSingleton(sp => new ChatHandlerChain(sp.GetServices<IChatHandler>()));
+
+        // 网关专属调用链：仅含用量记录（无 UI 专属的技能/知识库/持久化处理器）
+        // 复用主链路中已实例化的同一批 Handler 单例，无重复创建
+        services.TryAddSingleton<GatewayChatHandlerChain>(sp =>
+            new GatewayChatHandlerChain(sp.GetServices<IChatHandler>()
+                .Where(h => h is UsageRecordHandler)));
+
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);
 

@@ -1,11 +1,9 @@
-﻿using NewLife.Log;
-
-namespace NewLife.ChatAI.Handlers;
+﻿namespace NewLife.ChatAI.Handlers;
 
 /// <summary>用量入库处理器。事后通过 <see cref="UsageService"/> 记录 Token 使用、调用次数等度量</summary>
 /// <param name="usageService">用量服务（可为 null）</param>
-/// <param name="tracer">追踪器</param>
-public class UsageRecordHandler(UsageService? usageService, ITracer? tracer) : IChatHandler
+[ChatHandlerOrder(After = 9000)]
+public class UsageRecordHandler(UsageService? usageService) : IChatHandler
 {
     /// <inheritdoc/>
     public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;

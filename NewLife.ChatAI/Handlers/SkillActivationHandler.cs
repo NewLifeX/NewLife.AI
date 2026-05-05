@@ -12,8 +12,8 @@ namespace NewLife.ChatAI.Handlers;
 /// </remarks>
 /// <param name="toolProviders">工具提供者集合（用于 MCP 触发词匹配）</param>
 /// <param name="skillService">技能服务（可为 null）</param>
-/// <param name="tracer">追踪器</param>
-public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, SkillService? skillService, ITracer? tracer) : IChatHandler
+[ChatHandlerOrder(20)]
+public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, SkillService? skillService) : IChatHandler
 {
     /// <inheritdoc/>
     public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;

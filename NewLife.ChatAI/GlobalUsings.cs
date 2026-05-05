@@ -1,4 +1,5 @@
 ﻿global using NewLife.AI.Models;
+global using NewLife.AI.Handlers;
 global using NewLife.AI.Services;
 global using NewLife.ChatAI;
 global using NewLife.ChatAI.Entity;

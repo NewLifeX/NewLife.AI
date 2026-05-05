@@ -1,5 +1,4 @@
-﻿using NewLife.Log;
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Handlers;
 
@@ -10,8 +9,8 @@ namespace NewLife.ChatAI.Handlers;
 /// 写入 <c>flow.AssistantMessage</c> / <c>flow.UserMessage</c> / <c>flow.Conversation</c> 实体。</para>
 /// <para>注意：UsageService.Record 由 <c>UsageRecordHandler</c> 负责，本处理器仅写入消息/会话字段。</para>
 /// </remarks>
-/// <param name="tracer">追踪器</param>
-public class PersistMessageHandler(ITracer? tracer) : IChatHandler
+[ChatHandlerOrder(After = 9999)]
+public class PersistMessageHandler : IChatHandler
 {
     /// <inheritdoc/>
     public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;

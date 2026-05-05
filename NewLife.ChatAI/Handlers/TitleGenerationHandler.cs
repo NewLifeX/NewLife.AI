@@ -11,6 +11,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="cacheProvider"></param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
+[ChatHandlerOrder(30)]
 public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : IChatHandler
 {
     /// <summary>模型服务（供派生类访问）</summary>
