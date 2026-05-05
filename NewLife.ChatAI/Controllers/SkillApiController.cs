@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Entity;
-using NewLife.ChatAI.Services;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -50,8 +48,6 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
     }
 
     /// <summary>获取@提及下拉列表的技能。按用户最近使用优先，支持关键词模糊过滤</summary>
-    /// <param name="keyword">搜索关键词（可选）</param>
-    /// <param name="limit">最大返回数量，默认20</param>
     /// <summary>获取@提及下拉列表的技能和工具。工具排在前面，技能跟在后面，均支持关键词过滤</summary>
     /// <param name="keyword">搜索关键词（可选）</param>
     /// <param name="limit">最大返回数量，默认20</param>

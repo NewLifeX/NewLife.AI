@@ -53,11 +53,11 @@ public interface IChatContext : IExtend
     /// <summary>对话上下文消息列表。事前处理器可追加/修改/截断；核心处理器据此发起模型调用</summary>
     IList<ChatMessage> ContextMessages { get; set; }
 
-    /// <summary>系统提示词内容。由 SystemPrompt 处理器填充，供持久化与诊断使用</summary>
-    String? SystemPrompt { get; set; }
+    ///// <summary>系统提示词内容。由 SystemPrompt 处理器填充，供持久化与诊断使用</summary>
+    //String? SystemPrompt { get; set; }
 
-    /// <summary>系统消息就绪回调。核心处理器收到第一个流式 chunk 时触发，参数为完整的系统消息文本</summary>
-    Action<String>? OnSystemReady { get; set; }
+    ///// <summary>系统消息就绪回调。核心处理器收到第一个流式 chunk 时触发，参数为完整的系统消息文本</summary>
+    //Action<String>? OnSystemReady { get; set; }
 
     #endregion
 

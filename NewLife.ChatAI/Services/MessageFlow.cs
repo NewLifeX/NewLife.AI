@@ -234,16 +234,16 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!, request.ThinkingMode);
 
-        // 注册系统消息就绪回调（在 InvokeLlmAsync 收到首个 chunk 时被调用）
-        flow.OnSystemReady = sysContent =>
-        {
-            if (!sysContent.IsNullOrEmpty())
-            {
-                // 借用用户消息的思考字段来保存系统提示词内容
-                userMsg.ThinkingContent = sysContent;
-                userMsg.Update();
-            }
-        };
+        //// 注册系统消息就绪回调（在 InvokeLlmAsync 收到首个 chunk 时被调用）
+        //flow.OnSystemReady = sysContent =>
+        //{
+        //    if (!sysContent.IsNullOrEmpty())
+        //    {
+        //        // 借用用户消息的思考字段来保存系统提示词内容
+        //        userMsg.ThinkingContent = sysContent;
+        //        userMsg.Update();
+        //    }
+        //};
 
         // 记录请求选项供 Handler 读取
         if (request.Options is { Count: > 0 })
@@ -303,17 +303,17 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     {
         using var span = tracer?.NewSpan("ai:CreateFlowContext", new { messageId, expectedRole, conversationId, modelId, userId });
 
-        DbChatMessage? entity = null;
+        DbChatMessage? message = null;
         Conversation? conversation;
 
         if (messageId > 0)
         {
             // 按消息查找
-            entity = DbChatMessage.FindById(messageId.Value);
-            if (entity == null || (!expectedRole.IsNullOrEmpty() && !entity.Role.EqualIgnoreCase(expectedRole)))
+            message = DbChatMessage.FindById(messageId.Value);
+            if (message == null || (!expectedRole.IsNullOrEmpty() && !message.Role.EqualIgnoreCase(expectedRole)))
                 return new MessageFlowContext { Error = new ChatException("MESSAGE_NOT_FOUND", "消息不存在或角色不匹配") };
 
-            conversation = Conversation.FindById(entity.ConversationId);
+            conversation = Conversation.FindById(message.ConversationId);
         }
         else
         {
@@ -349,12 +349,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         };
 
         // 按消息模式：自动填充 UserMessage 或 AssistantMessage
-        if (entity != null)
+        if (message != null)
         {
-            if (entity.Role.EqualIgnoreCase("user"))
-                flow.UserMessage = entity;
+            if (message.Role.EqualIgnoreCase("user"))
+                flow.UserMessage = message;
             else
-                flow.AssistantMessage = entity;
+                flow.AssistantMessage = message;
         }
 
         return flow;
@@ -706,17 +706,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         Int64 thinkingStart = 0;
         String? lastFinishReason = null;
         var streamSw = Stopwatch.StartNew();
-        var sysFired = false;
 
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
         {
-            if (!sysFired)
-            {
-                sysFired = true;
-                context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-                context.OnSystemReady?.Invoke(context.SystemPrompt!);
-            }
-
             if (chunk.Usage != null) lastUsage = chunk.Usage;
 
             if (chunk is ChatResponse cr && cr.ToolCallEvents is { Count: > 0 } events)
@@ -754,7 +746,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 yield return ChatStreamEvent.ContentDelta(text);
         }
 
-        if (!sysFired) context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
         if (thinkingBuilder.Length > 0) yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
 
         streamSw.Stop();
@@ -821,9 +812,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var response = ChatResponse.From(await directClient.GetResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false));
         sw.Stop();
 
-        // 提取系统提示词（首个 system 消息）
-        context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-        context.OnSystemReady?.Invoke(context.SystemPrompt!);
+        //// 提取系统提示词（首个 system 消息）
+        //context.SystemPrompt = contextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+        //context.OnSystemReady?.Invoke(context.SystemPrompt!);
 
         // 写入正文
         var msg = response.Messages?.FirstOrDefault()?.Message;

@@ -114,12 +114,12 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <inheritdoc />
     IChatMessage IMessageFlowContext.AssistantMessage { get => AssistantMessage; set => AssistantMessage = (DbChatMessage)value; }
 
-    /// <inheritdoc />
-    IList<AiChatMessage> IMessageFlowContext.ContextMessages
-    {
-        get => ContextMessages;
-        set => ContextMessages = value;
-    }
+    ///// <inheritdoc />
+    //IList<AiChatMessage> IMessageFlowContext.ContextMessages
+    //{
+    //    get => ContextMessages;
+    //    set => ContextMessages = value;
+    //}
 
     #endregion
 
@@ -128,11 +128,11 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <summary>思考模式（IChatContext 新增）</summary>
     public ThinkingMode ThinkingMode { get; set; }
 
-    /// <summary>系统提示词内容</summary>
-    public String? SystemPrompt { get; set; }
+    ///// <summary>系统提示词内容</summary>
+    //public String? SystemPrompt { get; set; }
 
-    /// <summary>系统消息就绪回调</summary>
-    public Action<String>? OnSystemReady { get; set; }
+    ///// <summary>系统消息就绪回调</summary>
+    //public Action<String>? OnSystemReady { get; set; }
 
     /// <summary>消息中 @ToolName 显式引用的工具名称集合</summary>
     public ISet<String> SelectedTools { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);

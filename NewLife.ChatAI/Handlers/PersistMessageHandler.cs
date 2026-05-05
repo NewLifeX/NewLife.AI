@@ -48,6 +48,8 @@ public class PersistMessageHandler : IChatHandler
         var userMessage = flow.UserMessage;
         if (userMessage != null)
         {
+            // 提取系统提示词（首个 system 消息）
+            userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
             if (flow.AvailableToolNames.Count > 0)
                 userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
             userMessage.Update();
