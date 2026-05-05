@@ -40,6 +40,9 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <summary>AI 回复消息（新建或复用原消息）</summary>
     public DbChatMessage AssistantMessage { get; set; } = null!;
 
+    /// <summary>对话上下文消息列表。</summary>
+    public IList<DbChatMessage> HistoryMessages { get; set; } = [];
+
     #endregion
 
     #region 执行产物

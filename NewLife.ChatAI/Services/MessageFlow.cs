@@ -51,8 +51,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
     /// <summary>聊天过滤器链（日志、学习、Agent 触发等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
     protected IReadOnlyList<IChatFilter> ChatFilters = services?.GetServices<IChatFilter>().ToArray() ?? [];
-
-
     #endregion
 
     #region 生成入口
@@ -78,7 +76,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             // Step3: 通过非流式 Handler 三段式调用链执行（持久化由事后 Handler 完成）
             await InvokeNonStreamAsync(flow, cancellationToken).ConfigureAwait(false);
 
-            flow.AssistantMessage.ElapsedMs = (Int32)(flow.Usage?.ElapsedMs ?? 0);
+            flow.AssistantMessage.ElapsedMs = flow.Usage?.ElapsedMs ?? 0;
 
             return ToMessageDto(flow.AssistantMessage);
         }
@@ -122,6 +120,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         };
         assistantMsg.Insert();
         flow.AssistantMessage = assistantMsg;
+        flow.HistoryMessages.Add(assistantMsg);
 
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
@@ -220,6 +219,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             ModelName = model.Code,
         };
         assistantMsg.Insert();
+
+        flow.HistoryMessages.Add(userMsg);
+        flow.HistoryMessages.Add(assistantMsg);
 
         flow.UserMessage = userMsg;
         flow.AssistantMessage = assistantMsg;
@@ -357,6 +359,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 flow.AssistantMessage = message;
         }
 
+        var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
+        flow.HistoryMessages = LoadHistoryMessages(conversation.Id, maxRounds);
+
         return flow;
     }
 
@@ -369,11 +374,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     {
         using var span = tracer?.NewSpan("ai:BuildContext");
 
-        var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
-        var history = LoadHistoryMessages(flow.Conversation.Id, maxRounds);
-        var contextMessages = BuildContextMessages(flow.UserId, flow.ModelConfig, history, currentContent);
+        var contextMessages = BuildContextMessages(flow.UserId, flow.ModelConfig, flow.HistoryMessages, currentContent);
         flow.ContextMessages = contextMessages;
-        DefaultSpan.Current?.AppendTag(contextMessages.Join());
+        DefaultSpan.Current?.AppendTag(contextMessages.Join("\n"));
 
         return Task.FromResult(contextMessages);
     }
@@ -387,7 +390,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:BuildContextForRegenerate");
 
         var entity = flow.AssistantMessage;
-        var beforeMessages = DbChatMessage.FindAllBeforeId(entity.ConversationId, entity.Id);
+        var beforeMessages = flow.HistoryMessages.Where(e => e.Id < entity.Id).ToList();
 
         var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
         if (beforeMessages.Count > maxCount)
@@ -395,7 +398,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         var contextMessages = BuildContextMessages(flow.UserId, flow.ModelConfig, beforeMessages);
         flow.ContextMessages = contextMessages;
-        return Task.FromResult<IList<AiChatMessage>>(contextMessages);
+        DefaultSpan.Current?.AppendTag(contextMessages.Join("\n"));
+
+        return Task.FromResult(contextMessages);
     }
 
     /// <summary>构建上下文消息列表。注入系统提示词、展开 ToolCalls，并在历史消息较多时追加最新问题优先级提示</summary>
@@ -451,7 +456,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (histMsg != null) messages.Add(histMsg);
         }
 
-        if (!currentContent.IsNullOrEmpty() && history.Count > 4)
+        if (!currentContent.IsNullOrEmpty() && history.Count(e => e.Role == "user") >= 2)
         {
             messages.Add(new AiChatMessage
             {
@@ -964,6 +969,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <returns>按 Id 升序排列的历史消息列表</returns>
     protected virtual IList<DbChatMessage> LoadHistoryMessages(Int64 conversationId, Int32 maxRounds)
     {
+        // 倒序加载最新的一批消息，再重排为升序返回
         var history = DbChatMessage.FindAllByConversationIdDesc(conversationId, maxRounds * 2);
         //history.Reverse();
         //!!! 不能使用 Reverse ，它未能让列表完全倒置
