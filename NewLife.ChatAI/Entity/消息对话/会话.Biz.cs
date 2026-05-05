@@ -99,6 +99,16 @@ public partial class Conversation : Entity<Conversation>, IConversation
     #endregion
 
     #region 高级查询
+    /// <summary>根据编号查找</summary>
+    /// <param name="id">编号</param>
+    /// <returns>实体对象</returns>
+    public static Conversation? FindById(Int64 id)
+    {
+        if (id < 0) return null;
+
+        //return Find(_.Id == id);
+        return Meta.SingleCache[id] as Conversation;
+    }
 
     // Select Count(Id) as Id,Category From Conversation Where CreateTime>'2020-01-24 00:00:00' Group By Category Order By Id Desc limit 20
     //static readonly FieldCache<Conversation> _CategoryCache = new(nameof(Category))

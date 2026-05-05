@@ -337,16 +337,6 @@ public partial class Conversation
     #endregion
 
     #region 扩展查询
-    /// <summary>根据编号查找</summary>
-    /// <param name="id">编号</param>
-    /// <returns>实体对象</returns>
-    public static Conversation? FindById(Int64 id)
-    {
-        if (id < 0) return null;
-
-        return Find(_.Id == id);
-    }
-
     /// <summary>根据用户查找</summary>
     /// <param name="userId">用户</param>
     /// <returns>实体列表</returns>

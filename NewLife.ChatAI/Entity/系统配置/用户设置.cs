@@ -359,13 +359,14 @@ public partial class UserSetting
     /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
     /// <param name="showToolCalls">显示工具调用。是否在对话中显示工具调用的入参和出参详情</param>
+    /// <param name="thinkingCollapsed">思考过程收缩。默认是否收缩展示思考过程，默认展开</param>
     /// <param name="enableLearning">启用个人学习。用户级自学习开关，全局开关开启后此项生效</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, NewLife.AI.Models.ResponseStyle responseStyle, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, NewLife.AI.Models.ResponseStyle responseStyle, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? thinkingCollapsed, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -375,6 +376,7 @@ public partial class UserSetting
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
         if (showToolCalls != null) exp &= _.ShowToolCalls == showToolCalls;
+        if (thinkingCollapsed != null) exp &= _.ThinkingCollapsed == thinkingCollapsed;
         if (enableLearning != null) exp &= _.EnableLearning == enableLearning;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
