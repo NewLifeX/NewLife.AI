@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
+using NewLife.AI.Handlers;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Handlers;
-using NewLife.ChatAI.Services;
 using Xunit;
 
 namespace XUnitTest.Handlers;

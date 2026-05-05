@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
+using NewLife.AI.Handlers;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Handlers;
-using NewLife.ChatAI.Services;
 using Xunit;
 
 namespace XUnitTest.Handlers;
@@ -23,7 +20,7 @@ public class UsageRecordHandlerTests
     [DisplayName("OnBefore—始终立即返回")]
     public async Task OnBefore_AlwaysReturnsImmediately()
     {
-        var handler = new UsageRecordHandler(null, null);
+        var handler = new UsageRecordHandler(null);
         await handler.OnBefore(BuildFlow(), CancellationToken.None);
     }
 
@@ -35,7 +32,7 @@ public class UsageRecordHandlerTests
     [DisplayName("OnAfter—usageService 为 null 时立即返回，无异常")]
     public async Task OnAfter_NullUsageService_ReturnsImmediately()
     {
-        var handler = new UsageRecordHandler(null, null);
+        var handler = new UsageRecordHandler(null);
         var flow = BuildFlow();
 
         await handler.OnAfter(flow, CancellationToken.None);
@@ -46,7 +43,7 @@ public class UsageRecordHandlerTests
     [DisplayName("OnAfter—非 MessageFlowContext 时立即返回")]
     public async Task OnAfter_NotMessageFlowContext_ReturnsImmediately()
     {
-        var handler = new UsageRecordHandler(null, null);
+        var handler = new UsageRecordHandler(null);
         // IChatContext 的 stub 实现（不是 MessageFlowContext）
         var fakeCtx = new FakeContext();
 
@@ -58,7 +55,7 @@ public class UsageRecordHandlerTests
     public async Task OnAfter_NullUsage_ReturnsImmediately()
     {
         // usageService 为 null，所以还是早返回；此处验证 null usage 分支的防护能力
-        var handler = new UsageRecordHandler(null, null);
+        var handler = new UsageRecordHandler(null);
         var flow = BuildFlow();
         flow.Usage = null;
 

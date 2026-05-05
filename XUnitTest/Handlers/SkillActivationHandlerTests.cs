@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
+using NewLife.AI.Handlers;
+using NewLife.AI.Tools;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Handlers;
-using NewLife.ChatAI.Services;
 using Xunit;
 
 namespace XUnitTest.Handlers;
@@ -23,7 +21,7 @@ public class SkillActivationHandlerTests
     [DisplayName("OnBefore—skillService 为 null 时立即返回")]
     public async Task OnBefore_NullSkillService_ReturnsImmediately()
     {
-        var handler = new SkillActivationHandler([], null, null);
+        var handler = new SkillActivationHandler([], null);
         var ctx = BuildContext();
 
         await handler.OnBefore(ctx, CancellationToken.None);
@@ -36,7 +34,7 @@ public class SkillActivationHandlerTests
     [DisplayName("OnBefore—非 MessageFlowContext 且 skillService=null 时正常返回")]
     public async Task OnBefore_NotFlowContext_SkillServiceNull_ReturnsImmediately()
     {
-        var handler = new SkillActivationHandler([], null, null);
+        var handler = new SkillActivationHandler([], null);
         // SkillActivationHandler 先检查 skillService == null，再检查 MessageFlowContext
         await handler.OnBefore(new FakeContext(), CancellationToken.None);
     }
@@ -49,7 +47,7 @@ public class SkillActivationHandlerTests
     [DisplayName("OnAfter—skillService 为 null 时立即返回")]
     public async Task OnAfter_NullSkillService_ReturnsImmediately()
     {
-        var handler = new SkillActivationHandler([], null, null);
+        var handler = new SkillActivationHandler([], null);
         var ctx = BuildContext();
         ctx.SkillId = 1;
         ctx.UserId = 100;
@@ -61,7 +59,7 @@ public class SkillActivationHandlerTests
     [DisplayName("OnAfter—SkillId == 0 时立即返回（无技能激活）")]
     public async Task OnAfter_SkillIdZero_ReturnsImmediately()
     {
-        var handler = new SkillActivationHandler([], null, null);
+        var handler = new SkillActivationHandler([], null);
         var ctx = BuildContext();
         ctx.SkillId = 0;
         ctx.UserId = 100;
@@ -73,7 +71,7 @@ public class SkillActivationHandlerTests
     [DisplayName("OnAfter—UserId == 0 时立即返回（匿名用户）")]
     public async Task OnAfter_UserIdZero_ReturnsImmediately()
     {
-        var handler = new SkillActivationHandler([], null, null);
+        var handler = new SkillActivationHandler([], null);
         var ctx = BuildContext();
         ctx.SkillId = 5;
         ctx.UserId = 0;
@@ -85,7 +83,7 @@ public class SkillActivationHandlerTests
     [DisplayName("OnAfter—HasError=true 时立即返回")]
     public async Task OnAfter_HasError_ReturnsImmediately()
     {
-        var handler = new SkillActivationHandler([], null, null);
+        var handler = new SkillActivationHandler([], null);
         var ctx = BuildContext();
         ctx.SkillId = 5;
         ctx.UserId = 100;
@@ -103,7 +101,7 @@ public class SkillActivationHandlerTests
     public void ResolveSkillByContent_BaseClass_NoOp()
     {
         // 通过可访问的子类包装暴露 protected 方法
-        var handler = new ExposedSkillActivationHandler([], null, null);
+        var handler = new ExposedSkillActivationHandler([], null);
         var ctx = BuildContext();
         ctx.SkillId = 0;
 
@@ -158,10 +156,9 @@ public class SkillActivationHandlerTests
 
     /// <summary>暴露 protected ResolveSkillByContent 供测试调用</summary>
     private sealed class ExposedSkillActivationHandler(
-        IEnumerable<NewLife.AI.Tools.IToolProvider> toolProviders,
-        NewLife.ChatAI.Services.SkillService? skillService,
-        ITracer? tracer)
-        : SkillActivationHandler(toolProviders, skillService, tracer)
+        IEnumerable<IToolProvider> toolProviders,
+        SkillService? skillService)
+        : SkillActivationHandler(toolProviders, skillService)
     {
         public void ExposedResolveSkillByContent(IChatContext context, String? content)
             => ResolveSkillByContent(context, content);
