@@ -9,14 +9,28 @@ namespace NewLife.ChatAI.Handlers;
 /// 写入 <c>flow.AssistantMessage</c> / <c>flow.UserMessage</c> / <c>flow.Conversation</c> 实体。</para>
 /// <para>注意：UsageService.Record 由 <c>UsageRecordHandler</c> 负责，本处理器仅写入消息/会话字段。</para>
 /// </remarks>
-[ChatHandlerOrder(After = 9999)]
+[ChatHandlerOrder(9999)]
 public class PersistMessageHandler : IChatHandler
 {
     /// <inheritdoc/>
-    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.After;
+    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
 
     /// <inheritdoc/>
-    public Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
+    {
+        if (context is not MessageFlowContext flow) return Task.CompletedTask;
+
+        // 用户消息
+        var userMessage = flow.UserMessage;
+        if (userMessage != null)
+        {
+            // 提取系统提示词（首个 system 消息）
+            userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+            userMessage.Update();
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
@@ -29,9 +43,8 @@ public class PersistMessageHandler : IChatHandler
         if (assistantMsg != null)
         {
             // 写入消息内容
-            assistantMsg.Content = flow.ContentBuilder.Length > 0 ? flow.ContentBuilder.ToString() : null;
-            if (flow.ThinkingBuilder.Length > 0)
-                assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
+            assistantMsg.Content = flow.ContentBuilder.ToString();
+            assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
             if (flow.ToolCalls.Count > 0)
             {
                 assistantMsg.ToolCalls = flow.ToolCalls.ToJson();
@@ -48,8 +61,6 @@ public class PersistMessageHandler : IChatHandler
         var userMessage = flow.UserMessage;
         if (userMessage != null)
         {
-            // 提取系统提示词（首个 system 消息）
-            userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
             if (flow.AvailableToolNames.Count > 0)
                 userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
             userMessage.Update();
