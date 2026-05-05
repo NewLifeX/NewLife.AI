@@ -63,6 +63,9 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <summary>用量统计</summary>
     public UsageDetails? Usage { get; set; }
 
+    /// <summary>子流程用量集合（Before 阶段顺序执行，无竞态）</summary>
+    public IDictionary<String, UsageDetails> SubFlowUsages { get; } = new Dictionary<String, UsageDetails>(StringComparer.OrdinalIgnoreCase);
+
     #endregion
 
     #region 错误与控制

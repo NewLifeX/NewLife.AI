@@ -142,6 +142,7 @@ public class SkillActivationHandlerTests
         public System.Text.StringBuilder ThinkingBuilder { get; } = new();
         public List<ToolCallDto> ToolCalls { get; } = [];
         public UsageDetails? Usage { get; set; }
+        public IDictionary<String, UsageDetails> SubFlowUsages { get; } = new Dictionary<String, UsageDetails>(StringComparer.OrdinalIgnoreCase);
         public Boolean HasError { get; set; }
         public Boolean Cancel { get; set; }
         public String? CancelCode { get; set; }

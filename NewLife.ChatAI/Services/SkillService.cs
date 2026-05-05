@@ -108,7 +108,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
 
         if (ids.Count > 3) ids = ids.Take(3).ToList();
 
-        p.Value = ids.Join(",");
+        p.SetList(ids);
         p.Save();
     }
     #endregion
@@ -308,9 +308,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
     protected virtual IList<Int32> GetRecentSkillIds(Int32 userId)
     {
         var p = XCode.Membership.Parameter.GetOrAdd(userId, "ChatAI", "RecentSkills");
-        if (p.Value.IsNullOrEmpty()) return [];
-
-        return p.Value.Split(',').Select(e => e.ToInt()).Where(id => id > 0).ToList();
+        return p.GetList<Int32>();
     }
 
     /// <summary>根据用户消息内容匹配触发词技能。遍历所有启用且设置了触发词的技能，消息包含任一触发词时返回该技能（按Sort降序优先）</summary>

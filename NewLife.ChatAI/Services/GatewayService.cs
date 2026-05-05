@@ -90,7 +90,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         // 解析 Bearer Token
         var secret = authorization;
         if (secret.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            secret = secret.Substring(7).Trim();
+            secret = secret[7..].Trim();
 
         if (String.IsNullOrWhiteSpace(secret)) return null;
 
@@ -333,15 +333,12 @@ public class GatewayService(UsageService usageService, ModelService modelService
     /// <returns>JSON 字符串</returns>
     public static String FormatResponse(ChatResponse result, GatewayProtocol protocol)
     {
-        switch (protocol)
+        return protocol switch
         {
-            case GatewayProtocol.Anthropic:
-                return JsonSerializer.Serialize(AnthropicResponse.From(result), SnakeCaseOptions);
-            case GatewayProtocol.Gemini:
-                return JsonSerializer.Serialize(GeminiResponse.From(result), CamelCaseOptions);
-            default:
-                return JsonSerializer.Serialize(ChatCompletionResponse.From(result), SnakeCaseOptions);
-        }
+            GatewayProtocol.Anthropic => JsonSerializer.Serialize(AnthropicResponse.From(result), SnakeCaseOptions),
+            GatewayProtocol.Gemini => JsonSerializer.Serialize(GeminiResponse.From(result), CamelCaseOptions),
+            _ => JsonSerializer.Serialize(ChatCompletionResponse.From(result), SnakeCaseOptions),
+        };
     }
     #endregion
 

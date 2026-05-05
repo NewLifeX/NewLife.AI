@@ -98,6 +98,10 @@ public interface IChatContext : IExtend
     /// <summary>用量统计。message_done 事件时填充</summary>
     UsageDetails? Usage { get; set; }
 
+    /// <summary>子流程用量集合。Before 阶段中的同步子流程（如三明治状态机分类）在此写入；
+    /// <see cref="UsageRecordHandler"/> 在 OnAfter 阶段将每条记录独立落库，Source 取字典 Key</summary>
+    IDictionary<String, UsageDetails> SubFlowUsages { get; }
+
     #endregion
 
     #region 错误与控制

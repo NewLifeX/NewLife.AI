@@ -16,10 +16,16 @@ public class UsageRecordHandler(UsageService? usageService) : IChatHandler
     {
         if (usageService == null) return Task.CompletedTask;
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
-        if (flow.Usage == null) return Task.CompletedTask;
 
-        //using var span = tracer?.NewSpan("handler:UsageRecord");
-        usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, flow.Usage, "Chat");
+        // 主流程用量（Source=Chat）
+        if (flow.Usage != null)
+            usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, flow.Usage, "Chat");
+
+        // 子流程用量（Sandwich/Title 等）——Before 阶段同步子流程积累的用量，独立落库
+        foreach (var (source, subUsage) in flow.SubFlowUsages)
+        {
+            usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, subUsage, source);
+        }
 
         return Task.CompletedTask;
     }
