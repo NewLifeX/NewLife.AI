@@ -236,17 +236,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!, request.ThinkingMode);
 
-        //// 注册系统消息就绪回调（在 InvokeLlmAsync 收到首个 chunk 时被调用）
-        //flow.OnSystemReady = sysContent =>
-        //{
-        //    if (!sysContent.IsNullOrEmpty())
-        //    {
-        //        // 借用用户消息的思考字段来保存系统提示词内容
-        //        userMsg.ThinkingContent = sysContent;
-        //        userMsg.Update();
-        //    }
-        //};
-
         // 记录请求选项供 Handler 读取
         if (request.Options is { Count: > 0 })
         {
@@ -414,7 +403,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var messages = new List<AiChatMessage>();
 
         // 注入系统提示词
-        var systemMsg = BuildSystemMessage(userId, modelConfig, history.Count, tracer);
+        var userHistoryCount = history.Count(e => e.Role == "user");
+        var systemMsg = BuildSystemMessage(userId, modelConfig, userHistoryCount, tracer);
         if (systemMsg != null) messages.Add(systemMsg);
 
         foreach (var msg in history)
@@ -456,7 +446,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (histMsg != null) messages.Add(histMsg);
         }
 
-        if (!currentContent.IsNullOrEmpty() && history.Count(e => e.Role == "user") >= 2)
+        if (!currentContent.IsNullOrEmpty() && userHistoryCount >= 2)
         {
             messages.Add(new AiChatMessage
             {
@@ -552,7 +542,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             next = ct =>
             {
                 var name = handler.GetType().Name.TrimSuffix("Handler");
-                using var span = tracer?.NewSpan($"handler:Invoke:{name}", context.ContextMessages);
+                using var span = tracer?.NewSpan($"handler:Invoke:{name}");
                 try
                 {
                     return handler.InvokeAsync(context, captured, ct);
@@ -677,12 +667,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         foreach (var p in providers)
             foreach (var t in p.GetTools())
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
-
-        if (context.AvailableToolNames.Count > 0)
-        {
-            using var toolSchemaSpan = tracer?.NewSpan("ai:ToolSchema");
-            toolSchemaSpan?.AppendTag(providers.SelectMany(p => p.GetTools()).Where(t => t.Function != null).Select(t => t.Function).ToJson());
-        }
 
         var userId = context.UserId > 0 ? context.UserId.ToString() : null;
         var conversationId = context.Conversation?.Id > 0 ? context.Conversation.Id.ToString() : null;
@@ -995,12 +979,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <see cref="GatewayService"/> 与 <see cref="MessageFlow"/> 均调用此方法，避免逻辑重复。</remarks>
     /// <param name="userId">当前用户编号</param>
     /// <param name="model">模型配置（可选）</param>
-    /// <param name="historyCount">当前上下文中历史消息条数，大于 0 时才注入多轮优先级提示</param>
+    /// <param name="userHistoryCount">当前上下文中历史消息条数，大于 0 时才注入多轮优先级提示</param>
     /// <param name="tracer">追踪器（可选）</param>
     /// <returns>系统消息，无提示词时返回 null</returns>
-    public static AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? model, Int32 historyCount = 0, ITracer? tracer = null)
+    public static AiChatMessage? BuildSystemMessage(Int32 userId, ModelConfig? model, Int32 userHistoryCount = 0, ITracer? tracer = null)
     {
-        using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, model?.Name, historyCount });
+        using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, model?.Name, userHistoryCount });
         var parts = new List<String>();
 
         // 0. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
@@ -1045,7 +1029,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             parts.Add(model.SystemPrompt.Trim());
 
         // 4. 多轮对话时强调最新消息优先级
-        if (historyCount > 1)
+        if (userHistoryCount > 1)
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
 
         if (parts.Count == 0) return null;

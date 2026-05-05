@@ -26,6 +26,7 @@ public class PersistMessageHandler : IChatHandler
         {
             // 提取系统提示词（首个 system 消息）
             userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+            userMessage.ToolNames = flow.AvailableToolNames?.Join();
             userMessage.Update();
         }
 
@@ -45,10 +46,11 @@ public class PersistMessageHandler : IChatHandler
             // 写入消息内容
             assistantMsg.Content = flow.ContentBuilder.ToString();
             assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
-            if (flow.ToolCalls.Count > 0)
+            var toolCalls = flow.ToolCalls;
+            if (toolCalls.Count > 0)
             {
-                assistantMsg.ToolCalls = flow.ToolCalls.ToJson();
-                assistantMsg.ToolNames = String.Join(",", flow.ToolCalls.Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase));
+                assistantMsg.ToolCalls = toolCalls.ToJson();
+                assistantMsg.ToolNames = toolCalls.Select(t => t.Name).Distinct().Join();
             }
 
             // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
@@ -57,12 +59,12 @@ public class PersistMessageHandler : IChatHandler
             assistantMsg.Update();
         }
 
-        // 用户消息追加可用工具
+        // 用户消息
         var userMessage = flow.UserMessage;
         if (userMessage != null)
         {
-            if (flow.AvailableToolNames.Count > 0)
-                userMessage.ToolNames = String.Join(",", flow.AvailableToolNames);
+            userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+            userMessage.ToolNames = flow.AvailableToolNames?.Join();
             userMessage.Update();
         }
 

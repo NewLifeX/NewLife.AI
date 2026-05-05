@@ -94,8 +94,9 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
         // 用户消息追加技能名称与可用工具
         if (context.UserMessage is DbChatMessage userMessage)
         {
+            // 技能名可能是编码或者中文名，而列表里面基本都是 “code/name” 格式。
             var skillName = context.Conversation.SkillName;
-            if (!skillName.IsNullOrEmpty() && !skillNames.Contains(skillName))
+            if (!skillName.IsNullOrEmpty() && !skillNames.Any(e => e == skillName || e.StartsWith(skillName + "/") || e.EndsWith("/" + skillName)))
                 skillNames.Add(skillName);
 
             if (skillNames.Count > 0)
