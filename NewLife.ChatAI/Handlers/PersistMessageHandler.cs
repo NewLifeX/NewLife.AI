@@ -1,4 +1,5 @@
-﻿using NewLife.Serialization;
+﻿using NewLife.AI.Interfaces;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Handlers;
 
@@ -18,15 +19,14 @@ public class PersistMessageHandler : IChatHandler
     /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
-        if (context is not MessageFlowContext flow) return Task.CompletedTask;
+        //if (context is not MessageFlowContext flow) return Task.CompletedTask;
 
         // 用户消息
-        var userMessage = flow.UserMessage;
-        if (userMessage != null)
+        if (context.UserMessage is DbChatMessage userMessage)
         {
             // 提取系统提示词（首个 system 消息）
             userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-            userMessage.ToolNames = flow.AvailableToolNames?.Join();
+            userMessage.ToolNames = context.AvailableToolNames?.Join();
             userMessage.Update();
         }
 
@@ -36,17 +36,16 @@ public class PersistMessageHandler : IChatHandler
     /// <inheritdoc/>
     public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
-        if (context is not MessageFlowContext flow) return Task.CompletedTask;
+        //if (context is not MessageFlowContext flow) return Task.CompletedTask;
         //using var span = tracer?.NewSpan("handler:PersistMessage");
 
         // 助手消息
-        var assistantMsg = flow.AssistantMessage;
-        if (assistantMsg != null)
+        if (context.AssistantMessage is DbChatMessage assistantMsg)
         {
             // 写入消息内容
-            assistantMsg.Content = flow.ContentBuilder.ToString();
-            assistantMsg.ThinkingContent = flow.ThinkingBuilder.ToString();
-            var toolCalls = flow.ToolCalls;
+            assistantMsg.Content = context.ContentBuilder.ToString();
+            assistantMsg.ThinkingContent = context.ThinkingBuilder.ToString();
+            var toolCalls = context.ToolCalls;
             if (toolCalls.Count > 0)
             {
                 assistantMsg.ToolCalls = toolCalls.ToJson();
@@ -54,34 +53,32 @@ public class PersistMessageHandler : IChatHandler
             }
 
             // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
-            ApplyUsageToMessage(assistantMsg, flow.Usage, flow.HasError, flow.DeferredError?.Error);
-            ApplyRequestParams(assistantMsg, flow.ModelConfig, flow);
+            ApplyUsageToMessage(assistantMsg, context.Usage, context.HasError, (context as MessageFlowContext)?.DeferredError?.Error);
+            ApplyRequestParams(assistantMsg, context.ModelConfig, context);
             assistantMsg.Update();
         }
 
         // 用户消息
-        var userMessage = flow.UserMessage;
-        if (userMessage != null)
+        if (context.UserMessage is DbChatMessage userMessage)
         {
             userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-            userMessage.ToolNames = flow.AvailableToolNames?.Join();
+            userMessage.ToolNames = context.AvailableToolNames?.Join();
             userMessage.Update();
         }
 
         // 会话
-        var conversation = flow.Conversation;
-        if (conversation != null)
+        if (context.Conversation is Conversation conversation)
         {
             conversation.LastMessageTime = DateTime.Now;
             conversation.MessageCount = DbChatMessage.CountByConversationId(conversation.Id);
-            if (flow.Usage != null)
+            if (context.Usage != null)
             {
-                conversation.InputTokens += flow.Usage.InputTokens;
-                conversation.OutputTokens += flow.Usage.OutputTokens;
-                conversation.TotalTokens += flow.Usage.TotalTokens;
-                conversation.ElapsedMs += flow.Usage.ElapsedMs;
+                conversation.InputTokens += context.Usage.InputTokens;
+                conversation.OutputTokens += context.Usage.OutputTokens;
+                conversation.TotalTokens += context.Usage.TotalTokens;
+                conversation.ElapsedMs += context.Usage.ElapsedMs;
             }
-            if (flow.ModelConfig != null) conversation.ModelName = flow.ModelConfig.Name;
+            if (context.ModelConfig != null) conversation.ModelName = context.ModelConfig.Name;
             conversation.Update();
         }
 
@@ -119,7 +116,7 @@ public class PersistMessageHandler : IChatHandler
     /// <param name="msg">消息实体</param>
     /// <param name="modelConfig">模型配置</param>
     /// <param name="context">对话上下文</param>
-    private static void ApplyRequestParams(DbChatMessage msg, ModelConfig modelConfig, IChatContext context)
+    private static void ApplyRequestParams(IChatMessage msg, IModelConfig modelConfig, IChatContext context)
     {
         msg.ModelName = modelConfig.Code;
         if (context.MaxTokens > 0) msg.MaxTokens = context.MaxTokens;

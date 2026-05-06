@@ -15,16 +15,16 @@ public class UsageRecordHandler(UsageService? usageService) : IChatHandler
     public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         if (usageService == null) return Task.CompletedTask;
-        if (context is not MessageFlowContext flow) return Task.CompletedTask;
+        //if (context is not MessageFlowContext flow) return Task.CompletedTask;
 
         // 主流程用量（Source=Chat）
-        if (flow.Usage != null)
-            usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, flow.Usage, "Chat");
+        if (context.Usage != null)
+            usageService.Record(context.Conversation, context.AssistantMessage, context.ModelConfig, context.Usage, "Chat");
 
         // 子流程用量（Sandwich/Title 等）——Before 阶段同步子流程积累的用量，独立落库
-        foreach (var (source, subUsage) in flow.SubFlowUsages)
+        foreach (var (source, subUsage) in context.SubFlowUsages)
         {
-            usageService.Record(flow.Conversation, flow.AssistantMessage, flow.ModelConfig, subUsage, source);
+            usageService.Record(context.Conversation, context.AssistantMessage, context.ModelConfig, subUsage, source);
         }
 
         return Task.CompletedTask;

@@ -34,13 +34,13 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
         if (!setting.AutoGenerateTitle) return Task.CompletedTask;
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
 
-        var conversation = flow.Conversation;
+        var conversation = context.Conversation;
         // 已有标题则跳过（标题一旦生成就保持，不重复生成）
         if (!conversation.Title.IsNullOrEmpty()) return Task.CompletedTask;
 
-        var userContent = flow.UserMessage?.Content;
+        var userContent = context.UserMessage?.Content;
         var titleText = ExtractTitleText(userContent);
-        if (titleText.IsNullOrEmpty() && !flow.UserMessage?.Attachments.IsNullOrEmpty() == true)
+        if (titleText.IsNullOrEmpty() && !context.UserMessage?.Attachments.IsNullOrEmpty() == true)
             titleText = "[图片] 对话";
 
         if (titleText.IsNullOrEmpty()) return Task.CompletedTask;
@@ -55,13 +55,13 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
 
     /// <summary>标题生成用量就绪回调。基类实现使用 usageService 记录（Source=Title）；
     /// 派生类可覆盖以切换到自定义用量服务，无需修改 <see cref="GenerateTitleAsync"/> 主体</summary>
-    /// <param name="flow">上下文</param>
+    /// <param name="context">上下文</param>
     /// <param name="model">生成标题使用的模型配置</param>
     /// <param name="usage">令牌用量</param>
-    protected virtual void OnTitleUsageReady(MessageFlowContext flow, IModelConfig? model, UsageDetails? usage)
+    protected virtual void OnTitleUsageReady(IChatContext context, IModelConfig? model, UsageDetails? usage)
     {
         if (usageService != null && usage != null)
-            usageService.Record(flow.Conversation, flow.AssistantMessage, model, usage, "Title");
+            usageService.Record(context.Conversation, context.AssistantMessage, model, usage, "Title");
     }
 
     /// <summary>异步生成会话标题。短文本直接采用，否则调用模型生成。派生类可覆盖以增强</summary>
@@ -145,7 +145,7 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
         // 回退方案：截取前16个字符（考虑到中文），并清理换行等空白符
         var fallbackTitle = userMessage.Length > 16 ? userMessage[..16] : userMessage;
         fallbackTitle = fallbackTitle.Replace("\n", " ").Replace("\r", "").Trim();
-        if (!String.IsNullOrWhiteSpace(fallbackTitle) && fallbackTitle != conversation.Title)
+        if (!fallbackTitle.IsNullOrWhiteSpace() && fallbackTitle != conversation.Title)
         {
             conversation.Title = fallbackTitle;
             conversation.Update();

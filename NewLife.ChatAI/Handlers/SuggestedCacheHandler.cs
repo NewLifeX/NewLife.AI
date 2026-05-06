@@ -31,6 +31,8 @@ public class SuggestedCacheHandler(IChatSetting setting) : IChatHandler
         var cached = SuggestedQuestion.FindCachedTodayByQuestion(content);
         if (cached != null)
         {
+            // 跳过后续处理器，直接回放缓存内容
+            context.FlowControl = ChatFlowControl.SkipRemaining;
             context[HitKey] = cached;
             DefaultSpan.Current?.AppendTag(cached.Title!);
         }
@@ -49,20 +51,15 @@ public class SuggestedCacheHandler(IChatSetting setting) : IChatHandler
         }
 
         // 命中：直接回放
-        //using var span = tracer?.NewSpan("handler:SuggestedCache", cached.Question);
-
-        if (context is MessageFlowContext flow)
+        if (context.AssistantMessage is not DbChatMessage msg)
         {
-            var cachedMsg = new DbChatMessage
-            {
-                ConversationId = flow.Conversation.Id,
-                Role = "assistant",
-                Content = cached.Response,
-                ThinkingContent = cached.ThinkingResponse,
-            };
-            cachedMsg.Insert();
-            flow.AssistantMessage = cachedMsg;
+            msg = new DbChatMessage { Role = "assistant", };
         }
+        msg.ConversationId = context.Conversation.Id;
+        msg.Content = cached.Response;
+        msg.ThinkingContent = cached.ThinkingResponse;
+        msg.Save();
+        context.AssistantMessage = msg;
 
         var streamingSpeed = setting.StreamingSpeed;
 

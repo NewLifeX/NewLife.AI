@@ -178,7 +178,7 @@ public class PersistMessageHandlerTests
         public UsageDetails? Usage { get; set; }
         public IDictionary<String, UsageDetails> SubFlowUsages { get; } = new Dictionary<String, UsageDetails>(StringComparer.OrdinalIgnoreCase);
         public Boolean HasError { get; set; }
-        public Boolean Cancel { get; set; }
+        public ChatFlowControl FlowControl { get; set; }
         public String? CancelCode { get; set; }
         public String? CancelMessage { get; set; }
         public IDictionary<String, Object?> Items { get; } = new Dictionary<String, Object?>(StringComparer.OrdinalIgnoreCase);
