@@ -152,7 +152,7 @@ function toConversation(dto: ConversationDto): Conversation {
 }
 
 export async function fetchConversations(page = 1, pageSize = 50, keyword?: string): Promise<Conversation[]> {
-  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  const params = new URLSearchParams({ pageIndex: String(page), pageSize: String(pageSize) })
   if (keyword?.trim()) params.set('keyword', keyword.trim())
   const result = await request<PagedResult<ConversationDto>>(
     `/api/conversations?${params}`,
@@ -172,7 +172,7 @@ export interface MessageSearchResult {
 
 /** 全文搜索消息内容 */
 export async function searchMessages(keyword: string, page = 1, pageSize = 20): Promise<PagedResult<MessageSearchResult>> {
-  const params = new URLSearchParams({ keyword, page: String(page), pageSize: String(pageSize) })
+  const params = new URLSearchParams({ keyword, pageIndex: String(page), pageSize: String(pageSize) })
   return request<PagedResult<MessageSearchResult>>(`/api/messages/search?${params}`)
 }
 
