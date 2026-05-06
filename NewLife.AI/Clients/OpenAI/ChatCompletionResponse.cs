@@ -266,6 +266,11 @@ public class CompletionUsage
         PromptTokens = usage.InputTokens,
         CompletionTokens = usage.OutputTokens,
         TotalTokens = usage.TotalTokens,
+        PromptTokensDetails = new PromptTokensDetails
+        {
+            CachedTokens = usage.CachedInputTokens,
+            CacheCreationInputTokens = usage.CacheCreationTokens,
+        }
     };
 }
 

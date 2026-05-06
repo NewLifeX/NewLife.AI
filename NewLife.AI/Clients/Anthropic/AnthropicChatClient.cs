@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife.AI.Models;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Anthropic;
@@ -112,6 +113,15 @@ public class AnthropicChatClient : AiClientBase
     /// <summary>解析 Anthropic 流式 chunk</summary>
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
         => data.ToJsonEntity<AnthropicStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model);
+
+    /// <summary>Anthropic 将单次 LLM 调用的 Usage 拆成两个互补 chunk：
+    /// message_start 只含 InputTokens，message_delta 只含 OutputTokens。
+    /// 使用 <see cref="UsageDetails.Merge"/> 局部填充策略，非零字段覆盖零字段保留。</summary>
+    /// <param name="existing">当前已收集到的本轮 Usage</param>
+    /// <param name="incoming">当前 chunk 携带的 Usage</param>
+    /// <returns>合并后的 Usage</returns>
+    public override UsageDetails MergeChunkUsage(UsageDetails? existing, UsageDetails incoming)
+        => existing == null ? incoming : existing.Merge(incoming);
 
     /// <summary>设置 Anthropic 认证请求头</summary>
     protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)

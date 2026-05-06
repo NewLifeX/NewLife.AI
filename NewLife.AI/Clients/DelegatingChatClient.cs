@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.Clients;
+﻿using NewLife.AI.Models;
+
+namespace NewLife.AI.Clients;
 
 /// <summary>委托式 AI 对话客户端基类。实现 IChatClient 的可组合中间件管道模式</summary>
 /// <remarks>
@@ -42,6 +44,15 @@ public abstract class DelegatingChatClient : IChatClient
     /// <returns>流式响应块的异步枚举</returns>
     public virtual IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
         => InnerClient.GetStreamingResponseAsync(request, cancellationToken);
+
+    /// <summary>转发 chunk Usage 合并策略到内层客户端链上的实际协议客户端</summary>
+    /// <param name="existing">当前已收集到的本轮 Usage，首个 chunk 时为 null</param>
+    /// <param name="incoming">当前 chunk 携带的 Usage</param>
+    /// <returns>合并后的 Usage</returns>
+    public virtual UsageDetails MergeChunkUsage(UsageDetails? existing, UsageDetails incoming)
+        => InnerClient is AiClientBase ab ? ab.MergeChunkUsage(existing, incoming)
+         : InnerClient is DelegatingChatClient dc ? dc.MergeChunkUsage(existing, incoming)
+         : incoming;
 
     #endregion
 

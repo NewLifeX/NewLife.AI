@@ -214,6 +214,14 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <summary>解析流式响应字符串</summary>
     protected virtual IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent) => ParseResponse(data, request);
 
+    /// <summary>合并同一次 LLM 调用内的 chunk Usage。
+    /// 默认策略：直接返回 incoming（适用于最后一个 chunk 含完整 Usage 的协议，如 OpenAI/DeepSeek/Bedrock/Ollama）。
+    /// 协议有差异时子类可重写此方法（如 Anthropic 拆分两个互补 chunk，Gemini 每 chunk 累积）</summary>
+    /// <param name="existing">当前已收集到的本轮 Usage，首个 chunk 时为 null</param>
+    /// <param name="incoming">当前 chunk 携带的 Usage</param>
+    /// <returns>合并后的 Usage</returns>
+    public virtual UsageDetails MergeChunkUsage(UsageDetails? existing, UsageDetails incoming) => incoming;
+
     /// <summary>设置请求头。子类可重写此方法注入认证信息</summary>
     /// <param name="request">HTTP 请求</param>
     /// <param name="chatRequest">对话请求，可为 null。子类可据此读取运行时参数（如 Model）覆盖 options 中的默认值</param>

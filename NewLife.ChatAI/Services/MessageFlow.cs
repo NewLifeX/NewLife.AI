@@ -698,6 +698,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
         {
+            // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
+            // MessageFlow 只需取最后一次非空 Usage，无需跨 chunk 自行累加
             if (chunk.Usage != null) lastUsage = chunk.Usage;
 
             if (chunk is ChatResponse cr && cr.ToolCallEvents is { Count: > 0 } events)

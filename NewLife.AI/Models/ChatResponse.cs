@@ -161,6 +161,55 @@ public class UsageDetails
 
     /// <summary>耗时。本次LLM调用的端到端毫秒数</summary>
     public Int32 ElapsedMs { get; set; }
+
+    /// <summary>同一次 LLM 调用内的 chunk 用量局部填充。适用于 Anthropic 等将 Usage 拆成多个互补 chunk 的协议：
+    /// incoming 中非零字段覆盖当前实例对应字段，零字段保留当前值，返回新实例</summary>
+    /// <param name="incoming">新 chunk 携带的增量 Usage</param>
+    /// <returns>填充后的新 <see cref="UsageDetails"/> 实例</returns>
+    public UsageDetails Merge(UsageDetails incoming)
+    {
+        if (incoming == null) return this;
+        var result = new UsageDetails
+        {
+            InputTokens = incoming.InputTokens != 0 ? incoming.InputTokens : InputTokens,
+            OutputTokens = incoming.OutputTokens != 0 ? incoming.OutputTokens : OutputTokens,
+            TotalTokens = incoming.TotalTokens != 0 ? incoming.TotalTokens : TotalTokens,
+            CachedInputTokens = incoming.CachedInputTokens != 0 ? incoming.CachedInputTokens : CachedInputTokens,
+            CacheCreationTokens = incoming.CacheCreationTokens != 0 ? incoming.CacheCreationTokens : CacheCreationTokens,
+            ReasoningTokens = incoming.ReasoningTokens != 0 ? incoming.ReasoningTokens : ReasoningTokens,
+            InputAudioTokens = incoming.InputAudioTokens != 0 ? incoming.InputAudioTokens : InputAudioTokens,
+            InputTextTokens = incoming.InputTextTokens != 0 ? incoming.InputTextTokens : InputTextTokens,
+            OutputAudioTokens = incoming.OutputAudioTokens != 0 ? incoming.OutputAudioTokens : OutputAudioTokens,
+            OutputTextTokens = incoming.OutputTextTokens != 0 ? incoming.OutputTextTokens : OutputTextTokens,
+            ElapsedMs = incoming.ElapsedMs != 0 ? incoming.ElapsedMs : ElapsedMs,
+        };
+        // 填充后若 TotalTokens 仍为 0 但已有分项，则由分项推算（Anthropic 分块场景兜底）
+        if (result.TotalTokens == 0 && (result.InputTokens > 0 || result.OutputTokens > 0))
+            result.TotalTokens = result.InputTokens + result.OutputTokens;
+        return result;
+    }
+
+    /// <summary>累加另一轮 LLM 调用的用量，返回新实例。用于多轮工具调用时汇总所有 LLM 调用的 Token 消耗</summary>
+    /// <param name="other">另一轮的用量统计</param>
+    /// <returns>合并后的新 <see cref="UsageDetails"/> 实例</returns>
+    public UsageDetails Add(UsageDetails other)
+    {
+        if (other == null) return this;
+        return new UsageDetails
+        {
+            InputTokens = InputTokens + other.InputTokens,
+            OutputTokens = OutputTokens + other.OutputTokens,
+            TotalTokens = TotalTokens + other.TotalTokens,
+            CachedInputTokens = CachedInputTokens + other.CachedInputTokens,
+            CacheCreationTokens = CacheCreationTokens + other.CacheCreationTokens,
+            ReasoningTokens = ReasoningTokens + other.ReasoningTokens,
+            InputAudioTokens = InputAudioTokens + other.InputAudioTokens,
+            InputTextTokens = InputTextTokens + other.InputTextTokens,
+            OutputAudioTokens = OutputAudioTokens + other.OutputAudioTokens,
+            OutputTextTokens = OutputTextTokens + other.OutputTextTokens,
+            ElapsedMs = ElapsedMs + other.ElapsedMs,
+        };
+    }
 }
 
 /// <summary>工具调用事件信息。由 ToolChatClient 在工具执行前后注入到 ChatResponse.ToolCallEvents</summary>
