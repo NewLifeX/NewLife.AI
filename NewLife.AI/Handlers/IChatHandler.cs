@@ -32,9 +32,11 @@ public enum ChatHandlerCapabilities
 /// <para>通过 <see cref="Capabilities"/> 属性声明本处理器实现了哪些阶段，调度器据此跳过未声明阶段的调用。</para>
 /// <para><b>OnAfter 调用规则</b>：After-only（无 <see cref="ChatHandlerCapabilities.Before"/>）的处理器<b>无条件</b>执行 OnAfter；
 /// 同时声明 Before+After 的处理器仅当其 OnBefore 确实被调用过时才执行 OnAfter（短路时未执行的 OnBefore 对应的 OnAfter 不会被调用）。</para>
-/// <para><b>事前短路</b>：在 <see cref="OnBefore"/> 中将 <see cref="IChatContext.Cancel"/> 置 true 并填充
-/// <see cref="IChatContext.CancelCode"/> / <see cref="IChatContext.CancelMessage"/>，<c>MessageFlow</c> 将：
-/// 跳过后续 Handler 的 OnBefore、跳过整个核心阶段（含 LLM 调用），仍按注册正序执行所有已运行 OnBefore 的 Handler 的 OnAfter 以及所有 After-only Handler 的 OnAfter。</para>
+/// <para><b>事前流控</b>：在 <see cref="OnBefore"/> 中设置 <see cref="IChatContext.FlowControl"/>，<c>MessageFlow</c> 将按如下规则执行：<br/>
+/// • <see cref="ChatFlowControl.SkipRemaining"/>: 跳过后续 Handler 的 OnBefore，但仍执行 LLM 核心阶段，客户端收到正常内容流。<br/>
+/// • <see cref="ChatFlowControl.Cancel"/>: 跳过后续 Handler 的 OnBefore 与整个 LLM 核心阶段，客户端收到 error 事件；
+/// 配合 <see cref="IChatContext.CancelCode"/> / <see cref="IChatContext.CancelMessage"/> 填写原因。<br/>
+/// 两种短路情形下，已运行 OnBefore 的 Handler 的 OnAfter 仍按序执行以及所有 After-only Handler 的 OnAfter。</para>
 /// <para><b>异常</b>：实现者抛出的异常将向上传播。<b>不要</b>静默吞噬。</para>
 /// <para><b>事件流拦截</b>（如推荐缓存命中后直接回放缓存内容）：在 <see cref="Capabilities"/> 中追加
 /// <see cref="ChatHandlerCapabilities.Interceptor"/> 并覆写 <see cref="InvokeAsync"/>；

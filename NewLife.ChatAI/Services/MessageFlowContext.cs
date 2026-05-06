@@ -73,8 +73,8 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
     /// <summary>是否出现可恢复错误。Persist 阶段会据此调整落库策略</summary>
     public Boolean HasError { get; set; }
 
-    /// <summary>是否取消执行（事前短路）。OnBefore 阶段任一处理器置 true 即跳过后续 OnBefore 与核心阶段</summary>
-    public Boolean Cancel { get; set; }
+    /// <summary>流控信号。OnBefore 阶段任一处理器设置，调度器据此决定后续执行策略</summary>
+    public ChatFlowControl FlowControl { get; set; }
 
     /// <summary>取消代码</summary>
     public String? CancelCode { get; set; }

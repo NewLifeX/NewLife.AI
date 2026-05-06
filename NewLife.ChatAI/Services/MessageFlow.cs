@@ -459,7 +459,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     }
 
     /// <summary>执行 <see cref="IChatHandler"/> 三段式调用链：OnBefore（BeforeOrder 升序） → 核心阶段（含 LLM 调用与可选拦截器洋葱） → OnAfter（AfterOrder 升序）。
-    /// 任一 OnBefore 将 <see cref="IChatContext.Cancel"/> 置 true 即跳过后续 OnBefore 与整个核心阶段，但已经过的 OnAfter 仍会按序执行。
+    /// 任一 OnBefore 将 <see cref="IChatContext.FlowControl"/> 设为 <see cref="ChatFlowControl.SkipRemaining"/> 即跳过后续 OnBefore，但仍执行 LLM 核心阶段；
+    /// 设为 <see cref="ChatFlowControl.Cancel"/> 则同时跳过后续 OnBefore 与整个核心阶段。已经过的 OnAfter 仍会按序执行。
     /// OnBefore/OnAfter 抛出的异常将向上传播，不在此处捕获</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -486,18 +487,18 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             }
 
             ranBefore.Add(handler);
-            if (context.Cancel) break;
+            if (context.FlowControl != ChatFlowControl.Continue) break;
         }
 
-        // 2. 核心阶段（短路时跳过）
-        if (!context.Cancel)
+        // 2. 核心阶段（Cancel 时跳过；SkipRemaining 时仍正常运行）
+        if (context.FlowControl != ChatFlowControl.Cancel)
         {
             await foreach (var ev in CoreStreamAsync(context, cancellationToken).ConfigureAwait(false))
                 yield return ev;
         }
         else
         {
-            // 短路时回写一次 error 事件，便于客户端展示原因
+            // 取消时回写一次 error 事件，便于客户端展示原因
             yield return ChatStreamEvent.ErrorEvent(context.CancelCode ?? "CANCELED", context.CancelMessage ?? "请求已取消");
         }
 
@@ -850,11 +851,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             }
 
             ranBefore.Add(handler);
-            if (context.Cancel) break;
+            if (context.FlowControl != ChatFlowControl.Continue) break;
         }
 
-        // 2. 核心阶段（短路时跳过）
-        if (!context.Cancel)
+        // 2. 核心阶段（Cancel 时跳过；SkipRemaining 时仍正常运行）
+        if (context.FlowControl != ChatFlowControl.Cancel)
             await InvokeLlmDirectAsync(context, cancellationToken).ConfigureAwait(false);
 
         // 3. OnAfter 按 AfterOrder 升序执行
