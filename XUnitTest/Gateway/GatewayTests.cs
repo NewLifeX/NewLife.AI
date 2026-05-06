@@ -7,9 +7,7 @@ using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.ChatAI.Entity;
-using NewLife.ChatAI.Services;
 using Xunit;
-using ChatMessage = NewLife.AI.Models.ChatMessage;
 
 namespace XUnitTest.Gateway;
 
@@ -165,8 +163,8 @@ public class GatewayTests
             Model = "gpt-4o",
             Messages =
             [
-                new ChatMessage { Role = "system", Content = "You are helpful." },
-                new ChatMessage { Role = "user", Content = "Hello" },
+                new AiChatMessage { Role = "system", Content = "You are helpful." },
+                new AiChatMessage { Role = "user", Content = "Hello" },
             ],
             Stream = true,
         };
@@ -182,7 +180,7 @@ public class GatewayTests
         var request = new ChatCompletionRequest
         {
             Model = "gpt-4o",
-            Messages = [new ChatMessage { Role = "user", Content = "What's the weather?" }],
+            Messages = [new AiChatMessage { Role = "user", Content = "What's the weather?" }],
             Tools =
             [
                 new ChatTool
@@ -227,7 +225,7 @@ public class GatewayTests
                 new ChatChoice
                 {
                     Index = 0,
-                    Message = new ChatMessage { Role = "assistant", Content = "Hello!" },
+                    Message = new AiChatMessage { Role = "assistant", Content = "Hello!" },
                     FinishReason = FinishReason.Stop,
                 }
             ],
@@ -259,7 +257,7 @@ public class GatewayTests
                 new ChatChoice
                 {
                     Index = 0,
-                    Delta = new ChatMessage { Role = "assistant", Content = "He" },
+                    Delta = new AiChatMessage { Role = "assistant", Content = "He" },
                 }
             ],
         };
@@ -409,7 +407,7 @@ public class GatewayTests
         var request = new ChatCompletionRequest
         {
             Model = "gpt-4o",
-            Messages = [new ChatMessage { Role = "user", Content = "test" }],
+            Messages = [new AiChatMessage { Role = "user", Content = "test" }],
             Temperature = 0.7,
             TopP = 0.9,
             MaxTokens = 4096,
@@ -431,7 +429,7 @@ public class GatewayTests
     [Fact]
     public void MessageSupportsReasoningContent()
     {
-        var msg = new ChatMessage
+        var msg = new AiChatMessage
         {
             Role = "assistant",
             Content = "最终答案",
@@ -446,7 +444,7 @@ public class GatewayTests
     [Fact]
     public void MessageSupportsToolCalls()
     {
-        var msg = new ChatMessage
+        var msg = new AiChatMessage
         {
             Role = "assistant",
             ToolCalls =
@@ -473,7 +471,7 @@ public class GatewayTests
     [Fact]
     public void ToolRoleMessageHasToolCallId()
     {
-        var msg = new ChatMessage
+        var msg = new AiChatMessage
         {
             Role = "tool",
             ToolCallId = "call_abc",

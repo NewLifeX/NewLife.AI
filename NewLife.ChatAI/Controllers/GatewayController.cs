@@ -7,7 +7,6 @@ using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
 using NewLife.ChatAI.Filters;
-using ChatMessage = NewLife.AI.Models.ChatMessage;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -168,7 +167,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var imageClient = modelService.CreateClient(config)!;
             var response = await imageClient.GetResponseAsync(
-                [new ChatMessage { Role = "user", Content = $"Generate an image: {prompt}. Size: {size}" }],
+                [new AiChatMessage { Role = "user", Content = $"Generate an image: {prompt}. Size: {size}" }],
                 null,
                 cancellationToken).ConfigureAwait(false);
 

@@ -47,8 +47,9 @@ public static class ChatAIExtensions
         services.AddSingleton<IChatHandler, SuggestedCacheHandler>();   // 1. OnBefore 命中缓存时 Interceptor 短路 LLM
         services.AddSingleton<IChatHandler, SkillActivationHandler>();  // 2. OnBefore 技能解析与注入 / OnAfter 技能计数
         services.AddSingleton<IChatHandler, TitleGenerationHandler>();  // 3. OnBefore 异步生成标题（与 LLM 并行）
-        services.AddSingleton<IChatHandler, UsageRecordHandler>();      // 4. OnAfter 用量入库
-        services.AddSingleton<IChatHandler, PersistMessageHandler>();   // 5. OnAfter 最后落库消息/会话
+        services.AddSingleton<IChatHandler, LearningHandler>();         // 4. OnBefore 注入记忆 / OnAfter 自学习分析（火焰即忘）
+        services.AddSingleton<IChatHandler, UsageRecordHandler>();      // 5. OnAfter 用量入库
+        services.AddSingleton<IChatHandler, PersistMessageHandler>();   // 6. OnAfter 最后落库消息/会话
 
         // Web UI 主调用链：收集全部已注册的 IChatHandler，按 [ChatHandlerOrder] 特性构建有序视图
         // TryAdd 语义：上层项目已注册时不重复注册
@@ -89,7 +90,6 @@ public static class ChatAIExtensions
         services.AddSingleton<BackgroundGenerationService>();
         services.AddSingleton<MemoryService>();
         services.AddSingleton<ConversationAnalysisService>();
-        services.AddSingleton<IChatFilter, LearningFilter>();
         services.AddHttpClient("McpClient");
 
         // 消息频率限制器
