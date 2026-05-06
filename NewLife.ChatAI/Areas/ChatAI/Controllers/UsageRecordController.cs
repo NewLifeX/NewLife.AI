@@ -1,13 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using NewLife.ChatAI.Entity;
-using NewLife;
-using NewLife.Cube;
+﻿using NewLife.Cube;
 using NewLife.Cube.Extensions;
-using NewLife.Cube.ViewModels;
-using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
-using static NewLife.ChatAI.Entity.UsageRecord;
 
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
@@ -21,6 +15,7 @@ public class UsageRecordController : ChatEntityController<UsageRecord>
         //LogOnChange = true;
 
         ListFields.RemoveField("Id", "MessageId", "ModelId");
+        ListFields.RemoveField("ReasoningTokens", "InputAudioTokens", "InputTextTokens", "OutputAudioTokens", "OutputTextTokens");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{
