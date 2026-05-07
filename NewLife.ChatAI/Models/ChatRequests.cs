@@ -12,7 +12,7 @@ public record UpdateConversationRequest(String? Title, Int32 ModelId);
 public record EditMessageRequest(String Content);
 
 /// <summary>反馈请求</summary>
-public record FeedbackRequest(FeedbackType Type, String? Reason, Boolean? AllowTraining);
+public record FeedbackRequest(FeedbackType Type, String? Reason);
 
 /// <summary>创建分享请求</summary>
 public record CreateShareRequest(Int32? ExpireHours);

@@ -166,6 +166,22 @@ public partial class ChatMessage
     [BindColumn("ElapsedMs", "耗时。毫秒", "")]
     public Int32 ElapsedMs { get => _ElapsedMs; set { if (OnPropertyChanging("ElapsedMs", value)) { _ElapsedMs = value; OnPropertyChanged("ElapsedMs"); } } }
 
+    private NewLife.AI.Models.FeedbackType _FeedbackType;
+    /// <summary>反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩</summary>
+    [DisplayName("反馈类型")]
+    [Description("反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("FeedbackType", "反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩", "")]
+    public NewLife.AI.Models.FeedbackType FeedbackType { get => _FeedbackType; set { if (OnPropertyChanging("FeedbackType", value)) { _FeedbackType = value; OnPropertyChanged("FeedbackType"); } } }
+
+    private String? _FeedbackReason;
+    /// <summary>反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入</summary>
+    [DisplayName("反馈原因")]
+    [Description("反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("FeedbackReason", "反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入", "")]
+    public String? FeedbackReason { get => _FeedbackReason; set { if (OnPropertyChanging("FeedbackReason", value)) { _FeedbackReason = value; OnPropertyChanged("FeedbackReason"); } } }
+
     private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
@@ -229,6 +245,8 @@ public partial class ChatMessage
             "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
             "ElapsedMs" => _ElapsedMs,
+            "FeedbackType" => _FeedbackType,
+            "FeedbackReason" => _FeedbackReason,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -257,6 +275,8 @@ public partial class ChatMessage
                 case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
+                case "FeedbackType": _FeedbackType = (NewLife.AI.Models.FeedbackType)value.ToInt(); break;
+                case "FeedbackReason": _FeedbackReason = Convert.ToString(value); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -294,17 +314,19 @@ public partial class ChatMessage
     /// <summary>高级查询</summary>
     /// <param name="conversationId">会话。所属会话</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
+    /// <param name="feedbackType">反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.Models.ThinkingMode thinkingMode, NewLife.AI.Models.FeedbackType feedbackType, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
+        if (feedbackType >= 0) exp &= _.FeedbackType == feedbackType;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -382,6 +404,12 @@ public partial class ChatMessage
         /// <summary>耗时。毫秒</summary>
         public static readonly Field ElapsedMs = FindByName("ElapsedMs");
 
+        /// <summary>反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩</summary>
+        public static readonly Field FeedbackType = FindByName("FeedbackType");
+
+        /// <summary>反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入</summary>
+        public static readonly Field FeedbackReason = FindByName("FeedbackReason");
+
         /// <summary>链路。方便问题排查</summary>
         public static readonly Field TraceId = FindByName("TraceId");
 
@@ -453,6 +481,12 @@ public partial class ChatMessage
 
         /// <summary>耗时。毫秒</summary>
         public const String ElapsedMs = "ElapsedMs";
+
+        /// <summary>反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩</summary>
+        public const String FeedbackType = "FeedbackType";
+
+        /// <summary>反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入</summary>
+        public const String FeedbackReason = "FeedbackReason";
 
         /// <summary>链路。方便问题排查</summary>
         public const String TraceId = "TraceId";

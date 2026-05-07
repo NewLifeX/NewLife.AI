@@ -19,6 +19,7 @@ const REASON_KEYS = [
 export function DislikeReasonDialog({ open, onClose, onSubmit }: DislikeReasonDialogProps) {
   const { t } = useTranslation()
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [customText, setCustomText] = useState('')
 
   const toggle = useCallback((key: string) => {
     setSelected((prev) => {
@@ -30,13 +31,17 @@ export function DislikeReasonDialog({ open, onClose, onSubmit }: DislikeReasonDi
   }, [])
 
   const handleSubmit = useCallback(() => {
-    onSubmit(Array.from(selected))
+    const reasons = Array.from(selected)
+    if (customText.trim()) reasons.push(customText.trim())
+    onSubmit(reasons)
     setSelected(new Set())
+    setCustomText('')
     onClose()
-  }, [selected, onSubmit, onClose])
+  }, [selected, customText, onSubmit, onClose])
 
   const handleClose = useCallback(() => {
     setSelected(new Set())
+    setCustomText('')
     onClose()
   }, [onClose])
 
@@ -64,6 +69,13 @@ export function DislikeReasonDialog({ open, onClose, onSubmit }: DislikeReasonDi
             </button>
           ))}
         </div>
+        <textarea
+          value={customText}
+          onChange={(e) => setCustomText(e.target.value)}
+          placeholder={t('feedback.placeholder')}
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={handleClose}
@@ -73,7 +85,7 @@ export function DislikeReasonDialog({ open, onClose, onSubmit }: DislikeReasonDi
           </button>
           <button
             onClick={handleSubmit}
-            disabled={selected.size === 0}
+            disabled={selected.size === 0 && !customText.trim()}
             className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
           >
             {t('common.confirm')}

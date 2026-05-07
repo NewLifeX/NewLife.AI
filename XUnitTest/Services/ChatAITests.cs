@@ -615,13 +615,12 @@ public class ChatAITests
     }
 
     [Fact]
-    public void FeedbackRequestHasReasonAndTraining()
+    public void FeedbackRequestHasReason()
     {
-        var request = new FeedbackRequest(FeedbackType.Dislike, "回答不准确", true);
+        var request = new FeedbackRequest(FeedbackType.Dislike, "回答不准确");
 
         Assert.Equal(FeedbackType.Dislike, request.Type);
         Assert.Equal("回答不准确", request.Reason);
-        Assert.True(request.AllowTraining);
     }
     #endregion
 
@@ -674,7 +673,7 @@ public class ChatAITests
         var messages = await service.GetMessagesAsync(conv.Id, CancellationToken.None);
         var assistantMsg = messages.First(e => e.Role == "assistant");
 
-        await service.SubmitFeedbackAsync(assistantMsg.Id, new FeedbackRequest(FeedbackType.Like, null, false), CancellationToken.None);
+        await service.SubmitFeedbackAsync(assistantMsg.Id, new FeedbackRequest(FeedbackType.Like, null), CancellationToken.None);
         // SubmitFeedbackAsync 不抛异常即为成功
     }
 

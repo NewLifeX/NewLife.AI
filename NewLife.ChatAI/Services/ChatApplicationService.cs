@@ -100,13 +100,6 @@ public class ChatApplicationService
         var messages = ChatMessage.FindAllByConversationId(conversationId);
         var messageIds = messages.Select(m => m.Id).ToArray();
 
-        // 删除关联的消息反馈
-        if (messageIds.Length > 0)
-        {
-            var feedbacks = MessageFeedback.FindAllByMessageIds(messageIds);
-            feedbacks.Delete();
-        }
-
         // 删除关联的用量记录
         var usageRecords = UsageRecord.FindAllByConversationId(conversationId);
         usageRecords.Delete();
@@ -181,14 +174,7 @@ public class ChatApplicationService
         var list = ChatMessage.FindAllByConversationIdOrdered(conversationId)
             .Where(e => e.IsMain).ToList();
 
-        // 批量查询反馈，避免 N+1
-        var messageIds = list.Select(e => e.Id).ToList();
-        var feedbacks = messageIds.Count > 0
-            ? MessageFeedback.FindAllByMessageIdsAndUserId(messageIds, userId)
-                .ToDictionary(e => e.MessageId, e => e.FeedbackType)
-            : [];
-
-        var items = list.Select(e => ToMessageDto(e, feedbacks.TryGetValue(e.Id, out var ft) ? ft : default)).ToList();
+        var items = list.Select(e => ToMessageDto(e)).ToList();
         return Task.FromResult<IReadOnlyList<MessageDto>?>(items);
     }
 
@@ -256,18 +242,11 @@ public class ChatApplicationService
     public Task SubmitFeedbackAsync(Int64 messageId, FeedbackRequest request, Int32 userId, CancellationToken cancellationToken)
     {
         var msg = ChatMessage.FindById(messageId);
-        var entity = MessageFeedback.FindByMessageIdAndUserId(messageId, userId);
-        entity ??= new MessageFeedback
-        {
-            MessageId = messageId,
-            UserId = userId,
-        };
-        if (msg != null) entity.ConversationId = msg.ConversationId;
+        if (msg == null) return Task.CompletedTask;
 
-        entity.FeedbackType = request.Type;
-        entity.Reason = request.Reason;
-        entity.AllowTraining = request.AllowTraining ?? false;
-        entity.Save();
+        msg.FeedbackType = request.Type;
+        msg.FeedbackReason = request.Reason;
+        msg.Update();
 
         return Task.CompletedTask;
     }
@@ -279,8 +258,13 @@ public class ChatApplicationService
     /// <returns></returns>
     public Task DeleteFeedbackAsync(Int64 messageId, Int32 userId, CancellationToken cancellationToken)
     {
-        var entity = MessageFeedback.FindByMessageIdAndUserId(messageId, userId);
-        entity?.Delete();
+        var msg = ChatMessage.FindById(messageId);
+        if (msg != null)
+        {
+            msg.FeedbackType = FeedbackType.None;
+            msg.FeedbackReason = null;
+            msg.Update();
+        }
 
         return Task.CompletedTask;
     }
@@ -582,13 +566,6 @@ public class ChatApplicationService
         var messages = ChatMessage.FindAllByConversationIds(convIds);
         var msgIds = messages.Select(e => e.Id).ToArray();
 
-        // 删除消息反馈
-        if (msgIds.Length > 0)
-        {
-            var feedbacks = MessageFeedback.FindAllByMessageIds(msgIds);
-            feedbacks.Delete();
-        }
-
         // 删除用量记录
         var usageRecords = UsageRecord.FindAllByConversationIds(convIds);
         usageRecords.Delete();
@@ -612,9 +589,8 @@ public class ChatApplicationService
 
     /// <summary>转换消息实体为DTO</summary>
     /// <param name="entity">消息实体</param>
-    /// <param name="feedbackType">反馈类型。0=无反馈, 1=点赞, 2=点踩</param>
     /// <returns></returns>
-    private static MessageDto ToMessageDto(ChatMessage entity, FeedbackType feedbackType = default)
+    private static MessageDto ToMessageDto(ChatMessage entity)
     {
         // 反序列化 ToolCalls JSON
         IReadOnlyList<ToolCallDto>? toolCalls = null;
@@ -633,7 +609,8 @@ public class ChatApplicationService
             InputTokens = entity.InputTokens,
             OutputTokens = entity.OutputTokens,
             TotalTokens = entity.TotalTokens,
-            FeedbackType = (Int32)feedbackType,
+            FeedbackType = (Int32)entity.FeedbackType,
+            FeedbackReason = entity.FeedbackReason,
         };
     }
 

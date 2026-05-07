@@ -268,7 +268,8 @@ export default {
   },
   feedback: {
     title: '反馈原因',
-    description: '请选择不满意的原因（可多选）',
+    description: '请选择不满意的原因（可多选），或直接输入',
+    placeholder: '请输入其他原因…',
     reason: {
       inaccurate: '不准确',
       incomplete: '不完整',

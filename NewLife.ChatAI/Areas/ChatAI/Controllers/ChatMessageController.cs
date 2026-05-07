@@ -44,9 +44,11 @@ public class ChatMessageController : ChatEntityController<ChatMessage>
         var conversationId = p["conversationId"].ToLong(-1);
         var thinkingMode = (ThinkingMode)p["thinkingMode"].ToInt(-1);
 
+        var feedbackType = (FeedbackType)p["feedbackType"].ToInt(-1);
+
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return ChatMessage.Search(conversationId, thinkingMode, start, end, p["Q"], p);
+        return ChatMessage.Search(conversationId, thinkingMode, feedbackType, start, end, p["Q"], p);
     }
 }

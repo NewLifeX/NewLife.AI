@@ -50,4 +50,7 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
 
     /// <summary>反馈类型。Like=1, Dislike=2, 0=无反馈</summary>
     public Int32 FeedbackType { get; set; }
+
+    /// <summary>反馈原因。点踩时的具体原因</summary>
+    public String? FeedbackReason { get; set; }
 }

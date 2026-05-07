@@ -96,6 +96,8 @@
         <Column Name="OutputTokens" DataType="Int32" Description="输出Token数" />
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
+        <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩" Type="NewLife.AI.Models.FeedbackType" />
+        <Column Name="FeedbackReason" DataType="String" Length="500" Description="反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
@@ -103,28 +105,6 @@
       </Columns>
       <Indexes>
         <Index Columns="ConversationId,Id" />
-      </Indexes>
-    </Table>
-    <Table Name="MessageFeedback" Description="消息反馈。用户对AI回复的点赞或点踩" Output="消息对话">
-      <Columns>
-        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="ConversationId" DataType="Int64" Map="Conversation@Id@$@Title" Description="会话。被反馈的会话" />
-        <Column Name="MessageId" DataType="Int64" Description="消息。被反馈的消息" />
-        <Column Name="UserId" DataType="Int32" Map="XCode.Membership.User@ID@$@UserName" Description="用户。反馈用户" />
-        <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。Like=1点赞, Dislike=2点踩" Type="NewLife.AI.Models.FeedbackType" />
-        <Column Name="Reason" DataType="String" Length="500" Description="原因。点踩原因" />
-        <Column Name="AllowTraining" DataType="Boolean" Description="允许训练。是否允许用于模型学习训练" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
-      </Columns>
-      <Indexes>
-        <Index Columns="MessageId,UserId" Unique="True" />
-        <Index Columns="UserId" />
-        <Index Columns="ConversationId" />
       </Indexes>
     </Table>
     <Table Name="SharedConversation" Description="共享会话。通过链接分享的对话快照" Output="消息对话">
