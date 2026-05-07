@@ -40,7 +40,7 @@ export function Modal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-md:p-0">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
@@ -49,6 +49,7 @@ export function Modal({
         className={cn(
           'relative bg-white dark:bg-[#1e1e20] w-full rounded-2xl shadow-modal',
           'flex overflow-hidden animate-fade-in',
+          'max-md:rounded-none max-md:h-full max-md:max-w-none max-md:flex-col',
           maxWidth,
           className,
         )}

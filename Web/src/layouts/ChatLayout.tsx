@@ -172,18 +172,18 @@ export function ChatLayout({
       </div>
 
       <main className="flex-1 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
-        <div className="flex items-center px-4 pt-3 pb-1 z-10">
+        <div className="flex items-center px-4 pt-3 pb-1 z-10 min-w-0 overflow-hidden">
           {(sidebarCollapsed || isMobile) && (
             <button
               onClick={onSidebarToggle}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 mr-2"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 mr-2 shrink-0"
             >
               <Icon name="menu" variant="outlined" size="lg" />
             </button>
           )}
           {modelSelector}
           {conversationTitle && (
-            <h1 className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-xs">
+            <h1 className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 truncate min-w-0">
               {conversationTitle}
             </h1>
           )}

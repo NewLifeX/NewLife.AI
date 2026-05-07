@@ -243,7 +243,7 @@ export function ChatPage({
         </button>
       )}
 
-      <div className="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-30">
+      <div className="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 max-md:pb-3 max-md:px-2 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-30">
         <input
           ref={fileInputRef}
           type="file"

@@ -61,8 +61,9 @@ export function SettingsModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} className="h-[680px]">
-      <div className="w-64 bg-sidebar-light dark:bg-[#252528] border-r border-gray-100 dark:border-gray-800 flex flex-col pt-6 pb-4">
+    <Modal open={open} onClose={onClose} className="h-[680px] max-md:h-full">
+      {/* === PC 端：左侧导航栏 === */}
+      <div className="w-64 bg-sidebar-light dark:bg-[#252528] border-r border-gray-100 dark:border-gray-800 flex flex-col pt-6 pb-4 max-md:hidden">
         <div className="px-6 mb-6">
           <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{t('settings.title')}</h2>
         </div>
@@ -92,7 +93,139 @@ export function SettingsModal({
         </nav>
       </div>
 
-      <ScrollArea className="flex-1 bg-white dark:bg-[#1e1e20] p-8">
+      {/* === 移动端：顶部标题栏 + 标签栏 + 内容 === */}
+      <div className="hidden max-md:flex flex-col flex-1 min-h-0">
+        <div className="flex items-center px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 dark:text-gray-400 -ml-1 mr-2"
+            aria-label="Close"
+          >
+            <Icon name="arrow_back" size="lg" />
+          </button>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('settings.title')}</h2>
+        </div>
+        <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto no-scrollbar shrink-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 text-[11px] transition-colors border-b-2 -mb-px',
+                activeTab === tab.id
+                  ? 'text-primary border-primary'
+                  : 'text-gray-500 dark:text-gray-400 border-transparent',
+              )}
+            >
+              <Icon name={tab.icon} size="sm" />
+              <span className="whitespace-nowrap">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+        <ScrollArea className="flex-1 bg-white dark:bg-[#1e1e20] px-4 py-6">
+          {activeTab === 'general' && (
+            <GeneralSettings
+              language={settings.language}
+              onLanguageChange={(v) => update({ language: v })}
+              theme={settings.theme}
+              onThemeChange={(v) => update({ theme: v })}
+              fontSize={settings.fontSize}
+              onFontSizeChange={(v) => update({ fontSize: v })}
+              contentWidth={settings.contentWidth ?? 960}
+              onContentWidthChange={(v) => update({ contentWidth: v })}
+            />
+          )}
+          {activeTab === 'personalization' && (
+            <PersonalizationSettings
+              nickname={settings.nickname}
+              onNicknameChange={(v) => update({ nickname: v })}
+              userBackground={settings.userBackground}
+              onUserBackgroundChange={(v) => update({ userBackground: v })}
+              responseStyle={settings.responseStyle}
+              onResponseStyleChange={(v) => update({ responseStyle: v })}
+              systemPrompt={settings.systemPrompt}
+              onSystemPromptChange={(v) => update({ systemPrompt: v })}
+            />
+          )}
+          {activeTab === 'chat' && (
+            <ChatSettings
+              sendShortcut={settings.sendShortcut}
+              onSendShortcutChange={(v) => update({ sendShortcut: v })}
+              defaultModel={settings.defaultModel}
+              onDefaultModelChange={(v) => update({ defaultModel: v })}
+              defaultThinkingMode={settings.defaultThinkingMode}
+              onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
+              contextRounds={settings.contextRounds}
+              onContextRoundsChange={(v) => update({ contextRounds: v })}
+              thinkingCollapsed={settings.thinkingCollapsed ?? false}
+              onThinkingCollapsedChange={(v) => update({ thinkingCollapsed: v })}
+              models={models}
+            />
+          )}
+          {activeTab === 'mcp' && (
+            <McpSettings
+              plugins={mcpServers.map((s) => ({
+                id: String(s.id),
+                name: s.name,
+                version: '',
+                description: s.endpoint,
+                icon: 'extension',
+                iconBg: 'bg-indigo-100 dark:bg-indigo-900/50',
+                iconColor: 'text-indigo-600 dark:text-indigo-400',
+                enabled: s.enable,
+              }))}
+              onPluginToggle={(id, enabled) => {
+                const numId = Number(id)
+                toggleMcpServer(numId, enabled).catch(() => {})
+                setMcpServers((prev) =>
+                  prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
+                )
+              }}
+              mcpEnabled={settings.mcpEnabled}
+              onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
+              showToolCalls={settings.showToolCalls}
+              onShowToolCallsChange={(v) => update({ showToolCalls: v })}
+            />
+          )}
+          {activeTab === 'account' && (
+            <div className="mb-10">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 mb-5">
+                {userProfile?.avatar && userProfile.avatar.trim() && !avatarImgError ? (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.nickname || userProfile.account}
+                    className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                    onError={() => setAvatarImgError(true)}
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                    <Icon name="account_circle" variant="filled" size="xl" className="text-blue-500 dark:text-blue-400" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                    {userProfile?.nickname || userProfile?.account || '—'}
+                  </span>
+                  {userProfile?.nickname && userProfile.account && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400 truncate">@{userProfile.account}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {activeTab === 'data' && (
+            <DataSettings
+              onDataCleared={onDataCleared}
+              allowTraining={settings.allowTraining}
+              onAllowTrainingChange={(v) => update({ allowTraining: v })}
+            />
+          )}
+          {activeTab === 'appkeys' && <AppKeySettings />}
+        </ScrollArea>
+      </div>
+
+      {/* === PC 端：右侧内容区 === */}
+      <ScrollArea className="flex-1 bg-white dark:bg-[#1e1e20] p-8 max-md:hidden">
         {activeTab === 'general' && (
           <GeneralSettings
             language={settings.language}
