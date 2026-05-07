@@ -10,10 +10,12 @@ import { PersonalizationSettings } from './PersonalizationSettings'
 import { McpSettings } from './McpSettings'
 import { DataSettings } from './DataSettings'
 import { AppKeySettings } from './AppKeySettings'
+import { LearningSettings } from './LearningSettings'
+import { UsageSettings } from './UsageSettings'
 import type { UserSettings, ModelInfo } from '@/types'
 import { fetchMcpServers, toggleMcpServer, fetchUserProfile, type McpServer, type UserProfile } from '@/lib/api'
 
-type SettingsTab = 'account' | 'general' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'data'
+type SettingsTab = 'account' | 'general' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'data' | 'learning' | 'usage'
 
 interface SettingsModalProps {
   open: boolean
@@ -53,6 +55,8 @@ export function SettingsModal({
     { id: 'chat', icon: 'chat', label: t('settings.chatPrefs') },
     { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced'), badge: 'New' },
     { id: 'appkeys', icon: 'key', label: t('appKey.title') },
+    { id: 'learning', icon: 'psychology', label: t('learning.title') },
+    { id: 'usage', icon: 'bar_chart', label: t('usage.title') },
     { id: 'data', icon: 'storage', label: t('settings.dataManagement') },
   ]
 
@@ -213,6 +217,8 @@ export function SettingsModal({
               </div>
             </div>
           )}
+          {activeTab === 'learning' && <LearningSettings />}
+          {activeTab === 'usage' && <UsageSettings />}
           {activeTab === 'data' && (
             <DataSettings
               onDataCleared={onDataCleared}
@@ -414,6 +420,8 @@ export function SettingsModal({
             </div>
           </div>
         )}
+        {activeTab === 'learning' && <LearningSettings />}
+        {activeTab === 'usage' && <UsageSettings />}
         {activeTab === 'data' && (
           <DataSettings
             onDataCleared={onDataCleared}

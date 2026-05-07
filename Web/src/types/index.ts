@@ -91,6 +91,7 @@ export interface UserSettings {
   mcpEnabled: boolean
   showToolCalls: boolean
   allowTraining: boolean
+  enableLearning: boolean
   defaultSkill?: string
   contentWidth?: number
   thinkingCollapsed?: boolean

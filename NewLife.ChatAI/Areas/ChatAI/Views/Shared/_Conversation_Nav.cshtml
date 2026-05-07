@@ -16,7 +16,6 @@
     var dic = new Dictionary<String, Object>();
     dic[$"{conversation?.Title}"] = $"/ChatAI/Conversation/Edit?id={conversationId}";
     dic["消息列表"] = $"/ChatAI/ChatMessage?conversationId={conversationId}";
-    dic["消息反馈"] = $"/ChatAI/MessageFeedback?conversationId={conversationId}";
     dic["用量记录"] = $"/ChatAI/UsageRecord?conversationId={conversationId}";
     dic["共享会话"] = $"/ChatAI/SharedConversation?conversationId={conversationId}";
     dic["用户记忆"] = $"/ChatAI/UserMemory?conversationId={conversationId}";

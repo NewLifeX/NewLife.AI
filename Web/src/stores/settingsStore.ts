@@ -48,6 +48,7 @@ const defaults: UserSettings = {
   mcpEnabled: true,
   showToolCalls: false,
   allowTraining: false,
+  enableLearning: true,
   contentWidth: 960,
   thinkingCollapsed: false,
 }
