@@ -990,7 +990,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, model?.Name, userHistoryCount });
         var parts = new List<String>();
 
-        // 0. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
+        // 0. 当前日期时间（置首，确保 AI 在处理"今天"/"2号那天"等模糊表达时有明确锚点）
+        {
+            parts.Add($"当前时间：{DateTimeOffset.Now:O}");
+        }
+
+        // 1. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
         if (userId > 0 && ManageProvider.Provider?.FindByID(userId) is IUser user)
         {
             var sb = Pool.StringBuilder.Get();
@@ -1003,7 +1008,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             parts.Add(sb.Return(true));
         }
 
-        // 1. 个性化定制
+        // 2. 个性化定制
         var userSetting = UserSetting.FindByUserId(userId);
         if (userSetting != null)
         {
@@ -1023,15 +1028,15 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (stylePrompt != null) parts.Add(stylePrompt);
         }
 
-        // 2. 用户自定义指令
+        // 3. 用户自定义指令
         if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
             parts.Add(userSetting.SystemPrompt.Trim());
 
-        // 3. 模型级系统提示词
+        // 4. 模型级系统提示词
         if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
             parts.Add(model.SystemPrompt.Trim());
 
-        // 4. 多轮对话时强调最新消息优先级
+        // 5. 多轮对话时强调最新消息优先级
         if (userHistoryCount > 1)
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
 
