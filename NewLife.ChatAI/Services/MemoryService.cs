@@ -216,37 +216,6 @@ public class MemoryService(ITracer tracer, ILog log)
         return UserMemory.FindAllByUserIdAndCategory(userId, category);
     }
 
-    /// <summary>获取用户有效记忆的分页列表</summary>
-    /// <param name="userId">用户ID</param>
-    /// <param name="category">分类过滤（可选）</param>
-    /// <param name="page">页码（从1开始）</param>
-    /// <param name="pageSize">每页条数</param>
-    /// <returns>分页记忆列表</returns>
-    public MemoryListDto GetActiveMemoriesPaged(Int32 userId, String? category, Int32 page, Int32 pageSize)
-    {
-        var memories = category.IsNullOrEmpty()
-            ? GetActiveMemories(userId)
-            : GetMemoriesByCategory(userId, category!);
-
-        var total = memories.Count;
-        var items = memories
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(m => new MemoryItemDto
-            {
-                Id = m.Id,
-                Category = m.Category,
-                Key = m.Key,
-                Value = m.Value,
-                Confidence = m.Confidence,
-                Enable = m.Enable,
-                CreateTime = m.CreateTime,
-                UpdateTime = m.UpdateTime,
-            })
-            .ToList();
-
-        return new MemoryListDto { Total = total, Items = items, Page = page, PageSize = pageSize };
-    }
     #endregion
 
     #region 上下文构建

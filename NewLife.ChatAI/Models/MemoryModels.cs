@@ -18,8 +18,8 @@ public class MemoryListDto
 {
     /// <summary>总条数</summary>
     public Int32 Total { get; set; }
-    /// <summary>当前页</summary>
-    public Int32 Page { get; set; }
+    /// <summary>当前页码（从1开始）</summary>
+    public Int32 PageIndex { get; set; }
     /// <summary>每页条数</summary>
     public Int32 PageSize { get; set; }
     /// <summary>记忆列表</summary>

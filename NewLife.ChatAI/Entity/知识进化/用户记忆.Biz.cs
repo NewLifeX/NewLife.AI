@@ -1,3 +1,4 @@
+using NewLife.Data;
 using NewLife.Log;
 using XCode;
 using XCode.Membership;
@@ -81,6 +82,21 @@ public partial class UserMemory : Entity<UserMemory>
     /// <param name="count">最大返回数</param>
     /// <returns></returns>
     public static IList<UserMemory> FindPendingReview(Int32 count = 50) => FindAll(_.Status == 0 & _.Enable == true, _.Id.Asc(), null, 0, count);
+
+    /// <summary>分页查询用户有效记忆，支持分类过滤；PageParameter.TotalCount 将被填充总行数</summary>
+    /// <param name="userId">用户编号</param>
+    /// <param name="category">分类过滤，为空时不过滤</param>
+    /// <param name="page">分页参数；设置 RetrieveTotalCount=true 时自动回填 TotalCount</param>
+    /// <returns>当前页记忆列表</returns>
+    public static IList<UserMemory> Search(Int32 userId, String? category, PageParameter page)
+    {
+        var exp = _.UserId == userId & _.Enable == true;
+        if (!category.IsNullOrEmpty()) exp &= _.Category == category;
+
+        page.Sort = _.Confidence.Desc();
+
+        return FindAll(exp, page);
+    }
     #endregion
 
     #region 业务操作

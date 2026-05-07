@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
+using NewLife.Data;
 
 namespace NewLife.ChatAI.Controllers;
 
@@ -12,15 +13,27 @@ public class MemoryApiController(MemoryService memoryService) : ChatApiControlle
     #region 记忆接口
     /// <summary>获取当前用户的有效记忆列表</summary>
     /// <param name="category">分类过滤（可选）：偏好/习惯/兴趣/背景</param>
-    /// <param name="page">页码（从1开始）</param>
+    /// <param name="pageIndex">页码（从1开始）</param>
     /// <param name="pageSize">每页条数</param>
     /// <returns></returns>
     [HttpGet]
-    public ActionResult<MemoryListDto> GetMemories([FromQuery] String? category, [FromQuery] Int32 page = 1, [FromQuery] Int32 pageSize = 20)
+    public ActionResult<MemoryListDto> GetMemories([FromQuery] String? category, [FromQuery] Int32 pageIndex = 1, [FromQuery] Int32 pageSize = 20)
     {
         var userId = GetCurrentUserId();
-        var result = memoryService.GetActiveMemoriesPaged(userId, category, page, pageSize);
-        return Ok(result);
+        var pg = new PageParameter { PageIndex = pageIndex, PageSize = pageSize, RetrieveTotalCount = true };
+        var memories = UserMemory.Search(userId, category, pg);
+        var items = memories.Select(m => new MemoryItemDto
+        {
+            Id = m.Id,
+            Category = m.Category,
+            Key = m.Key,
+            Value = m.Value,
+            Confidence = m.Confidence,
+            Enable = m.Enable,
+            CreateTime = m.CreateTime,
+            UpdateTime = m.UpdateTime,
+        }).ToList();
+        return Ok(new MemoryListDto { Total = (Int32)pg.TotalCount, Items = items, PageIndex = pg.PageIndex, PageSize = pg.PageSize });
     }
 
     /// <summary>更新记忆内容</summary>

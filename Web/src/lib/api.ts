@@ -437,6 +437,7 @@ interface UserSettingsDto {
   streamingSpeed: number
   contentWidth: number
   thinkingCollapsed?: boolean
+  enableLearning: boolean
 }
 
 function toUserSettings(dto: UserSettingsDto): UserSettings {
@@ -457,6 +458,7 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     allowTraining: dto.allowTraining,
     contentWidth: dto.contentWidth || 960,
     thinkingCollapsed: dto.thinkingCollapsed ?? false,
+    enableLearning: dto.enableLearning ?? true,
   }
 }
 
@@ -485,6 +487,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       showToolCalls: settings.showToolCalls ?? false,
       contentWidth: settings.contentWidth ?? 960,
       thinkingCollapsed: settings.thinkingCollapsed ?? false,
+      enableLearning: settings.enableLearning ?? true,
     }),
   })
   return toUserSettings(dto)
@@ -827,16 +830,14 @@ export interface MemoryItem {
 
 export interface MemoryList {
   total: number
-  page: number
+  pageIndex: number
   pageSize: number
   items: MemoryItem[]
 }
 
-export async function fetchMemories(category?: string, page = 1, pageSize = 20): Promise<MemoryList> {
-  const params = new URLSearchParams()
+export async function fetchMemories(pageIndex = 1, pageSize = 20, category?: string): Promise<MemoryList> {
+  const params = new URLSearchParams({ pageIndex: String(pageIndex), pageSize: String(pageSize) })
   if (category) params.set('category', category)
-  params.set('page', String(page))
-  params.set('pageSize', String(pageSize))
   return request<MemoryList>(`/api/memory?${params}`)
 }
 
