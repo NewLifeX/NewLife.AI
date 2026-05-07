@@ -51,6 +51,8 @@ public class UsageRecordController : ChatEntityController<UsageRecord>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
+        if (userId > 0 || appKeyId > 0 || conversationId > 0 || modelId > 0) p.RetrieveState = true;
+
         return UsageRecord.Search(userId, appKeyId, conversationId, modelId, source, start, end, p["Q"], p);
     }
 }

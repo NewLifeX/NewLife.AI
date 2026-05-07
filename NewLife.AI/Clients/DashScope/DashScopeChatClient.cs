@@ -84,6 +84,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <returns>可直接序列化的请求字典</returns>
     protected override Object BuildRequest(IChatRequest request)
     {
+        AutoDetectSearchIntent(request);
         var dic = ChatCompletionRequest.BuildBody(request);
         AppendDashScopeFields(dic, request);
         return dic;
@@ -141,11 +142,72 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         }
     }
 
+    // 搜索意图关键词：触发时激活 enable_search + enable_source
+    private static readonly String[] _searchKeywords =
+    [
+        "搜索", "查一下", "查询", "查找", "找一找", "最新", "实时", "当前", "今天", "今日",
+        "新闻", "资讯", "股价", "股票", "天气", "汇率", "价格", "排行", "榜单",
+        "什么时候", "发布了吗", "有没有", "最近", "目前", "现在",
+        "search", "latest", "current", "today", "news", "price",
+    ];
+
+    // 爬取意图关键词：触发时激活 web_extractor（隐含 web_search）
+    private static readonly String[] _extractKeywords =
+    [
+        "抓取", "爬取", "爬虫", "爬一下", "读取网页", "访问网址", "访问链接", "打开链接",
+        "分析这个链接", "分析这个网址", "分析这个页面", "看一下这个链接", "看一下这个网页",
+        "fetch", "crawl", "scrape",
+    ];
+
+    /// <summary>自动推断联网意图。仅当外部未显式设置 EnableSearch / EnableWebExtractor 时，
+    /// 从最后一条用户消息中检测 URL 或关键词，自动激活对应的 DashScope 能力。</summary>
+    /// <param name="request">统一请求，结果写回 request["EnableSearch"] / request["EnableWebExtractor"]</param>
+    private static void AutoDetectSearchIntent(IChatRequest request)
+    {
+        // 已显式设置则尊重调用方决定，不覆盖
+        if (request["EnableSearch"] != null || request["EnableWebExtractor"] != null) return;
+
+        // 取最后一条 user 消息文本
+        var lastMsg = request.Messages?.LastOrDefault(m =>
+            String.Equals(m.Role, "user", StringComparison.OrdinalIgnoreCase))?.Content as String;
+        if (lastMsg.IsNullOrEmpty()) return;
+
+        // 检测 URL（以 http:// 或 https:// 开头的片段）→ 触发 web_extractor
+        if (lastMsg.Contains("http://", StringComparison.OrdinalIgnoreCase) ||
+            lastMsg.Contains("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            request["EnableWebExtractor"] = true;
+            return;
+        }
+
+        // 检测爬取类关键词 → 触发 web_extractor
+        foreach (var kw in _extractKeywords)
+        {
+            if (lastMsg.Contains(kw, StringComparison.OrdinalIgnoreCase))
+            {
+                request["EnableWebExtractor"] = true;
+                return;
+            }
+        }
+
+        // 检测搜索类关键词 → 触发 enable_search + enable_source
+        foreach (var kw in _searchKeywords)
+        {
+            if (lastMsg.Contains(kw, StringComparison.OrdinalIgnoreCase))
+            {
+                request["EnableSearch"] = true;
+                request["EnableSource"] = true;
+                return;
+            }
+        }
+    }
+
     /// <summary>构建 Omni 兼容模式请求体。在标准 OpenAI 请求体基础上注入 modalities、audio 等 Omni 专属字段</summary>
     /// <param name="request">统一请求</param>
     /// <returns>可直接序列化的请求字典</returns>
     private IDictionary<String, Object> BuildOmniBody(IChatRequest request)
     {
+        AutoDetectSearchIntent(request);
         var dic = ChatCompletionRequest.BuildBody(request);
         AppendDashScopeFields(dic, request);
 
@@ -259,6 +321,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
 
         var model = request.Model ?? _options.Model;
         var url = BuildUrl(request);
+        AutoDetectSearchIntent(request);
         var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         var dashResp = json.ToJsonEntity<DashScopeResponse>(JsonOptions)!;
@@ -291,6 +354,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         }
 
         var url = BuildUrl(request);
+        AutoDetectSearchIntent(request);
         var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
