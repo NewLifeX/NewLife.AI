@@ -3,11 +3,11 @@ using System.Text;
 
 namespace NewLife.AI.Embedding;
 
-/// <summary>基于 CJK Bigram + Murmur128 哈希的本地文本向量化实现</summary>
+/// <summary>基于 CJK Unigram+Bigram + Murmur128 哈希的本地文本向量化实现</summary>
 /// <remarks>
 /// 实现原理：
 /// <list type="number">
-/// <item><description>CJK 字符段落生成 Bigram；非 CJK 字符按空白/标点切词</description></item>
+/// <item><description>CJK 字符段落生成 Unigram（单字）和 Bigram（相邻双字）；非 CJK 字符按空白/标点切词</description></item>
 /// <item><description>统计词频（TF = count / total）</description></item>
 /// <item><description>对每个词项的 UTF-8 字节序列计算 Murmur128 哈希，取前 4 字节映射到 [0, Dimensions) 桶</description></item>
 /// <item><description>多个词项可映射到同一桶（累加 TF 权重）</description></item>
@@ -20,7 +20,7 @@ public class HashTextEmbedder : ILocalTextEmbedder
 {
     #region 属性
 
-    /// <summary>模型名称，固定为 local-hash-v1，不含维度信息</summary>
+    /// <summary>模型名称，固定为 local-hash-v2（v2 起新增 Unigram），不含维度信息</summary>
     public String ModelName { get; }
 
     /// <summary>向量维度数，默认 512</summary>
@@ -36,7 +36,7 @@ public class HashTextEmbedder : ILocalTextEmbedder
     {
         if (dimensions <= 0) throw new ArgumentOutOfRangeException(nameof(dimensions), "维度必须大于 0");
         Dimensions = dimensions;
-        ModelName = "local-hash-v1";
+        ModelName = "local-hash-v2";
     }
 
     #endregion
@@ -112,7 +112,10 @@ public class HashTextEmbedder : ILocalTextEmbedder
             }
             else
             {
-                // 提取所有相邻 Bigram
+                // 提取 Unigram（单字）：捕获字符级重叠，提升相关文本相似度
+                for (var i = 0; i < seg.Length; i++)
+                    tokens.Add(seg[i].ToString());
+                // 提取所有相邻 Bigram：捕获词组级特征
                 for (var i = 0; i < seg.Length - 1; i++)
                     tokens.Add(seg.Substring(i, 2));
             }

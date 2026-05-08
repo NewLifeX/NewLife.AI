@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Memory;
 
@@ -29,6 +29,9 @@ public class MemorySearchResult
 
     /// <summary>余弦相似度（0–1，越大越相似）</summary>
     public Double Relevance { get; set; }
+
+    /// <summary>调试友好输出。显示记录 Id 和得分</summary>
+    public override String ToString() => $"[{Entry?.Id}]{{Relevance={Relevance}}}";
 }
 
 /// <summary>向量存储记录。独立于语义记忆，专注于高维向量的存取与检索</summary>
@@ -52,4 +55,7 @@ public class VectorSearchResult
 
     /// <summary>相似度得分（余弦相似度，0–1）</summary>
     public Double Score { get; set; }
+
+    /// <summary>调试友好输出。显示记录 Id 和得分</summary>
+    public override String ToString() => $"[{Record?.Id}]{{Score={Score}}}";
 }

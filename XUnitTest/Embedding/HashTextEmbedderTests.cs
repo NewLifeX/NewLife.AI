@@ -60,13 +60,13 @@ public class HashTextEmbedderTests
     #region 属性
 
     [Fact]
-    [DisplayName("ModelName—固定返回 local-hash-v1（不含维度）")]
-    public void ModelName_AlwaysLocalHashV1()
+    [DisplayName("ModelName—固定返回 local-hash-v2（不含维度）")]
+    public void ModelName_AlwaysLocalHashV2()
     {
         var e512 = new HashTextEmbedder(512);
         var e256 = new HashTextEmbedder(256);
-        Assert.Equal("local-hash-v1", e512.ModelName);
-        Assert.Equal("local-hash-v1", e256.ModelName);
+        Assert.Equal("local-hash-v2", e512.ModelName);
+        Assert.Equal("local-hash-v2", e256.ModelName);
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public class HashTextEmbedderTests
     public void HashTextEmbedder_ImplementsInterface()
     {
         ILocalTextEmbedder embedder = new HashTextEmbedder(512);
-        Assert.Equal("local-hash-v1", embedder.ModelName);
+        Assert.Equal("local-hash-v2", embedder.ModelName);
         Assert.Equal(512, embedder.Dimensions);
         var result = embedder.Embed("接口测试");
         Assert.Equal(512, result.Length);
