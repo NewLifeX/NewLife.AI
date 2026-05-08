@@ -1,12 +1,9 @@
-﻿using NewLife.AI.Clients;
-
-namespace NewLife.AI.Embedding;
+﻿namespace NewLife.AI.Embedding;
 
 /// <summary>AI 嵌入向量客户端接口。将文本转换为浮点向量，用于语义搜索、相似度计算等场景</summary>
 /// <remarks>
 /// 设计对标 MEAI 的 IEmbeddingGenerator，简化为单方法接口。
-/// 通过 <see cref="IEmbeddingProvider.CreateEmbeddingClient"/> 获取实例，
-/// 或直接实例化 <see cref="OpenAiEmbeddingClient"/>。
+/// 直接实例化 <see cref="OpenAiEmbeddingClient"/>。
 /// </remarks>
 public interface IEmbeddingClient : IDisposable
 {
@@ -85,15 +82,15 @@ public class EmbeddingUsage
     public Int32 TotalTokens { get; set; }
 }
 
-/// <summary>支持嵌入向量的 AI 服务商接口。实现此接口的服务商可创建 IEmbeddingClient</summary>
-/// <remarks>
-/// OpenAI、阿里百炼等兼容 OpenAI Embeddings API 的服务商可实现此接口。
-/// 不支持 Embedding 的服务商无需实现（如 Anthropic Claude）。
-/// </remarks>
-public interface IEmbeddingProvider
-{
-    /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
-    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
-    /// <returns>已配置的 IEmbeddingClient 实例</returns>
-    IEmbeddingClient CreateEmbeddingClient(AiClientOptions options);
-}
+///// <summary>支持嵌入向量的 AI 服务商接口。实现此接口的服务商可创建 IEmbeddingClient</summary>
+///// <remarks>
+///// OpenAI、阿里百炼等兼容 OpenAI Embeddings API 的服务商可实现此接口。
+///// 不支持 Embedding 的服务商无需实现（如 Anthropic Claude）。
+///// </remarks>
+//public interface IEmbeddingProvider
+//{
+//    /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
+//    /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
+//    /// <returns>已配置的 IEmbeddingClient 实例</returns>
+//    IEmbeddingClient CreateEmbeddingClient(AiClientOptions options);
+//}

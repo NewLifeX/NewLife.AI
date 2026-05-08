@@ -13,13 +13,14 @@ namespace NewLife.AI.Embedding;
 /// <item><description>多个词项可映射到同一桶（累加 TF 权重）</description></item>
 /// <item><description>对结果向量进行 L2 归一化</description></item>
 /// </list>
-/// 模型名称格式：<c>local-hash-v1-{Dimensions}</c>，含维度信息，维度变更时自动触发重算。
+/// 模型名称固定为 <c>local-hash-v1</c>，不含维度信息。维度由 <see cref="Dimensions"/> 属性单独表达。
+/// 陈旧检测通过 <see cref="VectorData.IsStale(String, Int32)"/> 同时比较模型名和维度数实现。
 /// </remarks>
 public class HashTextEmbedder : ILocalTextEmbedder
 {
     #region 属性
 
-    /// <summary>模型名称，含维度编码，如 local-hash-v1-512</summary>
+    /// <summary>模型名称，固定为 local-hash-v1，不含维度信息</summary>
     public String ModelName { get; }
 
     /// <summary>向量维度数，默认 512</summary>
@@ -35,7 +36,7 @@ public class HashTextEmbedder : ILocalTextEmbedder
     {
         if (dimensions <= 0) throw new ArgumentOutOfRangeException(nameof(dimensions), "维度必须大于 0");
         Dimensions = dimensions;
-        ModelName = $"local-hash-v1-{dimensions}";
+        ModelName = "local-hash-v1";
     }
 
     #endregion

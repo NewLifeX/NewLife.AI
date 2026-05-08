@@ -9,8 +9,7 @@ namespace NewLife.AI.Embedding;
 
 /// <summary>OpenAI 协议嵌入向量客户端。兼容所有支持 OpenAI Embeddings API 的服务商</summary>
 /// <remarks>
-/// 通过 <see cref="IEmbeddingProvider.CreateEmbeddingClient"/> 创建，
-/// 也可直接实例化用于支持 OpenAI Embeddings API 的服务商（阿里百炼、DeepSeek 等）。
+/// 直接实例化用于支持 OpenAI Embeddings API 的服务商（阿里百炼、DeepSeek 等）。
 /// </remarks>
 public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeature
 {
@@ -57,8 +56,6 @@ public class OpenAiEmbeddingClient : IEmbeddingClient, ILogFeature, ITracerFeatu
             Endpoint = options.GetEndpoint(defaultEndpoint),
         };
     }
-
-
 
     private HttpClient CreateHttpClient()
     {
