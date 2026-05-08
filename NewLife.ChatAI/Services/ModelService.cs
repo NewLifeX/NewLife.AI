@@ -1,6 +1,7 @@
 ﻿using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Embedding;
 using NewLife.Log;
 using XCode.Membership;
 using ILog = NewLife.Log.ILog;
@@ -161,6 +162,21 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
         if (providerConfig == null || providerConfig.Provider.IsNullOrWhiteSpace()) return false;
 
         return _registry.GetDescriptor(providerConfig.Provider) != null;
+    }
+
+    /// <summary>根据模型配置创建 OpenAI 兼容的嵌入向量客户端。适用于所有使用 OpenAI Embeddings API 协议的服务商</summary>
+    /// <param name="config">模型配置（embedding 专用模型）</param>
+    /// <returns>已绑定连接参数的嵌入客户端，配置为空时返回 null</returns>
+    public IEmbeddingClient? CreateEmbeddingClient(ModelConfig config)
+    {
+        if (config == null) return null;
+
+        var options = BuildOptions(config);
+        var providerConfig = config.ProviderInfo;
+        var providerName = providerConfig?.Name ?? options.Code ?? "OpenAI";
+        var defaultEndpoint = providerConfig?.Endpoint ?? "https://api.openai.com";
+
+        return new OpenAiEmbeddingClient(providerName, defaultEndpoint, options) { Log = log, Tracer = tracer };
     }
 
     /// <summary>构建服务商连接选项。从关联的 ProviderConfig 获取 Endpoint/ApiKey，从 ModelConfig 获取默认模型和协议</summary>
