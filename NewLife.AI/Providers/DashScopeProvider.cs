@@ -137,7 +137,7 @@ public class DashScopeProvider : OpenAiProvider
     /// <summary>创建嵌入向量客户端。使用兼容模式地址，与文本对话原生地址隔离</summary>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
     /// <returns>已配置的 IEmbeddingClient 实例</returns>
-    public override IEmbeddingClient CreateEmbeddingClient(AiProviderOptions options)
+    public override IEmbeddingClient? CreateEmbeddingClient(AiProviderOptions options)
     {
         // Embedding 沿用兼容模式 /compatible-mode/v1/embeddings
         var embOptions = new AiProviderOptions
@@ -146,7 +146,8 @@ public class DashScopeProvider : OpenAiProvider
             Model = options.Model,
             Endpoint = CompatibleEndpoint,
         };
-        return new OpenAiEmbeddingClient(Name, CompatibleEndpoint, embOptions);
+        var client = CreateClient(embOptions);
+        return client as IEmbeddingClient;
     }
 
     /// <summary>创建 DashScope 专属对话选项实例。返回 <see cref="DashScopeChatOptions"/> 以便强类型设置 DashScope 高级参数</summary>

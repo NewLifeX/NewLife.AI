@@ -60,10 +60,14 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
         return new OpenAiChatClient(this, options) { Log = Log, Tracer = Tracer };
     }
 
-    /// <summary>创建已绑定连接参数的嵌入向量客户端</summary>
+    /// <summary>创建已绑定连接参数的嵌入向量客户端。由 <see cref="CreateClient"/> 创建对话客户端后转型为 <see cref="IEmbeddingClient"/></summary>
     /// <param name="options">连接选项（Endpoint、ApiKey 等）</param>
-    /// <returns>已配置的 IEmbeddingClient 实例</returns>
-    public virtual IEmbeddingClient CreateEmbeddingClient(AiProviderOptions options) => new OpenAiEmbeddingClient(this, options) { Log = Log, Tracer = Tracer };
+    /// <returns>已配置的 IEmbeddingClient 实例，客户端不支持嵌入时返回 null</returns>
+    public virtual IEmbeddingClient? CreateEmbeddingClient(AiProviderOptions options)
+    {
+        var client = CreateClient(options);
+        return client as IEmbeddingClient;
+    }
 
     /// <summary>非流式对话</summary>
     /// <param name="request">内部对话请求</param>

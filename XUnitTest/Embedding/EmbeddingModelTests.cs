@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
 using Xunit;
 
@@ -180,101 +181,105 @@ public class EmbeddingModelTests
     #endregion
 
     // ── EmbeddingClientMetadata ──────────────────────────────────────────────
-    // 通过 OpenAiEmbeddingClient 构造函数间接验证元数据属性（避免直接使用 init 属性出现兼容问题）
+    // 通过 OpenAIChatClient 实例化为 IEmbeddingClient 验证元数据属性
 
     #region EmbeddingClientMetadata
 
     [Fact]
-    [DisplayName("EmbeddingClientMetadata—通过 Client 构造函数验证 ProviderName 和 Endpoint")]
-    public void EmbeddingClientMetadata_ViaClient_ProviderNameAndEndpoint()
+    [DisplayName("EmbeddingClientMetadata—通过 OpenAIChatClient 验证 ProviderName 为 OpenAI")]
+    public void EmbeddingClientMetadata_ViaOpenAIChatClient_ProviderName()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test" };
-        var client = new OpenAiEmbeddingClient("AliDashScope", "https://default.example.com", opts);
-        Assert.Equal("AliDashScope", client.Metadata.ProviderName);
-        Assert.Equal("https://default.example.com", client.Metadata.Endpoint);
+        var client = new OpenAIChatClient(opts);
+        var embedding = (IEmbeddingClient)client;
+        Assert.Equal("OpenAI", embedding.Metadata.ProviderName);
     }
 
     [Fact]
-    [DisplayName("EmbeddingClientMetadata—Endpoint 默认为 null（DefaultModelId 未设置时）")]
-    public void EmbeddingClientMetadata_DefaultModelId_Null()
+    [DisplayName("EmbeddingClientMetadata—Endpoint 使用 options.Endpoint 覆盖默认地址")]
+    public void EmbeddingClientMetadata_ViaOpenAIChatClient_EndpointOverride()
+    {
+        var opts = new AiClientOptions { ApiKey = "sk-test", Endpoint = "https://custom.example.com" };
+        var client = new OpenAIChatClient(opts);
+        var embedding = (IEmbeddingClient)client;
+        Assert.Equal("https://custom.example.com", embedding.Metadata.Endpoint);
+    }
+
+    [Fact]
+    [DisplayName("EmbeddingClientMetadata—DefaultModel 等于 options.Model")]
+    public void EmbeddingClientMetadata_DefaultModel_FromOptions()
+    {
+        var opts = new AiClientOptions { ApiKey = "sk-test", Model = "text-embedding-3-small" };
+        var client = new OpenAIChatClient(opts);
+        Assert.Equal("text-embedding-3-small", ((IEmbeddingClient)client).Metadata.DefaultModel);
+    }
+
+    [Fact]
+    [DisplayName("EmbeddingClientMetadata—options.Model 未设置时 DefaultModel 为 null")]
+    public void EmbeddingClientMetadata_DefaultModel_Null_WhenNotSet()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test" };
-        var client = new OpenAiEmbeddingClient("Test", "https://x.com", opts);
-        // DefaultModelId 在 OpenAiEmbeddingClient 构造时不设置
-        Assert.Null(client.Metadata.DefaultModel);
+        var client = new OpenAIChatClient(opts);
+        Assert.Null(((IEmbeddingClient)client).Metadata.DefaultModel);
     }
 
     #endregion
 
-    // ── OpenAiEmbeddingClient ────────────────────────────────────────────────
+    // ── OpenAIChatClient as IEmbeddingClient ─────────────────────────────────
 
-    #region OpenAiEmbeddingClient
+    #region OpenAIChatClient 嵌入实现
 
     [Fact]
-    [DisplayName("OpenAiEmbeddingClient—构造后 Metadata.ProviderName 正确")]
-    public void OpenAiEmbeddingClient_Metadata_ProviderName()
+    [DisplayName("OpenAIChatClient—实现 IEmbeddingClient 接口")]
+    public void OpenAIChatClient_Implements_IEmbeddingClient()
     {
-        var opts = new AiClientOptions { ApiKey = "sk-test" };
-        var client = new OpenAiEmbeddingClient("DashScope", "https://dashscope.aliyuncs.com", opts);
-        Assert.Equal("DashScope", client.Metadata.ProviderName);
+        var client = new OpenAIChatClient(new AiClientOptions { ApiKey = "sk-test" });
+        Assert.IsAssignableFrom<IEmbeddingClient>(client);
     }
 
     [Fact]
-    [DisplayName("OpenAiEmbeddingClient—构造后 Metadata.Endpoint 使用 options.Endpoint 覆盖")]
-    public void OpenAiEmbeddingClient_Metadata_Endpoint_UseOptionsEndpoint()
+    [DisplayName("OpenAIChatClient—Metadata.ProviderName 从类名自动设为 OpenAI")]
+    public void OpenAIChatClient_EmbeddingMetadata_ProviderName()
+    {
+        var opts = new AiClientOptions { ApiKey = "sk-test" };
+        var client = new OpenAIChatClient(opts);
+        Assert.Equal("OpenAI", client.Metadata.ProviderName);
+    }
+
+    [Fact]
+    [DisplayName("OpenAIChatClient—Metadata.Endpoint 使用 options.Endpoint 覆盖")]
+    public void OpenAIChatClient_EmbeddingMetadata_Endpoint_UseOptionsEndpoint()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test", Endpoint = "https://custom.endpoint.com" };
-        var client = new OpenAiEmbeddingClient("Test", "https://default.com", opts);
+        var client = new OpenAIChatClient(opts);
         Assert.Equal("https://custom.endpoint.com", client.Metadata.Endpoint);
     }
 
     [Fact]
-    [DisplayName("OpenAiEmbeddingClient—options.Endpoint 为 null 时使用默认 Endpoint")]
-    public void OpenAiEmbeddingClient_Metadata_Endpoint_UseDefault()
+    [DisplayName("OpenAIChatClient—Metadata.Endpoint 未设置时返回 OpenAI 官方地址")]
+    public void OpenAIChatClient_EmbeddingMetadata_Endpoint_Default()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test", Endpoint = null };
-        var client = new OpenAiEmbeddingClient("Test", "https://default.com", opts);
-        Assert.Equal("https://default.com", client.Metadata.Endpoint);
+        var client = new OpenAIChatClient(opts);
+        // 注册表将 OpenAI 映射到 https://api.openai.com
+        Assert.Contains("openai.com", client.Metadata.Endpoint);
     }
 
     [Fact]
-    [DisplayName("OpenAiEmbeddingClient—null providerName 抛 ArgumentNullException")]
-    public void OpenAiEmbeddingClient_NullProviderName_Throws()
-    {
-        var opts = new AiClientOptions();
-        Assert.Throws<ArgumentNullException>(() => new OpenAiEmbeddingClient(null!, "https://x.com", opts));
-    }
-
-    [Fact]
-    [DisplayName("OpenAiEmbeddingClient—null defaultEndpoint 抛 ArgumentNullException")]
-    public void OpenAiEmbeddingClient_NullEndpoint_Throws()
-    {
-        var opts = new AiClientOptions();
-        Assert.Throws<ArgumentNullException>(() => new OpenAiEmbeddingClient("Test", null!, opts));
-    }
-
-    [Fact]
-    [DisplayName("OpenAiEmbeddingClient—null options 抛 ArgumentNullException")]
-    public void OpenAiEmbeddingClient_NullOptions_Throws()
-    {
-        Assert.Throws<ArgumentNullException>(() => new OpenAiEmbeddingClient("Test", "https://x.com", null!));
-    }
-
-    [Fact]
-    [DisplayName("OpenAiEmbeddingClient—Dispose 不抛异常")]
-    public void OpenAiEmbeddingClient_Dispose_DoesNotThrow()
+    [DisplayName("OpenAIChatClient—Dispose 不抛异常")]
+    public void OpenAIChatClient_Dispose_DoesNotThrow()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test" };
-        var client = new OpenAiEmbeddingClient("Test", "https://x.com", opts);
+        var client = new OpenAIChatClient(opts);
         client.Dispose(); // should not throw
     }
 
     [Fact]
-    [DisplayName("OpenAiEmbeddingClient—默认 Timeout 为 2 分钟")]
-    public void OpenAiEmbeddingClient_DefaultTimeout_TwoMinutes()
+    [DisplayName("OpenAIChatClient—默认 Timeout 为 2 分钟")]
+    public void OpenAIChatClient_DefaultTimeout_TwoMinutes()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test" };
-        var client = new OpenAiEmbeddingClient("Test", "https://x.com", opts);
+        var client = new OpenAIChatClient(opts);
         Assert.Equal(TimeSpan.FromMinutes(2), client.Timeout);
     }
 

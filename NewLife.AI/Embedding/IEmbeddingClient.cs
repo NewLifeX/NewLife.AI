@@ -3,7 +3,7 @@
 /// <summary>AI 嵌入向量客户端接口。将文本转换为浮点向量，用于语义搜索、相似度计算等场景</summary>
 /// <remarks>
 /// 设计对标 MEAI 的 IEmbeddingGenerator，简化为单方法接口。
-/// 直接实例化 <see cref="OpenAiEmbeddingClient"/>。
+/// <see cref="NewLife.AI.Clients.OpenAI.OpenAIChatClient"/> 实现此接口，可通过 <see cref="IChatClient"/> 强转获取。
 /// </remarks>
 public interface IEmbeddingClient : IDisposable
 {

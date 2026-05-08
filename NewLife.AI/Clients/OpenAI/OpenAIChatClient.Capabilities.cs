@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using NewLife.AI.Embedding;
 using NewLife.AI.Models;
 using NewLife.Remoting;
@@ -161,15 +163,91 @@ public partial class OpenAIChatClient
         DefaultModel = _options.Model,
     };
 
-    private OpenAiEmbeddingClient? _embeddingClient;
-    /// <summary>生成嵌入向量。委托到内部 <see cref="OpenAiEmbeddingClient"/>，与现有 OpenAI 协议保持一致</summary>
+    /// <summary>嵌入路径。默认 /v1/embeddings，子类可重写以适配服务商差异</summary>
+    protected virtual String EmbeddingPath => "/v1/embeddings";
+
+    /// <summary>生成嵌入向量。POST <see cref="EmbeddingPath"/>，使用当前客户端的 HttpClient 与认证头</summary>
     /// <param name="request">嵌入请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>嵌入响应</returns>
-    public virtual Task<EmbeddingResponse> GenerateAsync(EmbeddingRequest request, CancellationToken cancellationToken = default)
+    public virtual async Task<EmbeddingResponse> GenerateAsync(EmbeddingRequest request, CancellationToken cancellationToken = default)
     {
-        _embeddingClient ??= new OpenAiEmbeddingClient(Name, DefaultEndpoint, _options) { JsonHost = JsonHost, Timeout = Timeout };
-        return _embeddingClient.GenerateAsync(request, cancellationToken);
+        if (request == null) throw new ArgumentNullException(nameof(request));
+
+        var dic = new Dictionary<String, Object>();
+
+        // 单条输入直接传字符串，多条传数组（节省序列化开销）
+        if (request.Input.Count == 1)
+            dic["input"] = request.Input[0];
+        else
+            dic["input"] = request.Input;
+
+        if (request.Model != null) dic["model"] = request.Model;
+        else if (_options.Model != null) dic["model"] = _options.Model;
+        if (request.Dimensions != null) dic["dimensions"] = request.Dimensions.Value;
+        if (request.EncodingFormat != null) dic["encoding_format"] = request.EncodingFormat;
+        if (request.User != null) dic["user"] = request.User;
+
+        var body = JsonHost.Write(dic);
+        var url = BuildApiUrl(EmbeddingPath);
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
+        SetHeaders(httpRequest, null, _options);
+        httpRequest.Content = new StringContent(body, Encoding.UTF8, "application/json");
+
+        using var httpResponse = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        var responseText = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        if (!httpResponse.IsSuccessStatusCode)
+            throw new ApiException((Int32)httpResponse.StatusCode, responseText);
+
+        return ParseEmbeddingResponse(responseText);
+    }
+
+    /// <summary>解析嵌入响应 JSON</summary>
+    /// <param name="json">JSON 字符串</param>
+    /// <returns>嵌入响应</returns>
+    protected virtual EmbeddingResponse ParseEmbeddingResponse(String json)
+    {
+        var dic = JsonParser.Decode(json);
+        if (dic == null) throw new InvalidOperationException("无法解析 Embedding API 响应");
+
+        var response = new EmbeddingResponse { Model = dic["model"] as String };
+
+        // 解析 data 数组
+        if (dic["data"] is IList<Object> dataList)
+        {
+            var items = new List<EmbeddingItem>(dataList.Count);
+            foreach (var item in dataList)
+            {
+                if (item is not IDictionary<String, Object> itemDic) continue;
+
+                var ei = new EmbeddingItem { Index = itemDic["index"].ToInt() };
+
+                if (itemDic["embedding"] is IList<Object> embList)
+                {
+                    var arr = new Single[embList.Count];
+                    for (var i = 0; i < embList.Count; i++)
+                        arr[i] = (Single)embList[i].ToDouble();
+                    ei.Embedding = arr;
+                }
+
+                items.Add(ei);
+            }
+            response.Data = items;
+        }
+
+        // 解析 usage
+        if (dic["usage"] is IDictionary<String, Object> usageDic)
+        {
+            response.Usage = new EmbeddingUsage
+            {
+                PromptTokens = usageDic["prompt_tokens"].ToInt(),
+                TotalTokens = usageDic["total_tokens"].ToInt(),
+            };
+        }
+
+        return response;
     }
     #endregion
 }
