@@ -8,10 +8,8 @@ namespace NewLife.ChatAI.Services;
 /// <remarks>
 /// 各 <see cref="IChatHandler"/> 通过本上下文读取/修改状态，
 /// 无需互相感知。四大入口通过 <see cref="Kind"/> 区分。
-/// 同时实现 <see cref="IMessageFlowContext"/>（旧抽象）与 <see cref="IChatContext"/>（新中间件抽象），
-/// 便于平滑过渡到 <see cref="IChatHandler"/> 链路。
 /// </remarks>
-public class MessageFlowContext : IMessageFlowContext, IChatContext
+public class MessageFlowContext : IChatContext
 {
     #region 入口信息
 
@@ -103,29 +101,6 @@ public class MessageFlowContext : IMessageFlowContext, IChatContext
         get => Items.TryGetValue(key, out var v) ? v : null;
         set => Items[key] = value;
     }
-
-    #endregion
-
-    #region IMessageFlowContext 显式接口实现
-
-    /// <inheritdoc />
-    IConversation IMessageFlowContext.Conversation { get => Conversation; set => Conversation = (Conversation)value; }
-
-    /// <inheritdoc />
-    IModelConfig IMessageFlowContext.ModelConfig { get => ModelConfig; set => ModelConfig = (ModelConfig)value; }
-
-    /// <inheritdoc />
-    IChatMessage? IMessageFlowContext.UserMessage { get => UserMessage; set => UserMessage = (DbChatMessage?)value; }
-
-    /// <inheritdoc />
-    IChatMessage IMessageFlowContext.AssistantMessage { get => AssistantMessage; set => AssistantMessage = (DbChatMessage)value; }
-
-    ///// <inheritdoc />
-    //IList<AiChatMessage> IMessageFlowContext.ContextMessages
-    //{
-    //    get => ContextMessages;
-    //    set => ContextMessages = value;
-    //}
 
     #endregion
 
