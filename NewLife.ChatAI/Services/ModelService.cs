@@ -78,7 +78,7 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             if (config != null && config.Enable) return config;
         }
 
-        var models = ModelConfig.FindAllEnabled();
+        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).OrderByDescending(e => e.Id).ToList();
         return SelectDefaultModel(models, chatSetting.DefaultModel);
     }
 
@@ -92,8 +92,8 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
         return ModelConfig.FindByCode(modelCode);
     }
 
-    /// <summary>解析轻量模型配置。优先按 ChatSetting.LightweightModel 编码查找，未配置时回退到 LearningModel，最终回退到指定的 fallbackModelId</summary>
-    /// <param name="fallbackModelId">回退模型编号（通常为当前对话模型）</param>
+    /// <summary>解析轻量模型配置。优先按 ChatSetting.LightweightModel 编码查找；未配置时选择优先级最高的 flash/lite/mini/small 轻量文本模型；仍未找到时依次回退到 fallbackModelId 或主模型</summary>
+    /// <param name="fallbackModelId">兜底模型编号（通常为当前对话模型），0 表示使用主模型</param>
     /// <returns>模型配置，未找到返回 null</returns>
     public ModelConfig? ResolveLightweightModel(Int32 fallbackModelId = 0)
     {
@@ -103,20 +103,38 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             if (config != null && config.Enable) return config;
         }
 
-        if (!chatSetting.LearningModel.IsNullOrEmpty())
+        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).OrderByDescending(e => e.Id).ToList();
+        var lightweight = models.FirstOrDefault(e => !e.SupportEmbedding && IsLightweightCode(e.Code, e.Name));
+        if (lightweight != null) return lightweight;
+
+        if (fallbackModelId > 0)
         {
-            var config = ModelConfig.FindByCode(chatSetting.LearningModel);
+            var fallback = models.FirstOrDefault(e => e.Id == fallbackModelId);
+            if (fallback != null) return fallback;
+        }
+
+        return SelectDefaultModel(models, chatSetting.DefaultModel);
+    }
+
+    /// <summary>解析嵌入模型配置。优先按 ChatSetting.EmbedModel 编码查找；未配置时选择优先级最高的嵌入模型（SupportEmbedding=true）；仍未找到则返回 null（调用方退化到本地哈希嵌入）</summary>
+    /// <returns>嵌入模型配置，未找到返回 null</returns>
+    public ModelConfig? GetEmbeddingModel()
+    {
+        if (!chatSetting.EmbedModel.IsNullOrEmpty())
+        {
+            var config = ModelConfig.FindByCode(chatSetting.EmbedModel);
             if (config != null && config.Enable) return config;
         }
 
-        return ResolveModelOrDefault(fallbackModelId);
+        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).OrderByDescending(e => e.Id).ToList();
+        return models.FirstOrDefault(e => e.SupportEmbedding);
     }
 
-    /// <summary>从已启用模型列表中按优先级选出默认模型</summary>
+    /// <summary>从已启用模型列表中按优先级选出默认文本模型</summary>
     /// <param name="models">已启用的模型列表</param>
     /// <param name="defaultModelId">系统配置的默认模型编号，0 表示不指定</param>
     /// <returns>选出的模型配置，列表为空时返回 null</returns>
-    public static ModelConfig? SelectDefaultModel(IList<ModelConfig> models, Int32 defaultModelId)
+    private static ModelConfig? SelectDefaultModel(IList<ModelConfig> models, Int32 defaultModelId)
     {
         if (models == null || models.Count == 0) return null;
 
@@ -126,7 +144,16 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             if (preferred != null) return preferred;
         }
 
-        return models.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).FirstOrDefault();
+        // 优先选择文本模型（SupportEmbedding=false），按 Sort 降序取优先级最高的
+        //var sorted = models.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
+        return models.FirstOrDefault(e => !e.SupportEmbedding) ?? models.FirstOrDefault();
+    }
+
+    /// <summary>判断模型编码或名称是否含有轻量模型标识（flash/lite/mini/small）</summary>
+    private static Boolean IsLightweightCode(String? code, String? name)
+    {
+        var text = ((code ?? "") + " " + (name ?? "")).ToLower();
+        return text.Contains("flash") || text.Contains("lite") || text.Contains("mini") || text.Contains("small");
     }
     #endregion
 

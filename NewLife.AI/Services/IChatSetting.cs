@@ -1,4 +1,4 @@
-namespace NewLife.AI.Services;
+﻿namespace NewLife.AI.Services;
 
 /// <summary>AI 对话系统核心配置接口。NewLife.AI 通用编排层通过此接口取用配置项，
 /// 与具体实现解耦，由 ChatAI/StarChat 各自注册 &lt;IChatSetting, ChatSetting&gt; 实现注入</summary>
@@ -10,8 +10,14 @@ public interface IChatSetting
     #endregion
 
     #region 对话默认
-    /// <summary>默认模型。新用户的默认模型配置Id，0表示使用第一个可用模型</summary>
+    /// <summary>默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型</summary>
     Int32 DefaultModel { get; }
+
+    /// <summary>轻量模型。标题生成、摘要压缩、知识蒸馏等简单任务调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型</summary>
+    String LightweightModel { get; }
+
+    /// <summary>嵌入模型。向量检索/向量嵌入场景调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入</summary>
+    String EmbedModel { get; }
 
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
     Int32 DefaultContextRounds { get; }
@@ -34,13 +40,5 @@ public interface IChatSetting
 
     /// <summary>启用函数调用</summary>
     Boolean EnableFunctionCalling { get; }
-    #endregion
-
-    #region 自学习
-    /// <summary>学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型</summary>
-    String LearningModel { get; }
-
-    /// <summary>轻量模型。用于标题生成、摘要压缩、知识蒸馏等简单任务的模型编码，为空时复用LearningModel或当前对话模型</summary>
-    String LightweightModel { get; }
     #endregion
 }
