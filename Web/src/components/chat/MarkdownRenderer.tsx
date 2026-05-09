@@ -29,6 +29,7 @@ interface MermaidActionButtonProps {
   onClick: () => void
   disabled?: boolean
   className?: string
+  testId?: string
 }
 
 interface MermaidSvgPaneProps {
@@ -38,6 +39,7 @@ interface MermaidSvgPaneProps {
   fallbackClassName?: string
   scale?: number
   onSvgChange?: (svg: string | null) => void
+  testId?: string
 }
 
 interface MermaidPreviewDialogProps {
@@ -78,12 +80,13 @@ function downloadTextFile(fileName: string, content: string, mimeType: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function MermaidActionButton({ title, icon, onClick, disabled = false, className }: MermaidActionButtonProps) {
+function MermaidActionButton({ title, icon, onClick, disabled = false, className, testId }: MermaidActionButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      data-testid={testId}
       className={cn(
         'flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-900/90 text-gray-300 shadow-sm transition hover:bg-gray-800 hover:text-white',
         disabled && 'cursor-not-allowed opacity-40 hover:bg-gray-900/90 hover:text-gray-300',
@@ -103,6 +106,7 @@ function MermaidSvgPane({
   fallbackClassName = 'rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
   scale = 1,
   onSvgChange,
+  testId,
 }: MermaidSvgPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -172,6 +176,7 @@ function MermaidSvgPane({
   return (
     <div
       ref={containerRef}
+      data-testid={testId}
       className={className}
       style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: 'center top' }}
     />
@@ -200,17 +205,17 @@ function MermaidPreviewDialog({ open, code, fallbackClassName, onClose, onCopySo
   if (!open || typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm" onClick={onClose}>
+    <div data-testid="mermaid-preview-dialog" className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm" onClick={onClose}>
       <div className="absolute inset-0 flex flex-col" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 text-white">
           <div className="text-sm font-medium">{t('mermaid.title')}</div>
           <div className="flex items-center gap-2">
-            <MermaidActionButton title={t('mermaid.zoomOut')} icon="zoom_out" onClick={() => setScale((value) => Math.max(0.6, value - 0.2))} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
-            <MermaidActionButton title={t('mermaid.resetZoom')} icon="restart_alt" onClick={() => setScale(1)} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
-            <MermaidActionButton title={t('mermaid.zoomIn')} icon="zoom_in" onClick={() => setScale((value) => Math.min(2.4, value + 0.2))} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
-            <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={onDownloadSvg} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
-            <MermaidActionButton title={t('mermaid.copySource')} icon="content_copy" onClick={onCopySource} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
-            <MermaidActionButton title={t('mermaid.close')} icon="close" onClick={onClose} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+            <MermaidActionButton title={t('mermaid.zoomOut')} icon="zoom_out" onClick={() => setScale((value) => Math.max(0.6, value - 0.2))} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" testId="mermaid-zoom-out" />
+            <MermaidActionButton title={t('mermaid.resetZoom')} icon="restart_alt" onClick={() => setScale(1)} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" testId="mermaid-reset-zoom" />
+            <MermaidActionButton title={t('mermaid.zoomIn')} icon="zoom_in" onClick={() => setScale((value) => Math.min(2.4, value + 0.2))} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" testId="mermaid-zoom-in" />
+            <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={onDownloadSvg} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" testId="mermaid-preview-download" />
+            <MermaidActionButton title={t('mermaid.copySource')} icon="content_copy" onClick={onCopySource} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" testId="mermaid-preview-copy-source" />
+            <MermaidActionButton title={t('mermaid.close')} icon="close" onClick={onClose} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" testId="mermaid-close-preview" />
           </div>
         </div>
 
@@ -218,6 +223,7 @@ function MermaidPreviewDialog({ open, code, fallbackClassName, onClose, onCopySo
           <div className="mx-auto flex min-h-full min-w-max items-start justify-center">
             <MermaidSvgPane
               code={code}
+              testId="mermaid-preview-pane"
               className="rounded-2xl bg-white p-6 shadow-2xl"
               fallbackClassName={fallbackClassName}
               scale={scale}
@@ -261,15 +267,16 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
 
   return (
     <>
-      <div className="group/mermaid relative my-4 overflow-hidden rounded-xl border border-gray-700/70 bg-gray-950/70">
+      <div data-testid="mermaid-block" className="group/mermaid relative my-4 overflow-hidden rounded-xl border border-gray-700/70 bg-gray-950/70">
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
-          <MermaidActionButton title={t('mermaid.enlarge')} icon="open_in_full" onClick={handleOpenPreview} disabled={!svgMarkup} />
-          <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={handleDownloadSvg} disabled={!svgMarkup} />
-          <MermaidActionButton title={t('mermaid.copySource')} icon="content_copy" onClick={handleCopySource} />
+          <MermaidActionButton title={t('mermaid.enlarge')} icon="open_in_full" onClick={handleOpenPreview} disabled={!svgMarkup} testId="mermaid-open-preview" />
+          <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={handleDownloadSvg} disabled={!svgMarkup} testId="mermaid-download-svg" />
+          <MermaidActionButton title={t('mermaid.copySource')} icon="content_copy" onClick={handleCopySource} testId="mermaid-copy-source" />
         </div>
 
         <MermaidSvgPane
           code={code}
+          testId="mermaid-inline-pane"
           className="flex justify-center overflow-x-auto p-4 pt-12"
           fallbackClassName={fallbackClassName}
           onSvgChange={setSvgMarkup}
