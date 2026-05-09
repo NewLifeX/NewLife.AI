@@ -101,7 +101,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_NotMessageFlowContext_ReturnsImmediately()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         // 传入一个不是 MessageFlowContext 的假上下文
         var fakeContext = new FakeContext();
@@ -114,7 +114,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_AutoGenerateTitleFalse_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = false };
-        var handler = new TitleGenerationHandler(null!, setting, null, null, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
@@ -130,7 +130,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_HasError_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
@@ -145,7 +145,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_MessageCountGtZero_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
@@ -160,7 +160,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_EmptyUserContent_Skips()
     {
         var setting = new ChatSetting { AutoGenerateTitle = true };
-        var handler = new TitleGenerationHandler(null!, setting, null, null, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
 
         var flow = new MessageFlowContext
         {
@@ -180,7 +180,7 @@ public class TitleGenerationHandlerTests
     public async Task OnBefore_AlwaysReturnsImmediately()
     {
         var setting = new ChatSetting();
-        var handler = new TitleGenerationHandler(null!, setting, null, null, null, null);
+        var handler = new TitleGenerationHandler(null!, setting, null, null, null);
         await handler.OnBefore(new FakeContext(), CancellationToken.None);
     }
 

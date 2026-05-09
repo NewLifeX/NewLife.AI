@@ -18,9 +18,10 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <param name="model">模型</param>
     /// <param name="usage">用量详情</param>
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
-    public void Record(IConversation conversation, IChatMessage? message, IModelConfig? model, UsageDetails usage, String source)
+    /// <returns>写入的用量记录，已禁用或异常时返回 null</returns>
+    public virtual UsageRecord? Record(IConversation conversation, IChatMessage? message, IModelConfig? model, UsageDetails usage, String source)
     {
-        if (!chatSetting.EnableUsageStats) return;
+        if (!chatSetting.EnableUsageStats) return null;
 
         try
         {
@@ -45,10 +46,12 @@ public class UsageService(IChatSetting chatSetting, ILog log)
                 Source = source,
             };
             rec.Insert();
+            return rec;
         }
         catch (Exception ex)
         {
             log?.Error("写入用量记录失败: {0}", ex.Message);
+            return null;
         }
     }
     #endregion

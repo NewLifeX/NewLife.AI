@@ -2,6 +2,7 @@
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
+using NewLife.AI.Interfaces;
 using NewLife.Log;
 using XCode.Membership;
 using ILog = NewLife.Log.ILog;
@@ -13,7 +14,7 @@ namespace NewLife.ChatAI.Services;
 /// 将模型路由（按 ID/Code 查找 ModelConfig）与客户端工厂（BuildOptions + AiClientRegistry.Factory）
 /// 统一收口，业务服务只需注入 ModelService 即可获取可用模型和对应的 IChatClient 实例。
 /// </remarks>
-public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
+public class ModelService(IChatSetting chatSetting, UsageService? usageService, ITracer tracer, ILog log)
 {
     private readonly AiClientRegistry _registry = AiClientRegistry.Default;
 
@@ -215,6 +216,111 @@ public class ModelService(IChatSetting chatSetting, ITracer tracer, ILog log)
             Model = model.GetEffectiveModelCode(),
             Protocol = providerConfig?.ApiProtocol,
         };
+    }
+    #endregion
+
+    #region 包装调用
+    /// <summary>调用 LLM 并记录用量。封装创建客户端→调用→记录用量→释放全流程</summary>
+    /// <param name="model">模型配置</param>
+    /// <param name="conversation">会话上下文，null 时不记录用量</param>
+    /// <param name="userMessage">用户消息文本</param>
+    /// <param name="systemMessage">系统消息文本，null 时不发送系统消息</param>
+    /// <param name="options">LLM 调用选项</param>
+    /// <param name="source">用量来源标记（Title/Compact/Knowledge 等）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>模型输出文本，客户端不可用或调用失败时返回 null</returns>
+    public async Task<String?> CallAsync(
+        ModelConfig model,
+        IConversation? conversation,
+        String userMessage,
+        String? systemMessage,
+        ChatOptions? options,
+        String source,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient(model);
+        if (client == null) return null;
+
+        IList<AiChatMessage> messages = systemMessage.IsNullOrEmpty()
+            ? [new AiChatMessage { Role = "user", Content = userMessage }]
+            : [new AiChatMessage { Role = "system", Content = systemMessage }, new AiChatMessage { Role = "user", Content = userMessage }];
+
+        var response = await client.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
+
+        if (conversation != null && usageService != null && response.Usage != null)
+            usageService.Record(conversation, null, model, response.Usage, source);
+
+        return response.Text;
+    }
+
+    /// <summary>嵌入单条文本并记录用量。API 客户端不可用时返回 null，调用方自行回退本地哈希嵌入</summary>
+    /// <param name="model">嵌入模型配置</param>
+    /// <param name="conversation">会话上下文，null 时不记录用量</param>
+    /// <param name="text">嵌入文本</param>
+    /// <param name="source">用量来源标记，默认 Embedding</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>嵌入向量，客户端不可用时返回 null</returns>
+    public async Task<Single[]?> EmbedAsync(
+        ModelConfig model,
+        IConversation? conversation,
+        String text,
+        String source = "Embedding",
+        CancellationToken cancellationToken = default)
+    {
+        using var client = CreateEmbeddingClient(model);
+        if (client == null) return null;
+
+        var response = await client.GenerateAsync(new EmbeddingRequest { Input = [text] }, cancellationToken).ConfigureAwait(false);
+
+        if (conversation != null && usageService != null && response.Usage != null)
+        {
+            var ud = new UsageDetails { InputTokens = response.Usage.PromptTokens, TotalTokens = response.Usage.TotalTokens };
+            usageService.Record(conversation, null, model, ud, source);
+        }
+
+        return response.Data.FirstOrDefault()?.Embedding;
+    }
+
+    /// <summary>批量嵌入文本列表并记录用量。每批次独立记录；API 客户端不可用时返回空数组，调用方自行回退本地哈希嵌入</summary>
+    /// <param name="model">嵌入模型配置</param>
+    /// <param name="conversation">会话上下文，null 时不记录用量</param>
+    /// <param name="texts">文本列表</param>
+    /// <param name="source">用量来源标记，默认 Embedding</param>
+    /// <param name="batchSize">每批次嵌入文本数，默认 20</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>与 texts 等长的向量数组，API 客户端不可用时返回空数组</returns>
+    public async Task<Single[][]> BulkEmbedAsync(
+        ModelConfig model,
+        IConversation? conversation,
+        IList<String> texts,
+        String source = "Embedding",
+        Int32 batchSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (texts.Count == 0) return [];
+
+        using var client = CreateEmbeddingClient(model);
+        if (client == null) return [];
+
+        var result = new Single[texts.Count][];
+        for (var offset = 0; offset < texts.Count; offset += batchSize)
+        {
+            var batch = texts.Skip(offset).Take(batchSize).ToList();
+            var response = await client.GenerateAsync(new EmbeddingRequest { Input = batch }, cancellationToken).ConfigureAwait(false);
+            var baseIdx = offset;
+            foreach (var item in response.Data.OrderBy(x => x.Index))
+            {
+                var idx = baseIdx + item.Index;
+                if (idx < result.Length)
+                    result[idx] = item.Embedding ?? [];
+            }
+            if (conversation != null && usageService != null && response.Usage != null)
+            {
+                var ud = new UsageDetails { InputTokens = response.Usage.PromptTokens, TotalTokens = response.Usage.TotalTokens };
+                usageService.Record(conversation, null, model, ud, source);
+            }
+        }
+        return result;
     }
     #endregion
 

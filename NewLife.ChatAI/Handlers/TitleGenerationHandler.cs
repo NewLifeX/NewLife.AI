@@ -1,6 +1,4 @@
-﻿using NewLife.AI.Clients;
-using NewLife.AI.Interfaces;
-using NewLife.Caching;
+﻿using NewLife.Caching;
 using NewLife.Collections;
 using NewLife.Log;
 
@@ -10,11 +8,10 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="modelService">模型服务（用于建模型客户端）</param>
 /// <param name="setting">对话配置</param>
 /// <param name="cacheProvider"></param>
-/// <param name="usageService">用量服务（可为 null）；标题生成成功后调用 <see cref="OnTitleUsageReady"/> 落库记录</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
 [ChatHandlerOrder(30)]
-public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, UsageService? usageService, ITracer? tracer, ILog? log) : IChatHandler
+public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : IChatHandler
 {
     /// <summary>模型服务（供派生类访问）</summary>
     protected readonly ModelService ModelServiceInstance = modelService;
@@ -52,17 +49,6 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
 
     /// <inheritdoc/>
     public Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
-
-    /// <summary>标题生成用量就绪回调。基类实现使用 usageService 记录（Source=Title）；
-    /// 派生类可覆盖以切换到自定义用量服务，无需修改 <see cref="GenerateTitleAsync"/> 主体</summary>
-    /// <param name="context">上下文</param>
-    /// <param name="model">生成标题使用的模型配置</param>
-    /// <param name="usage">令牌用量</param>
-    protected virtual void OnTitleUsageReady(IChatContext context, IModelConfig? model, UsageDetails? usage)
-    {
-        if (usageService != null && usage != null)
-            usageService.Record(context.Conversation, context.AssistantMessage, model, usage, "Title");
-    }
 
     /// <summary>异步生成会话标题。短文本直接采用，否则调用模型生成。派生类可覆盖以增强</summary>
     /// <param name="flow">上下文</param>
@@ -104,41 +90,37 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
         var model = ModelServiceInstance.ResolveModel(conversation.ModelId);
         if (model != null)
         {
-            using var titleClient = ModelServiceInstance.CreateClient(model);
-            if (titleClient != null)
+            try
             {
-                // 调用模型生成标题，提示语要求简短且不带标点符号
-                try
+                var prompt = "请用16个字以内为以下对话生成一个简短标题，只输出标题文字，不要加任何标点和引号：";
+                var title = await ModelServiceInstance.CallAsync(
+                    model,
+                    flow.Conversation,
+                    $"{prompt}\n{userMessage}",
+                    null,
+                    new ChatOptions { MaxTokens = 30, Temperature = 0.3 },
+                    "Title",
+                    cancellationToken).ConfigureAwait(false);
+
+                if (!String.IsNullOrWhiteSpace(title))
                 {
-                    var prompt = "请用16个字以内为以下对话生成一个简短标题，只输出标题文字，不要加任何标点和引号：";
-                    var titleResponse = await titleClient.GetResponseAsync(
-                        $"{prompt}\n{userMessage}",
-                        new ChatOptions { MaxTokens = 30, Temperature = 0.3 },
-                        cancellationToken).ConfigureAwait(false);
-                    var title = titleResponse.Text;
+                    title = title.Trim().Trim('"', '\u201c', '\u201d', '\'', '\u300a', '\u300b');
+                    if (title.Length > 30) title = title[..30];
+                    span?.AppendTag(title!);
 
-                    if (!String.IsNullOrWhiteSpace(title))
-                    {
-                        title = title.Trim().Trim('"', '\u201c', '\u201d', '\'', '\u300a', '\u300b');
-                        if (title.Length > 30) title = title[..30];
-                        span?.AppendTag(title!);
+                    // 写入内容缓存
+                    if (cleanMsg.Length < 64 && !title.IsNullOrEmpty())
+                        cacheProvider.Cache.Set($"ai:title:{cleanMsg}", title, TimeSpan.FromHours(1));
 
-                        // 写入内容缓存
-                        if (cleanMsg.Length < 64 && !title.IsNullOrEmpty())
-                            cacheProvider.Cache.Set($"ai:title:{cleanMsg}", title, TimeSpan.FromHours(1));
-
-                        OnTitleUsageReady(flow, model, titleResponse.Usage);
-
-                        conversation.Title = title;
-                        conversation.Update();
-                        return title;
-                    }
+                    conversation.Title = title;
+                    conversation.Update();
+                    return title;
                 }
-                catch (Exception ex)
-                {
-                    span?.SetError(ex);
-                    Log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
-                }
+            }
+            catch (Exception ex)
+            {
+                span?.SetError(ex);
+                Log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
             }
         }
 
