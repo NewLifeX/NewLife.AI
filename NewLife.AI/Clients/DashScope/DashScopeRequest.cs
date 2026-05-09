@@ -19,11 +19,11 @@ public class DashScopeRequest : IChatRequest
     /// <summary>模型编码</summary>
     public String? Model { get; set; }
 
-    /// <summary>输入容器。包含 messages 列表</summary>
-    public DashScopeInput Input { get; set; } = new();
-
     /// <summary>推理参数</summary>
     public DashScopeParameters Parameters { get; set; } = new();
+
+    /// <summary>输入容器。包含 messages 列表</summary>
+    public DashScopeInput Input { get; set; } = new();
     #endregion
 
     #region IChatRequest 适配
