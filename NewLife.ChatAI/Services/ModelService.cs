@@ -79,7 +79,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             if (config != null && config.Enable) return config;
         }
 
-        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).OrderByDescending(e => e.Id).ToList();
+        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
         return SelectDefaultModel(models, chatSetting.DefaultModel);
     }
 
@@ -104,7 +104,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             if (config != null && config.Enable) return config;
         }
 
-        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).OrderByDescending(e => e.Id).ToList();
+        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
         var lightweight = models.FirstOrDefault(e => !e.SupportEmbedding && IsLightweightCode(e.Code, e.Name));
         if (lightweight != null) return lightweight;
 
@@ -127,7 +127,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             if (config != null && config.Enable) return config;
         }
 
-        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).OrderByDescending(e => e.Id).ToList();
+        var models = ModelConfig.FindAllEnabled().OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
         return models.FirstOrDefault(e => e.SupportEmbedding);
     }
 
