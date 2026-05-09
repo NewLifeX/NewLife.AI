@@ -229,14 +229,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     /// <param name="source">用量来源标记（Title/Compact/Knowledge 等）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型输出文本，客户端不可用或调用失败时返回 null</returns>
-    public async Task<String?> CallAsync(
-        ModelConfig model,
-        IConversation? conversation,
-        String userMessage,
-        String? systemMessage,
-        ChatOptions? options,
-        String source,
-        CancellationToken cancellationToken = default)
+    public async Task<String?> CallAsync(ModelConfig model, IConversation? conversation, String userMessage, String? systemMessage, ChatOptions? options, String source, CancellationToken cancellationToken = default)
     {
         using var client = CreateClient(model);
         if (client == null) return null;
@@ -245,6 +238,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             ? [new AiChatMessage { Role = "user", Content = userMessage }]
             : [new AiChatMessage { Role = "system", Content = systemMessage }, new AiChatMessage { Role = "user", Content = userMessage }];
 
+        options ??= new();
+        options.EnableThinking ??= false;
         var response = await client.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
         if (conversation != null && usageService != null && response.Usage != null)
@@ -260,12 +255,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     /// <param name="source">用量来源标记，默认 Embedding</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>嵌入向量，客户端不可用时返回 null</returns>
-    public async Task<Single[]?> EmbedAsync(
-        ModelConfig model,
-        IConversation? conversation,
-        String text,
-        String source = "Embedding",
-        CancellationToken cancellationToken = default)
+    public async Task<Single[]?> EmbedAsync(ModelConfig model, IConversation? conversation, String text, String source = "Embedding", CancellationToken cancellationToken = default)
     {
         using var client = CreateEmbeddingClient(model);
         if (client == null) return null;
@@ -274,7 +264,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
 
         if (conversation != null && usageService != null && response.Usage != null)
         {
-            var ud = new UsageDetails { InputTokens = response.Usage.PromptTokens, TotalTokens = response.Usage.TotalTokens };
+            var usage = response.Usage;
+            var ud = new UsageDetails { InputTokens = usage.PromptTokens, OutputTokens = usage.TotalTokens - usage.PromptTokens, TotalTokens = usage.TotalTokens };
             usageService.Record(conversation, null, model, ud, source);
         }
 
@@ -289,13 +280,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     /// <param name="batchSize">每批次嵌入文本数，默认 20</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>与 texts 等长的向量数组，API 客户端不可用时返回空数组</returns>
-    public async Task<Single[][]> BulkEmbedAsync(
-        ModelConfig model,
-        IConversation? conversation,
-        IList<String> texts,
-        String source = "Embedding",
-        Int32 batchSize = 20,
-        CancellationToken cancellationToken = default)
+    public async Task<Single[][]> BulkEmbedAsync(ModelConfig model, IConversation? conversation, IList<String> texts, String source = "Embedding", Int32 batchSize = 20, CancellationToken cancellationToken = default)
     {
         if (texts.Count == 0) return [];
 
@@ -316,7 +301,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             }
             if (conversation != null && usageService != null && response.Usage != null)
             {
-                var ud = new UsageDetails { InputTokens = response.Usage.PromptTokens, TotalTokens = response.Usage.TotalTokens };
+                var usage = response.Usage;
+                var ud = new UsageDetails { InputTokens = usage.PromptTokens, OutputTokens = usage.TotalTokens - usage.PromptTokens, TotalTokens = usage.TotalTokens };
                 usageService.Record(conversation, null, model, ud, source);
             }
         }

@@ -21,11 +21,11 @@ public class UsageRecordHandler(UsageService? usageService) : IChatHandler
         if (context.Usage != null)
             usageService.Record(context.Conversation, context.AssistantMessage, context.ModelConfig, context.Usage, "Chat");
 
-        // 子流程用量（Sandwich/Title 等）——Before 阶段同步子流程积累的用量，独立落库
-        foreach (var (source, subUsage) in context.SubFlowUsages)
-        {
-            usageService.Record(context.Conversation, context.AssistantMessage, context.ModelConfig, subUsage, source);
-        }
+        //// 子流程用量（Sandwich/Title 等）——Before 阶段同步子流程积累的用量，独立落库
+        //foreach (var (source, subUsage) in context.SubFlowUsages)
+        //{
+        //    usageService.Record(context.Conversation, context.AssistantMessage, context.ModelConfig, subUsage, source);
+        //}
 
         return Task.CompletedTask;
     }
