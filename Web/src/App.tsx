@@ -180,7 +180,7 @@ function ChatApp() {
     }
   }, [supportsThinking, thinkingMode, setThinkingMode])
 
-  // URL 参数接入：预填充输入框、收起侧边栏、清理 URL 防止刷新重发
+  // URL 参数接入：预填充输入框、收起侧边栏
   useEffect(() => {
     if (!urlParams) return
     newChat()
@@ -188,12 +188,10 @@ function ChatApp() {
     if (urlParams.collapseSidebar) {
       useUIStore.getState().setSidebarCollapsed(true)
     }
-    // 替换历史记录，清除 query 参数，防止刷新页面重复触发
-    navigate('/chat', { replace: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // URL 参数接入：appReady 后应用模型和思考模式，延迟 500ms 自动发送
+  // URL 参数接入：appReady 后应用模型和思考模式，清理 URL，再延迟 500ms 自动发送
   useEffect(() => {
     if (!appReady || !urlParams || urlAutoSendDoneRef.current) return
     urlAutoSendDoneRef.current = true
@@ -211,6 +209,11 @@ function ChatApp() {
     // 应用思考模式
     if (urlParams.thinking) {
       setThinkingMode(urlParams.thinking)
+    }
+
+    // 等初始化完成后再清理 query 参数，避免未登录 401 跳转登录时丢失回跳参数
+    if (window.location.search) {
+      navigate('/chat', { replace: true })
     }
 
     // 延迟 500ms 自动发送，让用户看到输入框填充效果后再发出
