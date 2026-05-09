@@ -76,10 +76,15 @@ export default {
     charLimit: '{{current}}/{{max}} characters, exceeds limit',
     dropToUpload: 'Drop files to upload',
   },
-  artifact: {
-    copy: 'Copy code',
-    download: 'Download file',
-    close: 'Close preview',
+  mermaid: {
+    title: 'Mermaid Diagram',
+    enlarge: 'Enlarge',
+    downloadSvg: 'Download SVG',
+    copySource: 'Copy source',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    resetZoom: 'Reset zoom',
+    close: 'Close',
   },
   preset: {
     title: 'Presets',

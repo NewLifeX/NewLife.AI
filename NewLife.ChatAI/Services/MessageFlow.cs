@@ -557,7 +557,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
 
         var source = next(cancellationToken);
-        var artifactDetector = new ArtifactDetector();
         var contentBuilder = context.ContentBuilder;
         var thinkingBuilder = context.ThinkingBuilder;
         var toolCalls = context.ToolCalls;
@@ -593,16 +592,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         break;
                     case "content_delta":
                         contentBuilder.Append(ev.Content);
-                        var artifactEvents = artifactDetector.Process(ev.Content!);
-                        foreach (var ae in artifactEvents)
-                        {
-                            switch (ae.Kind)
-                            {
-                                case ArtifactEventKind.ArtifactStart: yield return ChatStreamEvent.ArtifactStart(ae.Language!); break;
-                                case ArtifactEventKind.ArtifactDelta: yield return ChatStreamEvent.ArtifactDelta(ae.Content!); break;
-                                case ArtifactEventKind.ArtifactEnd: yield return ChatStreamEvent.ArtifactEnd(); break;
-                            }
-                        }
                         yield return ev;
                         break;
                     case "message_done":

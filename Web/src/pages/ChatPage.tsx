@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSettingsStore, useArtifactStore } from '@/stores'
+import { useSettingsStore } from '@/stores'
 import { Icon } from '@/components/common/Icon'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { ChatInput } from '@/components/input/ChatInput'
@@ -10,8 +10,6 @@ import { ThinkingBlock } from '@/components/chat/ThinkingBlock'
 import { ToolCallBadge } from '@/components/chat/ToolCallBadge'
 import { ShareDialog } from '@/components/chat/ShareDialog'
 import { DislikeReasonDialog } from '@/components/chat/DislikeReasonDialog'
-import { ArtifactPanel } from '@/components/chat/ArtifactPanel'
-import { extractAutoArtifact } from '@/components/chat/markdownArtifactHelper'
 
 type ThinkingMode = 'fast' | 'auto' | 'think'
 
@@ -77,11 +75,6 @@ export function ChatPage({
   const contentWidth = useSettingsStore((s) => s.contentWidth) ?? 960
   const thinkingCollapsed = useSettingsStore((s) => s.thinkingCollapsed) ?? false
   const updateSettings = useSettingsStore((s) => s.update)
-  const artifactOpen = useArtifactStore((s) => s.current !== null)
-  const artifactIsStreaming = useArtifactStore((s) => s.isStreaming)
-  const artifactSource = useArtifactStore((s) => s.source)
-  const openAutoArtifact = useArtifactStore((s) => s.openAuto)
-  const clearAutoArtifact = useArtifactStore((s) => s.clearAuto)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
@@ -126,22 +119,11 @@ export function ChatPage({
     }
   }, [messages, scrollToBottom])
 
-  useEffect(() => {
-    // 显式 artifact 流正在驱动时，以服务端事件为准；不要用正文自动提取覆盖它。
-    if (artifactIsStreaming || artifactSource === 'stream') return
-
-    const latestAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && typeof m.content === 'string')
-    const artifact = latestAssistant ? extractAutoArtifact(latestAssistant.content) : null
-
-    if (artifact) openAutoArtifact(artifact)
-    else clearAutoArtifact()
-  }, [messages, artifactIsStreaming, artifactSource, openAutoArtifact, clearAutoArtifact])
-
   return (
     <div className="relative flex flex-1 min-h-0">
-    <div
-      className="relative flex flex-col flex-1 min-h-0"
-    >
+      <div
+        className="relative flex flex-col flex-1 min-h-0"
+      >
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -302,8 +284,7 @@ export function ChatPage({
           conversationId={conversationId}
         />
       )}
-    </div>
-    {artifactOpen && <ArtifactPanel />}
+      </div>
     </div>
   )
 }

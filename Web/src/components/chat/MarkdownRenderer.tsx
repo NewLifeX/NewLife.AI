@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState, useMemo, type ReactNode, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -11,9 +13,7 @@ import { Icon } from '@/components/common/Icon'
 import { Lightbox } from '@/components/common/Lightbox'
 import { ImageEditDialog } from '@/components/chat/ImageEditDialog'
 import { ProgressiveImage } from '@/components/chat/ProgressiveImage'
-import { isPreviewable } from '@/components/chat/ArtifactPanel'
 import { resolveRenderableMermaidCode } from '@/components/chat/mermaidHelper'
-import { useArtifactStore } from '@/stores'
 import { useChatStore } from '@/stores/chatStore'
 import { editImage } from '@/lib/api'
 
@@ -22,6 +22,32 @@ mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose
 let mermaidCounter = 0
 
 type CodeLikeElement = ReactElement<{ className?: string; children?: ReactNode }> & { type?: unknown }
+
+interface MermaidActionButtonProps {
+  title: string
+  icon: string
+  onClick: () => void
+  disabled?: boolean
+  className?: string
+}
+
+interface MermaidSvgPaneProps {
+  code: string
+  isStreaming?: boolean
+  className?: string
+  fallbackClassName?: string
+  scale?: number
+  onSvgChange?: (svg: string | null) => void
+}
+
+interface MermaidPreviewDialogProps {
+  open: boolean
+  code: string
+  fallbackClassName: string
+  onClose: () => void
+  onCopySource: () => void
+  onDownloadSvg: () => void
+}
 
 function isCodeLikeElement(value: unknown): value is CodeLikeElement {
   if (!value || typeof value !== 'object' || !('props' in value)) return false
@@ -40,21 +66,57 @@ function extractText(node: ReactNode): string {
   return ''
 }
 
-function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boolean }) {
+function downloadTextFile(fileName: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+function MermaidActionButton({ title, icon, onClick, disabled = false, className }: MermaidActionButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-900/90 text-gray-300 shadow-sm transition hover:bg-gray-800 hover:text-white',
+        disabled && 'cursor-not-allowed opacity-40 hover:bg-gray-900/90 hover:text-gray-300',
+        className,
+      )}
+      title={title}
+    >
+      <Icon name={icon} size="sm" />
+    </button>
+  )
+}
+
+function MermaidSvgPane({
+  code,
+  isStreaming = false,
+  className,
+  fallbackClassName = 'rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
+  scale = 1,
+  onSvgChange,
+}: MermaidSvgPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 流式输出期间代码块不完整，跳过渲染避免 mermaid 将错误 UI 注入 document.body
+    onSvgChange?.(null)
+
     if (isStreaming || !containerRef.current) return
+
     const container = containerRef.current
     container.innerHTML = ''
 
     const id = `mermaid-${++mermaidCounter}`
     let cancelled = false
 
-    // 清理 mermaid 在 body 遗留的临时容器（#id 和 #d{id}）。
-    // 注意：容器里的根 SVG 也会使用相同 id，不能删除它，否则 Mermaid 作用域样式全部失效，
-    //       图形会退化成“黑乎乎”的默认样式。这里只清理容器外部的同名临时节点。
     const cleanupBodyById = () => {
       for (const targetId of [id, `d${id}`]) {
         document.querySelectorAll(`[id="${targetId}"]`).forEach((el) => {
@@ -65,7 +127,12 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
 
     const showFallback = () => {
       if (cancelled || containerRef.current !== container) return
-      container.textContent = code
+      container.innerHTML = ''
+      const pre = document.createElement('pre')
+      pre.className = fallbackClassName
+      pre.textContent = code
+      container.appendChild(pre)
+      onSvgChange?.(null)
     }
 
     void (async () => {
@@ -79,38 +146,146 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
       const { svg } = await mermaid.render(id, renderableCode)
       if (!cancelled && containerRef.current === container) {
         container.innerHTML = svg
-        const svgEl = container.querySelector(':scope > svg')
+        const svgEl = container.querySelector('svg')
         if (svgEl instanceof SVGSVGElement) {
           svgEl.style.maxWidth = '100%'
           svgEl.style.height = 'auto'
         }
+        onSvgChange?.(svg)
       }
       cleanupBodyById()
     })().catch(() => {
-      // 错误时 mermaid 可能已将错误 UI（炸弹图标）写入 body，按 id 精确清除
       cleanupBodyById()
       showFallback()
     })
 
-    // 组件卸载或 deps 变化时清理：
-    // - 如果已成功渲染，SVG id 已删除，cleanupBodyById 是无操作（找不到任何元素）
-    // - 如果 Promise 还未决议，将 cancelled 设为 true 并清理临时 body 元素
     return () => {
       cancelled = true
       cleanupBodyById()
     }
-  }, [code, isStreaming])
+  }, [code, fallbackClassName, isStreaming, onSvgChange])
 
-  // 流式输出期间展示原始代码占位，避免调用 mermaid.render 导致错误 UI 注入页面
   if (isStreaming) {
-    return (
-      <pre className="my-4 rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed">
-        {code}
-      </pre>
-    )
+    return <pre className={fallbackClassName}>{code}</pre>
   }
 
-  return <div ref={containerRef} className="my-4 flex justify-center overflow-x-auto" />
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: 'center top' }}
+    />
+  )
+}
+
+function MermaidPreviewDialog({ open, code, fallbackClassName, onClose, onCopySource, onDownloadSvg }: MermaidPreviewDialogProps) {
+  const { t } = useTranslation()
+  const [scale, setScale] = useState(1)
+
+  useEffect(() => {
+    if (open) setScale(1)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, open])
+
+  if (!open || typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div className="absolute inset-0 flex flex-col" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 text-white">
+          <div className="text-sm font-medium">{t('mermaid.title')}</div>
+          <div className="flex items-center gap-2">
+            <MermaidActionButton title={t('mermaid.zoomOut')} icon="zoom_out" onClick={() => setScale((value) => Math.max(0.6, value - 0.2))} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+            <MermaidActionButton title={t('mermaid.resetZoom')} icon="restart_alt" onClick={() => setScale(1)} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+            <MermaidActionButton title={t('mermaid.zoomIn')} icon="zoom_in" onClick={() => setScale((value) => Math.min(2.4, value + 0.2))} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+            <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={onDownloadSvg} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+            <MermaidActionButton title={t('mermaid.copySource')} icon="content_copy" onClick={onCopySource} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+            <MermaidActionButton title={t('mermaid.close')} icon="close" onClick={onClose} className="border-white/15 bg-white/10 text-white hover:bg-white/15 hover:text-white" />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-6">
+          <div className="mx-auto flex min-h-full min-w-max items-start justify-center">
+            <MermaidSvgPane
+              code={code}
+              className="rounded-2xl bg-white p-6 shadow-2xl"
+              fallbackClassName={fallbackClassName}
+              scale={scale}
+            />
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boolean }) {
+  const { t } = useTranslation()
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [svgMarkup, setSvgMarkup] = useState<string | null>(null)
+
+  const fallbackClassName = 'rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed'
+
+  useEffect(() => {
+    if (isStreaming) setPreviewOpen(false)
+  }, [isStreaming])
+
+  const handleCopySource = useCallback(() => {
+    void navigator.clipboard.writeText(code)
+  }, [code])
+
+  const handleDownloadSvg = useCallback(() => {
+    if (!svgMarkup) return
+    downloadTextFile(`mermaid-${Date.now()}.svg`, svgMarkup, 'image/svg+xml;charset=utf-8')
+  }, [svgMarkup])
+
+  const handleOpenPreview = useCallback(() => {
+    if (!svgMarkup) return
+    setPreviewOpen(true)
+  }, [svgMarkup])
+
+  if (isStreaming) {
+    return <MermaidSvgPane code={code} isStreaming fallbackClassName={fallbackClassName} />
+  }
+
+  return (
+    <>
+      <div className="group/mermaid relative my-4 overflow-hidden rounded-xl border border-gray-700/70 bg-gray-950/70">
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+          <MermaidActionButton title={t('mermaid.enlarge')} icon="open_in_full" onClick={handleOpenPreview} disabled={!svgMarkup} />
+          <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={handleDownloadSvg} disabled={!svgMarkup} />
+          <MermaidActionButton title={t('mermaid.copySource')} icon="content_copy" onClick={handleCopySource} />
+        </div>
+
+        <MermaidSvgPane
+          code={code}
+          className="flex justify-center overflow-x-auto p-4 pt-12"
+          fallbackClassName={fallbackClassName}
+          onSvgChange={setSvgMarkup}
+        />
+      </div>
+
+      <MermaidPreviewDialog
+        open={previewOpen}
+        code={code}
+        fallbackClassName={fallbackClassName}
+        onClose={() => setPreviewOpen(false)}
+        onCopySource={handleCopySource}
+        onDownloadSvg={handleDownloadSvg}
+      />
+    </>
+  )
 }
 
 interface MarkdownRendererProps {
@@ -132,11 +307,12 @@ function preprocessMath(content: string): string {
 
 function CopyCodeButton({ code }: { code: string }) {
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code)
+    void navigator.clipboard.writeText(code)
   }, [code])
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className="p-1 rounded bg-gray-700/60 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
       title="Copy"
@@ -146,30 +322,11 @@ function CopyCodeButton({ code }: { code: string }) {
   )
 }
 
-function PreviewCodeButton({ code, language }: { code: string; language: string }) {
-  const open = useArtifactStore((s) => s.open)
-
-  const handlePreview = useCallback(() => {
-    open({ language, code, title: language.toUpperCase() })
-  }, [open, language, code])
-
-  return (
-    <button
-      onClick={handlePreview}
-      className="p-1 rounded bg-gray-700/60 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
-      title="Preview"
-    >
-      <Icon name="visibility" size="sm" />
-    </button>
-  )
-}
-
 export function MarkdownRenderer({ content, isStreaming = false, className }: MarkdownRendererProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [editImageUrl, setEditImageUrl] = useState<string | null>(null)
 
-  // 从 Markdown 内容中提取所有图片 URL
   const images = useMemo(() => {
     const urls: string[] = []
     const imgRegex = /!\[.*?\]\((.*?)\)/g
@@ -206,19 +363,15 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
                 ? (codeEl as { props?: { children?: ReactNode } }).props?.children
                 : undefined
             const codeStr = extractText(rawChildren)
-            // 提取语言标识：className 可能是 'language-mermaid hljs' 等多个 class，取第一个 language-xxx
             const langClass =
               typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
                 ? String((codeEl as { props?: { className?: string } }).props?.className ?? '')
                 : ''
             const lang = langClass.split(/\s+/).find((c) => c.startsWith('language-'))?.replace('language-', '') ?? ''
 
-            // Mermaid：直接渲染图形，不走代码块 UI（避免 div 嵌套在 pre 中导致非法 HTML）
             if (lang === 'mermaid') {
               return <MermaidBlock code={codeStr.replace(/\n$/, '')} isStreaming={isStreaming} />
             }
-
-            const canPreview = isPreviewable(lang) && !!codeStr
 
             return (
               <div className="relative group/code">
@@ -229,7 +382,6 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
                   {children}
                 </pre>
                 <div className="absolute top-2 right-2 flex items-center gap-1">
-                  {canPreview && <PreviewCodeButton code={codeStr} language={lang} />}
                   {codeStr && <CopyCodeButton code={codeStr} />}
                 </div>
               </div>
@@ -246,6 +398,10 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
                   {children}
                 </code>
               )
+            }
+            if (codeClassName?.includes('language-mermaid')) {
+              const codeStr = extractText(children).replace(/\n$/, '')
+              return <MermaidBlock code={codeStr} isStreaming={isStreaming} />
             }
             return (
               <code className={codeClassName} {...props}>
@@ -322,7 +478,6 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
             try {
               const result = await editImage(image, prompt, model, mask)
               if (result.data?.[0]?.content) {
-                // 将编辑结果添加到 lightbox 图片列表并打开
                 images.push(result.data[0].content)
                 setLightboxIndex(images.length - 1)
                 setLightboxOpen(true)

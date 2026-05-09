@@ -76,10 +76,15 @@ export default {
     charLimit: '已输入 {{current}}/{{max}} 字，超出限制',
     dropToUpload: '释放以上传文件',
   },
-  artifact: {
-    copy: '复制代码',
-    download: '下载文件',
-    close: '关闭预览',
+  mermaid: {
+    title: 'Mermaid 图表',
+    enlarge: '放大预览',
+    downloadSvg: '下载 SVG',
+    copySource: '复制源码',
+    zoomIn: '放大',
+    zoomOut: '缩小',
+    resetZoom: '重置缩放',
+    close: '关闭',
   },
   preset: {
     title: '预设',
