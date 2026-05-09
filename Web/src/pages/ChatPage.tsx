@@ -11,6 +11,7 @@ import { ToolCallBadge } from '@/components/chat/ToolCallBadge'
 import { ShareDialog } from '@/components/chat/ShareDialog'
 import { DislikeReasonDialog } from '@/components/chat/DislikeReasonDialog'
 import { ArtifactPanel } from '@/components/chat/ArtifactPanel'
+import { extractAutoArtifact } from '@/components/chat/markdownArtifactHelper'
 
 type ThinkingMode = 'fast' | 'auto' | 'think'
 
@@ -77,6 +78,10 @@ export function ChatPage({
   const thinkingCollapsed = useSettingsStore((s) => s.thinkingCollapsed) ?? false
   const updateSettings = useSettingsStore((s) => s.update)
   const artifactOpen = useArtifactStore((s) => s.current !== null)
+  const artifactIsStreaming = useArtifactStore((s) => s.isStreaming)
+  const artifactSource = useArtifactStore((s) => s.source)
+  const openAutoArtifact = useArtifactStore((s) => s.openAuto)
+  const clearAutoArtifact = useArtifactStore((s) => s.clearAuto)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
@@ -120,6 +125,17 @@ export function ChatPage({
       scrollToBottom('smooth')
     }
   }, [messages, scrollToBottom])
+
+  useEffect(() => {
+    // 显式 artifact 流正在驱动时，以服务端事件为准；不要用正文自动提取覆盖它。
+    if (artifactIsStreaming || artifactSource === 'stream') return
+
+    const latestAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && typeof m.content === 'string')
+    const artifact = latestAssistant ? extractAutoArtifact(latestAssistant.content) : null
+
+    if (artifact) openAutoArtifact(artifact)
+    else clearAutoArtifact()
+  }, [messages, artifactIsStreaming, artifactSource, openAutoArtifact, clearAutoArtifact])
 
   return (
     <div className="relative flex flex-1 min-h-0">

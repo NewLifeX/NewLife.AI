@@ -12,6 +12,7 @@ import { Lightbox } from '@/components/common/Lightbox'
 import { ImageEditDialog } from '@/components/chat/ImageEditDialog'
 import { ProgressiveImage } from '@/components/chat/ProgressiveImage'
 import { isPreviewable } from '@/components/chat/ArtifactPanel'
+import { resolveRenderableMermaidCode } from '@/components/chat/mermaidHelper'
 import { useArtifactStore } from '@/stores'
 import { useChatStore } from '@/stores/chatStore'
 import { editImage } from '@/lib/api'
@@ -29,19 +30,85 @@ function isCodeLikeElement(value: unknown): value is CodeLikeElement {
   return element.type === 'code' || typeof className === 'string'
 }
 
-function MermaidBlock({ code }: { code: string }) {
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (node && typeof node === 'object' && 'props' in node) {
+    return extractText((node as { props?: { children?: ReactNode } }).props?.children)
+  }
+  return ''
+}
+
+function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    // 流式输出期间代码块不完整，跳过渲染避免 mermaid 将错误 UI 注入 document.body
+    if (isStreaming || !containerRef.current) return
+    const container = containerRef.current
+    container.innerHTML = ''
+
     const id = `mermaid-${++mermaidCounter}`
-    containerRef.current.innerHTML = ''
-    mermaid.render(id, code).then(({ svg }) => {
-      if (containerRef.current) containerRef.current.innerHTML = svg
-    }).catch(() => {
-      if (containerRef.current) containerRef.current.textContent = code
+    let cancelled = false
+
+    // 清理 mermaid 在 body 遗留的临时容器（#id 和 #d{id}）。
+    // 注意：容器里的根 SVG 也会使用相同 id，不能删除它，否则 Mermaid 作用域样式全部失效，
+    //       图形会退化成“黑乎乎”的默认样式。这里只清理容器外部的同名临时节点。
+    const cleanupBodyById = () => {
+      for (const targetId of [id, `d${id}`]) {
+        document.querySelectorAll(`[id="${targetId}"]`).forEach((el) => {
+          if (!container.contains(el)) el.remove()
+        })
+      }
+    }
+
+    const showFallback = () => {
+      if (cancelled || containerRef.current !== container) return
+      container.textContent = code
+    }
+
+    void (async () => {
+      const renderableCode = await resolveRenderableMermaidCode(code)
+      if (!renderableCode) {
+        cleanupBodyById()
+        showFallback()
+        return
+      }
+
+      const { svg } = await mermaid.render(id, renderableCode)
+      if (!cancelled && containerRef.current === container) {
+        container.innerHTML = svg
+        const svgEl = container.querySelector(':scope > svg')
+        if (svgEl instanceof SVGSVGElement) {
+          svgEl.style.maxWidth = '100%'
+          svgEl.style.height = 'auto'
+        }
+      }
+      cleanupBodyById()
+    })().catch(() => {
+      // 错误时 mermaid 可能已将错误 UI（炸弹图标）写入 body，按 id 精确清除
+      cleanupBodyById()
+      showFallback()
     })
-  }, [code])
+
+    // 组件卸载或 deps 变化时清理：
+    // - 如果已成功渲染，SVG id 已删除，cleanupBodyById 是无操作（找不到任何元素）
+    // - 如果 Promise 还未决议，将 cancelled 设为 true 并清理临时 body 元素
+    return () => {
+      cancelled = true
+      cleanupBodyById()
+    }
+  }, [code, isStreaming])
+
+  // 流式输出期间展示原始代码占位，避免调用 mermaid.render 导致错误 UI 注入页面
+  if (isStreaming) {
+    return (
+      <pre className="my-4 rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed">
+        {code}
+      </pre>
+    )
+  }
 
   return <div ref={containerRef} className="my-4 flex justify-center overflow-x-auto" />
 }
@@ -128,22 +195,29 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
     <div className={cn('prose dark:prose-invert max-w-none break-words', isStreaming && 'streaming-prose', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeHighlight, [rehypeKatex, { throwOnError: false, strict: false }]]}
+        rehypePlugins={[[rehypeHighlight, { plainText: ['mermaid'] }], [rehypeKatex, { throwOnError: false, strict: false }]]}
         components={{
           pre({ children, ...props }) {
             const codeEl = Array.isArray(children)
               ? children.find((c) => isCodeLikeElement(c))
               : children
-            const codeStr =
+            const rawChildren =
               typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
-                ? String((codeEl as { props?: { children?: ReactNode } }).props?.children ?? '')
-                : ''
-            // 提取语言标识 (language-xxx)
+                ? (codeEl as { props?: { children?: ReactNode } }).props?.children
+                : undefined
+            const codeStr = extractText(rawChildren)
+            // 提取语言标识：className 可能是 'language-mermaid hljs' 等多个 class，取第一个 language-xxx
             const langClass =
               typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
                 ? String((codeEl as { props?: { className?: string } }).props?.className ?? '')
                 : ''
-            const lang = langClass.replace(/^language-/, '')
+            const lang = langClass.split(/\s+/).find((c) => c.startsWith('language-'))?.replace('language-', '') ?? ''
+
+            // Mermaid：直接渲染图形，不走代码块 UI（避免 div 嵌套在 pre 中导致非法 HTML）
+            if (lang === 'mermaid') {
+              return <MermaidBlock code={codeStr.replace(/\n$/, '')} isStreaming={isStreaming} />
+            }
+
             const canPreview = isPreviewable(lang) && !!codeStr
 
             return (
@@ -172,11 +246,6 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
                   {children}
                 </code>
               )
-            }
-            // Mermaid code blocks
-            if (codeClassName === 'language-mermaid') {
-              const codeStr = String(children).replace(/\n$/, '')
-              return <MermaidBlock code={codeStr} />
             }
             return (
               <code className={codeClassName} {...props}>

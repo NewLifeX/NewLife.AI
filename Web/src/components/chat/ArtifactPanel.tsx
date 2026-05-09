@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { useArtifactStore } from '@/stores'
+import { resolveRenderableMermaidCode } from '@/components/chat/mermaidHelper'
 import type { Artifact } from '@/types'
 import mermaid from 'mermaid'
 
@@ -31,6 +32,7 @@ function buildSrcdoc(artifact: Artifact): string {
 export function ArtifactPanel() {
   const { t } = useTranslation()
   const current = useArtifactStore((s) => s.current)
+  const isStreaming = useArtifactStore((s) => s.isStreaming)
   const close = useArtifactStore((s) => s.close)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -97,7 +99,7 @@ export function ArtifactPanel() {
       {/* 预览区域 */}
       <div className="flex-1 overflow-hidden">
         {current.language === 'mermaid' ? (
-          <MermaidPreview code={current.code} />
+          <MermaidPreview code={current.code} isStreaming={isStreaming} />
         ) : (
           <iframe
             ref={iframeRef}
@@ -113,18 +115,60 @@ export function ArtifactPanel() {
 }
 
 /** Mermaid 独立预览，使用 mermaid.render */
-function MermaidPreview({ code }: { code: string }) {
+function MermaidPreview({ code, isStreaming }: { code: string; isStreaming?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (isStreaming || !containerRef.current) return
     const id = `artifact-mermaid-${Date.now()}`
-    mermaid.render(id, code).then(({ svg }) => {
-      if (containerRef.current) containerRef.current.innerHTML = svg
-    }).catch(() => {
-      if (containerRef.current) containerRef.current.textContent = code
+    const container = containerRef.current
+    container.innerHTML = ''
+    let cancelled = false
+
+    const cleanupBodyById = () => {
+      for (const targetId of [id, `d${id}`]) {
+        document.querySelectorAll(`[id="${targetId}"]`).forEach((el) => {
+          if (!container.contains(el)) el.remove()
+        })
+      }
+    }
+
+    void (async () => {
+      const renderableCode = await resolveRenderableMermaidCode(code)
+      if (!renderableCode) {
+        cleanupBodyById()
+        if (!cancelled && containerRef.current === container) container.textContent = code
+        return
+      }
+
+      const { svg } = await mermaid.render(id, renderableCode)
+      if (!cancelled && containerRef.current === container) {
+        container.innerHTML = svg
+        const svgEl = container.querySelector(':scope > svg')
+        if (svgEl instanceof SVGSVGElement) {
+          svgEl.style.maxWidth = '100%'
+          svgEl.style.height = 'auto'
+        }
+      }
+      cleanupBodyById()
+    })().catch(() => {
+      cleanupBodyById()
+      if (!cancelled && containerRef.current === container) container.textContent = code
     })
-  }, [code])
+
+    return () => {
+      cancelled = true
+      cleanupBodyById()
+    }
+  }, [code, isStreaming])
+
+  if (isStreaming) {
+    return (
+      <pre className="w-full h-full overflow-auto p-4 text-sm leading-relaxed bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100">
+        {code}
+      </pre>
+    )
+  }
 
   return (
     <div
