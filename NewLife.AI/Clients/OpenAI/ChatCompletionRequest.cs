@@ -180,7 +180,8 @@ public class ChatCompletionRequest : IChatRequest
             }
             messages.Add(m);
         }
-        dic["messages"] = messages;
+        // 内容放到最后，方便在埋点上查看参数
+        //dic["messages"] = messages;
 
         // stream 与 stream_options 仅在 stream=true 时写入；非流式请求不含这两个字段，避免 qwen-max 等模型的严格校验
         if (request.Stream)
@@ -219,6 +220,7 @@ public class ChatCompletionRequest : IChatRequest
         if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
         if (request.ResponseFormat != null) dic["response_format"] = request.ResponseFormat;
         if (request.ParallelToolCalls != null) dic["parallel_tool_calls"] = request.ParallelToolCalls.Value;
+        dic["messages"] = messages;
 
         return dic;
     }
