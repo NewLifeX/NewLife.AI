@@ -185,4 +185,46 @@ public class ChatHandlerChain
     }
 
     #endregion
+
+    #region 工厂方法
+
+    /// <summary>根据来源与链模式从全量 Handler 集合中构建适合当前渠道的处理器链</summary>
+    /// <param name="handlers">DI 解析的全量 <see cref="IChatHandler"/> 集合</param>
+    /// <param name="source">当前消息流来源（Web / Gateway / Channel）</param>
+    /// <param name="fullChain">true = 完整链（保留所有 <see cref="ChatHandlerTier.Full"/> Handler）；
+    /// false = 精简链（仅保留 <see cref="ChatHandlerTier.Core"/> Handler）</param>
+    /// <returns>已按来源和层级过滤的新 <see cref="ChatHandlerChain"/> 实例</returns>
+    /// <remarks>
+    /// <para><b>过滤规则：</b></para>
+    /// <list type="bullet">
+    ///   <item>未实现 <see cref="IChatHandlerScope"/> 的 Handler → 视为 All + Full，始终进入完整链，精简链下剔除</item>
+    ///   <item>实现了接口但 <see cref="IChatHandlerScope.SupportedSources"/> 不含当前 <paramref name="source"/> → 剔除</item>
+    ///   <item>来源匹配且 <see cref="IChatHandlerScope.Tier"/> == Core → 始终保留</item>
+    ///   <item>来源匹配且 Tier == Full 且 <paramref name="fullChain"/> == false → 剔除</item>
+    /// </list>
+    /// </remarks>
+    public static ChatHandlerChain BuildFor(IEnumerable<IChatHandler> handlers, ChatFlowSource source, Boolean fullChain)
+    {
+        var filtered = handlers.Where(h =>
+        {
+            if (h is not IChatHandlerScope scope)
+            {
+                // 未声明范围：视为 All + Full；精简链下剔除，完整链下保留
+                return fullChain;
+            }
+
+            // 来源不匹配：直接剔除
+            if (!scope.SupportedSources.HasFlag(source)) return false;
+
+            // Core 级别：无论完整/精简链均保留
+            if (scope.Tier == ChatHandlerTier.Core) return true;
+
+            // Full 级别：仅完整链保留
+            return fullChain;
+        });
+
+        return new ChatHandlerChain(filtered);
+    }
+
+    #endregion
 }

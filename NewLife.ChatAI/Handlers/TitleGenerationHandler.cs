@@ -11,7 +11,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
 [ChatHandlerOrder(30)]
-public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : IChatHandler
+public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : IChatHandler, IChatHandlerScope
 {
     /// <summary>模型服务（供派生类访问）</summary>
     protected readonly ModelService ModelServiceInstance = modelService;
@@ -24,6 +24,13 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
 
     /// <inheritdoc/>
     public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before;
+
+    /// <inheritdoc/>
+    /// <remarks>标题生成依赖持久化会话，网关和渠道无 Web 会话列表，标题无实际意义，因此仅在 Web 来源启用</remarks>
+    public virtual ChatFlowSource SupportedSources => ChatFlowSource.Web;
+
+    /// <inheritdoc/>
+    public virtual ChatHandlerTier Tier => ChatHandlerTier.Full;
 
     /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken)

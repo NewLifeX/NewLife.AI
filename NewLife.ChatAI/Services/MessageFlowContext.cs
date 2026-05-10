@@ -150,4 +150,14 @@ public class MessageFlowContext : IChatContext
     //IList<AiChatMessage> IChatContext.ContextMessages { get => ContextMessages; set => ContextMessages = value; }
 
     #endregion
+
+    #region 来源与持久化
+
+    /// <summary>消息流来源。由各 MessageFlow 子类在构建上下文时设置，默认 Web</summary>
+    public ChatFlowSource Source { get; set; } = ChatFlowSource.Web;
+
+    /// <summary>是否将消息持久化到数据库。false 时 UserMessage/AssistantMessage.Id 保持 0，不执行 Insert/Update</summary>
+    public Boolean PersistMessages { get; set; } = true;
+
+    #endregion
 }

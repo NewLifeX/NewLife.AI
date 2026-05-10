@@ -100,6 +100,8 @@ public class UsageRecordHandlerTests
         public ChatFlowControl FlowControl { get; set; }
         public String? CancelCode { get; set; }
         public String? CancelMessage { get; set; }
+        public ChatFlowSource Source { get; set; } = ChatFlowSource.Web;
+        public Boolean PersistMessages { get; set; } = true;
         public IDictionary<String, Object?> Items { get; } = new Dictionary<String, Object?>(StringComparer.OrdinalIgnoreCase);
         public Object? this[String key]
         {

@@ -8,13 +8,15 @@ namespace NewLife.ChatAI.Services;
 /// <summary>网关消息流。继承 <see cref="MessageFlow"/> 核心管道，专为 API 网关路径适配。
 /// <list type="bullet">
 ///   <item>不从数据库加载历史消息（<see cref="LoadHistoryMessages"/> 始终返回空列表）</item>
-///   <item><see cref="MessageFlow.Chain"/> 覆盖为 <see cref="GatewayChatHandlerChain"/> 网关专属链，仅执行配额校验、用量记录等轻量处理器</item>
-///   <item><see cref="MessageFlow.ChatFilters"/> 仍由 DI 解析，延续 IChatFilter 日志/监控横切链路</item>
+///   <item><see cref="MessageFlow.Chain"/> 由 <see cref="ChatHandlerChain.BuildFor"/> 按 <see cref="ChatFlowSource.Gateway"/> 过滤，<c>EnableGatewayHandlers=false</c> 时仅保留 Core 级处理器（精简链），为 true 时保留全部处理器（完整链）</item>
+///   <item>上下文 <see cref="MessageFlowContext.PersistMessages"/> 默认 false，由 <c>EnableGatewayRecording</c> 控制</item>
 /// </list>
 /// </summary>
 public class GatewayMessageFlow : MessageFlow
 {
     #region 构造
+
+    private readonly ChatSetting _chatSetting;
 
     /// <summary>初始化网关消息流</summary>
     /// <param name="modelService">模型服务</param>
@@ -25,9 +27,12 @@ public class GatewayMessageFlow : MessageFlow
     public GatewayMessageFlow(ModelService modelService, ChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null)
         : base(modelService, null, setting, tracer, log, services)
     {
-        // 网关路径使用 GatewayChatHandlerChain 专属链（配额检查、用量记录等轻量处理器）
-        // IChatFilter 链（日志、监控等）由 base 通过 services 解析并保留
-        Chain = services?.GetService<GatewayChatHandlerChain>() ?? new GatewayChatHandlerChain();
+        _chatSetting = setting;
+        // 按来源和链模式从全量 Handler 集合中过滤：
+        //   EnableGatewayHandlers=false → 精简链（Core 级处理器：配额、用量等）
+        //   EnableGatewayHandlers=true  → 完整链（含知识进化、记忆图谱等高级能力）
+        var allHandlers = services?.GetServices<IChatHandler>() ?? [];
+        Chain = ChatHandlerChain.BuildFor(allHandlers, ChatFlowSource.Gateway, setting.EnableGatewayHandlers);
     }
 
     #endregion
@@ -63,6 +68,9 @@ public class GatewayMessageFlow : MessageFlow
             ModelConfig = modelConfig,
             UserId = userId,
             Conversation = new Conversation { Id = conversationId },
+            // 标记来源为 Gateway；是否持久化由 EnableGatewayRecording 配置决定
+            Source = ChatFlowSource.Gateway,
+            PersistMessages = _chatSetting.EnableGatewayRecording,
         };
 
         await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))

@@ -14,12 +14,19 @@ namespace NewLife.ChatAI.Handlers;
 /// </remarks>
 /// <param name="setting">对话配置</param>
 [ChatHandlerOrder(10)]
-public class SuggestedCacheHandler(IChatSetting setting) : IChatHandler
+public class SuggestedCacheHandler(IChatSetting setting) : IChatHandler, IChatHandlerScope
 {
     private const String HitKey = "SuggestedHit";
 
     /// <inheritdoc/>
     public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After | ChatHandlerCapabilities.Interceptor;
+
+    /// <inheritdoc/>
+    /// <remarks>推荐问题缓存以 ConversationId 为 key，无持久化会话的渠道/网关场景无意义，仅在 Web 来源启用</remarks>
+    public ChatFlowSource SupportedSources => ChatFlowSource.Web;
+
+    /// <inheritdoc/>
+    public ChatHandlerTier Tier => ChatHandlerTier.Full;
 
     /// <inheritdoc/>
     public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
