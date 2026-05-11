@@ -235,6 +235,39 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         return dic;
     }
 
+    /// <summary>第三方托管模型流式对话。走兼容模式端点，使用 OpenAI 协议请求与 SSE 解析</summary>
+    private async IAsyncEnumerable<IChatResponse> ChatThirdPartyStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var body = ChatCompletionRequest.BuildBody(request);
+        var url = CombineApiUrl(CompatibleEndpoint, "/v1/chat/completions");
+
+        using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (!reader.EndOfStream)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
+            if (line == null) break;
+            if (!line.StartsWith("data:")) continue;
+
+            var data = line.Substring(5).Trim();
+            if (data.Length == 0 || data == "[DONE]") continue;
+
+            IChatResponse? chunk = null;
+            // base.ParseChunk 调用 AiClientBase.ParseChunk → ParseResponse（OpenAI 格式），不走 DashScope 原生解析
+            try { chunk = base.ParseChunk(data, request, null); } catch { }
+
+            if (chunk != null)
+            {
+                chunk.Model ??= request.Model;
+                yield return chunk;
+            }
+        }
+    }
+
     /// <summary>Omni 模型流式对话。走兼容模式端点，强制 stream=true，使用 OpenAI 协议解析 SSE 块</summary>
     private async IAsyncEnumerable<IChatResponse> ChatOmniStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -316,6 +349,15 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         if (IsOmniModel(request.Model ?? _options.Model))
             return await ChatOmniAggregateAsync(request, cancellationToken).ConfigureAwait(false);
 
+        // 第三方托管模型（GLM/Kimi/MiniMax 等）不支持 DashScope 原生端点，强制走兼容模式
+        if (IsNativeProtocol && IsThirdPartyModel(request.Model ?? _options.Model))
+        {
+            var compatUrl = CombineApiUrl(CompatibleEndpoint, "/v1/chat/completions");
+            var compatBody = ChatCompletionRequest.BuildBody(request);
+            var compatJson = await PostAsync(compatUrl, compatBody, request, _options, cancellationToken).ConfigureAwait(false);
+            return ParseResponse(compatJson, request);
+        }
+
         if (!IsNativeProtocol)
             return await base.ChatAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -342,6 +384,14 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         if (IsOmniModel(request.Model ?? _options.Model))
         {
             await foreach (var chunk in ChatOmniStreamAsync(request, cancellationToken).ConfigureAwait(false))
+                yield return chunk;
+            yield break;
+        }
+
+        // 第三方托管模型（GLM/Kimi/MiniMax 等）不支持 DashScope 原生端点，强制走兼容模式
+        if (IsNativeProtocol && IsThirdPartyModel(request.Model ?? _options.Model))
+        {
+            await foreach (var chunk in ChatThirdPartyStreamAsync(request, cancellationToken).ConfigureAwait(false))
                 yield return chunk;
             yield break;
         }
@@ -423,6 +473,15 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
             endpoint.IndexOf("compatible-mode", StringComparison.OrdinalIgnoreCase) >= 0)
             endpoint = NativeEndpoint;
         return endpoint.TrimEnd('/') + path;
+    }
+
+    /// <summary>判断是否为第三方托管模型。采用白名单策略：阿里自有模型以 qwen/qwq-/wan 开头，其余均视为第三方，强制走兼容模式端点</summary>
+    private static Boolean IsThirdPartyModel(String? model)
+    {
+        if (model.IsNullOrEmpty()) return false;
+        // 阿里自有模型白名单前缀：通义千问系列、QwQ 推理、万相图像/视频
+        if (model!.StartsWithIgnoreCase("qwen", "qwq-", "wan")) return false;
+        return true;
     }
 
     /// <summary>判断指定模型是否为多模态模型（需走 multimodal-generation 端点）</summary>
