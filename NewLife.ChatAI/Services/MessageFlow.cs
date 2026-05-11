@@ -68,6 +68,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.Kind = FlowKind.Regenerate;
         if (flow.Error != null) return null;
 
+        // 沿用原消息的思考模式，避免因默认 Auto 在支持思考的模型上意外开启推理
+        flow.ThinkingMode = flow.AssistantMessage.ThinkingMode;
+
         try
         {
             // Step2: 构建对话上下文
@@ -152,6 +155,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             yield return ChatStreamEvent.ErrorEvent(flow.Error.Code, flow.Error.Message);
             yield break;
         }
+
+        // 沿用原消息的思考模式，避免因默认 Auto 在支持思考的模型上意外开启推理
+        flow.ThinkingMode = flow.AssistantMessage.ThinkingMode;
 
         // Step2: 构建对话上下文
         await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);

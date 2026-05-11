@@ -434,11 +434,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   regenerateMsg: async (id) => {
-    // 标记该消息为 streaming 并清空旧内容
+    // 标记该消息为 streaming 并清空旧内容（含工具调用）
     set((s) => ({
       isGenerating: true,
       messages: s.messages.map((m) =>
-        m.id === id ? { ...m, content: '', thinkingContent: undefined, status: 'streaming' as const, usage: undefined } : m,
+        m.id === id ? { ...m, content: '', thinkingContent: undefined, toolCalls: undefined, status: 'streaming' as const, usage: undefined } : m,
       ),
     }))
 
@@ -461,6 +461,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 m.id === id ? { ...m, thinkingContent: (m.thinkingContent ?? '') + (event.content ?? '') } : m,
               ),
             }))
+            break
+          case 'tool_call_start':
+            if (event.toolCallId) {
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === id
+                    ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
+                    : m,
+                ),
+              }))
+            }
+            break
+          case 'tool_call_done':
+            if (event.toolCallId) {
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === id
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === event.toolCallId ? { ...t, status: 'done' as const, result: event.result } : t) }
+                    : m,
+                ),
+              }))
+            }
+            break
+          case 'tool_call_error':
+            if (event.toolCallId) {
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === id
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === event.toolCallId ? { ...t, status: 'error' as const, result: event.error } : t) }
+                    : m,
+                ),
+              }))
+            }
             break
           case 'message_done':
             set((s) => ({
