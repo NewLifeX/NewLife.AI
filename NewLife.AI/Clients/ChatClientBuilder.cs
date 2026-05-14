@@ -122,13 +122,14 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers));
 
-    /// <summary>添加工具中间件，并指定工具结果最大字符数。超过此长度时自动截断</summary>
+    /// <summary>添加工具中间件，并指定最大调用轮次与工具结果最大字符数</summary>
     /// <param name="builder">构建器</param>
+    /// <param name="maxIterations">工具调用最大轮次，防止无限递归；传入 0 或负数自动回退为默认值 10</param>
     /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
     /// <param name="providers">工具提供者列表</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxResultLength, params IToolProvider[] providers)
-        => builder.Use(inner => new ToolChatClient(inner, providers) { MaxResultLength = maxResultLength });
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxIterations, Int32 maxResultLength, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers) { MaxIterations = maxIterations, MaxResultLength = maxResultLength });
 
     /// <summary>添加工具审批中间件。设置后 <see cref="ToolChatClient"/> 在执行每个工具前会请求用户确认</summary>
     /// <param name="builder">构建器</param>
@@ -138,14 +139,15 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolApprovalProvider approvalProvider, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers) { ApprovalProvider = approvalProvider });
 
-    /// <summary>添加工具审批中间件，并指定工具结果最大字符数</summary>
+    /// <summary>添加工具审批中间件，并指定最大调用轮次与工具结果最大字符数</summary>
     /// <param name="builder">构建器</param>
     /// <param name="approvalProvider">工具审批提供者</param>
+    /// <param name="maxIterations">工具调用最大轮次，防止无限递归；传入 0 或负数自动回退为默认值 10</param>
     /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
     /// <param name="providers">工具提供者列表</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolApprovalProvider approvalProvider, Int32 maxResultLength, params IToolProvider[] providers)
-        => builder.Use(inner => new ToolChatClient(inner, providers) { ApprovalProvider = approvalProvider, MaxResultLength = maxResultLength });
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolApprovalProvider approvalProvider, Int32 maxIterations, Int32 maxResultLength, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers) { ApprovalProvider = approvalProvider, MaxIterations = maxIterations, MaxResultLength = maxResultLength });
 
     // ── MEAI 风格 Use*() 工厂方法 ─────────────────────────────────────────
 

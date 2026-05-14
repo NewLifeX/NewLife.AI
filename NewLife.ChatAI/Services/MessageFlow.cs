@@ -880,7 +880,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="providers">已解析的工具提供者集合</param>
     protected virtual void ApplyTools(ref ChatClientBuilder clientBuilder, IList<AiChatMessage> contextMessages, IToolProvider[] providers)
     {
-        if (providers.Length > 0) clientBuilder = clientBuilder.UseTools(providers);
+        if (providers.Length == 0) return;
+
+        clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, providers);
     }
 
     /// <summary>根据用户回应风格设置采样参数。仅在请求未显式指定时设置</summary>

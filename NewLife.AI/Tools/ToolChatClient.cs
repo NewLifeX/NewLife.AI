@@ -29,8 +29,9 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     /// <summary>工具提供者列表（按工具名直接路由执行工具调用）</summary>
     public IReadOnlyList<IToolProvider> Providers { get; }
 
-    /// <summary>最大工具调用循环次数，防止无限递归。默认 10</summary>
-    public Int32 MaxIterations { get; set; } = 10;
+    private Int32 _maxIterations = 10;
+    /// <summary>最大工具调用循环次数，防止无限递归。默认 10；设为 0 或负数时自动回退为 10</summary>
+    public Int32 MaxIterations { get => _maxIterations; set => _maxIterations = value > 0 ? value : 10; }
 
     /// <summary>工具结果最大字符数。超过此长度时自动截断并追加省略提示，0表示不限制</summary>
     public Int32 MaxResultLength { get; set; }

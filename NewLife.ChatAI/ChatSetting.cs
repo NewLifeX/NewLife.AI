@@ -148,6 +148,16 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("工具渐进式发现阈值。工具总数超过此值时切换为Advertise模式，仅向模型展示工具摘要而非完整Schema，模型按需加载，默认15")]
     public Int32 ToolAdvertiseThreshold { get; set; } = 15;
 
+    /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认8000</summary>
+    [Category("工具与扩展")]
+    [Description("工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认8000")]
+    public Int32 ToolResultMaxChars { get; set; } = 8000;
+
+    /// <summary>工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10</summary>
+    [Category("工具与扩展")]
+    [Description("工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10")]
+    public Int32 ToolMaxIterations { get; set; } = 10;
+
     /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000</summary>
     [Category("工具与扩展")]
     [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000")]

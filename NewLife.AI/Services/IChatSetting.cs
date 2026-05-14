@@ -24,6 +24,12 @@ public interface IChatSetting
     #endregion
 
     #region 工具与能力
+    /// <summary>工具调用最大轮次。防止工具调用无限递归，默认10</summary>
+    Int32 ToolMaxIterations { get; }
+
+    /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制</summary>
+    Int32 ToolResultMaxChars { get; }
+
     /// <summary>推荐问题缓存。开启后命中当天缓存时直接返回，不请求大模型</summary>
     Boolean EnableSuggestedQuestionCache { get; }
 
