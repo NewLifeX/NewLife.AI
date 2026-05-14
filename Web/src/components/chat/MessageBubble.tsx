@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useCallback, useMemo, useEffect } from 'react'
+import { type ReactNode, useState, useRef, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn, formatRelativeTime, formatExactTime } from '@/lib/utils'
 import { Avatar } from '@/components/common/Avatar'
@@ -6,8 +6,7 @@ import { Icon } from '@/components/common/Icon'
 import { MessageActions } from './MessageActions'
 import { TypingCursor } from './TypingCursor'
 import { ToolCallBadge } from './ToolCallBadge'
-import { ActionSheet, type ActionSheetItem } from '@/components/common/ActionSheet'
-import { useLongPress } from '@/hooks/useLongPress'
+
 import { fetchAttachmentInfos, type AttachmentInfo } from '@/lib/api'
 import type { ToolCall, TokenUsage } from '@/types'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -100,31 +99,9 @@ export function MessageBubble({
     return () => { document.body.style.overflow = '' }
   }, [previewUrl])
 
-  // 移动端长按操作
-  const [actionSheetOpen, setActionSheetOpen] = useState(false)
-  const [actionSheetPos, setActionSheetPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-
-  const handleLongPress = useCallback(
-    (e: TouchEvent | MouseEvent) => {
-      const pos = 'touches' in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
-      setActionSheetPos(pos)
-      setActionSheetOpen(true)
-    },
-    [],
-  )
-
-  const longPressHandlers = useLongPress({ onLongPress: handleLongPress })
-
-  const mobileActions: ActionSheetItem[] = []
-  if (onCopy) mobileActions.push({ icon: 'content_copy', label: t('common.copy'), onClick: onCopy })
-  if (role === 'user' && onEdit) mobileActions.push({ icon: 'edit', label: t('common.edit'), onClick: onEdit })
-  if (role === 'assistant' && onRegenerate) mobileActions.push({ icon: 'refresh', label: t('common.regenerate'), onClick: onRegenerate })
-  if (onShare) mobileActions.push({ icon: 'share', label: t('common.share'), onClick: onShare })
-  if (onDelete) mobileActions.push({ icon: 'delete', label: t('common.delete'), onClick: onDelete })
-
   if (role === 'user') {
     return (
-      <div className={cn('flex flex-col items-end mb-6 group', className)} {...longPressHandlers}>
+      <div className={cn('flex flex-col items-end mb-6 group', className)}>
         <div className="max-w-[75%] relative">
           {isEditing ? (
             <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
@@ -213,7 +190,7 @@ export function MessageBubble({
                 </div>
               )}
               {(onCopy || onEdit || onDelete) && (
-                <div className="absolute right-full -translate-x-1 top-2 hidden group-hover:flex space-x-1">
+                <div className="absolute right-full -translate-x-1 top-2 flex md:hidden md:group-hover:flex space-x-1">
                   {onCopy && (
                     <button
                       onClick={onCopy}
@@ -253,13 +230,12 @@ export function MessageBubble({
             </div>
           )}
         </div>
-        <ActionSheet open={actionSheetOpen} onClose={() => setActionSheetOpen(false)} items={mobileActions} position={actionSheetPos} />
       </div>
     )
   }
 
   return (
-    <div className={cn('mb-8 group w-full', className)} {...longPressHandlers}>
+    <div className={cn('mb-8 group w-full', className)}>
       <div className="flex items-center gap-2 mb-3">
         <Avatar type="ai" size="sm" />
       </div>
@@ -327,7 +303,6 @@ export function MessageBubble({
           </div>
         </div>
       </div>
-      <ActionSheet open={actionSheetOpen} onClose={() => setActionSheetOpen(false)} items={mobileActions} position={actionSheetPos} />
       {previewUrl && (
         <div
           ref={lightboxRef}
