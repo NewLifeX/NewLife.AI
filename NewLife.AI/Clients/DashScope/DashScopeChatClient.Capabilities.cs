@@ -222,7 +222,7 @@ public partial class DashScopeChatClient
         var p = new Dictionary<String, Object?>();
         if (!String.IsNullOrEmpty(request.NegativePrompt)) p["negative_prompt"] = request.NegativePrompt;
         if (request.N.HasValue) p["n"] = request.N.Value;
-        if (!String.IsNullOrEmpty(request.Size))
+        if (!request.Size.IsNullOrEmpty())
         {
             // 统一分隔符：1024x1024 → 1024*1024（DashScope 原生接口要求 * 分隔）
             p["size"] = request.Size.Replace('x', '*').Replace('X', '*');
@@ -446,7 +446,7 @@ public partial class DashScopeChatClient
     /// <summary>是否为万相 2.7 图生视频模型</summary>
     private static Boolean IsWan27I2vModel(String? model)
     {
-        if (String.IsNullOrEmpty(model)) return false;
+        if (model.IsNullOrEmpty()) return false;
         return model.StartsWith("wan2.7-i2v", StringComparison.OrdinalIgnoreCase);
     }
 

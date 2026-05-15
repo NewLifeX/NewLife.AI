@@ -16,13 +16,13 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="chatSetting">配置</param>
 /// <param name="log">日志</param>
 [ChatHandlerOrder(110)]
-public class LearningHandler(ConversationAnalysisService analysisService, ChatSetting chatSetting, ILog log) : IChatHandler
+public class LearningHandler(ConversationAnalysisService analysisService, ChatSetting chatSetting, ILog log) : ChatHandlerBase
 {
-    /// <inheritdoc/>
-    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
+    ///// <inheritdoc/>
+    //public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
 
     /// <inheritdoc/>
-    public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         if (!chatSetting.EnableAutoLearning) return Task.CompletedTask;
 
@@ -34,7 +34,7 @@ public class LearningHandler(ConversationAnalysisService analysisService, ChatSe
     }
 
     /// <inheritdoc/>
-    public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         if (!chatSetting.EnableAutoLearning) return Task.CompletedTask;
         if (context.HasError) return Task.CompletedTask;

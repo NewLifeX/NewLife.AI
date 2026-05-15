@@ -495,7 +495,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// </remarks>
     private static Boolean IsMultimodalModel(String? model)
     {
-        if (String.IsNullOrEmpty(model)) return false;
+        if (model.IsNullOrEmpty()) return false;
         // Omni 全模态模型不走原生多模态端点，走兼容模式
         if (IsOmniModel(model)) return false;
         if (model.IndexOf("-vl", StringComparison.OrdinalIgnoreCase) >= 0) return true;
@@ -538,7 +538,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         var path = request.RequestUri?.AbsolutePath;
-        if (String.IsNullOrEmpty(path)) return;
+        if (path.IsNullOrEmpty()) return;
 
         // 视频生成接口仅支持异步调用，必须携带该请求头
         if (path.EndsWith(VideoSynthesisPath, StringComparison.OrdinalIgnoreCase))

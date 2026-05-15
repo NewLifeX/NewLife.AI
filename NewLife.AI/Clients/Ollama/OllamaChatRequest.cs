@@ -164,7 +164,7 @@ public class OllamaChatRequest : IChatRequest
             };
 
             if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
-                {
+            {
                 var toolCalls = new List<OllamaToolCall>();
                 foreach (var tc in msg.ToolCalls)
                 {
@@ -174,7 +174,7 @@ public class OllamaChatRequest : IChatRequest
                         // 将 arguments JSON 字符串解析为对象，以便序列化时输出 JSON 对象而非字符串
                         Object? args;
                         var argsStr = tc.Function.Arguments;
-                        if (!String.IsNullOrEmpty(argsStr))
+                        if (!argsStr.IsNullOrEmpty())
                             args = JsonParser.Decode(argsStr) ?? (Object)argsStr;
                         else
                             args = new Dictionary<String, Object?>();
@@ -215,7 +215,7 @@ public class OllamaChatRequest : IChatRequest
 
         // 工具定义
         if (request.Tools != null && request.Tools.Count > 0)
-            {
+        {
             var tools = new List<Object>();
             foreach (var tool in request.Tools)
             {
@@ -264,7 +264,7 @@ public class OllamaChatMessage
         };
 
         if (ToolCalls != null && ToolCalls.Count > 0)
-            {
+        {
             var toolCalls = new List<ToolCall>();
             foreach (var tc in ToolCalls)
             {

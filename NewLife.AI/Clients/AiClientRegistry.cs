@@ -196,7 +196,7 @@ public class AiClientRegistry
                 if (instance is AiClientBase clientBase)
                 {
                     clientBase.Name = attr.DisplayName;
-                    if (!String.IsNullOrEmpty(chatPath)) clientBase.ChatPath = chatPath;
+                    if (!chatPath.IsNullOrEmpty()) clientBase.ChatPath = chatPath;
                 }
                 return (IChatClient)instance!;
             },

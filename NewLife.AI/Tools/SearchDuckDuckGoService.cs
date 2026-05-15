@@ -27,7 +27,7 @@ public class SearchDuckDuckGoService(HttpClient? httpClient = null) : ISearchSer
 
             var model = new SearchModel();
 
-            if (!String.IsNullOrEmpty(root?.AbstractText))
+            if (root != null && !root.AbstractText.IsNullOrEmpty())
                 model.Items.Add(new SearchItem { Title = root.Heading, Url = root.AbstractURL, Snippet = root.AbstractText });
 
             if (root?.RelatedTopics != null)

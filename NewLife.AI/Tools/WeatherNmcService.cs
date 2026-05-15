@@ -56,7 +56,7 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
                 Rain = $"{w.Rain} mm",
                 Wind = wind == null ? null : $"{wind.Direct} {wind.Power}（{wind.Speed} m/s）",
                 PublishTime = real.PublishTime,
-                Warning = String.IsNullOrEmpty(real.Warn?.Alert) ? null : real.Warn.Alert,
+                Warning = real.Warn?.Alert,
             };
         }
         catch
@@ -91,7 +91,7 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
         {
             foreach (var c in cities)
             {
-                if (String.IsNullOrEmpty(c.Code) || String.IsNullOrEmpty(c.City)) continue;
+                if (c.Code.IsNullOrEmpty() || c.City.IsNullOrEmpty()) continue;
                 _stationCache.TryAdd(c.City, c.Code);
                 var key2 = c.City.TrimEnd('市', '区', '县', '省');
                 if (key2 != c.City) _stationCache.TryAdd(key2, c.Code);

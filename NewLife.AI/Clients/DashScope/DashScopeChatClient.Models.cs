@@ -1,4 +1,4 @@
-using NewLife.AI.Models;
+﻿using NewLife.AI.Models;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
@@ -99,7 +99,7 @@ public partial class DashScopeChatClient
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
     public override AiProviderCapabilities? InferModelCapabilities(String? modelId)
     {
-        if (String.IsNullOrEmpty(modelId)) return null;
+        if (modelId.IsNullOrEmpty()) return null;
 
         // 非对话模型：嵌入、重排序、语音识别/合成等
         if (modelId.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) ||

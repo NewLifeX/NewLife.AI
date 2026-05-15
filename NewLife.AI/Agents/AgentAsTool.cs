@@ -1,6 +1,7 @@
 ﻿using NewLife.AI.Models;
 using NewLife.AI.Tools;
 using NewLife.Collections;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Agents;
 
@@ -72,12 +73,12 @@ public static class AgentAsTool
     {
         // 解析输入消息
         var content = "请处理任务";
-        if (!String.IsNullOrWhiteSpace(arguments))
+        if (!arguments.IsNullOrWhiteSpace())
         {
             // 简单 JSON 解析: {"message": "xxx"}
             try
             {
-                var dic = NewLife.Serialization.JsonParser.Decode(arguments);
+                var dic = JsonParser.Decode(arguments);
                 if (dic != null && dic.TryGetValue("message", out var msgObj) && msgObj is String msg && !String.IsNullOrEmpty(msg))
                     content = msg;
             }

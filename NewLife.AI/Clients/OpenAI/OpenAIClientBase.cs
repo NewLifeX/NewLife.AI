@@ -218,7 +218,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
     public virtual AiProviderCapabilities? InferModelCapabilities(String? modelId)
     {
-        if (String.IsNullOrEmpty(modelId)) return null;
+        if (modelId.IsNullOrEmpty()) return null;
 
         // 非对话模型：嵌入、语音合成、语音识别等
         if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||

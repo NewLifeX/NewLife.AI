@@ -61,6 +61,8 @@ public class FilterTests
             await next(context, ct).ConfigureAwait(false);
             Calls.Add($"after-{Label}");
         }
+
+        Task IChatFilter.OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class RequestModifyingFilter : IChatFilter
@@ -74,6 +76,8 @@ public class FilterTests
             await next(context, ct).ConfigureAwait(false);
             CapturedUser = context.Request.User;
         }
+
+        Task IChatFilter.OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     // ── 测试 ──────────────────────────────────────────────────────────────────

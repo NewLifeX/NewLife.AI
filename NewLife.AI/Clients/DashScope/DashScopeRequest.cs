@@ -237,7 +237,7 @@ public class DashScopeRequest : IChatRequest
 
         var searchOptions = new Dictionary<String, Object>();
         var searchStrategy = request["SearchStrategy"] as String;
-        if (!String.IsNullOrEmpty(searchStrategy)) searchOptions["search_strategy"] = searchStrategy;
+        if (!searchStrategy.IsNullOrEmpty()) searchOptions["search_strategy"] = searchStrategy;
         var enableSource = request["EnableSource"] as Boolean?;
         if (enableSource != null) searchOptions["enable_source"] = enableSource.Value;
         var forcedSearch = request["ForcedSearch"] as Boolean?;

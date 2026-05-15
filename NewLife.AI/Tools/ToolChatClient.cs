@@ -336,7 +336,7 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
             {
                 tools.Add(t);
                 var name = t.Function?.Name;
-                if (!String.IsNullOrEmpty(name))
+                if (!name.IsNullOrEmpty())
                     toolMap[name] = provider;
             }
         }

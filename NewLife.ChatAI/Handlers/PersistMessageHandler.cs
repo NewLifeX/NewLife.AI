@@ -11,7 +11,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <para>注意：UsageService.Record 由 <c>UsageRecordHandler</c> 负责，本处理器仅写入消息/会话字段。</para>
 /// </remarks>
 [ChatHandlerOrder(9999)]
-public class PersistMessageHandler : IChatHandler, IChatHandlerScope
+public class PersistMessageHandler : ChatHandlerBase, IChatHandlerScope
 {
     /// <inheritdoc/>
     /// <remarks>持久化处理器适用于所有来源，但内部由 PersistMessages 加以守卫</remarks>
@@ -21,11 +21,11 @@ public class PersistMessageHandler : IChatHandler, IChatHandlerScope
     /// <remarks>持久化是粿心能力，始终保留在链中；是否真正写入由 PersistMessages 决定</remarks>
     public ChatHandlerTier Tier => ChatHandlerTier.Core;
 
-    /// <inheritdoc/>
-    public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
+    ///// <inheritdoc/>
+    //public ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
 
     /// <inheritdoc/>
-    public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         // 未开启持久化时跳过数据库写入
         if (!context.PersistMessages) return Task.CompletedTask;
@@ -45,7 +45,7 @@ public class PersistMessageHandler : IChatHandler, IChatHandlerScope
     }
 
     /// <inheritdoc/>
-    public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         // 未开启持久化时跳过数据库写入
         if (!context.PersistMessages) return Task.CompletedTask;

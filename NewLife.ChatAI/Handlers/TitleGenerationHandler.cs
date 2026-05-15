@@ -11,7 +11,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
 [ChatHandlerOrder(30)]
-public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : IChatHandler, IChatHandlerScope
+public class TitleGenerationHandler(ModelService modelService, IChatSetting setting, ICacheProvider cacheProvider, ITracer? tracer, ILog? log) : ChatHandlerBase, IChatHandlerScope
 {
     /// <summary>模型服务（供派生类访问）</summary>
     protected readonly ModelService ModelServiceInstance = modelService;
@@ -23,7 +23,7 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
     protected readonly ILog? Log = log;
 
     /// <inheritdoc/>
-    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before;
+    public override ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before;
 
     /// <inheritdoc/>
     /// <remarks>标题生成依赖持久化会话，网关和渠道无 Web 会话列表，标题无实际意义，因此仅在 Web 来源启用</remarks>
@@ -33,7 +33,7 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
     public virtual ChatHandlerTier Tier => ChatHandlerTier.Full;
 
     /// <inheritdoc/>
-    public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         if (!setting.AutoGenerateTitle) return Task.CompletedTask;
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
@@ -55,7 +55,7 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
     }
 
     /// <inheritdoc/>
-    public Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    public override Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>异步生成会话标题。短文本直接采用，否则调用模型生成。派生类可覆盖以增强</summary>
     /// <param name="flow">上下文</param>

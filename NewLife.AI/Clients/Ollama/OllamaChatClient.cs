@@ -255,7 +255,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
     /// <returns>推断出的能力信息</returns>
     public AiProviderCapabilities InferModelCapabilities(String? modelId, OllamaModelDetails? details)
     {
-        if (String.IsNullOrEmpty(modelId))
+        if (modelId.IsNullOrEmpty())
             return new AiProviderCapabilities(false, false, false, false);
 
         var thinking = false;

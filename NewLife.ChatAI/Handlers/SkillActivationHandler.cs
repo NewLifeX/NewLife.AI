@@ -13,16 +13,16 @@ namespace NewLife.ChatAI.Handlers;
 /// <param name="toolProviders">工具提供者集合（用于 MCP 触发词匹配）</param>
 /// <param name="skillService">技能服务（可为 null）</param>
 [ChatHandlerOrder(20)]
-public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, SkillService? skillService) : IChatHandler
+public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, SkillService? skillService) : ChatHandlerBase
 {
-    /// <inheritdoc/>
-    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
+    ///// <inheritdoc/>
+    //public override ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
 
     /// <summary>派生类访问 <see cref="SkillService"/> 实例</summary>
     protected SkillService? SkillServiceInstance => skillService;
 
     /// <inheritdoc/>
-    public Task OnBefore(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         if (skillService == null) return Task.CompletedTask;
         //using var span = tracer?.NewSpan("handler:SkillActivation");
@@ -110,7 +110,7 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
     }
 
     /// <inheritdoc/>
-    public Task OnAfter(IChatContext context, CancellationToken cancellationToken)
+    public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         if (skillService == null || context.SkillId <= 0 || context.UserId <= 0) return Task.CompletedTask;
         if (context.HasError) return Task.CompletedTask;

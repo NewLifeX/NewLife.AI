@@ -66,7 +66,7 @@ public class BedrockResponse : IChatResponse
 
                     foreach (var block in msg.Content)
                     {
-                        if (!String.IsNullOrEmpty(block.Text))
+                        if (!block.Text.IsNullOrEmpty())
                             textParts.Add(block.Text);
                         if (block.ReasoningContent?.ReasoningText != null)
                             reasoningParts.Add(block.ReasoningContent.ReasoningText);
@@ -169,10 +169,10 @@ public class BedrockResponse : IChatResponse
 
                 foreach (var block in msg.Content)
                 {
-                    if (!String.IsNullOrEmpty(block.Text))
+                    if (!block.Text.IsNullOrEmpty())
                         textParts.Add(block.Text);
 
-                    if (block.ReasoningContent != null && !String.IsNullOrEmpty(block.ReasoningContent.ReasoningText))
+                    if (block.ReasoningContent != null && !block.ReasoningContent.ReasoningText.IsNullOrEmpty())
                         reasoningParts.Add(block.ReasoningContent.ReasoningText);
 
                     if (block.ToolUse != null)

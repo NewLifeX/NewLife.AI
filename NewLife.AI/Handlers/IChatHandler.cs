@@ -1,5 +1,4 @@
-using NewLife.AI.Models;
-using NewLife.AI.Services;
+﻿using NewLife.AI.Models;
 
 namespace NewLife.AI.Handlers;
 
@@ -48,13 +47,13 @@ public interface IChatHandler
     /// <remarks>默认值 <see cref="ChatHandlerCapabilities.Before"/> | <see cref="ChatHandlerCapabilities.After"/>，
     /// 与历史行为一致。仅有 OnAfter 逻辑时应声明 <see cref="ChatHandlerCapabilities.After"/>，
     /// 需要拦截事件流时额外追加 <see cref="ChatHandlerCapabilities.Interceptor"/></remarks>
-    ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
+    ChatHandlerCapabilities Capabilities { get; }
 
     /// <summary>事前处理。可修改 <see cref="IChatContext.ContextMessages"/>、注入 SystemPrompt、配额校验、解析技能等</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>
-    Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    Task OnBefore(IChatContext context, CancellationToken cancellationToken);
 
     /// <summary>事后处理。可读取 <see cref="IChatContext.ContentBuilder"/> / <see cref="IChatContext.Usage"/> 等收集结果，
     /// 用于持久化、配额扣减、统计累加、用量入库等。<b>按注册正序执行</b>
@@ -62,7 +61,7 @@ public interface IChatHandler
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>
-    Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    Task OnAfter(IChatContext context, CancellationToken cancellationToken);
 
     /// <summary>处理对话事件流。可在调用 <paramref name="next"/> 前后插入逻辑，或不调用 <paramref name="next"/> 实现短路。
     /// 仅当 <see cref="Capabilities"/> 含 <see cref="ChatHandlerCapabilities.Interceptor"/> 时，调度器才将本方法纳入洋葱链</summary>
@@ -70,5 +69,37 @@ public interface IChatHandler
     /// <param name="next">链中下一个节点（最末端为 <c>MessageFlow</c> 内核 LLM 调用）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>事件流</returns>
-    IAsyncEnumerable<ChatStreamEvent> InvokeAsync(IChatContext context, ChatNextDelegate next, CancellationToken cancellationToken) => next(cancellationToken);
+    IAsyncEnumerable<ChatStreamEvent> InvokeAsync(IChatContext context, ChatNextDelegate next, CancellationToken cancellationToken);
+}
+
+/// <summary>示例空实现。仅供测试或占位，实际处理器请根据需要实现对应方法并声明能力标志</summary>
+public abstract class ChatHandlerBase : IChatHandler
+{
+    /// <summary>处理器能力标志。声明当前处理器实现了哪些调度阶段，调度器据此决定是否调用对应方法</summary>
+    /// <remarks>默认值 <see cref="ChatHandlerCapabilities.Before"/> | <see cref="ChatHandlerCapabilities.After"/>，
+    /// 与历史行为一致。仅有 OnAfter 逻辑时应声明 <see cref="ChatHandlerCapabilities.After"/>，
+    /// 需要拦截事件流时额外追加 <see cref="ChatHandlerCapabilities.Interceptor"/></remarks>
+    public virtual ChatHandlerCapabilities Capabilities => ChatHandlerCapabilities.Before | ChatHandlerCapabilities.After;
+
+    /// <summary>事前处理。可修改 <see cref="IChatContext.ContextMessages"/>、注入 SystemPrompt、配额校验、解析技能等</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步任务</returns>
+    public virtual Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>事后处理。可读取 <see cref="IChatContext.ContentBuilder"/> / <see cref="IChatContext.Usage"/> 等收集结果，
+    /// 用于持久化、配额扣减、统计累加、用量入库等。<b>按注册正序执行</b>
+    /// （After-only 处理器无条件执行；Before+After 处理器仅当 OnBefore 确实运行过时才执行）</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>异步任务</returns>
+    public virtual Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>处理对话事件流。可在调用 <paramref name="next"/> 前后插入逻辑，或不调用 <paramref name="next"/> 实现短路。
+    /// 仅当 <see cref="Capabilities"/> 含 <see cref="ChatHandlerCapabilities.Interceptor"/> 时，调度器才将本方法纳入洋葱链</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="next">链中下一个节点（最末端为 <c>MessageFlow</c> 内核 LLM 调用）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>事件流</returns>
+    public virtual IAsyncEnumerable<ChatStreamEvent> InvokeAsync(IChatContext context, ChatNextDelegate next, CancellationToken cancellationToken) => next(cancellationToken);
 }

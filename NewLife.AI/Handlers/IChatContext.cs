@@ -1,10 +1,9 @@
 ﻿using System.Text;
-using NewLife.AI.Handlers;
 using NewLife.AI.Interfaces;
 using NewLife.AI.Models;
 using NewLife.Data;
 
-namespace NewLife.AI.Services;
+namespace NewLife.AI.Handlers;
 
 /// <summary>对话处理上下文。在 <see cref="IChatHandler"/> 链各节点之间流转，
 /// 统一承载会话/模型/消息实体、对话上下文、收集器、用量与扩展数据</summary>
@@ -126,7 +125,7 @@ public interface IChatContext : IExtend
     #region 来源与持久化
 
     /// <summary>消息流来源。标识当前上下文从哪条路径进入处理器链（Web / Gateway / Channel）。
-    /// 由各 <see cref="MessageFlow"/> 子类在构建上下文时设置，默认 <see cref="ChatFlowSource.Web"/></summary>
+    /// 由各 <see cref="NewLife.AI.Services.IMessageFlow"/> 子类在构建上下文时设置，默认 <see cref="ChatFlowSource.Web"/></summary>
     ChatFlowSource Source { get; set; }
 
     /// <summary>是否将用户消息和 AI 回复消息持久化到数据库。

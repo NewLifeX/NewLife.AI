@@ -53,7 +53,7 @@ public class AiClientOptions
     /// <summary>获取实际使用的 API 地址</summary>
     /// <param name="defaultEndpoint">默认地址</param>
     /// <returns></returns>
-    public String GetEndpoint(String defaultEndpoint) => String.IsNullOrWhiteSpace(Endpoint) ? defaultEndpoint : Endpoint;
+    public String GetEndpoint(String defaultEndpoint) => Endpoint.IsNullOrWhiteSpace() ? defaultEndpoint : Endpoint;
 }
 
 /// <summary>AI 客户端描述符。描述一个 AI 服务商的元数据及客户端创建工厂。替代原 IAiProvider 接口</summary>
@@ -93,7 +93,7 @@ public class AiClientDescriptor
     /// <returns>匹配的能力信息，未找到返回 null</returns>
     public AiProviderCapabilities? FindModelCapabilities(String? modelId)
     {
-        if (String.IsNullOrEmpty(modelId) || Models.Length == 0) return null;
+        if (modelId.IsNullOrEmpty() || Models.Length == 0) return null;
 
         // 精确匹配
         foreach (var m in Models)

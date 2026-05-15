@@ -1,4 +1,4 @@
-using NewLife.Security;
+﻿using NewLife.Security;
 using System.Text;
 
 namespace NewLife.AI.Embedding;
@@ -66,13 +66,13 @@ public class HashTextEmbedder : ILocalTextEmbedder
 
         // 哈希映射并累加 TF 权重
         var total = (Single)tokens.Count;
-        foreach (var (token, count) in tf)
+        foreach (var item in tf)
         {
-            var tokenBytes = Encoding.UTF8.GetBytes(token);
+            var tokenBytes = Encoding.UTF8.GetBytes(item.Key);
             using var murmur = new Murmur128(0u);
             var hash = murmur.ComputeHash(tokenBytes);
             var bucket = (Int32)(BitConverter.ToUInt32(hash, 0) % (UInt32)Dimensions);
-            vector[bucket] += count / total;
+            vector[bucket] += item.Value / total;
         }
 
         // L2 归一化
@@ -82,13 +82,16 @@ public class HashTextEmbedder : ILocalTextEmbedder
 
         if (norm < 1e-10f) return vector;
 
+#if NETSTANDARD2_1_OR_GREATER
         norm = MathF.Sqrt(norm);
+#else
+        norm = (Single)Math.Sqrt(norm);
+#endif
         for (var i = 0; i < vector.Length; i++)
             vector[i] /= norm;
 
         return vector;
     }
-
     #endregion
 
     #region 辅助

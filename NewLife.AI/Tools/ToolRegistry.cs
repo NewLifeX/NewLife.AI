@@ -131,7 +131,7 @@ public class ToolRegistry : IToolProvider
         var chatTool = ToolSchemaBuilder.BuildFromMethod(method);
         var function = chatTool.Function;
         var toolName = function?.Name;
-        if (String.IsNullOrEmpty(toolName)) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
+        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
 
         if (function == null) throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 未生成函数定义");
 
@@ -155,7 +155,7 @@ public class ToolRegistry : IToolProvider
     /// <returns>规范化后的触发词文本</returns>
     public static String? NormalizeTriggers(String? triggers)
     {
-        if (String.IsNullOrWhiteSpace(triggers)) return null;
+        if (triggers.IsNullOrWhiteSpace()) return null;
 
         var words = triggers.Split([',', '，'], StringSplitOptions.RemoveEmptyEntries)
             .Select(e => e.Trim())
@@ -177,7 +177,7 @@ public class ToolRegistry : IToolProvider
         if (String.IsNullOrEmpty(toolName)) throw new ArgumentNullException(nameof(toolName));
 
         var displayName = method.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
-        if (!String.IsNullOrEmpty(displayName)) return displayName;
+        if (!displayName.IsNullOrEmpty()) return displayName;
         if (!String.IsNullOrEmpty(description))
         {
             var value = description!;
@@ -234,7 +234,7 @@ public class ToolRegistry : IToolProvider
         DescribeMethod(type, method, model);
 
         var toolName = model.Name;
-        if (String.IsNullOrEmpty(toolName)) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
+        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
 
         var existing = findByName(toolName);
         var isNew = existing == null;
@@ -338,7 +338,7 @@ public class ToolRegistry : IToolProvider
             .ToArray();
 
         Object?[] args;
-        if (parameters.Length == 0 || String.IsNullOrWhiteSpace(arguments))
+        if (parameters.Length == 0 || arguments.IsNullOrWhiteSpace())
             args = BuildDefaultArgs(method);
         else
             args = DeserializeArguments(parameters, arguments);

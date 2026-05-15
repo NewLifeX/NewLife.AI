@@ -36,7 +36,7 @@ public interface IChatFilter
     /// </remarks>
     /// <param name="context">过滤器上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
-    Task OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    Task OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken = default);
 }
 
 /// <summary>函数调用过滤器接口。在工具函数执行前后注入自定义逻辑</summary>

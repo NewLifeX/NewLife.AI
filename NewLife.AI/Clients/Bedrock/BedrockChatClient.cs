@@ -140,8 +140,7 @@ public class BedrockChatClient : AiClientBase
         var accessKey = options.ApiKey;
         var secretKey = options.Organization;
 
-        if (String.IsNullOrEmpty(accessKey) || String.IsNullOrEmpty(secretKey))
-            return;
+        if (accessKey.IsNullOrEmpty() || secretKey.IsNullOrEmpty()) return;
 
         // 读取请求体用于签名
         var payload = "";
