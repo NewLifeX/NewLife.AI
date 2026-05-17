@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Toggle } from '@/components/atoms/Toggle'
 import { Icon } from '@/components/common/Icon'
 import { useSettingsStore } from '@/stores/settingsStore'
 import {
@@ -118,20 +119,7 @@ export function LearningSettings() {
           <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t('learning.enableLearning')}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('learning.enableLearningDesc')}</p>
         </div>
-        <button
-          onClick={() => update({ enableLearning: !enableLearning })}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-            enableLearning ? 'bg-purple-500' : 'bg-gray-300 dark:bg-gray-600'
-          }`}
-          role="switch"
-          aria-checked={enableLearning}
-        >
-          <span
-            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${
-              enableLearning ? 'translate-x-5' : 'translate-x-0'
-            }`}
-          />
-        </button>
+        <Toggle checked={enableLearning} onChange={(v) => update({ enableLearning: v })} />
       </div>
 
       {/* Memories */}
@@ -225,15 +213,7 @@ function MemoryCard({
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <button
-          onClick={() => onToggle(item)}
-          title={item.enable ? t('learning.deactivate') : t('learning.activate')}
-          className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-            item.enable ? 'text-green-500' : 'text-gray-400'
-          }`}
-        >
-          <Icon name={item.enable ? 'toggle_on' : 'toggle_off'} size="lg" />
-        </button>
+        <Toggle size="sm" checked={item.enable} onChange={() => onToggle(item)} />
         <button
           onClick={() => onDelete(item.id)}
           title={t('common.delete')}

@@ -45,8 +45,8 @@ export function Toggle({
           'mt-0.5 ml-0.5',
         )}
         style={{
-          transform: `translateX(${checked ? thumbOffset : 0}px)`,
-          transition: 'transform 0.3s ease-in-out',
+          translate: `${checked ? thumbOffset : 0}px 0`,
+          transition: 'translate 0.3s ease-in-out',
         }}
       />
     </button>

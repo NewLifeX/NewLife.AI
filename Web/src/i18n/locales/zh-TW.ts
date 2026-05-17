@@ -137,6 +137,8 @@ export default {
     speedBalanced: '平衡模式',
     speedFast: '快速',
     speedMax: '極速',
+    thinkingCollapsed: '預設收縮思考過程',
+    thinkingCollapsedDesc: '開啟後，AI思考過程預設收縮顯示，點擊可展開。收縮時標題框會即時顯示當前思考步驟。',
     contentWidth: '內容區寬度',
     contentWidthNarrow: '小螢幕 (800px)',
     contentWidthStandard: '標準 (960px)',

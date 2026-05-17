@@ -10,31 +10,7 @@ import {
 } from '@/lib/api'
 import type { ProviderItem, ModelManageItem } from '@/types'
 import { showToast } from '@/stores/toastStore'
-
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean
-  onChange: (v: boolean) => void
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${checked ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-600'}`}
-    >
-      <span
-        className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`}
-      />
-    </button>
-  )
-}
+import { Toggle } from '@/components/atoms/Toggle'
 
 // ── API Key Dialog ──
 
@@ -175,7 +151,7 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
           <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
             {t('providers.modelEdit.enable')}
           </span>
-          <Toggle checked={form.enable} onChange={(v) => setField('enable', v)} />
+          <Toggle size="sm" checked={form.enable} onChange={(v) => setField('enable', v)} />
         </div>
 
         {/* Context Length */}
@@ -335,7 +311,7 @@ export function ProvidersSettings() {
                     {provider.protocol}
                   </span>
                 </div>
-                <Toggle checked={provider.enable} onChange={(v) => { void handleToggleProvider({ ...provider, enable: !v }) }} />
+                <Toggle size="sm" checked={provider.enable} onChange={(v) => { void handleToggleProvider({ ...provider, enable: !v }) }} />
               </div>
               {provider.endpoint && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-2">{provider.endpoint}</p>
@@ -436,7 +412,7 @@ export function ProvidersSettings() {
                       </div>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <Toggle checked={model.enable} onChange={() => handleToggleModel(model)} />
+                      <Toggle size="sm" checked={model.enable} onChange={() => handleToggleModel(model)} />
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button

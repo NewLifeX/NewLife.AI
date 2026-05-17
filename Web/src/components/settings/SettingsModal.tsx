@@ -13,7 +13,7 @@ import { AppKeySettings } from './AppKeySettings'
 import { LearningSettings } from './LearningSettings'
 import { UsageSettings } from './UsageSettings'
 import type { UserSettings, ModelInfo } from '@/types'
-import { fetchMcpServers, toggleMcpServer, fetchUserProfile, type McpServer, type UserProfile } from '@/lib/api'
+import { fetchUserProfile, type UserProfile } from '@/lib/api'
 
 type SettingsTab = 'account' | 'general' | 'personalization' | 'chat' | 'mcp' | 'appkeys' | 'data' | 'learning' | 'usage'
 
@@ -36,14 +36,12 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>('account')
-  const [mcpServers, setMcpServers] = useState<McpServer[]>([])
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [legalDialog, setLegalDialog] = useState<'terms' | 'privacy' | null>(null)
   const [avatarImgError, setAvatarImgError] = useState(false)
 
   useEffect(() => {
     if (open) {
-      fetchMcpServers().then(setMcpServers).catch((e) => console.error('Failed to load MCP servers:', e))
       fetchUserProfile().then((p) => { setUserProfile(p); setAvatarImgError(false) }).catch(() => {})
     }
   }, [open])
@@ -53,7 +51,7 @@ export function SettingsModal({
     { id: 'general', icon: 'tune', label: t('settings.general') },
     { id: 'personalization', icon: 'auto_awesome', label: t('personalization.title') },
     { id: 'chat', icon: 'chat', label: t('settings.chatPrefs') },
-    { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced'), badge: 'New' },
+    { id: 'mcp', icon: 'extension', label: t('settings.mcpAdvanced') },
     { id: 'appkeys', icon: 'key', label: t('appKey.title') },
     { id: 'learning', icon: 'psychology', label: t('learning.title') },
     { id: 'usage', icon: 'bar_chart', label: t('usage.title') },
@@ -168,23 +166,6 @@ export function SettingsModal({
           )}
           {activeTab === 'mcp' && (
             <McpSettings
-              plugins={mcpServers.map((s) => ({
-                id: String(s.id),
-                name: s.name,
-                version: '',
-                description: s.endpoint,
-                icon: 'extension',
-                iconBg: 'bg-indigo-100 dark:bg-indigo-900/50',
-                iconColor: 'text-indigo-600 dark:text-indigo-400',
-                enabled: s.enable,
-              }))}
-              onPluginToggle={(id, enabled) => {
-                const numId = Number(id)
-                toggleMcpServer(numId, enabled).catch(() => {})
-                setMcpServers((prev) =>
-                  prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
-                )
-              }}
               mcpEnabled={settings.mcpEnabled}
               onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
               showToolCalls={settings.showToolCalls}
@@ -273,23 +254,6 @@ export function SettingsModal({
         )}
         {activeTab === 'mcp' && (
           <McpSettings
-            plugins={mcpServers.map((s) => ({
-              id: String(s.id),
-              name: s.name,
-              version: '',
-              description: s.endpoint,
-              icon: 'extension',
-              iconBg: 'bg-indigo-100 dark:bg-indigo-900/50',
-              iconColor: 'text-indigo-600 dark:text-indigo-400',
-              enabled: s.enable,
-            }))}
-            onPluginToggle={(id, enabled) => {
-              const numId = Number(id)
-              toggleMcpServer(numId, enabled).catch((e) => console.error('Failed to toggle MCP server:', e))
-              setMcpServers((prev) =>
-                prev.map((s) => (s.id === numId ? { ...s, enable: enabled } : s)),
-              )
-            }}
             mcpEnabled={settings.mcpEnabled}
             onMcpEnabledChange={(v) => update({ mcpEnabled: v })}
             showToolCalls={settings.showToolCalls}
