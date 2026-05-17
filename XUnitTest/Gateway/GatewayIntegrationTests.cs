@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -85,11 +85,11 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         var first = data[0]!;
         Assert.True(first["context_length"] != null, "缺少 context_length 字段");
         Assert.True(first["support_thinking"] != null, "缺少 support_thinking 字段");
-        Assert.True(first["support_function_calling"] != null, "缺少 support_function_calling 字段");
+        Assert.True(first["support_function"] != null, "缺少 support_function 字段");
         Assert.True(first["support_vision"] != null, "缺少 support_vision 字段");
         Assert.True(first["support_audio"] != null, "缺少 support_audio 字段");
-        Assert.True(first["support_image_generation"] != null, "缺少 support_image_generation 字段");
-        Assert.True(first["support_video_generation"] != null, "缺少 support_video_generation 字段");
+        Assert.True(first["support_image"] != null, "缺少 support_image 字段");
+        Assert.True(first["support_video"] != null, "缺少 support_video 字段");
     }
 
     [Fact]

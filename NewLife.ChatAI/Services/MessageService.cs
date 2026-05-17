@@ -14,8 +14,9 @@ namespace NewLife.ChatAI.Services;
 /// <param name="setting">AI对话系统配置</param>
 /// <param name="tracer">追踪器</param>
 /// <param name="log">日志</param>
-public class MessageService(ModelService modelService, BackgroundGenerationService? backgroundService, ChatSetting setting, ITracer tracer, ILog log)
-    : MessageFlow(modelService, backgroundService, setting, tracer, log)
+/// <param name="services">服务提供者，用于解析 IChatHandler 链</param>
+public class MessageService(ModelService modelService, BackgroundGenerationService? backgroundService, ChatSetting setting, ITracer tracer, ILog log, IServiceProvider? services = null)
+    : MessageFlow(modelService, backgroundService, setting, tracer, log, services)
 {
     #region 覆盖：完整多模态（图片 + Office 文档）
 
