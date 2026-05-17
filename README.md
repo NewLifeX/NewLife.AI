@@ -9,7 +9,7 @@
 
 ## 项目介绍
 
-**NewLife.AI** 是面向 .NET 生态的**开源 AI 基础库**，通过统一的 `IChatClient` 接口封装 **48 个主流大模型服务商**，内置函数调用、MCP 协议、流式输出、多模态、多智能体等能力，可作为 NuGet 包嵌入任意 .NET 项目（`netstandard2.1`）。
+**NewLife.AI** 是面向 .NET 生态的**开源 AI 基础库**，通过统一的 `IChatClient` 接口封装 **46 个主流大模型服务商**，内置函数调用、MCP 协议、流式输出、多模态、多智能体等能力，可作为 NuGet 包嵌入任意 .NET 项目（`net45 / netstandard2.1`）。
 
 **NewLife.ChatAI** 是构建于 NewLife.AI 之上的**完整 Web 对话应用**（ASP.NET Core），提供即开即用的多模型对话前端、统一 AI 网关与自动记忆进化，既可独立部署，也可通过 NuGet 嵌入已有 ASP.NET Core 项目。
 
@@ -17,11 +17,11 @@
 
 ## 核心特性
 
-- **48 家 AI 服务商，5 种协议**：OpenAI / Anthropic / Gemini / 通义 DashScope / Ollama + AWS Bedrock SigV4 + DeepSeek，一行代码任意切换
+- **46 家 AI 服务商，5 种协议**：OpenAI / Anthropic / Gemini / 通义 DashScope / Ollama + AWS Bedrock SigV4 + DeepSeek，一行代码任意切换
 - **统一 `IChatClient` 接口**：对齐 MEAI 规范，单轮、流式、函数调用、多模态全部统一 API
 - **函数调用（工具）**：`[ToolDescription]` 特性自动生成 JSON Schema，`ToolChatClient` 多轮循环，内置搜索 / 天气 / 翻译 / 网页抓取 / IP 定位等工具
 - **MCP 双向支持**：客户端对接外部 MCP Server（stdio / HTTP SSE），服务端将本系统工具暴露为标准 MCP 服务
-- **完整对话内核**：`IChatHandler` 三段式处理链（OnBefore → Execute → OnAfter），LlmCore/SystemPrompt/Persist 内置 Handler，可插拔 `IChatFilter` 与 `IContextEnricher`
+- **完整对话内核**：`IChatHandler` 三段式处理链（OnBefore → Execute → OnAfter），内置 Handler（技能激活 / 记忆注入 / 持久化 / 用量统计 / 标题生成），可插拔 `IChatFilter`
 - **用户记忆进化**：自动从对话中提取 10 类结构化记忆，越用越懂用户
 - **统一 AI 网关**：兼容 OpenAI / Anthropic / Gemini 协议，snake_case/camelCase 自动适配，AppKey 多租户，上游 429 指数退避重试
 - **技能系统**：Markdown 提示词复用，`@` 递归引用，触发词自动激活
@@ -32,9 +32,9 @@
 
 ## 支持的 AI 服务商
 
-48 家服务商，**10 个独立协议客户端 + 38 个 OpenAI 兼容适配**。
+46 家服务商，**9 个独立协议客户端 + 37 个 OpenAI 兼容适配**。
 
-### 独立协议实现（10 个）
+### 独立协议实现（9 个）
 
 | 服务商 | 协议 | 特性 |
 |--------|------|------|
@@ -47,7 +47,7 @@
 | Ollama | Ollama API | 本地 llama / deepseek / qwen |
 | AWS Bedrock | SigV4 签名 | Claude / Llama / Titan / Mistral |
 | NewLifeAI | 级联代理 | 聚合多服务商 |
-| （其他） | OpenAI 兼容 | 38 个兼容平台 |
+| （其他） | OpenAI 兼容 | 37 个兼容平台 |
 
 ### OpenAI 兼容家族（37 个）
 
@@ -232,25 +232,24 @@ services.AddSingleton<IToolProvider>(_ =>
 });
 ```
 
-### 新增上下文增强器
+### 新增 IChatHandler
 
-在每次对话 Prepare 阶段自动注入内容（如实时数据、用户状态）：
+在对话事前（OnBefore）或事后（OnAfter）注入自定义逻辑（如上下文注入、审计、记录）：
 
 ```csharp
-public class CurrentTimeEnricher : IContextEnricher
+[ChatHandlerOrder(150)]
+public class CurrentTimeHandler : ChatHandlerBase
 {
-    public Int32 Order => 150;   // 控制与其他 Enricher 的执行顺序
-
-    public Task EnrichAsync(MessageFlowContext ctx, CancellationToken ct)
+    public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
-        ctx.Messages.Insert(0,
-            new ChatMessage("system", $"当前时间：{DateTime.Now:yyyy-MM-dd HH:mm}"));
+        context.ContextMessages.Insert(0,
+            new ChatMessage { Role = "system", Content = $"当前时间：{DateTime.Now:yyyy-MM-dd HH:mm}" });
         return Task.CompletedTask;
     }
 }
 
-// DI 注册后自动按 Order 升序调用
-services.AddSingleton<IContextEnricher, CurrentTimeEnricher>();
+// DI 注册，MessageFlow 自动按 ChatHandlerOrderAttribute 排序调用
+services.AddSingleton<IChatHandler, CurrentTimeHandler>();
 ```
 
 ### 新增过滤器
