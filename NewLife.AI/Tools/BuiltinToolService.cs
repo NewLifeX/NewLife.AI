@@ -27,7 +27,7 @@ public class BuiltinToolService
         sb.AppendLine($"weekOfYear: {CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(now.DateTime, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday)}");
         sb.AppendLine($"timezone: {tzName}");
         sb.AppendLine($"utcOffset: {now.Offset}");
-        sb.Append($"unixTimestamp: {now.ToUnixTimeSeconds()}");
+        sb.Append($"unixTimestamp: {now.ToLong()}");
         return sb.Return(true);
     }
 

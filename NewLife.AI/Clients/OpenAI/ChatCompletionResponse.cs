@@ -39,8 +39,8 @@ public class ChatCompletionResponse : IChatResponse
     [IgnoreDataMember]
     DateTimeOffset IChatResponse.Created
     {
-        get => Created > 0 ? DateTimeOffset.FromUnixTimeSeconds(Created) : DateTimeOffset.UtcNow;
-        set => Created = value.ToUnixTimeSeconds();
+        get => Created > 0 ? Created.ToDateTimeOffset() : DateTimeOffset.UtcNow;
+        set => Created = value.ToLong();
     }
 
     /// <summary>消息选择列表。从 Choices 适配为 IList&lt;ChatChoice&gt;</summary>
@@ -122,7 +122,7 @@ public class ChatCompletionResponse : IChatResponse
         {
             Id = Id,
             Object = Object,
-            Created = Created > 0 ? DateTimeOffset.FromUnixTimeSeconds(Created) : DateTimeOffset.UtcNow,
+            Created = Created > 0 ? Created.ToDateTimeOffset() : DateTimeOffset.UtcNow,
             Model = Model,
         };
 
@@ -166,7 +166,7 @@ public class ChatCompletionResponse : IChatResponse
         {
             Id = response.Id,
             Object = response.Object ?? "chat.completion",
-            Created = response.Created.ToUnixTimeSeconds(),
+            Created = response.Created.ToLong(),
             Model = response.Model,
         };
 
@@ -200,7 +200,7 @@ public class ChatCompletionResponse : IChatResponse
         {
             Id = chunk.Id,
             Object = "chat.completion.chunk",
-            Created = chunk.Created.ToUnixTimeSeconds(),
+            Created = chunk.Created.ToLong(),
             Model = chunk.Model,
         };
 

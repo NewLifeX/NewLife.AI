@@ -328,7 +328,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
             Object = "chat.completion",
             Id = last?.Id,
             Model = last?.Model ?? request.Model,
-            Created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Created = DateTimeOffset.UtcNow.ToLong(),
             Choices =
             [
                 new CompletionChoice

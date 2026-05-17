@@ -25,7 +25,7 @@ public sealed class InMemorySemanticMemory : ISemanticMemory
             }
             col[entry.Id] = entry;
         }
-        return Task.CompletedTask;
+        return TaskEx.CompletedTask;
     }
 
     /// <summary>按 Id 获取单条记忆</summary>
@@ -87,7 +87,7 @@ public sealed class InMemorySemanticMemory : ISemanticMemory
                 if (col.Count == 0) _store.Remove(collection);
             }
         }
-        return Task.CompletedTask;
+        return TaskEx.CompletedTask;
     }
 
     /// <summary>列出集合内所有条目 Id</summary>

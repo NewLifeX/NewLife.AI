@@ -1,4 +1,4 @@
-namespace NewLife.AI.Memory;
+﻿namespace NewLife.AI.Memory;
 
 /// <summary>内存实现的向量存储。适合开发测试与小规模 RAG 场景</summary>
 /// <remarks>线程安全，使用 lock 保护字典操作。</remarks>
@@ -18,7 +18,7 @@ public sealed class InMemoryVectorStore : IVectorStore
         lock (_lock)
             _records[record.Id] = record;
 
-        return Task.CompletedTask;
+        return TaskEx.CompletedTask;
     }
 
     /// <summary>批量新增或更新</summary>
@@ -36,7 +36,7 @@ public sealed class InMemoryVectorStore : IVectorStore
                     _records[r.Id] = r;
             }
         }
-        return Task.CompletedTask;
+        return TaskEx.CompletedTask;
     }
 
     /// <summary>按 Id 获取记录</summary>
@@ -85,7 +85,7 @@ public sealed class InMemoryVectorStore : IVectorStore
         lock (_lock)
             _records.Remove(id);
 
-        return Task.CompletedTask;
+        return TaskEx.CompletedTask;
     }
 
     /// <summary>获取记录总数</summary>

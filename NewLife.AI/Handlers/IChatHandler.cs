@@ -85,7 +85,7 @@ public abstract class ChatHandlerBase : IChatHandler
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>
-    public virtual Task OnBefore(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    public virtual Task OnBefore(IChatContext context, CancellationToken cancellationToken) => TaskEx.CompletedTask;
 
     /// <summary>事后处理。可读取 <see cref="IChatContext.ContentBuilder"/> / <see cref="IChatContext.Usage"/> 等收集结果，
     /// 用于持久化、配额扣减、统计累加、用量入库等。<b>按注册正序执行</b>
@@ -93,7 +93,7 @@ public abstract class ChatHandlerBase : IChatHandler
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>异步任务</returns>
-    public virtual Task OnAfter(IChatContext context, CancellationToken cancellationToken) => Task.CompletedTask;
+    public virtual Task OnAfter(IChatContext context, CancellationToken cancellationToken) => TaskEx.CompletedTask;
 
     /// <summary>处理对话事件流。可在调用 <paramref name="next"/> 前后插入逻辑，或不调用 <paramref name="next"/> 实现短路。
     /// 仅当 <see cref="Capabilities"/> 含 <see cref="ChatHandlerCapabilities.Interceptor"/> 时，调度器才将本方法纳入洋葱链</summary>

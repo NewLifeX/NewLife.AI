@@ -231,7 +231,11 @@ public class BackgroundTask
 
     #region 事件通知
     private readonly List<ChatStreamEvent> _events = [];
+#if NET45
+    private volatile TaskCompletionSource<Boolean> _signal = new();
+#else
     private volatile TaskCompletionSource<Boolean> _signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+#endif
 
     /// <summary>当前等待句柄的 Task 快照。订阅者必须在读取事件“之前”取此快照，避免 Notify 丢失</summary>
     internal Task SignalTask => _signal.Task;
@@ -255,7 +259,11 @@ public class BackgroundTask
     /// <summary>唤醒所有等待中的订阅者</summary>
     internal void Notify()
     {
+#if NET45
+        var old = Interlocked.Exchange(ref _signal, new TaskCompletionSource<Boolean>());
+#else
         var old = Interlocked.Exchange(ref _signal, new TaskCompletionSource<Boolean>(TaskCreationOptions.RunContinuationsAsynchronously));
+#endif
         old.TrySetResult(true);
     }
 
@@ -266,7 +274,11 @@ public class BackgroundTask
     {
         if (signalTask.IsCompleted) return;
 
+#if NET45
+        var tcs = new TaskCompletionSource<Boolean>();
+#else
         var tcs = new TaskCompletionSource<Boolean>(TaskCreationOptions.RunContinuationsAsynchronously);
+#endif
         using var _ = cancellationToken.Register(static s => ((TaskCompletionSource<Boolean>)s!).TrySetResult(default), tcs);
         await Task.WhenAny(signalTask, tcs.Task).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();

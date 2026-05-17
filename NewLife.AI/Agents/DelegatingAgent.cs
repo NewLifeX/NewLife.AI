@@ -92,7 +92,7 @@ public class DelegatingAgent : IAgent
 
     /// <summary>前置拦截。在 InnerAgent.HandleAsync 之前调用，可修改 context.History 或注入额外逻辑</summary>
     /// <param name="context">代理执行上下文</param>
-    protected virtual Task OnBeforeAsync(AgentContext context) => Task.CompletedTask;
+    protected virtual Task OnBeforeAsync(AgentContext context) => TaskEx.CompletedTask;
 
     /// <summary>后置拦截。在 InnerAgent.HandleAsync 之后调用，可修改/过滤/追加消息结果</summary>
     /// <param name="context">代理执行上下文</param>
