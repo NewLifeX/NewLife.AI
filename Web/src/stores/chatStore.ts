@@ -4,6 +4,7 @@ import {
   fetchConversations,
   createConversation,
   deleteConversation,
+  deleteConversationIfEmpty,
   pinConversation,
   updateConversation,
   fetchMessages,
@@ -141,8 +142,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (prevId != null && prevId !== id) {
       const prevConv = get().conversations.find((c) => c.id === prevId)
       if (prevConv && get().messages.length === 0 && !get().isLoadingMessages) {
-        deleteConversation(prevId).catch(() => {})
-        set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
+        deleteConversationIfEmpty(prevId).then((deleted) => {
+          if (deleted) set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
+        }).catch(() => {})
       }
     }
 
@@ -167,8 +169,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (prevId != null) {
       const prevConv = get().conversations.find((c) => c.id === prevId)
       if (prevConv && get().messages.length === 0 && !get().isLoadingMessages) {
-        deleteConversation(prevId).catch(() => {})
-        set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
+        deleteConversationIfEmpty(prevId).then((deleted) => {
+          if (deleted) set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
+        }).catch(() => {})
       }
     }
 

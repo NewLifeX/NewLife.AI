@@ -168,6 +168,14 @@ public partial class Conversation
     [BindColumn("Source", "来源。Web/Gateway/Channel等，标识对话入口", "")]
     public String? Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
 
+    private Boolean _Enable;
+    /// <summary>启用。false表示已删除/停用，不在会话列表中显示</summary>
+    [DisplayName("启用")]
+    [Description("启用。false表示已删除/停用，不在会话列表中显示")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Enable", "启用。false表示已删除/停用，不在会话列表中显示", "", DefaultValue = "true")]
+    public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
+
     private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
@@ -267,6 +275,7 @@ public partial class Conversation
             "TotalTokens" => _TotalTokens,
             "ElapsedMs" => _ElapsedMs,
             "Source" => _Source,
+            "Enable" => _Enable,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -299,6 +308,7 @@ public partial class Conversation
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "Source": _Source = Convert.ToString(value); break;
+                case "Enable": _Enable = value.ToBoolean(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -367,12 +377,13 @@ public partial class Conversation
     /// <param name="modelId">模型。当前使用的模型Id，引用ModelConfig.Id</param>
     /// <param name="skillId">技能。当前会话使用的技能，引用Skill.Id</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
+    /// <param name="enable">启用。false表示已删除/停用，不在会话列表中显示</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 appKeyId, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<Conversation> Search(Int32 userId, Boolean? isPinned, String? source, Int32 appKeyId, Int32 modelId, Int32 skillId, NewLife.AI.Models.ThinkingMode thinkingMode, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -383,6 +394,7 @@ public partial class Conversation
         if (modelId >= 0) exp &= _.ModelId == modelId;
         if (skillId >= 0) exp &= _.SkillId == skillId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
+        if (enable != null) exp &= _.Enable == enable;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -459,6 +471,9 @@ public partial class Conversation
 
         /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
         public static readonly Field Source = FindByName("Source");
+
+        /// <summary>启用。false表示已删除/停用，不在会话列表中显示</summary>
+        public static readonly Field Enable = FindByName("Enable");
 
         /// <summary>链路。方便问题排查</summary>
         public static readonly Field TraceId = FindByName("TraceId");
@@ -543,6 +558,9 @@ public partial class Conversation
 
         /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
         public const String Source = "Source";
+
+        /// <summary>启用。false表示已删除/停用，不在会话列表中显示</summary>
+        public const String Enable = "Enable";
 
         /// <summary>链路。方便问题排查</summary>
         public const String TraceId = "TraceId";

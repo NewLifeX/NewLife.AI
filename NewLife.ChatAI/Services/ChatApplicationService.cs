@@ -94,28 +94,45 @@ public class ChatApplicationService
         var entity = Conversation.FindById(conversationId);
         if (entity == null || entity.UserId != userId) return Task.FromResult(false);
 
-        using var trans = ChatMessage.Meta.CreateTrans();
+        // 软删除：保留历史记录和用量记录，仅标记为停用
+        entity.Enable = false;
+        entity.Update();
 
-        // 获取关联的消息 ID 列表，用于清理消息反馈
+        // 软删除关联消息（不参与历史上下文构建，不展示给用户）
         var messages = ChatMessage.FindAllByConversationId(conversationId);
-        var messageIds = messages.Select(m => m.Id).ToArray();
+        foreach (var msg in messages)
+        {
+            msg.Enable = false;
+            msg.Update();
+        }
 
-        // 删除关联的用量记录
-        var usageRecords = UsageRecord.FindAllByConversationId(conversationId);
-        usageRecords.Delete();
-
-        // 删除关联的消息
-        messages.Delete();
-
-        // 删除关联的共享
+        // 删除关联的共享链接（分享链接在会话删除后应失效）
         var shares = SharedConversation.FindAllByConversationId(conversationId);
         shares.Delete();
 
-        entity.Delete();
-
-        trans.Commit();
+        // 不删除用量记录：Token 消耗是实际发生的，不因会话删除而消除
 
         return Task.FromResult(true);
+    }
+
+    /// <summary>若会话无已启用消息则软删除。专用于前端切走时自动清理空会话，服务端权威判断防止前端误删</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <param name="userId">当前用户编号</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>true=会话确为空已删除；false=会话含消息未删除；null=会话不存在或无权访问</returns>
+    public Task<Boolean?> DeleteIfEmptyAsync(Int64 conversationId, Int32 userId, CancellationToken cancellationToken)
+    {
+        var entity = Conversation.FindById(conversationId);
+        if (entity == null || entity.UserId != userId || !entity.Enable) return Task.FromResult<Boolean?>(null);
+
+        // 服务端权威判断：是否存在已启用消息
+        if (ChatMessage.CountByConversationId(conversationId) > 0) return Task.FromResult<Boolean?>(false);
+
+        // 真正的空会话：软删除
+        entity.Enable = false;
+        entity.Update();
+
+        return Task.FromResult<Boolean?>(true);
     }
 
     /// <summary>置顶/取消置顶</summary>
@@ -142,7 +159,7 @@ public class ChatApplicationService
     public Boolean CanAccessConversation(Int64 conversationId, Int32 userId)
     {
         var conv = Conversation.FindById(conversationId);
-        return conv != null && conv.UserId == userId;
+        return conv != null && conv.UserId == userId && conv.Enable;
     }
 
     /// <summary>验证当前用户是否有权访问指定消息（通过所属会话校验）</summary>
@@ -435,7 +452,7 @@ public class ChatApplicationService
     /// <returns></returns>
     public Task<Stream> ExportUserDataAsync(Int32 userId, CancellationToken cancellationToken)
     {
-        var conversations = Conversation.FindAllByUserId(userId);
+        var conversations = Conversation.FindAllByUserId(userId, Int32.MaxValue);
 
         var result = new List<Object>();
 
@@ -557,24 +574,26 @@ public class ChatApplicationService
 
         var convIds = conversations.Select(e => e.Id).ToArray();
 
-        // 按会话维度级联删除，避免误删其他用户数据
-        // 删除关联的共享
+        // 删除关联的共享链接（分享链接在会话清除后应失效）
         var shares = SharedConversation.FindAllByConversationIds(convIds);
         shares.Delete();
 
-        // 获取关联的消息 ID
+        // 软删除关联消息
         var messages = ChatMessage.FindAllByConversationIds(convIds);
-        var msgIds = messages.Select(e => e.Id).ToArray();
+        foreach (var msg in messages)
+        {
+            msg.Enable = false;
+            msg.Update();
+        }
 
-        // 删除用量记录
-        var usageRecords = UsageRecord.FindAllByConversationIds(convIds);
-        usageRecords.Delete();
+        // 软删除会话（保留历史记录和用量记录）
+        foreach (var conv in conversations)
+        {
+            conv.Enable = false;
+            conv.Update();
+        }
 
-        // 删除消息
-        messages.Delete();
-
-        // 删除会话
-        conversations.Delete();
+        // 不删除用量记录：Token 消耗是实际发生的，不因会话清除而消除
 
         return Task.CompletedTask;
     }

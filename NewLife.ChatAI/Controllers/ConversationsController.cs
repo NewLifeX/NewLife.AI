@@ -46,6 +46,16 @@ public class ConversationsController(ChatApplicationService chatService) : ChatA
         return NoContent();
     }
 
+    /// <summary>若会话无消息则删除（服务端权威判断）。前端切换会话时调用，防止误删含消息的会话</summary>
+    [HttpDelete("{id:long}/if-empty")]
+    public async Task<IActionResult> DeleteIfEmptyAsync([FromRoute] Int64 id, CancellationToken cancellationToken)
+    {
+        var result = await chatService.DeleteIfEmptyAsync(id, GetCurrentUserId(), cancellationToken).ConfigureAwait(false);
+        if (result == null) return NotFound();
+        if (result == false) return Conflict();
+        return NoContent();
+    }
+
     /// <summary>设置会话置顶状态</summary>
     [HttpPatch("{id:long}/pin")]
     public async Task<IActionResult> SetPinAsync([FromRoute] Int64 id, [FromQuery] Boolean isPinned, CancellationToken cancellationToken)

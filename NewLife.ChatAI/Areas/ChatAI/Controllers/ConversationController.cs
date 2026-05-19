@@ -75,6 +75,6 @@ public class ConversationController : ChatEntityController<Conversation>
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Conversation.Search(userId, isPinned, p["source"], appKeyId, modelId, skillId, thinkingMode, start, end, p["Q"], p);
+        return Conversation.Search(userId, isPinned, p["source"], appKeyId, modelId, skillId, thinkingMode, null, start, end, p["Q"], p);
     }
 }

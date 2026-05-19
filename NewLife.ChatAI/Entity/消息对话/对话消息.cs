@@ -182,6 +182,14 @@ public partial class ChatMessage
     [BindColumn("FeedbackReason", "反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入", "")]
     public String? FeedbackReason { get => _FeedbackReason; set { if (OnPropertyChanging("FeedbackReason", value)) { _FeedbackReason = value; OnPropertyChanged("FeedbackReason"); } } }
 
+    private Boolean _Enable;
+    /// <summary>启用。false表示已删除/停用，不参与历史上下文构建</summary>
+    [DisplayName("启用")]
+    [Description("启用。false表示已删除/停用，不参与历史上下文构建")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Enable", "启用。false表示已删除/停用，不参与历史上下文构建", "", DefaultValue = "true")]
+    public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
+
     private String? _TraceId;
     /// <summary>链路。方便问题排查</summary>
     [Category("扩展")]
@@ -247,6 +255,7 @@ public partial class ChatMessage
             "ElapsedMs" => _ElapsedMs,
             "FeedbackType" => _FeedbackType,
             "FeedbackReason" => _FeedbackReason,
+            "Enable" => _Enable,
             "TraceId" => _TraceId,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
@@ -277,6 +286,7 @@ public partial class ChatMessage
                 case "ElapsedMs": _ElapsedMs = value.ToInt(); break;
                 case "FeedbackType": _FeedbackType = (NewLife.AI.Models.FeedbackType)value.ToInt(); break;
                 case "FeedbackReason": _FeedbackReason = Convert.ToString(value); break;
+                case "Enable": _Enable = value.ToBoolean(); break;
                 case "TraceId": _TraceId = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
@@ -315,18 +325,20 @@ public partial class ChatMessage
     /// <param name="conversationId">会话。所属会话</param>
     /// <param name="thinkingMode">思考模式。Auto=0自动, Think=1思考, Fast=2快速</param>
     /// <param name="feedbackType">反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩</param>
+    /// <param name="enable">启用。false表示已删除/停用，不参与历史上下文构建</param>
     /// <param name="start">编号开始</param>
     /// <param name="end">编号结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.Models.ThinkingMode thinkingMode, NewLife.AI.Models.FeedbackType feedbackType, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ChatMessage> Search(Int64 conversationId, NewLife.AI.Models.ThinkingMode thinkingMode, NewLife.AI.Models.FeedbackType feedbackType, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
         if (conversationId >= 0) exp &= _.ConversationId == conversationId;
         if (thinkingMode >= 0) exp &= _.ThinkingMode == thinkingMode;
         if (feedbackType >= 0) exp &= _.FeedbackType == feedbackType;
+        if (enable != null) exp &= _.Enable == enable;
         exp &= _.Id.Between(start, end, Meta.Factory.Snow);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
 
@@ -410,6 +422,9 @@ public partial class ChatMessage
         /// <summary>反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入</summary>
         public static readonly Field FeedbackReason = FindByName("FeedbackReason");
 
+        /// <summary>启用。false表示已删除/停用，不参与历史上下文构建</summary>
+        public static readonly Field Enable = FindByName("Enable");
+
         /// <summary>链路。方便问题排查</summary>
         public static readonly Field TraceId = FindByName("TraceId");
 
@@ -487,6 +502,9 @@ public partial class ChatMessage
 
         /// <summary>反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入</summary>
         public const String FeedbackReason = "FeedbackReason";
+
+        /// <summary>启用。false表示已删除/停用，不参与历史上下文构建</summary>
+        public const String Enable = "Enable";
 
         /// <summary>链路。方便问题排查</summary>
         public const String TraceId = "TraceId";

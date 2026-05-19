@@ -61,6 +61,7 @@
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数。会话累计消耗的总Token数（含额外LLM调用）" />
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="Source" DataType="String" Description="来源。Web/Gateway/Channel等，标识对话入口" />
+        <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。false表示已删除/停用，不在会话列表中显示" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
@@ -98,6 +99,7 @@
         <Column Name="ElapsedMs" DataType="Int32" Description="耗时。毫秒" />
         <Column Name="FeedbackType" DataType="Int32" Description="反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩" Type="NewLife.AI.Models.FeedbackType" />
         <Column Name="FeedbackReason" DataType="String" Length="500" Description="反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入" />
+        <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。false表示已删除/停用，不参与历史上下文构建" />
         <Column Name="TraceId" DataType="String" Description="链路。方便问题排查" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />

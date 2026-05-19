@@ -131,6 +131,7 @@ public partial class Conversation : Entity<Conversation>, IConversation
 
         var exp = new WhereExpression();
         exp &= _.UserId == userId;
+        exp &= _.Enable == true;
         if (!keyword.IsNullOrEmpty()) exp &= _.Title.Contains(keyword.Trim());
 
         return FindAll(exp, page);
@@ -140,7 +141,7 @@ public partial class Conversation : Entity<Conversation>, IConversation
     /// <param name="userId">用户编号</param>
     /// <returns>会话编号数组</returns>
     public static Int64[] FindIdsByUserId(Int32 userId)
-        => FindAll(_.UserId == userId, null, _.Id, 0, 0).Select(e => e.Id).ToArray();
+        => FindAll(_.UserId == userId & _.Enable == true, null, _.Id, 0, 0).Select(e => e.Id).ToArray();
 
     /// <summary>获取用户最近的会话列表，按最后消息时间倒序</summary>
     /// <param name="userId">用户编号</param>
@@ -150,7 +151,7 @@ public partial class Conversation : Entity<Conversation>, IConversation
     {
         if (userId <= 0 || maxCount <= 0) return [];
 
-        return FindAll(_.UserId == userId, _.LastMessageTime.Desc(), null, 0, maxCount);
+        return FindAll(_.UserId == userId & _.Enable == true, _.LastMessageTime.Desc(), null, 0, maxCount);
     }
 
     /// <summary>统计用户的会话总数</summary>

@@ -91,7 +91,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
     {
         if (conversationId < 0) return [];
 
-        return FindAll(_.ConversationId == conversationId, _.Id.Desc(), null, 0, count);
+        return FindAll(_.ConversationId == conversationId & _.Enable == true, _.Id.Desc(), null, 0, count);
     }
 
     /// <summary>根据会话查找，按创建时间升序排列</summary>
@@ -101,7 +101,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
     {
         if (conversationId < 0) return [];
 
-        return FindAll(_.ConversationId == conversationId, _.Id.Asc(), null, 0, count);
+        return FindAll(_.ConversationId == conversationId & _.Enable == true, _.Id.Asc(), null, 0, count);
     }
 
     /// <summary>根据会话查找指定消息之前的消息，按创建时间升序排列</summary>
@@ -112,7 +112,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
     {
         if (conversationId < 0) return [];
 
-        return FindAll(_.ConversationId == conversationId & _.Id < messageId, _.Id.Asc(), null, 0, 0);
+        return FindAll(_.ConversationId == conversationId & _.Id < messageId & _.Enable == true, _.Id.Asc(), null, 0, 0);
     }
 
     /// <summary>根据会话查找指定消息之后的消息</summary>
@@ -123,7 +123,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
     {
         if (conversationId < 0) return [];
 
-        return FindAll(_.ConversationId == conversationId & _.Id > messageId, null, null, 0, 0);
+        return FindAll(_.ConversationId == conversationId & _.Id > messageId & _.Enable == true, null, null, 0, 0);
     }
 
     /// <summary>获取会话最后一条消息</summary>
@@ -133,7 +133,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
     {
         if (conversationId < 0) return null;
 
-        var list = FindAll(_.ConversationId == conversationId, _.Id.Desc(), null, 0, 1);
+        var list = FindAll(_.ConversationId == conversationId & _.Enable == true, _.Id.Desc(), null, 0, 1);
         return list.Count > 0 ? list[0] : null;
     }
 
@@ -146,6 +146,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
         if (conversationId < 0) return [];
 
         var exp = _.ConversationId == conversationId;
+        exp &= _.Enable == true;
         if (snapshotMessageId > 0) exp &= _.Id <= snapshotMessageId;
 
         return FindAll(exp, _.Id.Asc(), null, 0, 0);
@@ -174,6 +175,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
 
         var exp = new WhereExpression();
         exp &= _.ConversationId.In(convIds);
+        exp &= _.Enable == true;
         if (!key.IsNullOrEmpty()) exp &= _.Content.Contains(key.Trim());
 
         return FindAll(exp, page);
@@ -211,7 +213,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
     public static Int32 CountByConversationId(Int64 conversationId)
     {
         if (conversationId <= 0) return 0;
-        return (Int32)FindCount(_.ConversationId == conversationId);
+        return (Int32)FindCount(_.ConversationId == conversationId & _.Enable == true);
     }
 
     /// <summary>统计指定用户下的消息总数（通过会话子查询）</summary>

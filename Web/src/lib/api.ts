@@ -199,6 +199,16 @@ export async function deleteConversation(id: string): Promise<void> {
   await request<boolean>(`/api/conversations/${id}`, { method: 'DELETE' })
 }
 
+/** 若会话无消息则删除（服务端权威判断），返回是否实际删除 */
+export async function deleteConversationIfEmpty(id: string): Promise<boolean> {
+  try {
+    await request<void>(`/api/conversations/${id}/if-empty`, { method: 'DELETE' })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function pinConversation(id: string, isPinned: boolean): Promise<void> {
   await request<boolean>(`/api/conversations/${id}/pin?isPinned=${isPinned}`, {
     method: 'PATCH',
