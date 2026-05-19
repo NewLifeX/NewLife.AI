@@ -342,6 +342,8 @@ export default {
     createLink: '建立分享連結',
     createFailed: '建立分享連結失敗，請稍後重試',
     linkHint: '任何擁有此連結的人都可以檢視對話內容。',
+    copyUrl: '複製連結',
+    copyWithTitle: '複製分享文字',
     revokeLink: '撤銷分享',
     revokeConfirm: '確定要撤銷此分享連結嗎？撤銷後他人將無法再存取。',
     revokeFailed: '撤銷分享連結失敗，請稍後重試',

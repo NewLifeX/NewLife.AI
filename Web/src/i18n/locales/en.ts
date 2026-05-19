@@ -337,6 +337,8 @@ export default {
     createLink: 'Create Share Link',
     createFailed: 'Failed to create share link. Please try again.',
     linkHint: 'Anyone with this link can view the conversation.',
+    copyUrl: 'Copy Link',
+    copyWithTitle: 'Copy with Title',
     revokeLink: 'Revoke Share',
     revokeConfirm: 'Are you sure you want to revoke this share link? Others will no longer be able to access it.',
     revokeFailed: 'Failed to revoke share link. Please try again.',

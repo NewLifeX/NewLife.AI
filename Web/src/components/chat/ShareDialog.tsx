@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { Icon } from '@/components/common/Icon'
 import { createShareLink, revokeShareLink } from '@/lib/api'
+import { useChatStore } from '@/stores'
 
 interface ShareDialogProps {
   open: boolean
@@ -16,8 +17,26 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [revoking, setRevoking] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedText, setCopiedText] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const convTitle = useChatStore((s) => s.conversations.find((c) => c.id === conversationId)?.title ?? '')
+
+  const writeText = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+  }, [])
 
   const handleCreate = useCallback(async () => {
     setLoading(true)
@@ -30,12 +49,22 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
       // 从 url 中提取 token（最后一段路径）
       const token = result.url.split('/').pop() ?? ''
       setShareToken(token)
+      // 创建成功后自动复制：有标题则复制"标题\nURL"，否则复制纯 URL
+      if (convTitle) {
+        await writeText(`${convTitle}\n${fullUrl}`)
+        setCopiedText(true)
+        setTimeout(() => setCopiedText(false), 2000)
+      } else {
+        await writeText(fullUrl)
+        setCopiedUrl(true)
+        setTimeout(() => setCopiedUrl(false), 2000)
+      }
     } catch {
       setError(t('share.createFailed'))
     } finally {
       setLoading(false)
     }
-  }, [conversationId, t])
+  }, [conversationId, convTitle, writeText, t])
 
   const handleRevoke = useCallback(async () => {
     if (!shareToken) return
@@ -53,31 +82,25 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
     }
   }, [shareToken, t])
 
-  const handleCopy = useCallback(async () => {
+  const handleCopyUrl = useCallback(async () => {
     if (!shareUrl) return
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // fallback for non-HTTPS environments
-      const ta = document.createElement('textarea')
-      ta.value = shareUrl
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }, [shareUrl])
+    await writeText(shareUrl)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 2000)
+  }, [shareUrl, writeText])
+
+  const handleCopyWithTitle = useCallback(async () => {
+    if (!shareUrl) return
+    await writeText(`${convTitle}\n${shareUrl}`)
+    setCopiedText(true)
+    setTimeout(() => setCopiedText(false), 2000)
+  }, [shareUrl, convTitle, writeText])
 
   const handleClose = useCallback(() => {
     setShareUrl(null)
     setShareToken(null)
-    setCopied(false)
+    setCopiedUrl(false)
+    setCopiedText(false)
     setError(null)
     onClose()
   }, [onClose])
@@ -117,17 +140,30 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
                 className="flex-1 bg-transparent text-sm text-gray-700 dark:text-gray-300 outline-none select-all"
               />
               <button
-                onClick={handleCopy}
+                onClick={handleCopyUrl}
                 className="flex-shrink-0 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                title={t('common.copy')}
+                title={t('share.copyUrl')}
               >
                 <Icon
-                  name={copied ? 'check' : 'content_copy'}
+                  name={copiedUrl ? 'check' : 'content_copy'}
                   size="base"
-                  className={copied ? 'text-green-500' : 'text-gray-500'}
+                  className={copiedUrl ? 'text-green-500' : 'text-gray-500'}
                 />
               </button>
             </div>
+            {convTitle && (
+              <button
+                onClick={handleCopyWithTitle}
+                className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <Icon
+                  name={copiedText ? 'check' : 'share'}
+                  size="base"
+                  className={copiedText ? 'text-green-500' : ''}
+                />
+                {copiedText ? t('common.copied') : t('share.copyWithTitle')}
+              </button>
+            )}
             <p className="text-xs text-gray-400 dark:text-gray-500">
               {t('share.linkHint')}
             </p>

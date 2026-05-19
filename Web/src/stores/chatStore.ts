@@ -140,7 +140,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const prevId = get().activeConversationId
     if (prevId != null && prevId !== id) {
       const prevConv = get().conversations.find((c) => c.id === prevId)
-      if (prevConv && get().messages.length === 0) {
+      if (prevConv && get().messages.length === 0 && !get().isLoadingMessages) {
         deleteConversation(prevId).catch(() => {})
         set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
       }
@@ -166,7 +166,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const prevId = get().activeConversationId
     if (prevId != null) {
       const prevConv = get().conversations.find((c) => c.id === prevId)
-      if (prevConv && get().messages.length === 0) {
+      if (prevConv && get().messages.length === 0 && !get().isLoadingMessages) {
         deleteConversation(prevId).catch(() => {})
         set((s) => ({ conversations: s.conversations.filter((c) => c.id !== prevId) }))
       }
