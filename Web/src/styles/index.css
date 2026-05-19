@@ -69,6 +69,11 @@
   --tw-translate-y: 0;
 }
 
+html, body {
+  /* 防止移动端隐藏元素撑宽页面导致内容被截断 */
+  overflow-x: hidden;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -165,4 +170,14 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
   list-style-type: decimal;
   padding-left: 1.5em;
   margin-bottom: 0.8em;
+}
+
+/* 输入框底部安全区域适配（兼容 iOS 回家条与手机浏览器工具栏） */
+.pb-input {
+  padding-bottom: 24px;
+}
+@media (max-width: 767px) {
+  .pb-input {
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+  }
 }

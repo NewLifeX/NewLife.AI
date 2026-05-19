@@ -107,10 +107,10 @@ export function ModelSelector({
     <div ref={ref} className={cn('relative', className)}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="flex items-center gap-1.5 max-w-[200px] max-md:max-w-[130px] overflow-hidden px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <span>{selected?.name ?? '选择模型'}</span>
-        <Icon name="expand_more" size="base" className={cn('transition-transform', open && 'rotate-180')} />
+        <span className="truncate">{selected?.name ?? '选择模型'}</span>
+        <Icon name="expand_more" size="base" className={cn('transition-transform flex-shrink-0', open && 'rotate-180')} />
       </button>
 
       {open && pos !== null && createPortal(

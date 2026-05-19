@@ -116,7 +116,7 @@ export function ChatLayout({
 
   return (
     <div
-      className={cn('h-screen flex overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100', className)}
+      className={cn('h-dvh flex overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100', className)}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -171,7 +171,7 @@ export function ChatLayout({
         />
       </div>
 
-      <main className="flex-1 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
+      <main className="flex-1 min-w-0 relative flex flex-col h-full bg-background-light dark:bg-background-dark">
         <div className="flex items-center px-4 pt-3 pb-1 z-10 min-w-0 overflow-hidden">
           {(sidebarCollapsed || isMobile) && (
             <button

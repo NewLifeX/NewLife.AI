@@ -127,9 +127,9 @@ export function ChatPage({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-0"
+        className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar"
       >
-        <div className={`${contentWidth >= 1200 ? 'max-w-5xl' : contentWidth < 960 ? 'max-w-2xl' : 'max-w-3xl'} mx-auto w-full pt-8 pb-32`}>
+        <div className={`${contentWidth >= 1200 ? 'max-w-5xl' : contentWidth < 960 ? 'max-w-2xl' : 'max-w-3xl'} mx-auto w-full pt-8 pb-32 px-4`}>
           {isLoadingMessages && messages.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -241,7 +241,7 @@ export function ChatPage({
         </button>
       )}
 
-      <div className="absolute bottom-0 left-0 w-full pb-6 pt-2 px-4 max-md:pb-3 max-md:px-2 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-30">
+      <div className="absolute bottom-0 left-0 w-full pb-input pt-2 px-4 max-md:px-2 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-30">
         <input
           ref={fileInputRef}
           type="file"
