@@ -53,4 +53,7 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
 
     /// <summary>反馈原因。点踩时的具体原因</summary>
     public String? FeedbackReason { get; set; }
+
+    /// <summary>模型编码。实际使用的模型编码，如 gpt-4o</summary>
+    public String? ModelName { get; set; }
 }

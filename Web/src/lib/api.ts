@@ -238,6 +238,7 @@ interface MessageDto {
   outputTokens?: number
   totalTokens?: number
   feedbackType?: number
+  modelName?: string
 }
 
 function toMessage(dto: MessageDto): Message {
@@ -269,6 +270,7 @@ function toMessage(dto: MessageDto): Message {
     } : undefined,
     feedbackType: dto.feedbackType,
     attachments: dto.attachments,
+    model: dto.modelName,
   }
 }
 

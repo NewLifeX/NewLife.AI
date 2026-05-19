@@ -1129,6 +1129,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             TotalTokens = entity.TotalTokens,
             FeedbackType = (Int32)entity.FeedbackType,
             FeedbackReason = entity.FeedbackReason,
+            ModelName = entity.ModelName,
         };
     }
 

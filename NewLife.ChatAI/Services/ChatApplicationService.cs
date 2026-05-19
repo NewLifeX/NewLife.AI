@@ -633,6 +633,7 @@ public class ChatApplicationService
             TotalTokens = entity.TotalTokens,
             FeedbackType = (Int32)entity.FeedbackType,
             FeedbackReason = entity.FeedbackReason,
+            ModelName = entity.ModelName,
         };
     }
 
