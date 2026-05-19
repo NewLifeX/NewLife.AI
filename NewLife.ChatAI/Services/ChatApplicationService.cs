@@ -39,6 +39,7 @@ public class ChatApplicationService
             ModelName = request.ModelId > 0 ? ModelConfig.FindById(request.ModelId)?.Name : null,
             Source = "Web",
             LastMessageTime = DateTime.Now,
+            Enable = true,
         };
         entity.Insert();
 
@@ -511,6 +512,7 @@ public class ChatApplicationService
                 IsPinned = item.IsPinned,
                 CreateTime = item.CreateTime,
                 LastMessageTime = item.LastMessageTime,
+                Enable = true,
             };
             conv.Insert();
 
@@ -527,6 +529,7 @@ public class ChatApplicationService
                         ThinkingContent = msg.ThinkingContent,
                         ThinkingMode = (ThinkingMode)msg.ThinkingMode,
                         Attachments = msg.Attachments,
+                        Enable = true,
                         CreateTime = msg.CreateTime,
                         CreateUserID = userId,
                     };

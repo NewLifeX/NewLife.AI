@@ -71,6 +71,22 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 沿用原消息的思考模式，避免因默认 Auto 在支持思考的模型上意外开启推理
         flow.ThinkingMode = flow.AssistantMessage.ThinkingMode;
 
+        // 软删除旧消息，保留历史版本；为本次重新生成创建新消息实体
+        var oldMsg = flow.AssistantMessage;
+        var newMsg = new DbChatMessage
+        {
+            ConversationId = oldMsg.ConversationId,
+            Role = "assistant",
+            ThinkingMode = flow.ThinkingMode,
+            Enable = true,
+        };
+        newMsg.Insert();
+        oldMsg.Enable = false;
+        oldMsg.Update();
+        flow.HistoryMessages.Remove(oldMsg);
+        flow.HistoryMessages.Add(newMsg);
+        flow.AssistantMessage = newMsg;
+
         try
         {
             // Step2: 构建对话上下文
@@ -120,6 +136,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             ConversationId = userMessage.ConversationId,
             Role = "assistant",
             ThinkingMode = userMessage.ThinkingMode,
+            Enable = true,
         };
         assistantMsg.Insert();
         flow.AssistantMessage = assistantMsg;
@@ -158,6 +175,22 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 沿用原消息的思考模式，避免因默认 Auto 在支持思考的模型上意外开启推理
         flow.ThinkingMode = flow.AssistantMessage.ThinkingMode;
+
+        // 软删除旧消息，保留历史版本；为本次重新生成创建新消息实体
+        var oldMsg = flow.AssistantMessage;
+        var newMsg = new DbChatMessage
+        {
+            ConversationId = oldMsg.ConversationId,
+            Role = "assistant",
+            ThinkingMode = flow.ThinkingMode,
+            Enable = true,
+        };
+        newMsg.Insert();
+        oldMsg.Enable = false;
+        oldMsg.Update();
+        flow.HistoryMessages.Remove(oldMsg);
+        flow.HistoryMessages.Add(newMsg);
+        flow.AssistantMessage = newMsg;
 
         // Step2: 构建对话上下文
         await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
@@ -211,6 +244,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             Content = request.Content,
             ThinkingMode = request.ThinkingMode,
             ModelName = model.Code,
+            Enable = true,
         };
         if (request.AttachmentIds is { Count: > 0 })
             userMsg.Attachments = request.AttachmentIds.ToJson();
@@ -223,6 +257,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             Role = "assistant",
             ThinkingMode = request.ThinkingMode,
             ModelName = model.Code,
+            Enable = true,
         };
         assistantMsg.Insert();
 

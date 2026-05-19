@@ -443,6 +443,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 ModelName = config.Name,
                 Source = "Gateway",
                 LastMessageTime = DateTime.Now,
+                Enable = true,
             };
             conversation.Insert();
             return conversation.Id;
@@ -504,6 +505,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     OutputTokens = usage?.OutputTokens ?? 0,
                     TotalTokens = usage?.TotalTokens ?? 0,
                     ElapsedMs = usage?.ElapsedMs ?? 0,
+                    Enable = true,
                 };
                 conversation.Insert();
             }
@@ -517,6 +519,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 Role = "user",
                 Content = userContent,
                 InputTokens = usage?.InputTokens ?? 0,
+                Enable = true,
             };
             userMsg.Insert();
 
@@ -532,6 +535,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     OutputTokens = usage?.OutputTokens ?? 0,
                     TotalTokens = usage?.TotalTokens ?? 0,
                     ElapsedMs = usage?.ElapsedMs ?? 0,
+                    Enable = true,
                 };
                 assistantMsg.Insert();
             }

@@ -60,7 +60,7 @@ public class SuggestedCacheHandler(IChatSetting setting) : IChatHandler, IChatHa
         // 命中：直接回放
         if (context.AssistantMessage is not DbChatMessage msg)
         {
-            msg = new DbChatMessage { Role = "assistant", };
+            msg = new DbChatMessage { Role = "assistant", Enable = true };
         }
         msg.ConversationId = context.Conversation.Id;
         msg.Content = cached.Response;

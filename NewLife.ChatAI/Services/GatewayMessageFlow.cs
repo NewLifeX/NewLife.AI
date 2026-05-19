@@ -67,7 +67,7 @@ public class GatewayMessageFlow : MessageFlow
             ContextMessages = messages,
             ModelConfig = modelConfig,
             UserId = userId,
-            Conversation = new Conversation { Id = conversationId },
+            Conversation = new Conversation { Id = conversationId, Enable = true },
             // 标记来源为 Gateway；是否持久化由 EnableGatewayRecording 配置决定
             Source = ChatFlowSource.Gateway,
             PersistMessages = _chatSetting.EnableGatewayRecording,
