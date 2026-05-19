@@ -1,4 +1,4 @@
-namespace NewLife.AI.Models;
+﻿namespace NewLife.AI.Models;
 
 /// <summary>发送消息请求。前端发起对话/编辑/重生的统一入参</summary>
 /// <param name="Content">用户消息文本（多模态场景为 JSON 编码的内容数组）</param>
@@ -56,4 +56,7 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
 
     /// <summary>模型编码。实际使用的模型编码，如 gpt-4o</summary>
     public String? ModelName { get; set; }
+
+    /// <summary>本次对话费用（元）</summary>
+    public Decimal TotalCost { get; set; }
 }

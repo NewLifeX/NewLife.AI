@@ -1,7 +1,4 @@
 ﻿using System.Text;
-using NewLife.AI.Models;
-using NewLife.ChatAI.Models;
-using NewLife.ChatAI.Entity;
 using NewLife.Data;
 using NewLife.Serialization;
 using XCode;
@@ -612,7 +609,7 @@ public class ChatApplicationService
     /// <summary>转换消息实体为DTO</summary>
     /// <param name="entity">消息实体</param>
     /// <returns></returns>
-    private static MessageDto ToMessageDto(ChatMessage entity)
+    public static MessageDto ToMessageDto(ChatMessage entity)
     {
         // 反序列化 ToolCalls JSON
         IReadOnlyList<ToolCallDto>? toolCalls = null;

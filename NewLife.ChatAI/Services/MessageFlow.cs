@@ -97,7 +97,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
             flow.AssistantMessage.ElapsedMs = flow.Usage?.ElapsedMs ?? 0;
 
-            return ToMessageDto(flow.AssistantMessage);
+            return ChatApplicationService.ToMessageDto(flow.AssistantMessage);
         }
         catch (Exception ex)
         {
@@ -1109,29 +1109,5 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             }
         }
     }
-
-    /// <summary>转换消息实体为 DTO。供派生类在 <see cref="RegenerateMessageAsync"/> 等场景转出</summary>
-    /// <param name="entity">消息实体</param>
-    /// <returns>消息 DTO</returns>
-    protected static MessageDto ToMessageDto(DbChatMessage entity)
-    {
-        IReadOnlyList<ToolCallDto>? toolCalls = null;
-        if (!String.IsNullOrEmpty(entity.ToolCalls))
-        {
-            try { toolCalls = entity.ToolCalls.ToJsonEntity<List<ToolCallDto>>(); }
-            catch { }
-        }
-        return new MessageDto(entity.Id, entity.ConversationId, entity.Role ?? String.Empty, entity.Content ?? String.Empty, entity.ThinkingContent, entity.ThinkingMode, entity.Attachments, entity.CreateTime)
-        {
-            ToolCalls = toolCalls,
-            InputTokens = entity.InputTokens,
-            OutputTokens = entity.OutputTokens,
-            TotalTokens = entity.TotalTokens,
-            FeedbackType = (Int32)entity.FeedbackType,
-            FeedbackReason = entity.FeedbackReason,
-            ModelName = entity.ModelName,
-        };
-    }
-
     #endregion
 }
