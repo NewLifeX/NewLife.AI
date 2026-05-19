@@ -267,7 +267,7 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
 
   return (
     <>
-      <div data-testid="mermaid-block" className="group/mermaid relative my-4 overflow-hidden rounded-xl border border-gray-700/70 bg-gray-950/70">
+      <div data-testid="mermaid-block" className="group/mermaid relative my-4 overflow-x-auto rounded-xl border border-gray-700/70 bg-gray-950/70">
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
           <MermaidActionButton title={t('mermaid.enlarge')} icon="open_in_full" onClick={handleOpenPreview} disabled={!svgMarkup} testId="mermaid-open-preview" />
           <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={handleDownloadSvg} disabled={!svgMarkup} testId="mermaid-download-svg" />

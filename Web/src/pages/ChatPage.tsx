@@ -120,9 +120,9 @@ export function ChatPage({
   }, [messages, scrollToBottom])
 
   return (
-    <div className="relative flex flex-1 min-h-0">
+    <div className="relative flex flex-1 min-h-0 min-w-0">
       <div
-        className="relative flex flex-col flex-1 min-h-0"
+        className="relative flex flex-col flex-1 min-h-0 min-w-0"
       >
       <div
         ref={scrollRef}
