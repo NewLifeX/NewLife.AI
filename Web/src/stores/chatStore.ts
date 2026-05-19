@@ -437,6 +437,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   regenerateMsg: async (id) => {
+    // currentId 跟踪当前消息 ID：服务端创建新消息后会通过 message_start 推送新 ID
+    let currentId = id
+
     // 标记该消息为 streaming 并清空旧内容（含工具调用）
     set((s) => ({
       isGenerating: true,
@@ -451,17 +454,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await streamRegenerate(id, (event) => {
         switch (event.type) {
+          case 'message_start':
+            // 服务端为重新生成创建了新消息实体，更新本地消息 ID
+            if (event.messageId && event.messageId !== currentId) {
+              set((s) => ({
+                messages: s.messages.map((m) =>
+                  m.id === currentId ? { ...m, id: event.messageId!, model: event.model } : m,
+                ),
+                _generatingMsgId: event.messageId!,
+              }))
+              currentId = event.messageId!
+            }
+            break
           case 'content_delta':
             set((s) => ({
               messages: s.messages.map((m) =>
-                m.id === id ? { ...m, content: (m.content ?? '') + (event.content ?? '') } : m,
+                m.id === currentId ? { ...m, content: (m.content ?? '') + (event.content ?? '') } : m,
               ),
             }))
             break
           case 'thinking_delta':
             set((s) => ({
               messages: s.messages.map((m) =>
-                m.id === id ? { ...m, thinkingContent: (m.thinkingContent ?? '') + (event.content ?? '') } : m,
+                m.id === currentId ? { ...m, thinkingContent: (m.thinkingContent ?? '') + (event.content ?? '') } : m,
               ),
             }))
             break
@@ -469,7 +484,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (event.toolCallId) {
               set((s) => ({
                 messages: s.messages.map((m) =>
-                  m.id === id
+                  m.id === currentId
                     ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
                     : m,
                 ),
@@ -480,7 +495,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (event.toolCallId) {
               set((s) => ({
                 messages: s.messages.map((m) =>
-                  m.id === id
+                  m.id === currentId
                     ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === event.toolCallId ? { ...t, status: 'done' as const, result: event.result } : t) }
                     : m,
                 ),
@@ -491,7 +506,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (event.toolCallId) {
               set((s) => ({
                 messages: s.messages.map((m) =>
-                  m.id === id
+                  m.id === currentId
                     ? { ...m, toolCalls: (m.toolCalls ?? []).map((t) => t.id === event.toolCallId ? { ...t, status: 'error' as const, result: event.error } : t) }
                     : m,
                 ),
@@ -504,7 +519,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               _abortController: null,
               _generatingMsgId: null,
               messages: s.messages.map((m) =>
-                m.id === id
+                m.id === currentId
                   ? { ...m, status: 'done' as const, usage: event.usage ? { inputTokens: event.usage.inputTokens, outputTokens: event.usage.outputTokens, totalTokens: event.usage.totalTokens } : m.usage }
                   : m,
               ),
@@ -516,7 +531,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               _abortController: null,
               _generatingMsgId: null,
               messages: s.messages.map((m) =>
-                m.id === id ? { ...m, content: event.error ?? event.message ?? '[error]', status: 'error' as const } : m,
+                m.id === currentId ? { ...m, content: event.error ?? event.message ?? '[error]', status: 'error' as const } : m,
               ),
             }))
             break
@@ -529,7 +544,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isGenerating: false, _abortController: null, _generatingMsgId: null })
       set((s) => ({
         messages: s.messages.map((m) =>
-          m.id === id && m.status === 'streaming' ? { ...m, status: 'done' as const } : m,
+          m.id === currentId && m.status === 'streaming' ? { ...m, status: 'done' as const } : m,
         ),
       }))
     }
