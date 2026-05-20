@@ -19,7 +19,7 @@ public class AppKeyApiController : ChatApiControllerBase
             e.Id, e.Name ?? String.Empty, MaskSecret(e.Secret ?? String.Empty), e.Enable,
             e.Models,
             e.ExpireTime.Year > 2000 ? e.ExpireTime : null,
-            e.Calls, e.TotalTokens, e.LastCallTime, e.CreateTime)).ToList();
+            e.LastCallTime, e.CreateTime)).ToList();
         return Ok(items);
     }
 
@@ -80,7 +80,7 @@ public class AppKeyApiController : ChatApiControllerBase
             entity.Id, entity.Name ?? String.Empty, MaskSecret(entity.Secret ?? String.Empty), entity.Enable,
             entity.Models,
             entity.ExpireTime.Year > 2000 ? entity.ExpireTime : null,
-            entity.Calls, entity.TotalTokens, entity.LastCallTime, entity.CreateTime));
+            entity.LastCallTime, entity.CreateTime));
     }
 
     /// <summary>删除 AppKey</summary>
@@ -118,7 +118,7 @@ public record UpdateAppKeyRequest(String? Name, Boolean? Enable, DateTime? Expir
 
 /// <summary>AppKey 响应（不含完整密钥）</summary>
 public record AppKeyResponseDto(Int32 Id, String Name, String SecretMask, Boolean Enable,
-    String? Models, DateTime? ExpireTime, Int64 Calls, Int64 TotalTokens, DateTime LastCallTime, DateTime CreateTime);
+    String? Models, DateTime? ExpireTime, DateTime LastCallTime, DateTime CreateTime);
 
 /// <summary>AppKey 创建响应（含完整密钥，仅此一次）</summary>
 public record AppKeyCreateResponseDto(Int32 Id, String Name, String Secret, DateTime CreateTime);

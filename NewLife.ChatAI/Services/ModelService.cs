@@ -243,7 +243,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         var response = await client.GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
 
         if (conversation != null && usageService != null && response.Usage != null)
-            usageService.Record(conversation, null, model, response.Usage, source);
+            usageService.Record(conversation, null, null, model, response.Usage, source);
 
         return response.Text;
     }
@@ -266,7 +266,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         {
             var usage = response.Usage;
             var ud = new UsageDetails { InputTokens = usage.PromptTokens, OutputTokens = usage.TotalTokens - usage.PromptTokens, TotalTokens = usage.TotalTokens };
-            usageService.Record(conversation, null, model, ud, source);
+            usageService.Record(conversation, null, null, model, ud, source);
         }
 
         return response.Data.FirstOrDefault()?.Embedding;
@@ -303,7 +303,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             {
                 var usage = response.Usage;
                 var ud = new UsageDetails { InputTokens = usage.PromptTokens, OutputTokens = usage.TotalTokens - usage.PromptTokens, TotalTokens = usage.TotalTokens };
-                usageService.Record(conversation, null, model, ud, source);
+                usageService.Record(conversation, null, null, model, ud, source);
             }
         }
         return result;

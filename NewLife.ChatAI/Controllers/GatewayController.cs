@@ -521,8 +521,13 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             // 开启对话记录时预创建会话，确保 UsageRecord 可关联到对应会话
             if (enableRecording)
             {
-                var conversationId = gatewayService.CreateGatewayConversation(request, config, appKey);
-                if (conversationId > 0) request.ConversationId = conversationId.ToString();
+                var conversation = gatewayService.CreateGatewayConversation(request, config, appKey);
+                if (conversation != null)
+                {
+                    conversation.Insert();
+
+                    request.ConversationId = conversation.Id.ToString();
+                }
             }
 
             var messages = gatewayService.BuildContextMessages(request, appKey, config);

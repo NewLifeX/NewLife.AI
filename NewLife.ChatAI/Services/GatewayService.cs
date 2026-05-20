@@ -384,7 +384,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             UserId = appKey?.UserId ?? 0,
             AppKeyId = appKey?.Id ?? 0,
         };
-        usageService.Record(conv, null, model, usage, "Gateway");
+        usageService.Record(conv, null, appKey, model, usage, "Gateway");
     }
 
     /// <summary>从 AI 消息中提取纯文本内容。支持多模态消息（Contents 列表中提取 TextContent）</summary>
@@ -425,19 +425,20 @@ public class GatewayService(UsageService usageService, ModelService modelService
     /// <param name="request">对话请求</param>
     /// <param name="config">模型配置</param>
     /// <param name="appKey">应用密钥</param>
-    /// <returns>会话编号，失败时返回 0</returns>
-    public Int64 CreateGatewayConversation(IChatRequest request, ModelConfig config, AppKey appKey)
+    /// <returns>会话，失败时返回 null</returns>
+    public Conversation? CreateGatewayConversation(IChatRequest request, ModelConfig config, AppKey appKey)
     {
         try
         {
             var lastUserMsg = request.Messages?.LastOrDefault(m => "user".Equals(m.Role, StringComparison.OrdinalIgnoreCase));
             var userContent = ExtractTextContent(lastUserMsg);
-            if (userContent.IsNullOrEmpty()) return 0;
+            if (userContent.IsNullOrEmpty()) return null;
 
             var conversation = new Conversation
             {
                 UserId = appKey.UserId,
                 UserName = appKey.Name,
+                AppKeyId = appKey.Id,
                 Title = userContent.Length > 50 ? userContent[..50] + "..." : userContent,
                 ModelId = config.Id,
                 ModelName = config.Name,
@@ -445,13 +446,13 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 LastMessageTime = DateTime.Now,
                 Enable = true,
             };
-            conversation.Insert();
-            return conversation.Id;
+            //conversation.Insert();
+            return conversation;
         }
         catch (Exception ex)
         {
             log?.Error("预创建网关会话失败: {0}", ex.Message);
-            return 0;
+            return null;
         }
     }
 
@@ -495,6 +496,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 {
                     UserId = appKey.UserId,
                     UserName = appKey.Name,
+                    AppKeyId = appKey.Id,
                     Title = userContent.Length > 50 ? userContent[..50] + "..." : userContent,
                     ModelId = config.Id,
                     ModelName = config.Name,
@@ -532,6 +534,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     Role = "assistant",
                     Content = responseContent,
                     ThinkingContent = thinkingContent.IsNullOrEmpty() ? null : thinkingContent,
+                    ModelName = config.Code,
                     InputTokens = usage?.InputTokens ?? 0,
                     OutputTokens = usage?.OutputTokens ?? 0,
                     TotalTokens = usage?.TotalTokens ?? 0,

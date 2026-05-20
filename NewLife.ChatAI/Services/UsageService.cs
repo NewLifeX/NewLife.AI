@@ -15,11 +15,12 @@ public class UsageService(IChatSetting chatSetting, ILog log)
     /// <summary>记录一次 AI 调用的用量（携带 UsageDetails，自动填充所有 Token 详情字段）</summary>
     /// <param name="conversation">会话</param>
     /// <param name="message">消息</param>
+    /// <param name="appKey">应用密钥</param>
     /// <param name="model">模型</param>
     /// <param name="usage">用量详情</param>
     /// <param name="source">请求来源。Chat=对话/Gateway=网关</param>
     /// <returns>写入的用量记录，已禁用或异常时返回 null</returns>
-    public virtual UsageRecord? Record(IConversation conversation, IChatMessage? message, IModelConfig? model, UsageDetails usage, String source)
+    public virtual UsageRecord? Record(IConversation conversation, IChatMessage? message, IAppKey? appKey, IModelConfig? model, UsageDetails usage, String source)
     {
         if (!chatSetting.EnableUsageStats) return null;
 
@@ -28,11 +29,11 @@ public class UsageService(IChatSetting chatSetting, ILog log)
             var rec = new UsageRecord
             {
                 UserId = conversation.UserId,
-                AppKeyId = conversation.AppKeyId,
+                AppKeyId = appKey?.Id ?? conversation.AppKeyId,
                 ConversationId = conversation.Id,
                 MessageId = message?.Id ?? 0,
-                ModelId = model?.Id ?? 0,
-                ModelName = model?.Name,
+                ModelId = model?.Id ?? conversation.ModelId,
+                ModelName = model?.Name ?? conversation.ModelName,
                 InputTokens = usage.InputTokens,
                 OutputTokens = usage.OutputTokens,
                 TotalTokens = usage.TotalTokens,
