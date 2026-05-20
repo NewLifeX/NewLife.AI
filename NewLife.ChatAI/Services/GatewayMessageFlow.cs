@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using NewLife.AI.Clients;
 using NewLife.Collections;
 using NewLife.Log;
 using ChatResponse = NewLife.AI.Models.ChatResponse;
@@ -53,6 +54,7 @@ public class GatewayMessageFlow : MessageFlow
     /// <param name="modelConfig">目标模型配置</param>
     /// <param name="userId">当前用户编号（0 表示匿名）</param>
     /// <param name="conversationId">关联会话编号（0 表示无会话）</param>
+    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking 等生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>SSE 事件流</returns>
     public virtual async IAsyncEnumerable<ChatStreamEvent> StreamGatewayAsync(
@@ -60,6 +62,7 @@ public class GatewayMessageFlow : MessageFlow
         ModelConfig modelConfig,
         Int32 userId,
         Int64 conversationId,
+        IChatRequest? request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var flow = new MessageFlowContext
@@ -71,6 +74,14 @@ public class GatewayMessageFlow : MessageFlow
             // 标记来源为 Gateway；是否持久化由 EnableGatewayRecording 配置决定
             Source = ChatFlowSource.Gateway,
             PersistMessages = _chatSetting.EnableGatewayRecording,
+            MaxTokens = request?.MaxTokens ?? 0,
+            Temperature = request?.Temperature,
+            ThinkingMode = request?.EnableThinking switch
+            {
+                true => ThinkingMode.Think,
+                false => ThinkingMode.Fast,
+                _ => ThinkingMode.Auto,
+            },
         };
 
         await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
@@ -84,6 +95,7 @@ public class GatewayMessageFlow : MessageFlow
     /// <param name="modelConfig">目标模型配置</param>
     /// <param name="userId">当前用户编号（0 表示匿名）</param>
     /// <param name="conversationId">关联会话编号（0 表示无会话）</param>
+    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking 等生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>聚合后的完整响应</returns>
     public virtual async Task<ChatResponse> CompletionGatewayAsync(
@@ -91,13 +103,14 @@ public class GatewayMessageFlow : MessageFlow
         ModelConfig modelConfig,
         Int32 userId,
         Int64 conversationId,
+        IChatRequest? request,
         CancellationToken cancellationToken)
     {
         var contentSb = Pool.StringBuilder.Get();
         var thinkingSb = Pool.StringBuilder.Get();
         UsageDetails? lastUsage = null;
 
-        await foreach (var ev in StreamGatewayAsync(messages, modelConfig, userId, conversationId, cancellationToken).ConfigureAwait(false))
+        await foreach (var ev in StreamGatewayAsync(messages, modelConfig, userId, conversationId, request, cancellationToken).ConfigureAwait(false))
         {
             switch (ev.Type)
             {

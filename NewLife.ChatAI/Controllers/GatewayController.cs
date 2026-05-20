@@ -548,7 +548,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 }
 
                 UsageDetails? lastUsage = null;
-                await foreach (var ev in gatewayMessageFlow.StreamGatewayAsync(messages, config, appKey.UserId, convId, cancellationToken).ConfigureAwait(false))
+                await foreach (var ev in gatewayMessageFlow.StreamGatewayAsync(messages, config, appKey.UserId, convId, request, cancellationToken).ConfigureAwait(false))
                 {
                     if (enableRecording)
                     {
@@ -578,7 +578,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             else
             {
                 // 非流式：聚合完整响应 → 写出 JSON → 用量/对话记录
-                var result = await gatewayMessageFlow.CompletionGatewayAsync(messages, config, appKey.UserId, convId, cancellationToken).ConfigureAwait(false);
+                var result = await gatewayMessageFlow.CompletionGatewayAsync(messages, config, appKey.UserId, convId, request, cancellationToken).ConfigureAwait(false);
                 Response.ContentType = "application/json";
                 await Response.WriteAsync(GatewayService.FormatResponse(result, protocol), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
 

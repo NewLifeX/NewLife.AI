@@ -716,6 +716,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
         ApplyResponseStyle(chatOptions, userId);
 
+        // 将请求参数覆盖到 chatOptions（MaxTokens/Temperature 优先使用 context 中从请求提取的值）
+        if (context.MaxTokens > 0) chatOptions.MaxTokens = context.MaxTokens;
+        if (context.Temperature.HasValue) chatOptions.Temperature = context.Temperature;
+
+        // 记录最终生效的参数值（供后续持久化使用）
         context.MaxTokens = chatOptions.MaxTokens ?? 0;
         context.Temperature = chatOptions.Temperature;
 
@@ -825,6 +830,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
         ApplyResponseStyle(chatOptions, userId);
 
+        // 将请求参数覆盖到 chatOptions（MaxTokens/Temperature 优先使用 context 中从请求提取的值）
+        if (context.MaxTokens > 0) chatOptions.MaxTokens = context.MaxTokens;
+        if (context.Temperature.HasValue) chatOptions.Temperature = context.Temperature;
+
+        // 记录最终生效的参数值（供后续持久化使用）
         context.MaxTokens = chatOptions.MaxTokens ?? 0;
         context.Temperature = chatOptions.Temperature;
 
