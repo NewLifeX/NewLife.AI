@@ -518,7 +518,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 ConversationId = conversation.Id,
                 Role = "user",
                 Content = userContent,
-                InputTokens = usage?.InputTokens ?? 0,
+                //InputTokens = usage?.InputTokens ?? 0,
                 Enable = true,
             };
             userMsg.Insert();
@@ -532,6 +532,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     Role = "assistant",
                     Content = responseContent,
                     ThinkingContent = thinkingContent.IsNullOrEmpty() ? null : thinkingContent,
+                    InputTokens = usage?.InputTokens ?? 0,
                     OutputTokens = usage?.OutputTokens ?? 0,
                     TotalTokens = usage?.TotalTokens ?? 0,
                     ElapsedMs = usage?.ElapsedMs ?? 0,
