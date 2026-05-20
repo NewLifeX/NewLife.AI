@@ -573,7 +573,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 // 用量记录 + 网关对话记录
                 gatewayService.RecordUsage(appKey, config, convId, lastUsage);
                 if (enableRecording)
-                    gatewayService.RecordGatewayConversation(request, config, appKey, contentBuilder!.ToString(), thinkingBuilder!.ToString(), lastUsage);
+                    await gatewayService.RecordGatewayConversationAsync(request, config, appKey, contentBuilder!.ToString(), thinkingBuilder!.ToString(), lastUsage).ConfigureAwait(false);
             }
             else
             {
@@ -587,7 +587,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 if (enableRecording)
                 {
                     var thinking = result.Messages?.FirstOrDefault()?.Message?.ReasoningContent;
-                    gatewayService.RecordGatewayConversation(request, config, appKey, result.Text, thinking, result.Usage);
+                    await gatewayService.RecordGatewayConversationAsync(request, config, appKey, result.Text, thinking, result.Usage).ConfigureAwait(false);
                 }
             }
         }

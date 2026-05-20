@@ -9,6 +9,7 @@ using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Filters;
 using NewLife.Collections;
+using NewLife.Cube.Entity;
 using NewLife.Serialization;
 using ILog = NewLife.Log.ILog;
 
@@ -496,7 +497,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     /// <param name="responseContent">AI 回复内容</param>
     /// <param name="thinkingContent">思考过程</param>
     /// <param name="usage">Token 用量统计</param>
-    public virtual void RecordGatewayConversation(IChatRequest request, ModelConfig config, AppKey appKey, String? responseContent, String? thinkingContent, UsageDetails? usage)
+    public virtual async Task RecordGatewayConversationAsync(IChatRequest request, ModelConfig config, AppKey appKey, String? responseContent, String? thinkingContent, UsageDetails? usage)
     {
         try
         {
@@ -504,6 +505,9 @@ public class GatewayService(UsageService usageService, ModelService modelService
             var lastUserMsg = request.Messages?.LastOrDefault(m => "user".Equals(m.Role, StringComparison.OrdinalIgnoreCase));
             var userContent = ExtractTextContent(lastUserMsg);
             if (userContent.IsNullOrEmpty()) return;
+
+            // 提取并保存用户消息中的附件（图片、文档、音频等）
+            var attachmentsJson = await SaveGatewayAttachmentsAsync(lastUserMsg).ConfigureAwait(false);
 
             var existingId = request.ConversationId.ToLong();
 
@@ -552,6 +556,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 ConversationId = conversation.Id,
                 Role = "user",
                 Content = userContent,
+                Attachments = attachmentsJson,
                 //InputTokens = usage?.InputTokens ?? 0,
                 Enable = true,
             };
@@ -583,6 +588,135 @@ public class GatewayService(UsageService usageService, ModelService modelService
             log?.Error("网关对话记录失败: {0}", ex.Message);
         }
     }
+
+    /// <summary>提取并保存网关请求用户消息中的所有二进制附件（图片、文档、音频等）为附件记录</summary>
+    /// <remarks>
+    /// 支持 <see cref="ImageContent"/> / <see cref="DataContent"/> / <see cref="AudioContent"/> 三种二进制内嵌类型，
+    /// 以及通过 data URI 格式（<c>data:...;base64,...</c>）传输的任意媒体类型（如 PDF、DOCX）。
+    /// HTTP/HTTPS URL 附件不做下载，跳过处理。
+    /// </remarks>
+    /// <param name="message">用户消息</param>
+    /// <returns>附件 ID 列表 JSON（如 <c>[1001,1002]</c>），无附件时返回 null</returns>
+    private async Task<String?> SaveGatewayAttachmentsAsync(AiChatMessage? message)
+    {
+        if (message == null) return null;
+
+        message.ResolveContents();
+        if (message.Contents == null || message.Contents.Count == 0) return null;
+
+        var ids = new List<Int64>();
+        foreach (var item in message.Contents)
+        {
+            Byte[]? bytes = null;
+            var mediaType = "application/octet-stream";
+
+            if (item is ImageContent img)
+            {
+                if (img.Data != null)
+                {
+                    bytes = img.Data;
+                    mediaType = img.MediaType ?? "image/jpeg";
+                }
+                else if (!img.Uri.IsNullOrEmpty() && img.Uri.StartsWith("data:"))
+                {
+                    (bytes, mediaType) = ParseDataUri(img.Uri, "image/jpeg");
+                }
+                // HTTP/HTTPS URL：不做下载，跳过
+                else continue;
+            }
+            else if (item is DataContent dc)
+            {
+                bytes = dc.Data;
+                mediaType = dc.MediaType;
+            }
+            else if (item is AudioContent ac && ac.Data != null)
+            {
+                bytes = ac.Data;
+                mediaType = ac.MediaType;
+            }
+            else continue;
+
+            if (bytes == null || bytes.Length == 0) continue;
+
+            try
+            {
+                var ext = GetExtensionByMediaType(mediaType);
+                var fileName = $"gw_{DateTime.Now:yyyyMMddHHmmssfff}{ext}";
+
+                var att = new Attachment
+                {
+                    FileName = fileName,
+                    Category = "ChatAI",
+                    ContentType = mediaType,
+                    Size = bytes.Length,
+                    Enable = true,
+                    UploadTime = DateTime.Now,
+                };
+
+                using var ms = new MemoryStream(bytes);
+                var saved = await att.SaveFile(ms, null, fileName).ConfigureAwait(false);
+                if (saved) ids.Add(att.Id);
+            }
+            catch (Exception ex)
+            {
+                log?.Error("保存网关附件失败: {0}", ex.Message);
+            }
+        }
+
+        return ids.Count > 0 ? ids.ToJson() : null;
+    }
+
+    /// <summary>解析 data URI，返回字节数组和媒体类型</summary>
+    /// <param name="uri">data URI，格式为 <c>data:{mediaType};base64,{base64Data}</c></param>
+    /// <param name="defaultMediaType">解析失败时的默认媒体类型</param>
+    /// <returns>bytes 为 null 表示解析失败</returns>
+    private static (Byte[]? Bytes, String MediaType) ParseDataUri(String uri, String defaultMediaType)
+    {
+        var comma = uri.IndexOf(',');
+        if (comma <= 0) return (null, defaultMediaType);
+
+        var meta = uri[5..comma]; // 跨过 "data:" 前缀
+        var base64 = uri[(comma + 1)..];
+        var semiColon = meta.IndexOf(';');
+        var mediaType = semiColon > 0 ? meta[..semiColon] : meta;
+        if (mediaType.IsNullOrEmpty()) mediaType = defaultMediaType;
+
+        try { return (Convert.FromBase64String(base64), mediaType); }
+        catch { return (null, mediaType); }
+    }
+
+    /// <summary>根据 MIME 类型返回文件扩展名</summary>
+    /// <param name="mediaType">MIME 类型，如 <c>image/png</c></param>
+    /// <returns>文件扩展名，包含点，如 <c>.png</c></returns>
+    private static String GetExtensionByMediaType(String mediaType) => mediaType switch
+    {
+        "image/jpeg" or "image/jpg" => ".jpg",
+        "image/png" => ".png",
+        "image/gif" => ".gif",
+        "image/webp" => ".webp",
+        "image/bmp" => ".bmp",
+        "application/pdf" => ".pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => ".docx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" => ".pptx",
+        "application/msword" => ".doc",
+        "application/vnd.ms-excel" => ".xls",
+        "text/markdown" or "text/x-markdown" => ".md",
+        "text/plain" => ".txt",
+        "text/html" => ".html",
+        "text/csv" => ".csv",
+        "audio/wav" or "audio/x-wav" => ".wav",
+        "audio/mpeg" or "audio/mp3" => ".mp3",
+        "audio/ogg" => ".ogg",
+        "audio/webm" => ".webm",
+        "audio/aac" => ".aac",
+        "video/mp4" => ".mp4",
+        "video/webm" => ".webm",
+        _ when mediaType.StartsWith("image/") => ".jpg",
+        _ when mediaType.StartsWith("audio/") => ".mp3",
+        _ when mediaType.StartsWith("video/") => ".mp4",
+        _ => ".bin",
+    };
 
     /// <summary>保存会话前的钩子。子类可重写以设置扩展字段（如 StarChat 的 TotalCost）</summary>
     /// <param name="conversation">即将保存的会话实体</param>
