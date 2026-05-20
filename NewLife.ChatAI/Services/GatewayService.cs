@@ -118,11 +118,32 @@ public class GatewayService(UsageService usageService, ModelService modelService
     {
         var messages = new List<AiChatMessage>();
 
+        // 收集请求中的客户端系统提示词
+        // Content 反序列化后可能是 String、JsonElement（System.Text.Json 原生）或 IList<Object>（NewLife SystemJson）
+        // 用 GetMessageText() 统一提取文本，避免 as String 在 JsonElement 场景静默返回 null
+        var clientSysParts = (request.Messages ?? [])
+            .Where(m => m.Role?.Equals("system", StringComparison.OrdinalIgnoreCase) == true)
+            .Select(m => GetMessageText(m.Content))
+            .Where(c => !String.IsNullOrWhiteSpace(c))
+            .ToList();
+
         // 构建系统消息（包含用户信息 + UserSetting + ModelConfig SystemPrompt）
         var sysMsg = MessageFlow.BuildSystemMessage(appKey.UserId, config);
-        if (sysMsg != null) messages.Add(sysMsg);
 
-        // 添加请求中的对话消息（跳过系统消息，已由管道注入）
+        // 合并自动生成的系统消息与客户端系统提示词，保证只有一条 system 消息
+        if (clientSysParts.Count > 0)
+        {
+            var sysContent = sysMsg != null
+                ? $"{sysMsg.Content}\n\n{String.Join("\n\n", clientSysParts)}"
+                : String.Join("\n\n", clientSysParts);
+            messages.Add(new AiChatMessage { Role = "system", Content = sysContent });
+        }
+        else if (sysMsg != null)
+        {
+            messages.Add(sysMsg);
+        }
+
+        // 添加请求中的非系统对话消息
         foreach (var msg in request.Messages ?? [])
         {
             if (msg.Role?.Equals("system", StringComparison.OrdinalIgnoreCase) == true) continue;
@@ -343,6 +364,18 @@ public class GatewayService(UsageService usageService, ModelService modelService
     #endregion
 
     #region 辅助
+    /// <summary>从 ChatMessage.Content（Object?）中提取纯文本字符串。
+    /// Content 在反序列化后可能是 String、JsonElement 或 IList 等类型，统一处理</summary>
+    /// <param name="content">消息 Content 值</param>
+    /// <returns>文本内容，无法提取时返回 null</returns>
+    private static String? GetMessageText(Object? content) => content switch
+    {
+        null => null,
+        String s => s,
+        JsonElement je when je.ValueKind == JsonValueKind.String => je.GetString(),
+        _ => content.ToString(),
+    };
+
     /// <summary>判断异常是否为 HTTP 429 限流</summary>
     /// <param name="ex">HTTP 请求异常</param>
     /// <returns></returns>
