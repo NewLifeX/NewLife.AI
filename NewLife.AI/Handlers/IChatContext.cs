@@ -131,14 +131,5 @@ public interface IChatContext : IExtend
     /// 由各 <see cref="NewLife.AI.Services.IMessageFlow"/> 子类在构建上下文时设置，默认 <see cref="ChatFlowSource.Web"/></summary>
     ChatFlowSource Source { get; set; }
 
-    /// <summary>是否将用户消息和 AI 回复消息持久化到数据库。
-    /// <list type="bullet">
-    ///   <item><see langword="true"/>（Web 默认）：<c>UserMessage</c> 和 <c>AssistantMessage</c> 正常 Insert/Update</item>
-    ///   <item><see langword="false"/>（Gateway / Channel 默认）：两条消息对象仍存在于内存，但 Id 为 0，
-    ///   不执行任何数据库写入；Handler 仍可从对象读取内容，例如 <c>LearningHandler</c> 从 <c>ContentBuilder</c> 读取回复</item>
-    /// </list>
-    /// </summary>
-    Boolean PersistMessages { get; set; }
-
     #endregion
 }

@@ -20,7 +20,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnBefore—始终立即返回")]
     public async Task OnBefore_AlwaysReturnsImmediately()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         await handler.OnBefore(BuildFlow(withAssistantMessage: false), CancellationToken.None);
     }
 
@@ -32,7 +32,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—非 MessageFlowContext 时立即返回")]
     public async Task OnAfter_NotFlowContext_ReturnsImmediately()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         await handler.OnAfter(new FakeContext(), CancellationToken.None);
     }
 
@@ -40,7 +40,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—AssistantMessage 为 null 时立即返回")]
     public async Task OnAfter_NullAssistantMessage_ReturnsImmediately()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         var flow = BuildFlow(withAssistantMessage: false);
 
         await handler.OnAfter(flow, CancellationToken.None);
@@ -55,7 +55,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—ThinkingBuilder 有内容时写入 ThinkingContent")]
     public async Task OnAfter_ThinkingBuilderHasContent_WrittenToThinkingContent()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         var flow = BuildFlow(withAssistantMessage: true);
         flow.ThinkingBuilder.Append("这是思考内容");
         flow.ContentBuilder.Append("回复正文");
@@ -73,7 +73,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—HasError=true 且内容为空时写入 [生成失败]")]
     public async Task OnAfter_HasErrorAndEmptyContent_WritesFailurePlaceholder()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         var flow = BuildFlow(withAssistantMessage: true);
         flow.HasError = true;
         // ContentBuilder 为空
@@ -88,7 +88,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—HasError=true 且有错误详情时附加到内容末尾")]
     public async Task OnAfter_HasErrorWithDetail_AppendsToContent()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         var flow = BuildFlow(withAssistantMessage: true);
         flow.HasError = true;
         flow.ContentBuilder.Append("部分回复");
@@ -106,7 +106,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—Usage 有值时写入 Token 字段")]
     public async Task OnAfter_WithUsage_WritesTokenFields()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         var flow = BuildFlow(withAssistantMessage: true);
         flow.ContentBuilder.Append("回复内容");
         flow.Usage = new UsageDetails { InputTokens = 15, OutputTokens = 30, TotalTokens = 45, ElapsedMs = 500 };
@@ -123,7 +123,7 @@ public class PersistMessageHandlerTests
     [DisplayName("OnAfter—ToolCalls 有值时写入 ToolNames 字段")]
     public async Task OnAfter_WithToolCalls_WritesToolNames()
     {
-        var handler = new PersistMessageHandler();
+        var handler = new PersistMessageHandler(ChatSetting.Current);
         var flow = BuildFlow(withAssistantMessage: true);
         flow.ContentBuilder.Append("使用了工具");
         flow.ToolCalls.Add(new ToolCallDto("tool-1", "search_web", ToolCallStatus.Done));
@@ -183,7 +183,6 @@ public class PersistMessageHandlerTests
         public String? CancelCode { get; set; }
         public String? CancelMessage { get; set; }
         public ChatFlowSource Source { get; set; } = ChatFlowSource.Web;
-        public Boolean PersistMessages { get; set; } = true;
         public IDictionary<String, Object?> Items { get; } = new Dictionary<String, Object?>(StringComparer.OrdinalIgnoreCase);
         public Object? this[String key]
         {

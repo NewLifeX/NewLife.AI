@@ -10,15 +10,11 @@ namespace NewLife.ChatAI.Services;
 /// <list type="bullet">
 ///   <item>不从数据库加载历史消息（<see cref="LoadHistoryMessages"/> 始终返回空列表）</item>
 ///   <item><see cref="MessageFlow.Chain"/> 由 <see cref="ChatHandlerChain.BuildFor"/> 按 <see cref="ChatFlowSource.Gateway"/> 过滤，<c>EnableGatewayHandlers=false</c> 时仅保留 Core 级处理器（精简链），为 true 时保留全部处理器（完整链）</item>
-///   <item>上下文 <see cref="MessageFlowContext.PersistMessages"/> 默认 false，由 <c>EnableGatewayRecording</c> 控制</item>
 /// </list>
 /// </summary>
 public class GatewayMessageFlow : MessageFlow
 {
     #region 构造
-
-    private readonly ChatSetting _chatSetting;
-
     /// <summary>初始化网关消息流</summary>
     /// <param name="modelService">模型服务</param>
     /// <param name="setting">系统配置</param>
@@ -28,7 +24,6 @@ public class GatewayMessageFlow : MessageFlow
     public GatewayMessageFlow(ModelService modelService, ChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null)
         : base(modelService, null, setting, tracer, log, services)
     {
-        _chatSetting = setting;
         // 按来源和链模式从全量 Handler 集合中过滤：
         //   EnableGatewayHandlers=false → 精简链（Core 级处理器：配额、用量等）
         //   EnableGatewayHandlers=true  → 完整链（含知识进化、记忆图谱等高级能力）
@@ -73,7 +68,6 @@ public class GatewayMessageFlow : MessageFlow
             Conversation = new Conversation { Id = conversationId, Enable = true },
             // 标记来源为 Gateway；是否持久化由 EnableGatewayRecording 配置决定
             Source = ChatFlowSource.Gateway,
-            PersistMessages = _chatSetting.EnableGatewayRecording,
             MaxTokens = request?.MaxTokens ?? 0,
             Temperature = request?.Temperature,
             ResponseFormat = request?.ResponseFormat,

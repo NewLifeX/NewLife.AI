@@ -11,14 +11,14 @@ namespace NewLife.ChatAI.Handlers;
 /// <para>注意：UsageService.Record 由 <c>UsageRecordHandler</c> 负责，本处理器仅写入消息/会话字段。</para>
 /// </remarks>
 [ChatHandlerOrder(9999)]
-public class PersistMessageHandler : ChatHandlerBase, IChatHandlerScope
+public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChatHandlerScope
 {
     /// <inheritdoc/>
-    /// <remarks>持久化处理器适用于所有来源，但内部由 PersistMessages 加以守卫</remarks>
+    /// <remarks>持久化处理器适用于所有来源</remarks>
     public ChatFlowSource SupportedSources => ChatFlowSource.All;
 
     /// <inheritdoc/>
-    /// <remarks>持久化是粿心能力，始终保留在链中；是否真正写入由 PersistMessages 决定</remarks>
+    /// <remarks>持久化是核心能力，始终保留在链中</remarks>
     public ChatHandlerTier Tier => ChatHandlerTier.Core;
 
     ///// <inheritdoc/>
@@ -28,17 +28,21 @@ public class PersistMessageHandler : ChatHandlerBase, IChatHandlerScope
     public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         // 未开启持久化时跳过数据库写入
-        if (!context.PersistMessages) return Task.CompletedTask;
-
-        //if (context is not MessageFlowContext flow) return Task.CompletedTask;
-
-        // 用户消息
-        if (context.UserMessage is DbChatMessage userMessage)
+        if (context.Source.HasFlag(ChatFlowSource.Web) ||
+            context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayRecording
+#if STARCHAT
+            || context.Source.HasFlag(ChatFlowSource.Channel) && setting.EnableChannelPersist
+#endif
+            )
         {
-            // 提取系统提示词（首个 system 消息）
-            userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-            userMessage.ToolNames = context.AvailableToolNames?.Join();
-            userMessage.Update();
+            // 用户消息
+            if (context.UserMessage is DbChatMessage userMessage)
+            {
+                // 提取系统提示词（首个 system 消息）
+                userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+                userMessage.ToolNames = context.AvailableToolNames?.Join();
+                userMessage.Update();
+            }
         }
 
         return Task.CompletedTask;
@@ -48,52 +52,56 @@ public class PersistMessageHandler : ChatHandlerBase, IChatHandlerScope
     public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
         // 未开启持久化时跳过数据库写入
-        if (!context.PersistMessages) return Task.CompletedTask;
-
-        //if (context is not MessageFlowContext flow) return Task.CompletedTask;
-        //using var span = tracer?.NewSpan("handler:PersistMessage");
-
-        // 助手消息
-        if (context.AssistantMessage is DbChatMessage assistantMsg)
+        if (context.Source.HasFlag(ChatFlowSource.Web) ||
+            context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayRecording
+#if STARCHAT
+            || context.Source.HasFlag(ChatFlowSource.Channel) && setting.EnableChannelPersist
+#endif
+            )
         {
-            // 写入消息内容
-            assistantMsg.Content = context.ContentBuilder.ToString();
-            assistantMsg.ThinkingContent = context.ThinkingBuilder.ToString();
-            var toolCalls = context.ToolCalls;
-            if (toolCalls.Count > 0)
+
+            // 助手消息
+            if (context.AssistantMessage is DbChatMessage assistantMsg)
             {
-                assistantMsg.ToolCalls = toolCalls.ToJson();
-                assistantMsg.ToolNames = toolCalls.Select(t => t.Name).Distinct().Join();
+                // 写入消息内容
+                assistantMsg.Content = context.ContentBuilder.ToString();
+                assistantMsg.ThinkingContent = context.ThinkingBuilder.ToString();
+                var toolCalls = context.ToolCalls;
+                if (toolCalls.Count > 0)
+                {
+                    assistantMsg.ToolCalls = toolCalls.ToJson();
+                    assistantMsg.ToolNames = toolCalls.Select(t => t.Name).Distinct().Join();
+                }
+
+                // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
+                ApplyUsageToMessage(assistantMsg, context.Usage, context.HasError, (context as MessageFlowContext)?.DeferredError?.Error);
+                ApplyRequestParams(assistantMsg, context.ModelConfig, context);
+                assistantMsg.Update();
             }
 
-            // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
-            ApplyUsageToMessage(assistantMsg, context.Usage, context.HasError, (context as MessageFlowContext)?.DeferredError?.Error);
-            ApplyRequestParams(assistantMsg, context.ModelConfig, context);
-            assistantMsg.Update();
-        }
-
-        // 用户消息
-        if (context.UserMessage is DbChatMessage userMessage)
-        {
-            userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-            userMessage.ToolNames = context.AvailableToolNames?.Join();
-            userMessage.Update();
-        }
-
-        // 会话
-        if (context.Conversation is Conversation conversation)
-        {
-            conversation.LastMessageTime = DateTime.Now;
-            conversation.MessageCount = DbChatMessage.CountByConversationId(conversation.Id);
-            if (context.Usage != null)
+            // 用户消息
+            if (context.UserMessage is DbChatMessage userMessage)
             {
-                conversation.InputTokens += context.Usage.InputTokens;
-                conversation.OutputTokens += context.Usage.OutputTokens;
-                conversation.TotalTokens += context.Usage.TotalTokens;
-                conversation.ElapsedMs += context.Usage.ElapsedMs;
+                userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+                userMessage.ToolNames = context.AvailableToolNames?.Join();
+                userMessage.Update();
             }
-            if (context.ModelConfig != null) conversation.ModelName = context.ModelConfig.Name;
-            conversation.Update();
+
+            // 会话
+            if (context.Conversation is Conversation conversation)
+            {
+                conversation.LastMessageTime = DateTime.Now;
+                conversation.MessageCount = DbChatMessage.CountByConversationId(conversation.Id);
+                if (context.Usage != null)
+                {
+                    conversation.InputTokens += context.Usage.InputTokens;
+                    conversation.OutputTokens += context.Usage.OutputTokens;
+                    conversation.TotalTokens += context.Usage.TotalTokens;
+                    conversation.ElapsedMs += context.Usage.ElapsedMs;
+                }
+                if (context.ModelConfig != null) conversation.ModelName = context.ModelConfig.Name;
+                conversation.Update();
+            }
         }
 
         return Task.CompletedTask;
