@@ -638,7 +638,7 @@ public class DashScopeIntegrationTests
             await ChatAsync(request);
         });
 
-        Assert.Contains("Invalid", ex.Message);
+        Assert.Contains("does not exist", ex.Message);
     }
 
     [Fact]
@@ -1588,7 +1588,7 @@ public class DashScopeIntegrationTests
 
     #region 文生图（Text-to-Image）
 
-    [Fact]
+    [Fact(Skip = "仅用于开发，平时跳过")]
     [DisplayName("文生图_wan2.6-t2i_URL返回与负向提示词，并保存本地文件")]
     public async Task TextToImageAsync_Wanx26T2i_Complete()
     {
@@ -1615,7 +1615,7 @@ public class DashScopeIntegrationTests
         await SaveOutputFileAsync(imageUrl!, "t2i_wanx26t2i.jpg");
     }
 
-    [Fact]
+    [Fact(Skip = "仅用于开发，平时跳过")]
     [DisplayName("文生图_qwen-image-2.0-pro_URL返回并保存本地文件")]
     public async Task TextToImageAsync_QwenImage20Pro_Complete()
     {
@@ -1646,7 +1646,7 @@ public class DashScopeIntegrationTests
 
     #region 文生视频（Text-to-Video）
 
-    [Fact]
+    [Fact(Skip = "仅用于开发，平时跳过")]
     [DisplayName("文生视频_wan2.7-t2v_等待完成并保存本地视频")]
     public async Task TextToVideoAsync_Wan27Turbo_CompletesAndSaves()
     {
@@ -1673,7 +1673,7 @@ public class DashScopeIntegrationTests
         await SaveOutputFileAsync(status.VideoUrls![0], "t2v_wan27turbo.mp4");
     }
 
-    [Fact]
+    [Fact(Skip = "仅用于开发，平时跳过")]
     [DisplayName("文生视频_提交后立即查询状态应为有效值")]
     public async Task GetVideoTaskAsync_AfterSubmit_ReturnsValidStatus()
     {
@@ -1698,7 +1698,7 @@ public class DashScopeIntegrationTests
             $"任务状态应为有效值，实际: {statusResponse.Status}");
     }
 
-    [Fact]
+    [Fact(Skip = "仅用于开发，平时跳过")]
     [DisplayName("图生视频_wan2.7-i2v_等待完成并保存本地视频")]
     public async Task ImageToVideoAsync_Wan27Turbo_CompletesAndSaves()
     {

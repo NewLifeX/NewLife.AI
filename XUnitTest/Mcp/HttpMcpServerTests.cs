@@ -223,7 +223,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        server.Port = 20017;
+        server.Port = 0;
 
         // Act
         server.Start();

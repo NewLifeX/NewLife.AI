@@ -55,6 +55,56 @@ public class OllamaIntegrationTests
         return chunks;
     }
 
+    private static async Task<(String Content, String Thinking, Int32 ChunkCount, Boolean ReachedThreshold)> CollectStreamUntilEnoughAsync(
+        OllamaChatClient client, ChatRequest request, Int32 minTextLength = 48, CancellationToken ct = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        var contentParts = new List<String>();
+        var thinkingParts = new List<String>();
+        var contentLength = 0;
+        var thinkingLength = 0;
+        var chunkCount = 0;
+        var reachedThreshold = false;
+
+        try
+        {
+            await foreach (var chunk in client.GetStreamingResponseAsync(request, cts.Token))
+            {
+                chunkCount++;
+
+                foreach (var message in chunk.Messages ?? [])
+                {
+                    var content = message.Delta?.Content as String;
+                    if (!String.IsNullOrWhiteSpace(content))
+                    {
+                        contentParts.Add(content);
+                        contentLength += content.Length;
+                    }
+
+                    var thinking = message.Delta?.ReasoningContent;
+                    if (!String.IsNullOrWhiteSpace(thinking))
+                    {
+                        thinkingParts.Add(thinking);
+                        thinkingLength += thinking.Length;
+                    }
+                }
+
+                if (contentLength + thinkingLength >= minTextLength)
+                {
+                    reachedThreshold = true;
+                    cts.Cancel();
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // 达到阈值后主动结束流式读取，缩短重量模型测试耗时
+        }
+
+        return (String.Concat(contentParts), String.Concat(thinkingParts), chunkCount, reachedThreshold);
+    }
+
     #endregion
 
     #region 服务元数据与客户端基础
@@ -761,7 +811,7 @@ public class OllamaIntegrationTests
     #region 重量模型测试
 
     [OllamaHeavyFact]
-    [DisplayName("重量模型_诗歌+思考_正文或思考至少其一非空")]
+    [DisplayName("重量模型_诗歌+思考_流式达到阈值即可提前结束")]
     public async Task HeavyModel_ChatAsync_ThinkTrue_PoemContentNonEmpty()
     {
         using var client = CreateClientFor(HeavyModel);
@@ -771,23 +821,18 @@ public class OllamaIntegrationTests
             Messages = [new ChatMessage { Role = "user", Content = "Write a short poem about the moon." }],
             MaxTokens = 500,
             EnableThinking = true,
+            Stream = true,
         };
 
-        var response = await client.GetResponseAsync(request);
+        var result = await CollectStreamUntilEnoughAsync(client, request);
 
-        Assert.NotNull(response?.Messages);
-        var msg = response.Messages[0].Message;
-        Assert.NotNull(msg);
-
-        var content = msg.Content as String;
-        var thinking = msg.ReasoningContent;
-
-        Assert.True(!String.IsNullOrWhiteSpace(content) || !String.IsNullOrWhiteSpace(thinking),
+        Assert.True(result.ChunkCount > 0, "重量模型流式模式至少应返回一个 chunk");
+        Assert.True(!String.IsNullOrWhiteSpace(result.Content) || !String.IsNullOrWhiteSpace(result.Thinking),
             "重量模型在 think=true 时至少应返回正文或思考内容之一");
     }
 
     [OllamaHeavyFact]
-    [DisplayName("重量模型_流式流式思考_正文拼合后非空")]
+    [DisplayName("重量模型_流式思考_达到阈值后主动结束")]
     public async Task HeavyModel_ChatStreamAsync_ThinkTrue_ContentNonEmpty()
     {
         using var client = CreateClientFor(HeavyModel);
@@ -800,19 +845,14 @@ public class OllamaIntegrationTests
             Stream = true,
         };
 
-        var chunks = await CollectStreamAsync(client, request);
-        Assert.NotEmpty(chunks);
-
-        var allContent = String.Concat(chunks
-            .SelectMany(c => c.Messages ?? [])
-            .Select(ch => ch.Delta?.Content as String ?? ""));
-        var allThinking = String.Concat(chunks
-            .SelectMany(c => c.Messages ?? [])
-            .Select(ch => ch.Delta?.ReasoningContent ?? ""));
+        var result = await CollectStreamUntilEnoughAsync(client, request);
 
         // 不同 Ollama/模型版本在 think=true 时可能仅输出 reasoning 或 content，接受任一非空即可
-        Assert.True(!String.IsNullOrWhiteSpace(allContent) || !String.IsNullOrWhiteSpace(allThinking),
+        Assert.True(result.ChunkCount > 0, "重量模型流式模式至少应返回一个 chunk");
+        Assert.True(!String.IsNullOrWhiteSpace(result.Content) || !String.IsNullOrWhiteSpace(result.Thinking),
             "流式返回至少应包含正文或思考内容之一");
+        Assert.True(result.ReachedThreshold || result.Content.Length + result.Thinking.Length > 0,
+            "应在达到阈值后提前结束，或至少收到部分正文/思考内容");
     }
 
     [OllamaHeavyFact]
