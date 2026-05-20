@@ -68,14 +68,26 @@ public class GatewayMessageFlow : MessageFlow
             Conversation = new Conversation { Id = conversationId, Enable = true },
             // 标记来源为 Gateway；是否持久化由 EnableGatewayRecording 配置决定
             Source = ChatFlowSource.Gateway,
-            MaxTokens = request?.MaxTokens ?? 0,
-            Temperature = request?.Temperature,
-            ResponseFormat = request?.ResponseFormat,
             ThinkingMode = request?.EnableThinking switch
             {
                 true => ThinkingMode.Think,
                 false => ThinkingMode.Fast,
                 _ => ThinkingMode.Auto,
+            },
+            Options = new ChatOptions
+            {
+                MaxTokens = request?.MaxTokens > 0 ? request!.MaxTokens : null,
+                Temperature = request?.Temperature,
+                ResponseFormat = request?.ResponseFormat,
+                Model = modelConfig.GetEffectiveModelCode(),
+                EnableThinking = request?.EnableThinking switch
+                {
+                    true => true,
+                    false => false,
+                    _ => modelConfig.SupportThinking ? true : null,
+                },
+                UserId = userId > 0 ? userId.ToString() : null,
+                ConversationId = conversationId > 0 ? conversationId.ToString() : null,
             },
         };
 

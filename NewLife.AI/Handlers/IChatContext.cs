@@ -72,14 +72,8 @@ public interface IChatContext : IExtend
 
     #region 模型调用参数
 
-    /// <summary>实际使用的最大 Token 数。由核心处理器在构建 ChatOptions 后填充</summary>
-    Int32 MaxTokens { get; set; }
-
-    /// <summary>实际使用的采样温度。由核心处理器在构建 ChatOptions 后填充</summary>
-    Double? Temperature { get; set; }
-
-    /// <summary>响应格式约束。透传至 LLM 的 response_format 参数，支持 json_object/json_schema/text</summary>
-    Object? ResponseFormat { get; set; }
+    /// <summary>模型调用选项。由入口方法（四大方法/网关入口）在初始化上下文时完整填充，各 Handler 可在 OnBefore 阶段读取或修改</summary>
+    ChatOptions Options { get; set; }
 
     /// <summary>完成原因。由核心处理器在流式/非流式结束后填充</summary>
     String? FinishReason { get; set; }

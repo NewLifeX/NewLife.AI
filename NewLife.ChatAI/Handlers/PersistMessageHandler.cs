@@ -141,8 +141,8 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
     private static void ApplyRequestParams(IChatMessage msg, IModelConfig modelConfig, IChatContext context)
     {
         msg.ModelName = modelConfig.Code;
-        if (context.MaxTokens > 0) msg.MaxTokens = context.MaxTokens;
-        if (context.Temperature != null) msg.Temperature = context.Temperature.Value;
+        if (context.Options.MaxTokens > 0) msg.MaxTokens = context.Options.MaxTokens.Value;
+        if (context.Options.Temperature != null) msg.Temperature = context.Options.Temperature.Value;
         if (!context.FinishReason.IsNullOrEmpty()) msg.FinishReason = context.FinishReason;
     }
 }

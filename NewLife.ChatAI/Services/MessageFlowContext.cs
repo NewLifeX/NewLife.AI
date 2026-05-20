@@ -121,14 +121,8 @@ public class MessageFlowContext : IChatContext
     /// <summary>本轮实际注入给模型的工具名称集合</summary>
     public ISet<String> AvailableToolNames { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>实际使用的最大 Token 数</summary>
-    public Int32 MaxTokens { get; set; }
-
-    /// <summary>实际使用的采样温度</summary>
-    public Double? Temperature { get; set; }
-
-    /// <summary>响应格式约束。透传至 LLM 的 response_format 参数，支持 json_object/json_schema/text</summary>
-    public Object? ResponseFormat { get; set; }
+    /// <summary>模型调用选项。由入口方法初始化并填充全部字段，各 Handler 可在 OnBefore 阶段读取或修改</summary>
+    public ChatOptions Options { get; set; } = new();
 
     /// <summary>完成原因</summary>
     public String? FinishReason { get; set; }

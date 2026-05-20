@@ -68,9 +68,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.Kind = FlowKind.Regenerate;
         if (flow.Error != null) return null;
 
-        // 沿用原消息的思考模式，避免因默认 Auto 在支持思考的模型上意外开启推理
-        flow.ThinkingMode = flow.AssistantMessage.ThinkingMode;
-
         // 软删除旧消息，保留历史版本；为本次重新生成创建新消息实体
         var oldMsg = flow.AssistantMessage;
         var newMsg = new DbChatMessage
@@ -173,9 +170,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             yield break;
         }
 
-        // 沿用原消息的思考模式，避免因默认 Auto 在支持思考的模型上意外开启推理
-        flow.ThinkingMode = flow.AssistantMessage.ThinkingMode;
-
         // 软删除旧消息，保留历史版本；为本次重新生成创建新消息实体
         var oldMsg = flow.AssistantMessage;
         var newMsg = new DbChatMessage
@@ -269,6 +263,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.SkillId = conversation.SkillId;
         flow["RequestSkillCode"] = request.SkillCode;
         flow.ThinkingMode = request.ThinkingMode;
+        flow.Options.EnableThinking = flow.ThinkingMode switch
+        {
+            ThinkingMode.Think => true,
+            ThinkingMode.Fast => false,
+            _ => flow.ModelConfig.SupportThinking ? true : null,
+        };
 
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
@@ -380,17 +380,32 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             SkillId = conversation.SkillId,
         };
 
-        // 按消息模式：自动填充 UserMessage 或 AssistantMessage
+        // 按消息模式：自动填充 UserMessage 或 AssistantMessage，并从消息继承 ThinkingMode
+        // （避免因默认 Auto 在支持思考的模型上意外开启推理）
         if (message != null)
         {
             if (message.Role.EqualIgnoreCase("user"))
                 flow.UserMessage = message;
             else
                 flow.AssistantMessage = message;
+
+            flow.ThinkingMode = message.ThinkingMode;
         }
 
         var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
         flow.HistoryMessages = LoadHistoryMessages(conversation.Id, maxRounds);
+
+        // 预初始化调用选项。按会话模式（StreamMessageAsync）会用请求参数覆盖 EnableThinking
+        flow.Options.Model = modelConfig.GetEffectiveModelCode();
+        flow.Options.EnableThinking = flow.ThinkingMode switch
+        {
+            ThinkingMode.Think => true,
+            ThinkingMode.Fast => false,
+            _ => modelConfig.SupportThinking ? true : null,
+        };
+        flow.Options.UserId = userId > 0 ? userId.ToString() : null;
+        flow.Options.ConversationId = conversation.Id > 0 ? conversation.Id.ToString() : null;
+        ApplyResponseStyle(flow.Options, flow.Options.UserId);
 
         return flow;
     }
@@ -699,31 +714,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             foreach (var t in p.GetTools())
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
 
-        var userId = context.UserId > 0 ? context.UserId.ToString() : null;
-        var conversationId = context.Conversation?.Id > 0 ? context.Conversation.Id.ToString() : null;
-        var chatOptions = new ChatOptions
-        {
-            Model = model.GetEffectiveModelCode(),
-            EnableThinking = context.ThinkingMode switch
-            {
-                ThinkingMode.Think => true,
-                ThinkingMode.Fast => false,
-                _ => model.SupportThinking ? true : null,
-            },
-            UserId = userId,
-            ConversationId = conversationId,
-        };
+        var chatOptions = context.Options;
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
-        ApplyResponseStyle(chatOptions, userId);
-
-        // 将请求参数覆盖到 chatOptions（MaxTokens/Temperature/ResponseFormat 优先使用 context 中从请求提取的值）
-        if (context.MaxTokens > 0) chatOptions.MaxTokens = context.MaxTokens;
-        if (context.Temperature.HasValue) chatOptions.Temperature = context.Temperature;
-        if (context.ResponseFormat != null) chatOptions.ResponseFormat = context.ResponseFormat;
-
-        // 记录最终生效的参数值（供后续持久化使用）
-        context.MaxTokens = chatOptions.MaxTokens ?? 0;
-        context.Temperature = chatOptions.Temperature;
+        ApplyResponseStyle(chatOptions, context.Options.UserId);
 
         using var streamClient = clientBuilder.Build();
 
@@ -814,31 +807,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             foreach (var t in p.GetTools())
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
 
-        var userId = context.UserId > 0 ? context.UserId.ToString() : null;
-        var conversationId = context.Conversation?.Id > 0 ? context.Conversation.Id.ToString() : null;
-        var chatOptions = new ChatOptions
-        {
-            Model = model.GetEffectiveModelCode(),
-            EnableThinking = context.ThinkingMode switch
-            {
-                ThinkingMode.Think => true,
-                ThinkingMode.Fast => false,
-                _ => model.SupportThinking ? true : null,
-            },
-            UserId = userId,
-            ConversationId = conversationId,
-        };
+        var chatOptions = context.Options;
         if (context.Items.Count > 0) chatOptions.Items = context.Items;
-        ApplyResponseStyle(chatOptions, userId);
-
-        // 将请求参数覆盖到 chatOptions（MaxTokens/Temperature/ResponseFormat 优先使用 context 中从请求提取的值）
-        if (context.MaxTokens > 0) chatOptions.MaxTokens = context.MaxTokens;
-        if (context.Temperature.HasValue) chatOptions.Temperature = context.Temperature;
-        if (context.ResponseFormat != null) chatOptions.ResponseFormat = context.ResponseFormat;
-
-        // 记录最终生效的参数值（供后续持久化使用）
-        context.MaxTokens = chatOptions.MaxTokens ?? 0;
-        context.Temperature = chatOptions.Temperature;
+        ApplyResponseStyle(chatOptions, context.Options.UserId);
 
         using var directClient = clientBuilder.Build();
 
