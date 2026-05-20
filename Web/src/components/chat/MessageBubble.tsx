@@ -270,7 +270,7 @@ export function MessageBubble({
           )}
         </div>
 
-        <div className="flex items-center mt-2">
+        <div className="flex flex-wrap items-center mt-2">
           <MessageActions
             onCopy={onCopy}
             onLike={onLike}
@@ -284,19 +284,19 @@ export function MessageBubble({
           />
           <div className="ml-auto flex items-center space-x-2 mr-1">
             {modelName && (
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default">
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default whitespace-nowrap">
                 {modelName}
               </span>
             )}
             {usage && usage.totalTokens != null && (
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default" title={`${t('chat.inputTokens')}: ${usage.inputTokens ?? 0} | ${t('chat.outputTokens')}: ${usage.outputTokens ?? 0}`}>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default whitespace-nowrap" title={`${t('chat.inputTokens')}: ${usage.inputTokens ?? 0} | ${t('chat.outputTokens')}: ${usage.outputTokens ?? 0}`}>
                 {usage.inputTokens != null && usage.outputTokens != null
                   ? `${usage.inputTokens} + ${usage.outputTokens} = ${usage.totalTokens} tokens`
                   : `${usage.totalTokens} tokens`}
               </span>
             )}
             {createdAt && (
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default" title={formatExactTime(createdAt)}>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 cursor-default whitespace-nowrap" title={formatExactTime(createdAt)}>
                 {formatRelativeTime(createdAt, locale)}
               </span>
             )}
