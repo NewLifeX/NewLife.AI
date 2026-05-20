@@ -23,6 +23,9 @@ public partial interface IModelConfig
     /// <summary>名称。显示名称</summary>
     String? Name { get; set; }
 
+    /// <summary>上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）</summary>
+    String? UpstreamModel { get; set; }
+
     /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
     Int32 ContextLength { get; set; }
 
@@ -43,6 +46,9 @@ public partial interface IModelConfig
 
     /// <summary>视频生成。是否支持文生视频</summary>
     Boolean SupportVideo { get; set; }
+
+    /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
+    Boolean SupportEmbedding { get; set; }
 
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     String? SystemPrompt { get; set; }

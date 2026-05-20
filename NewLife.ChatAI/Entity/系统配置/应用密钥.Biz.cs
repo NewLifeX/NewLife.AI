@@ -1,10 +1,11 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
+using NewLife.AI.Interfaces;
 using NewLife.Log;
 using XCode;
 
 namespace NewLife.ChatAI.Entity;
 
-public partial class AppKey : Entity<AppKey>
+public partial class AppKey : Entity<AppKey>, IAppKey
 {
     #region 对象操作
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存

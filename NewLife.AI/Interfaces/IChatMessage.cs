@@ -64,5 +64,14 @@ public partial interface IChatMessage
 
     /// <summary>耗时。毫秒</summary>
     Int32 ElapsedMs { get; set; }
+
+    /// <summary>反馈类型。None=0无反馈, Like=1点赞, Dislike=2点踩</summary>
+    NewLife.AI.Models.FeedbackType FeedbackType { get; set; }
+
+    /// <summary>反馈原因。点踩时的具体原因，可多选逗号分隔，或用户自定义输入</summary>
+    String? FeedbackReason { get; set; }
+
+    /// <summary>启用。false表示已删除/停用，不参与历史上下文构建</summary>
+    Boolean Enable { get; set; }
     #endregion
 }

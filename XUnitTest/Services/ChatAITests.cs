@@ -492,7 +492,7 @@ public class ChatAITests
     [Fact]
     public void AppKeyResponseDtoMasksSecret()
     {
-        var dto = new AppKeyResponseDto(1, "测试", "sk-ab****jk", true, "gpt-4o", null, 100, 5000, DateTime.Now, DateTime.Now);
+        var dto = new AppKeyResponseDto(1, "测试", "sk-ab****jk", true, "gpt-4o", null, DateTime.Now, DateTime.Now);
 
         Assert.Contains("****", dto.SecretMask);
         Assert.Equal(1, dto.Id);

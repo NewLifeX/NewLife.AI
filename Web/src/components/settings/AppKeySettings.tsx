@@ -210,8 +210,6 @@ export function AppKeySettings() {
                   {item.secretMask}
                 </code>
                 <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400">
-                  <span>{t('appKey.calls')}: {item.calls.toLocaleString()}</span>
-                  <span>Tokens: {item.totalTokens.toLocaleString()}</span>
                   <span>{t('appKey.created')}: {formatDate(item.createTime)}</span>
                 </div>
                 {editModelsId === item.id ? (

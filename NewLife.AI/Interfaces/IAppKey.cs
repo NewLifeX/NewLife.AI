@@ -35,12 +35,6 @@ public partial interface IAppKey
     /// <summary>最后调用时间</summary>
     DateTime LastCallTime { get; set; }
 
-    /// <summary>调用次数。累计API请求数</summary>
-    Int64 Calls { get; set; }
-
-    /// <summary>总Token数。累计消耗Token</summary>
-    Int64 TotalTokens { get; set; }
-
     /// <summary>备注</summary>
     String? Remark { get; set; }
     #endregion

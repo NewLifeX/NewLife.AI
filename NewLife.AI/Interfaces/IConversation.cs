@@ -20,7 +20,7 @@ public partial interface IConversation
     /// <summary>用户名</summary>
     String? UserName { get; set; }
 
-    /// <summary>应用密钥编号。通过API网关调用时关联的AppKey</summary>
+    /// <summary>应用密钥。通过API网关调用时关联的AppKey</summary>
     Int32 AppKeyId { get; set; }
 
     /// <summary>标题。会话标题，显示在侧边栏</summary>
@@ -64,6 +64,9 @@ public partial interface IConversation
 
     /// <summary>来源。Web/Gateway/Channel等，标识对话入口</summary>
     String? Source { get; set; }
+
+    /// <summary>启用。false表示已删除/停用，不在会话列表中显示</summary>
+    Boolean Enable { get; set; }
 
     /// <summary>备注</summary>
     String? Remark { get; set; }

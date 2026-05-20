@@ -87,22 +87,6 @@ public partial class AppKey
     [BindColumn("LastCallTime", "最后调用时间", "")]
     public DateTime LastCallTime { get => _LastCallTime; set { if (OnPropertyChanging("LastCallTime", value)) { _LastCallTime = value; OnPropertyChanged("LastCallTime"); } } }
 
-    private Int64 _Calls;
-    /// <summary>调用次数。累计API请求数</summary>
-    [DisplayName("调用次数")]
-    [Description("调用次数。累计API请求数")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("Calls", "调用次数。累计API请求数", "")]
-    public Int64 Calls { get => _Calls; set { if (OnPropertyChanging("Calls", value)) { _Calls = value; OnPropertyChanged("Calls"); } } }
-
-    private Int64 _TotalTokens;
-    /// <summary>总Token数。累计消耗Token</summary>
-    [DisplayName("总Token数")]
-    [Description("总Token数。累计消耗Token")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("TotalTokens", "总Token数。累计消耗Token", "")]
-    public Int64 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
-
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -183,8 +167,6 @@ public partial class AppKey
             "Enable" => _Enable,
             "ExpireTime" => _ExpireTime,
             "LastCallTime" => _LastCallTime,
-            "Calls" => _Calls,
-            "TotalTokens" => _TotalTokens,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -206,8 +188,6 @@ public partial class AppKey
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
                 case "LastCallTime": _LastCallTime = value.ToDateTime(); break;
-                case "Calls": _Calls = value.ToLong(); break;
-                case "TotalTokens": _TotalTokens = value.ToLong(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -326,12 +306,6 @@ public partial class AppKey
         /// <summary>最后调用时间</summary>
         public static readonly Field LastCallTime = FindByName("LastCallTime");
 
-        /// <summary>调用次数。累计API请求数</summary>
-        public static readonly Field Calls = FindByName("Calls");
-
-        /// <summary>总Token数。累计消耗Token</summary>
-        public static readonly Field TotalTokens = FindByName("TotalTokens");
-
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -382,12 +356,6 @@ public partial class AppKey
 
         /// <summary>最后调用时间</summary>
         public const String LastCallTime = "LastCallTime";
-
-        /// <summary>调用次数。累计API请求数</summary>
-        public const String Calls = "Calls";
-
-        /// <summary>总Token数。累计消耗Token</summary>
-        public const String TotalTokens = "TotalTokens";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

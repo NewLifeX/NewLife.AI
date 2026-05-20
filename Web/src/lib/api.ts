@@ -905,8 +905,6 @@ export interface AppKeyItem {
   enable: boolean
   models: string | null
   expireTime: string | null
-  calls: number
-  totalTokens: number
   lastCallTime: string
   createTime: string
 }
