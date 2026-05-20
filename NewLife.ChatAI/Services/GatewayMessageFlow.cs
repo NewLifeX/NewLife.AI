@@ -54,7 +54,7 @@ public class GatewayMessageFlow : MessageFlow
     /// <param name="modelConfig">目标模型配置</param>
     /// <param name="userId">当前用户编号（0 表示匿名）</param>
     /// <param name="conversationId">关联会话编号（0 表示无会话）</param>
-    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking 等生成参数</param>
+    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking/ResponseFormat 等生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>SSE 事件流</returns>
     public virtual async IAsyncEnumerable<ChatStreamEvent> StreamGatewayAsync(
@@ -76,6 +76,7 @@ public class GatewayMessageFlow : MessageFlow
             PersistMessages = _chatSetting.EnableGatewayRecording,
             MaxTokens = request?.MaxTokens ?? 0,
             Temperature = request?.Temperature,
+            ResponseFormat = request?.ResponseFormat,
             ThinkingMode = request?.EnableThinking switch
             {
                 true => ThinkingMode.Think,
@@ -95,7 +96,7 @@ public class GatewayMessageFlow : MessageFlow
     /// <param name="modelConfig">目标模型配置</param>
     /// <param name="userId">当前用户编号（0 表示匿名）</param>
     /// <param name="conversationId">关联会话编号（0 表示无会话）</param>
-    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking 等生成参数</param>
+    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking/ResponseFormat 等生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>聚合后的完整响应</returns>
     public virtual async Task<ChatResponse> CompletionGatewayAsync(

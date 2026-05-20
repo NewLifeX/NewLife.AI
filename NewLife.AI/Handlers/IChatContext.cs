@@ -78,6 +78,9 @@ public interface IChatContext : IExtend
     /// <summary>实际使用的采样温度。由核心处理器在构建 ChatOptions 后填充</summary>
     Double? Temperature { get; set; }
 
+    /// <summary>响应格式约束。透传至 LLM 的 response_format 参数，支持 json_object/json_schema/text</summary>
+    Object? ResponseFormat { get; set; }
+
     /// <summary>完成原因。由核心处理器在流式/非流式结束后填充</summary>
     String? FinishReason { get; set; }
 

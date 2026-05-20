@@ -156,6 +156,26 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
             "你是一个只用JSON格式回答的助手，回答格式为：{\"reply\":\"内容\"}",
             "你好",
             100);
+        // 用 json_schema 强约束输出，确保模型返回 {"reply":"..."} 结构
+        request.ResponseFormat = new Dictionary<String, Object?>
+        {
+            ["type"] = "json_schema",
+            ["json_schema"] = new Dictionary<String, Object?>
+            {
+                ["name"] = "reply_schema",
+                ["strict"] = true,
+                ["schema"] = new Dictionary<String, Object?>
+                {
+                    ["type"] = "object",
+                    ["properties"] = new Dictionary<String, Object?>
+                    {
+                        ["reply"] = new Dictionary<String, Object?> { ["type"] = "string" },
+                    },
+                    ["required"] = new[] { "reply" },
+                    ["additionalProperties"] = false,
+                },
+            },
+        };
 
         var response = await ChatAsync(request);
 
@@ -163,6 +183,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         var content = response.Messages?[0].Message?.Content as String;
         Assert.False(String.IsNullOrEmpty(content));
         Assert.Contains("{", content);
+        Assert.Contains("reply", content);
     }
 
     [Fact]

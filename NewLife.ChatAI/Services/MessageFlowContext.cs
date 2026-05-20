@@ -127,6 +127,9 @@ public class MessageFlowContext : IChatContext
     /// <summary>实际使用的采样温度</summary>
     public Double? Temperature { get; set; }
 
+    /// <summary>响应格式约束。透传至 LLM 的 response_format 参数，支持 json_object/json_schema/text</summary>
+    public Object? ResponseFormat { get; set; }
+
     /// <summary>完成原因</summary>
     public String? FinishReason { get; set; }
 

@@ -206,6 +206,7 @@ public class TitleGenerationHandlerTests
         public ISet<String> AvailableToolNames { get; } = new HashSet<String>();
         public Int32 MaxTokens { get; set; }
         public Double? Temperature { get; set; }
+        public Object? ResponseFormat { get; set; }
         public String? FinishReason { get; set; }
         public System.Text.StringBuilder ContentBuilder { get; } = new();
         public System.Text.StringBuilder ThinkingBuilder { get; } = new();
