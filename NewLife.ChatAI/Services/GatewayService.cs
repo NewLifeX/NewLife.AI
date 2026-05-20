@@ -496,7 +496,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     /// <param name="responseContent">AI 回复内容</param>
     /// <param name="thinkingContent">思考过程</param>
     /// <param name="usage">Token 用量统计</param>
-    public void RecordGatewayConversation(IChatRequest request, ModelConfig config, AppKey appKey, String? responseContent, String? thinkingContent, UsageDetails? usage)
+    public virtual void RecordGatewayConversation(IChatRequest request, ModelConfig config, AppKey appKey, String? responseContent, String? thinkingContent, UsageDetails? usage)
     {
         try
         {
@@ -505,22 +505,20 @@ public class GatewayService(UsageService usageService, ModelService modelService
             var userContent = ExtractTextContent(lastUserMsg);
             if (userContent.IsNullOrEmpty()) return;
 
-            Conversation? conversation;
             var existingId = request.ConversationId.ToLong();
-            if (existingId > 0)
+
+            // 复用预创建的会话，补充用量统计
+            var conversation = Conversation.FindById(existingId);
+            if (conversation != null)
             {
-                // 复用预创建的会话，补充用量统计
-                conversation = Conversation.FindById(existingId);
-                if (conversation != null)
-                {
-                    conversation.MessageCount = responseContent.IsNullOrEmpty() ? 1 : 2;
-                    conversation.InputTokens = usage?.InputTokens ?? 0;
-                    conversation.OutputTokens = usage?.OutputTokens ?? 0;
-                    conversation.TotalTokens = usage?.TotalTokens ?? 0;
-                    conversation.ElapsedMs = usage?.ElapsedMs ?? 0;
-                    conversation.LastMessageTime = DateTime.Now;
-                    conversation.Update();
-                }
+                conversation.MessageCount = responseContent.IsNullOrEmpty() ? 1 : 2;
+                conversation.InputTokens = usage?.InputTokens ?? 0;
+                conversation.OutputTokens = usage?.OutputTokens ?? 0;
+                conversation.TotalTokens = usage?.TotalTokens ?? 0;
+                conversation.ElapsedMs = usage?.ElapsedMs ?? 0;
+                conversation.LastMessageTime = DateTime.Now;
+                OnConversationSaving(conversation, config, usage);
+                conversation.Update();
             }
             else
             {
@@ -542,6 +540,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     ElapsedMs = usage?.ElapsedMs ?? 0,
                     Enable = true,
                 };
+                OnConversationSaving(conversation, config, usage);
                 conversation.Insert();
             }
 
@@ -574,6 +573,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     ElapsedMs = usage?.ElapsedMs ?? 0,
                     Enable = true,
                 };
+                OnAssistantMessageSaving(assistantMsg, config, usage);
                 assistantMsg.Insert();
             }
         }
@@ -583,5 +583,17 @@ public class GatewayService(UsageService usageService, ModelService modelService
             log?.Error("网关对话记录失败: {0}", ex.Message);
         }
     }
+
+    /// <summary>保存会话前的钩子。子类可重写以设置扩展字段（如 StarChat 的 TotalCost）</summary>
+    /// <param name="conversation">即将保存的会话实体</param>
+    /// <param name="config">模型配置</param>
+    /// <param name="usage">Token 用量统计</param>
+    protected virtual void OnConversationSaving(Conversation conversation, ModelConfig config, UsageDetails? usage) { }
+
+    /// <summary>保存助手消息前的钩子。子类可重写以设置扩展字段（如 StarChat 的 TotalCost）</summary>
+    /// <param name="assistantMsg">即将保存的助手消息实体</param>
+    /// <param name="config">模型配置</param>
+    /// <param name="usage">Token 用量统计</param>
+    protected virtual void OnAssistantMessageSaving(DbChatMessage assistantMsg, ModelConfig config, UsageDetails? usage) { }
     #endregion
 }
