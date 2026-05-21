@@ -1,44 +1,39 @@
-﻿using NewLife.AI.Models;
+﻿using System.Text.RegularExpressions;
+using NewLife.AI.Models;
+using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
 
-// ===== 既有对话与多模态模型 =====
+// ===== 对话模型 =====
 [AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true)]
-[AiClientModel("qwen3.5-plus", "Qwen3.5 Plus", Thinking = true, Vision = true)]
-[AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true, Vision = true)]
 [AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
 [AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
-[AiClientModel("qwen-image", "Qwen Image", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-plus", "Qwen Image Plus", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-max", "Qwen Image Max", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-2.0", "Qwen Image 2.0", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-2.0-pro",   "Qwen Image 2.0 Pro",     ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-edit-max",  "Qwen Image Edit Max",    ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-edit-plus", "Qwen Image Edit Plus",   ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen-image-edit",      "Qwen Image Edit",        ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-2.0-pro", "Qwen Image 2.0 Pro", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("qwen-image-edit", "Qwen Image Edit", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
-[AiClientModel("qwen3.5-omni-plus",  "Qwen3.5 Omni Plus",  Vision = true, Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, FunctionCalling = false)]
 [AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-omni-flash",   "Qwen3 Omni Flash",   Vision = true, Audio = true, Thinking = true, FunctionCalling = false)]
-[AiClientModel("qwen-omni-turbo",    "Qwen Omni Turbo",    Vision = true, Audio = true, FunctionCalling = false)]
-[AiClientModel("wan2.6-t2i", "Wan 文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("wan2.7-t2v", "Wanx 文生视频", VideoGeneration = true, FunctionCalling = false)]
-[AiClientModel("wan2.7-i2v", "Wanx 图生视频", Vision = true, VideoGeneration = true, FunctionCalling = false)]
-// ===== 新增对话模型（2026-Q2）=====
-[AiClientModel("qwen3.6-max-preview", "Qwen3.6 Max Preview", Thinking = true)]
-[AiClientModel("qwen3.6-plus",        "Qwen3.6 Plus",        Thinking = true, Vision = true)]
-[AiClientModel("qwen3.6-flash",       "Qwen3.6 Flash",       Thinking = true)]
-[AiClientModel("deepseek-v4-pro",     "DeepSeek V4 Pro",     Thinking = true)]
-[AiClientModel("deepseek-v4-flash",   "DeepSeek V4 Flash",   Thinking = true)]
-[AiClientModel("glm-5.1",             "GLM 5.1",             Thinking = true)]
-[AiClientModel("kimi-k2.6",           "Kimi K2.6",           Thinking = true)]
-[AiClientModel("MiniMax-M2.5",        "MiniMax M2.5",        Thinking = true)]
+[AiClientModel("qwen3-omni-flash", "Qwen3 Omni Flash", Vision = true, Audio = true, Thinking = true, FunctionCalling = false)]
+[AiClientModel("qwen-omni-turbo", "Qwen Omni Turbo", Vision = true, Audio = true, FunctionCalling = false)]
+[AiClientModel("wan2.6-t2i", "文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("wan2.7-t2v", "文生视频（万相2.7）", VideoGeneration = true, FunctionCalling = false)]
+[AiClientModel("wan2.7-i2v", "图生视频（万相2.7）", Vision = true, VideoGeneration = true, FunctionCalling = false)]
+// ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
+// -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
+[AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true)]
+[AiClientModel("qwen3.6-plus", "Qwen3.6 Plus", Thinking = true, Vision = true)]
+[AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true, Vision = true)]
+[AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Thinking = true)]
+[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Thinking = true)]
+[AiClientModel("glm-5.1", "GLM 5.1", Thinking = true)]
+[AiClientModel("kimi-k2.6", "Kimi K2.6", Thinking = true)]
+[AiClientModel("MiniMax-M2.5", "MiniMax M2.5", Thinking = true)]
 // ===== 嵌入与重排序模型 =====
-[AiClientModel("text-embedding-v4",  "Text Embedding V4",  FunctionCalling = false)]
+[AiClientModel("text-embedding-v4", "Text Embedding V4", FunctionCalling = false)]
 [AiClientModel("qwen3-vl-embedding", "Qwen3 VL Embedding", Vision = true, FunctionCalling = false)]
-[AiClientModel("qwen3-rerank",       "Qwen3 Rerank",       FunctionCalling = false)]
-[AiClientModel("qwen3-vl-rerank",    "Qwen3 VL Rerank",    Vision = true, FunctionCalling = false)]
+[AiClientModel("qwen3-rerank", "Qwen3 Rerank", FunctionCalling = false)]
+[AiClientModel("qwen3-vl-rerank", "Qwen3 VL Rerank", Vision = true, FunctionCalling = false)]
 public partial class DashScopeChatClient
 {
     #region 模型列表
@@ -81,8 +76,9 @@ public partial class DashScopeChatClient
     /// <remarks>
     /// 阿里百炼模型命名规律（基于 2026-Q2 官方文档）：
     /// <list type="bullet">
-    /// <item>qwen*-vl* / qvq-*：视觉能力</item>
-    /// <item>qwen3.X-*（如 qwen3.5-/qwen3.6-）中 Plus 和开源版：内置多模态（视觉），Flash/Max/Coder 纯文本</item>
+    /// <item>qwen -plus/-flash/-turbo：支持文本 + 视觉（Vision = true），通过 OpenAI 兼容模式传入图片</item>
+    /// <item>qwen -max：纯文本旗舰，不支持视觉</item>
+    /// <item>qwen*-vl* / qvq-*：视觉语言系列，走 multimodal-generation 专属端点</item>
     /// <item>qwq-* / qvq-*：专用推理模型，始终具备思考能力</item>
     /// <item>qwen3*（除 coder 和 -instruct 后缀）：qwen3 时代全系列支持思考模式</item>
     /// <item>qwen-max/plus/flash/turbo（稳定版别名）：当前均指向 qwen3 时代，支持思考</item>
@@ -149,18 +145,17 @@ public partial class DashScopeChatClient
             return new AiProviderCapabilities(false, false, true, true, false, false, false, 32_768);
 
         // === 视觉能力 ===
-        // VL 系列和 QVQ 视觉推理模型
+        // -vl 标识符（视觉语言/OCR）或 qvq- 前缀（视觉推理）
         if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("-ocr", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
             vision = true;
 
-        // qwen3.X-*（如 qwen3.5-/qwen3.6-）中 Plus 和开源模型支持多模态（文本+图像+视频输入）
-        // Flash/Max/Turbo/Coder 子系列为纯文本，"qwen3." 不匹配 "qwen3-max" 等
-        if (modelId.StartsWithIgnoreCase("qwen3.") &&
-            !modelId.Contains("-flash", StringComparison.OrdinalIgnoreCase) &&
-            !modelId.Contains("-max", StringComparison.OrdinalIgnoreCase) &&
-            !modelId.Contains("-turbo", StringComparison.OrdinalIgnoreCase) &&
-            !modelId.Contains("-coder", StringComparison.OrdinalIgnoreCase))
+        // qwen -plus/-flash/-turbo 支持文本+视觉；-max 为纯文本旗舰无视觉
+        if (Regex.IsMatch(modelId, @"^qwen\d+\.\d+-", RegexOptions.IgnoreCase) &&
+            (modelId.Contains("-plus", StringComparison.OrdinalIgnoreCase) ||
+             modelId.Contains("-flash", StringComparison.OrdinalIgnoreCase) ||
+             modelId.Contains("-turbo", StringComparison.OrdinalIgnoreCase)))
             vision = true;
 
         // === 思考/推理能力 ===

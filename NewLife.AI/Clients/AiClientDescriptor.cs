@@ -114,6 +114,33 @@ public class AiClientDescriptor
         return null;
     }
 
+    /// <summary>按模型 ID 查找已注册的完整模型信息（显示名称 + 能力）</summary>
+    /// <remarks>匹配规则与 <see cref="FindModelCapabilities"/> 相同：精确匹配优先，其次前缀匹配带版本后缀的变体</remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>匹配的模型信息，未找到返回 null</returns>
+    public AiModelInfo? FindModelInfo(String? modelId)
+    {
+        if (modelId.IsNullOrEmpty() || Models.Length == 0) return null;
+
+        // 精确匹配
+        foreach (var m in Models)
+        {
+            if (String.Equals(m.Model, modelId, StringComparison.OrdinalIgnoreCase))
+                return m;
+        }
+
+        // 前缀匹配：已注册模型作为前缀匹配远端返回的带版本后缀变体
+        foreach (var m in Models)
+        {
+            if (modelId!.StartsWith(m.Model, StringComparison.OrdinalIgnoreCase) &&
+                modelId.Length > m.Model.Length &&
+                (modelId[m.Model.Length] == '-' || modelId[m.Model.Length] == ':'))
+                return m;
+        }
+
+        return null;
+    }
+
     /// <inheritdoc/>
     public override String ToString() => $"{Code} ({DisplayName})";
 }

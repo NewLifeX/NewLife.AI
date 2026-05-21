@@ -597,6 +597,12 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             };
 
             if (!model.Name.IsNullOrEmpty()) config.Name = model.Name;
+
+            // 新建模型且名称为空时，优先从已注册列表取显示名，其次按命名规律（连字符各段首字母大写）推断
+            if (isNew && config.Name.IsNullOrEmpty())
+                config.Name = descriptor?.FindModelInfo(model.Id)?.DisplayName
+                    ?? (client as OpenAIClientBase)?.InferModelDisplayName(model.Id);
+
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
 
             // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动配置）

@@ -1,10 +1,10 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Collections;
-using NewLife.Remoting;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
@@ -488,9 +488,11 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <remarks>
     /// 命名规律：
     /// <list type="bullet">
-    /// <item>含 -vl：Vision-Language 系列</item>
-    /// <item>qvq- 前缀：视觉推理系列（区别于纯文本推理 qwq-）</item>
-    /// <item>qwen3.X- 前缀（如 qwen3.5-/qwen3.6-）：内置多模态能力，仅支持 multimodal-generation 端点</item>
+    /// <item>含 -vl / -ocr：Vision-Language 系列，走多模态端点</item>
+    /// <item>qvq- 前缀：视觉推理系列（区别于纯文本推理 qwq-），走多模态端点</item>
+    /// <item>qwen3.5/3.6/3.7 -plus/-flash/-turbo：支持文本+视觉，走多模态端点</item>
+    /// <item>qwen3.5/3.6/3.7 -max（含 -max-preview）：纯文本旗舰，走 text-generation 端点</item>
+    /// <item>音频理解模型（qwen-audio-*、qwen2-audio-*）：走多模态端点</item>
     /// </list>
     /// </remarks>
     private static Boolean IsMultimodalModel(String? model)
@@ -498,9 +500,20 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         if (model.IsNullOrEmpty()) return false;
         // Omni 全模态模型不走原生多模态端点，走兼容模式
         if (IsOmniModel(model)) return false;
+        // -vl / -ocr 标识符（视觉语言/OCR）
         if (model.IndexOf("-vl", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        if (model.IndexOf("-ocr", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        // qvq- 前缀：视觉推理系列
         if (model.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase)) return true;
-        if (model.StartsWithIgnoreCase("qwen3.5-", "qwen3.")) return true;
+        // qwen3.5/3.6/3.7：-plus/-flash/-turbo 含视觉能力，走多模态端点；-max（含 -max-preview）为纯文本
+        if (Regex.IsMatch(model, @"^qwen\d+\.\d+-", RegexOptions.IgnoreCase))
+        {
+            if (model.Contains("-plus", StringComparison.OrdinalIgnoreCase) ||
+                model.Contains("-flash", StringComparison.OrdinalIgnoreCase) ||
+                model.Contains("-turbo", StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
         // 音频理解模型（qwen-audio-chat、qwen2-audio-instruct 等）使用多模态端点
         if (model.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase)) return true;
         if (model.StartsWith("qwen2-audio", StringComparison.OrdinalIgnoreCase)) return true;

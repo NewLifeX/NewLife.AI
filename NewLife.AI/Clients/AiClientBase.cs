@@ -131,7 +131,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
 
         var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"ai:Chat:{request.Model}", request.Messages?.FirstOrDefault()?.Content);
+        using var span = Tracer?.NewSpan($"ai:Chat:{request.Model}", request.Messages?.LastOrDefault()?.Content);
         try
         {
             var response = await ChatAsync(request, cancellationToken);
@@ -163,7 +163,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
 
         var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"ai:Streaming:{request.Model}", request.Messages?.FirstOrDefault()?.Content);
+        using var span = Tracer?.NewSpan($"ai:Streaming:{request.Model}", request.Messages?.LastOrDefault()?.Content);
 
         UsageDetails? lastUsage = null;
         await foreach (var chunk in ChatStreamAsync(request, cancellationToken).ConfigureAwait(false))

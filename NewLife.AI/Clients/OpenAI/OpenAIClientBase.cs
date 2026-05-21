@@ -302,5 +302,30 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
 
         return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, false, contextLength);
     }
+
+    /// <summary>根据模型 ID 推断可读显示名称。将连字符分隔的各段首字母大写，如 qwen3.7-max → Qwen3.7 Max</summary>
+    /// <remarks>子类可重写以实现服务商特定格式（如品牌名全大写等）。已在 <see cref="AiClientDescriptor"/> 注册的模型优先使用 DisplayName 属性，此方法作为未注册模型的兜底推断</remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断出的显示名称，输入为空时返回 null</returns>
+    public virtual String? InferModelDisplayName(String? modelId)
+    {
+        if (modelId.IsNullOrEmpty()) return null;
+
+        var parts = modelId!.Split('-');
+        var sb = new StringBuilder();
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i > 0) sb.Append(' ');
+            var part = parts[i];
+            if (part.Length > 0 && Char.IsLower(part[0]))
+            {
+                sb.Append(Char.ToUpper(part[0]));
+                if (part.Length > 1) sb.Append(part, 1, part.Length - 1);
+            }
+            else
+                sb.Append(part);
+        }
+        return sb.ToString();
+    }
     #endregion
 }
