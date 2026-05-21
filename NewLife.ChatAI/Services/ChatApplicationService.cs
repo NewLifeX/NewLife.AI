@@ -10,7 +10,7 @@ namespace NewLife.ChatAI.Services;
 /// <summary>数据库版对话应用服务。基于 XCode 实体类持久化数据</summary>
 /// <remarks>
 /// 对话内核层：负责会话与消息的持久化管理、分享、反馈、模型与用户设置等功能。
-/// 生成相关方法已提取到 <see cref="MessageService"/>。
+/// 生成相关方法已提取到 <see cref="MessageFlowForWeb"/>。
 /// </remarks>
 public class ChatApplicationService
 {

@@ -33,14 +33,14 @@ public static class ChatAIExtensions
     public static IServiceCollection AddChatAI(this IServiceCollection services)
     {
         services.AddScoped<ChatApplicationService>();
-        services.AddScoped<IMessageFlow, MessageService>();
+        services.AddScoped<IMessageFlow, MessageFlowForWeb>();
         services.AddSingleton<IChatSetting>(_ => ChatSetting.Current);
         services.AddSingleton(_ => ChatSetting.Current);
         services.AddSingleton<SkillService>();
         services.AddSingleton<UsageService>();
         services.AddSingleton<ModelService>();
         services.AddSingleton<GatewayService>();
-        services.AddSingleton<GatewayMessageFlow>();
+        services.AddSingleton<MessageFlowForGateway>();
 
         // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 正序）
         // OnBefore 与 OnAfter 均按注册顺序正序执行，顺序意义：见 Doc/L2-IChatHandler架构.md
@@ -54,12 +54,6 @@ public static class ChatAIExtensions
         // Web UI 主调用链：收集全部已注册的 IChatHandler，按 [ChatHandlerOrder] 特性构建有序视图
         // TryAdd 语义：上层项目已注册时不重复注册
         services.TryAddSingleton(sp => new ChatHandlerChain(sp.GetServices<IChatHandler>()));
-
-        // 网关专属调用链：仅含用量记录（无 UI 专属的技能/知识库/持久化处理器）
-        // 复用主链路中已实例化的同一批 Handler 单例，无重复创建
-        services.TryAddSingleton<GatewayChatHandlerChain>(sp =>
-            new GatewayChatHandlerChain(sp.GetServices<IChatHandler>()
-                .Where(h => h is UsageRecordHandler)));
 
         // 工具服务注册（工具提供者实现）
         RegisterToolServices(services);

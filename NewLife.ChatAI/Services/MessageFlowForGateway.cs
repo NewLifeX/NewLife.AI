@@ -10,7 +10,7 @@ namespace NewLife.ChatAI.Services;
 ///   <item><see cref="MessageFlow.Chain"/> 由 <see cref="ChatHandlerChain.BuildFor"/> 按 <see cref="ChatFlowSource.Gateway"/> 过滤，<c>EnableGatewayHandlers=false</c> 时仅保留 Core 级处理器（精简链），为 true 时保留全部处理器（完整链）</item>
 /// </list>
 /// </summary>
-public class GatewayMessageFlow : MessageFlow
+public class MessageFlowForGateway : MessageFlow
 {
     #region 构造
     /// <summary>初始化网关消息流</summary>
@@ -19,7 +19,7 @@ public class GatewayMessageFlow : MessageFlow
     /// <param name="tracer">追踪器</param>
     /// <param name="log">日志</param>
     /// <param name="services">服务提供者（仅用于解析 IChatFilter 链）</param>
-    public GatewayMessageFlow(ModelService modelService, ChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null)
+    public MessageFlowForGateway(ModelService modelService, ChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null)
         : base(modelService, null, setting, tracer, log, services)
     {
         // 按来源和链模式从全量 Handler 集合中过滤：

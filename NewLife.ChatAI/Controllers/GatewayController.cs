@@ -16,7 +16,7 @@ namespace NewLife.ChatAI.Controllers;
 /// 通过 Authorization: Bearer {appkey} 进行认证。
 /// </remarks>
 [ApiController]
-public class GatewayController(GatewayService gatewayService, ModelService modelService, ChatSetting chatSetting, GatewayMessageFlow gatewayMessageFlow) : ControllerBase
+public class GatewayController(GatewayService gatewayService, ModelService modelService, ChatSetting chatSetting, MessageFlowForGateway gatewayMessageFlow) : ControllerBase
 {
     #region 模型列表
     /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
