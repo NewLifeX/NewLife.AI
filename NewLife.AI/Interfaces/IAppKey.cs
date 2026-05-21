@@ -32,9 +32,6 @@ public partial interface IAppKey
     /// <summary>过期时间。null表示永不过期</summary>
     DateTime ExpireTime { get; set; }
 
-    /// <summary>最后调用时间</summary>
-    DateTime LastCallTime { get; set; }
-
     /// <summary>备注</summary>
     String? Remark { get; set; }
     #endregion

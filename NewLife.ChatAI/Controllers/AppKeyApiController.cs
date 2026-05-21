@@ -19,7 +19,7 @@ public class AppKeyApiController : ChatApiControllerBase
             e.Id, e.Name ?? String.Empty, MaskSecret(e.Secret ?? String.Empty), e.Enable,
             e.Models,
             e.ExpireTime.Year > 2000 ? e.ExpireTime : null,
-            e.LastCallTime, e.CreateTime)).ToList();
+            UsageRecord.FindLastTimeByAppKeyId(e.Id), e.CreateTime)).ToList();
         return Ok(items);
     }
 
@@ -80,7 +80,7 @@ public class AppKeyApiController : ChatApiControllerBase
             entity.Id, entity.Name ?? String.Empty, MaskSecret(entity.Secret ?? String.Empty), entity.Enable,
             entity.Models,
             entity.ExpireTime.Year > 2000 ? entity.ExpireTime : null,
-            entity.LastCallTime, entity.CreateTime));
+            UsageRecord.FindLastTimeByAppKeyId(entity.Id), entity.CreateTime));
     }
 
     /// <summary>删除 AppKey</summary>

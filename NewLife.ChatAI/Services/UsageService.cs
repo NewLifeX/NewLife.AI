@@ -131,7 +131,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
                 key.Name ?? "",
                 records.Count,
                 records.Sum(e => e.TotalTokens),
-                key.LastCallTime));
+                records.Select(r => r.CreateTime).DefaultIfEmpty().Max()));
         }
 
         return result.OrderByDescending(e => e.Calls).ToList();

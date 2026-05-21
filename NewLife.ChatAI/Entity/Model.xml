@@ -233,7 +233,6 @@
         <Column Name="Models" DataType="String" Length="200" Description="可用模型。逗号分隔的模型名称或编码，为空时不限制" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
-        <Column Name="LastCallTime" DataType="DateTime" Description="最后调用时间" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />

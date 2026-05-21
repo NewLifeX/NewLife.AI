@@ -79,14 +79,6 @@ public partial class AppKey
     [BindColumn("ExpireTime", "过期时间。null表示永不过期", "")]
     public DateTime ExpireTime { get => _ExpireTime; set { if (OnPropertyChanging("ExpireTime", value)) { _ExpireTime = value; OnPropertyChanged("ExpireTime"); } } }
 
-    private DateTime _LastCallTime;
-    /// <summary>最后调用时间</summary>
-    [DisplayName("最后调用时间")]
-    [Description("最后调用时间")]
-    [DataObjectField(false, false, true, 0)]
-    [BindColumn("LastCallTime", "最后调用时间", "")]
-    public DateTime LastCallTime { get => _LastCallTime; set { if (OnPropertyChanging("LastCallTime", value)) { _LastCallTime = value; OnPropertyChanged("LastCallTime"); } } }
-
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -166,7 +158,6 @@ public partial class AppKey
             "Models" => _Models,
             "Enable" => _Enable,
             "ExpireTime" => _ExpireTime,
-            "LastCallTime" => _LastCallTime,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -187,7 +178,6 @@ public partial class AppKey
                 case "Models": _Models = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
-                case "LastCallTime": _LastCallTime = value.ToDateTime(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -303,9 +293,6 @@ public partial class AppKey
         /// <summary>过期时间。null表示永不过期</summary>
         public static readonly Field ExpireTime = FindByName("ExpireTime");
 
-        /// <summary>最后调用时间</summary>
-        public static readonly Field LastCallTime = FindByName("LastCallTime");
-
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -353,9 +340,6 @@ public partial class AppKey
 
         /// <summary>过期时间。null表示永不过期</summary>
         public const String ExpireTime = "ExpireTime";
-
-        /// <summary>最后调用时间</summary>
-        public const String LastCallTime = "LastCallTime";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

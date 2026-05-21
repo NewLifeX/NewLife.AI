@@ -84,6 +84,16 @@ public partial class UsageRecord : Entity<UsageRecord>
 
         return FindAll(_.ConversationId.In(convIds));
     }
+
+    /// <summary>查询指定 AppKey 最后一次调用时间</summary>
+    /// <param name="appKeyId">应用密钥编号</param>
+    /// <returns>最后一条用量记录的创建时间；无记录时返回 default</returns>
+    public static DateTime FindLastTimeByAppKeyId(Int32 appKeyId)
+    {
+        if (appKeyId <= 0) return default;
+        var list = FindAll(_.AppKeyId == appKeyId, _.Id.Desc(), null, 0, 1);
+        return list.Count > 0 ? list[0].CreateTime : default;
+    }
     #endregion
 
     #region 业务操作
