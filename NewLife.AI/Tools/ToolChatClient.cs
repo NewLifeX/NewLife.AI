@@ -349,26 +349,26 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
     }
 
     /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>
-    private static ChatOptions MergeToolOptions(IChatRequest? options, List<ChatTool> mergedTools)
+    private static ChatOptions MergeToolOptions(IChatRequest? request, List<ChatTool> mergedTools)
         => new()
         {
-            Model = options?.Model,
-            Temperature = options?.Temperature,
-            TopP = options?.TopP,
-            TopK = options?.TopK,
-            MaxTokens = options?.MaxTokens,
-            Stop = options?.Stop,
-            PresencePenalty = options?.PresencePenalty,
-            FrequencyPenalty = options?.FrequencyPenalty,
+            Model = request?.Model,
+            Temperature = request?.Temperature,
+            TopP = request?.TopP,
+            TopK = request?.TopK,
+            MaxTokens = request?.MaxTokens,
+            Stop = request?.Stop,
+            PresencePenalty = request?.PresencePenalty,
+            FrequencyPenalty = request?.FrequencyPenalty,
             Tools = mergedTools,
-            ToolChoice = options?.ToolChoice ?? "auto",
-            User = options?.User,
-            EnableThinking = options?.EnableThinking,
-            ResponseFormat = options?.ResponseFormat,
-            ParallelToolCalls = options?.ParallelToolCalls,
-            UserId = options?.UserId,
-            ConversationId = options?.ConversationId,
-            Items = options?.Items ?? new Dictionary<String, Object?>(),
+            ToolChoice = request?.ToolChoice ?? "auto",
+            User = request?.User,
+            EnableThinking = request?.EnableThinking,
+            ResponseFormat = request?.ResponseFormat,
+            ParallelToolCalls = request?.ParallelToolCalls,
+            UserId = request?.UserId,
+            ConversationId = request?.ConversationId,
+            Items = request?.Items ?? new Dictionary<String, Object?>(),
         };
 
     #endregion

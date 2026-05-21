@@ -1,8 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using NewLife.AI.Clients;
-using NewLife.Collections;
 using NewLife.Log;
-using ChatResponse = NewLife.AI.Models.ChatResponse;
 
 namespace NewLife.ChatAI.Services;
 
@@ -52,13 +50,43 @@ public class GatewayMessageFlow : MessageFlow
     /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking/ResponseFormat 等生成参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>SSE 事件流</returns>
-    public virtual async IAsyncEnumerable<ChatStreamEvent> StreamGatewayAsync(
-        IList<AiChatMessage> messages,
-        ModelConfig modelConfig,
-        Int32 userId,
-        Int64 conversationId,
-        IChatRequest? request,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    public virtual async IAsyncEnumerable<ChatStreamEvent> StreamGatewayAsync(IList<AiChatMessage> messages, ModelConfig modelConfig, Int32 userId, Int64 conversationId, IChatRequest? request, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var flow = CreateGatewayFlowContext(messages, modelConfig, userId, conversationId, request);
+        await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
+            yield return ev;
+    }
+
+    /// <summary>网关非流式对话入口。调用 <see cref="InvokeNonStreamAsync"/> 直接获取 LLM 完整响应，无 SSE 流聚合开销</summary>
+    /// <remarks>OnBefore/OnAfter Handler 链完整执行；Interceptor（洋葱）Handler 不参与非流式路径</remarks>
+    /// <param name="messages">完整上下文消息列表（含系统提示词）</param>
+    /// <param name="modelConfig">目标模型配置</param>
+    /// <param name="userId">当前用户编号（0 表示匿名）</param>
+    /// <param name="conversationId">关联会话编号（0 表示无会话）</param>
+    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking/ResponseFormat 等生成参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>完整响应</returns>
+    public virtual async Task<ChatResponse> CompletionGatewayAsync(IList<AiChatMessage> messages, ModelConfig modelConfig, Int32 userId, Int64 conversationId, IChatRequest? request, CancellationToken cancellationToken)
+    {
+        var flow = CreateGatewayFlowContext(messages, modelConfig, userId, conversationId, request);
+        await InvokeNonStreamAsync(flow, cancellationToken).ConfigureAwait(false);
+
+        var content = flow.ContentBuilder.ToString();
+        var thinking = flow.ThinkingBuilder.ToString();
+        var result = new ChatResponse { Model = modelConfig.Code, Usage = flow.Usage };
+        var choice = result.Add(content, "assistant", FinishReason.Stop);
+        if (!thinking.IsNullOrEmpty() && choice?.Message != null)
+            choice.Message.ReasoningContent = thinking;
+        return result;
+    }
+
+    /// <summary>构建网关对话上下文</summary>
+    /// <param name="messages">完整上下文消息列表</param>
+    /// <param name="modelConfig">目标模型配置</param>
+    /// <param name="userId">当前用户编号</param>
+    /// <param name="conversationId">关联会话编号</param>
+    /// <param name="request">原始请求</param>
+    private MessageFlowContext CreateGatewayFlowContext(IList<AiChatMessage> messages, ModelConfig modelConfig, Int32 userId, Int64 conversationId, IChatRequest? request)
     {
         var flow = new MessageFlowContext
         {
@@ -90,56 +118,9 @@ public class GatewayMessageFlow : MessageFlow
                 ConversationId = conversationId > 0 ? conversationId.ToString() : null,
             },
         };
-
-        await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
-            yield return ev;
-    }
-
-    /// <summary>网关非流式对话入口。内部调用 <see cref="StreamGatewayAsync"/> 聚合所有 SSE 事件为单次响应，
-    /// 同样经过 <see cref="ChatHandlerChain"/> 三段式链路及 <see cref="MessageFlow.ChatFilters"/> 过滤器链。
-    /// </summary>
-    /// <param name="messages">完整上下文消息列表（含系统提示词）</param>
-    /// <param name="modelConfig">目标模型配置</param>
-    /// <param name="userId">当前用户编号（0 表示匿名）</param>
-    /// <param name="conversationId">关联会话编号（0 表示无会话）</param>
-    /// <param name="request">原始请求，用于提取 MaxTokens/Temperature/EnableThinking/ResponseFormat 等生成参数</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>聚合后的完整响应</returns>
-    public virtual async Task<ChatResponse> CompletionGatewayAsync(
-        IList<AiChatMessage> messages,
-        ModelConfig modelConfig,
-        Int32 userId,
-        Int64 conversationId,
-        IChatRequest? request,
-        CancellationToken cancellationToken)
-    {
-        var contentSb = Pool.StringBuilder.Get();
-        var thinkingSb = Pool.StringBuilder.Get();
-        UsageDetails? lastUsage = null;
-
-        await foreach (var ev in StreamGatewayAsync(messages, modelConfig, userId, conversationId, request, cancellationToken).ConfigureAwait(false))
-        {
-            switch (ev.Type)
-            {
-                case "content_delta" when !ev.Content.IsNullOrEmpty():
-                    contentSb.Append(ev.Content);
-                    break;
-                case "thinking_delta" when !ev.Content.IsNullOrEmpty():
-                    thinkingSb.Append(ev.Content);
-                    break;
-                case "message_done":
-                    if (ev.Usage != null) lastUsage = ev.Usage;
-                    break;
-            }
-        }
-
-        var content = contentSb.Return(true);
-        var thinking = thinkingSb.Return(true);
-        var result = new ChatResponse { Model = modelConfig.Code, Usage = lastUsage };
-        var choice = result.Add(content, "assistant", FinishReason.Stop);
-        if (!thinking.IsNullOrEmpty() && choice?.Message != null)
-            choice.Message.ReasoningContent = thinking;
-        return result;
+        ApplyResponseStyle(flow.Options, flow.Options.UserId);
+        //flow.Options.Items = flow.Items;
+        return flow;
     }
 
     #endregion

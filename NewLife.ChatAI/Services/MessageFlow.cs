@@ -74,7 +74,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         {
             ConversationId = oldMsg.ConversationId,
             Role = "assistant",
-            ThinkingMode = flow.ThinkingMode,
+            ThinkingMode = oldMsg.ThinkingMode,
             Enable = true,
         };
         newMsg.Insert();
@@ -92,7 +92,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             // Step3: 通过非流式 Handler 三段式调用链执行（持久化由事后 Handler 完成）
             await InvokeNonStreamAsync(flow, cancellationToken).ConfigureAwait(false);
 
-            flow.AssistantMessage.ElapsedMs = flow.Usage?.ElapsedMs ?? 0;
+            //flow.AssistantMessage.ElapsedMs = flow.Usage?.ElapsedMs ?? 0;
 
             return ChatApplicationService.ToMessageDto(flow.AssistantMessage);
         }
@@ -176,7 +176,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         {
             ConversationId = oldMsg.ConversationId,
             Role = "assistant",
-            ThinkingMode = flow.ThinkingMode,
+            ThinkingMode = oldMsg.ThinkingMode,
             Enable = true,
         };
         newMsg.Insert();
@@ -263,7 +263,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.SkillId = conversation.SkillId;
         flow["RequestSkillCode"] = request.SkillCode;
         flow.ThinkingMode = request.ThinkingMode;
-        flow.Options.EnableThinking = flow.ThinkingMode switch
+        flow.Options.EnableThinking = request.ThinkingMode switch
         {
             ThinkingMode.Think => true,
             ThinkingMode.Fast => false,
@@ -406,6 +406,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.Options.UserId = userId > 0 ? userId.ToString() : null;
         flow.Options.ConversationId = conversation.Id > 0 ? conversation.Id.ToString() : null;
         ApplyResponseStyle(flow.Options, flow.Options.UserId);
+        //// Options.Items 与 context.Items 共享同一引用，后续对 context.Items 的写入无需再复制
+        //flow.Options.Items = flow.Items;
 
         return flow;
     }
@@ -714,10 +716,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             foreach (var t in p.GetTools())
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
 
-        var chatOptions = context.Options;
-        if (context.Items.Count > 0) chatOptions.Items = context.Items;
-        ApplyResponseStyle(chatOptions, context.Options.UserId);
-
         using var streamClient = clientBuilder.Build();
 
         var thinkingBuilder = new StringBuilder();
@@ -726,7 +724,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         String? lastFinishReason = null;
         var streamSw = Stopwatch.StartNew();
 
-        await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false))
         {
             // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
             // MessageFlow 只需取最后一次非空 Usage，无需跨 chunk 自行累加
@@ -807,14 +805,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             foreach (var t in p.GetTools())
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
 
-        var chatOptions = context.Options;
-        if (context.Items.Count > 0) chatOptions.Items = context.Items;
-        ApplyResponseStyle(chatOptions, context.Options.UserId);
-
         using var directClient = clientBuilder.Build();
 
         var sw = Stopwatch.StartNew();
-        var response = ChatResponse.From(await directClient.GetResponseAsync(contextMessages, chatOptions, cancellationToken).ConfigureAwait(false));
+        var response = ChatResponse.From(await directClient.GetResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false));
         sw.Stop();
 
         //// 提取系统提示词（首个 system 消息）
