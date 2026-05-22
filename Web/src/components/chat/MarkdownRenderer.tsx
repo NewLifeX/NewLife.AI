@@ -38,6 +38,7 @@ interface MermaidSvgPaneProps {
   className?: string
   fallbackClassName?: string
   scale?: number
+  expand?: boolean
   onSvgChange?: (svg: string | null) => void
   testId?: string
 }
@@ -105,6 +106,7 @@ function MermaidSvgPane({
   className,
   fallbackClassName = 'rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
   scale = 1,
+  expand = false,
   onSvgChange,
   testId,
 }: MermaidSvgPaneProps) {
@@ -152,7 +154,11 @@ function MermaidSvgPane({
         container.innerHTML = svg
         const svgEl = container.querySelector('svg')
         if (svgEl instanceof SVGSVGElement) {
-          svgEl.style.maxWidth = '100%'
+          if (expand) {
+            svgEl.style.width = '100%'
+          } else {
+            svgEl.style.maxWidth = '100%'
+          }
           svgEl.style.height = 'auto'
         }
         onSvgChange?.(svg)
@@ -220,13 +226,14 @@ function MermaidPreviewDialog({ open, code, fallbackClassName, onClose, onCopySo
         </div>
 
         <div className="flex-1 overflow-auto p-6">
-          <div className="mx-auto flex min-h-full min-w-max items-start justify-center">
+          <div className="mx-auto flex w-full min-h-full items-start justify-center">
             <MermaidSvgPane
               code={code}
               testId="mermaid-preview-pane"
-              className="rounded-2xl bg-white p-6 shadow-2xl"
+              className="w-full rounded-2xl bg-white p-6 shadow-2xl"
               fallbackClassName={fallbackClassName}
               scale={scale}
+              expand
             />
           </div>
         </div>
