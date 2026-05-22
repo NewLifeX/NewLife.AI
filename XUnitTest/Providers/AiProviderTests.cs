@@ -375,7 +375,7 @@ public class AiProviderTests
     #region 服务商接口调用验证
 
     [Fact]
-    [DisplayName("DashScope服务商_模型列表_包含qwen3.5-plus")]
+    [DisplayName("DashScope服务商_模型列表_包含qwen3.6-plus")]
     public void DashScope_HasCorrectModels()
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope");
@@ -387,9 +387,9 @@ public class AiProviderTests
         var models = descriptor.Models;
         Assert.NotNull(models);
         Assert.NotEmpty(models);
-        var qwenPlus = models.FirstOrDefault(m => m.Model == "qwen3.5-plus");
+        var qwenPlus = models.FirstOrDefault(m => m.Model == "qwen3.6-plus");
         Assert.NotNull(qwenPlus);
-        Assert.Equal("Qwen3.5 Plus", qwenPlus!.DisplayName);
+        Assert.Equal("Qwen3.6 Plus", qwenPlus!.DisplayName);
     }
 
     [Fact]
@@ -410,9 +410,9 @@ public class AiProviderTests
     public void DashScope_QwenPlus_CapabilitiesCorrect()
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
-        var qwenPlus = descriptor.Models!.First(m => m.Model == "qwen3.5-plus");
+        var qwenPlus = descriptor.Models!.First(m => m.Model == "qwen3.6-plus");
 
-        // qwen3.5-plus 支持思考模式、视觉，不支持文生图，支持函数调用
+        // qwen3.6-plus 支持思考模式、视觉，不支持文生图，支持函数调用
         Assert.True(qwenPlus.Capabilities!.SupportThinking);
         Assert.True(qwenPlus.Capabilities.SupportVision);
         Assert.False(qwenPlus.Capabilities.SupportImage);
@@ -439,13 +439,11 @@ public class AiProviderTests
     // qwen3-max：纯文本，支持思考
     [InlineData("qwen3-max", true, true, false, false, false, false)]
     [InlineData("qwen3-max-2026-01-23", true, true, false, false, false, false)]
-    // qwen3.5/3.6 Plus：多模态 + 思考
-    [InlineData("qwen3.5-plus", true, true, true, false, false, false)]
+    // qwen3.6 Plus：多模态 + 思考
+    [InlineData("qwen3.6-plus", true, true, true, false, false, false)]
     [InlineData("qwen3.6-plus-2026-04-02", true, true, true, false, false, false)]
-    [InlineData("qwen3.5-27b", true, true, true, false, false, false)]
-    [InlineData("qwen3.5-397b-a17b", true, true, true, false, false, false)]
-    // qwen3.5-flash：纯文本 Flash 系列，支持思考但不是多模态
-    [InlineData("qwen3.5-flash", true, true, false, false, false, false)]
+    // qwen3.6-flash：纯文本 Flash 系列，支持思考但不是多模态
+    [InlineData("qwen3.6-flash", true, true, true, false, false, false)]
     // 稳定版别名：思考但不确定多模态（保守推断）
     [InlineData("qwen-max", true, true, false, false, false, false)]
     [InlineData("qwen-plus", true, true, false, false, false, false)]
@@ -492,7 +490,7 @@ public class AiProviderTests
     // omni 全模态
     [InlineData("qwen-omni-turbo", false, false, true, true, false, false)]
     [InlineData("qwen3.5-omni-plus", false, false, true, true, false, false)]
-    [InlineData("qwen3-omni-flash", true, false, true, true, false, false)]
+    [InlineData("qwen3.5-omni-flash", false, false, true, true, false, false)]
     // 专用模型不支持函数调用
     [InlineData("farui-plus", false, false, false, false, false, false)]
     [InlineData("qwen-mt-plus", false, false, false, false, false, false)]

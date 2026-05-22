@@ -1311,7 +1311,7 @@ public class DashScopeIntegrationTests
     [DisplayName("联网搜索_EnableSource_请求被接受")]
     public async Task ChatAsync_EnableSource_Accepted()
     {
-        var request = CreateSimpleRequest("qwen3.5-plus", "今天有什么新闻？", 200);
+        var request = CreateSimpleRequest("qwen3.5-plus", "今天有什么电商活动？", 200);
         request["EnableSearch"] = true;
         request["EnableSource"] = true;
 

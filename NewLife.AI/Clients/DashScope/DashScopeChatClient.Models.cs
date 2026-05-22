@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using NewLife.AI.Models;
-using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
