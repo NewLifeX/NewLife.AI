@@ -25,6 +25,22 @@ function fixPipesInNodeLabels(code: string): string {
 }
 
 /**
+ * 将节点标签和边标签内的字面量 \n（反斜杠+n）转换为 <br/>。
+ * Mermaid 在被引号包裹的标签（["..."]）及圆形节点（((...))）中，
+ * \n 不会自动换行，统一替换为 <br/>，与默认的 htmlLabels 配合产生真正的换行。
+ * 覆盖：双圆括号 ((  ))、圆括号 (  )、引号方括号 ["  "]、方括号 [  ]、边标签 |  |。
+ */
+function fixNewlinesInLabels(code: string): string {
+  const br = '<br/>'
+  return code
+    .replace(/\(\(([^()]*)\)\)/g, (_, c) => `((${c.replace(/\\n/g, br)}))`)
+    .replace(/\(([^()]*)\)/g, (_, c) => `(${c.replace(/\\n/g, br)})`)
+    .replace(/\["([^"]*)"\]/g, (_, c) => `["${c.replace(/\\n/g, br)}"]`)
+    .replace(/\[([^\[\]"]*)\]/g, (_, c) => `[${c.replace(/\\n/g, br)}]`)
+    .replace(/\|([^|]*)\|/g, (_, c) => `|${c.replace(/\\n/g, br)}|`)
+}
+
+/**
  * LLM 常把 Redis Key、占位符、模板变量写进 Mermaid 节点标签，例如：
  *   D[device:{id}:latest]
  * Mermaid 会把其中的 `{` 误判为菱形节点起始符，导致 parse 失败。
@@ -38,9 +54,10 @@ function fixPipesInNodeLabels(code: string): string {
  * 不处理顶层的 `{...}`，避免破坏合法的菱形节点语法。
  */
 export function normalizeMermaidCode(code: string): string {
-  // 先做正则预处理（顺序：dasharray → pipe in labels → 字符扫描）
+  // 先做正则预处理（顺序：dasharray → pipe in labels → newlines → 字符扫描）
   code = fixClassDefStrokeDasharray(code)
   code = fixPipesInNodeLabels(code)
+  code = fixNewlinesInLabels(code)
 
   // 字符级扫描：转义标签上下文内的 {}
   // 引号上下文（inQuoted）内，| [ ( ] ) 均为字面量，不做上下文切换
