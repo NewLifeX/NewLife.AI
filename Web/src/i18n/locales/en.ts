@@ -223,8 +223,8 @@ export default {
       allowedExtensionsDesc: 'Comma-separated file extension whitelist, leave empty to allow all',
       defaultImageSize: 'Default Image Size',
       defaultImageSizeDesc: 'Default output size for image generation',
-      shareExpireDays: 'Share Link Expiry (days)',
-      shareExpireDaysDesc: 'Default expiry days for share links, 0 = never expire',
+      shareExpireMinutes: 'Share Link Expiry (minutes)',
+      shareExpireMinutesDesc: 'Default expiry minutes for share links, 0 = never expire',
     },
     gateway: {
       enableGateway: 'Enable Gateway',
@@ -353,6 +353,7 @@ export default {
     readOnlyNotice: 'This is a read-only shared conversation. You cannot send messages or perform actions.',
     you: 'User',
     assistant: 'Assistant',
+    sharedBy: 'Shared by',
   },
   usage: {
     title: 'Usage Statistics',

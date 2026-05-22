@@ -223,8 +223,8 @@ export default {
       allowedExtensionsDesc: '逗号分隔的文件扩展名白名单，留空为全部允许',
       defaultImageSize: '默认图片尺寸',
       defaultImageSizeDesc: '图像生成的默认输出尺寸',
-      shareExpireDays: '分享链接有效期（天）',
-      shareExpireDaysDesc: '分享链接的默认过期天数，0 表示永不过期',
+      shareExpireMinutes: '分享链接有效期（分钟）',
+      shareExpireMinutesDesc: '分享链接的默认过期分钟数，0 表示永不过期',
     },
     gateway: {
       enableGateway: '启用网关',
@@ -352,6 +352,7 @@ export default {
     readOnlyNotice: '这是一个只读的分享对话，您无法发送消息或进行操作。',
     you: '用户',
     assistant: '助手',
+    sharedBy: '分享人',
   },
   usage: {
     title: '用量统计',

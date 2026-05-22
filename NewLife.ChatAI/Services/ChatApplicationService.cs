@@ -303,6 +303,8 @@ public class ChatApplicationService
         DateTime? expireTime = null;
         if (request.ExpireHours is > 0)
             expireTime = DateTime.Now.AddHours(request.ExpireHours.Value);
+        else if (ChatSetting.Current.ShareExpireMinutes > 0)
+            expireTime = DateTime.Now.AddMinutes(ChatSetting.Current.ShareExpireMinutes);
 
         var entity = new SharedConversation
         {
@@ -333,9 +335,20 @@ public class ChatApplicationService
         if (share.ExpireTime > DateTime.MinValue && share.ExpireTime < DateTime.Now)
             return Task.FromResult<Object?>(null);
 
-        // 获取快照范围内的消息
+        // 获取快照范围内的已启用消息（FindByShareSnapshot 已过滤 Enable == true）
         var messages = ChatMessage.FindByShareSnapshot(share.ConversationId, share.SnapshotMessageId);
-        var items = messages.Select(m => ToMessageDto(m)).ToList();
+        var items = messages.Select(m =>
+        {
+            return new
+            {
+                Id = m.Id.ToString(),
+                ConversationId = m.ConversationId.ToString(),
+                m.Role,
+                Content = m.Content ?? String.Empty,
+                CreatedAt = m.CreateTime,
+                // ThinkingContent 和 ToolCalls 不对外暴露（分享页仅展示主要内容）
+            };
+        }).ToList();
 
         var result = new
         {
@@ -343,6 +356,10 @@ public class ChatApplicationService
             Messages = items,
             share.CreateTime,
             ExpireTime = share.ExpireTime > DateTime.MinValue ? (DateTime?)share.ExpireTime : null,
+            AnchorMessageId = share.SnapshotMessageId > 0 ? share.SnapshotMessageId.ToString() : (String?)null,
+            share.SnapshotTitle,
+            CreatorName = share.CreateUser,
+            SiteTitle = ChatSetting.Current.SiteTitle,
         };
         return Task.FromResult<Object?>(result);
     }

@@ -35,7 +35,7 @@ const defaultSettings: SystemSettings = {
   maxAttachmentCount: 5,
   allowedExtensions: '',
   defaultImageSize: '1024x1024',
-  shareExpireDays: 7,
+  shareExpireMinutes: 30,
   enableGateway: false,
   gatewayRateLimit: 0,
   upstreamRetryCount: 2,

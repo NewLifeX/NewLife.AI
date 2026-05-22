@@ -528,12 +528,15 @@ export interface SharedConversationContent {
     role: 'user' | 'assistant'
     content: string
     createdAt: string
-    thinkingContent?: string
-    toolCalls?: Array<{ id: string; name: string; status: string; arguments?: string; result?: string }>
+    modelName?: string
     usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
   }>
   createTime: string
   expireTime?: string
+  anchorMessageId?: string
+  snapshotTitle?: string
+  creatorName?: string
+  siteTitle?: string
 }
 
 export async function fetchSharedConversation(token: string): Promise<SharedConversationContent | null> {
@@ -746,7 +749,7 @@ export interface SystemSettings {
   maxAttachmentCount: number
   allowedExtensions: string
   defaultImageSize: string
-  shareExpireDays: number
+  shareExpireMinutes: number
   // 网关
   enableGateway: boolean
   gatewayRateLimit: number

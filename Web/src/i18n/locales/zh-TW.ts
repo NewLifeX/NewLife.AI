@@ -227,8 +227,8 @@ export default {
       allowedExtensionsDesc: '逗號分隔的檔案副檔名白名單，留空為全部允許',
       defaultImageSize: '預設圖片尺寸',
       defaultImageSizeDesc: '圖像生成的預設輸出尺寸',
-      shareExpireDays: '分享連結有效期（天）',
-      shareExpireDaysDesc: '分享連結的預設過期天數，0 表示永不過期',
+      shareExpireMinutes: '分享連結有效期（分鐘）',
+      shareExpireMinutesDesc: '分享連結的預設過期分鐘數，0 表示永不過期',
     },
     gateway: {
       enableGateway: '啟用閘道',
@@ -358,6 +358,7 @@ export default {
     readOnlyNotice: '這是一個唯讀的分享對話，您無法傳送訊息或進行操作。',
     you: '使用者',
     assistant: '助手',
+    sharedBy: '分享人',
   },
   usage: {
     title: '用量統計',

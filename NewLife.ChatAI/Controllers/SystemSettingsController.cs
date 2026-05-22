@@ -37,7 +37,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             MaxAttachmentCount = chatSetting.MaxAttachmentCount,
             AllowedExtensions = chatSetting.AllowedExtensions,
             DefaultImageSize = chatSetting.DefaultImageSize,
-            ShareExpireDays = chatSetting.ShareExpireDays,
+            ShareExpireMinutes = chatSetting.ShareExpireMinutes,
             // API 网关
             EnableGateway = chatSetting.EnableGateway,
             GatewayRateLimit = chatSetting.GatewayRateLimit,
@@ -86,7 +86,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.MaxAttachmentCount.HasValue) chatSetting.MaxAttachmentCount = dto.MaxAttachmentCount.Value;
         if (dto.AllowedExtensions != null) chatSetting.AllowedExtensions = dto.AllowedExtensions;
         if (dto.DefaultImageSize != null) chatSetting.DefaultImageSize = dto.DefaultImageSize;
-        if (dto.ShareExpireDays.HasValue) chatSetting.ShareExpireDays = dto.ShareExpireDays.Value;
+        if (dto.ShareExpireMinutes.HasValue) chatSetting.ShareExpireMinutes = dto.ShareExpireMinutes.Value;
         // API 网关
         if (dto.EnableGateway.HasValue) chatSetting.EnableGateway = dto.EnableGateway.Value;
         if (dto.GatewayRateLimit.HasValue) chatSetting.GatewayRateLimit = dto.GatewayRateLimit.Value;

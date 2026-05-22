@@ -89,10 +89,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("图像生成默认尺寸")]
     public String DefaultImageSize { get; set; } = "1024x1024";
 
-    /// <summary>分享有效期。共享链接有效天数，0 表示永不过期</summary>
+    /// <summary>分享有效期（分钟）。共享链接有效时间，0 表示永不过期，默认 30 分钟</summary>
     [Category("附件与分享")]
-    [Description("分享有效期。共享链接有效天数，0 表示永不过期")]
-    public Int32 ShareExpireDays { get; set; } = 30;
+    [Description("分享有效期（分钟）。共享链接有效时间，0 表示永不过期，默认 30 分钟")]
+    public Int32 ShareExpireMinutes { get; set; } = 30;
     #endregion
 
     #region API 网关

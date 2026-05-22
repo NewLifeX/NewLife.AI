@@ -45,7 +45,7 @@ public class SystemSettingsDto
     public String DefaultImageSize { get; set; } = "";
 
     /// <summary>分享有效期（天），0=永不过期</summary>
-    public Int32 ShareExpireDays { get; set; }
+    public Int32 ShareExpireMinutes { get; set; }
     #endregion
 
     #region API 网关
@@ -150,7 +150,7 @@ public class SystemSettingsUpdateDto
     public String? DefaultImageSize { get; set; }
 
     /// <summary>分享有效期（天）</summary>
-    public Int32? ShareExpireDays { get; set; }
+    public Int32? ShareExpireMinutes { get; set; }
     #endregion
 
     #region API 网关
