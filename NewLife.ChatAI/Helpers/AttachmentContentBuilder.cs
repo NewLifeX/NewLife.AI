@@ -1,4 +1,7 @@
+using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
+using NewLife.AI.Tools;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Office;
@@ -11,6 +14,10 @@ namespace NewLife.ChatAI.Helpers;
 /// 从 MessageService 提取为独立静态工具类，供 BuildHistoryMessage 覆盖点共用</summary>
 public static class AttachmentContentBuilder
 {
+    private static readonly String[] _imageKeywords = ["图片", "照片"];
+    private static readonly Regex _urlRegex = new(@"https?://[^\s<>""]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly HttpClient _httpClient = ToolHelper.CreateDefaultHttpClient();
+
     /// <summary>将附件 JSON 与文本内容构建为多模态用户消息</summary>
     /// <remarks>
     /// <list type="bullet">
@@ -22,7 +29,7 @@ public static class AttachmentContentBuilder
     /// <param name="attachmentsJson">附件 ID 列表 JSON（Int64 或字符串数组）</param>
     /// <param name="textContent">用户文本内容</param>
     /// <returns>多模态或纯文本 AiChatMessage</returns>
-    public static AiChatMessage Build(String attachmentsJson, String? textContent)
+    public static AiChatMessage Build(String attachmentsJson, String? textContent, IList<ImageContent>? inlineImages = null)
     {
         var contents = new List<AIContent>();
         var docParts = new List<String>();
@@ -55,6 +62,13 @@ public static class AttachmentContentBuilder
                     XTrace.WriteException(ex);
                 }
             }
+        }
+
+        // 文本中提取的内联图片（HTTP 下载后保存为附件）
+        if (inlineImages != null)
+        {
+            foreach (var img in inlineImages)
+                contents.Add(img);
         }
 
         // 将文档内容前置注入到用户文本
@@ -183,5 +197,94 @@ public static class AttachmentContentBuilder
             XTrace.WriteException(ex);
             return null;
         }
+    }
+
+    /// <summary>从文本中提取内联图片 URL，下载后保存为附件。同时满足含关键词、URL 可匹配、能下载、ContentType 为 image/* 四个条件才生效</summary>
+    /// <param name="text">用户消息文本</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>成功下载并保存的 ImageContent 列表；条件不满足时返回 null</returns>
+    public static async Task<List<ImageContent>?> ExtractAndSaveInlineImagesAsync(String? text, CancellationToken cancellationToken)
+    {
+        if (text.IsNullOrEmpty()) return null;
+
+        // 检查是否含图片关键词
+        var hasKeyword = false;
+        foreach (var kw in _imageKeywords)
+        {
+            if (text.Contains(kw))
+            {
+                hasKeyword = true;
+                break;
+            }
+        }
+        if (!hasKeyword) return null;
+
+        var matches = _urlRegex.Matches(text);
+        if (matches.Count == 0) return null;
+
+        List<ImageContent>? result = null;
+        foreach (Match match in matches)
+        {
+            var url = match.Value.TrimEnd('.', ',', '!', '?', ')', ']', ';');
+            Uri uri;
+            try { uri = new Uri(url); }
+            catch { continue; }
+
+            // SSRF 防护：阻止访问内网 / 回环地址
+            if (ToolHelper.IsSsrfRisk(uri.Host)) continue;
+
+            Byte[]? bytes = null;
+            String? mediaType = null;
+            try
+            {
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (!response.IsSuccessStatusCode) continue;
+
+                mediaType = response.Content.Headers.ContentType?.MediaType;
+                if (mediaType.IsNullOrEmpty() || !mediaType.StartsWithIgnoreCase("image/")) continue;
+
+                bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            }
+            catch (Exception ex) { XTrace.WriteException(ex); continue; }
+
+            if (bytes == null || bytes.Length == 0) continue;
+
+            // 从 URL 路径取文件名；无扩展时根据内容类型推断
+            var fileName = Path.GetFileName(uri.LocalPath);
+            if (fileName.IsNullOrEmpty() || !Path.HasExtension(fileName))
+            {
+                var ext = mediaType switch
+                {
+                    "image/jpeg" => ".jpg",
+                    "image/png" => ".png",
+                    "image/gif" => ".gif",
+                    "image/webp" => ".webp",
+                    _ => ".bin",
+                };
+                fileName = $"inline_{DateTime.Now:yyyyMMddHHmmssfff}{ext}";
+            }
+
+            // 保存为附件记录，同用户上传
+            try
+            {
+                var att = new Attachment
+                {
+                    Category = "ChatAI",
+                    ContentType = mediaType,
+                    Size = bytes.Length,
+                    Enable = true,
+                    UploadTime = DateTime.Now,
+                };
+                using var ms = new MemoryStream(bytes);
+                var saved = await att.SaveFile(ms, null, fileName);
+                if (!saved) continue;
+            }
+            catch (Exception ex) { XTrace.WriteException(ex); continue; }
+
+            result ??= [];
+            result.Add(new ImageContent { Data = bytes, MediaType = mediaType });
+        }
+
+        return result;
     }
 }
