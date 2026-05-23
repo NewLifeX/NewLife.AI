@@ -216,6 +216,15 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
         return (Int32)FindCount(_.ConversationId == conversationId & _.Enable == true);
     }
 
+    /// <summary>统计会话中用户消息的轮数（role=user 且有效）</summary>
+    /// <param name="conversationId">会话编号</param>
+    /// <returns>用户消息轮数</returns>
+    public static Int32 CountUserRoundsByConversationId(Int64 conversationId)
+    {
+        if (conversationId <= 0) return 0;
+        return (Int32)FindCount(_.ConversationId == conversationId & _.Role == "user" & _.Enable == true);
+    }
+
     /// <summary>统计指定用户下的消息总数（通过会话子查询）</summary>
     /// <param name="userId">用户编号</param>
     /// <returns>消息总数</returns>

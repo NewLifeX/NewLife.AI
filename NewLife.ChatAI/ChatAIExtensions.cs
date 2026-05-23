@@ -44,6 +44,7 @@ public static class ChatAIExtensions
 
         // IChatHandler 三段式调用链（OnBefore 正序、核心 LLM 在 MessageFlow.InvokeLlmAsync、OnAfter 正序）
         // OnBefore 与 OnAfter 均按注册顺序正序执行，顺序意义：见 Doc/L2-IChatHandler架构.md
+        services.AddSingleton<IChatHandler, ContextRoundsHandler>();    // 0. OnBefore 会话轮数上限检查，超限则拒绝
         services.AddSingleton<IChatHandler, SuggestedCacheHandler>();   // 1. OnBefore 命中缓存时 Interceptor 短路 LLM
         services.AddSingleton<IChatHandler, SkillActivationHandler>();  // 2. OnBefore 技能解析与注入 / OnAfter 技能计数
         services.AddSingleton<IChatHandler, TitleGenerationHandler>();  // 3. OnBefore 异步生成标题（与 LLM 并行）
