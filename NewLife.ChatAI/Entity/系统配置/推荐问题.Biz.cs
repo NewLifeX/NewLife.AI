@@ -32,6 +32,10 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存
     private static Int32 MaxCacheCount = 1000;
 
+    // 预设图标与颜色调色板，新建推荐问题时若未填写则自动选取
+    private static readonly String[] _autoIcons = ["chat", "code", "science", "menu_book", "brush", "fitness_center", "cloud", "location_on", "edit_note", "trending_up", "lightbulb", "psychology", "travel_explore", "calculate", "music_note"];
+    private static readonly String[] _autoColors = ["text-blue-500", "text-pink-500", "text-purple-500", "text-orange-500", "text-red-500", "text-cyan-500", "text-teal-500", "text-green-500", "text-yellow-500", "text-indigo-500"];
+
     static SuggestedQuestion()
     {
         // 累加字段，生成 Update xx Set Count=Count+1234 Where xxx
@@ -60,6 +64,14 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
         if (!base.Valid(method)) return false;
 
         // 在新插入数据或者修改了指定字段时进行修正
+
+        // 新建时若未填写图标或颜色，根据问题文本自动选取，确保欢迎页展示效果一致
+        if (method == DataMethod.Insert && (Icon.IsNullOrEmpty() || Color.IsNullOrEmpty()))
+        {
+            var idx = Math.Abs((Question ?? Title ?? "").GetHashCode());
+            if (Icon.IsNullOrEmpty()) Icon = _autoIcons[idx % _autoIcons.Length];
+            if (Color.IsNullOrEmpty()) Color = _autoColors[(idx + 5) % _autoColors.Length];
+        }
 
         // 处理当前已登录用户信息，可以由UserInterceptor拦截器代劳
         /*var user = ManageProvider.User;
