@@ -4,12 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife.AI.Models;
-using NewLife.AI.Services;
-using NewLife.Log;
 using NewLife.ChatAI.Controllers;
-using NewLife.ChatAI.Models;
-using NewLife.ChatAI.Services;
 using Xunit;
 
 namespace XUnitTest.Services;
@@ -23,7 +18,7 @@ public class ChatAITests
     {
         var setting = new ChatSetting();
 
-        Assert.Equal(30, setting.ShareExpireDays);
+        Assert.Equal(30, setting.ShareExpireMinutes);
         Assert.Equal(0, setting.DefaultModel);
         Assert.Equal(ThinkingMode.Auto, setting.DefaultThinkingMode);
         Assert.Equal(10, setting.DefaultContextRounds);
@@ -48,12 +43,12 @@ public class ChatAITests
     {
         var setting = new ChatSetting();
 
-        setting.ShareExpireDays = 0;
+        setting.ShareExpireMinutes = 0;
         setting.DefaultModel = 3;
         setting.GatewayRateLimit = 100;
         setting.EnableMcp = false;
 
-        Assert.Equal(0, setting.ShareExpireDays);
+        Assert.Equal(0, setting.ShareExpireMinutes);
         Assert.Equal(3, setting.DefaultModel);
         Assert.Equal(100, setting.GatewayRateLimit);
         Assert.False(setting.EnableMcp);

@@ -415,11 +415,18 @@ public class ChatApplicationService
         var entity = UserSetting.FindByUserId(userId);
         if (entity == null)
         {
-            // 返回默认设置
-            return Task.FromResult(new UserSettingsDto("zh-CN", "system", 16, "Enter", 0, ThinkingMode.Auto, 10, String.Empty, String.Empty, ResponseStyle.Balanced, String.Empty, false)
+            entity = new UserSetting
             {
+                UserId = userId,
+                Language = "zh-CN",
+                Theme = "system",
+                FontSize = 16,
+                SendShortcut = "Enter",
+                ContextRounds = 10,
+                DefaultSkill = "general",
                 EnableLearning = true,
-            });
+            };
+            if (userId > 0) entity.Insert(); // 新登录用户首次访问，持久化默认设置
         }
 
         return Task.FromResult(ToUserSettingsDto(entity));
