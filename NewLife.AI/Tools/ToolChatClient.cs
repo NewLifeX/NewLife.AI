@@ -64,7 +64,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         UsageDetails? accumulatedUsage = null;
 
         // 构建工具调用上下文，整个请求生命周期内保持稳定；每轮 LLM 返回后更新 Response
-        var context = ToolCallContext.Current = new ToolCallContext { Request = request };
+        var context = new ToolCallContext { Request = request };
 
         while (true)
         {
@@ -96,12 +96,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             {
                 if (tc.Function == null) continue;
 
-                // 将当前工具调用 ID 写入上下文，工具方法可通过 ToolCallContext.Current.CurrentToolCallId 读取
+                // 将当前工具调用 ID 写入上下文，工具方法通过 context 参数读取
                 context.CurrentToolCallId = tc.Id;
-                // 重新赋值 Current，确保 ExecuteToolAsync 的 async 调用链继承到正确上下文
-                // （非流式路径无 yield，此赋值为防御性处理，与流式路径保持一致）
-                ToolCallContext.Current = context;
-                var result = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
+                var result = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, context, cancellationToken).ConfigureAwait(false);
                 workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = result });
             }
         }
@@ -135,7 +132,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         UsageDetails? accumulatedUsage = null;
 
         // 构建工具调用上下文，整个请求生命周期内保持稳定；流式模式下 Response 始终为 null
-        var context = ToolCallContext.Current = new ToolCallContext { Request = request };
+        var context = new ToolCallContext { Request = request };
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
@@ -228,14 +225,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
                 ToolCallEventInfo resultEvent;
                 var span = Tracer?.NewSpan($"ai:tool:{tc.Function.Name}", tc.Function.Arguments);
-                // 将当前工具调用 ID 写入上下文，工具方法可通过 ToolCallContext.Current.CurrentToolCallId 读取
+                // 将当前工具调用 ID 写入上下文，工具方法通过 context 参数读取
                 context.CurrentToolCallId = tc.Id;
-                // 流式 async iterator 在 yield return 后恢复时使用调用方 ExecutionContext，导致 AsyncLocal 被重置为 null。
-                // 在 ExecuteToolAsync 调用前重新赋值，确保工具方法（如 RequestDecisionAsync）读到正确的 CurrentToolCallId。
-                ToolCallContext.Current = context;
                 try
                 {
-                    var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
+                    var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, context, cancellationToken).ConfigureAwait(false);
                     workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = toolResult });
                     if (span != null && toolResult != null)
                         span.AppendTag(toolResult, toolResult.Length);
@@ -273,8 +267,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="toolName">工具名称</param>
     /// <param name="argumentsJson">参数 JSON 字符串（模型原文）</param>
     /// <param name="toolMap">工具名到 Provider 的路由字典</param>
+    /// <param name="context">工具调用上下文，透传至工具方法</param>
     /// <param name="cancellationToken">取消令牌</param>
-    private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, CancellationToken cancellationToken)
+    private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
         if (!toolMap.TryGetValue(toolName, out var provider))
             throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
@@ -295,7 +290,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         String result;
         try
         {
-            result = await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+            result = await provider.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)

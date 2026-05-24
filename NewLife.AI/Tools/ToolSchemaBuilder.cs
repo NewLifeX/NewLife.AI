@@ -64,8 +64,9 @@ public static class ToolSchemaBuilder
         foreach (var p in parameters)
         {
             if (p.Name == null) continue;
-            // 跳过 CancellationToken 参数
+            // 跳过 CancellationToken / ToolCallContext 参数（由框架自动注入，不暴露给 LLM）
             if (p.ParameterType == typeof(CancellationToken)) continue;
+            if (p.ParameterType == typeof(ToolCallContext)) continue;
 
             // 优先使用参数的 [Description] 标注
             var pDescAttr = p.GetCustomAttribute<DescriptionAttribute>();

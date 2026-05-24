@@ -30,7 +30,7 @@ public static class AgentAsTool
         var name = toolName ?? ToSnakeCase(agent.Name);
         var description = agent.Description ?? $"调用 {agent.Name} 代理处理任务";
 
-        registry.AddTool(name, (args, ct) => InvokeAgentAsync(agent, args, ct), description);
+        registry.AddTool(name, (args, ctx, ct) => InvokeAgentAsync(agent, args, ct), description);
     }
 
     /// <summary>创建表示 Agent 能力的 ChatTool 定义（不注册到 ToolRegistry）</summary>

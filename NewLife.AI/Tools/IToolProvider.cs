@@ -16,7 +16,8 @@ public interface IToolProvider
     /// <summary>按名称调用工具并返回文本结果</summary>
     /// <param name="toolName">工具名称（与 <see cref="GetTools"/> 返回的 Function.Name 一致）</param>
     /// <param name="argumentsJson">参数 JSON 字符串（模型返回的 tool_call.arguments 原文）</param>
+    /// <param name="context">工具调用上下文，含请求信息与当前工具调用 ID；不需要上下文的实现可忽略（null）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>工具执行结果文本，供追加 tool 角色消息回传模型；工具未找到时抛 <see cref="KeyNotFoundException"/></returns>
-    Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default);
+    Task<String> CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context = null, CancellationToken cancellationToken = default);
 }

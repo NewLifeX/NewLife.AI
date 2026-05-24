@@ -30,7 +30,7 @@ public class ToolRegistry : IToolProvider
 
     private readonly List<ChatTool> _tools = [];
     private readonly List<Type> _registeredTypes = [];
-    private readonly Dictionary<String, Func<String?, CancellationToken, Task<String>>> _handlers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<String, Func<String?, ToolCallContext?, CancellationToken, Task<String>>> _handlers = new(StringComparer.OrdinalIgnoreCase);
     #endregion
 
     #region 注册方法
@@ -39,7 +39,7 @@ public class ToolRegistry : IToolProvider
     /// <param name="name">工具名称</param>
     /// <param name="handler">处理委托，参数为 JSON 字符串，返回 JSON 字符串结果</param>
     /// <param name="description">工具功能描述（可选）</param>
-    public void AddTool(String name, Func<String?, CancellationToken, Task<String>> handler, String? description = null)
+    public void AddTool(String name, Func<String?, ToolCallContext?, CancellationToken, Task<String>> handler, String? description = null)
     {
         if (String.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
         if (handler == null) throw new ArgumentNullException(nameof(handler));
@@ -276,28 +276,30 @@ public class ToolRegistry : IToolProvider
     /// <summary>根据工具名称和 JSON 参数调用已注册的工具处理器</summary>
     /// <param name="name">工具名称（大小写不敏感）</param>
     /// <param name="arguments">JSON 格式的参数字符串</param>
+    /// <param name="context">调用上下文，可为 null</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>工具执行结果的 JSON 字符串</returns>
     /// <exception cref="KeyNotFoundException">工具名称未注册</exception>
-    public Task<String> InvokeAsync(String name, String? arguments, CancellationToken cancellationToken = default)
+    public Task<String> InvokeAsync(String name, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
         if (!_handlers.TryGetValue(name, out var handler))
             throw new KeyNotFoundException($"工具 '{name}' 未注册到 ToolRegistry");
-        return handler(arguments, cancellationToken);
+        return handler(arguments, context, cancellationToken);
     }
 
     /// <summary>尝试调用工具，工具未注册或执行出错时返回错误描述（不抛异常）</summary>
     /// <param name="name">工具名称</param>
     /// <param name="arguments">JSON 格式参数</param>
+    /// <param name="context">调用上下文，可为 null</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>执行结果 JSON 字符串，或错误描述字符串</returns>
-    public async Task<String> TryInvokeAsync(String name, String? arguments, CancellationToken cancellationToken = default)
+    public async Task<String> TryInvokeAsync(String name, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
         if (!_handlers.TryGetValue(name, out var handler))
             return $"{{\"error\":\"tool '{name}' not registered\"}}";
         try
         {
-            return await handler(arguments, cancellationToken).ConfigureAwait(false);
+            return await handler(arguments, context, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -328,13 +330,13 @@ public class ToolRegistry : IToolProvider
         if (_handlers.ContainsKey(toolName)) return;  // 已注册则跳过，不覆盖
 
         _tools.Add(tool);
-        _handlers[toolName] = (args, ct) => InvokeMethodAsync(method, instance, args, ct);
+        _handlers[toolName] = (args, ctx, ct) => InvokeMethodAsync(method, instance, args, ctx, ct);
     }
 
-    private static async Task<String> InvokeMethodAsync(MethodInfo method, Object instance, String? arguments, CancellationToken cancellationToken)
+    private static async Task<String> InvokeMethodAsync(MethodInfo method, Object instance, String? arguments, ToolCallContext? context, CancellationToken cancellationToken)
     {
         var parameters = method.GetParameters()
-            .Where(p => p.ParameterType != typeof(CancellationToken))
+            .Where(p => p.ParameterType != typeof(CancellationToken) && p.ParameterType != typeof(ToolCallContext))
             .ToArray();
 
         Object?[] args;
@@ -343,7 +345,7 @@ public class ToolRegistry : IToolProvider
         else
             args = DeserializeArguments(parameters, arguments);
 
-        // 将所有 CancellationToken 参数替换为传入的 ct
+        // 将所有 CancellationToken / ToolCallContext 参数替换为传入实例
         var allParams = method.GetParameters();
         var finalArgs = new Object?[allParams.Length];
         var argIdx = 0;
@@ -351,6 +353,8 @@ public class ToolRegistry : IToolProvider
         {
             if (allParams[i].ParameterType == typeof(CancellationToken))
                 finalArgs[i] = cancellationToken;
+            else if (allParams[i].ParameterType == typeof(ToolCallContext))
+                finalArgs[i] = context;
             else
                 finalArgs[i] = argIdx < args.Length ? args[argIdx++] : (allParams[i].HasDefaultValue ? allParams[i].DefaultValue : null);
         }
@@ -384,7 +388,7 @@ public class ToolRegistry : IToolProvider
 
     private static Object?[] BuildDefaultArgs(MethodInfo method)
     {
-        var nonCt = method.GetParameters().Where(p => p.ParameterType != typeof(CancellationToken)).ToArray();
+        var nonCt = method.GetParameters().Where(p => p.ParameterType != typeof(CancellationToken) && p.ParameterType != typeof(ToolCallContext)).ToArray();
         var defaults = new Object?[nonCt.Length];
         for (var i = 0; i < nonCt.Length; i++)
             defaults[i] = nonCt[i].HasDefaultValue ? nonCt[i].DefaultValue : null;
@@ -446,8 +450,8 @@ public class ToolRegistry : IToolProvider
 
     IList<ChatTool> IToolProvider.GetTools() => [.. _tools];
 
-    Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken)
-        => InvokeAsync(toolName, argumentsJson, cancellationToken);
+    Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context, CancellationToken cancellationToken)
+        => InvokeAsync(toolName, argumentsJson, context, cancellationToken);
 
     #endregion
 }

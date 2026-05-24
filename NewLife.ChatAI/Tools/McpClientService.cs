@@ -180,9 +180,10 @@ public class McpClientService(ILog log) : IToolProvider
     /// <summary>实现 <see cref="IToolProvider.CallToolAsync"/>。按工具名在已启用服务中查找并调用</summary>
     /// <param name="toolName">工具名称</param>
     /// <param name="argumentsJson">参数 JSON 字符串</param>
+    /// <param name="context">调用上下文，可为 null</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>调用结果文本；工具未找到时抛 <see cref="KeyNotFoundException"/></returns>
-    async Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken)
+    async Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context, CancellationToken cancellationToken)
     {
         var allTools = GetAllTools();
         var tool = allTools.FirstOrDefault(t => t.Name.EqualIgnoreCase(toolName));

@@ -64,8 +64,8 @@ public class DbToolProvider(ToolRegistry registry, IChatSetting chatSetting) : I
     /// <param name="argumentsJson">参数 JSON 字符串</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>执行结果文本；工具不在 Registry 中时抛 <see cref="KeyNotFoundException"/></returns>
-    public Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default)
-        => registry.InvokeAsync(toolName, argumentsJson, cancellationToken);
+    public Task<String> CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context = null, CancellationToken cancellationToken = default)
+        => registry.InvokeAsync(toolName, argumentsJson, context, cancellationToken);
 
     #endregion
 }

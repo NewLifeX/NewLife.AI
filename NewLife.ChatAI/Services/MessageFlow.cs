@@ -941,8 +941,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         /// <inheritdoc/>
         public IList<ChatTool> GetTools() => inner.GetFilteredTools(selectedTools);
         /// <inheritdoc/>
-        public Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default)
-            => inner.CallToolAsync(toolName, argumentsJson, cancellationToken);
+        public Task<String> CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context = null, CancellationToken cancellationToken = default)
+            => inner.CallToolAsync(toolName, argumentsJson, context, cancellationToken);
     }
 
     /// <summary>携带 SelectedTools 的轻量 McpClientService 包装器</summary>
@@ -951,8 +951,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         /// <inheritdoc/>
         public IList<ChatTool> GetTools() => inner.GetFilteredTools(selectedTools);
         /// <inheritdoc/>
-        public Task<String> CallToolAsync(String toolName, String? argumentsJson, CancellationToken cancellationToken = default)
-            => ((IToolProvider)inner).CallToolAsync(toolName, argumentsJson, cancellationToken);
+        public Task<String> CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context = null, CancellationToken cancellationToken = default)
+            => ((IToolProvider)inner).CallToolAsync(toolName, argumentsJson, context, cancellationToken);
     }
 
     #endregion
