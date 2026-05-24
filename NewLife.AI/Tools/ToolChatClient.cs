@@ -98,6 +98,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
                 // 将当前工具调用 ID 写入上下文，工具方法可通过 ToolCallContext.Current.CurrentToolCallId 读取
                 context.CurrentToolCallId = tc.Id;
+                // 重新赋值 Current，确保 ExecuteToolAsync 的 async 调用链继承到正确上下文
+                // （非流式路径无 yield，此赋值为防御性处理，与流式路径保持一致）
+                ToolCallContext.Current = context;
                 var result = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
                 workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = result });
             }
@@ -227,6 +230,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var span = Tracer?.NewSpan($"ai:tool:{tc.Function.Name}", tc.Function.Arguments);
                 // 将当前工具调用 ID 写入上下文，工具方法可通过 ToolCallContext.Current.CurrentToolCallId 读取
                 context.CurrentToolCallId = tc.Id;
+                // 流式 async iterator 在 yield return 后恢复时使用调用方 ExecutionContext，导致 AsyncLocal 被重置为 null。
+                // 在 ExecuteToolAsync 调用前重新赋值，确保工具方法（如 RequestDecisionAsync）读到正确的 CurrentToolCallId。
+                ToolCallContext.Current = context;
                 try
                 {
                     var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
