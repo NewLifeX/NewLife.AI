@@ -135,7 +135,33 @@ var client = rawClient.AsBuilder()
 var reply = await client.ChatAsync("北京今天天气怎么样？");
 ```
 
-### 4. 运行完整 Web 对话应用
+### 4. 约束推理路径（ReAct 模式）
+
+当 AI 对复杂问题容易猜测或走弯路时，在 System Prompt 中使用 **ReAct 格式**强制逐步推理。
+`ToolChatClient` 已内置 `while` 大循环（`MaxIterations = 10`），无需手写 Agent；
+搭配 ReAct System Prompt 可进一步约束每步的推理方向，防止跳步猜测。
+
+```csharp
+// UseTools 管道装配：ToolChatClient 自动循环至模型不再发起工具调用为止
+var client = rawClient.AsBuilder()
+    .UseTools(registry)
+    .Build();
+
+// ReAct System Prompt：Thought → Action → Observation → Answer 强制逐步推理
+var reply = await client.ChatAsync([
+    ("system",
+        "你必须按如下格式逐步推理，不允许跳过步骤或直接猜测：\n" +
+        "Thought: <分析当前需要做什么>\n" +
+        "Action: <调用哪个工具及参数>\n" +
+        "Observation: <分析工具返回结果>\n" +
+        "（重复 Thought/Action/Observation 直到信息充分）\n" +
+        "Answer: <基于以上观测得出最终结论>\n\n" +
+        "规则：禁止在未调用工具的情况下直接给出 Answer。"),
+    ("user", "北京今天天气适合户外运动吗？"),
+]);
+```
+
+### 5. 运行完整 Web 对话应用
 
 ```bash
 git clone https://github.com/NewLifeX/NewLife.AI.git
