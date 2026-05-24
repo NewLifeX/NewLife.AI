@@ -229,13 +229,16 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     if (span != null && toolResult != null)
                         span.AppendTag(toolResult, toolResult.Length);
 
-                    resultEvent = new ToolCallEventInfo("done", tc.Id, tc.Function.Name, toolResult);
+                    // 检测结构化错误返回，以正确类型通知消费方
+                    var eventType = ToolError.IsToolError(toolResult) ? "error" : "done";
+                    resultEvent = new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, toolResult);
                 }
                 catch (Exception ex)
                 {
                     span?.SetError(ex, null);
-                    // 将错误作为工具结果反馈给模型，让模型有机会修正，不中断流
-                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = $"Error: {ex.Message}" });
+                    // 将结构化错误作为工具结果反馈给模型，让模型有机会修正，不中断流
+                    var errJson = ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
+                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = errJson });
                     resultEvent = new ToolCallEventInfo("error", tc.Id, tc.Function.Name, ex.Message);
                 }
                 finally
@@ -265,15 +268,29 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (!toolMap.TryGetValue(toolName, out var provider))
             throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
 
-        // 审批拦截：设置了 ApprovalProvider 时在执行前请求用户确认
-        if (ApprovalProvider != null)
+        // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
+        var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
+        if (tier == ToolApprovalTier.Deny)
+            return ToolError.Create("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）").ToJson();
+
+        if (tier == ToolApprovalTier.Ask && ApprovalProvider != null)
         {
             var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
             if (!approval.Approved)
-                return $"工具调用被用户拒绝: {toolName}";
+                return ToolError.Create("USER_DENIED", $"工具 {toolName} 被用户拒绝执行").ToJson();
         }
+        // tier == Allow：低风险工具直接放行，无需审批
 
-        var result = await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+        String result;
+        try
+        {
+            result = await provider.CallToolAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
+        }
 
         // 结果超长时截断并追加省略提示
         if (MaxResultLength > 0 && result != null && result.Length > MaxResultLength)

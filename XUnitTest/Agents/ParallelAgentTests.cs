@@ -271,6 +271,136 @@ public class ParallelAgentTests
         Assert.Throws<ArgumentNullException>(() => AgentAsTool.Register(null!, new EchoAgent("a", "b")));
     }
 
+    // ── AgentConclusion 结构化结论测试 ────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("AgentConclusion.ToSummaryText 格式化含结论文本")]
+    public void AgentConclusion_ToSummaryText_ContainsConclusion()
+    {
+        var conclusion = new AgentConclusion { Conclusion = "模块 A 评估通过" };
+        var text = conclusion.ToSummaryText();
+        Assert.Contains("模块 A 评估通过", text);
+    }
+
+    [Fact]
+    [DisplayName("AgentConclusion.ToSummaryText 置信度小于 1 时输出百分比")]
+    public void AgentConclusion_ToSummaryText_ShowsConfidence()
+    {
+        var conclusion = new AgentConclusion { Conclusion = "结论", Confidence = 0.9f };
+        var text = conclusion.ToSummaryText();
+        Assert.Contains("90%", text);
+    }
+
+    [Fact]
+    [DisplayName("AgentConclusion.ToSummaryText 置信度为 1 时不输出百分比")]
+    public void AgentConclusion_ToSummaryText_NoConfidenceWhenFull()
+    {
+        var conclusion = new AgentConclusion { Conclusion = "结论", Confidence = 1f };
+        var text = conclusion.ToSummaryText();
+        Assert.DoesNotContain("100%", text);
+    }
+
+    [Fact]
+    [DisplayName("AgentConclusion.ToSummaryText 含 Impact 时输出影响范围")]
+    public void AgentConclusion_ToSummaryText_ShowsImpact()
+    {
+        var conclusion = new AgentConclusion { Conclusion = "评估通过", Impact = "核心业务模块" };
+        var text = conclusion.ToSummaryText();
+        Assert.Contains("核心业务模块", text);
+    }
+
+    [Fact]
+    [DisplayName("AgentConclusion.ExtractFrom 超长文本时截断并追加省略号")]
+    public void AgentConclusion_ExtractFrom_TruncatesLongText()
+    {
+        var longText = new String('C', 500);
+        var conclusion = AgentConclusion.ExtractFrom(longText, maxLength: 100);
+
+        Assert.True(conclusion.Conclusion.Length <= 104);
+        Assert.EndsWith("...", conclusion.Conclusion);
+    }
+
+    [Fact]
+    [DisplayName("AgentConclusion.ExtractFrom 短文本不截断")]
+    public void AgentConclusion_ExtractFrom_ShortTextUnchanged()
+    {
+        var conclusion = AgentConclusion.ExtractFrom("简短结论", maxLength: 100);
+
+        Assert.Equal("简短结论", conclusion.Conclusion);
+        Assert.DoesNotContain("...", conclusion.Conclusion);
+    }
+
+    [Fact]
+    [DisplayName("AgentConclusion.ExtractFrom 空文本返回空结论")]
+    public void AgentConclusion_ExtractFrom_EmptyTextReturnsEmpty()
+    {
+        var conclusion = AgentConclusion.ExtractFrom(String.Empty);
+        Assert.Equal(String.Empty, conclusion.Conclusion);
+    }
+
+    // ── ParallelGroupChat MaxWorkerConclusionLength 测试 ──────────────────────
+
+    [Fact]
+    [DisplayName("MaxWorkerConclusionLength 为 0 时不截断工作代理输出")]
+    public async Task ParallelGroupChat_ConclusionLength0_NeverTruncates()
+    {
+        var longReply = new String('A', 500);
+        var workers = new List<IAgent> { new EchoAgent("worker1", longReply) };
+        var aggregator = new CapturingAggregatorAgent();
+        var chat = new ParallelGroupChat(workers, aggregator); // MaxWorkerConclusionLength 默认 0
+
+        await foreach (var _ in chat.RunAsync(new TextMessage { Source = "user", Role = "user", Content = "test" })) { }
+
+        Assert.Contains(longReply, aggregator.ReceivedContent);
+    }
+
+    [Fact]
+    [DisplayName("MaxWorkerConclusionLength 设置后截断工作代理长输出")]
+    public async Task ParallelGroupChat_WithConclusionLength_TruncatesWorkerOutput()
+    {
+        var longReply = new String('B', 500);
+        var workers = new List<IAgent> { new EchoAgent("worker1", longReply) };
+        var aggregator = new CapturingAggregatorAgent();
+        var chat = new ParallelGroupChat(workers, aggregator) { MaxWorkerConclusionLength = 100 };
+
+        await foreach (var _ in chat.RunAsync(new TextMessage { Source = "user", Role = "user", Content = "test" })) { }
+
+        Assert.True(aggregator.ReceivedContent.Length < 500, "截断后聚合输入应大幅缩短");
+        Assert.Contains("...", aggregator.ReceivedContent);
+    }
+
+    [Fact]
+    [DisplayName("MaxWorkerConclusionLength 短输出不截断")]
+    public async Task ParallelGroupChat_ShortOutput_NotTruncated()
+    {
+        var shortReply = "短回复";
+        var workers = new List<IAgent> { new EchoAgent("worker1", shortReply) };
+        var aggregator = new CapturingAggregatorAgent();
+        var chat = new ParallelGroupChat(workers, aggregator) { MaxWorkerConclusionLength = 100 };
+
+        await foreach (var _ in chat.RunAsync(new TextMessage { Source = "user", Role = "user", Content = "test" })) { }
+
+        Assert.Contains(shortReply, aggregator.ReceivedContent);
+        Assert.DoesNotContain("...", aggregator.ReceivedContent);
+    }
+
+    // 捕获聚合输入内容的假聚合代理
+    private sealed class CapturingAggregatorAgent : IAgent
+    {
+        public String Name => "aggregator";
+        public String? Description => null;
+        public String ReceivedContent { get; private set; } = String.Empty;
+
+        public async IAsyncEnumerable<AgentMessage> HandleAsync(
+            IList<AgentMessage> history, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            // 取最后一条 user 角色消息（即 BuildAggregatorHistory 生成的汇总输入）
+            var userMsg = history.OfType<TextMessage>().LastOrDefault(m => m.Role == "user");
+            if (userMsg != null) ReceivedContent = userMsg.Content ?? String.Empty;
+            yield return new TextMessage { Source = Name, Role = "assistant", Content = "ok" };
+        }
+    }
+
     // ── 辅助子类 ─────────────────────────────────────────────────────────────
 
     /// <summary>OnBefore 注入系统消息到历史头部</summary>

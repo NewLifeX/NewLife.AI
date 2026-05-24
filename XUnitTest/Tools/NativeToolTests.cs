@@ -525,4 +525,162 @@ public class NativeToolTests
         var ua = client.DefaultRequestHeaders.UserAgent.ToString();
         Assert.Contains("Mozilla", ua);
     }
+
+    // ── ToolError 结构化错误返回测试 ──────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("ToolError.ToJson 生成含 error_code 和 hint 字段的 JSON")]
+    public void ToolError_ToJson_ContainsRequiredFields()
+    {
+        var err = ToolError.Create("SYNTAX_ERROR", "SQL 语法错误");
+        var json = err.ToJson();
+
+        Assert.Contains("\"error_code\"", json);
+        Assert.Contains("SYNTAX_ERROR", json);
+        Assert.Contains("\"hint\"", json);
+        Assert.Contains("SQL 语法错误", json);
+    }
+
+    [Fact]
+    [DisplayName("ToolError.ToJson 含 suggested_fix 时输出该字段")]
+    public void ToolError_ToJson_IncludesSuggestedFix()
+    {
+        var err = ToolError.Create("SYNTAX_ERROR", "SQL 语法错误", "请添加 SELECT 子句");
+        var json = err.ToJson();
+
+        Assert.Contains("\"suggested_fix\"", json);
+        Assert.Contains("SELECT 子句", json);
+    }
+
+    [Fact]
+    [DisplayName("ToolError.ToJson 不含 suggested_fix 时省略该字段")]
+    public void ToolError_ToJson_OmitsSuggestedFixWhenNull()
+    {
+        var err = ToolError.Create("NOT_FOUND", "工具未找到");
+        var json = err.ToJson();
+
+        Assert.DoesNotContain("suggested_fix", json);
+    }
+
+    [Fact]
+    [DisplayName("ToolError.IsToolError 正确识别结构化错误 JSON")]
+    public void ToolError_IsToolError_RecognizesErrorJson()
+    {
+        var errJson = ToolError.Create("TEST", "hint").ToJson();
+        Assert.True(ToolError.IsToolError(errJson));
+        Assert.False(ToolError.IsToolError("计算结果是 30"));
+        Assert.False(ToolError.IsToolError(null));
+        Assert.False(ToolError.IsToolError(String.Empty));
+    }
+
+    [Fact]
+    [DisplayName("ToolError.ToJson 对特殊字符正确转义")]
+    public void ToolError_ToJson_EscapesSpecialChars()
+    {
+        var err = ToolError.Create("ERR", "含\"引号\"和\\反斜线");
+        var json = err.ToJson();
+
+        // 必须合法 JSON：引号转义为 \"，反斜线转义为 \\
+        Assert.Contains("\\\"", json);
+        Assert.Contains("\\\\", json);
+    }
+
+    // ── ToolApprovalTier 三档权限测试 ─────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("ToolApprovalTier.Allow 低风险工具绕过审批直接执行")]
+    public async Task ToolChatClient_TierAllow_SkipsApproval()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        var innerClient = new ToolCallThenReplyClient("add_numbers", "{\"a\":1,\"b\":2}", "结果 3");
+        var client = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var approvalRequested = false;
+        client.ApprovalProvider = new TierApprovalProvider(
+            tier: ToolApprovalTier.Allow,
+            onRequest: () => { approvalRequested = true; return ToolApprovalResult.Allow; });
+
+        await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "1+2?" }]);
+        Assert.False(approvalRequested, "Allow 档位不应调用 RequestApprovalAsync");
+    }
+
+    [Fact]
+    [DisplayName("ToolApprovalTier.Deny 高风险工具被代码层阻断，不调用审批")]
+    public async Task ToolChatClient_TierDeny_BlocksWithoutApproval()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        var innerClient = new ToolCallThenReplyClient("add_numbers", "{\"a\":1,\"b\":2}", "done");
+        var client = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var approvalRequested = false;
+        client.ApprovalProvider = new TierApprovalProvider(
+            tier: ToolApprovalTier.Deny,
+            onRequest: () => { approvalRequested = true; return ToolApprovalResult.Allow; });
+
+        await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "1+2?" }]);
+        Assert.False(approvalRequested, "Deny 档位不应调用 RequestApprovalAsync");
+    }
+
+    [Fact]
+    [DisplayName("ToolApprovalTier.Ask 中风险工具调用审批，用户拒绝后返回结构化错误")]
+    public async Task ToolChatClient_TierAsk_UserDeny_ReturnsStructuredError()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 第二次返回最终文本（包含工具结果）
+        var innerClient = new ToolCallThenReplyClient("add_numbers", "{\"a\":1,\"b\":2}", "已处理");
+        var client = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        client.ApprovalProvider = new TierApprovalProvider(
+            tier: ToolApprovalTier.Ask,
+            onRequest: () => ToolApprovalResult.Deny);
+
+        // 不应抛出异常，错误被结构化返回给模型
+        var response = await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "1+2?" }]);
+        Assert.NotNull(response);
+    }
+
+    [Fact]
+    [DisplayName("工具执行抛异常时返回结构化错误 JSON 而非向上抛出")]
+    public async Task ToolChatClient_ToolException_ReturnsStructuredError()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTool("failing_tool", (_, __) =>
+        {
+            throw new InvalidOperationException("数据库连接失败");
+#pragma warning disable CS0162
+            return Task.FromResult(String.Empty);
+#pragma warning restore CS0162
+        });
+
+        var innerClient = new ToolCallThenReplyClient("failing_tool", "{}", "done");
+        var client = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        // 不应抛出 — 异常被捕获为结构化错误传给模型
+        var response = await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "fail" }]);
+        Assert.NotNull(response);
+    }
+
+    // 测试专用：支持配置档位的审批提供者（同时实现 IToolTierProvider）
+    private sealed class TierApprovalProvider : IToolApprovalProvider, IToolTierProvider
+    {
+        private readonly ToolApprovalTier _tier;
+        private readonly Func<ToolApprovalResult> _onRequest;
+
+        public TierApprovalProvider(ToolApprovalTier tier, Func<ToolApprovalResult> onRequest)
+        {
+            _tier = tier;
+            _onRequest = onRequest;
+        }
+
+        public ToolApprovalTier GetToolTier(String toolName) => _tier;
+
+        public Task<ToolApprovalResult> RequestApprovalAsync(String toolName, String? argumentsJson, CancellationToken ct = default)
+            => Task.FromResult(_onRequest());
+    }
 }

@@ -29,6 +29,13 @@ public sealed class ParallelGroupChat
     /// <summary>单个工作代理的超时时间（秒），默认 60</summary>
     public Int32 WorkerTimeoutSeconds { get; set; } = 60;
 
+    /// <summary>单个工作代理结论的最大字符数（0 表示不限制）。超长时截断并追加省略号，避免主链上下文膨胀</summary>
+    /// <remarks>
+    /// 子代理结论汇聚协议：子代理只向主代理回传约 100 字的摘要。
+    /// 建议设置为 300~500，可将主链上下文大幅压缩。0（默认）表示不截断。
+    /// </remarks>
+    public Int32 MaxWorkerConclusionLength { get; set; } = 0;
+
     #endregion
 
     #region 构造
@@ -74,7 +81,7 @@ public sealed class ParallelGroupChat
         }
 
         // 构造聚合输入：初始消息 + 各工作代理的文本结果
-        var aggregatorHistory = BuildAggregatorHistory(initial, workerResults);
+        var aggregatorHistory = BuildAggregatorHistory(initial, workerResults, MaxWorkerConclusionLength);
 
         // 调用聚合代理
         await foreach (var msg in Aggregator.HandleAsync(aggregatorHistory, cancellationToken).ConfigureAwait(false))
@@ -145,8 +152,11 @@ public sealed class ParallelGroupChat
     }
 
     /// <summary>构建聚合代理的消息历史。将各工作代理的文本结果汇总为格式化文本</summary>
+    /// <param name="initial">初始触发消息</param>
+    /// <param name="workerResults">各工作代理的执行结果</param>
+    /// <param name="maxConclusionLength">单个代理结论最大字符数（0 不限制）</param>
     private static IList<AgentMessage> BuildAggregatorHistory(
-        AgentMessage initial, IList<(IAgent Agent, IList<AgentMessage> Messages)> workerResults)
+        AgentMessage initial, IList<(IAgent Agent, IList<AgentMessage> Messages)> workerResults, Int32 maxConclusionLength = 0)
     {
         var history = new List<AgentMessage> { initial };
 
@@ -161,7 +171,13 @@ public sealed class ParallelGroupChat
             foreach (var msg in messages)
             {
                 if (msg is TextMessage textMsg && !String.IsNullOrEmpty(textMsg.Content))
-                    sb.AppendLine(textMsg.Content);
+                {
+                    var content = textMsg.Content;
+                    // 子代理结论汇聚：超长时截断，保持主链上下文精简
+                    if (maxConclusionLength > 0 && content.Length > maxConclusionLength)
+                        content = content.Substring(0, maxConclusionLength) + "...";
+                    sb.AppendLine(content);
+                }
             }
             sb.AppendLine();
         }
