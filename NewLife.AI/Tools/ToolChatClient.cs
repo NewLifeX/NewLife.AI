@@ -22,12 +22,14 @@ namespace NewLife.AI.Tools;
 ///     .Build();
 /// </code>
 /// </remarks>
-public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
+/// <remarks>初始化工具对话客户端中间件</remarks>
+/// <param name="innerClient">内层客户端</param>
+/// <param name="providers">工具提供者列表（按工具名路由；未找到则抛 <see cref="InvalidOperationException"/>）</param>
+public class ToolChatClient(IChatClient innerClient, params IToolProvider[] providers) : DelegatingChatClient(innerClient), ILogFeature, ITracerFeature
 {
     #region 属性
-
     /// <summary>工具提供者列表（按工具名直接路由执行工具调用）</summary>
-    public IReadOnlyList<IToolProvider> Providers { get; }
+    public IReadOnlyList<IToolProvider> Providers { get; } = (providers ?? []).ToList().AsReadOnly();
 
     private Int32 _maxIterations = 10;
     /// <summary>最大工具调用循环次数，防止无限递归。默认 10；设为 0 或负数时自动回退为 10</summary>
@@ -38,18 +40,6 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
 
     /// <summary>工具审批提供者。设置后在每次工具执行前请求审批，未设置时直接执行</summary>
     public IToolApprovalProvider? ApprovalProvider { get; set; }
-    #endregion
-
-    #region 构造
-
-    /// <summary>初始化工具对话客户端中间件</summary>
-    /// <param name="innerClient">内层客户端</param>
-    /// <param name="providers">工具提供者列表（按工具名路由；未找到则抛 <see cref="InvalidOperationException"/>）</param>
-    public ToolChatClient(IChatClient innerClient, params IToolProvider[] providers) : base(innerClient)
-    {
-        Providers = (providers ?? []).ToList().AsReadOnly();
-    }
-
     #endregion
 
     #region 方法
@@ -73,10 +63,14 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
         var iterations = 0;
         UsageDetails? accumulatedUsage = null;
 
+        // 构建工具调用上下文，整个请求生命周期内保持稳定；每轮 LLM 返回后更新 Response
+        var context = ToolCallContext.Current = new ToolCallContext { Request = request };
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
+            context.Response = response;
 
             // 累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）
             if (response.Usage != null) accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
@@ -133,6 +127,9 @@ public class ToolChatClient : DelegatingChatClient, ILogFeature, ITracerFeature
         var workMessages = request.Messages.ToList();
 
         UsageDetails? accumulatedUsage = null;
+
+        // 构建工具调用上下文，整个请求生命周期内保持稳定；流式模式下 Response 始终为 null
+        ToolCallContext.Current = new ToolCallContext { Request = request };
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
