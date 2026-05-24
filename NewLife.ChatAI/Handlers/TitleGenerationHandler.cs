@@ -80,16 +80,19 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
             return cleanMsg;
         }
 
-        // 命中内容缓存：直接写回，跳过 LLM 调用
+        // 命中内容缓存：直接写回，跳过 LLM 调用；未命中则继续走 LLM 生成
         if (cleanMsg.Length < 64)
         {
             var cachedTitle = cacheProvider.Cache.Get<String>($"ai:title:{cleanMsg}");
-            if (cachedTitle != conversation.Title)
+            if (!cachedTitle.IsNullOrEmpty())
             {
-                conversation.Title = cachedTitle;
-                conversation.Update();
+                if (cachedTitle != conversation.Title)
+                {
+                    conversation.Title = cachedTitle;
+                    conversation.Update();
+                }
+                return cachedTitle;
             }
-            return cachedTitle;
         }
 
         using var span = Tracer?.NewSpan("ai:GenerateTitle");
