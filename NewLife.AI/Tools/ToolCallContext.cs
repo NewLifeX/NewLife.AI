@@ -23,6 +23,9 @@ public class ToolCallContext
 
     /// <summary>当前轮次的 LLM 响应，每次 LLM 返回后由 ToolChatClient 更新。流式模式下始终为 null</summary>
     public IChatResponse? Response { get; set; }
+
+    /// <summary>当前正在执行的工具调用编号（由 LLM 分配）。在工具方法内读取，用于将工具调用 ID 透传给 HITL 等需要回调的机制</summary>
+    public String? CurrentToolCallId { get; set; }
     #endregion
 
 #if NETFRAMEWORK

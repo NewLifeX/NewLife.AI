@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using NewLife.AI.Models;
 using NewLife.Log;
 using NewLife.Serialization;
 using XCode.Membership;
@@ -19,6 +19,8 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        // 允许中文等非 ASCII 字符直接输出，避免 SSE 数据中出现 \uXXXX 转义
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new SafeInt64Converter() },
     };
 

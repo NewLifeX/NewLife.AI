@@ -95,6 +95,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             foreach (var tc in toolCalls)
             {
                 if (tc.Function == null) continue;
+
+                // 将当前工具调用 ID 写入上下文，工具方法可通过 ToolCallContext.Current.CurrentToolCallId 读取
+                context.CurrentToolCallId = tc.Id;
                 var result = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
                 workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = result });
             }
@@ -129,7 +132,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         UsageDetails? accumulatedUsage = null;
 
         // 构建工具调用上下文，整个请求生命周期内保持稳定；流式模式下 Response 始终为 null
-        ToolCallContext.Current = new ToolCallContext { Request = request };
+        var context = ToolCallContext.Current = new ToolCallContext { Request = request };
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
@@ -222,6 +225,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
                 ToolCallEventInfo resultEvent;
                 var span = Tracer?.NewSpan($"ai:tool:{tc.Function.Name}", tc.Function.Arguments);
+                // 将当前工具调用 ID 写入上下文，工具方法可通过 ToolCallContext.Current.CurrentToolCallId 读取
+                context.CurrentToolCallId = tc.Id;
                 try
                 {
                     var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, cancellationToken).ConfigureAwait(false);
