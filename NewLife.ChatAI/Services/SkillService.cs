@@ -363,6 +363,34 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         return result;
     }
 
+    /// <summary>根据助手回复内容匹配助手触发词工具。仅返回启用且 IsSystem=false 且设置了 AssistantTriggers 的工具名称集合</summary>
+    /// <param name="content">AI 上一轮回复内容</param>
+    /// <returns>命中的工具名称集合</returns>
+    public ISet<String> MatchNativeToolNamesByAssistantContent(String? content)
+    {
+        var result = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        if (content.IsNullOrWhiteSpace()) return result;
+
+        var tools = GetNativeToolsForTriggerMatch();
+        foreach (var tool in tools.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id))
+        {
+            if (tool.Name.IsNullOrWhiteSpace() || tool.IsSystem || tool.AssistantTriggers.IsNullOrWhiteSpace()) continue;
+
+            var triggers = tool.AssistantTriggers.Split(',', '，');
+            foreach (var trigger in triggers)
+            {
+                var word = trigger.Trim();
+                if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Add(tool.Name);
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>获取所有启用的技能列表（用于触发词匹配）。可在子类中覆盖以支持测试</summary>
     protected virtual IList<Skill> GetAllEnabledSkillsForTriggerMatch() => Skill.FindAllEnabled();
 

@@ -62,9 +62,15 @@ public class SkillActivationHandler(IEnumerable<IToolProvider> toolProviders, Sk
         // 派生类钩子：商用版可基于内容自动匹配技能
         ResolveSkillByContent(context, lastUserContent);
 
-        // 触发词命中（NativeTool）
+        // 触发词命中（NativeTool — 用户消息）
         var matchedNative = skillService.MatchNativeToolNamesByContent(lastUserContent);
         foreach (var n in matchedNative)
+            context.SelectedTools.Add(n);
+
+        // 助手输出触发词命中（NativeTool — AI 上一轮回复）
+        var lastAssistantContent = context.ContextMessages.LastOrDefault(m => m.Role == "assistant")?.Content as String;
+        var matchedAssistant = skillService.MatchNativeToolNamesByAssistantContent(lastAssistantContent);
+        foreach (var n in matchedAssistant)
             context.SelectedTools.Add(n);
 
         // 触发词命中（MCP）

@@ -87,6 +87,14 @@ public partial class NativeTool
     [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）", "")]
     public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
 
+    private String? _AssistantTriggers;
+    /// <summary>助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
+    [DisplayName("助手触发词")]
+    [Description("助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("AssistantTriggers", "助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）", "")]
+    public String? AssistantTriggers { get => _AssistantTriggers; set { if (OnPropertyChanging("AssistantTriggers", value)) { _AssistantTriggers = value; OnPropertyChanged("AssistantTriggers"); } } }
+
     private Boolean _Enable;
     /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
     [DisplayName("启用")]
@@ -223,6 +231,7 @@ public partial class NativeTool
             "Description" => _Description,
             "Parameters" => _Parameters,
             "Triggers" => _Triggers,
+            "AssistantTriggers" => _AssistantTriggers,
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
             "IsLocked" => _IsLocked,
@@ -251,6 +260,7 @@ public partial class NativeTool
                 case "Description": _Description = Convert.ToString(value); break;
                 case "Parameters": _Parameters = Convert.ToString(value); break;
                 case "Triggers": _Triggers = Convert.ToString(value); break;
+                case "AssistantTriggers": _AssistantTriggers = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
                 case "IsLocked": _IsLocked = value.ToBoolean(); break;
@@ -360,6 +370,9 @@ public partial class NativeTool
         /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
         public static readonly Field Triggers = FindByName("Triggers");
 
+        /// <summary>助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
+        public static readonly Field AssistantTriggers = FindByName("AssistantTriggers");
+
         /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -431,6 +444,9 @@ public partial class NativeTool
 
         /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
         public const String Triggers = "Triggers";
+
+        /// <summary>助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
+        public const String AssistantTriggers = "AssistantTriggers";
 
         /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
         public const String Enable = "Enable";

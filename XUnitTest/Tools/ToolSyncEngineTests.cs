@@ -46,6 +46,7 @@ public class ToolSyncEngineTests
         public String? Description { get; set; }
         public String? Parameters { get; set; }
         public String? Triggers { get; set; }
+        public String? AssistantTriggers { get; set; }
         public Boolean Enable { get; set; }
         public Boolean IsSystem { get; set; }
         public Boolean IsLocked { get; set; }

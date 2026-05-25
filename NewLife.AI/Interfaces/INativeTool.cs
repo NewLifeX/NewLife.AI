@@ -35,6 +35,9 @@ public partial interface INativeTool
     /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
     String? Triggers { get; set; }
 
+    /// <summary>助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）</summary>
+    String? AssistantTriggers { get; set; }
+
     /// <summary>启用。是否启用此工具，禁用后不传给LLM调用</summary>
     Boolean Enable { get; set; }
 

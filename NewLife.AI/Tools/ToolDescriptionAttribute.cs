@@ -37,6 +37,9 @@ public sealed class ToolDescriptionAttribute : Attribute
     /// <summary>触发词。多个词使用中英文逗号分隔，用户消息命中任一词时可自动激活该工具</summary>
     public String? Triggers { get; set; }
 
+    /// <summary>助手输出触发词。多个词使用中英文逗号分隔，AI 上一轮回复命中任一词时可自动激活该工具</summary>
+    public String? AssistantTriggers { get; set; }
+
     /// <summary>是否启用。false 时同步到配置表后将保持禁用状态，可用于临时下线工具</summary>
     public Boolean Enable { get; set; } = true;
 }

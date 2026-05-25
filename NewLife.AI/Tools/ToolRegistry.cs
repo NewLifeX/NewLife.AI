@@ -144,6 +144,7 @@ public class ToolRegistry : IToolProvider
         model.Description = description;
         model.Parameters = function.Parameters?.ToJson();
         model.Triggers = NormalizeTriggers(attr.Triggers);
+        model.AssistantTriggers = NormalizeTriggers(attr.AssistantTriggers);
         model.IsSystem = attr.IsSystem;
         model.Enable = attr.Enable;
         model.ClassName = type.FullName;
@@ -264,6 +265,7 @@ public class ToolRegistry : IToolProvider
             record.Description = model.Description;
             record.Parameters = model.Parameters;
             record.Triggers = model.Triggers;
+            record.AssistantTriggers = model.AssistantTriggers;
         }
 
         save(record);

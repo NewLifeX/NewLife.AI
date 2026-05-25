@@ -362,6 +362,7 @@
         <Column Name="Description" DataType="String" ItemType="markdown" Length="2000" Description="描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖" />
         <Column Name="Parameters" DataType="String" ItemType="json" ShowIn="Auto,-List,-Search" Length="-1" Description="参数Schema。JSON格式的函数参数定义，锁定后不再覆盖" />
         <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）" />
+        <Column Name="AssistantTriggers" DataType="String" Length="500" Description="助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）" />
         <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。是否启用此工具，禁用后不传给LLM调用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统工具。每次LLM请求自动携带，无需@引用，如当前时间、当前用户信息" />
         <Column Name="IsLocked" DataType="Boolean" Description="锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整" />
