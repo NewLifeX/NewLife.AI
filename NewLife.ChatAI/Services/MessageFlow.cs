@@ -266,6 +266,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.Options.EnableThinking = request.ThinkingMode switch
         {
             ThinkingMode.Think => true,
+            ThinkingMode.Clarify => true, // 澄清模式底层使用深度思考，再叠加系统提示词
             ThinkingMode.Fast => false,
             _ => flow.ModelConfig.SupportThinking ? true : null,
         };
@@ -400,6 +401,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.Options.EnableThinking = flow.ThinkingMode switch
         {
             ThinkingMode.Think => true,
+            ThinkingMode.Clarify => true, // 澄清模式底层使用深度思考，再叠加系统提示词
             ThinkingMode.Fast => false,
             _ => modelConfig.SupportThinking ? true : null,
         };

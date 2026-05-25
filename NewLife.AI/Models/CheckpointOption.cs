@@ -12,5 +12,8 @@ public class CheckpointOption
 
     /// <summary>选项描述（可选，补充说明该路径的重点或预期耗时）</summary>
     public String? Description { get; set; }
+
+    /// <summary>选项预览（可选，可填入小段代码/SQL/链接/图片地址等，前端折叠展示，帮助用户决策）</summary>
+    public String? Preview { get; set; }
     #endregion
 }
