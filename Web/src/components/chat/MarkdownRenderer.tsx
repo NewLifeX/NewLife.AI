@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentPropsWithoutRef, type ReactElement, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
@@ -20,8 +20,6 @@ import { editImage } from '@/lib/api'
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
 
 let mermaidCounter = 0
-
-type CodeLikeElement = ReactElement<{ className?: string; children?: ReactNode }> & { type?: unknown }
 
 interface MermaidActionButtonProps {
   title: string
@@ -52,13 +50,6 @@ interface MermaidPreviewDialogProps {
   onDownloadSvg: () => void
 }
 
-function isCodeLikeElement(value: unknown): value is CodeLikeElement {
-  if (!value || typeof value !== 'object' || !('props' in value)) return false
-  const element = value as CodeLikeElement
-  const className = element.props?.className
-  return element.type === 'code' || typeof className === 'string'
-}
-
 function extractText(node: ReactNode): string {
   if (typeof node === 'string') return node
   if (typeof node === 'number') return String(node)
@@ -66,6 +57,14 @@ function extractText(node: ReactNode): string {
   if (node && typeof node === 'object' && 'props' in node) {
     return extractText((node as { props?: { children?: ReactNode } }).props?.children)
   }
+  return ''
+}
+
+type HastChild = { type: string; value?: string; properties?: Record<string, unknown>; children?: HastChild[] }
+
+function hastToText(node: HastChild): string {
+  if (node.type === 'text') return node.value ?? ''
+  if (node.children) return node.children.map(hastToText).join('')
   return ''
 }
 
@@ -346,13 +345,41 @@ interface CollapsibleCodeBlockProps extends ComponentPropsWithoutRef<'pre'> {
 
 function CollapsibleCodeBlock({ codeStr, lang: _lang, children, ...props }: CollapsibleCodeBlockProps) {
   const { t } = useTranslation()
-  // 末尾空行不计入行数
-  const lines = codeStr.endsWith('\n') ? codeStr.slice(0, -1).split('\n') : codeStr.split('\n')
-  const lineCount = lines.length
+  const preRef = useRef<HTMLPreElement>(null)
+
+  // effectiveCode：优先用 prop 传入的 codeStr（来自 hast AST），兜底用 DOM 文本内容
+  const [effectiveCode, setEffectiveCode] = useState(codeStr)
+  const [lineCount, setLineCount] = useState(() => {
+    const text = codeStr.endsWith('\n') ? codeStr.slice(0, -1) : codeStr
+    return text ? text.split('\n').length : 0
+  })
   const shouldCollapse = lineCount > CODE_COLLAPSE_THRESHOLD
   const [collapsed, setCollapsed] = useState(shouldCollapse)
 
-  // 流式写入时若行数刚超过阈值则自动折叠，否则保持当前状态
+  // codeStr 变化时同步（流式写入场景）
+  useEffect(() => {
+    if (codeStr) {
+      setEffectiveCode(codeStr)
+      const text = codeStr.endsWith('\n') ? codeStr.slice(0, -1) : codeStr
+      setLineCount(text ? text.split('\n').length : 0)
+    }
+  }, [codeStr])
+
+  // codeStr 为空时从 DOM 兜底测量；useLayoutEffect 在浏览器绘制前同步运行，无闪烁
+  useLayoutEffect(() => {
+    if (!codeStr && preRef.current) {
+      const domText = preRef.current.textContent ?? ''
+      const text = domText.endsWith('\n') ? domText.slice(0, -1) : domText
+      const count = text ? text.split('\n').length : 0
+      if (count > 0) {
+        setEffectiveCode(domText)
+        setLineCount(count)
+        if (count > CODE_COLLAPSE_THRESHOLD) setCollapsed(true)
+      }
+    }
+  }, [codeStr])
+
+  // 流式写入时若行数刚越过阈值则自动折叠，否则保持用户选择
   const prevShouldCollapse = useRef(shouldCollapse)
   useEffect(() => {
     if (!prevShouldCollapse.current && shouldCollapse) {
@@ -365,6 +392,7 @@ function CollapsibleCodeBlock({ codeStr, lang: _lang, children, ...props }: Coll
     <div className="relative group/code">
       <div className={cn(shouldCollapse && collapsed ? 'max-h-[17rem] overflow-hidden relative' : 'relative')}>
         <pre
+          ref={preRef}
           {...props}
           className={cn(
             'bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
@@ -378,7 +406,7 @@ function CollapsibleCodeBlock({ codeStr, lang: _lang, children, ...props }: Coll
         )}
       </div>
       <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
-        {codeStr && <CopyCodeButton code={codeStr} />}
+        {effectiveCode && <CopyCodeButton code={effectiveCode} />}
       </div>
       {shouldCollapse && (
         <button
@@ -422,108 +450,107 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
     [images],
   )
 
+  // 将 components 提取为 useMemo，避免每次渲染都生成新函数引用，
+  // 防止 ReactMarkdown 把 pre/code 视为新组件类型而卸载/重挂载（导致折叠状态丢失）
+  const markdownComponents = useMemo(
+    () => ({
+      pre({ children, node: preNode, ...props }: ComponentPropsWithoutRef<'pre'> & { node?: { children?: HastChild[] } }) {
+        // 直接从 hast 节点提取原始文本，比从 React children 解析更可靠
+        const codeHastNode = preNode?.children?.[0]
+        const codeStr = codeHastNode ? hastToText(codeHastNode) : extractText(children)
+        const classNames: string[] = (codeHastNode?.properties?.className as string[] | undefined) ?? []
+        const lang = classNames.find((c) => c.startsWith('language-'))?.replace('language-', '') ?? ''
+
+        if (lang === 'mermaid') {
+          return <MermaidBlock code={codeStr.replace(/\n$/, '')} isStreaming={isStreaming} />
+        }
+
+        return (
+          <CollapsibleCodeBlock codeStr={codeStr} lang={lang} {...props}>
+            {children}
+          </CollapsibleCodeBlock>
+        )
+      },
+      code({ className: codeClassName, children, ...props }: ComponentPropsWithoutRef<'code'>) {
+        const isInline = !codeClassName
+        if (isInline) {
+          return (
+            <code
+              className="bg-gray-100 dark:bg-gray-800 text-primary dark:text-blue-400 px-1.5 py-0.5 rounded text-sm font-mono"
+              {...props}
+            >
+              {children}
+            </code>
+          )
+        }
+        if (codeClassName?.includes('language-mermaid')) {
+          const codeStr = extractText(children).replace(/\n$/, '')
+          return <MermaidBlock code={codeStr} isStreaming={isStreaming} />
+        }
+        return (
+          <code className={codeClassName} {...props}>
+            {children}
+          </code>
+        )
+      },
+      a({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) {
+        return (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+            {...props}
+          >
+            {children}
+          </a>
+        )
+      },
+      table({ children, ...props }: ComponentPropsWithoutRef<'table'>) {
+        return (
+          <div className="overflow-x-auto my-4">
+            <table className="border-collapse border border-gray-200 dark:border-gray-700 w-full text-sm" {...props}>
+              {children}
+            </table>
+          </div>
+        )
+      },
+      th({ children, ...props }: ComponentPropsWithoutRef<'th'>) {
+        return (
+          <th
+            className="border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-left font-medium"
+            {...props}
+          >
+            {children}
+          </th>
+        )
+      },
+      td({ children, ...props }: ComponentPropsWithoutRef<'td'>) {
+        return (
+          <td className="border border-gray-200 dark:border-gray-700 px-3 py-2" {...props}>
+            {children}
+          </td>
+        )
+      },
+      img({ src, alt }: ComponentPropsWithoutRef<'img'>) {
+        return (
+          <ProgressiveImage
+            src={src}
+            alt={alt ?? ''}
+            onClick={() => src && handleImageClick(src)}
+          />
+        )
+      },
+    }),
+    [isStreaming, handleImageClick],
+  )
+
   return (
     <div className={cn('prose dark:prose-invert max-w-none break-words', isStreaming && 'streaming-prose', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { plainText: ['mermaid'] }], [rehypeKatex, { throwOnError: false, strict: false }]]}
-        components={{
-          pre({ children, ...props }) {
-            const codeEl = Array.isArray(children)
-              ? children.find((c) => isCodeLikeElement(c))
-              : children
-            const rawChildren =
-              typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
-                ? (codeEl as { props?: { children?: ReactNode } }).props?.children
-                : undefined
-            const codeStr = extractText(rawChildren)
-            const langClass =
-              typeof codeEl === 'object' && codeEl !== null && 'props' in codeEl
-                ? String((codeEl as { props?: { className?: string } }).props?.className ?? '')
-                : ''
-            const lang = langClass.split(/\s+/).find((c) => c.startsWith('language-'))?.replace('language-', '') ?? ''
-
-            if (lang === 'mermaid') {
-              return <MermaidBlock code={codeStr.replace(/\n$/, '')} isStreaming={isStreaming} />
-            }
-
-            return (
-              <CollapsibleCodeBlock codeStr={codeStr} lang={lang} {...props}>
-                {children}
-              </CollapsibleCodeBlock>
-            )
-          },
-          code({ className: codeClassName, children, ...props }) {
-            const isInline = !codeClassName
-            if (isInline) {
-              return (
-                <code
-                  className="bg-gray-100 dark:bg-gray-800 text-primary dark:text-blue-400 px-1.5 py-0.5 rounded text-sm font-mono"
-                  {...props}
-                >
-                  {children}
-                </code>
-              )
-            }
-            if (codeClassName?.includes('language-mermaid')) {
-              const codeStr = extractText(children).replace(/\n$/, '')
-              return <MermaidBlock code={codeStr} isStreaming={isStreaming} />
-            }
-            return (
-              <code className={codeClassName} {...props}>
-                {children}
-              </code>
-            )
-          },
-          a({ href, children, ...props }) {
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-                {...props}
-              >
-                {children}
-              </a>
-            )
-          },
-          table({ children, ...props }) {
-            return (
-              <div className="overflow-x-auto my-4">
-                <table className="border-collapse border border-gray-200 dark:border-gray-700 w-full text-sm" {...props}>
-                  {children}
-                </table>
-              </div>
-            )
-          },
-          th({ children, ...props }) {
-            return (
-              <th
-                className="border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-left font-medium"
-                {...props}
-              >
-                {children}
-              </th>
-            )
-          },
-          td({ children, ...props }) {
-            return (
-              <td className="border border-gray-200 dark:border-gray-700 px-3 py-2" {...props}>
-                {children}
-              </td>
-            )
-          },
-          img({ src, alt }) {
-            return (
-              <ProgressiveImage
-                src={src}
-                alt={alt ?? ''}
-                onClick={() => src && handleImageClick(src)}
-              />
-            )
-          },
-        }}
+        components={markdownComponents}
       >
         {processedContent}
       </ReactMarkdown>
