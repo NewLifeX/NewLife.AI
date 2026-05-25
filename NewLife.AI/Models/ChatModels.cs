@@ -15,7 +15,11 @@ public enum ThinkingMode
 
     /// <summary>快速</summary>
     [Description("快速")]
-    Fast = 2
+    Fast = 2,
+
+    /// <summary>澄清。先与用户确认意图与关键参数，再执行复杂任务；通常配合 ask_user 工具实现交互闭环</summary>
+    [Description("澄清")]
+    Clarify = 3
 }
 
 /// <summary>反馈类型</summary>
