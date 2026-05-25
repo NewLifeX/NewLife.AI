@@ -131,6 +131,18 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         return models.FirstOrDefault(e => e.SupportEmbedding);
     }
 
+    /// <summary>解析重排序模型配置。优先按 ChatSetting.RerankModel 编码查找；未配置则返回 null（调用方跳过 CrossEncoder 重排步骤）</summary>
+    /// <returns>重排序模型配置，未配置或模型不存在返回 null</returns>
+    public ModelConfig? GetRerankModel()
+    {
+        if (chatSetting.RerankModel.IsNullOrEmpty()) return null;
+
+        var config = ModelConfig.FindByCode(chatSetting.RerankModel);
+        if (config != null && config.Enable) return config;
+
+        return null;
+    }
+
     /// <summary>从已启用模型列表中按优先级选出默认文本模型</summary>
     /// <param name="models">已启用的模型列表</param>
     /// <param name="defaultModelId">系统配置的默认模型编号，0 表示不指定</param>

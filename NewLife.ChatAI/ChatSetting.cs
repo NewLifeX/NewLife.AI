@@ -190,6 +190,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("嵌入模型。向量检索/向量嵌入场景调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入")]
     public String EmbedModel { get; set; } = "";
 
+    /// <summary>重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分</summary>
+    [Category("知识进化")]
+    [Description("重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分")]
+    public String RerankModel { get; set; } = "";
+
     /// <summary>学习最低字数。用户消息总字数低于该值且仅 1 轮时跳过记忆提取</summary>
     [Category("知识进化")]
     [Description("学习最低字数。用户消息总字数低于该值且仅 1 轮时跳过记忆提取")]

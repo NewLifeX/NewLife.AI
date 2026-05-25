@@ -19,6 +19,9 @@ public interface IChatSetting
     /// <summary>嵌入模型。向量检索/向量嵌入场景调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入</summary>
     String EmbedModel { get; }
 
+    /// <summary>重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分</summary>
+    String RerankModel { get; }
+
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
     Int32 DefaultContextRounds { get; }
     #endregion
