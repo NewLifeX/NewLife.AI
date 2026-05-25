@@ -122,15 +122,22 @@ export function ChatPage({
       }
       if (target) el.scrollTo({ top: target.offsetTop, behavior: 'smooth' })
     } else {
-      const threshold = el.scrollTop + 50
+      const viewportBottom = el.scrollTop + el.clientHeight
       let target: HTMLElement | undefined
       for (const item of items) {
-        if (item.offsetTop > threshold) {
+        const itemBottom = item.offsetTop + item.offsetHeight
+        if (itemBottom > viewportBottom + 1) {
           target = item
           break
         }
       }
-      if (target) el.scrollTo({ top: target.offsetTop, behavior: 'smooth' })
+      if (target) {
+        const targetScrollTop = target.offsetTop + target.offsetHeight - el.clientHeight
+        el.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' })
+      } else {
+        // 最后一条助手消息已完全可见或接近末尾，直接滚到容器底部
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      }
     }
   }, [])
 
@@ -253,7 +260,7 @@ export function ChatPage({
         </div>
       </div>
 
-      <div className="absolute bottom-32 right-6 z-20 flex flex-col gap-1.5">
+      <div className="absolute bottom-32 right-6 z-40 flex flex-col gap-1.5">
         <button
           type="button"
           onClick={() => navigateMessages('up')}
