@@ -230,7 +230,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 try
                 {
                     var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, context, cancellationToken).ConfigureAwait(false);
-                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = toolResult });
+
+                    // workMessages 使用截断版，避免超长结果（如 show_widget SVG）塞满 AI context window
+                    // resultEvent 必须保留完整结果：前端渲染（如 WidgetBlock）依赖完整 JSON，截断会导致 JSON 解析失败
+                    var aiContextContent = toolResult;
+                    if (MaxResultLength > 0 && aiContextContent != null && aiContextContent.Length > MaxResultLength)
+                        aiContextContent = aiContextContent.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {aiContextContent.Length} 字符，仅保留前 {MaxResultLength} 字符]";
+
+                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = aiContextContent });
                     if (span != null && toolResult != null)
                         span.AppendTag(toolResult, toolResult.Length);
 
@@ -296,12 +303,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         catch (Exception ex)
         {
             return ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
-        }
-
-        // 结果超长时截断并追加省略提示
-        if (MaxResultLength > 0 && result != null && result.Length > MaxResultLength)
-        {
-            result = result.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {MaxResultLength} 字符]";
         }
 
         return result!;
