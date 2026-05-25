@@ -174,6 +174,9 @@ public class SystemConfigDto
     /// <summary>欢迎语。欢迎页大标题，为空时前端使用默认文案</summary>
     public String? WelcomeMessage { get; set; }
 
+    /// <summary>分享链接默认有效期（分钟），0 表示永不过期</summary>
+    public Int32 ShareExpireMinutes { get; set; }
+
     /// <summary>欢迎页推荐问题列表</summary>
     public SuggestedQuestionDto[] SuggestedQuestions { get; set; } = [];
 }

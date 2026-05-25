@@ -301,7 +301,13 @@ public class ChatApplicationService
         var snapshotMessageId = ChatMessage.FindLastByConversationId(conversationId)?.Id ?? 0;
 
         DateTime? expireTime = null;
-        if (request.ExpireHours is > 0)
+        if (request.ExpireMinutes.HasValue)
+        {
+            if (request.ExpireMinutes.Value > 0)
+                expireTime = DateTime.Now.AddMinutes(request.ExpireMinutes.Value);
+            // ExpireMinutes == 0：用户明确选择永不过期
+        }
+        else if (request.ExpireHours is > 0)
             expireTime = DateTime.Now.AddHours(request.ExpireHours.Value);
         else if (ChatSetting.Current.ShareExpireMinutes > 0)
             expireTime = DateTime.Now.AddMinutes(ChatSetting.Current.ShareExpireMinutes);

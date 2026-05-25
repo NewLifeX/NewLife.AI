@@ -508,11 +508,11 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
 
 export async function createShareLink(
   conversationId: string,
-  expireHours?: number,
+  expireMinutes?: number,
 ): Promise<{ url: string; createTime: string; expireTime?: string }> {
   return request(`/api/conversations/${conversationId}/share`, {
     method: 'POST',
-    body: JSON.stringify({ expireHours }),
+    body: JSON.stringify({ expireMinutes }),
   })
 }
 
@@ -723,6 +723,8 @@ export interface SystemConfig {
   siteTitle: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage?: string
+  /** 分享链接默认有效期（分钟），0 表示永不过期 */
+  shareExpireMinutes?: number
   suggestedQuestions: SuggestedQuestion[]
 }
 

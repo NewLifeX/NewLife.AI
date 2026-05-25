@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { Icon } from '@/components/common/Icon'
-import { createShareLink, revokeShareLink } from '@/lib/api'
+import { createShareLink, revokeShareLink, fetchSystemConfig } from '@/lib/api'
 import { useChatStore } from '@/stores'
 
 interface ShareDialogProps {
@@ -20,8 +20,17 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedText, setCopiedText] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expireMinutes, setExpireMinutes] = useState<number>(0)
 
   const convTitle = useChatStore((s) => s.conversations.find((c) => c.id === conversationId)?.title ?? '')
+
+  // 打开时拉取默认有效期
+  useEffect(() => {
+    if (!open) return
+    fetchSystemConfig()
+      .then((cfg) => setExpireMinutes(cfg.shareExpireMinutes ?? 0))
+      .catch(() => {})
+  }, [open])
 
   const writeText = useCallback(async (text: string) => {
     try {
@@ -42,7 +51,7 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
     setLoading(true)
     setError(null)
     try {
-      const result = await createShareLink(conversationId)
+      const result = await createShareLink(conversationId, expireMinutes)
       // result.url 已包含 /share/{token}，直接拼接 origin
       const fullUrl = `${window.location.origin}${result.url}`
       setShareUrl(fullUrl)
@@ -114,6 +123,19 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('share.description')}
             </p>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                {t('share.expireLabel')}
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={expireMinutes}
+                onChange={(e) => setExpireMinutes(Math.max(0, Number(e.target.value)))}
+                className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none focus:border-primary"
+              />
+              <span className="text-xs text-gray-400 dark:text-gray-500">{t('share.expireHint')}</span>
+            </div>
             {error && (
               <p className="text-sm text-red-500">{error}</p>
             )}

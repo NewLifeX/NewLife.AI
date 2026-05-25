@@ -347,8 +347,8 @@ export default {
     revokeLink: '撤銷分享',
     revokeConfirm: '確定要撤銷此分享連結嗎？撤銷後他人將無法再存取。',
     revokeFailed: '撤銷分享連結失敗，請稍後重試',
-    revokeSuccess: '分享連結已撤銷',
-  },
+    revokeSuccess: '分享連結已撤銷',    expireLabel: '有效期（分鐘）',
+    expireHint: '0 表示永不過期',  },
   sharePage: {
     title: '分享的對話',
     notFound: '連結已失效',

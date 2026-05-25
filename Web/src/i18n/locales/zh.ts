@@ -342,6 +342,8 @@ export default {
     revokeConfirm: '确定要撤销此分享链接吗？撤销后他人将无法再访问。',
     revokeFailed: '撤销分享链接失败，请稍后重试',
     revokeSuccess: '分享链接已撤销',
+    expireLabel: '有效期（分钟）',
+    expireHint: '0 表示永不过期',
   },
   sharePage: {
     title: '分享的对话',

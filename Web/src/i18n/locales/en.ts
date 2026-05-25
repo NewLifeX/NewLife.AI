@@ -343,6 +343,8 @@ export default {
     revokeConfirm: 'Are you sure you want to revoke this share link? Others will no longer be able to access it.',
     revokeFailed: 'Failed to revoke share link. Please try again.',
     revokeSuccess: 'Share link revoked',
+    expireLabel: 'Expiry (minutes)',
+    expireHint: '0 = never expires',
   },
   sharePage: {
     title: 'Shared Conversation',
