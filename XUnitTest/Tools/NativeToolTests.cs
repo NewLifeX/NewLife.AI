@@ -254,7 +254,7 @@ public class NativeToolTests
     public async Task AddTool_DelegateRegistration_InvokesCorrectly()
     {
         var registry = new ToolRegistry();
-        registry.AddTool("echo", async (args, ct) =>
+        registry.AddTool("echo", async (args, context, ct) =>
         {
             await Task.Yield();
             return args ?? "null";
@@ -650,7 +650,7 @@ public class NativeToolTests
     public async Task ToolChatClient_ToolException_ReturnsStructuredError()
     {
         var registry = new ToolRegistry();
-        registry.AddTool("failing_tool", (_, __) =>
+        registry.AddTool("failing_tool", (_, __, ___) =>
         {
             throw new InvalidOperationException("数据库连接失败");
 #pragma warning disable CS0162

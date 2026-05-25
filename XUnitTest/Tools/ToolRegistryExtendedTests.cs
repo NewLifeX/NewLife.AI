@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
@@ -21,7 +21,7 @@ public class ToolRegistryExtendedTests
     {
         var registry = new ToolRegistry();
         Assert.Throws<ArgumentNullException>(() =>
-            registry.AddTool(null!, static (_, _) => Task.FromResult("ok")));
+            registry.AddTool(null!, static (_, _, _) => Task.FromResult("ok")));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class ToolRegistryExtendedTests
     public void AddTool_RegisteredToolAppearsInList()
     {
         var registry = new ToolRegistry();
-        registry.AddTool("my_tool", static (_, _) => Task.FromResult("result"), "描述");
+        registry.AddTool("my_tool", static (_, _, _) => Task.FromResult("result"), "描述");
 
         Assert.Single(registry.Tools);
         Assert.Equal("my_tool", registry.Tools[0].Function!.Name);
