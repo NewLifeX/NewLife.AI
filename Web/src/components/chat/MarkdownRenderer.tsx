@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentPropsWithoutRef, type ReactElement, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
@@ -336,6 +336,66 @@ function CopyCodeButton({ code }: { code: string }) {
   )
 }
 
+const CODE_COLLAPSE_THRESHOLD = 20
+
+interface CollapsibleCodeBlockProps extends ComponentPropsWithoutRef<'pre'> {
+  codeStr: string
+  lang: string
+  children: ReactNode
+}
+
+function CollapsibleCodeBlock({ codeStr, lang: _lang, children, ...props }: CollapsibleCodeBlockProps) {
+  const { t } = useTranslation()
+  // 末尾空行不计入行数
+  const lines = codeStr.endsWith('\n') ? codeStr.slice(0, -1).split('\n') : codeStr.split('\n')
+  const lineCount = lines.length
+  const shouldCollapse = lineCount > CODE_COLLAPSE_THRESHOLD
+  const [collapsed, setCollapsed] = useState(shouldCollapse)
+
+  // 流式写入时若行数刚超过阈值则自动折叠，否则保持当前状态
+  const prevShouldCollapse = useRef(shouldCollapse)
+  useEffect(() => {
+    if (!prevShouldCollapse.current && shouldCollapse) {
+      setCollapsed(true)
+    }
+    prevShouldCollapse.current = shouldCollapse
+  }, [shouldCollapse])
+
+  return (
+    <div className="relative group/code">
+      <div className={cn(shouldCollapse && collapsed ? 'max-h-[17rem] overflow-hidden relative' : 'relative')}>
+        <pre
+          {...props}
+          className={cn(
+            'bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
+            shouldCollapse ? 'rounded-t-lg' : 'rounded-lg',
+          )}
+        >
+          {children}
+        </pre>
+        {shouldCollapse && collapsed && (
+          <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-gray-900 dark:from-gray-950 to-transparent pointer-events-none" />
+        )}
+      </div>
+      <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+        {codeStr && <CopyCodeButton code={codeStr} />}
+      </div>
+      {shouldCollapse && (
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          className="w-full flex items-center justify-center gap-1 py-1.5 rounded-b-lg bg-gray-800 dark:bg-gray-900 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700 dark:hover:bg-gray-800 transition-colors border-t border-gray-700/40"
+        >
+          <Icon name={collapsed ? 'expand_more' : 'expand_less'} size="sm" />
+          {collapsed
+            ? t('chat.codeExpandAll', { lines: lineCount })
+            : t('chat.codeCollapse')}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function MarkdownRenderer({ content, isStreaming = false, className }: MarkdownRendererProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -388,17 +448,9 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
             }
 
             return (
-              <div className="relative group/code">
-                <pre
-                  {...props}
-                  className="rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed"
-                >
-                  {children}
-                </pre>
-                <div className="absolute top-2 right-2 flex items-center gap-1">
-                  {codeStr && <CopyCodeButton code={codeStr} />}
-                </div>
-              </div>
+              <CollapsibleCodeBlock codeStr={codeStr} lang={lang} {...props}>
+                {children}
+              </CollapsibleCodeBlock>
             )
           },
           code({ className: codeClassName, children, ...props }) {

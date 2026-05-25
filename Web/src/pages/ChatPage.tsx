@@ -71,7 +71,6 @@ export function ChatPage({
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const userScrolledRef = useRef(false)
-  const [showBackToBottom, setShowBackToBottom] = useState(false)
   const contentWidth = useSettingsStore((s) => s.contentWidth) ?? 960
   const thinkingCollapsed = useSettingsStore((s) => s.thinkingCollapsed) ?? false
   const updateSettings = useSettingsStore((s) => s.update)
@@ -100,17 +99,39 @@ export function ChatPage({
     userScrolledRef.current = false
   }, [])
 
-  const handleBackToBottom = useCallback(() => {
-    scrollToBottom('smooth')
-    setShowBackToBottom(false)
-  }, [scrollToBottom])
-
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    const near = isNearBottom(el)
-    userScrolledRef.current = !near
-    setShowBackToBottom((prev) => prev !== !near ? !near : prev)
+    userScrolledRef.current = !isNearBottom(el)
+  }, [])
+
+  const navigateMessages = useCallback((direction: 'up' | 'down') => {
+    const el = scrollRef.current
+    if (!el) return
+    const role = direction === 'up' ? 'user' : 'assistant'
+    const items = Array.from(el.querySelectorAll<HTMLElement>(`[data-role="${role}"]`))
+    if (items.length === 0) return
+    if (direction === 'up') {
+      const threshold = el.scrollTop - 10
+      let target: HTMLElement | undefined
+      for (let i = items.length - 1; i >= 0; i--) {
+        if (items[i].offsetTop < threshold) {
+          target = items[i]
+          break
+        }
+      }
+      if (target) el.scrollTo({ top: target.offsetTop, behavior: 'smooth' })
+    } else {
+      const threshold = el.scrollTop + 50
+      let target: HTMLElement | undefined
+      for (const item of items) {
+        if (item.offsetTop > threshold) {
+          target = item
+          break
+        }
+      }
+      if (target) el.scrollTo({ top: target.offsetTop, behavior: 'smooth' })
+    }
   }, [])
 
   useEffect(() => {
@@ -181,8 +202,8 @@ export function ChatPage({
             }
 
             return (
+            <div key={msg.id} data-role={msg.role} data-message-id={msg.id}>
             <MessageBubble
-              key={msg.id}
               role={msg.role}
               content={
                 msg.role === 'assistant' && typeof msg.content === 'string'
@@ -225,21 +246,31 @@ export function ChatPage({
               usage={msg.usage}
               model={msg.model}
             />
+            </div>
             )
           })}
           <div ref={bottomRef} />
         </div>
       </div>
 
-      {showBackToBottom && (
+      <div className="absolute bottom-32 right-6 z-20 flex flex-col gap-1.5">
         <button
-          onClick={handleBackToBottom}
-          className="absolute bottom-32 right-6 z-20 w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-          title={t('chat.backToBottom')}
+          type="button"
+          onClick={() => navigateMessages('up')}
+          className="w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          title={t('chat.prevUserMessage')}
+        >
+          <Icon name="keyboard_arrow_up" variant="outlined" size="xl" />
+        </button>
+        <button
+          type="button"
+          onClick={() => navigateMessages('down')}
+          className="w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          title={t('chat.nextAssistantMessage')}
         >
           <Icon name="keyboard_arrow_down" variant="outlined" size="xl" />
         </button>
-      )}
+      </div>
 
       <div className="absolute bottom-0 left-0 w-full pb-input pt-2 px-4 max-md:px-2 bg-gradient-to-t from-white via-white to-transparent dark:from-background-dark dark:via-background-dark z-30">
         <input
