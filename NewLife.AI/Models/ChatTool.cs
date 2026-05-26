@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace NewLife.AI.Models;
+﻿namespace NewLife.AI.Models;
 
 /// <summary>聊天工具定义</summary>
 public class ChatTool

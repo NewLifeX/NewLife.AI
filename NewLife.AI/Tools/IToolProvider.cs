@@ -10,8 +10,12 @@ namespace NewLife.AI.Tools;
 public interface IToolProvider
 {
     /// <summary>获取此提供者暴露的工具定义列表</summary>
+    /// <param name="selectedTools">
+    /// 工具可见性过滤集合：<c>null</c> 返回全量工具（目录展示/路由表构建）；
+    /// 空集合仅返回系统工具；非空集合返回系统工具 + 指定名称工具（AI 请求注入场景）
+    /// </param>
     /// <returns>工具定义列表，供注入 <c>ChatCompletionRequest.Tools</c></returns>
-    IList<ChatTool> GetTools();
+    IList<ChatTool> GetTools(ISet<String>? selectedTools = null);
 
     /// <summary>按名称调用工具并返回文本结果</summary>
     /// <param name="toolName">工具名称（与 <see cref="GetTools"/> 返回的 Function.Name 一致）</param>

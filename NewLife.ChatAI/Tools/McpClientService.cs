@@ -11,6 +11,13 @@ namespace NewLife.ChatAI.Tools;
 /// <param name="log">日志</param>
 public class McpClientService(ILog log) : IToolProvider
 {
+    #region 缓存
+    private IList<McpToolInfo>? _allToolsCache;
+    private Int64 _allToolsCacheExpiry;
+    /// <summary>GetAllTools 结果缓存 TTL（毫秒）。McpServerConfig 实体缓存兜底，此处再缓存反序列化后的 McpToolInfo 列表</summary>
+    private const Int64 AllToolsCacheTtlMs = 30_000;
+    #endregion
+
     #region 工具发现
     /// <summary>发现指定 MCP Server 的可用工具列表，并更新到数据库</summary>
     /// <param name="serverId">MCP 服务配置编号</param>
@@ -49,9 +56,21 @@ public class McpClientService(ILog log) : IToolProvider
         return tools;
     }
 
-    /// <summary>获取所有已启用 MCP Server 的工具列表</summary>
+    /// <summary>获取所有已启用 MCP Server 的工具列表（带 30 s 缓存）</summary>
     /// <returns>工具列表，包含服务名称</returns>
     public IList<McpToolInfo> GetAllTools()
+    {
+        var now = Runtime.TickCount64;
+        if (_allToolsCache != null && now < _allToolsCacheExpiry) return _allToolsCache;
+
+        var list = BuildAllTools();
+        _allToolsCache = list;
+        _allToolsCacheExpiry = now + AllToolsCacheTtlMs;
+        return list;
+    }
+
+    /// <summary>遍历已启用 MCP Server，反序列化工具清单，构建 <see cref="McpToolInfo"/> 列表</summary>
+    private List<McpToolInfo> BuildAllTools()
     {
         var list = new List<McpToolInfo>();
         var servers = McpServerConfig.FindAllWithCache();
@@ -80,17 +99,10 @@ public class McpClientService(ILog log) : IToolProvider
         return list;
     }
 
-    /// <summary>实现 <see cref="IToolProvider.GetTools"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>
+    /// <summary>实现 <see cref="IToolProvider.GetTools(ISet{String}?)"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>
+    /// <param name="selectedTools">工具可见性过滤集合；null 返回全部已启用 MCP 工具，非 null 时仅返回 selectedTools 中包含的工具</param>
     /// <returns>工具定义列表，供注入 ChatCompletionRequest.Tools</returns>
-    public IList<ChatTool> GetTools()
-    {
-        return GetFilteredTools(null);
-    }
-
-    /// <summary>按工具名集合过滤 MCP 工具定义。用于会话级作用域控制</summary>
-    /// <param name="selectedTools">已选工具集合。null 表示不过滤，返回全部已启用 MCP 工具</param>
-    /// <returns>工具定义列表</returns>
-    public IList<ChatTool> GetFilteredTools(ISet<String>? selectedTools)
+    public IList<ChatTool> GetTools(ISet<String>? selectedTools = null)
     {
         var mcpTools = GetAllTools();
         var tools = new List<ChatTool>(mcpTools.Count);

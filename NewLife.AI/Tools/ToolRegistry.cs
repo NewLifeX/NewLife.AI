@@ -450,7 +450,11 @@ public class ToolRegistry : IToolProvider
 
     #region IToolProvider
 
-    IList<ChatTool> IToolProvider.GetTools() => [.. _tools];
+    IList<ChatTool> IToolProvider.GetTools(ISet<String>? selectedTools)
+    {
+        if (selectedTools == null) return [.. _tools];
+        return [.. _tools.Where(t => t.Function?.Name != null && selectedTools.Contains(t.Function.Name))];
+    }
 
     Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context, CancellationToken cancellationToken)
         => InvokeAsync(toolName, argumentsJson, context, cancellationToken);

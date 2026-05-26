@@ -40,6 +40,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
     /// <summary>工具审批提供者。设置后在每次工具执行前请求审批，未设置时直接执行</summary>
     public IToolApprovalProvider? ApprovalProvider { get; set; }
+
+    /// <summary>本次请求的工具可见性过滤集合。null 表示全量；空集合仅保留系统工具；非空集合保留系统工具 + 指定工具。
+    /// 由 <see cref="GetMergedTools"/> 传入各 <see cref="IToolProvider.GetTools(ISet{String}?)"/>，实现会话级工具范围控制</summary>
+    public ISet<String>? SelectedTools { get; set; }
     #endregion
 
     #region 方法
@@ -279,7 +283,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
         if (!toolMap.TryGetValue(toolName, out var provider))
-            throw new InvalidOperationException($"Tool not found: '{toolName}', searched {Providers.Count} providers");
+            throw new InvalidOperationException($"Tool not found: '{toolName}', searched {toolMap.Count} in {Providers.Count} providers");
 
         // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
         var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
@@ -319,7 +323,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         else if (delta.Index != null)
             existing = collector.FirstOrDefault(t => t.Index == delta.Index);
         else if (collector.Count > 0)
-            existing = collector[collector.Count - 1];  // 兜底取最后一个（单工具调用时常见）
+            existing = collector[^1];  // 兜底取最后一个（单工具调用时常见）
 
         if (existing == null && !String.IsNullOrEmpty(delta.Id))
         {
@@ -353,7 +357,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
         foreach (var provider in Providers)
         {
-            foreach (var t in provider.GetTools())
+            foreach (var t in provider.GetTools(SelectedTools))
             {
                 tools.Add(t);
                 var name = t.Function?.Name;

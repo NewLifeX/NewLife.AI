@@ -4,7 +4,6 @@ using System.Text;
 using NewLife.AI.Clients;
 using NewLife.AI.Filters;
 using NewLife.AI.Tools;
-using NewLife.ChatAI.Tools;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -47,7 +46,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     protected ChatHandlerChain Chain = services?.GetService<ChatHandlerChain>() ?? new ChatHandlerChain(services?.GetServices<IChatHandler>() ?? []);
 
     /// <summary>工具提供者集合（DbToolProvider / McpClientService 等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
-    protected IReadOnlyList<IToolProvider> ToolProviders = services?.GetServices<IToolProvider>().ToArray() ?? [];
+    protected IToolProvider[] ToolProviders = services?.GetServices<IToolProvider>().ToArray() ?? [];
 
     /// <summary>聊天过滤器链（日志、学习、Agent 触发等），由 DI 解析。供 <see cref="InvokeLlmAsync"/> 使用</summary>
     protected IReadOnlyList<IChatFilter> ChatFilters = services?.GetServices<IChatFilter>().ToArray() ?? [];
@@ -692,7 +691,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     }
 
     /// <summary>核心 LLM 调用。链路最内层节点：组装过滤器链 + 工具循环 + 流式 SSE 转换。
-    /// 派生类可覆盖 <see cref="ApplyTools"/> / <see cref="ApplyResponseStyle"/> / <see cref="BuildScopedProviders"/> 扩展能力</summary>
+    /// 派生类可覆盖 <see cref="ApplyTools"/> / <see cref="ApplyResponseStyle"/> 扩展能力</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>事件流</returns>
@@ -713,12 +712,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var clientBuilder = rawClient.AsBuilder();
         foreach (var filter in ChatFilters)
             clientBuilder = clientBuilder.UseFilters(filter);
-        var providers = BuildScopedProviders(context.SelectedTools).ToArray();
-        ApplyTools(ref clientBuilder, contextMessages, providers);
+        ApplyTools(ref clientBuilder, contextMessages, ToolProviders, context.SelectedTools);
 
-        // 记录本轮可用工具
-        foreach (var p in providers)
-            foreach (var t in p.GetTools())
+        // 记录本轮实际注入的工具（与 AI 收到的工具集一致）
+        foreach (var p in ToolProviders)
+            foreach (var t in p.GetTools(context.SelectedTools))
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
 
         using var streamClient = clientBuilder.Build();
@@ -803,11 +801,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var clientBuilder = rawClient.AsBuilder();
         foreach (var filter in ChatFilters)
             clientBuilder = clientBuilder.UseFilters(filter);
-        var providers = BuildScopedProviders(context.SelectedTools).ToArray();
-        ApplyTools(ref clientBuilder, contextMessages, providers);
+        ApplyTools(ref clientBuilder, contextMessages, ToolProviders, context.SelectedTools);
 
-        foreach (var p in providers)
-            foreach (var t in p.GetTools())
+        foreach (var p in ToolProviders)
+            foreach (var t in p.GetTools(context.SelectedTools))
                 if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
 
         using var directClient = clientBuilder.Build();
@@ -917,11 +914,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="clientBuilder">客户端构建器（ref 传入）</param>
     /// <param name="contextMessages">上下文消息列表</param>
     /// <param name="providers">已解析的工具提供者集合</param>
-    protected virtual void ApplyTools(ref ChatClientBuilder clientBuilder, IList<AiChatMessage> contextMessages, IToolProvider[] providers)
+    /// <param name="selectedTools">工具可见性过滤集合；null 全量，空集合仅系统工具，非空集合系统工具 + 指定工具</param>
+    protected virtual void ApplyTools(ref ChatClientBuilder clientBuilder, IList<AiChatMessage> contextMessages, IToolProvider[] providers, ISet<String>? selectedTools = null)
     {
         if (providers.Length == 0) return;
 
-        clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, providers);
+        clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, selectedTools, providers);
     }
 
     /// <summary>根据用户回应风格设置采样参数。仅在请求未显式指定时设置</summary>
@@ -944,42 +942,6 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         };
         chatOptions.Temperature ??= temp;
         chatOptions.TopP ??= topP;
-    }
-
-    /// <summary>将 DbToolProvider/McpClientService 包装为携带 selectedTools 的作用域版本</summary>
-    /// <param name="selectedTools">本轮选中的工具名称集合</param>
-    /// <returns>作用域化的工具提供者序列</returns>
-    protected virtual IEnumerable<IToolProvider> BuildScopedProviders(ISet<String> selectedTools)
-    {
-        foreach (var p in ToolProviders)
-        {
-            if (p is DbToolProvider dbTool)
-                yield return new ScopedDbToolProvider(dbTool, selectedTools);
-            else if (p is McpClientService mcp)
-                yield return new ScopedMcpToolProvider(mcp, selectedTools);
-            else
-                yield return p;
-        }
-    }
-
-    /// <summary>携带 SelectedTools 的轻量 DbToolProvider 包装器</summary>
-    private sealed class ScopedDbToolProvider(DbToolProvider inner, ISet<String> selectedTools) : IToolProvider
-    {
-        /// <inheritdoc/>
-        public IList<ChatTool> GetTools() => inner.GetFilteredTools(selectedTools);
-        /// <inheritdoc/>
-        public Task<String> CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context = null, CancellationToken cancellationToken = default)
-            => inner.CallToolAsync(toolName, argumentsJson, context, cancellationToken);
-    }
-
-    /// <summary>携带 SelectedTools 的轻量 McpClientService 包装器</summary>
-    private sealed class ScopedMcpToolProvider(McpClientService inner, ISet<String> selectedTools) : IToolProvider
-    {
-        /// <inheritdoc/>
-        public IList<ChatTool> GetTools() => inner.GetFilteredTools(selectedTools);
-        /// <inheritdoc/>
-        public Task<String> CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context = null, CancellationToken cancellationToken = default)
-            => ((IToolProvider)inner).CallToolAsync(toolName, argumentsJson, context, cancellationToken);
     }
 
     #endregion

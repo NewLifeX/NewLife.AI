@@ -131,6 +131,16 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxIterations, Int32 maxResultLength, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers) { MaxIterations = maxIterations, MaxResultLength = maxResultLength });
 
+    /// <summary>添加工具中间件，并指定最大调用轮次、工具结果最大字符数与工具可见性过滤集合</summary>
+    /// <param name="builder">构建器</param>
+    /// <param name="maxIterations">工具调用最大轮次，防止无限递归；传入 0 或负数自动回退为默认值 10</param>
+    /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
+    /// <param name="selectedTools">工具可见性过滤集合；null 全量，空集合仅系统工具，非空集合系统工具 + 指定工具</param>
+    /// <param name="providers">工具提供者列表</param>
+    /// <returns>构建器（支持链式调用）</returns>
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxIterations, Int32 maxResultLength, ISet<String>? selectedTools, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers) { MaxIterations = maxIterations, MaxResultLength = maxResultLength, SelectedTools = selectedTools });
+
     /// <summary>添加工具审批中间件。设置后 <see cref="ToolChatClient"/> 在执行每个工具前会请求用户确认</summary>
     /// <param name="builder">构建器</param>
     /// <param name="approvalProvider">工具审批提供者</param>
