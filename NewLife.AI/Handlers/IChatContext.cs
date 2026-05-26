@@ -52,6 +52,10 @@ public interface IChatContext : IExtend
     /// <summary>对话上下文消息列表。事前处理器可追加/修改/截断；核心处理器据此发起模型调用</summary>
     IList<ChatMessage> ContextMessages { get; set; }
 
+    /// <summary>待注入 system 消息的有序文本片段列表。各处理器在 OnBefore 阶段调用 Add 追加内容，
+    /// <c>MessageFlow</c> 在所有 OnBefore 完成后统一将片段以 <c>"\n\n"</c> 拼接并追加到 system 消息末尾</summary>
+    IList<String> SystemSegments { get; }
+
     ///// <summary>系统提示词内容。由 SystemPrompt 处理器填充，供持久化与诊断使用</summary>
     //String? SystemPrompt { get; set; }
 

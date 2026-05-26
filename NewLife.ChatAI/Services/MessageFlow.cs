@@ -550,6 +550,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (context.FlowControl != ChatFlowControl.Continue) break;
         }
 
+        // 所有 OnBefore 完成后，将 SystemSegments 结果统一写入 system 消息
+        FlushSystemSegments(context);
+
         // 2. 核心阶段（Cancel 时跳过；SkipRemaining 时仍正常运行）
         if (context.FlowControl != ChatFlowControl.Cancel)
         {
@@ -863,6 +866,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (context.FlowControl != ChatFlowControl.Continue) break;
         }
 
+        // 所有 OnBefore 完成后，将 SystemSegments 结果统一写入 system 消息
+        FlushSystemSegments(context);
+
         // 2. 核心阶段（Cancel 时跳过；SkipRemaining 时仍正常运行）
         if (context.FlowControl != ChatFlowControl.Cancel)
             await InvokeLlmDirectAsync(context, cancellationToken).ConfigureAwait(false);
@@ -886,6 +892,25 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 throw;
             }
         }
+    }
+
+    /// <summary>将 <see cref="IChatContext.SystemSegments"/> 中的所有文本片段以 <c>"\n\n"</c> 拼接后追加到 system 消息末尾。
+    /// 在所有 OnBefore 处理器执行完成后、核心 LLM 调用之前调用</summary>
+    /// <param name="context">对话上下文</param>
+    protected virtual void FlushSystemSegments(IChatContext context)
+    {
+        if (context.SystemSegments.Count == 0) return;
+
+        var extra = String.Join("\n\n", context.SystemSegments);
+        var messages = context.ContextMessages;
+        var systemMsg = messages.FirstOrDefault(m => m.Role == "system");
+        if (systemMsg != null)
+        {
+            var existing = systemMsg.Content as String ?? String.Empty;
+            systemMsg.Content = existing.Length > 0 ? existing + "\n\n" + extra : extra;
+        }
+        else
+            messages.Insert(0, new AiChatMessage { Role = "system", Content = extra });
     }
 
     /// <summary>将工具提供者应用到客户端构建器。派生类可覆盖以实现渐进式工具发现、结果截断等策略</summary>

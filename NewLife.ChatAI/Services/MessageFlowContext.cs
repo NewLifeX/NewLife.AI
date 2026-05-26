@@ -109,6 +109,9 @@ public class MessageFlowContext : IChatContext
     /// <summary>思考模式（IChatContext 新增）</summary>
     public ThinkingMode ThinkingMode { get; set; }
 
+    /// <summary>待注入 system 消息的有序文本片段列表。各处理器在 OnBefore 阶段追加，MessageFlow 在所有 OnBefore 完成后统一 flush</summary>
+    public IList<String> SystemSegments { get; } = [];
+
     /// <summary>消息中 @ToolName 显式引用的工具名称集合</summary>
     public ISet<String> SelectedTools { get; } = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 
