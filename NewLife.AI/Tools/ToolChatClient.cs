@@ -283,7 +283,20 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
         if (!toolMap.TryGetValue(toolName, out var provider))
-            throw new InvalidOperationException($"Tool not found: '{toolName}', searched {toolMap.Count} in {Providers.Count} providers");
+        {
+            foreach (var p in Providers)
+            {
+                var tools = p.GetTools(new HashSet<String>([toolName]));
+                if (tools != null && tools.Count > 0)
+                {
+                    provider = p;
+                    break;
+                }
+            }
+
+            if (provider == null)
+                throw new InvalidOperationException($"Tool not found: '{toolName}', searched {toolMap.Count} in {Providers.Count} providers");
+        }
 
         // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
         var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
