@@ -1,4 +1,7 @@
-﻿namespace NewLife.AI.Models;
+﻿using System.Runtime.Serialization;
+using NewLife.AI.Tools;
+
+namespace NewLife.AI.Models;
 
 /// <summary>聊天工具定义</summary>
 public class ChatTool
@@ -27,6 +30,10 @@ public class FunctionDefinition
 
     /// <summary>参数。JSON Schema 格式</summary>
     public Object? Parameters { get; set; }
+
+    /// <summary>工具响应路由。决定执行结果的输出目标；序列化时跳过，LLM 不需要此元信息</summary>
+    [IgnoreDataMember]
+    public ToolResponseRouting Routing { get; set; } = ToolResponseRouting.Both;
 }
 
 /// <summary>MCP（Model Context Protocol）工具配置</summary>

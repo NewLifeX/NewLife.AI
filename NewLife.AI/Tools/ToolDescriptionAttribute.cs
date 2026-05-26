@@ -42,4 +42,7 @@ public sealed class ToolDescriptionAttribute : Attribute
 
     /// <summary>是否启用。false 时同步到配置表后将保持禁用状态，可用于临时下线工具</summary>
     public Boolean Enable { get; set; } = true;
+
+    /// <summary>工具响应路由。决定执行结果的输出目标，默认同时发给 LLM 和前端</summary>
+    public ToolResponseRouting Routing { get; set; } = ToolResponseRouting.Both;
 }

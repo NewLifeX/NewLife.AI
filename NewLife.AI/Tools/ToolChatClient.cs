@@ -2,6 +2,7 @@
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.Log;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Tools;
 
@@ -55,7 +56,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var (mergedTools, toolMap) = GetMergedTools(request);
+        var (mergedTools, toolMap, toolRoutingMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
             return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -67,14 +68,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var iterations = 0;
         UsageDetails? accumulatedUsage = null;
 
-        // 构建工具调用上下文，整个请求生命周期内保持稳定；每轮 LLM 返回后更新 Response
-        var context = new ToolCallContext { Request = request };
-
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
-            context.Response = response;
 
             // 累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）
             if (response.Usage != null) accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
@@ -95,15 +92,26 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
             });
 
-            // 依次执行所有工具调用
+            // 并行启动所有工具调用（每次调用独立 ToolCallContext，避免共享字段并发互覆）
+            var perCallTasks = new List<(ToolCall tc, Task<String> task)>();
             foreach (var tc in toolCalls)
             {
                 if (tc.Function == null) continue;
+                var perCallCtx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
+                perCallTasks.Add((tc, ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, perCallCtx, cancellationToken)));
+            }
 
-                // 将当前工具调用 ID 写入上下文，工具方法通过 context 参数读取
-                context.CurrentToolCallId = tc.Id;
-                var result = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, context, cancellationToken).ConfigureAwait(false);
-                workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = result });
+            // 按序收集结果，并按 Routing 决定写入 LLM 消息的内容
+            foreach (var (tc, task) in perCallTasks)
+            {
+                String result;
+                try { result = await task.ConfigureAwait(false); }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { result = ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson(); }
+
+                var routing = toolRoutingMap.TryGetValue(tc.Function!.Name, out var r2) ? r2 : ToolResponseRouting.Both;
+                var llmContent = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]";
+                workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = llmContent });
             }
         }
 
@@ -122,7 +130,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var (mergedTools, toolMap) = GetMergedTools(request);
+        var (mergedTools, toolMap, toolRoutingMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
         {
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
@@ -134,9 +142,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var workMessages = request.Messages.ToList();
 
         UsageDetails? accumulatedUsage = null;
-
-        // 构建工具调用上下文，整个请求生命周期内保持稳定；流式模式下 Response 始终为 null
-        var context = new ToolCallContext { Request = request };
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
@@ -216,54 +221,53 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 ToolCalls = toolCallCollector.ToList(),
             });
 
+            // Step 1: yield 全部 start 事件，同时并行启动工具任务（每次调用独立上下文，无共享竞争）
+            var pendingTasks = new List<(ToolCall tc, ISpan? span, Task<String> task)>();
             foreach (var tc in toolCallCollector)
             {
                 if (tc.Function == null) continue;
 
-                // 通知调用方：工具调用开始
                 yield return new ChatResponse
                 {
                     ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
                 };
 
-                // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
-                ToolCallEventInfo resultEvent;
                 var span = Tracer?.NewSpan($"ai:tool:{tc.Function.Name}", tc.Function.Arguments);
-                // 将当前工具调用 ID 写入上下文，工具方法通过 context 参数读取
-                context.CurrentToolCallId = tc.Id;
+                var perCallCtx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
+                pendingTasks.Add((tc, span, ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, perCallCtx, cancellationToken)));
+            }
+
+            // Step 2: 按序 await（任务已并行运行），按 Routing 决定 LLM/SSE 内容
+            foreach (var (tc, span, task) in pendingTasks)
+            {
+                // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
+                String toolResult;
                 try
                 {
-                    var toolResult = await ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, context, cancellationToken).ConfigureAwait(false);
-
-                    // workMessages 使用截断版，避免超长结果（如 show_widget SVG）塞满 AI context window
-                    // resultEvent 必须保留完整结果：前端渲染（如 WidgetBlock）依赖完整 JSON，截断会导致 JSON 解析失败
-                    var aiContextContent = toolResult;
-                    if (MaxResultLength > 0 && aiContextContent != null && aiContextContent.Length > MaxResultLength)
-                        aiContextContent = aiContextContent.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {aiContextContent.Length} 字符，仅保留前 {MaxResultLength} 字符]";
-
-                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = aiContextContent });
+                    toolResult = await task.ConfigureAwait(false);
                     if (span != null && toolResult != null)
                         span.AppendTag(toolResult, toolResult.Length);
-
-                    // 检测结构化错误返回，以正确类型通知消费方
-                    var eventType = ToolError.IsToolError(toolResult) ? "error" : "done";
-                    resultEvent = new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, toolResult);
                 }
                 catch (Exception ex)
                 {
                     span?.SetError(ex, null);
-                    // 将结构化错误作为工具结果反馈给模型，让模型有机会修正，不中断流
-                    var errJson = ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
-                    workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = errJson });
-                    resultEvent = new ToolCallEventInfo("error", tc.Id, tc.Function.Name, ex.Message);
+                    toolResult = ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
                 }
                 finally
                 {
                     span?.Dispose();
                 }
 
-                // 通知调用方：工具调用结果
-                yield return new ChatResponse { ToolCallEvents = [resultEvent] };
+                var routing = toolRoutingMap.TryGetValue(tc.Function!.Name, out var r) ? r : ToolResponseRouting.Both;
+
+                // LLM 消息：Llm 路由时写截断版，仅 Frontend 路由时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
+                var llmContent = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(toolResult) : $"[已渲染到客户端：{tc.Function.Name}]";
+                workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = llmContent });
+
+                // SSE 事件：Frontend 路由时发送完整结果，Llm-only 时发送空内容的完成信号
+                var eventType = ToolError.IsToolError(toolResult) ? "error" : "done";
+                var sseContent = routing.HasFlag(ToolResponseRouting.Frontend) ? toolResult : null;
+                yield return new ChatResponse { ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, sseContent)] };
             }
             // 继续下一轮（下一轮流的 chunk 透传给调用方）
         }
@@ -282,7 +286,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="cancellationToken">取消令牌</param>
     private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
-        if (!toolMap.TryGetValue(toolName, out var provider))
+        // 先尝试从预构建路由表查找，找不到则动态 fallback（目录调用：AI 在 system 中看到工具名但未获得 schema）
+        var isCatalogCall = !toolMap.TryGetValue(toolName, out var provider);
+        if (isCatalogCall)
         {
             foreach (var p in Providers)
             {
@@ -314,15 +320,42 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         String result;
         try
         {
-            result = await provider.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
+            result = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            // 目录调用（AI 未拿到 schema 就猜参数）：返回 INVALID_ARGUMENTS + schema hint，引导模型修正
+            if (isCatalogCall)
+            {
+                var hint = GetSchemaHint(toolName, provider!);
+                return ToolError.Create("INVALID_ARGUMENTS", ex.Message, hint).ToJson();
+            }
             return ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
         }
 
         return result!;
+    }
+
+    /// <summary>从 Provider 中提取工具的参数 Schema，作为 INVALID_ARGUMENTS 错误的修复建议</summary>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="provider">已定位的工具提供者</param>
+    /// <returns>Schema 提示文本，无法获取时返回 null</returns>
+    private static String? GetSchemaHint(String toolName, IToolProvider provider)
+    {
+        try
+        {
+            var allTools = provider.GetTools(null);
+            var match = allTools?.FirstOrDefault(t => t.Function?.Name != null &&
+                String.Equals(t.Function.Name, toolName, StringComparison.OrdinalIgnoreCase));
+            var schema = match?.Function?.Parameters;
+            if (schema == null) return null;
+            return $"工具 {toolName} 期望的参数 schema：{schema.ToJson()}，请按 schema 重试。";
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>合并流式 tool_call 增量到收集列表。OpenAI 流式协议中 tool_calls 分块到达</summary>
@@ -363,11 +396,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
     }
 
-    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典</summary>
-    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap) GetMergedTools(IChatRequest? options)
+    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典和路由策略字典</summary>
+    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap, Dictionary<String, ToolResponseRouting> toolRoutingMap) GetMergedTools(IChatRequest? options)
     {
         var tools = new List<ChatTool>();
         var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
+        var toolRoutingMap = new Dictionary<String, ToolResponseRouting>(StringComparer.OrdinalIgnoreCase);
         foreach (var provider in Providers)
         {
             foreach (var t in provider.GetTools(SelectedTools))
@@ -375,7 +409,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 tools.Add(t);
                 var name = t.Function?.Name;
                 if (!name.IsNullOrEmpty())
+                {
                     toolMap[name] = provider;
+                    toolRoutingMap[name] = t.Function!.Routing;
+                }
             }
         }
         if (options?.Tools != null)
@@ -383,7 +420,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             foreach (var t in options.Tools)
                 tools.Add(t);
         }
-        return (tools, toolMap);
+        return (tools, toolMap, toolRoutingMap);
     }
 
     /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>
@@ -408,6 +445,16 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             ConversationId = request?.ConversationId,
             Items = request?.Items ?? new Dictionary<String, Object?>(),
         };
+
+    /// <summary>按 <see cref="MaxResultLength"/> 截断过长结果，防止撑满 LLM Context Window</summary>
+    /// <param name="result">工具原始返回文本</param>
+    /// <returns>截断后的文本，不超限时原样返回</returns>
+    private String? TruncateResult(String? result)
+    {
+        if (MaxResultLength <= 0 || result == null || result.Length <= MaxResultLength)
+            return result;
+        return result.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {MaxResultLength} 字符]";
+    }
 
     #endregion
 

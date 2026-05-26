@@ -683,4 +683,176 @@ public class NativeToolTests
         public Task<ToolApprovalResult> RequestApprovalAsync(String toolName, String? argumentsJson, CancellationToken ct = default)
             => Task.FromResult(_onRequest());
     }
+
+    // ── B1 新特性：ToolResponseRouting / ToolCallId / isCatalogCall ────────────
+
+    /// <summary>带 Frontend 路由标注的测试工具服务</summary>
+    private sealed class FrontendToolService
+    {
+        /// <summary>展示可视化内容</summary>
+        /// <param name="content">内容</param>
+        [ToolDescription("show_visual", Routing = ToolResponseRouting.Frontend)]
+        public String ShowVisual(String content) => $"{{\"rendered\":\"{content}\"}}";
+    }
+
+    /// <summary>捕获第 N 次调用请求消息的假客户端</summary>
+    private sealed class MessageCapturingClient : IChatClient
+    {
+        private readonly String _toolName;
+        private readonly String _toolArgs;
+        private readonly String _finalReply;
+        private Int32 _callCount;
+
+        /// <summary>第二次调用时收到的消息列表</summary>
+        public IList<ChatMessage>? SecondCallMessages { get; private set; }
+
+        public MessageCapturingClient(String toolName, String toolArgs, String finalReply)
+        {
+            _toolName = toolName;
+            _toolArgs = toolArgs;
+            _finalReply = finalReply;
+        }
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+        {
+            _callCount++;
+            if (_callCount == 2)
+                SecondCallMessages = request.Messages?.ToList();
+
+            if (_callCount == 1)
+            {
+                return Task.FromResult<IChatResponse>(new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                ToolCalls =
+                                [
+                                    new ToolCall
+                                    {
+                                        Id = "call_b1",
+                                        Type = "function",
+                                        Function = new FunctionCall { Name = _toolName, Arguments = _toolArgs }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                });
+            }
+            return Task.FromResult<IChatResponse>(new ChatResponse
+            {
+                Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = _finalReply } }]
+            });
+        }
+
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
+    [Fact]
+    [DisplayName("ToolDescriptionAttribute 默认 Routing 为 Both")]
+    public void ToolDescriptionAttribute_DefaultRouting_IsBoth()
+    {
+        var attr = new ToolDescriptionAttribute("tool");
+        Assert.Equal(ToolResponseRouting.Both, attr.Routing);
+    }
+
+    [Fact]
+    [DisplayName("ToolDescriptionAttribute 可设置 Routing = Frontend")]
+    public void ToolDescriptionAttribute_RoutingFrontend_CanBeSet()
+    {
+        var attr = new ToolDescriptionAttribute("tool") { Routing = ToolResponseRouting.Frontend };
+        Assert.Equal(ToolResponseRouting.Frontend, attr.Routing);
+    }
+
+    [Fact]
+    [DisplayName("ToolSchemaBuilder 从 ToolDescriptionAttribute 读取 Routing 并写入 FunctionDefinition")]
+    public void ToolSchemaBuilder_Routing_IsReadFromAttribute()
+    {
+        var method = typeof(FrontendToolService).GetMethod(nameof(FrontendToolService.ShowVisual))!;
+        var tool = ToolSchemaBuilder.BuildFromMethod(method);
+
+        Assert.NotNull(tool.Function);
+        Assert.Equal(ToolResponseRouting.Frontend, tool.Function!.Routing);
+    }
+
+    [Fact]
+    [DisplayName("Frontend 路由工具：role=tool 消息写入占位文本而非真实结果")]
+    public async Task ToolChatClient_FrontendRouting_WritesPlaceholderToLlm()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new FrontendToolService());
+
+        var innerClient = new MessageCapturingClient(
+            toolName: "show_visual",
+            toolArgs: "{\"content\":\"hello\"}",
+            finalReply: "已渲染");
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+        await nativeClient.GetResponseAsync([new ChatMessage { Role = "user", Content = "渲染图表" }]);
+
+        // 第二次调用（工具结束后）发送给 LLM 的消息里，role=tool 内容应为占位符而非 JSON
+        var toolMsg = innerClient.SecondCallMessages?.FirstOrDefault(m => m.Role == "tool");
+        Assert.NotNull(toolMsg);
+        Assert.Contains("[已渲染到客户端：show_visual]", toolMsg!.Content as String ?? "");
+        Assert.DoesNotContain("rendered", toolMsg.Content as String ?? "");
+    }
+
+    [Fact]
+    [DisplayName("ToolCallId 在工具调用时与 LLM 返回的 tc.Id 一致")]
+    public async Task ToolChatClient_ToolCallId_MatchesTcId()
+    {
+        String? capturedToolCallId = null;
+        var registry = new ToolRegistry();
+        registry.AddTool("id_capture", async (args, ctx, ct) =>
+        {
+            await Task.Yield();
+            capturedToolCallId = ctx?.ToolCallId;
+            return "ok";
+        });
+
+        var innerClient = new ToolCallThenReplyClient("id_capture", "{}", "done");
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+        await nativeClient.GetResponseAsync([new ChatMessage { Role = "user", Content = "test" }]);
+
+        Assert.Equal("call_001", capturedToolCallId);
+    }
+
+    [Fact]
+    [DisplayName("isCatalogCall 目录调用（工具不在 SelectedTools）：异常时返回 INVALID_ARGUMENTS + schema hint")]
+    public async Task ToolChatClient_CatalogCall_ThrowsReturnsInvalidArguments()
+    {
+        var registry = new ToolRegistry();
+        // dummy_tool 会被放入 SelectedTools，让 mergedTools 非空以启动工具循环
+        registry.AddTool("dummy_tool", (_, __, ___) => Task.FromResult("dummy"));
+        // strict_tool 不在 SelectedTools → isCatalogCall = true，调用时抛异常
+        registry.AddTool("strict_tool", (args, _, ___) =>
+        {
+            if (args.IsNullOrEmpty() || !args.Contains("\"name\""))
+                throw new ArgumentException("缺少必填参数 name");
+            return Task.FromResult("ok");
+        });
+
+        var capturingInner = new MessageCapturingClient("strict_tool", "{}", "done");
+        // SelectedTools 包含 dummy_tool 但不包含 strict_tool
+        var client = new ToolChatClient(capturingInner, (IToolProvider)registry)
+        {
+            SelectedTools = new System.Collections.Generic.HashSet<String>(System.StringComparer.OrdinalIgnoreCase) { "dummy_tool" }
+        };
+
+        await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "test" }]);
+
+        // 工具结果写回 role=tool 消息后，第二轮 LLM 调用会收到该消息
+        var toolMsg = capturingInner.SecondCallMessages?.FirstOrDefault(m => m.Role == "tool");
+        Assert.NotNull(toolMsg);
+        var content = toolMsg!.Content as String ?? "";
+        Assert.Contains("INVALID_ARGUMENTS", content);
+    }
 }
