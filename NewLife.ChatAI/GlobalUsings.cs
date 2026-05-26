@@ -3,6 +3,7 @@ global using NewLife.AI.Handlers;
 global using NewLife.AI.Services;
 global using NewLife.ChatAI;
 global using NewLife.ChatAI.Entity;
+global using NewLife.ChatAI.Helpers;
 global using NewLife.ChatAI.Models;
 global using NewLife.ChatAI.Services;
 

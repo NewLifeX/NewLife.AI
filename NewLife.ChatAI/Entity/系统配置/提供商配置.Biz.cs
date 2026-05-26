@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
@@ -228,11 +228,11 @@ public partial class ProviderConfig : Entity<ProviderConfig>
             if (roleArray.Intersect(roleIds).Any()) return true;
         }
 
-        // 检查部门权限
+        // 检查部门权限：用户部门或其任意祖先部门命中白名单即放行
         if (!DepartmentIds.IsNullOrEmpty())
         {
             var deptArray = DepartmentIds.SplitAsInt();
-            if (deptArray.Contains(departmentId)) return true;
+            if (DepartmentHelper.GetDepartmentChain(departmentId).Any(id => deptArray.Contains(id))) return true;
         }
 
         return false;

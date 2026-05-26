@@ -216,11 +216,11 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
             if (roleArray.Intersect(roleIds).Any()) return true;
         }
 
-        // 检查部门权限
+        // 检查部门权限：用户部门或其任意祖先部门命中白名单即放行
         if (!DepartmentIds.IsNullOrEmpty())
         {
-            var deptArray = DepartmentIds.Split(',').Select(x => x.ToInt()).ToArray();
-            if (deptArray.Contains(departmentId)) return true;
+            var deptArray = DepartmentIds.SplitAsInt();
+            if (DepartmentHelper.GetDepartmentChain(departmentId).Any(id => deptArray.Contains(id))) return true;
         }
 
         return false;
