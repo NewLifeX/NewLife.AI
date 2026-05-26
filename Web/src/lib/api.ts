@@ -764,6 +764,8 @@ export interface SystemSettings {
   streamingSpeed: number
   toolAdvertiseThreshold: number
   toolResultMaxChars: number
+  toolMaxIterations: number
+  skillBudgetChars: number
   // 系统功能
   enableUsageStats: boolean
   backgroundGeneration: boolean
@@ -771,6 +773,8 @@ export interface SystemSettings {
   // 学习记忆
   enableAutoLearning: boolean
   learningModel: string
+  lightweightModel: string
+  embedModel: string
   minLearningContentLength: number
 }
 

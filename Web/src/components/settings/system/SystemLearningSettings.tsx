@@ -62,6 +62,30 @@ export function SystemLearningSettings({ settings, onChange }: Props) {
       </div>
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.learning.lightweightModel')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.learning.lightweightModelDesc')}</p>
+        <input
+          type="text"
+          value={settings.lightweightModel}
+          onChange={(e) => onChange({ lightweightModel: e.target.value })}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.learning.embedModel')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.learning.embedModelDesc')}</p>
+        <input
+          type="text"
+          value={settings.embedModel}
+          onChange={(e) => onChange({ embedModel: e.target.value })}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
           {t('systemSettings.learning.minLearningContentLength')}
         </label>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.learning.minLearningContentLengthDesc')}</p>

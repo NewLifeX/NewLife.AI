@@ -77,6 +77,15 @@ public class SystemSettingsDto
 
     /// <summary>工具渐进式发现阈值</summary>
     public Int32 ToolAdvertiseThreshold { get; set; }
+
+    /// <summary>工具结果最大字符数</summary>
+    public Int32 ToolResultMaxChars { get; set; }
+
+    /// <summary>工具调用最大轮次</summary>
+    public Int32 ToolMaxIterations { get; set; }
+
+    /// <summary>技能内容最大字符数</summary>
+    public Int32 SkillBudgetChars { get; set; }
     #endregion
 
     #region 功能开关
@@ -96,6 +105,12 @@ public class SystemSettingsDto
 
     /// <summary>学习分析模型</summary>
     public String LearningModel { get; set; } = "";
+
+    /// <summary>轻量模型编码</summary>
+    public String LightweightModel { get; set; } = "";
+
+    /// <summary>嵌入模型编码</summary>
+    public String EmbedModel { get; set; } = "";
 
     /// <summary>学习最低字数</summary>
     public Int32 MinLearningContentLength { get; set; }
@@ -182,6 +197,15 @@ public class SystemSettingsUpdateDto
 
     /// <summary>工具渐进式发现阈值</summary>
     public Int32? ToolAdvertiseThreshold { get; set; }
+
+    /// <summary>工具结果最大字符数</summary>
+    public Int32? ToolResultMaxChars { get; set; }
+
+    /// <summary>工具调用最大轮次</summary>
+    public Int32? ToolMaxIterations { get; set; }
+
+    /// <summary>技能内容最大字符数</summary>
+    public Int32? SkillBudgetChars { get; set; }
     #endregion
 
     #region 功能开关
@@ -201,6 +225,12 @@ public class SystemSettingsUpdateDto
 
     /// <summary>学习分析模型</summary>
     public String? LearningModel { get; set; }
+
+    /// <summary>轻量模型编码</summary>
+    public String? LightweightModel { get; set; }
+
+    /// <summary>嵌入模型编码</summary>
+    public String? EmbedModel { get; set; }
 
     /// <summary>学习最低字数</summary>
     public Int32? MinLearningContentLength { get; set; }

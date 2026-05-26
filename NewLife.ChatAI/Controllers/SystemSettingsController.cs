@@ -49,6 +49,9 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             EnableSuggestedQuestionCache = chatSetting.EnableSuggestedQuestionCache,
             StreamingSpeed = chatSetting.StreamingSpeed,
             ToolAdvertiseThreshold = chatSetting.ToolAdvertiseThreshold,
+            ToolResultMaxChars = chatSetting.ToolResultMaxChars,
+            ToolMaxIterations = chatSetting.ToolMaxIterations,
+            SkillBudgetChars = chatSetting.SkillBudgetChars,
             // 功能开关
             EnableUsageStats = chatSetting.EnableUsageStats,
             BackgroundGeneration = chatSetting.BackgroundGeneration,
@@ -56,6 +59,8 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             // 自学习
             EnableAutoLearning = chatSetting.EnableAutoLearning,
             LearningModel = chatSetting.LearningModel,
+            LightweightModel = chatSetting.LightweightModel,
+            EmbedModel = chatSetting.EmbedModel,
             MinLearningContentLength = chatSetting.MinLearningContentLength,
             // 可用模型列表
             Models = [.. models],
@@ -98,6 +103,9 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.EnableSuggestedQuestionCache.HasValue) chatSetting.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;
         if (dto.StreamingSpeed.HasValue) chatSetting.StreamingSpeed = dto.StreamingSpeed.Value;
         if (dto.ToolAdvertiseThreshold.HasValue) chatSetting.ToolAdvertiseThreshold = dto.ToolAdvertiseThreshold.Value;
+        if (dto.ToolResultMaxChars.HasValue) chatSetting.ToolResultMaxChars = dto.ToolResultMaxChars.Value;
+        if (dto.ToolMaxIterations.HasValue) chatSetting.ToolMaxIterations = dto.ToolMaxIterations.Value;
+        if (dto.SkillBudgetChars.HasValue) chatSetting.SkillBudgetChars = dto.SkillBudgetChars.Value;
         // 功能开关
         if (dto.EnableUsageStats.HasValue) chatSetting.EnableUsageStats = dto.EnableUsageStats.Value;
         if (dto.BackgroundGeneration.HasValue) chatSetting.BackgroundGeneration = dto.BackgroundGeneration.Value;
@@ -105,6 +113,8 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         // 自学习
         if (dto.EnableAutoLearning.HasValue) chatSetting.EnableAutoLearning = dto.EnableAutoLearning.Value;
         if (dto.LearningModel != null) chatSetting.LearningModel = dto.LearningModel;
+        if (dto.LightweightModel != null) chatSetting.LightweightModel = dto.LightweightModel;
+        if (dto.EmbedModel != null) chatSetting.EmbedModel = dto.EmbedModel;
         if (dto.MinLearningContentLength.HasValue) chatSetting.MinLearningContentLength = dto.MinLearningContentLength.Value;
 
         chatSetting.Save();

@@ -106,6 +106,34 @@ export function ToolsCapabilitySettings({ settings, onChange }: Props) {
           className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.tools.toolMaxIterations')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.tools.toolMaxIterationsDesc')}</p>
+        <input
+          type="number"
+          min={1}
+          max={50}
+          value={settings.toolMaxIterations}
+          onChange={(e) => onChange({ toolMaxIterations: Number(e.target.value) })}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.tools.skillBudgetChars')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.tools.skillBudgetCharsDesc')}</p>
+        <input
+          type="number"
+          min={1000}
+          step={1000}
+          value={settings.skillBudgetChars}
+          onChange={(e) => onChange({ skillBudgetChars: Number(e.target.value) })}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
     </div>
   )
 }

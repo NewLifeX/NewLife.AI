@@ -34,14 +34,13 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("外观与品牌")]
     [Description("欢迎语。欢迎页大标题，为空时使用前端默认文案")]
     public String WelcomeMessage { get; set; } = "";
+    #endregion
 
+    #region 对话行为
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     [Category("对话行为")]
     [Description("自动生成标题。首条消息后是否自动生成会话标题")]
     public Boolean AutoGenerateTitle { get; set; } = true;
-    #endregion
-
-    #region 对话行为
     /// <summary>默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型</summary>
     [Category("对话行为")]
     [Description("默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型")]
@@ -162,9 +161,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("工具与扩展")]
     [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000")]
     public Int32 SkillBudgetChars { get; set; } = 8000;
+    #endregion
 
+    #region 功能开关
     /// <summary>启用用量统计</summary>
-    [Category("工具与扩展")]
+    [Category("功能开关")]
     [Description("启用用量统计")]
     public Boolean EnableUsageStats { get; set; } = true;
     #endregion

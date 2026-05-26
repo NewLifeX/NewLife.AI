@@ -46,11 +46,15 @@ const defaultSettings: SystemSettings = {
   streamingSpeed: 3,
   toolAdvertiseThreshold: 0,
   toolResultMaxChars: 4000,
+  toolMaxIterations: 10,
+  skillBudgetChars: 8000,
   enableUsageStats: true,
   backgroundGeneration: true,
   maxMessagesPerMinute: 0,
   enableAutoLearning: false,
   learningModel: '',
+  lightweightModel: '',
+  embedModel: '',
   minLearningContentLength: 200,
 }
 
