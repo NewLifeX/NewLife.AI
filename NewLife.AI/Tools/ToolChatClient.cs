@@ -117,6 +117,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     Content = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]"
                 });
             }
+
+            // 若本轮所有工具均为纯 Frontend 路由（不回传 LLM），继续循环无意义，直接退出
+            // show_widget 等展示类工具返回占位 "[已渲染到客户端]"，LLM 收到后容易误判任务未完成而重复调用
+            if (toolCalls.All(call =>
+            {
+                var rCall = toolRoutingMap.TryGetValue(call.Function?.Name ?? "", out var rtCall) ? rtCall : ToolResponseRouting.Both;
+                return !rtCall.HasFlag(ToolResponseRouting.Llm);
+            })) break;
         }
 
         // 将所有轮次的 Token 用量累加值写回最终 response，供上层（如 InvokeLlmDirectAsync）使用
@@ -277,6 +285,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     routing.HasFlag(ToolResponseRouting.Frontend) ? result : null)]
                 };
             }
+
+            // 若本轮所有工具均为纯 Frontend 路由（不回传 LLM），继续循环无意义，直接退出
+            // show_widget 等展示类工具返回占位 "[已渲染到客户端]"，LLM 收到后容易误判任务未完成而重复调用
+            if (toolCalls.All(call =>
+            {
+                var rCall = toolRoutingMap.TryGetValue(call.Function?.Name ?? "", out var rtCall) ? rtCall : ToolResponseRouting.Both;
+                return !rtCall.HasFlag(ToolResponseRouting.Llm);
+            })) yield break;
             // 继续下一轮（下一轮流的 chunk 透传给调用方）
         }
         // 超过最大轮次，静默退出（调用方已收到全部 chunk）
