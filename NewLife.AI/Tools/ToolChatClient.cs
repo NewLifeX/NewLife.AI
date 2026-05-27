@@ -80,7 +80,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
             var toolCalls = assistantMessage?.ToolCalls;
             if (toolCalls == null || toolCalls.Count == 0) break;
-            if (++iterations > MaxIterations) break;
+            if (++iterations >= MaxIterations) break;
 
             // 追加 assistant 消息（含工具调用）
             // DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传，否则 API 返回 400
@@ -92,26 +92,29 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
             });
 
-            // 并行启动所有工具调用（每次调用独立 ToolCallContext，避免共享字段并发互覆）
-            var perCallTasks = new List<(ToolCall tc, Task<String> task)>();
-            foreach (var tc in toolCalls)
+            // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
+            var tasks = new Task<String>[toolCalls.Count];
+            for (var i = 0; i < tasks.Length; i++)
             {
+                var tc = toolCalls[i];
                 if (tc.Function == null) continue;
-                var perCallCtx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
-                perCallTasks.Add((tc, ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, perCallCtx, cancellationToken)));
+                var ctx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
+                tasks[i] = ExecuteToolAsync(tc.Function!.Name, tc.Function!.Arguments, toolMap, ctx, cancellationToken);
             }
 
-            // 按序收集结果，并按 Routing 决定写入 LLM 消息的内容
-            foreach (var (tc, task) in perCallTasks)
+            // Phase 2：顺序 await + 写入（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
+            for (var i = 0; i < tasks.Length; i++)
             {
-                String result;
-                try { result = await task.ConfigureAwait(false); }
-                catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { result = ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson(); }
-
+                if (tasks[i] == null) continue;
+                var tc = toolCalls[i];
+                var result = await tasks[i].ConfigureAwait(false);
                 var routing = toolRoutingMap.TryGetValue(tc.Function!.Name, out var r2) ? r2 : ToolResponseRouting.Both;
-                var llmContent = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]";
-                workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = llmContent });
+                workMessages.Add(new ChatMessage
+                {
+                    Role = "tool",
+                    ToolCallId = tc.Id,
+                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]"
+                });
             }
         }
 
@@ -147,7 +150,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var toolCallCollector = new List<ToolCall>();
+            var toolCalls = new List<ToolCall>();
             String? finishReason = null;
             var assistantContent = (String?)null;
             var assistantReasoningContent = (String?)null;
@@ -168,18 +171,17 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     {
                         // 累积正文内容（供追加 assistant 消息）
                         var text = delta.Content as String;
-                        if (!String.IsNullOrEmpty(text))
-                            assistantContent = (assistantContent ?? String.Empty) + text;
+                        if (!text.IsNullOrEmpty()) assistantContent += text;
 
                         // 累积思维链内容（DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传）
-                        if (!String.IsNullOrEmpty(delta.ReasoningContent))
-                            assistantReasoningContent = (assistantReasoningContent ?? String.Empty) + delta.ReasoningContent;
+                        if (!delta.ReasoningContent.IsNullOrEmpty())
+                            assistantReasoningContent += delta.ReasoningContent;
 
                         // 合并流式 tool_calls 增量
                         if (delta.ToolCalls != null)
                         {
                             foreach (var tc in delta.ToolCalls)
-                                MergeToolCallDelta(toolCallCollector, tc);
+                                MergeToolCallDelta(toolCalls, tc);
                         }
                     }
                 }
@@ -201,10 +203,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 accumulatedUsage = accumulatedUsage?.Add(iterUsage) ?? iterUsage;
             }
 
-            var isToolRound = finishReason.EqualIgnoreCase("tool_calls") ||
-                              (toolCallCollector.Count > 0 && String.IsNullOrEmpty(finishReason));
+            var isToolRound = finishReason.EqualIgnoreCase("tool_calls") || (toolCalls.Count > 0 && finishReason.IsNullOrEmpty());
 
-            if (!isToolRound || toolCallCollector.Count == 0)
+            if (!isToolRound || toolCalls.Count == 0)
             {
                 // 兜底：最终轮无 Usage chunk 但存在历史轮（极少见），补发累计总量
                 if (iterUsage == null && accumulatedUsage != null)
@@ -218,13 +219,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 Role = "assistant",
                 Content = assistantContent,
                 ReasoningContent = assistantReasoningContent,
-                ToolCalls = toolCallCollector.ToList(),
+                ToolCalls = toolCalls.ToList(),
             });
 
             // Step 1: yield 全部 start 事件，同时并行启动工具任务（每次调用独立上下文，无共享竞争）
-            var pendingTasks = new List<(ToolCall tc, ISpan? span, Task<String> task)>();
-            foreach (var tc in toolCallCollector)
+            var tasks = new Task<String>[toolCalls.Count];
+            for (var i = 0; i < toolCalls.Count; i++)
             {
+                var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
                 yield return new ChatResponse
@@ -232,42 +234,34 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
                 };
 
-                var span = Tracer?.NewSpan($"ai:tool:{tc.Function.Name}", tc.Function.Arguments);
-                var perCallCtx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
-                pendingTasks.Add((tc, span, ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, perCallCtx, cancellationToken)));
+                var ctx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
+                tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
             }
 
-            // Step 2: 按序 await（任务已并行运行），按 Routing 决定 LLM/SSE 内容
-            foreach (var (tc, span, task) in pendingTasks)
+            // Step 2: 按序 await（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
+            for (var i = 0; i < toolCalls.Count; i++)
             {
-                // 在 try/catch 中执行工具，收集结果（yield 不能出现在 try/catch 内）
-                String toolResult;
-                try
-                {
-                    toolResult = await task.ConfigureAwait(false);
-                    if (span != null && toolResult != null)
-                        span.AppendTag(toolResult, toolResult.Length);
-                }
-                catch (Exception ex)
-                {
-                    span?.SetError(ex, null);
-                    toolResult = ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
-                }
-                finally
-                {
-                    span?.Dispose();
-                }
+                var tc = toolCalls[i];
+                if (tasks[i] == null) continue;
 
+                var result = await tasks[i].ConfigureAwait(false);
                 var routing = toolRoutingMap.TryGetValue(tc.Function!.Name, out var r) ? r : ToolResponseRouting.Both;
 
                 // LLM 消息：Llm 路由时写截断版，仅 Frontend 路由时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
-                var llmContent = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(toolResult) : $"[已渲染到客户端：{tc.Function.Name}]";
-                workMessages.Add(new ChatMessage { Role = "tool", ToolCallId = tc.Id, Content = llmContent });
+                workMessages.Add(new ChatMessage
+                {
+                    Role = "tool",
+                    ToolCallId = tc.Id,
+                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(result) : $"[已渲染到客户端：{tc.Function.Name}]"
+                });
 
                 // SSE 事件：Frontend 路由时发送完整结果，Llm-only 时发送空内容的完成信号
-                var eventType = ToolError.IsToolError(toolResult) ? "error" : "done";
-                var sseContent = routing.HasFlag(ToolResponseRouting.Frontend) ? toolResult : null;
-                yield return new ChatResponse { ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, sseContent)] };
+                var eventType = ToolError.IsToolError(result) ? "error" : "done";
+                yield return new ChatResponse
+                {
+                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name,
+                    routing.HasFlag(ToolResponseRouting.Frontend) ? result : null)]
+                };
             }
             // 继续下一轮（下一轮流的 chunk 透传给调用方）
         }
@@ -286,55 +280,52 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="cancellationToken">取消令牌</param>
     private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
+        using var span = Tracer?.NewSpan($"ai:tool:{toolName}", argumentsJson);
         // 先尝试从预构建路由表查找，找不到则动态 fallback（目录调用：AI 在 system 中看到工具名但未获得 schema）
         var isCatalogCall = !toolMap.TryGetValue(toolName, out var provider);
-        if (isCatalogCall)
-        {
-            foreach (var p in Providers)
-            {
-                var tools = p.GetTools(new HashSet<String>([toolName]));
-                if (tools != null && tools.Count > 0)
-                {
-                    provider = p;
-                    break;
-                }
-            }
-
-            if (provider == null)
-                throw new InvalidOperationException($"Tool not found: '{toolName}', searched {toolMap.Count} in {Providers.Count} providers");
-        }
-
-        // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
-        var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
-        if (tier == ToolApprovalTier.Deny)
-            return ToolError.Create("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）").ToJson();
-
-        if (tier == ToolApprovalTier.Ask && ApprovalProvider != null)
-        {
-            var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
-            if (!approval.Approved)
-                return ToolError.Create("USER_DENIED", $"工具 {toolName} 被用户拒绝执行").ToJson();
-        }
-        // tier == Allow：低风险工具直接放行，无需审批
-
-        String result;
         try
         {
-            result = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            // 目录调用（AI 未拿到 schema 就猜参数）：返回 INVALID_ARGUMENTS + schema hint，引导模型修正
             if (isCatalogCall)
             {
-                var hint = GetSchemaHint(toolName, provider!);
+                foreach (var p in Providers)
+                {
+                    var tools = p.GetTools(new HashSet<String>([toolName]));
+                    if (tools != null && tools.Count > 0) { provider = p; break; }
+                }
+                if (provider == null)
+                    throw new InvalidOperationException($"Tool not found: '{toolName}', searched {toolMap.Count} in {Providers.Count} providers");
+            }
+
+            // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
+            var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
+            if (tier == ToolApprovalTier.Deny)
+                return ToolError.Create("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）").ToJson();
+
+            if (tier == ToolApprovalTier.Ask && ApprovalProvider != null)
+            {
+                var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
+                if (!approval.Approved)
+                    return ToolError.Create("USER_DENIED", $"工具 {toolName} 被用户拒绝执行").ToJson();
+            }
+            // tier == Allow：低风险工具直接放行，无需审批
+
+            var result = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
+            span?.AppendTag(result, result.Length);
+            return result!;
+        }
+        catch (Exception ex)
+        {
+            span?.SetError(ex, null);
+            if (ex is OperationCanceledException) throw;
+
+            // 目录调用（AI 未拿到 schema 就猜参数）：返回 INVALID_ARGUMENTS + schema hint，引导模型修正
+            if (isCatalogCall && provider != null)
+            {
+                var hint = GetSchemaHint(toolName, provider);
                 return ToolError.Create("INVALID_ARGUMENTS", ex.Message, hint).ToJson();
             }
             return ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
         }
-
-        return result!;
     }
 
     /// <summary>从 Provider 中提取工具的参数 Schema，作为 INVALID_ARGUMENTS 错误的修复建议</summary>
