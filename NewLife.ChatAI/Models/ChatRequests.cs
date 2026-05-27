@@ -15,7 +15,7 @@ public record EditMessageRequest(String Content);
 public record FeedbackRequest(FeedbackType Type, String? Reason);
 
 /// <summary>创建分享请求</summary>
-public record CreateShareRequest(Int32? ExpireHours, Int32? ExpireMinutes = null);
+public record CreateShareRequest(Int32? ExpireMinutes);
 
 /// <summary>上传附件结果</summary>
 public record UploadAttachmentResult(Int64 Id, String FileName, String Url, Int64 Size);

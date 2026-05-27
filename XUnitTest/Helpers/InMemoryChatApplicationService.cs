@@ -305,9 +305,8 @@ public class InMemoryChatApplicationService
     {
         var token = Guid.NewGuid().ToString("N");
         var createTime = DateTime.Now;
-        DateTime? expireTime = null;
-        if (request.ExpireHours is > 0)
-            expireTime = createTime.AddHours(request.ExpireHours.Value);
+        var mins = request.ExpireMinutes is > 0 ? request.ExpireMinutes.Value : 30;
+        var expireTime = (DateTime?)createTime.AddMinutes(mins);
 
         _shares[token] = (conversationId, createTime, expireTime);
         return Task.FromResult(new ShareLinkDto($"/api/share/{token}", createTime, expireTime));

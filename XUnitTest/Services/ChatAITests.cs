@@ -673,7 +673,7 @@ public class ChatAITests
     }
 
     [Fact]
-    public async Task ShareWithNullExpireHours()
+    public async Task ShareWithNullExpireMinutes()
     {
         var service = new InMemoryChatApplicationService();
         var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
@@ -778,10 +778,10 @@ public class ChatAITests
     }
 
     [Fact]
-    public void CreateShareRequestWithExpireHours()
+    public void CreateShareRequestWithExpireMinutes()
     {
         var req = new CreateShareRequest(48);
-        Assert.Equal(48, req.ExpireHours);
+        Assert.Equal(48, req.ExpireMinutes);
     }
 
     [Fact]
@@ -904,8 +904,8 @@ public class ChatAITests
     }
 
     [Fact]
-    [DisplayName("分享无过期时间时 ExpireTime 为 null")]
-    public async Task ShareWithoutExpireTimeHasNullExpireTime()
+    [DisplayName("分享未指定过期分钟数时使用默认30分钟")]
+    public async Task ShareWithNullExpireMinutesUsesDefault()
     {
         var service = new InMemoryChatApplicationService();
         var conv = await service.CreateConversationAsync(new CreateConversationRequest(null, 0), CancellationToken.None);
@@ -913,7 +913,8 @@ public class ChatAITests
 
         var share = await service.CreateShareLinkAsync(conv.Id, new CreateShareRequest(null), CancellationToken.None);
 
-        Assert.Null(share.ExpireTime);
+        Assert.NotNull(share.ExpireTime);
+        Assert.True(share.ExpireTime > DateTime.Now);
     }
     #endregion
 

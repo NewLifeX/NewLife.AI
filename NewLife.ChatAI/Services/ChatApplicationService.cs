@@ -300,17 +300,11 @@ public class ChatApplicationService
         // 获取当前最后一条消息的编号作为快照截止点
         var snapshotMessageId = ChatMessage.FindLastByConversationId(conversationId)?.Id ?? 0;
 
-        DateTime? expireTime = null;
-        if (request.ExpireMinutes.HasValue)
-        {
-            if (request.ExpireMinutes.Value > 0)
-                expireTime = DateTime.Now.AddMinutes(request.ExpireMinutes.Value);
-            // ExpireMinutes == 0：用户明确选择永不过期
-        }
-        else if (request.ExpireHours is > 0)
-            expireTime = DateTime.Now.AddHours(request.ExpireHours.Value);
-        else if (ChatSetting.Current.ShareExpireMinutes > 0)
-            expireTime = DateTime.Now.AddMinutes(ChatSetting.Current.ShareExpireMinutes);
+        // ExpireMinutes 不合法时回退系统默认值，仍不合法则取30分钟
+        var minutes = request.ExpireMinutes is > 0
+            ? request.ExpireMinutes.Value
+            : ChatSetting.Current.ShareExpireMinutes > 0 ? ChatSetting.Current.ShareExpireMinutes : 30;
+        var expireTime = DateTime.Now.AddMinutes(minutes);
 
         var entity = new SharedConversation
         {
@@ -318,7 +312,7 @@ public class ChatApplicationService
             ShareToken = Guid.NewGuid().ToString("N"),
             SnapshotTitle = conversation.Title,
             SnapshotMessageId = snapshotMessageId,
-            ExpireTime = expireTime ?? DateTime.MinValue,
+            ExpireTime = expireTime,
             CreateUserID = user.ID,
             CreateUser = user.DisplayName ?? user.Name,
         };
