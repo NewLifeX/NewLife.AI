@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife;
 using NewLife.Cube;
@@ -20,7 +20,7 @@ public class SuggestedQuestionController : EntityController<SuggestedQuestion>
     {
         //LogOnChange = true;
 
-        //ListFields.RemoveField("Id", "Creator");
+        ListFields.RemoveField("Question");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{

@@ -92,9 +92,15 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
     {
-        if (Meta.Session.Count > 0) return;
-
         if (XTrace.Debug) XTrace.WriteLine("开始初始化SuggestedQuestion[推荐问题]数据……");
+
+        // 原来是否已有数据，决定新增项是否默认启用
+        var hasExisting = Meta.Session.Count > 0;
+
+        // 以标题为去重键，已有标题的跳过，仅插入新增项
+        var existingTitles = hasExisting
+            ? Meta.Cache.FindAll(e => true).Select(e => e.Title).ToHashSet()
+            : new HashSet<String?>();
 
         var items = new[]
         {
@@ -110,9 +116,12 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
             new { Title = "Mermaid画注册流程图", Question = "请用 Mermaid flowchart TD 格式绘制完整的用户注册与登录流程图：输入表单→格式校验→发送邮箱验证码→验证通过→注册成功；同时包含忘记密码→重置密码路径；使用判断菱形区分成功与失败分支", Icon = "schema", Color = "text-orange-500" },
         };
 
+        var added = 0;
         for (var i = 0; i < items.Length; i++)
         {
             var item = items[i];
+            if (existingTitles.Contains(item.Title)) continue;
+
             var entity = new SuggestedQuestion
             {
                 Title = item.Title,
@@ -120,12 +129,13 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
                 Icon = item.Icon,
                 Color = item.Color,
                 Sort = items.Length - i,
-                Enable = true,
+                Enable = !hasExisting,
             };
             entity.Insert();
+            added++;
         }
 
-        if (XTrace.Debug) XTrace.WriteLine("完成初始化SuggestedQuestion[推荐问题]数据！");
+        if (XTrace.Debug) XTrace.WriteLine($"完成初始化SuggestedQuestion[推荐问题]数据，新增 {added} 条！");
     }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>
