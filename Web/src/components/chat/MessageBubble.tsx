@@ -251,7 +251,7 @@ export function MessageBubble({
         >
           {thinkingBlock}
 
-          {toolCalls && toolCalls.length > 0 && (
+          {showToolCalls && toolCalls && toolCalls.length > 0 && (
             <div className="flex items-center flex-wrap gap-2 mb-4">
               {toolCalls.map((tc) => (
                 <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />
