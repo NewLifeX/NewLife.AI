@@ -39,8 +39,8 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
         if (context is not MessageFlowContext flow) return Task.CompletedTask;
 
         var conversation = context.Conversation;
-        // 已有标题则跳过（标题一旦生成就保持，不重复生成）
-        if (!conversation.Title.IsNullOrEmpty()) return Task.CompletedTask;
+        // 已有实质助手回复则跳过（标题已定型）；预插入的空内容占位消息不计入
+        if (flow.HistoryMessages.Any(m => m.Role.EqualIgnoreCase("assistant") && !m.Content.IsNullOrEmpty())) return Task.CompletedTask;
 
         var userContent = context.UserMessage?.Content;
         var titleText = ExtractTitleText(userContent);
