@@ -972,7 +972,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (msg.Role.EqualIgnoreCase("user") && !msg.Attachments.IsNullOrEmpty())
             // 基类降级：仅保留文本，附件内容被丢弃；派生类（如 MessageService）覆写以支持完整多模态
             return new AiChatMessage { Role = "user", Content = msg.Content };
-        return new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content };
+        var aiMsg = new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content };
+        // DeepSeek 思考模式要求：历史 assistant 消息有 reasoning_content 时必须原样回传，否则 API 返回 400
+        if (msg.Role.EqualIgnoreCase("assistant") && !msg.ThinkingContent.IsNullOrEmpty())
+            aiMsg.ReasoningContent = msg.ThinkingContent;
+        return aiMsg;
     }
 
     /// <summary>构建系统提示词消息。合并用户全局级和模型级系统提示词（技能提示词由管道注入）</summary>
