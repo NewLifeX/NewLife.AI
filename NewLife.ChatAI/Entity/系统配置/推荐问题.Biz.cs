@@ -107,6 +107,7 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
             new { Title = "我在哪里", Question = "请帮我查询我的当前位置，我在哪个城市？附近有哪些值得去的地方？", Icon = "location_on", Color = "text-teal-500" },
             new { Title = "写一封请假邮件", Question = "请帮我写一封请病假的邮件，收件人是部门主管，语气正式得体，简明扼要", Icon = "edit_note", Color = "text-green-500" },
             new { Title = "分析投资理财策略", Question = "对于普通投资者，请分析当前经济环境下有哪些稳健的理财和投资策略，如何做好风险控制", Icon = "trending_up", Color = "text-yellow-500" },
+            new { Title = "Mermaid画注册流程图", Question = "请用 Mermaid flowchart TD 格式绘制完整的用户注册与登录流程图：输入表单→格式校验→发送邮箱验证码→验证通过→注册成功；同时包含忘记密码→重置密码路径；使用判断菱形区分成功与失败分支", Icon = "schema", Color = "text-orange-500" },
         };
 
         for (var i = 0; i < items.Length; i++)
