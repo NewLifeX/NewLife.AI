@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
-using NewLife.AI.Filters;
 using NewLife.AI.Tools;
 using NewLife.ChatAI.Filters;
 using NewLife.ChatAI.Handlers;
@@ -138,8 +137,8 @@ public static class ChatAIExtensions
         {
             // 嵌入资源优先，再到主机的 WebRootFileProvider，覆盖 Cube 内嵌视图文件夹
             env.WebRootFileProvider = new CompositeFileProvider(
-                embeddedProvider,
-                env.WebRootFileProvider);
+                env.WebRootFileProvider,
+                embeddedProvider);
         }
         else
         {
