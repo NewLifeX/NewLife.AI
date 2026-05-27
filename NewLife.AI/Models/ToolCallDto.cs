@@ -6,4 +6,5 @@ namespace NewLife.AI.Models;
 /// <param name="Status">调用状态</param>
 /// <param name="Arguments">入参（JSON 字符串）</param>
 /// <param name="Result">结果（截断后的文本）</param>
-public record ToolCallDto(String Id, String Name, ToolCallStatus Status, String? Arguments = null, String? Result = null);
+/// <param name="ContentOffset">工具调用触发时消息正文的字符偏移量（UTF-16 单元数），用于前端将卡片嵌入内容正确位置。null 表示旧消息不含位置信息</param>
+public record ToolCallDto(String Id, String Name, ToolCallStatus Status, String? Arguments = null, String? Result = null, Int32? ContentOffset = null);

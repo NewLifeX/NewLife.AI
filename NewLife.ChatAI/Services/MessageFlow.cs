@@ -665,7 +665,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         yield return ev;
                         break;
                     case "tool_call_start":
-                        toolCalls.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments));
+                        toolCalls.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments, ContentOffset: contentBuilder.Length));
                         yield return ev;
                         break;
                     case "tool_call_done":
@@ -906,11 +906,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         {
             clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, context.SelectedTools, providers);
 
-        // 记录本轮实际注入的工具（与 AI 收到的工具集一致）
+            // 记录本轮实际注入的工具（与 AI 收到的工具集一致）
             foreach (var p in providers)
-            foreach (var t in p.GetTools(context.SelectedTools))
-                if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
-    }
+                foreach (var t in p.GetTools(context.SelectedTools))
+                    if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
+        }
 
         return clientBuilder.Build();
     }
@@ -1067,7 +1067,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (collector[i].Id == toolCallId)
             {
                 var orig = collector[i];
-                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value);
+                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value, orig.ContentOffset);
                 break;
             }
         }
