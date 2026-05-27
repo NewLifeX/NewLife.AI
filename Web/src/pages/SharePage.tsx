@@ -36,7 +36,9 @@ export function SharePage() {
 
   useEffect(() => {
     if (data) {
-      document.title = data.snapshotTitle || data.siteTitle || t('sharePage.title')
+      document.title = data.snapshotTitle && data.siteTitle
+        ? `${data.snapshotTitle} - ${data.siteTitle}`
+        : (data.snapshotTitle || data.siteTitle || t('sharePage.title'))
       if (anchorRef.current) {
         anchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }

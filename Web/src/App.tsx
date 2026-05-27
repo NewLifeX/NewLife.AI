@@ -173,6 +173,11 @@ function ChatApp() {
   const currentModel = resolvedModel || models[0]?.id || 0
   const supportsThinking = models.find((m) => m.id === currentModel)?.supportThinking ?? false
 
+  // 当前会话标题变化时更新网页标题，离开对话时恢复站点名
+  useEffect(() => {
+    document.title = activeConv?.title ? `${activeConv.title} - ${siteTitle}` : siteTitle
+  }, [activeConversationId, activeConv?.title, siteTitle])
+
   // 当前模型不支持思考时，若已选了 think 模式则自动回退到 auto
   useEffect(() => {
     if (!supportsThinking && (thinkingMode === 'think' || thinkingMode === 'fast')) {
