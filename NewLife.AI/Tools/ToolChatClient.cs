@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
+using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
 
@@ -152,8 +153,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
             var toolCalls = new List<ToolCall>();
             String? finishReason = null;
-            var assistantContent = (String?)null;
-            var assistantReasoningContent = (String?)null;
+            var contentSb = Pool.StringBuilder.Get();
+            var reasoningSb = Pool.StringBuilder.Get();
             UsageDetails? iterUsage = null;
 
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(ChatRequest.Create(workMessages, workOptions, stream: true), cancellationToken).ConfigureAwait(false))
@@ -171,11 +172,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     {
                         // 累积正文内容（供追加 assistant 消息）
                         var text = delta.Content as String;
-                        if (!text.IsNullOrEmpty()) assistantContent += text;
+                        if (!text.IsNullOrEmpty()) contentSb.Append(text);
 
                         // 累积思维链内容（DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传）
                         if (!delta.ReasoningContent.IsNullOrEmpty())
-                            assistantReasoningContent += delta.ReasoningContent;
+                            reasoningSb.Append(delta.ReasoningContent);
 
                         // 合并流式 tool_calls 增量
                         if (delta.ToolCalls != null)
@@ -207,18 +208,31 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
             if (!isToolRound || toolCalls.Count == 0)
             {
+                Pool.StringBuilder.Return(contentSb);
+                Pool.StringBuilder.Return(reasoningSb);
                 // 兜底：最终轮无 Usage chunk 但存在历史轮（极少见），补发累计总量
                 if (iterUsage == null && accumulatedUsage != null)
                     yield return new ChatResponse { Usage = accumulatedUsage };
                 yield break;
             }
 
+            // 若 SelectedTools 已启用过滤且 AI 调用了不在列表中的工具，动态扩展以便后续请求可见
+            if (SelectedTools != null)
+            {
+                foreach (var tc in toolCalls)
+                {
+                    var name = tc.Function?.Name;
+                    if (!name.IsNullOrEmpty() && !SelectedTools.Contains(name))
+                        SelectedTools.Add(name);
+                }
+            }
+
             // 追加 assistant 消息（含工具调用）
             workMessages.Add(new ChatMessage
             {
                 Role = "assistant",
-                Content = assistantContent,
-                ReasoningContent = assistantReasoningContent,
+                Content = contentSb.Return(true),
+                ReasoningContent = reasoningSb.Return(true),
                 ToolCalls = toolCalls.ToList(),
             });
 
