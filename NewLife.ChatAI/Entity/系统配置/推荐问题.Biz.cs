@@ -128,7 +128,6 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
                 Question = item.Question,
                 Icon = item.Icon,
                 Color = item.Color,
-                Sort = items.Length - i,
                 Enable = !hasExisting,
             };
             entity.Insert();
@@ -154,6 +153,13 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     #endregion
 
     #region 扩展属性
+    /// <summary>会话</summary>
+    [XmlIgnore, IgnoreDataMember, ScriptIgnore]
+    public Conversation? Conversation => Extends.Get(nameof(Conversation), k => Conversation.FindById(ConversationId));
+
+    /// <summary>会话</summary>
+    [Map(nameof(ConversationId), typeof(Conversation), "Id")]
+    public String? ConversationTitle => Conversation?.Title;
     #endregion
 
     #region 高级查询
@@ -173,11 +179,11 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     public static IList<SuggestedQuestion> FindAllCachedEnabled()
         => Meta.Cache.FindAll(q => q.Enable);
 
-    /// <summary>从实体缓存中查找今日匹配指定问题且已缓存回答的推荐问题。用于命中缓存时直接返回</summary>
+    /// <summary>从实体缓存中查找今日匹配指定问题且已关联助手消息的推荐问题。用于命中缓存时直接返回</summary>
     /// <param name="question">问题内容</param>
     /// <returns>匹配的推荐问题，未命中返回 null</returns>
     public static SuggestedQuestion? FindCachedTodayByQuestion(String question)
-        => Meta.Cache.FindAll(q => q.Enable && q.Question == question && !q.Response.IsNullOrEmpty() && q.UpdateTime.Date == DateTime.Today).FirstOrDefault();
+        => Meta.Cache.FindAll(q => q.Enable && q.Question == question && q.MessageId > 0 && q.UpdateTime.Date == DateTime.Today).FirstOrDefault();
 
     /// <summary>从实体缓存中查找启用且匹配指定问题的推荐问题。用于回写缓存时定位目标记录</summary>
     /// <param name="question">问题内容</param>

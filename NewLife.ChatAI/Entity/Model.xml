@@ -284,12 +284,10 @@
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="Title" DataType="String" Master="True" Length="100" Description="标题。欢迎页按钮显示的短标题" />
         <Column Name="Question" DataType="String" Length="200" Description="问题。点击后发送给AI的完整提示词" />
-        <Column Name="Response" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="响应。缓存的AI回复内容，Markdown格式" />
-        <Column Name="ThinkingResponse" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="推理响应。缓存的思考过程内容" />
-        <Column Name="ModelId" DataType="Int32" Map="ModelConfig@Id@Name" Description="模型。生成缓存响应时使用的模型" />
+        <Column Name="ConversationId" DataType="Int64" Description="会话。关联的对话会话编号" />
+        <Column Name="MessageId" DataType="Int64" Description="消息。关联的助手消息编号，0=尚未缓存" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
         <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
@@ -299,8 +297,7 @@
         <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
       </Columns>
       <Indexes>
-        <Index Columns="Sort" />
-        <Index Columns="Enable,Sort" />
+        <Index Columns="Enable" />
       </Indexes>
     </Table>
     <Table Name="ChatPreset" Description="对话预设。保存模型+技能+SystemPrompt组合为预设模板" Output="系统配置">

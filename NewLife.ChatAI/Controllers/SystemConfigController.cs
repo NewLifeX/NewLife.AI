@@ -17,10 +17,10 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
     public ActionResult<SystemConfigDto> GetConfig()
     {
 
-        // 从推荐问题表读取启用的问题，按排序号倒序、编号倒序排列
+        // 从推荐问题表读取启用的问题，按编号倒序取最新12条
         var questions = SuggestedQuestion.FindAllCachedEnabled()
-            .OrderByDescending(q => q.Sort)
-            .ThenByDescending(q => q.Id)
+            .OrderByDescending(q => q.Id)
+            .Take(12)
             .Select(q => new SuggestedQuestionDto
             {
                 Title = q.Title,

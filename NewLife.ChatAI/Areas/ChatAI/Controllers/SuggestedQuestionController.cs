@@ -54,13 +54,11 @@ public class SuggestedQuestionController : EntityController<SuggestedQuestion>
     /// <returns></returns>
     protected override IEnumerable<SuggestedQuestion> Search(Pager p)
     {
-        var sort = p["sort"].ToInt(-1);
         var enable = p["enable"]?.ToBoolean();
-        var modelId = p["modelId"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return SuggestedQuestion.Search(sort, enable, modelId, start, end, p["Q"], p);
+        return SuggestedQuestion.Search(enable, start, end, p["Q"], p);
     }
 }

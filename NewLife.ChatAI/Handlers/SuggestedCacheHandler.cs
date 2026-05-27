@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using NewLife;
 using NewLife.Caching;
 using NewLife.Log;
+using NewLife.Serialization;
 
 namespace NewLife.ChatAI.Handlers;
 
@@ -59,41 +61,67 @@ public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cachePro
             yield break;
         }
 
-        // 命中：直接回放
+        // 命中：从关联的助手消息读取并全量回放（含工具调用）
+        var sourceMsg = DbChatMessage.FindById(cached.MessageId);
+        if (sourceMsg == null)
+        {
+            // 关联消息已丢失，降级走正常 LLM 路径
+            await foreach (var ev in next(cancellationToken).ConfigureAwait(false))
+                yield return ev;
+            yield break;
+        }
+
         if (context.AssistantMessage is not DbChatMessage msg)
         {
             msg = new DbChatMessage { Role = "assistant", Enable = true };
         }
         msg.ConversationId = context.Conversation.Id;
-        msg.Content = cached.Response;
-        msg.ThinkingContent = cached.ThinkingResponse;
+        msg.Content = sourceMsg.Content;
+        msg.ThinkingContent = sourceMsg.ThinkingContent;
+        msg.ToolCalls = sourceMsg.ToolCalls;
         msg.Save();
         context.AssistantMessage = msg;
 
         var streamingSpeed = setting.StreamingSpeed;
 
-        if (!cached.ThinkingResponse.IsNullOrEmpty())
+        // 1. 思考过程
+        if (!sourceMsg.ThinkingContent.IsNullOrEmpty())
         {
             if (streamingSpeed > 5)
             {
-                yield return new ChatStreamEvent { Type = "thinking_delta", Content = cached.ThinkingResponse };
+                yield return new ChatStreamEvent { Type = "thinking_delta", Content = sourceMsg.ThinkingContent };
             }
             else
             {
                 var (tChunkSize, tDelayMs) = GetCachedStreamingParams(streamingSpeed);
-                await foreach (var chunk in ThrottleTextAsync(cached.ThinkingResponse!, tChunkSize, tDelayMs, cancellationToken))
+                await foreach (var chunk in ThrottleTextAsync(sourceMsg.ThinkingContent!, tChunkSize, tDelayMs, cancellationToken))
                     yield return new ChatStreamEvent { Type = "thinking_delta", Content = chunk };
             }
         }
 
+        // 2. 工具调用
+        if (!sourceMsg.ToolCalls.IsNullOrEmpty())
+        {
+            var toolCallDtos = sourceMsg.ToolCalls.ToJsonEntity<List<ToolCallDto>>();
+            if (toolCallDtos != null)
+            {
+                foreach (var tc in toolCallDtos)
+                {
+                    yield return new ChatStreamEvent { Type = "tool_call_start", ToolCallId = tc.Id, Name = tc.Name, Arguments = tc.Arguments };
+                    yield return new ChatStreamEvent { Type = "tool_call_done", ToolCallId = tc.Id, Name = tc.Name, Result = tc.Result, Success = tc.Status != ToolCallStatus.Error };
+                }
+            }
+        }
+
+        // 3. 正文内容
         if (streamingSpeed > 5)
         {
-            yield return new ChatStreamEvent { Type = "content_delta", Content = cached.Response };
+            yield return new ChatStreamEvent { Type = "content_delta", Content = sourceMsg.Content };
         }
         else
         {
             var (chunkSize, delayMs) = GetCachedStreamingParams(streamingSpeed);
-            await foreach (var chunk in ThrottleTextAsync(cached.Response ?? String.Empty, chunkSize, delayMs, cancellationToken))
+            await foreach (var chunk in ThrottleTextAsync(sourceMsg.Content ?? String.Empty, chunkSize, delayMs, cancellationToken))
                 yield return new ChatStreamEvent { Type = "content_delta", Content = chunk };
         }
 
@@ -113,11 +141,13 @@ public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cachePro
         var sq = SuggestedQuestion.FindCachedByQuestion(question);
         if (sq != null)
         {
-            // 已在推荐列表：回写本次生成的回复到缓存
-            sq.Response = context.ContentBuilder.ToString();
-            sq.ThinkingResponse = context.ThinkingBuilder.ToString();
-            sq.ModelId = context.ModelConfig.Id;
-            sq.Update();
+            // 已在推荐列表：回写本次生成的助手消息 Id 到缓存
+            if (context.AssistantMessage is DbChatMessage savedMsg)
+            {
+                sq.ConversationId = savedMsg.ConversationId;
+                sq.MessageId = savedMsg.Id;
+                sq.Update();
+            }
             return Task.CompletedTask;
         }
 
