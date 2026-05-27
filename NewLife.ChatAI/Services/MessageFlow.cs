@@ -709,17 +709,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             yield break;
         }
 
-        var clientBuilder = rawClient.AsBuilder();
-        foreach (var filter in ChatFilters)
-            clientBuilder = clientBuilder.UseFilters(filter);
-        ApplyTools(ref clientBuilder, contextMessages, ToolProviders, context.SelectedTools);
-
-        // 记录本轮实际注入的工具（与 AI 收到的工具集一致）
-        foreach (var p in ToolProviders)
-            foreach (var t in p.GetTools(context.SelectedTools))
-                if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
-
-        using var streamClient = clientBuilder.Build();
+        using var streamClient = BuildPipelineClient(rawClient, context);
 
         var thinkingBuilder = new StringBuilder();
         UsageDetails? lastUsage = null;
@@ -798,16 +788,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             return;
         }
 
-        var clientBuilder = rawClient.AsBuilder();
-        foreach (var filter in ChatFilters)
-            clientBuilder = clientBuilder.UseFilters(filter);
-        ApplyTools(ref clientBuilder, contextMessages, ToolProviders, context.SelectedTools);
-
-        foreach (var p in ToolProviders)
-            foreach (var t in p.GetTools(context.SelectedTools))
-                if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
-
-        using var directClient = clientBuilder.Build();
+        using var directClient = BuildPipelineClient(rawClient, context);
 
         var sw = Stopwatch.StartNew();
         var response = ChatResponse.From(await directClient.GetResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false));
@@ -910,16 +891,28 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             messages.Insert(0, new AiChatMessage { Role = "system", Content = extra });
     }
 
-    /// <summary>将工具提供者应用到客户端构建器。派生类可覆盖以实现渐进式工具发现、结果截断等策略</summary>
-    /// <param name="clientBuilder">客户端构建器（ref 传入）</param>
-    /// <param name="contextMessages">上下文消息列表</param>
-    /// <param name="providers">已解析的工具提供者集合</param>
-    /// <param name="selectedTools">工具可见性过滤集合；null 全量，空集合仅系统工具，非空集合系统工具 + 指定工具</param>
-    protected virtual void ApplyTools(ref ChatClientBuilder clientBuilder, IList<AiChatMessage> contextMessages, IToolProvider[] providers, ISet<String>? selectedTools = null)
+    /// <summary>在 rawClient 上组装过滤器链 + 工具层，构建完整管道客户端，并将实际注入的工具名写入 context.AvailableToolNames</summary>
+    /// <param name="rawClient">原始模型客户端（生命周期由调用方管理）</param>
+    /// <param name="context">对话上下文</param>
+    /// <returns>管道客户端（调用方负责 Dispose）</returns>
+    protected virtual IChatClient BuildPipelineClient(IChatClient rawClient, IChatContext context)
     {
-        if (providers.Length == 0) return;
+        var clientBuilder = rawClient.AsBuilder();
+        foreach (var filter in ChatFilters)
+            clientBuilder = clientBuilder.UseFilters(filter);
 
-        clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, selectedTools, providers);
+        var providers = ToolProviders;
+        if (providers.Length > 0)
+        {
+            clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, context.SelectedTools, providers);
+
+        // 记录本轮实际注入的工具（与 AI 收到的工具集一致）
+            foreach (var p in providers)
+            foreach (var t in p.GetTools(context.SelectedTools))
+                if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
+    }
+
+        return clientBuilder.Build();
     }
 
     /// <summary>根据用户回应风格设置采样参数。仅在请求未显式指定时设置</summary>
