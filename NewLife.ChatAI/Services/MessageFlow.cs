@@ -485,6 +485,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                             Id = tc.Id,
                             Function = new AiFunctionCall { Name = tc.Name, Arguments = tc.Arguments },
                         }).ToList(),
+                        // 思考模式下工具调用的推理内容必须回传，否则 DeepSeek 返回 400
+                        ReasoningContent = msg.ThinkingContent.IsNullOrEmpty() ? null : msg.ThinkingContent,
                     });
                     foreach (var tc in storedDtos)
                     {
