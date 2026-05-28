@@ -38,8 +38,15 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
             // 用户消息
             if (context.UserMessage is DbChatMessage userMessage)
             {
-                // 提取系统提示词（首个 system 消息）
-                userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+                // 提取系统提示词：首个 system 消息内容 + 尚未 flush 的 SystemSegments 片段
+                // （FlushSystemSegments 在所有 OnBefore 完成后才执行，此时 SystemSegments 已由各处理器注入内容）
+                var systemContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+                if (context.SystemSegments.Count > 0)
+                {
+                    var extra = String.Join("\n\n", context.SystemSegments);
+                    systemContent = systemContent.IsNullOrEmpty() ? extra : systemContent + "\n\n" + extra;
+                }
+                userMessage.ThinkingContent = systemContent;
                 userMessage.ToolNames = context.AvailableToolNames?.Join();
                 userMessage.Update();
             }

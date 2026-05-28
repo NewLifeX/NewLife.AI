@@ -55,15 +55,7 @@ public class LearningHandler(ConversationAnalysisService analysisService, ChatSe
             var memoryContext = analysisService.MemoryService.BuildContextForUser(userId);
             if (memoryContext.IsNullOrEmpty()) return;
 
-            var messages = context.ContextMessages;
-            var systemMsg = messages.FirstOrDefault(m => m.Role == "system");
-            if (systemMsg != null)
-            {
-                var existingContent = systemMsg.Content as String ?? String.Empty;
-                systemMsg.Content = existingContent + "\n\n" + memoryContext;
-            }
-            else
-                messages.Insert(0, new AiChatMessage { Role = "system", Content = memoryContext });
+            context.SystemSegments.Add(memoryContext);
         }
         catch (Exception ex)
         {
