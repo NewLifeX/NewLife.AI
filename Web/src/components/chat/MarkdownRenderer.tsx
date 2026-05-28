@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeKatex from 'rehype-katex'
+import rehypeRaw from 'rehype-raw'
 import 'katex/dist/katex.min.css'
 import mermaid from 'mermaid'
 import { cn } from '@/lib/utils'
@@ -318,6 +319,26 @@ function preprocessMath(content: string): string {
   return result
 }
 
+/**
+ * 在代码块以外，移除 Markdown 内容中危险的 HTML 标签（script/style/iframe 等），
+ * 防止 AI 输出被利用作 XSS 注入。仅处理代码围栏外的部分。
+ */
+function preprocessStripDangerousHtml(content: string): string {
+  const dangerousTagPattern = /<\/?(?:script|style|iframe|object|embed|form|base|link|meta|applet)(\s[^>]*)?>/gi
+  const result: string[] = []
+  const codeBlockRegex = /```[\s\S]*?```/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    const before = content.slice(lastIndex, match.index)
+    result.push(before.replace(dangerousTagPattern, ''))
+    result.push(match[0])
+    lastIndex = match.index + match[0].length
+  }
+  result.push(content.slice(lastIndex).replace(dangerousTagPattern, ''))
+  return result.join('')
+}
+
 function CopyCodeButton({ code }: { code: string }) {
   const handleCopy = useCallback(() => {
     void navigator.clipboard.writeText(code)
@@ -439,7 +460,7 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
     return urls
   }, [content])
 
-  const processedContent = useMemo(() => preprocessMath(content), [content])
+  const processedContent = useMemo(() => preprocessStripDangerousHtml(preprocessMath(content)), [content])
 
   const handleImageClick = useCallback(
     (src: string) => {
@@ -549,7 +570,7 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
     <div className={cn('prose dark:prose-invert max-w-none break-words', isStreaming && 'streaming-prose', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { plainText: ['mermaid'] }], [rehypeKatex, { throwOnError: false, strict: false }]]}
+        rehypePlugins={[rehypeRaw, [rehypeHighlight, { plainText: ['mermaid'] }], [rehypeKatex, { throwOnError: false, strict: false }]]}
         components={markdownComponents}
       >
         {processedContent}
