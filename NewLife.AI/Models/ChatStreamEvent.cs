@@ -104,6 +104,10 @@ public class ChatStreamEvent
         return new() { Type = "error", Code = code, Message = message };
     }
 
+    /// <summary>SSE 保活心跳事件。无正式事件推送时每隔一段时间发送，防止反向代理因连接静默而断连</summary>
+    /// <returns></returns>
+    public static ChatStreamEvent Heartbeat() => new() { Type = "heartbeat" };
+
     /// <summary>工具调用开始事件</summary>
     /// <param name="toolCallId">调用编号</param>
     /// <param name="name">工具名称</param>

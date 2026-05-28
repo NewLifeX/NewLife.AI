@@ -190,7 +190,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                         if (delta.ToolCalls != null)
                         {
                             foreach (var tc in delta.ToolCalls)
+                            {
                                 MergeToolCallDelta(toolCalls, tc);
+                            }
                         }
                     }
                 }
