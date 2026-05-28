@@ -95,7 +95,9 @@ export function ChatPage({
   }, [onAttachmentAdd])
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    bottomRef.current?.scrollIntoView({ behavior })
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior })
     userScrolledRef.current = false
   }, [])
 
@@ -143,9 +145,10 @@ export function ChatPage({
 
   useEffect(() => {
     if (!userScrolledRef.current) {
-      scrollToBottom('smooth')
+      // 流式输出期间用 instant，避免每个 SSE token 触发 smooth 动画积压导致视觉抖动
+      scrollToBottom(isGenerating ? 'instant' : 'smooth')
     }
-  }, [messages, scrollToBottom])
+  }, [messages, scrollToBottom, isGenerating])
 
   return (
     <div className="relative flex flex-1 min-h-0 min-w-0">

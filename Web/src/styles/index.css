@@ -70,8 +70,10 @@
 }
 
 html, body {
-  /* 防止移动端隐藏元素撑宽页面导致内容被截断 */
-  overflow-x: hidden;
+  /* overflow: hidden 防止 scrollIntoView 等 DOM 操作触发 window/body 滚动，
+     避免整个 ChatLayout 被带出视口（页面上移、下方空白、刷新后无法恢复）。
+     ChatLayout 自身用 h-dvh + overflow-hidden 约束，body 无需可滚动。 */
+  overflow: hidden;
 }
 
 body {
