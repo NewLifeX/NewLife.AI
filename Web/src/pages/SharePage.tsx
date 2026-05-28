@@ -14,6 +14,16 @@ export function SharePage() {
   const [notFound, setNotFound] = useState(false)
   const anchorRef = useRef<HTMLDivElement | null>(null)
 
+  // 分享页是独立的全屏滚动页，需覆盖全局 overflow:hidden（该规则是为 ChatLayout 固定布局设置的）
+  useEffect(() => {
+    document.documentElement.style.overflow = 'auto'
+    document.body.style.overflow = 'auto'
+    return () => {
+      document.documentElement.style.overflow = ''
+      document.body.style.overflow = ''
+    }
+  }, [])
+
   const safeTime = (s: string | null | undefined, style: 'time' | 'full' = 'full'): string | null => {
     if (!s) return null
     const d = new Date(s)
