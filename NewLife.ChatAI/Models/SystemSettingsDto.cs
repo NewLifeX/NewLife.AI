@@ -75,8 +75,8 @@ public class SystemSettingsDto
     /// <summary>流式输出速度（1~5）</summary>
     public Int32 StreamingSpeed { get; set; }
 
-    /// <summary>工具渐进式发现阈值</summary>
-    public Int32 ToolAdvertiseThreshold { get; set; }
+    /// <summary>工具仓位上限</summary>
+    public Int32 ToolSlotLimit { get; set; }
 
     /// <summary>工具结果最大字符数</summary>
     public Int32 ToolResultMaxChars { get; set; }
@@ -195,8 +195,8 @@ public class SystemSettingsUpdateDto
     /// <summary>流式输出速度（1~5）</summary>
     public Int32? StreamingSpeed { get; set; }
 
-    /// <summary>工具渐进式发现阈值</summary>
-    public Int32? ToolAdvertiseThreshold { get; set; }
+    /// <summary>工具仓位上限</summary>
+    public Int32? ToolSlotLimit { get; set; }
 
     /// <summary>工具结果最大字符数</summary>
     public Int32? ToolResultMaxChars { get; set; }

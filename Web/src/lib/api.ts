@@ -762,7 +762,7 @@ export interface SystemSettings {
   enableMcp: boolean
   enableSuggestedQuestionCache: boolean
   streamingSpeed: number
-  toolAdvertiseThreshold: number
+  toolSlotLimit: number
   toolResultMaxChars: number
   toolMaxIterations: number
   skillBudgetChars: number

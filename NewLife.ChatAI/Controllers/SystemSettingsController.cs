@@ -48,7 +48,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             EnableMcp = chatSetting.EnableMcp,
             EnableSuggestedQuestionCache = chatSetting.EnableSuggestedQuestionCache,
             StreamingSpeed = chatSetting.StreamingSpeed,
-            ToolAdvertiseThreshold = chatSetting.ToolAdvertiseThreshold,
+            ToolSlotLimit = chatSetting.ToolSlotLimit,
             ToolResultMaxChars = chatSetting.ToolResultMaxChars,
             ToolMaxIterations = chatSetting.ToolMaxIterations,
             SkillBudgetChars = chatSetting.SkillBudgetChars,
@@ -102,7 +102,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.EnableMcp.HasValue) chatSetting.EnableMcp = dto.EnableMcp.Value;
         if (dto.EnableSuggestedQuestionCache.HasValue) chatSetting.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;
         if (dto.StreamingSpeed.HasValue) chatSetting.StreamingSpeed = dto.StreamingSpeed.Value;
-        if (dto.ToolAdvertiseThreshold.HasValue) chatSetting.ToolAdvertiseThreshold = dto.ToolAdvertiseThreshold.Value;
+        if (dto.ToolSlotLimit.HasValue) chatSetting.ToolSlotLimit = dto.ToolSlotLimit.Value;
         if (dto.ToolResultMaxChars.HasValue) chatSetting.ToolResultMaxChars = dto.ToolResultMaxChars.Value;
         if (dto.ToolMaxIterations.HasValue) chatSetting.ToolMaxIterations = dto.ToolMaxIterations.Value;
         if (dto.SkillBudgetChars.HasValue) chatSetting.SkillBudgetChars = dto.SkillBudgetChars.Value;

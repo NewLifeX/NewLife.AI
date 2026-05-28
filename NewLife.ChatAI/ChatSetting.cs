@@ -142,10 +142,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容，不做延迟")]
     public Int32 StreamingSpeed { get; set; } = 3;
 
-    /// <summary>工具渐进式发现阈值。工具总数超过此值时切换为Advertise模式，仅向模型展示工具摘要而非完整Schema，模型按需加载，默认15</summary>
+    /// <summary>工具仓位上限。每次请求注入完整 Schema 的工具数上限，超出的工具降级为纯文本目录；0 表示不限制，默认15</summary>
     [Category("工具与扩展")]
-    [Description("工具渐进式发现阈值。工具总数超过此值时切换为Advertise模式，仅向模型展示工具摘要而非完整Schema，模型按需加载，默认15")]
-    public Int32 ToolAdvertiseThreshold { get; set; } = 15;
+    [Description("工具仓位上限。每次请求注入完整 Schema 的工具数上限；超出的工具降级为纯文本目录；0 表示不限制，默认15")]
+    public Int32 ToolSlotLimit { get; set; } = 15;
 
     /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认8000</summary>
     [Category("工具与扩展")]

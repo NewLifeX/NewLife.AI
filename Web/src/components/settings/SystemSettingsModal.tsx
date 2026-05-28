@@ -44,7 +44,7 @@ const defaultSettings: SystemSettings = {
   enableMcp: true,
   enableSuggestedQuestionCache: true,
   streamingSpeed: 3,
-  toolAdvertiseThreshold: 0,
+  toolSlotLimit: 15,
   toolResultMaxChars: 4000,
   toolMaxIterations: 10,
   skillBudgetChars: 8000,

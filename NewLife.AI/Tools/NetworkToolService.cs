@@ -137,7 +137,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("translate", Triggers = "帮我翻译,翻译这段,翻译成中文,翻译成英文,translate this")]
     [DisplayName("文本翻译")]
-    [Description("将文本翻译为目标语言。支持 60+ 种语言，无需 API 密鑰（每天免费额度 5000 词）")]
+    [Description("将文本翻译为目标语言。支持 60+ 种语言")]
     public async Task<Object> TranslateAsync(
         [Description("要翻译的文本内容")] String text,
         [Description("目标语言代码，如 zh（中文）、en（英文）、ja（日文）、fr（法文）、de（德文）、ko（韩文）")] String targetLang = "zh",
