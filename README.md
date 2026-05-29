@@ -17,7 +17,7 @@
 
 ## 核心特性
 
-- **46 家 AI 服务商，5 种协议**：OpenAI / Anthropic / Gemini / 通义 DashScope / Ollama + AWS Bedrock SigV4 + DeepSeek，一行代码任意切换
+- **46 家 AI 服务商，6 种协议**：OpenAI / Anthropic / Gemini / 通义 DashScope / Ollama / AWS Bedrock，一行代码任意切换
 - **统一 `IChatClient` 接口**：对齐 MEAI 规范，单轮、流式、函数调用、多模态全部统一 API
 - **函数调用（工具）**：`[ToolDescription]` 特性自动生成 JSON Schema，`ToolChatClient` 多轮循环，内置搜索 / 天气 / 翻译 / 网页抓取 / IP 定位等工具
 - **MCP 双向支持**：客户端对接外部 MCP Server（stdio / HTTP SSE），服务端将本系统工具暴露为标准 MCP 服务
