@@ -289,6 +289,10 @@
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如chat_bubble_outline" />
         <Column Name="Color" DataType="String" Description="颜色。图标CSS颜色类，如text-blue-500" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
+        <Column Name="CacheDuration" DataType="Int32" Description="缓存时长（分钟）。0=当天有效，-1=不缓存，正数=从更新时间起缓存N分钟" />
+        <Column Name="HitCount" DataType="Int32" Description="命中次数。累计被用户提问的总次数" />
+        <Column Name="HeatScore" DataType="Double" Description="热度分数。时间衰减得分，72小时半衰期EMA，用于欢迎页排序" />
+        <Column Name="LastHitTime" DataType="DateTime" Description="最近命中时间。最后一次被用户提问的时间戳" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />

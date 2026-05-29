@@ -46,6 +46,8 @@ public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cachePro
             context.FlowControl = ChatFlowControl.SkipRemaining;
             context[HitKey] = cached;
             DefaultSpan.Current?.AppendTag(cached.Title!);
+            // fire-and-forget：记录命中，更新热度分数，不阻塞主流程
+            _ = Task.Run(() => cached.RecordHit());
         }
 
         return Task.CompletedTask;
@@ -148,6 +150,8 @@ public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cachePro
                 sq.MessageId = savedMsg.Id;
                 sq.Update();
             }
+            // fire-and-forget：记录命中，更新热度分数，不阻塞主流程
+            _ = Task.Run(() => sq.RecordHit());
             return Task.CompletedTask;
         }
 

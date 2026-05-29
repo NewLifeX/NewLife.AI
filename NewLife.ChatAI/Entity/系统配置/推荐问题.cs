@@ -86,6 +86,38 @@ public partial class SuggestedQuestion
     [BindColumn("Enable", "启用", "")]
     public Boolean Enable { get => _Enable; set { if (OnPropertyChanging("Enable", value)) { _Enable = value; OnPropertyChanged("Enable"); } } }
 
+    private Int32 _CacheDuration;
+    /// <summary>缓存时长（分钟）。0=当天有效，-1=不缓存，正数=从更新时间起缓存N分钟</summary>
+    [DisplayName("缓存时长（分钟）")]
+    [Description("缓存时长（分钟）。0=当天有效，-1=不缓存，正数=从更新时间起缓存N分钟")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("CacheDuration", "缓存时长（分钟）。0=当天有效，-1=不缓存，正数=从更新时间起缓存N分钟", "")]
+    public Int32 CacheDuration { get => _CacheDuration; set { if (OnPropertyChanging("CacheDuration", value)) { _CacheDuration = value; OnPropertyChanged("CacheDuration"); } } }
+
+    private Int32 _HitCount;
+    /// <summary>命中次数。累计被用户提问的总次数</summary>
+    [DisplayName("命中次数")]
+    [Description("命中次数。累计被用户提问的总次数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("HitCount", "命中次数。累计被用户提问的总次数", "")]
+    public Int32 HitCount { get => _HitCount; set { if (OnPropertyChanging("HitCount", value)) { _HitCount = value; OnPropertyChanged("HitCount"); } } }
+
+    private Double _HeatScore;
+    /// <summary>热度分数。时间衰减得分，72小时半衰期EMA，用于欢迎页排序</summary>
+    [DisplayName("热度分数")]
+    [Description("热度分数。时间衰减得分，72小时半衰期EMA，用于欢迎页排序")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("HeatScore", "热度分数。时间衰减得分，72小时半衰期EMA，用于欢迎页排序", "")]
+    public Double HeatScore { get => _HeatScore; set { if (OnPropertyChanging("HeatScore", value)) { _HeatScore = value; OnPropertyChanged("HeatScore"); } } }
+
+    private DateTime _LastHitTime;
+    /// <summary>最近命中时间。最后一次被用户提问的时间戳</summary>
+    [DisplayName("最近命中时间")]
+    [Description("最近命中时间。最后一次被用户提问的时间戳")]
+    [DataObjectField(false, false, true, 0)]
+    [BindColumn("LastHitTime", "最近命中时间。最后一次被用户提问的时间戳", "")]
+    public DateTime LastHitTime { get => _LastHitTime; set { if (OnPropertyChanging("LastHitTime", value)) { _LastHitTime = value; OnPropertyChanged("LastHitTime"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -157,6 +189,10 @@ public partial class SuggestedQuestion
             "Icon" => _Icon,
             "Color" => _Color,
             "Enable" => _Enable,
+            "CacheDuration" => _CacheDuration,
+            "HitCount" => _HitCount,
+            "HeatScore" => _HeatScore,
+            "LastHitTime" => _LastHitTime,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -177,6 +213,10 @@ public partial class SuggestedQuestion
                 case "Icon": _Icon = Convert.ToString(value); break;
                 case "Color": _Color = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
+                case "CacheDuration": _CacheDuration = value.ToInt(); break;
+                case "HitCount": _HitCount = value.ToInt(); break;
+                case "HeatScore": _HeatScore = value.ToDouble(); break;
+                case "LastHitTime": _LastHitTime = value.ToDateTime(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -258,6 +298,18 @@ public partial class SuggestedQuestion
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
+        /// <summary>缓存时长（分钟）。0=当天有效，-1=不缓存，正数=从更新时间起缓存N分钟</summary>
+        public static readonly Field CacheDuration = FindByName("CacheDuration");
+
+        /// <summary>命中次数。累计被用户提问的总次数</summary>
+        public static readonly Field HitCount = FindByName("HitCount");
+
+        /// <summary>热度分数。时间衰减得分，72小时半衰期EMA，用于欢迎页排序</summary>
+        public static readonly Field HeatScore = FindByName("HeatScore");
+
+        /// <summary>最近命中时间。最后一次被用户提问的时间戳</summary>
+        public static readonly Field LastHitTime = FindByName("LastHitTime");
+
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -305,6 +357,18 @@ public partial class SuggestedQuestion
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";
+
+        /// <summary>缓存时长（分钟）。0=当天有效，-1=不缓存，正数=从更新时间起缓存N分钟</summary>
+        public const String CacheDuration = "CacheDuration";
+
+        /// <summary>命中次数。累计被用户提问的总次数</summary>
+        public const String HitCount = "HitCount";
+
+        /// <summary>热度分数。时间衰减得分，72小时半衰期EMA，用于欢迎页排序</summary>
+        public const String HeatScore = "HeatScore";
+
+        /// <summary>最近命中时间。最后一次被用户提问的时间戳</summary>
+        public const String LastHitTime = "LastHitTime";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

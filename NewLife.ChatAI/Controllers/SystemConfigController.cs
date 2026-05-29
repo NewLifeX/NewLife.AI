@@ -17,9 +17,10 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
     public ActionResult<SystemConfigDto> GetConfig()
     {
 
-        // 从推荐问题表读取启用的问题，按编号倒序取最新12条
+        // 从推荐问题表读取启用的问题，按热度分数降序取最多12条（新建问题HeatScore=0时按Id降序兴排）
         var questions = SuggestedQuestion.FindAllCachedEnabled()
-            .OrderByDescending(q => q.Id)
+            .OrderByDescending(q => q.HeatScore)
+            .ThenByDescending(q => q.Id)
             .Take(12)
             .Select(q => new SuggestedQuestionDto
             {

@@ -183,15 +183,57 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     /// <param name="question">问题内容</param>
     /// <returns>匹配的推荐问题，未命中返回 null</returns>
     public static SuggestedQuestion? FindCachedTodayByQuestion(String question)
-        => Meta.Cache.FindAll(q => q.Enable && q.Question == question && q.MessageId > 0 && q.UpdateTime.Date == DateTime.Today).FirstOrDefault();
+    {
+        var now = DateTime.Now;
+        return Meta.Cache.FindAll(q => q.Enable && q.Question == question && q.MessageId > 0 && IsCacheValid(q, now)).FirstOrDefault();
+    }
 
     /// <summary>从实体缓存中查找启用且匹配指定问题的推荐问题。用于回写缓存时定位目标记录</summary>
     /// <param name="question">问题内容</param>
     /// <returns>匹配的推荐问题，未命中返回 null</returns>
     public static SuggestedQuestion? FindCachedByQuestion(String question)
         => Meta.Cache.FindAll(q => q.Enable && q.Question == question).FirstOrDefault();
+
+    /// <summary>判断推荐问题的缓存是否仍然有效。CacheDuration=-1永不缓存；0=当天有效；正数=从更新时间起N分钟内有效</summary>
+    /// <param name="q">推荐问题实体</param>
+    /// <param name="now">当前时间</param>
+    /// <returns>缓存是否有效</returns>
+    private static Boolean IsCacheValid(SuggestedQuestion q, DateTime now) => q.CacheDuration switch
+    {
+        -1 => false,
+        0 => q.UpdateTime.Date == now.Date,
+        _ => now < q.UpdateTime.AddMinutes(q.CacheDuration),
+    };
     #endregion
 
     #region 业务操作
+    // 72小时半衰期对应的EMA衰减系数 λ = ln(2) / 72
+    private const Double _heatDecayLambda = 0.009627; // ln(2)/72 ≈ 0.009627
+
+    /// <summary>记录一次命中，更新热度分数（EMA）和命中计数。使用静态SQL Update绕过TimeInterceptor，不刷新UpdateTime</summary>
+    public void RecordHit()
+    {
+        var now = DateTime.Now;
+        Double newScore;
+        if (LastHitTime == default)
+        {
+            newScore = 1.0;
+        }
+        else
+        {
+            var elapsedHours = (now - LastHitTime).TotalHours;
+            newScore = HeatScore * Math.Exp(-_heatDecayLambda * elapsedHours) + 1.0;
+        }
+
+        var newCount = HitCount + 1;
+
+        // 直接走SQL，绕过TimeInterceptor，确保UpdateTime（缓存内容写入时间）不被刷新
+        Update(_.HeatScore == newScore & _.HitCount == newCount & _.LastHitTime == now, _.Id == Id);
+
+        // 同步更新内存中的实体缓存字段值
+        HeatScore = newScore;
+        HitCount = newCount;
+        LastHitTime = now;
+    }
     #endregion
 }
