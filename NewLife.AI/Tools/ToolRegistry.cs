@@ -430,7 +430,13 @@ public class ToolRegistry : IToolProvider
         if (value == null) return null;
         var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
 
-        if (underlyingType == typeof(String)) return value.ToString();
+        if (underlyingType == typeof(String))
+        {
+            // LLM 可能将 JSON 对象/数组直接内联传入 String 参数，将其序列化为 JSON 字符串
+            if (value is IDictionary<String, Object?> || value is IList<Object?>)
+                return value.ToJson();
+            return value.ToString();
+        }
         if (underlyingType == typeof(Boolean)) return Convert.ToBoolean(value);
         if (underlyingType == typeof(Int32)) return Convert.ToInt32(value);
         if (underlyingType == typeof(Int64)) return Convert.ToInt64(value);
