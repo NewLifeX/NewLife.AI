@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.Collections;
@@ -46,6 +47,18 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>本次请求的工具可见性过滤集合。null 表示全量；空集合仅保留系统工具；非空集合保留系统工具 + 指定工具。
     /// 由 <see cref="GetMergedTools"/> 传入各 <see cref="IToolProvider.GetTools(ISet{String}?)"/>，实现会话级工具范围控制</summary>
     public ISet<String>? SelectedTools { get; set; }
+
+    private Int32 _failureThreshold = 5;
+    /// <summary>单 Provider 熔断失败阈值。连续失败达此数后触发熔断（Open），请求将返回降级错误而非继续调用。默认 5；设为 0 或负数时自动回退为 5</summary>
+    public Int32 FailureThreshold { get => _failureThreshold; set => _failureThreshold = value > 0 ? value : 5; }
+
+    private Int32 _cooldownSeconds = 60;
+    /// <summary>熔断冷却秒数。Open 状态持续此时长后允许一次 HalfOpen 探测，探测成功则恢复 Closed。默认 60</summary>
+    public Int32 CooldownSeconds { get => _cooldownSeconds; set => _cooldownSeconds = value > 0 ? value : 60; }
+
+    /// <summary>各 Provider 的熔断器实例（按引用相等性索引）</summary>
+    private readonly ConcurrentDictionary<IToolProvider, CircuitBreakerPolicy> _breakers = new();
+
     #endregion
 
     #region 方法
@@ -341,7 +354,27 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
             // tier == Allow：低风险工具直接放行，无需审批
 
-            var result = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
+            // 熔断检查：Open 状态直接降级，避免雪崩效应
+            var breaker = _breakers.GetOrAdd(provider!, _ => new CircuitBreakerPolicy(FailureThreshold, CooldownSeconds));
+            if (!breaker.TryAcquire())
+            {
+                var remaining = breaker.RemainingCooldownSeconds;
+                return ToolError.Create("CIRCUIT_OPEN", $"工具提供者暂时不可用（熔断中），预计 {remaining}s 后恢复。如需立即重试请联系管理员重置熔断器").ToJson();
+            }
+
+            String callResult;
+            try
+            {
+                callResult = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
+                breaker.RecordSuccess();
+            }
+            catch (Exception)
+            {
+                breaker.RecordFailure();
+                throw;
+            }
+
+            var result = callResult;
             span?.AppendTag(result, result.Length);
             return result!;
         }
