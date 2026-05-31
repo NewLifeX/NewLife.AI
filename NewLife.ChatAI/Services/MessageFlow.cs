@@ -874,16 +874,28 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
     }
 
-    /// <summary>将 <see cref="IChatContext.SystemSegments"/> 中的所有文本片段以 <c>"\n\n"</c> 拼接后追加到 system 消息末尾。
+    /// <summary>将 <see cref="IChatContext.SystemSegments"/>（中段）和 <see cref="IChatContext.TailSegments"/>（末段）
+    /// 中的所有文本片段以 <c>"\n\n"</c> 拼接后按顺序追加到 system 消息末尾。
+    /// 注入顺序：基础 System Prompt（固定头）→ SystemSegments（中段，记忆/图谱/技能）→ TailSegments（末段，RAG/痛觉）→ user 消息。
     /// 在所有 OnBefore 处理器执行完成后、核心 LLM 调用之前调用</summary>
     /// <param name="context">对话上下文</param>
     protected virtual void FlushSystemSegments(IChatContext context)
     {
-        if (context.SystemSegments.Count == 0) return;
+        var hasMiddle = context.SystemSegments.Count > 0;
+        var hasTail = context.TailSegments.Count > 0;
+        if (!hasMiddle && !hasTail) return;
 
-        var extra = String.Join("\n\n", context.SystemSegments);
         var messages = context.ContextMessages;
         var systemMsg = messages.FirstOrDefault(m => m.Role == "system");
+
+        // 构建追加内容（中段 + 末段按顺序拼接）
+        var parts = new List<String>(context.SystemSegments.Count + context.TailSegments.Count);
+        foreach (var s in context.SystemSegments)
+            parts.Add(s);
+        foreach (var s in context.TailSegments)
+            parts.Add(s);
+
+        var extra = String.Join("\n\n", parts);
         if (systemMsg != null)
         {
             var existing = systemMsg.Content as String ?? String.Empty;

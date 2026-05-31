@@ -168,6 +168,7 @@ public class PersistMessageHandlerTests
         public String? SystemPrompt { get; set; }
         public Action<String>? OnSystemReady { get; set; }
         public IList<String> SystemSegments { get; } = new List<String>();
+        public IList<String> TailSegments { get; } = new List<String>();
         public ISet<String> SelectedTools { get; } = new HashSet<String>();
         public ISet<String> AvailableToolNames { get; } = new HashSet<String>();
         public ChatOptions Options { get; set; } = new();
