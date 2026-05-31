@@ -114,7 +114,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
-                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]"
+                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径"
                 });
             }
 
@@ -276,7 +276,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
-                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(result) : $"[已渲染到客户端：{tc.Function.Name}]"
+                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(result) : $"[已渲染到客户端：{tc.Function.Name}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径"
                 });
 
                 // SSE 事件：Frontend 路由时发送完整结果，Llm-only 时发送空内容的完成信号
