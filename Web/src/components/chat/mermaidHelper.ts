@@ -41,11 +41,38 @@ function fixNewlinesInLabels(code: string): string {
 }
 
 /**
+ * 修复 LLM 将 <br/> 及追加文本写在节点标签括号之外的问题。
+ * LLM 有时生成 `NodeId[label]<br/>extra_text:::class`，
+ * `<br/>` 及其后的文字处于 `[...]` 括号外，被 Mermaid 解析器视为非法 token，
+ * 导致整行 parse 失败。统一收纳回括号内：`NodeId["label<br/>extra_text"]:::class`。
+ */
+function fixBrAfterNodeLabel(code: string): string {
+  return code.replace(
+    /\[([^\[\]"]+)\](<br\/>)([^:\n\[\]{}|]*)(:::[\w]+)?/g,
+    (_m, label, br, extra, cls) => `["${label}${br}${extra.trimEnd()}"]${cls ?? ''}`,
+  )
+}
+
+/**
+ * 修复 LLM 在方括号节点标签内嵌入双引号的问题。
+ * LLM 有时生成 `NodeId[选择"忘记密码"]`，双引号未在最外层（即非 `["..."]` 格式），
+ * Mermaid 解析器会把 `"` 解析为 STR token 开始，导致剩余内容报 parse 错误。
+ * 将标签内的 `"` 替换为 `'`：`NodeId[选择'忘记密码']`。
+ */
+function fixQuotesInBracketLabels(code: string): string {
+  // 匹配未以 " 开头的方括号标签（已用外层引号包裹的不处理）
+  return code.replace(
+    /\[([^"\[\]\n{}<>|][^\[\]\n{}<>]*)\]/g,
+    (m, label) => (label.includes('"') ? `[${label.replace(/"/g, "'")}]` : m),
+  )
+}
+
+/**
  * LLM 常把 Redis Key、占位符、模板变量写进 Mermaid 节点标签，例如：
  *   D[device:{id}:latest]
  * Mermaid 会把其中的 `{` 误判为菱形节点起始符，导致 parse 失败。
  *
- * 这里只在“已进入标签文本上下文”时转义花括号：
+ * 这里只在"已进入标签文本上下文"时转义花括号：
  * - 方括号节点标签 [...]
  * - 圆括号节点标签 (...)
  * - 边标签 |...|
@@ -54,10 +81,12 @@ function fixNewlinesInLabels(code: string): string {
  * 不处理顶层的 `{...}`，避免破坏合法的菱形节点语法。
  */
 export function normalizeMermaidCode(code: string): string {
-  // 先做正则预处理（顺序：dasharray → pipe in labels → newlines → 字符扫描）
+  // 先做正则预处理（顺序：dasharray → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
   code = fixClassDefStrokeDasharray(code)
   code = fixPipesInNodeLabels(code)
   code = fixNewlinesInLabels(code)
+  code = fixBrAfterNodeLabel(code)
+  code = fixQuotesInBracketLabels(code)
 
   // 字符级扫描：转义标签上下文内的 {}
   // 引号上下文（inQuoted）内，| [ ( ] ) 均为字面量，不做上下文切换
