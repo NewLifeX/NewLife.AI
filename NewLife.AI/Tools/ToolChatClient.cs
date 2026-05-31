@@ -443,6 +443,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             foreach (var t in options.Tools)
                 tools.Add(t);
         }
+
+        // 埋点：记录注入给 LLM 的工具名单和 schema 总字符长度，便于评估 token 消耗
+        if (tools.Count > 0)
+        {
+            var toolNames = String.Join(",", tools.Select(t => t.Function?.Name).Where(n => !n.IsNullOrEmpty()));
+            using var schemaSpan = Tracer?.NewSpan("ai:tool:schema", null, tools.Count);
+            schemaSpan?.AppendTag(toolNames);
+        }
+
         return (tools, toolMap, toolRoutingMap);
     }
 

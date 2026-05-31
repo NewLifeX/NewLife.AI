@@ -449,6 +449,19 @@ public class ToolRegistry : IToolProvider
         if (value is IDictionary<String, Object?> || value is IList<Object?>)
             return JsonHelper.Default.Convert(value, underlyingType);
 
+        // Qwen3.6 兼容：复杂类型参数收到 JSON 字符串时（模型将对象序列化为字符串传入），尝试二次解析后转换
+        // 约 15% 概率出现，直接返回字符串会导致类型不符、工具参数错误
+        if (value is String jsonStr)
+        {
+            try
+            {
+                var reparsed = JsonParser.Decode(jsonStr);
+                if (reparsed is IDictionary<String, Object?> || reparsed is IList<Object?>)
+                    return JsonHelper.Default.Convert(reparsed, underlyingType);
+            }
+            catch { }
+        }
+
         return value;
     }
 
