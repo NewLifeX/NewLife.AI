@@ -1,4 +1,5 @@
-﻿using NewLife.AI.Clients;
+﻿using System.Runtime.CompilerServices;
+using NewLife.AI.Clients;
 using NewLife.AI.Models;
 
 namespace NewLife.AI.Agents;
@@ -77,7 +78,7 @@ public class ConversableAgent : IAgent
     /// <param name="cancellationToken">取消令牌</param>
     public async IAsyncEnumerable<AgentMessage> HandleAsync(
         IList<AgentMessage> history,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (history == null) throw new ArgumentNullException(nameof(history));
 
