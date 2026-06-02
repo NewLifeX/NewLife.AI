@@ -516,7 +516,32 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             });
         }
 
+        // 启用提示缓存时，给 system prompt 和首条用户消息打上 cache_control 标记
+        if (setting.EnablePromptCache)
+            ApplyCacheControl(messages);
+
         return messages;
+    }
+
+    /// <summary>对消息列表添加缓存标记。给 system 消息和第一条 user 消息的 TextContent 设置 CacheControl="ephemeral"</summary>
+    /// <param name="messages">构建完成的上下文消息列表</param>
+    private static void ApplyCacheControl(IList<AiChatMessage> messages)
+    {
+        // 最多标记 2 个消息：system prompt + 首条用户消息，遵守 ≤4 个 cache_control 约束
+        foreach (var msg in messages)
+        {
+            if (msg.Role != "system" && msg.Role != "user") continue;
+
+            var text = msg.Content as String;
+            if (text.IsNullOrEmpty()) continue;
+
+            // 将 Content(String) 转为 Contents(TextContent)，确保 build 时输出 cache_control
+            msg.Contents = [new TextContent(text) { CacheControl = "ephemeral" }];
+            msg.Content = null;
+
+            // 只标记 system + 首条 user
+            if (msg.Role == "user") break;
+        }
     }
 
     /// <summary>执行 <see cref="IChatHandler"/> 三段式调用链：OnBefore（BeforeOrder 升序） → 核心阶段（含 LLM 调用与可选拦截器洋葱） → OnAfter（AfterOrder 升序）。

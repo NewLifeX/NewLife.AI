@@ -168,6 +168,12 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("功能开关")]
     [Description("启用用量统计")]
     public Boolean EnableUsageStats { get; set; } = true;
+
+    /// <summary>启用提示缓存。给 system prompt 和历史消息打上 cache_control 标记，
+    /// 兼容 DeepSeek/Qwen/OpenAI 等提供商的提示缓存功能</summary>
+    [Category("功能开关")]
+    [Description("启用提示缓存。给 system prompt 和历史消息打上 cache_control 标记，兼容 DeepSeek/Qwen/OpenAI 等提供商的提示缓存功能")]
+    public Boolean EnablePromptCache { get; set; } = true;
     #endregion
 
     #region 知识进化

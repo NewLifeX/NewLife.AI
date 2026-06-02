@@ -49,5 +49,9 @@ public interface IChatSetting
 
     /// <summary>启用函数调用</summary>
     Boolean EnableFunctionCalling { get; }
+
+    /// <summary>启用提示缓存。开启后给 system prompt 和历史消息打上 cache_control 标记，
+    /// 兼容 DeepSeek/Qwen/OpenAI 等提供商的提示缓存功能（缓存输入价格通常更低）</summary>
+    Boolean EnablePromptCache { get; }
     #endregion
 }
