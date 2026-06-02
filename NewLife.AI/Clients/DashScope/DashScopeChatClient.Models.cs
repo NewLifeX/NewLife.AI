@@ -18,6 +18,9 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("wan2.6-t2i", "文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "文生视频（万相2.7）", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "图生视频（万相2.7）", Vision = true, VideoGeneration = true, FunctionCalling = false)]
+// ===== TTS 语音合成模型 =====
+[AiClientModel("cosyvoice-v1", "CosyVoice V1", Audio = true, FunctionCalling = false)]
+[AiClientModel("cosyvoice-v2", "CosyVoice V2", Audio = true, FunctionCalling = false)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
 [AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true)]
@@ -101,13 +104,16 @@ public partial class DashScopeChatClient
             modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("paraformer", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("sambert", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("sensevoice", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWithIgnoreCase("qwen3-asr", "qwen3-tts", "qwen-tts", "qwen-voice"))
             return new AiProviderCapabilities(false, false, false, false);
+
+    // TTS 语音合成模型：cosyvoice* 支持音频能力
+    if (modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase))
+        return new AiProviderCapabilities(false, false, false, true);
 
         var thinking = false;
         var vision = false;

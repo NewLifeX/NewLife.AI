@@ -406,6 +406,22 @@ public class AiProviderTests
     }
 
     [Fact]
+    [DisplayName("DashScope_TTS模型_注册了cosyvoice-v1和v2")]
+    public void DashScope_HasTtsModels()
+    {
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
+        var cosyvoiceV1 = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v1");
+        Assert.NotNull(cosyvoiceV1);
+        Assert.Equal("CosyVoice V1", cosyvoiceV1!.DisplayName);
+        Assert.True(cosyvoiceV1.Capabilities!.SupportAudio);
+
+        var cosyvoiceV2 = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v2");
+        Assert.NotNull(cosyvoiceV2);
+        Assert.Equal("CosyVoice V2", cosyvoiceV2!.DisplayName);
+        Assert.True(cosyvoiceV2.Capabilities!.SupportAudio);
+    }
+
+    [Fact]
     [DisplayName("DashScope_QwenPlus模型_能力标记正确")]
     public void DashScope_QwenPlus_CapabilitiesCorrect()
     {
@@ -485,7 +501,10 @@ public class AiProviderTests
     [InlineData("wan2.1-i2v-plus", false, false, false, false, false, true)]
     // 非对话模型
     [InlineData("text-embedding-v4", false, false, false, false, false, false)]
-    [InlineData("cosyvoice-v3-plus", false, false, false, false, false, false)]
+    // TTS 语音合成模型
+    [InlineData("cosyvoice-v3-plus", false, false, false, true, false, false)]
+    [InlineData("cosyvoice-v2", false, false, false, true, false, false)]
+    [InlineData("cosyvoice-v1", false, false, false, true, false, false)]
     [InlineData("fun-asr-realtime", false, false, false, false, false, false)]
     // omni 全模态
     [InlineData("qwen-omni-turbo", false, false, true, true, false, false)]
