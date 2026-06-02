@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife;
@@ -1929,6 +1931,76 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response!.Messages!);
         var content = response.Messages[0].Message?.Content as String;
         Assert.False(String.IsNullOrEmpty(content));
+    }
+
+    #endregion
+
+    #region 语音合成（TTS）
+
+    [Fact]
+    [DisplayName("SpeechAsync_OapiVoice_映射为DashScope默认音色")]
+    public async Task SpeechAsync_OapiVoice_UseDashScopeDefaultVoice()
+    {
+        // 跳过，需配置 DashScope ApiKey
+        if (String.IsNullOrEmpty(_apiKey)) return;
+
+        // 先用原始 HttpClient 验证 API 是否可访问
+        var rawBody = """{"model":"cosyvoice-v3-flash","input":{"text":"你好。","voice":"longanyang","format":"wav","sample_rate":24000}}""";
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        var rawResp = await httpClient.PostAsync(
+            "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer",
+            new StringContent(rawBody, Encoding.UTF8, "application/json"));
+        var rawJson = await rawResp.Content.ReadAsStringAsync();
+        if (!rawResp.IsSuccessStatusCode)
+        {
+            // 原始 HTTP 请求也失败，说明是 API 配置问题
+            throw new InvalidOperationException($"原始 HTTP 请求也失败: {rawResp.StatusCode} {rawJson}");
+        }
+
+        // 原始 HTTP 请求成功，再用 SDK 测试（先用 curl 验证过的模型名）
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3-flash", // 使用 curl 示例中验证过的模型名
+            Input = "你好，欢迎使用语音合成服务。",
+            Voice = "alloy", // OpenAI 音色，应映射为 longanyang
+            ResponseFormat = "wav",
+        };
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3.5-flash";
+
+        var client = new DashScopeChatClient(option);
+        var audioBytes = await client.SpeechAsync(request);
+
+        Assert.NotNull(audioBytes);
+        Assert.True(audioBytes.Length > 100, "音频数据不应为空");
+    }
+
+    [Fact]
+    [DisplayName("SpeechAsync_DashScopeNativeVoice_直接传递")]
+    public async Task SpeechAsync_DashScopeNativeVoice_Works()
+    {
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3.5-flash",
+            Input = "今天天气真不错。",
+            Voice = "longanyang",
+            ResponseFormat = "wav",
+        };
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3.5-flash";
+
+        var client = new DashScopeChatClient(option);
+        var audioBytes = await client.SpeechAsync(request);
+
+        Assert.NotNull(audioBytes);
+        Assert.True(audioBytes.Length > 100, "音频数据不应为空");
     }
 
     #endregion

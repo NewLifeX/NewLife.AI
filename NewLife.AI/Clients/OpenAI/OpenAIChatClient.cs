@@ -94,7 +94,10 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     public virtual async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
     {
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/v1/audio/speech";
+        // 防止数据库中存储的端点已含 /v1 导致双路径（如 .../compatible-mode/v1/v1/audio/speech）
+        var url = endpoint.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)
+            ? endpoint + "/audio/speech"
+            : endpoint + "/v1/audio/speech";
 
         return await PostBinaryAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
     }

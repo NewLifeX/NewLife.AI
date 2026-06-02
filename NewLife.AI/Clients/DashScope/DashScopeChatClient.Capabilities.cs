@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.Log;
 using NewLife.Remoting;
 using NewLife.Serialization;
 
@@ -512,6 +513,116 @@ public partial class DashScopeChatClient
         resp.ErrorMessage = output?["message"] as String ?? dic["message"] as String;
 
         return resp;
+    }
+    #endregion
+
+    #region 语音合成（TTS）
+    /// <summary>语音合成（TTS）。DashScope CosyVoice 使用原生端点，返回音频字节流</summary>
+    /// <remarks>
+    /// 原生端点：POST /api/v1/services/audio/tts/SpeechSynthesizer<br/>
+    /// 请求格式：{"model":"cosyvoice-v3.5-flash","input":{"text":"...","voice":"...","format":"wav"}}<br/>
+    /// 响应格式：JSON → output.audio.url → 下载音频字节流<br/>
+    /// 官方文档：https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api
+    /// </remarks>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>音频字节流</returns>
+    public override async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
+    {
+        // DashScope 原生 TTS 走专属端点，不使用 OpenAI 兼容模式
+        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+
+        // 判断是否使用原生模式：端点含 /api/v1 或未显式指定兼容端点
+        var useNative = endpoint.Contains("/api/v1");
+
+        if (!useNative && !endpoint.Contains("/compatible-mode"))
+            useNative = IsNativeProtocol;
+
+        if (!useNative)
+        {
+            // 兼容模式：走基类 OpenAI 兼容逻辑
+            return await base.SpeechAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        // ===== 原生 DashScope TTS =====
+        var nativeUrl = endpoint.Contains("/services/audio/tts/SpeechSynthesizer")
+            ? endpoint
+            : endpoint.TrimEnd('/') + "/services/audio/tts/SpeechSynthesizer";
+
+        var format = "wav";
+        if (request.ResponseFormat != null)
+        {
+            format = request.ResponseFormat switch
+            {
+                "mp3" => "mp3",
+                "wav" => "wav",
+                "pcm" => "pcm",
+                _ => request.ResponseFormat,
+            };
+        }
+
+        // DashScope CosyVoice 使用中文音色名，需要将 OpenAI 兼容音色映射为默认值
+        // OpenAI 音色：alloy, echo, fable, nova, onyx, shimmer
+        var voice = request.Voice;
+        if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
+            voice = "longxiaochun_v3";
+
+        var body = new Dictionary<String, Object?>
+        {
+            ["model"] = request.Model ?? _options.Model ?? "cosyvoice-v3.5-flash",
+            ["input"] = new Dictionary<String, Object>
+            {
+                ["text"] = request.Input,
+                ["voice"] = voice,
+                ["format"] = format,
+                ["sample_rate"] = 24000,
+            },
+        };
+
+        using var span = Tracer?.NewSpan("ai:DashScopeTts", new { model = body["model"], format, voice = request.Voice });
+        try
+        {
+            var json = await PostAsync(nativeUrl, body, null, _options, cancellationToken).ConfigureAwait(false);
+
+            // 解析响应获取音频 URL
+            var dic = JsonParser.Decode(json);
+            if (dic == null)
+                throw new InvalidOperationException("无法解析 DashScope TTS 响应");
+
+            // 检查错误码
+            var code = dic["code"] as String;
+            if (!String.IsNullOrEmpty(code))
+            {
+                var message = dic["message"] as String ?? code;
+                throw new HttpRequestException($"[DashScope] TTS 错误 {code}: {message}");
+            }
+
+            var output = dic["output"] as IDictionary<String, Object>;
+            if (output == null)
+                throw new InvalidOperationException("DashScope TTS 响应缺少 output 字段");
+
+            var audio = output["audio"] as IDictionary<String, Object>;
+            if (audio == null)
+                throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio 字段");
+
+            var audioUrl = audio["url"] as String;
+            if (String.IsNullOrWhiteSpace(audioUrl))
+                throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio.url");
+
+            // 从 URL 下载音频字节流
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+#if NET5_0_OR_GREATER
+            var audioBytes = await httpClient.GetByteArrayAsync(audioUrl, cancellationToken).ConfigureAwait(false);
+#else
+            var audioBytes = await httpClient.GetByteArrayAsync(audioUrl).ConfigureAwait(false);
+#endif
+            return audioBytes;
+        }
+        catch (Exception ex)
+        {
+            span?.SetError(ex, null);
+            throw;
+        }
     }
     #endregion
 }

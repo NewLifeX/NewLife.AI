@@ -256,7 +256,10 @@ public class OpenAiProvider : AiProviderBase, IAiProvider, IAiChatProtocol, IEmb
     {
         options ??= new AiProviderOptions();
         var endpoint = options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/v1/audio/speech";
+        // 防止端点已含 /v1 导致双路径
+        var url = endpoint.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)
+            ? endpoint + "/audio/speech"
+            : endpoint + "/v1/audio/speech";
 
         var dic = new Dictionary<String, Object?>();
         dic["model"] = model ?? (Models.Length > 0 ? Models[0].Model : "tts-1");

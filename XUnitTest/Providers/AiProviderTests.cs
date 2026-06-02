@@ -410,14 +410,14 @@ public class AiProviderTests
     public void DashScope_HasTtsModels()
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
-        var flash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3.5-flash");
+        var flash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-flash");
         Assert.NotNull(flash);
-        Assert.Equal("CosyVoice V3.5 Flash", flash!.DisplayName);
+        Assert.Equal("CosyVoice V3 Flash", flash!.DisplayName);
         Assert.True(flash.Capabilities!.SupportAudio);
 
-        var plus = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3.5-plus");
+        var plus = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-plus");
         Assert.NotNull(plus);
-        Assert.Equal("CosyVoice V3.5 Plus", plus!.DisplayName);
+        Assert.Equal("CosyVoice V3 Plus", plus!.DisplayName);
         Assert.True(plus.Capabilities!.SupportAudio);
     }
 
@@ -502,9 +502,8 @@ public class AiProviderTests
     // 非对话模型
     [InlineData("text-embedding-v4", false, false, false, false, false, false)]
     // TTS 语音合成模型
-    [InlineData("cosyvoice-v3.5-plus", false, false, false, true, false, false)]
-    [InlineData("cosyvoice-v3.5-flash", false, false, false, true, false, false)]
     [InlineData("cosyvoice-v3-plus", false, false, false, true, false, false)]
+    [InlineData("cosyvoice-v3-flash", false, false, false, true, false, false)]
     [InlineData("fun-asr-realtime", false, false, false, false, false, false)]
     // omni 全模态
     [InlineData("qwen-omni-turbo", false, false, true, true, false, false)]
