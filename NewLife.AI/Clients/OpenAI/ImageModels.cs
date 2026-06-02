@@ -40,7 +40,7 @@ public class ImageGenerationRequest
 /// <summary>语音合成请求。兼容 OpenAI /v1/audio/speech 接口格式</summary>
 public class SpeechRequest
 {
-    /// <summary>TTS 模型编码。如 tts-1、cosyvoice-v2</summary>
+    /// <summary>TTS 模型编码。如 tts-1、cosyvoice-v3.5-flash</summary>
     public String Model { get; set; } = "tts-1";
 
     /// <summary>要合成的文本内容</summary>

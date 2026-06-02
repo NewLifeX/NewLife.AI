@@ -110,8 +110,8 @@ public class DashScopeProvider : OpenAiProvider
     /// <remarks>端点：POST /compatible-mode/v1/audio/speech</remarks>
     public AiModelInfo[] TtsModels { get; } =
     [
-        new("cosyvoice-v2", "CosyVoice V2", new(false, false, false, false)),
-        new("cosyvoice-v1", "CosyVoice V1", new(false, false, false, false)),
+        new("cosyvoice-v3.5-plus", "CosyVoice V3.5 Plus", new(false, false, false, true)),
+        new("cosyvoice-v3.5-flash", "CosyVoice V3.5 Flash", new(false, false, false, true)),
     ];
 
     /// <summary>文档重排序模型列表。GTE-Rerank 系列，通过 <see cref="RerankAsync"/> 调用</summary>

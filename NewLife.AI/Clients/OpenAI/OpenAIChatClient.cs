@@ -102,13 +102,28 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     /// <summary>语音合成（TTS）。兼容 OpenAI /v1/audio/speech 接口，返回音频字节流</summary>
     /// <param name="input">要合成的文本内容</param>
     /// <param name="voice">音色名称。如 longxiaochun、alloy</param>
-    /// <param name="model">TTS 模型编码。如 cosyvoice-v2、tts-1</param>
+    /// <param name="model">TTS 模型编码。如 cosyvoice-v3.5-flash、tts-1</param>
     /// <param name="responseFormat">音频格式。mp3（默认）/ wav / opus / flac / pcm</param>
     /// <param name="speed">语速倍率。0.25~4.0，默认 1.0</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>音频字节流（格式由 responseFormat 决定，默认 mp3）</returns>
     public virtual Task<Byte[]> SpeechAsync(String input, String voice, String? model = null, String? responseFormat = null, Double? speed = null, CancellationToken cancellationToken = default)
         => SpeechAsync(new SpeechRequest { Input = input, Voice = voice, Model = model ?? "tts-1", ResponseFormat = responseFormat, Speed = speed }, cancellationToken);
+
+    /// <summary>流式语音合成。以异步枚举方式逐段返回音频字节流，支持边生成边播放</summary>
+    /// <remarks>
+    /// 暂未实现，默认抛出 <see cref="NotSupportedException"/>。
+    /// DashScope CosyVoice 通过 WebSocket（wss://dashscope.aliyuncs.com/api-ws/v1/inference）实现流式合成，
+    /// 详见 Doc/《CosyVoice WebSocket 流式合成.md》。
+    /// OpenAI 兼容服务商通过 SSE 分块 /v1/audio/speech?stream=true 实现。
+    /// </remarks>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>逐段返回音频字节分片</returns>
+    public virtual IAsyncEnumerable<Byte[]> SpeechStreamAsync(SpeechRequest request, CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException($"[{nameof(ISpeechClient)}] 流式语音合成暂未实现");
+    }
     #endregion
 
     #region 文生视频

@@ -19,8 +19,8 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("wan2.7-t2v", "文生视频（万相2.7）", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "图生视频（万相2.7）", Vision = true, VideoGeneration = true, FunctionCalling = false)]
 // ===== TTS 语音合成模型 =====
-[AiClientModel("cosyvoice-v1", "CosyVoice V1", Audio = true, FunctionCalling = false)]
-[AiClientModel("cosyvoice-v2", "CosyVoice V2", Audio = true, FunctionCalling = false)]
+[AiClientModel("cosyvoice-v3.5-flash", "CosyVoice V3.5 Flash", Audio = true, FunctionCalling = false)]
+[AiClientModel("cosyvoice-v3.5-plus", "CosyVoice V3.5 Plus", Audio = true, FunctionCalling = false)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
 [AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true)]
