@@ -76,8 +76,8 @@
   <ItemGroup>
     <PackageReference Include="NewLife.Cube.Core" Version="6.10.2026.404" />
     <PackageReference Include="NewLife.Holiday" Version="1.4.2026.206" />
-    <PackageReference Include="NewLife.MySql" Version="1.1.2026.501" />
-    <PackageReference Include="NewLife.XCode" Version="11.26.2026.509" />
+    <PackageReference Include="NewLife.MySql" Version="1.2.2026.601" />
+    <PackageReference Include="NewLife.XCode" Version="11.27.2026.601" />
   </ItemGroup>
 
   <ItemGroup>

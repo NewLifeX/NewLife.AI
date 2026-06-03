@@ -343,6 +343,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         if (!resp.IsSuccessStatusCode)
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (errBody.IsNullOrEmpty()) errBody = resp.ReasonPhrase;
             resp.Dispose();
             throw new ApiException((Int32)resp.StatusCode, errBody);
             //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
@@ -369,8 +370,8 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         if (!resp.IsSuccessStatusCode)
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (errBody.IsNullOrEmpty()) errBody = resp.ReasonPhrase;
             throw new ApiException((Int32)resp.StatusCode, errBody);
-            //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
     }
