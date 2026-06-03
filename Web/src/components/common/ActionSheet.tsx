@@ -50,7 +50,7 @@ export function ActionSheet({ open, onClose, items, position }: ActionSheetProps
     <div className="fixed inset-0 z-[9998] bg-black/20" onClick={onClose}>
       <div
         ref={sheetRef}
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden min-w-[180px] animate-in fade-in slide-in-from-bottom-2 duration-150"
+        className="bg-[var(--color-surface-0)] rounded-xl shadow-modal border border-[var(--color-border-subtle)] overflow-hidden min-w-[180px] animate-in fade-in slide-in-from-bottom-2 duration-150"
         style={style}
         onClick={(e) => e.stopPropagation()}
       >
@@ -65,8 +65,8 @@ export function ActionSheet({ open, onClose, items, position }: ActionSheetProps
               'flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors',
               item.danger
                 ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
-              i < items.length - 1 && 'border-b border-gray-100 dark:border-gray-700',
+                : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)]',
+              i < items.length - 1 && 'border-b border-[var(--color-border-subtle)]',
             )}
           >
             <Icon name={item.icon} size="base" />

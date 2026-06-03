@@ -47,9 +47,9 @@ function ConversationIcon({ conv }: { conv: Conversation }) {
     )
   }
   if (conv.isPinned) {
-    return <Icon name="smart_toy" size="lg" className="text-gray-500" />
+    return <Icon name="smart_toy" size="lg" className="text-[var(--color-text-secondary)]" />
   }
-  return <Icon name="chat_bubble_outline" size="lg" className="text-gray-400" />
+  return <Icon name="chat_bubble_outline" size="lg" className="text-[var(--color-text-tertiary)]" />
 }
 
 export function ConversationList({
@@ -151,18 +151,18 @@ export function ConversationList({
     <div ref={listRef} onScroll={handleListScroll} className={cn('flex-1 overflow-y-auto custom-scrollbar px-3 pb-2', className)}>
       {conversations.length > 5 && (
         <div className="relative px-1 mb-2">
-          <Icon name="search" size="sm" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <Icon name="search" size="sm" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] pointer-events-none" />
           <input
             ref={searchRef}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('sidebar.searchPlaceholder')}
-            className="w-full pl-8 pr-7 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-primary/30 rounded-lg outline-none text-gray-700 dark:text-gray-300 placeholder-gray-400"
+            className="w-full pl-8 pr-7 py-1.5 text-xs bg-[var(--color-surface-2)] border border-transparent focus:border-[color:var(--color-brand-500)]/30 rounded-lg outline-none text-[var(--color-text-primary)] placeholder-[color:var(--color-text-tertiary)]"
           />
           {searchQuery && (
             <button
               onClick={() => { setSearchQuery(''); searchRef.current?.focus() }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
             >
               <Icon name="close" size="xs" />
             </button>
@@ -170,14 +170,14 @@ export function ConversationList({
         </div>
       )}
       {grouped.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+        <div className="flex flex-col items-center justify-center py-8 text-[var(--color-text-tertiary)]">
           <Icon name={searchQuery ? 'search_off' : 'chat_bubble_outline'} size="xl" className="mb-2 opacity-50" />
           <span className="text-xs">{searchQuery ? t('sidebar.noResults') : t('sidebar.empty')}</span>
         </div>
       )}
       {grouped.map(({ group, items }) => (
         <div key={group}>
-          <div className="text-xs text-gray-400 px-3 py-2 font-medium">{t(groupLabelKey[group])}</div>
+          <div className="text-xs text-[var(--color-text-tertiary)] px-3 py-2 font-medium">{t(groupLabelKey[group])}</div>
           <ul className="space-y-0.5">
             {items.map((conv) => {
               const isActive = conv.id === activeId
@@ -188,8 +188,8 @@ export function ConversationList({
                     className={cn(
                       'group flex items-center space-x-2 px-3 py-2 rounded-lg text-sm w-full relative',
                       isActive
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50',
+                        ? 'bg-[var(--color-surface-1)] text-[var(--color-text-primary)] font-medium'
+                        : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)]',
                     )}
                   >
                     <button
@@ -208,7 +208,7 @@ export function ConversationList({
                           }}
                           autoFocus
                           onClick={(e) => e.stopPropagation()}
-                          className="flex-1 min-w-0 bg-white dark:bg-gray-700 border border-primary/40 rounded px-1 py-0.5 text-sm outline-none"
+                          className="flex-1 min-w-0 bg-[var(--color-surface-0)] border border-[color:var(--color-brand-500)]/40 rounded px-1 py-0.5 text-sm outline-none"
                         />
                       ) : (
                         <span className="truncate">{conv.title}</span>
@@ -255,7 +255,7 @@ export function ConversationList({
                         ) : onDelete && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(conv.id) }}
-                            className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
+                            className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-[var(--color-text-tertiary)] hover:text-red-500 transition-colors"
                             title={t('sidebar.delete')}
                           >
                             <Icon name="delete" size="sm" />
@@ -266,7 +266,7 @@ export function ConversationList({
 
                     {!isEditing && conv.isPinned && (
                       <span className="absolute right-3 rotate-45 transform group-hover:hidden">
-                        <Icon name="push_pin" variant="filled" size="xs" className="text-gray-400" />
+                        <Icon name="push_pin" variant="filled" size="xs" className="text-[var(--color-text-tertiary)]" />
                       </span>
                     )}
                   </div>
@@ -277,7 +277,7 @@ export function ConversationList({
         </div>
       ))}
       {searchQuery.trim() && messageResults.length > 0 && (
-        <div className="mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
+        <div className="mt-2 border-t border-[var(--color-border-subtle)] pt-2">
           <div className="text-xs text-gray-400 px-3 py-1 font-medium">{t('sidebar.messageResults')}</div>
           <ul className="space-y-0.5">
             {messageResults.map((msg) => (

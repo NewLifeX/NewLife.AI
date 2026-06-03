@@ -175,18 +175,13 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             {featureKeys.map(([key, labelKey]) => (
-              <label
+              <div
                 key={key}
-                className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                className="flex items-center gap-2"
               >
-                <input
-                  type="checkbox"
-                  checked={form[key]}
-                  onChange={(e) => setField(key, e.target.checked)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary/40"
-                />
-                {t(labelKey)}
-              </label>
+                <Toggle size="sm" checked={form[key]} onChange={(v) => setField(key, v)} />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t(labelKey)}</span>
+              </div>
             ))}
           </div>
         </div>

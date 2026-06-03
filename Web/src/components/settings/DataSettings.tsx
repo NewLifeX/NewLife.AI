@@ -94,10 +94,10 @@ export function DataSettings({ onDataCleared, allowTraining = false, onAllowTrai
 
         <div className="flex items-center justify-between">
           <div className="flex-1 mr-4">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            <div className="text-sm font-medium text-[var(--color-text-primary)]">
               {t('settings.exportData')}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">
               {t('settings.exportDataDesc')}
             </div>
           </div>
@@ -114,7 +114,7 @@ export function DataSettings({ onDataCleared, allowTraining = false, onAllowTrai
 
         <div className="flex items-center justify-between">
           <div className="flex-1 mr-4">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            <div className="text-sm font-medium text-[var(--color-text-primary)]">
               {t('settings.importData')}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -152,7 +152,7 @@ export function DataSettings({ onDataCleared, allowTraining = false, onAllowTrai
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="px-3 py-1.5 text-sm rounded-lg border border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-500)]/50"
               >
                 {t('common.cancel')}
               </button>

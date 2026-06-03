@@ -57,23 +57,23 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
         onClick={() => setOpen(!open)}
         className={cn(
           'flex items-center space-x-1.5',
-          'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-          'rounded-full px-3 py-1.5 shadow-sm',
-          'hover:border-blue-400 dark:hover:border-blue-500 transition-colors',
+          'bg-[var(--color-surface-0)] border border-[var(--color-border-default)]',
+          'rounded-full px-3 py-1.5 shadow-soft',
+          'hover:border-[color:var(--color-brand-300)] transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           className,
         )}
       >
         <Icon name={icon} variant="symbols" size="lg" className="text-blue-500" />
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{config.label}</span>
-        <Icon name={open ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size="base" className="text-gray-400" />
+        <span className="text-xs font-medium text-[var(--color-text-primary)]">{config.label}</span>
+        <Icon name={open ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size="base" className="text-[var(--color-text-tertiary)]" />
       </button>
 
       {open && popupPos && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
           <div
-            className="fixed w-56 py-1 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 animate-fade-in z-[9999]"
+            className="fixed w-56 py-1 rounded-xl shadow-menu border border-[var(--color-border-subtle)] bg-[var(--color-surface-0)] animate-fade-in z-[9999]"
             style={{ bottom: popupPos.bottom, left: popupPos.left }}
           >
             {modes.map((m) => {
@@ -86,25 +86,25 @@ export function ThinkingModeToggle({ mode, onChange, className }: ThinkingModeTo
                   className={cn(
                     'w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors',
                     active
-                      ? 'bg-blue-50 dark:bg-blue-900/30'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50',
+                      ? 'bg-[color:var(--color-brand-50)]'
+                      : 'hover:bg-[var(--color-surface-2)]',
                   )}
                 >
                   <Icon
                     name={modeIcons[m]}
                     variant="symbols"
                     size="lg"
-                    className={cn('mt-0.5', active ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500')}
+                    className={cn('mt-0.5', active ? 'text-[color:var(--color-brand-500)]' : 'text-[var(--color-text-tertiary)]')}
                   />
                   <div className="flex-1 min-w-0">
                     <div className={cn(
                       'text-xs font-medium',
-                      active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200',
+                      active ? 'text-[color:var(--color-brand-700)] dark:text-[color:var(--color-brand-400)]' : 'text-[var(--color-text-primary)]',
                     )}>
                       {c.label}
                       {active && <Icon name="check" size="sm" className="inline-block ml-1 text-blue-500" />}
                     </div>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-snug mt-0.5">{c.description}</p>
+                    <p className="text-[11px] text-[var(--color-text-tertiary)] leading-snug mt-0.5">{c.description}</p>
                   </div>
                 </button>
               )

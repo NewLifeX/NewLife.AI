@@ -57,8 +57,8 @@ export function SharePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center text-gray-400">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-1)]">
+        <div className="flex items-center text-[var(--color-text-tertiary)]">
           <Icon name="hourglass_empty" className="animate-spin mr-2" />
           {t('common.loading')}
         </div>
@@ -68,16 +68,16 @@ export function SharePage() {
 
   if (notFound || !data) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Icon name="link_off" size="xl" className="text-gray-300 dark:text-gray-600 mb-4" />
-        <h1 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{t('sharePage.notFound')}</h1>
-        <p className="text-gray-500 dark:text-gray-400">{t('sharePage.notFoundDesc')}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-surface-1)]">
+        <Icon name="link_off" size="xl" className="text-[var(--color-text-muted)] mb-4" />
+        <h1 className="text-xl font-bold text-[var(--color-text-secondary)] mb-2">{t('sharePage.notFound')}</h1>
+        <p className="text-[var(--color-text-secondary)]">{t('sharePage.notFoundDesc')}</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[var(--color-surface-1)]">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">

@@ -104,10 +104,10 @@ export function ChatInput({
       <div className="w-full max-w-3xl mx-auto relative group">
         <div
           className={cn(
-            'bg-white dark:bg-gray-800',
-            'border border-gray-200 dark:border-gray-700',
+            'bg-[var(--color-surface-0)]',
+            'border border-[var(--color-border-default)]',
             'group-focus-within:border-primary/40 dark:group-focus-within:border-primary/40',
-            'rounded-2xl shadow-input dark:shadow-none',
+            'rounded-2xl shadow-input',
             'transition-all duration-200 p-3 pb-2 relative',
           )}
         >
@@ -156,7 +156,7 @@ export function ChatInput({
                     ? 'bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900'
                     : value.trim() && !isOverLimit
                       ? 'bg-primary hover:bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed',
+                      : 'bg-[var(--color-surface-2)] text-[var(--color-text-tertiary)] cursor-not-allowed',
                 )}
                 title={isGenerating ? t('chat.stopGen') : undefined}
                 aria-label={isGenerating ? t('chat.stopGen') : undefined}
@@ -174,7 +174,7 @@ export function ChatInput({
         )}
 
         <div className="text-center mt-2">
-          <p className="text-[10px] text-gray-400">{t('common.aiDisclaimer')}</p>
+          <p className="text-[10px] text-[var(--color-text-tertiary)]">{t('common.aiDisclaimer')}</p>
         </div>
       </div>
     </div>

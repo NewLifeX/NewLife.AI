@@ -104,12 +104,12 @@ export function MessageBubble({
       <div className={cn('flex flex-col items-end mb-6 group', className)}>
         <div className="max-w-[75%] relative">
           {isEditing ? (
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
+            <div className="bg-[var(--color-surface-2)] rounded-2xl rounded-tr-sm px-4 py-3 shadow-soft">
               <textarea
                 ref={editRef}
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="w-full bg-transparent text-gray-900 dark:text-gray-100 text-[15px] leading-7 resize-none outline-none min-h-[60px]"
+                className="w-full bg-transparent text-[var(--color-text-primary)] text-[15px] leading-7 resize-none outline-none min-h-[60px]"
                 rows={Math.max(2, editValue.split('\n').length)}
                 autoFocus
                 onKeyDown={(e) => {
@@ -123,14 +123,14 @@ export function MessageBubble({
               <div className="flex justify-end space-x-2 mt-2">
                 <button
                   onClick={onEditCancel}
-                  className="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  className="px-3 py-1 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-md hover:bg-[var(--color-surface-2)] transition-colors"
                 >
                   {t('common.cancel')}
                 </button>
                 {onEditSaveOnly && (
                   <button
                     onClick={() => editValue.trim() && onEditSaveOnly(editValue.trim())}
-                    className="px-3 py-1 text-xs text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50"
+                    className="px-3 py-1 text-xs text-[var(--color-text-primary)] border border-[var(--color-border-default)] hover:bg-[var(--color-surface-2)] rounded-md transition-colors disabled:opacity-50"
                     disabled={!editValue.trim()}
                   >
                     {t('common.save')}
@@ -147,7 +147,7 @@ export function MessageBubble({
             </div>
           ) : (
             <>
-              <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3.5 leading-7 shadow-sm" style={{ fontSize: 'var(--chat-font-size, 16px)' }}>
+              <div className="bg-[var(--color-surface-2)] text-[var(--color-text-primary)] rounded-2xl rounded-tr-sm px-5 py-3.5 leading-7 shadow-soft" style={{ fontSize: 'var(--chat-font-size, 16px)' }}>
                 {content}
               </div>
               {attachInfos.length > 0 && (
@@ -157,7 +157,7 @@ export function MessageBubble({
                       <button
                         key={info.id}
                         onClick={() => setPreviewUrl(info.url)}
-                        className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 hover:opacity-80 transition-opacity"
+                        className="w-20 h-20 rounded-lg overflow-hidden border border-[var(--color-border-default)] hover:opacity-80 transition-opacity"
                       >
                         <img src={info.url} alt={info.fileName} className="w-full h-full object-cover" />
                       </button>

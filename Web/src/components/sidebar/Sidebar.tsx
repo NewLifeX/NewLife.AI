@@ -59,7 +59,7 @@ export function Sidebar({
     <aside
       className={cn(
         'w-[260px] h-full bg-sidebar-light dark:bg-sidebar-dark',
-        'flex flex-col border-r border-gray-100 dark:border-gray-800',
+        'flex flex-col border-r border-[var(--color-border-subtle)]',
         'flex-shrink-0 relative z-20',
         className,
       )}
@@ -74,7 +74,7 @@ export function Sidebar({
         {onToggle && (
           <button
             onClick={onToggle}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded-md transition-colors"
+            className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] rounded-md transition-colors"
             title={t('sidebar.collapse')}
           >
             <Icon name="menu_open" variant="outlined" size="lg" />

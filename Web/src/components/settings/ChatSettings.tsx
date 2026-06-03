@@ -64,7 +64,7 @@ export function ChatSettings({
         {/* 4.2.1 发送快捷键 */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.sendShortcut')}</div>
+            <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('settings.sendShortcut')}</div>
           </div>
           <Select
             options={shortcutOptions}
@@ -79,8 +79,8 @@ export function ChatSettings({
         {/* 4.2.2 默认模型 */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.defaultModel')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.defaultModelDesc')}</div>
+            <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('settings.defaultModel')}</div>
+            <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">{t('settings.defaultModelDesc')}</div>
           </div>
           <Select options={modelOptions} value={String(defaultModel)} onChange={(v) => onDefaultModelChange(Number(v))} className="w-48" />
         </div>
@@ -90,7 +90,7 @@ export function ChatSettings({
         {/* 默认思考模式 */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.defaultThinkingMode')}</div>
+            <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('settings.defaultThinkingMode')}</div>
           </div>
           <Select
             options={localThinkingOptions}

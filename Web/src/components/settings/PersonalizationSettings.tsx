@@ -35,7 +35,7 @@ export function PersonalizationSettings({
 
   return (
     <div className="mb-10">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+      <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-6 flex items-center">
         <span className="bg-pink-100 dark:bg-pink-900/40 text-pink-600 p-1 rounded mr-3">
           <Icon name="auto_awesome" variant="filled" size="lg" />
         </span>
@@ -44,15 +44,15 @@ export function PersonalizationSettings({
       <div className="space-y-6">
         {/* AI 称呼 */}
         <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('personalization.nickname')}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{t('personalization.nicknameDesc')}</div>
+          <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('personalization.nickname')}</div>
+          <div className="text-xs text-[var(--color-text-tertiary)]">{t('personalization.nicknameDesc')}</div>
           <input
             type="text"
             value={nickname}
             onChange={(e) => onNicknameChange(e.target.value)}
             maxLength={50}
             placeholder={t('personalization.nicknamePlaceholder')}
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-0)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-500)]/50"
           />
         </div>
 
@@ -60,8 +60,8 @@ export function PersonalizationSettings({
 
         {/* 用户背景信息 */}
         <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('personalization.userBackground')}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{t('personalization.userBackgroundDesc')}</div>
+          <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('personalization.userBackground')}</div>
+          <div className="text-xs text-[var(--color-text-tertiary)]">{t('personalization.userBackgroundDesc')}</div>
           <div className="relative">
             <textarea
               value={userBackground}
@@ -69,9 +69,9 @@ export function PersonalizationSettings({
               rows={4}
               maxLength={500}
               placeholder={t('personalization.userBackgroundPlaceholder')}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-0)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-500)]/50 resize-none"
             />
-            <span className="absolute bottom-2 right-3 text-xs text-gray-400">{userBackground.length}/500</span>
+            <span className="absolute bottom-2 right-3 text-xs text-[var(--color-text-tertiary)]">{userBackground.length}/500</span>
           </div>
         </div>
 
@@ -79,8 +79,8 @@ export function PersonalizationSettings({
 
         {/* 回复风格 */}
         <div className="space-y-3">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('personalization.responseStyle')}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{t('personalization.responseStyleDesc')}</div>
+          <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('personalization.responseStyle')}</div>
+          <div className="text-xs text-[var(--color-text-tertiary)]">{t('personalization.responseStyleDesc')}</div>
           <div className="grid grid-cols-2 gap-3">
             {styles.map((s) => (
               <button
@@ -110,8 +110,8 @@ export function PersonalizationSettings({
 
         {/* 自定义指令 */}
         <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('personalization.customInstructions')}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{t('personalization.customInstructionsDesc')}</div>
+          <div className="text-sm font-medium text-[var(--color-text-primary)]">{t('personalization.customInstructions')}</div>
+          <div className="text-xs text-[var(--color-text-tertiary)]">{t('personalization.customInstructionsDesc')}</div>
           <div className="relative">
             <textarea
               value={systemPrompt}

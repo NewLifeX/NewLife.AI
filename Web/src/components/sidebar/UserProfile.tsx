@@ -38,15 +38,15 @@ export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onSyst
   }
 
   return (
-    <div ref={containerRef} className={cn('p-3 border-t border-gray-100 dark:border-gray-800 relative', className)}>
+    <div ref={containerRef} className={cn('p-3 border-t border-[var(--color-border-subtle)] relative', className)}>
       {/* 弹出菜单 */}
       {open && (
-        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 z-50">
+        <div className="absolute bottom-full left-3 right-3 mb-1 bg-[var(--color-surface-0)] border border-[var(--color-border-subtle)] rounded-xl shadow-menu py-1 z-50">
           <button
             onClick={() => handleMenuItem(onSettingsClick)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mx-0"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-2)] rounded-lg mx-0"
           >
-            <Icon name="settings" size="base" className="text-gray-400 dark:text-gray-500" />
+            <Icon name="settings" size="base" className="text-[var(--color-text-tertiary)]" />
             {t('menu.settings')}
           </button>
           {isSystem && (
@@ -54,7 +54,7 @@ export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onSyst
               onClick={() => handleMenuItem(onSystemSettingsClick)}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
-              <Icon name="tune" size="base" className="text-gray-400 dark:text-gray-500" />
+              <Icon name="tune" size="base" className="text-[var(--color-text-tertiary)]" />
               {t('menu.systemSettings')}
             </button>
           )}
@@ -63,7 +63,7 @@ export function UserProfile({ name, avatarUrl, isSystem, onSettingsClick, onSyst
               onClick={() => handleMenuItem(onAdminClick)}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
-              <Icon name="admin_panel_settings" size="base" className="text-gray-400 dark:text-gray-500" />
+              <Icon name="admin_panel_settings" size="base" className="text-[var(--color-text-tertiary)]" />
               {t('menu.admin')}
             </button>
           )}
