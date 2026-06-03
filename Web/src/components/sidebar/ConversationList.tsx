@@ -186,7 +186,7 @@ export function ConversationList({
                 <li key={conv.id}>
                   <div
                     className={cn(
-                      'group flex items-center space-x-2 px-3 py-2 rounded-lg text-sm w-full relative transition-colors',
+                      'group flex items-center space-x-2 px-3 py-2 rounded-lg text-sm w-full relative',
                       isActive
                         ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50',
@@ -216,7 +216,7 @@ export function ConversationList({
                     </button>
 
                     {!isEditing && (
-                      <div className="hidden group-hover:flex items-center space-x-0.5 flex-shrink-0">
+                      <div className="flex opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto items-center space-x-0.5 flex-shrink-0">
                         {onPin && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onPin(conv.id, !conv.isPinned) }}
