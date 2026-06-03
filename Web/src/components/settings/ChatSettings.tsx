@@ -54,7 +54,7 @@ export function ChatSettings({
 
   return (
     <div className="mb-10">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+      <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-6 flex items-center">
         <span className="bg-purple-100 dark:bg-purple-900/40 text-purple-600 p-1 rounded mr-3">
           <Icon name="chat" variant="filled" size="lg" />
         </span>

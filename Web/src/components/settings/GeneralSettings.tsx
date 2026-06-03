@@ -68,7 +68,7 @@ export function GeneralSettings({
   const { t } = useTranslation()
   return (
     <div className="mb-10">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+      <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-6 flex items-center">
         <span className="bg-blue-100 dark:bg-blue-900/40 text-primary p-1 rounded mr-3">
           <Icon name="tune" variant="filled" size="lg" />
         </span>
@@ -83,10 +83,10 @@ export function GeneralSettings({
           <Select options={languageOptions} value={language} onChange={onLanguageChange} className="w-40" />
         </div>
 
-        <div className="border-b border-gray-100 dark:border-gray-800" />
+        <div className="border-b border-[var(--color-border-subtle)]" />
 
         <div>
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">{t('settings.theme')}</div>
+          <div className="text-sm font-medium text-[var(--color-text-primary)] mb-3">{t('settings.theme')}</div>
           <div className="grid grid-cols-3 gap-4">
             <ThemeCard active={theme === 'light'} onClick={() => onThemeChange('light')} label={t('settings.themeLight')}>
               <div className="absolute inset-x-2 top-2 bottom-0 bg-white rounded-t-lg shadow-sm">

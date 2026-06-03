@@ -12,6 +12,7 @@ import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
 import { ToastContainer } from '@/components/common/Toast'
+import { applyBrandTheme } from '@/lib/theme'
 
 function ChatApp() {
   const { conversationId } = useParams<{ conversationId: string }>()
@@ -112,6 +113,7 @@ function ChatApp() {
           document.title = cfg.siteTitle
           setSuggestedQuestions(cfg.suggestedQuestions)
           if (cfg.welcomeMessage) setWelcomeMessage(cfg.welcomeMessage)
+          applyBrandTheme(cfg.themeColor, cfg.brandGradient)
         })
         .catch(() => {}),
     ]).finally(() => setAppReady(true))

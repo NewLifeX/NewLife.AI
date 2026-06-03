@@ -721,6 +721,10 @@ export interface SuggestedQuestion {
 export interface SystemConfig {
   appName: string
   siteTitle: string
+  /** 品牌主色 HEX。空值时前端使用默认 #5B5BFF */
+  themeColor?: string
+  /** 品牌渐变（两个 HEX 逗号分隔，如 "#5B5BFF,#8B5CF6"）。空值时使用默认蓝紫渐变 */
+  brandGradient?: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage?: string
   /** 分享链接默认有效期（分钟），0 表示永不过期 */

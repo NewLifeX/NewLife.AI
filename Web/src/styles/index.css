@@ -3,10 +3,39 @@
 @plugin "@tailwindcss/typography";
 @import "highlight.js/styles/github-dark.min.css";
 
+/* =============================================================================
+ * NewLife · 星语 UI 规范 设计系统
+ * 主色：#5B5BFF（蓝紫）  辅色：#8B5CF6（紫）
+ * 风格：玻璃拟态 + 渐变高光 + 微动效
+ * ============================================================================= */
+
 @theme {
-  --color-primary: #0057ff;
+  /* ── 品牌色阶（动态可被 SystemConfig 覆盖） ─────────────────────────── */
+  --color-brand-50: #eef0ff;
+  --color-brand-100: #dee1ff;
+  --color-brand-200: #c2c6ff;
+  --color-brand-300: #9ea3ff;
+  --color-brand-400: #7a7eff;
+  --color-brand-500: #5b5bff;
+  --color-brand-600: #4a4ae6;
+  --color-brand-700: #3b3bbf;
+  --color-brand-800: #2f2f99;
+  --color-brand-900: #25257a;
+
+  --color-accent-50: #f5f0ff;
+  --color-accent-100: #ebe0ff;
+  --color-accent-300: #c4a3ff;
+  --color-accent-400: #a87bff;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7a3ee6;
+  --color-accent-700: #6529c2;
+
+  /* ── 品牌色 Tailwind 工具类快捷支持 ── */
+  --color-primary: var(--color-brand-500);
   --color-primary-hover: #004ad9;
   --color-primary-light: #e6f0ff;
+
+  /* ── 兼容旧变量 ── */
   --color-background-light: #ffffff;
   --color-background-dark: #18181b;
   --color-sidebar-light: #f9f9fa;
@@ -15,30 +44,44 @@
   --color-input-border: #e5e7eb;
   --color-input-focus: #3b82f6;
 
-  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-mono: "Consolas", "Monaco", "Courier New", monospace;
+  /* ── 字体 ── */
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", "Monaco", "Courier New", monospace;
 
+  /* ── 圆角 ── */
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
 
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+  /* ── 阴影体系 ── */
+  --shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.04);
   --shadow-input: 0 4px 20px rgba(0, 0, 0, 0.08);
-  --shadow-modal: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
-  --shadow-menu: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
-  --shadow-message: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-tooltip: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.3);
+  --shadow-modal: 0 24px 60px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --shadow-menu: 0 14px 40px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --shadow-message: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-tooltip: 0 6px 18px -4px rgba(15, 23, 42, 0.18);
+  --shadow-glow: 0 0 0 4px rgba(91, 91, 255, 0.18);
+  --shadow-brand-glow: 0 8px 24px -8px rgba(91, 91, 255, 0.45), 0 2px 6px rgba(91, 91, 255, 0.18);
+
+  /* ── 动效曲线 / 时长 ── */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
 
   --animate-cursor-blink: blink 1s step-end infinite;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-slide-up: slideUpFade 0.2s ease-out forwards;
-  --animate-fade-in: fadeIn 0.15s ease-out;
-  --animate-slide-in-right: slideInRight 0.3s ease-out forwards;
+  --animate-slide-up: slideUpFade 0.24s var(--ease-out-expo) forwards;
+  --animate-fade-in: fadeIn 0.18s ease-out;
+  --animate-slide-in-right: slideInRight 0.32s var(--ease-out-expo) forwards;
+  --animate-scale-in: scaleIn 0.22s var(--ease-out-expo) forwards;
+  --animate-aurora: aurora 14s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
 
   @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(100%); }
+    from { opacity: 0; transform: translateX(24px); }
     to { opacity: 1; transform: translateX(0); }
   }
 
@@ -48,7 +91,7 @@
   }
 
   @keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
@@ -57,10 +100,91 @@
     to { opacity: 1; }
   }
 
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   @keyframes streamFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
+
+  @keyframes aurora {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.55; }
+    50%      { transform: translate3d(2%, -2%, 0) scale(1.06); opacity: 0.75; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+/* =============================================================================
+ * 全局基底：表层 / 文本 / 边界 / 渐变
+ * ============================================================================= */
+
+/* Tailwind v4 兼容：初始化 translate/scale/rotate CSS 变量默认值 */
+*, *::before, *::after {
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+}
+
+:root {
+  color-scheme: light;
+  --slider-track: #e5e7eb;
+  --color-surface-0: #ffffff;
+  --color-surface-1: #f7f7fb;
+  --color-surface-2: #eef0f6;
+  --color-surface-3: #e2e5ee;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #cbd5e1;
+  --color-border-subtle: rgba(15, 23, 42, 0.06);
+  --color-border-default: rgba(15, 23, 42, 0.10);
+  --color-border-strong: rgba(15, 23, 42, 0.18);
+
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-accent-500) 100%);
+  --gradient-brand-soft: linear-gradient(135deg, var(--color-brand-50) 0%, var(--color-accent-50) 100%);
+  --gradient-aurora: radial-gradient(at 20% 20%, rgba(91, 91, 255, 0.55) 0%, transparent 55%),
+                     radial-gradient(at 80% 30%, rgba(139, 92, 246, 0.45) 0%, transparent 55%),
+                     radial-gradient(at 60% 80%, rgba(34, 211, 238, 0.35) 0%, transparent 60%);
+  --gradient-mesh-bg: radial-gradient(at 0% 0%, rgba(91, 91, 255, 0.06) 0%, transparent 50%),
+                      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.05) 0%, transparent 55%),
+                      radial-gradient(at 50% 100%, rgba(34, 211, 238, 0.04) 0%, transparent 50%);
+}
+
+html.dark {
+  color-scheme: dark;
+  --slider-track: #2a2a36;
+  --color-surface-0: #0d0d12;
+  --color-surface-1: #161620;
+  --color-surface-2: #1f1f2c;
+  --color-surface-3: #2a2a3a;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.10);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+
+  --gradient-brand: linear-gradient(135deg, #6b6bff 0%, #9b6dff 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(91, 91, 255, 0.12) 0%, rgba(139, 92, 246, 0.10) 100%);
+  --gradient-aurora: radial-gradient(at 20% 20%, rgba(91, 91, 255, 0.42) 0%, transparent 55%),
+                     radial-gradient(at 80% 30%, rgba(139, 92, 246, 0.38) 0%, transparent 55%),
+                     radial-gradient(at 60% 80%, rgba(34, 211, 238, 0.28) 0%, transparent 60%);
+  --gradient-mesh-bg: radial-gradient(at 0% 0%, rgba(91, 91, 255, 0.10) 0%, transparent 55%),
+                      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 55%),
+                      radial-gradient(at 50% 100%, rgba(34, 211, 238, 0.06) 0%, transparent 55%);
+
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-input: 0 4px 24px -8px rgba(91, 91, 255, 0.30), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 24px 60px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-menu: 0 14px 40px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-brand-glow: 0 8px 24px -8px rgba(91, 91, 255, 0.55), 0 2px 6px rgba(91, 91, 255, 0.25);
 }
 
 /* Tailwind v4 兼容：初始化 translate/scale/rotate CSS 变量默认值 */
@@ -70,6 +194,8 @@
 }
 
 html, body {
+  background-color: var(--color-surface-0);
+  color: var(--color-text-primary);
   /* overflow: hidden 防止 scrollIntoView 等 DOM 操作触发 window/body 滚动，
      避免整个 ChatLayout 被带出视口（页面上移、下方空白、刷新后无法恢复）。
      ChatLayout 自身用 h-dvh + overflow-hidden 约束，body 无需可滚动。 */
@@ -77,14 +203,10 @@ html, body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --slider-track: #e5e7eb;
-}
-
-html.dark body {
-  --slider-track: #374151;
+  letter-spacing: -0.005em;
 }
 
 /* 主题切换过渡动效：仅在切换瞬间启用，避免影响正常交互性能 */

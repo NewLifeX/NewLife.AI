@@ -70,7 +70,7 @@ export function DataSettings({ onDataCleared, allowTraining = false, onAllowTrai
   return (
     <div className="mb-10">
       {/* 数据管理区域 */}
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+      <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-6 flex items-center">
         <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-600 p-1 rounded mr-3">
           <Icon name="storage" variant="filled" size="lg" />
         </span>
