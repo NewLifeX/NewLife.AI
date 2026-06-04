@@ -130,7 +130,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
         foreach (var skill in allSkills)
         {
             var entry = skill.Code.IsNullOrEmpty() ? skill.Name : $"{skill.Code}/{skill.Name}";
-            var desc = skill.Remark;
+            var desc = skill.Description;
             if (desc.IsNullOrEmpty()) desc = "无描述";
             if (desc.Length > 60) desc = desc.Substring(0, 60) + "...";
             sb.AppendLine($"- {entry}：{desc}");
