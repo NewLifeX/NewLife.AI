@@ -104,16 +104,15 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
 
         var items = new[]
         {
-            new { Title = "写C#单例模式", Question = "请帮我用C#实现一个线程安全的单例模式，要求支持懒加载并分析适用场景", Icon = "code", Color = "text-blue-500" },
-            new { Title = "写一首春天的诗", Question = "请帮我写一首关于春天的诗，表达春意盎然的美好，风格清新自然", Icon = "brush", Color = "text-pink-500" },
-            new { Title = "解释量子计算", Question = "请通俗地解释量子计算的基本原理，以及它与传统计算机的本质区别", Icon = "science", Color = "text-purple-500" },
-            new { Title = "推荐几本好书", Question = "请推荐几本值得精读的经典好书，涵盖思维提升和人文社科方面，并说明各自的理由", Icon = "menu_book", Color = "text-orange-500" },
-            new { Title = "制定健身计划", Question = "请帮我制定一份适合上班族的周健身计划，包含有氧和力量训练，每次控制在30分钟内", Icon = "fitness_center", Color = "text-red-500" },
-            new { Title = "查询我这里天气", Question = "请查询我当前所在位置的天气情况，并给出今日出行建议", Icon = "cloud", Color = "text-cyan-500" },
-            new { Title = "我在哪里", Question = "请帮我查询我的当前位置，我在哪个城市？附近有哪些值得去的地方？", Icon = "location_on", Color = "text-teal-500" },
-            new { Title = "写一封请假邮件", Question = "请帮我写一封请病假的邮件，收件人是部门主管，语气正式得体，简明扼要", Icon = "edit_note", Color = "text-green-500" },
-            new { Title = "分析投资理财策略", Question = "对于普通投资者，请分析当前经济环境下有哪些稳健的理财和投资策略，如何做好风险控制", Icon = "trending_up", Color = "text-yellow-500" },
-            new { Title = "Mermaid画注册流程图", Question = "请用 Mermaid flowchart TD 格式绘制完整的用户注册与登录流程图：输入表单→格式校验→发送邮箱验证码→验证通过→注册成功；同时包含忘记密码→重置密码路径；使用判断菱形区分成功与失败分支", Icon = "schema", Color = "text-orange-500" },
+            new { Title = "C#线程安全单例模式实现", Question = "请帮我用C#实现一个线程安全的单例模式，要求支持懒加载并分析适用场景", Icon = "code", Color = "text-blue-500" },
+            new { Title = "今日天气与春意诗词", Question = "今天天气怎么样？请结合当前天气和春天时令，为我写一首描绘春色的诗词", Icon = "cloud", Color = "text-cyan-500" },
+            new { Title = "通俗解读量子计算原理", Question = "请通俗地解释量子计算的基本原理，以及它与传统计算机的本质区别", Icon = "science", Color = "text-purple-500" },
+            new { Title = "了解我喜好的个性化荐书", Question = "请先了解一下我的个人信息，然后结合我的阅读偏好，推荐几本值得精读的经典好书", Icon = "menu_book", Color = "text-orange-500" },
+            new { Title = "制定上班族周健身计划", Question = "请帮我制定一份适合上班族的周健身计划，包含有氧和力量训练，每次控制在30分钟内", Icon = "fitness_center", Color = "text-red-500" },
+            new { Title = "搜索AI领域最新进展", Question = "帮我搜索最近大语言模型领域有什么重要进展，整理成摘要", Icon = "search", Color = "text-teal-500" },
+            new { Title = "查询近期节假日安排", Question = "帮我查一下今天是工作日还是假期，近期有哪些连休安排", Icon = "event", Color = "text-green-500" },
+            new { Title = "Mermaid绘制注册流程图", Question = "请用 Mermaid 流程图格式绘制完整的用户注册与登录流程，包含邮箱验证和找回密码路径，使用判断菱形区分成功与失败分支", Icon = "schema", Color = "text-indigo-500" },
+            new { Title = "写一封请假邮件", Question = "请帮我写一封请病假的邮件，收件人是部门主管，语气正式得体，简明扼要", Icon = "edit_note", Color = "text-yellow-500" },
         };
 
         var added = 0;
