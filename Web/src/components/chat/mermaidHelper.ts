@@ -14,6 +14,29 @@ function fixClassDefStrokeDasharray(code: string): string {
 }
 
 /**
+ * 修复 classDef 应用语法（:::）中多余冒号和前导空格的问题。
+ * LLM 有时生成 `A[Node] :::::className`（5 个冒号）而非正确的 `A[Node]:::className`（3 个冒号），
+ * 多余冒号导致 Mermaid 词法分析异常，整个图表解析失败。
+ * 同时移除 ::: 前的多余空格，使类应用紧贴节点定义。
+ */
+function fixClassApplicationColons(code: string): string {
+  return code.replace(/\s*(:{3,})\s*(\w+)/g, ':::$2')
+}
+
+/**
+ * 移除 classDef 中 Mermaid 不支持的 SVG 几何属性（rx、ry 等）。
+ * LLM 有时生成 `classDef foo fill:#eee,rx:12,ry:12`，这些是合法 SVG 属性但不被
+ * Mermaid classDef 解析器识别，会导致整条 classDef 失效或触发 parse error。
+ * 对每行 classDef，移除所有 `,rx:n` / `,ry:n` 形式的无效属性。
+ */
+function fixClassDefInvalidProps(code: string): string {
+  return code.replace(
+    /^(\s*classDef\b[^\n]*)/gm,
+    (line) => line.replace(/,\s*r[xy]\s*:\s*[\d.]+/g, ''),
+  )
+}
+
+/**
  * 修复节点标签 [...] 中含有 `|` 的情况。
  * `|` 是 Mermaid 边标签的保留分隔符，在未加引号的方括号标签内会触发 Parse error：
  *   got 'PIPE'
@@ -81,8 +104,10 @@ function fixQuotesInBracketLabels(code: string): string {
  * 不处理顶层的 `{...}`，避免破坏合法的菱形节点语法。
  */
 export function normalizeMermaidCode(code: string): string {
-  // 先做正则预处理（顺序：dasharray → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
+  // 先做正则预处理（顺序：dasharray → class colons → invalid props → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
   code = fixClassDefStrokeDasharray(code)
+  code = fixClassApplicationColons(code)
+  code = fixClassDefInvalidProps(code)
   code = fixPipesInNodeLabels(code)
   code = fixNewlinesInLabels(code)
   code = fixBrAfterNodeLabel(code)
