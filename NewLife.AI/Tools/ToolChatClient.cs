@@ -458,17 +458,17 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var tools = new List<ChatTool>();
         var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
         var toolRoutingMap = new Dictionary<String, ToolResponseRouting>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
         foreach (var provider in Providers)
         {
             foreach (var t in provider.GetTools(SelectedTools))
             {
-                tools.Add(t);
                 var name = t.Function?.Name;
-                if (!name.IsNullOrEmpty())
-                {
-                    toolMap[name] = provider;
-                    toolRoutingMap[name] = t.Function!.Routing;
-                }
+                if (name == null || !seen.Add(name)) continue;
+
+                tools.Add(t);
+                toolMap[name] = provider;
+                toolRoutingMap[name] = t.Function!.Routing;
             }
         }
         if (options?.Tools != null)
