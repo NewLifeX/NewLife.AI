@@ -407,7 +407,30 @@ public class ToolRegistry : IToolProvider
         }
         catch
         {
-            // 参数 JSON 格式异常（如流式截断导致不完整 JSON），使用默认值
+            // 参数 JSON 格式异常（如流式截断导致不完整 JSON，或 LLM 输出含匿名对象等畸形结构）
+            // 后备策略：按参数名逐一提取字段原始 JSON，放宽整体解析要求
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                var p = parameters[i];
+                if (p.Name == null) continue;
+                var rawJson = TryExtractFieldJson(arguments, p.Name);
+                if (rawJson != null)
+                {
+                    try
+                    {
+                        var val = JsonParser.Decode(rawJson);
+                        result[i] = ConvertValue(val ?? (Object?)rawJson, p.ParameterType);
+                    }
+                    catch
+                    {
+                        if (p.HasDefaultValue) result[i] = p.DefaultValue;
+                    }
+                }
+                else if (p.HasDefaultValue)
+                {
+                    result[i] = p.DefaultValue;
+                }
+            }
             return result;
         }
         if (parsed == null) return result;
@@ -463,6 +486,75 @@ public class ToolRegistry : IToolProvider
         }
 
         return value;
+    }
+
+    /// <summary>从可能格式损坏的 JSON 字符串中按字段名提取字段值的原始 JSON 表示</summary>
+    /// <remarks>用于 LLM 生成含匿名对象等畸形结构时的后备解析</remarks>
+    private static String? TryExtractFieldJson(String? json, String fieldName)
+    {
+        if (json.IsNullOrWhiteSpace()) return null;
+        // 查找 "fieldName" :
+        var key = $"\"{fieldName}\"";
+        var pos = json.IndexOf(key, StringComparison.Ordinal);
+        if (pos < 0) return null;
+        pos += key.Length;
+        // 跳过空白
+        while (pos < json.Length && json[pos] is ' ' or '\t' or '\n' or '\r') pos++;
+        if (pos >= json.Length || json[pos] != ':') return null;
+        pos++;
+        // 跳过空白
+        while (pos < json.Length && json[pos] is ' ' or '\t' or '\n' or '\r') pos++;
+        if (pos >= json.Length) return null;
+        return ExtractJsonValueAt(json, pos);
+    }
+
+    /// <summary>从指定位置提取一个完整 JSON 值（字符串/数字/布尔/对象/数组）</summary>
+    private static String? ExtractJsonValueAt(String json, Int32 start)
+    {
+        if (start >= json.Length) return null;
+        var c = json[start];
+        if (c == '"')
+        {
+            // 字符串：找结束引号（跳过转义）
+            var end = start + 1;
+            while (end < json.Length)
+            {
+                if (json[end] == '\\') { end += 2; continue; }
+                if (json[end] == '"') { end++; break; }
+                end++;
+            }
+            return json.Substring(start, end - start);
+        }
+        if (c is '{' or '[')
+        {
+            // 对象/数组：深度跟踪找结束符
+            var depth = 0;
+            var inStr = false;
+            var esc = false;
+            var end = start;
+            while (end < json.Length)
+            {
+                var ch = json[end];
+                if (esc) { esc = false; end++; continue; }
+                if (ch == '\\' && inStr) { esc = true; end++; continue; }
+                if (ch == '"') { inStr = !inStr; end++; continue; }
+                if (!inStr)
+                {
+                    if (ch is '{' or '[') depth++;
+                    else if (ch is '}' or ']') { depth--; if (depth == 0) { end++; break; } }
+                }
+                end++;
+            }
+            return json.Substring(start, end - start);
+        }
+        else
+        {
+            // 数字/布尔/null：遇到分隔符停止
+            var end = start;
+            while (end < json.Length && json[end] is not (',' or '}' or ']' or ' ' or '\t' or '\n' or '\r'))
+                end++;
+            return json.Substring(start, end - start);
+        }
     }
 
     #endregion
