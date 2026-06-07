@@ -6,7 +6,7 @@ namespace NewLife.ChatAI.Handlers;
 /// <summary>技能激活处理器。事前解析消息中的技能引用，注入技能 Prompt 到 system 消息；事后记录技能使用次数</summary>
 /// <remarks>
 /// <para>事前：从 <c>flow["NewSkillCode"]</c>（请求显式指定）或 <c>flow.SkillId</c>（会话已绑定）解析当前激活技能，
-/// 将技能 Prompt 加入 <see cref="IChatContext.SystemSegments"/> 待写入 system 消息，并列出未激活技能目录。
+/// 将技能 Prompt 加入 <see cref="IChatContext.SystemSegments"/> 待写入 system 消息，并列出技能目录。
 /// 触发词命中选择工具由 <c>ToolContextHandler</c>（StarChat）处理并填充 <see cref="IChatContext.SelectedTools"/>。</para>
 /// <para>事后：当 <c>SkillId &gt; 0</c> 且未短路时调用 <see cref="SkillService.RecordUsage"/> 累加技能使用计数。</para>
 /// </remarks>
@@ -84,10 +84,10 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
             }
         }
 
-        // 未激活技能目录：将所有非当前技能以 code/name + 描述形式注入，供模型引导用户按需切换
-        var inactiveCatalog = BuildInactiveSkillCatalog(skillService, context.SkillId);
-        if (!inactiveCatalog.IsNullOrWhiteSpace())
-            context.SystemSegments.Add(inactiveCatalog);
+        // 技能目录：将所有技能以 code/name + 描述形式注入，供模型参考
+        var catalog = BuildSkillCatalog(skillService);
+        if (!catalog.IsNullOrWhiteSpace())
+            context.SystemSegments.Add(catalog);
 
         return Task.CompletedTask;
     }
@@ -115,13 +115,12 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
             context.SkillId = matched.Id;
     }
 
-    /// <summary>构建未激活技能目录。列出除当前激活技能外的所有启用技能</summary>
+    /// <summary>构建技能目录。列出所有启用技能的编码、名称和描述</summary>
     /// <param name="svc">技能服务</param>
-    /// <param name="currentSkillId">当前激活技能编号（0 表示无激活）</param>
     /// <returns>技能目录文本；无可列技能时返回空字符串</returns>
-    protected virtual String BuildInactiveSkillCatalog(SkillService svc, Int32 currentSkillId)
+    protected virtual String BuildSkillCatalog(SkillService svc)
     {
-        var allSkills = svc.GetAllSkills().Where(s => s.Id != currentSkillId).ToList();
+        var allSkills = svc.GetAllSkills().ToList();
         if (allSkills.Count == 0) return String.Empty;
 
         var sb = Pool.StringBuilder.Get();
