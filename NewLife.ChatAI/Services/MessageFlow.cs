@@ -1080,6 +1080,46 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
     }
 
+    /// <summary>构建项目维度系统提示词消息。通过项目密钥（AppKey.ProjectId > 0）接入时使用，不含用户个人信息与个性化设置</summary>
+    /// <remarks>项目密钥由用户在项目内创建，代表项目接入而非个人使用；注入项目级指令 + 时间 + 模型级指令。AppKey.SystemPrompt（业务层）由调用方在合并时置首</remarks>
+    /// <param name="projectId">项目编号。0 或不传时跳过项目级信息读取</param>
+    /// <param name="model">模型配置（可选）</param>
+    /// <param name="userHistoryCount">当前上下文中历史消息条数，大于 0 时才注入多轮优先级提示</param>
+    /// <param name="tracer">追踪器（可选）</param>
+    /// <returns>系统消息，无提示词时返回 null</returns>
+    public static AiChatMessage? BuildSystemMessageForProject(Int32 projectId, ModelConfig? model, Int32 userHistoryCount = 0, ITracer? tracer = null)
+    {
+        using var span = tracer?.NewSpan("ai:BuildSystemMessageForProject", new { projectId, model?.Name, userHistoryCount });
+        var parts = new List<String>();
+
+        // 0. 当前日期时间
+        parts.Add($"当前时间：{DateTimeOffset.Now:O}");
+
+        // 1. 项目级系统提示词（StarChat 独有；AgentProject 不在 ChatAI 实体，故用条件编译）
+        // 项目级指令定义 AI 整体行为与角色，优先级仅次于 AppKey.SystemPrompt（业务层）
+#if STARCHAT
+        if (projectId > 0)
+        {
+            var project = NewLife.StarChat.Entity.AgentProject.FindById(projectId);
+            if (project != null && !String.IsNullOrWhiteSpace(project.SystemPrompt))
+                parts.Add(project.SystemPrompt.Trim());
+        }
+#endif
+
+        // 2. 模型级系统提示词（项目接入仍遵从模型配置指令）
+        if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
+            parts.Add(model.SystemPrompt.Trim());
+
+        // 3. 多轮对话时强调最新消息优先级
+        if (userHistoryCount > 1)
+            parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
+
+        if (parts.Count == 0) return null;
+        span?.AppendTag(null!, parts.Count);
+
+        return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
+    }
+
     /// <summary>判断是否应跳过历史消息。用于过滤预分配但尚未写入正文的 assistant 占位消息，避免发送非法上下文给上游模型</summary>
     /// <param name="message">历史消息实体</param>
     /// <returns>应跳过返回 true，否则返回 false</returns>

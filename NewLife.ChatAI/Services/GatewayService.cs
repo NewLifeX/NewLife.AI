@@ -110,7 +110,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     #endregion
 
     #region 消息构建
-    /// <summary>为网关请求构建上下文消息列表。注入系统提示词（用户信息+UserSetting+ModelConfig），过滤请求中原有系统消息</summary>
+    /// <summary>为网关请求构建上下文消息列表。注入系统提示词（AppKey系统指令 + 用户信息 + UserSetting + ModelConfig），过滤请求中原有系统消息</summary>
     /// <param name="request">网关请求</param>
     /// <param name="appKey">应用密钥</param>
     /// <param name="config">模型配置</param>
@@ -128,21 +128,32 @@ public class GatewayService(UsageService usageService, ModelService modelService
             .Where(c => !String.IsNullOrWhiteSpace(c))
             .ToList();
 
-        // 构建系统消息（包含用户信息 + UserSetting + ModelConfig SystemPrompt）
+        // 根据接入类型选择系统消息版本：
+        // - 个人密钥（ProjectId == 0）：注入用户信息 + 个性化设置
+        // - 项目密钥（ProjectId > 0）：注入项目级指令 + 模型指令，不包含任何用户个人信息
+#if STARCHAT
+        var sysMsg = appKey.ProjectId > 0
+            ? MessageFlow.BuildSystemMessageForProject(appKey.ProjectId, config)
+            : MessageFlow.BuildSystemMessage(appKey.UserId, config);
+#else
         var sysMsg = MessageFlow.BuildSystemMessage(appKey.UserId, config);
+#endif
 
-        // 合并自动生成的系统消息与客户端系统提示词，保证只有一条 system 消息
-        if (clientSysParts.Count > 0)
+        // 合并系统消息：优先级从高到低为 AppKey系统指令 > 自动生成信息 > 客户端注入
+        // AppKey.SystemPrompt 置于最前，定义业务角色与场景约束，后续各层可叠加但不应覆盖
+        var sysParts = new List<String>();
+        if (!String.IsNullOrWhiteSpace(appKey.SystemPrompt))
+            sysParts.Add(appKey.SystemPrompt.Trim());
+        if (sysMsg != null)
         {
-            var sysContent = sysMsg != null
-                ? $"{sysMsg.Content}\n\n{String.Join("\n\n", clientSysParts)}"
-                : String.Join("\n\n", clientSysParts);
-            messages.Add(new AiChatMessage { Role = "system", Content = sysContent });
+            var sysMsgText = GetMessageText(sysMsg.Content);
+            if (!String.IsNullOrWhiteSpace(sysMsgText))
+                sysParts.Add(sysMsgText);
         }
-        else if (sysMsg != null)
-        {
-            messages.Add(sysMsg);
-        }
+        sysParts.AddRange(clientSysParts);
+
+        if (sysParts.Count > 0)
+            messages.Add(new AiChatMessage { Role = "system", Content = String.Join("\n\n", sysParts) });
 
         // 添加请求中的非系统对话消息
         foreach (var msg in request.Messages ?? [])
@@ -470,7 +481,11 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
             var conversation = new Conversation
             {
+#if STARCHAT
+                UserId = appKey.ProjectId > 0 ? 0 : appKey.UserId,
+#else
                 UserId = appKey.UserId,
+#endif
                 UserName = appKey.Name,
                 AppKeyId = appKey.Id,
                 Title = userContent.Length > 50 ? userContent[..50] + "..." : userContent,
@@ -529,7 +544,11 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 // 未预创建时回退到直接插入
                 conversation = new Conversation
                 {
+#if STARCHAT
+                    UserId = appKey.ProjectId > 0 ? 0 : appKey.UserId,
+#else
                     UserId = appKey.UserId,
+#endif
                     UserName = appKey.Name,
                     AppKeyId = appKey.Id,
                     Title = userContent.Length > 50 ? userContent[..50] + "..." : userContent,

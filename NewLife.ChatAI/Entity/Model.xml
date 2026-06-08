@@ -233,6 +233,7 @@
         <Column Name="Models" DataType="String" Length="200" Description="可用模型。逗号分隔的模型名称或编码，为空时不限制" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="ExpireTime" DataType="DateTime" Description="过期时间。null表示永不过期" />
+        <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="系统指令。通过该密钥接入的请求将在对话系统消息首部注入此提示词" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />

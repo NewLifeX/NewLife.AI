@@ -79,6 +79,14 @@ public partial class AppKey
     [BindColumn("ExpireTime", "过期时间。null表示永不过期", "")]
     public DateTime ExpireTime { get => _ExpireTime; set { if (OnPropertyChanging("ExpireTime", value)) { _ExpireTime = value; OnPropertyChanged("ExpireTime"); } } }
 
+    private String? _SystemPrompt;
+    /// <summary>系统指令。通过该密钥接入的请求将在对话系统消息首部注入此提示词</summary>
+    [DisplayName("系统指令")]
+    [Description("系统指令。通过该密钥接入的请求将在对话系统消息首部注入此提示词")]
+    [DataObjectField(false, false, true, -1)]
+    [BindColumn("SystemPrompt", "系统指令。通过该密钥接入的请求将在对话系统消息首部注入此提示词", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
+    public String? SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -158,6 +166,7 @@ public partial class AppKey
             "Models" => _Models,
             "Enable" => _Enable,
             "ExpireTime" => _ExpireTime,
+            "SystemPrompt" => _SystemPrompt,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -178,6 +187,7 @@ public partial class AppKey
                 case "Models": _Models = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "ExpireTime": _ExpireTime = value.ToDateTime(); break;
+                case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -293,6 +303,9 @@ public partial class AppKey
         /// <summary>过期时间。null表示永不过期</summary>
         public static readonly Field ExpireTime = FindByName("ExpireTime");
 
+        /// <summary>系统指令。通过该密钥接入的请求将在对话系统消息首部注入此提示词</summary>
+        public static readonly Field SystemPrompt = FindByName("SystemPrompt");
+
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
 
@@ -340,6 +353,9 @@ public partial class AppKey
 
         /// <summary>过期时间。null表示永不过期</summary>
         public const String ExpireTime = "ExpireTime";
+
+        /// <summary>系统指令。通过该密钥接入的请求将在对话系统消息首部注入此提示词</summary>
+        public const String SystemPrompt = "SystemPrompt";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";
