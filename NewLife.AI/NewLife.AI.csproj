@@ -5,7 +5,7 @@
     <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 33 个服务商，提供函数调用、图像生成、MCP 工具调用等能力</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
-    <VersionPrefix>1.2</VersionPrefix>
+    <VersionPrefix>1.3</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -28,7 +28,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>IChatHandler 三段式架构替代 IChatPipeline，实现 LlmCore/SystemPrompt/Persist 核心 Handler；新增 DeepSeekChatClient 专属客户端，支持 DeepSeek v4；DashScope Omni 全模态与 Files API 文件上传；网关支持 Anthropic/Gemini 协议兼容与 snake_case/camelCase 自动适配；修复 ExtendableConverter null 序列化与 BackgroundGenerationService race condition</PackageReleaseNotes>
+    <PackageReleaseNotes>知识进化层功能落地，支持知识库自动构建与向量语义检索；嵌入/向量检索能力内置，HashTextEmbedder v2；TTS 语音合成支持 DashScope/CosyVoice V3.5；新增反思代理与评审代理，复杂任务拆分与并行聚合；人机决策检查点功能，支持 AI 多路径人工选择；工具调用增强：ToolCallContext 透传、Provider 熔断器、三档权限体系；兼容 net45/net462</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

@@ -7,7 +7,7 @@
     <Description>基于 NewLife.AI 基础库的扩展模块，提供中间件、依赖注入、缓存等企业级扩展能力</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
-    <VersionPrefix>1.1</VersionPrefix>
+    <VersionPrefix>1.2</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -33,7 +33,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;X组件;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageReleaseNotes>依赖包全面升级；IChatHandler 链解析支持与模型字段断言修正；MCP 服务增强；与 NewLife.AI v1.3 基础库同步更新</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
