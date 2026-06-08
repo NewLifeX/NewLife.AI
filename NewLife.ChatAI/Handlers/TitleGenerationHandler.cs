@@ -97,7 +97,7 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
 
         using var span = Tracer?.NewSpan("ai:GenerateTitle");
 
-        var model = ModelServiceInstance.ResolveModel(conversation.ModelId);
+        var model = ModelServiceInstance.ResolveLightweightModel(conversation.ModelId);
         if (model != null)
         {
             try
