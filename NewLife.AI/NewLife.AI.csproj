@@ -67,6 +67,9 @@
     <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Resources\CosyVoiceVoices.json" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\Readme.MD">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

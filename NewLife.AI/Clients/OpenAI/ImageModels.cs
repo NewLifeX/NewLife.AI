@@ -54,6 +54,15 @@ public class SpeechRequest
 
     /// <summary>语速倍率。0.25~4.0，默认 1.0</summary>
     public Double? Speed { get; set; }
+
+    /// <summary>采样率。如 24000、16000、8000，默认 24000</summary>
+    public Int32? SampleRate { get; set; }
+
+    /// <summary>关联消息编号。传入后优先从数据库加载消息文本，无需传 Input</summary>
+    public Int64? MessageId { get; set; }
+
+    /// <summary>本次合成消耗的字符数。由 SpeechAsync 回填，供上层用量追踪</summary>
+    public Int32 CharactersUsed { get; set; }
 }
 
 /// <summary>图像编辑请求。对应 OpenAI /v1/images/edits（multipart/form-data）接口参数，以及 DashScope 原生多模态图像编辑接口参数</summary>

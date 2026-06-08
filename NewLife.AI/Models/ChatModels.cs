@@ -114,4 +114,8 @@ public enum PricingMode
     /// <summary>按 Embedding 调用。EmbeddingPrice 单位：元/百万Token</summary>
     [Description("按Embedding")]
     Embedding = 3,
+
+    /// <summary>按语音合成字符数。SpeechPrice 单位：元/千字符</summary>
+    [Description("按语音合成")]
+    Speech = 4,
 }

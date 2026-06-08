@@ -549,15 +549,22 @@ public partial class DashScopeChatClient
         if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
             voice = "longxiaochun_v3";
 
+        // 校验音色是否合法
+        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3.5-flash";
+        if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
+            throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
+
+        var sampleRate = request.SampleRate ?? 24000;
+
         var body = new Dictionary<String, Object?>
         {
-            ["model"] = request.Model ?? _options.Model ?? "cosyvoice-v3.5-flash",
+            ["model"] = modelCode,
             ["input"] = new Dictionary<String, Object>
             {
                 ["text"] = request.Input,
                 ["voice"] = voice,
                 ["format"] = format,
-                ["sample_rate"] = 24000,
+                ["sample_rate"] = sampleRate,
             },
         };
 
@@ -590,6 +597,10 @@ public partial class DashScopeChatClient
             var audioUrl = audio["url"] as String;
             if (String.IsNullOrWhiteSpace(audioUrl))
                 throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio.url");
+
+            // 解析字符用量
+            if (dic["usage"] is IDictionary<String, Object> usage)
+                request.CharactersUsed = usage["characters"].ToInt();
 
             // 从 URL 下载音频字节流
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
