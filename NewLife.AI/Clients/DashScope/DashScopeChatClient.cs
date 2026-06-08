@@ -26,16 +26,31 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <inheritdoc/>
     public override String Name { get; set; } = "阿里百炼";
 
-    /// <summary>原生 DashScope API 基础地址（/api/v1）</summary>
-    protected virtual String NativeEndpoint => "https://dashscope.aliyuncs.com/api/v1";
+    /// <summary>原生 API 路径前缀（/api/v1）</summary>
+    protected virtual String NativePath => "/api/v1";
 
-    /// <summary>兼容模式基础地址。Embedding、重排序等沿用此端点</summary>
-    protected virtual String CompatibleEndpoint => "https://dashscope.aliyuncs.com/compatible-mode";
+    /// <summary>兼容模式 API 路径前缀（/compatible-mode）。Embedding、重排序等沿用此路径</summary>
+    protected virtual String CompatiblePath => "/compatible-mode";
+
+    /// <summary>从配置地址中提取 scheme+host，用于构建完整 API 地址</summary>
+    private String GetHost()
+    {
+        var endpoint = _options.Endpoint;
+        if (!endpoint.IsNullOrWhiteSpace() && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+            return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+        return "https://dashscope.aliyuncs.com";
+    }
+
+    /// <summary>获取原生协议完整基础地址</summary>
+    private String GetNativeBaseUrl() => GetHost() + NativePath;
+
+    /// <summary>获取兼容模式完整基础地址</summary>
+    private String GetCompatibleBaseUrl() => GetHost() + CompatiblePath;
 
     /// <inheritdoc/>
     public override String DefaultEndpoint
     {
-        get => IsNativeProtocol ? NativeEndpoint : CompatibleEndpoint;
+        get => IsNativeProtocol ? GetNativeBaseUrl() : GetCompatibleBaseUrl();
         set => base.DefaultEndpoint = value;
     }
 
@@ -239,7 +254,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     private async IAsyncEnumerable<IChatResponse> ChatThirdPartyStreamAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var body = ChatCompletionRequest.BuildBody(request);
-        var url = CombineApiUrl(CompatibleEndpoint, "/v1/chat/completions");
+        var url = CombineApiUrl(GetCompatibleBaseUrl(), "/v1/chat/completions");
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -273,7 +288,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     {
         request.Stream = true;
         var body = BuildOmniBody(request);
-        var url = CombineApiUrl(CompatibleEndpoint, "/v1/chat/completions");
+        var url = CombineApiUrl(GetCompatibleBaseUrl(), "/v1/chat/completions");
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -352,7 +367,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         // 第三方托管模型（GLM/Kimi/MiniMax 等）不支持 DashScope 原生端点，强制走兼容模式
         if (IsNativeProtocol && IsThirdPartyModel(request.Model ?? _options.Model))
         {
-            var compatUrl = CombineApiUrl(CompatibleEndpoint, "/v1/chat/completions");
+            var compatUrl = CombineApiUrl(GetCompatibleBaseUrl(), "/v1/chat/completions");
             var compatBody = ChatCompletionRequest.BuildBody(request);
             var compatJson = await PostAsync(compatUrl, compatBody, request, _options, cancellationToken).ConfigureAwait(false);
             return ParseResponse(compatJson, request);
@@ -471,7 +486,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         var endpoint = _options.Endpoint;
         if (endpoint.IsNullOrWhiteSpace() ||
             endpoint.IndexOf("compatible-mode", StringComparison.OrdinalIgnoreCase) >= 0)
-            endpoint = NativeEndpoint;
+            endpoint = GetNativeBaseUrl();
         return endpoint.TrimEnd('/') + path;
     }
 

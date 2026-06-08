@@ -44,7 +44,7 @@ public partial class DashScopeChatClient
     /// <returns>模型列表，服务不可用时返回 null</returns>
     public override async Task<ModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
     {
-        var url = CombineApiUrl(CompatibleEndpoint, "/v1/models");
+        var url = CombineApiUrl(GetCompatibleBaseUrl(), "/v1/models");
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
         if (json == null) return null;
 

@@ -1,7 +1,8 @@
 ﻿using System.Net.Http.Headers;
+using System.Text;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Embedding;
 using NewLife.AI.Models;
-using NewLife.Log;
 using NewLife.Remoting;
 using NewLife.Serialization;
 
@@ -27,7 +28,7 @@ public partial class DashScopeChatClient
         if (IsNativeImageGenerationModel(modelId))
             return await TextToImageNativeAsync(request, cancellationToken).ConfigureAwait(false);
 
-        var url = CombineApiUrl(CompatibleEndpoint, "/v1/images/generations");
+        var url = CombineApiUrl(GetCompatibleBaseUrl(), "/v1/images/generations");
         var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseImageGenerationResponse(json);
     }
@@ -99,7 +100,7 @@ public partial class DashScopeChatClient
     /// <returns>图像生成响应</returns>
     private async Task<ImageGenerationResponse?> EditImageNativeAsync(ImageEditsRequest request, CancellationToken cancellationToken)
     {
-        var url = NativeEndpoint.TrimEnd('/') + "/services/aigc/multimodal-generation/generation";
+        var url = GetNativeBaseUrl() + "/services/aigc/multimodal-generation/generation";
 
         // 优先使用 URL，否则将 Stream 转 Base64
         String imageValue;
@@ -145,7 +146,7 @@ public partial class DashScopeChatClient
     /// <returns>图像生成响应</returns>
     private async Task<ImageGenerationResponse?> TextToImageNativeAsync(ImageGenerationRequest request, CancellationToken cancellationToken)
     {
-        var url = NativeEndpoint.TrimEnd('/') + "/services/aigc/multimodal-generation/generation";
+        var url = GetNativeBaseUrl() + "/services/aigc/multimodal-generation/generation";
 
         var body = new Dictionary<String, Object?>
         {
@@ -283,7 +284,7 @@ public partial class DashScopeChatClient
                 return NormalizeOpenAiImagePath(endpoint);
         }
 
-        return NormalizeOpenAiImagePath(CompatibleEndpoint);
+        return NormalizeOpenAiImagePath(GetCompatibleBaseUrl());
     }
 
     private static String NormalizeOpenAiImagePath(String endpoint)
@@ -311,8 +312,8 @@ public partial class DashScopeChatClient
         };
 
         // DashScope 当前重排序走原生端点（非 OpenAI 兼容）；保留历史路径回退
-        var nativeBase = NativeEndpoint.TrimEnd('/');
-        var compatBase = CompatibleEndpoint.TrimEnd('/');
+        var nativeBase = GetNativeBaseUrl();
+        var compatBase = GetCompatibleBaseUrl();
         var urls = new[]
         {
             nativeBase + "/services/rerank/text-rerank/text-rerank",
@@ -388,8 +389,7 @@ public partial class DashScopeChatClient
     /// <returns>任务提交响应，含 TaskId</returns>
     public override async Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
     {
-        var endpoint = NativeEndpoint.TrimEnd('/');
-        var url = endpoint + VideoSynthesisPath;
+        var url = GetNativeBaseUrl() + VideoSynthesisPath;
 
         var body = new Dictionary<String, Object?>
         {
@@ -408,8 +408,7 @@ public partial class DashScopeChatClient
     /// <returns>任务状态响应</returns>
     public override async Task<VideoTaskStatusResponse> GetVideoTaskAsync(String taskId, CancellationToken cancellationToken = default)
     {
-        var endpoint = NativeEndpoint.TrimEnd('/');
-        var url = endpoint + $"/tasks/{taskId}";
+        var url = GetNativeBaseUrl() + $"/tasks/{taskId}";
 
         var json = await GetAsync(url, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseDashScopeVideoStatusResponse(json);
@@ -529,25 +528,8 @@ public partial class DashScopeChatClient
     /// <returns>音频字节流</returns>
     public override async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
     {
-        // DashScope 原生 TTS 走专属端点，不使用 OpenAI 兼容模式
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-
-        // 判断是否使用原生模式：端点含 /api/v1 或未显式指定兼容端点
-        var useNative = endpoint.Contains("/api/v1");
-
-        if (!useNative && !endpoint.Contains("/compatible-mode"))
-            useNative = IsNativeProtocol;
-
-        if (!useNative)
-        {
-            // 兼容模式：走基类 OpenAI 兼容逻辑
-            return await base.SpeechAsync(request, cancellationToken).ConfigureAwait(false);
-        }
-
-        // ===== 原生 DashScope TTS =====
-        var nativeUrl = endpoint.Contains("/services/audio/tts/SpeechSynthesizer")
-            ? endpoint
-            : endpoint.TrimEnd('/') + "/services/audio/tts/SpeechSynthesizer";
+        // DashScope CosyVoice TTS 仅支持原生端点，始终使用原生路径，与全局端点配置解耦
+        var nativeUrl = GetNativeBaseUrl() + "/services/audio/tts/SpeechSynthesizer";
 
         var format = "wav";
         if (request.ResponseFormat != null)
@@ -622,6 +604,31 @@ public partial class DashScopeChatClient
         {
             span?.SetError(ex, null);
             throw;
+        }
+    }
+    #endregion
+
+    #region 嵌入向量（IEmbeddingClient 实现）
+    /// <summary>生成嵌入向量。始终使用兼容模式端点，与对话原生端点隔离</summary>
+    /// <remarks>
+    /// DashScope 嵌入 API 仅在兼容模式下可用：POST /compatible-mode/v1/embeddings<br/>
+    /// 无论全局端点配置为何，嵌入请求均自动路由到兼容模式端点。
+    /// </remarks>
+    /// <param name="request">嵌入请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>嵌入响应</returns>
+    public override async Task<EmbeddingResponse> GenerateAsync(EmbeddingRequest request, CancellationToken cancellationToken = default)
+    {
+        // Embedding 始终使用兼容模式端点，临时切换 endpoint 后委托基类
+        var saved = _options.Endpoint;
+        _options.Endpoint = GetCompatibleBaseUrl();
+        try
+        {
+            return await base.GenerateAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _options.Endpoint = saved;
         }
     }
     #endregion
