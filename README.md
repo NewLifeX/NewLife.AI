@@ -27,6 +27,13 @@
 - **技能系统**：Markdown 提示词复用，`@` 递归引用，触发词自动激活
 - **多智能体**：`ConversableAgent` / `GroupChat` / `ParallelGroupChat` / `FunctionCallingPlanner`
 - **React 19 Web 前端**：SSE 流式 + 对话预设 + Artifact 实时预览（HTML/SVG/Mermaid）+ 对话分叉 + 工具调用可视化 + 推理计时 + 多模态
+- **知识进化层**：自动从对话中提炼知识，构建可检索的知识库，支持 TOC 目录式浏览与向量语义检索
+- **TTS 语音合成**：支持 DashScope TTS 与 CosyVoice V3.5，流式语音合成，前端专用 TTS 接口
+- **嵌入/向量检索**：内置 HashTextEmbedder v2 与向量存储，支持知识库文档向量化与语义搜索
+- **多智能体增强**：新增反思代理（ReflectionAgent）、评审代理（ReviewAgent），支持复杂任务拆分与子代理并行聚合
+- **人机决策检查点**：人类可在 AI 多路径中实时选择，支持多问题组模式的决策检查与人工干预
+- **工具调用增强**：引入 ToolCallContext 上下文透传、工具 Provider 熔断器、会话级工具可见性过滤、结构化错误返回与三档权限体系
+- **记忆进化**：记忆整合服务支持去重/合并/过期机制，学习记忆功能自动从对话中提取结构化知识
 
 ---
 
