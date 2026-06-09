@@ -90,19 +90,19 @@ public partial class Skill : Entity<Skill>
 
         //Add("general", "通用助手", "smart_toy", "通用", "通用AI对话助手", "你是一个知识渊博、乐于助人的AI助手。请用简洁清晰的语言回答用户的问题。", 100);
         //Add("coder", "编程助手", "code", "开发", "专业编程开发助手", "你是一个专业的编程助手。请提供准确、高质量的代码和技术解答。注意代码的可读性、性能和最佳实践。", 90);
-        Add("translator", "翻译助手", "translate", "通用", "多语言翻译助手", "你是一个专业翻译助手。请准确翻译用户提供的文本，保持原文语义和风格。如果用户输入中文，翻译为英文；如果输入英文或其他语言，翻译为中文。", 80);
+        Add("translator", "翻译助手", "translate", "通用", "多语言翻译助手", "你是一个专业翻译助手。请准确翻译用户提供的文本，保持原文语义和风格。如果用户输入中文，翻译为英文；如果输入英文或其他语言，翻译为中文。", 80, "翻译,translate,帮我译,翻一下");
         //Add("writer", "写作助手", "edit_note", "创作", "文案与内容创作助手", "你是一个专业的写作助手。请帮助用户完善文案、撰写文章、优化表达。注意逻辑清晰、语言流畅、风格得体。", 70);
         //Add("analyst", "数据分析", "analytics", "分析", "数据分析与洞察助手", "你是一个数据分析专家。请帮助用户分析数据、发现规律、提供洞察和建议。用清晰的逻辑和可视化描述呈现分析结果。", 60);
         //Add("researcher", "深度研究", "travel_explore", "分析", "复杂问题的深度调研与多角度分析", "你是一个专业的研究助手。请对复杂问题进行深度调研，提供多角度的分析，引用可靠来源，给出有据可查的结论和建议。", 50);
-        Add("case_teacher", "案例教学", "school", "教学", "从业务专家案例中提炼规则和分析流程，自动创建或更新技能", CaseTeachingContent, 40);
-        Add("business_rule_template", "业务规则模板", "rule", "业务规则", "业务专家编写规则式技能的起点模板，每行一条if-then规则，自带强约束SystemPrompt", BusinessRuleTemplateContent, 30);
+        Add("case_teacher", "案例教学", "school", "教学", "从业务专家案例中提炼规则和分析流程，自动创建或更新技能", CaseTeachingContent, 40, "案例教学,从案例中学,案例分析");
+        Add("business_rule_template", "业务规则模板", "rule", "业务规则", "业务专家编写规则式技能的起点模板，每行一条if-then规则，自带强约束SystemPrompt", BusinessRuleTemplateContent, 30, "业务规则,规则模板");
 
         if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
     }
 
     /// <summary>新增或补齐内置技能（按 Code 幂等 upsert）。
     /// 不存在时插入；存在且为系统内置（IsSystem=true）时仅补齐空字段，不覆盖用户已修改的值。</summary>
-    private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort)
+    private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort, String? triggers = null)
     {
         var entity = FindByCode(code);
         if (entity == null)
@@ -116,6 +116,7 @@ public partial class Skill : Entity<Skill>
                 Description = description,
                 Content = content,
                 Sort = sort,
+                Triggers = triggers,
                 Enable = true,
                 IsSystem = true,
             };
@@ -130,6 +131,7 @@ public partial class Skill : Entity<Skill>
         if (entity.Category.IsNullOrEmpty()) { entity.Category = category; dirty = true; }
         if (entity.Description.IsNullOrEmpty()) { entity.Description = description; dirty = true; }
         if (entity.Content.IsNullOrEmpty()) { entity.Content = content; dirty = true; }
+        if (entity.Triggers.IsNullOrEmpty() && !triggers.IsNullOrEmpty()) { entity.Triggers = triggers; dirty = true; }
         if (!entity.IsSystem) { entity.IsSystem = true; dirty = true; }
 
         if (dirty) entity.Update();

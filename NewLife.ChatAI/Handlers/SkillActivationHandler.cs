@@ -56,7 +56,9 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
             }
         }
 
-        var lastUserContent = context.ContextMessages.LastOrDefault(m => m.Role == "user")?.Content as String;
+        // 优先从 UserMessage 取内容（不经 ApplyCacheControl 清零），Regenerate 场景 UserMessage 为 null 时回退到 ContextMessages
+        var lastUserContent = context.UserMessage?.Content
+            ?? context.ContextMessages.LastOrDefault(m => m.Role == "user")?.Content as String;
 
         // 基于用户消息内容自动匹配技能（StarChat 与 ChatAI 均支持）
         ResolveSkillByContent(context, lastUserContent);
@@ -103,16 +105,29 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
         return Task.CompletedTask;
     }
 
-    /// <summary>基于用户消息内容自动匹配技能。默认实现调用 <see cref="SkillService.MatchSkillByContent"/>；派生类可覆盖</summary>
+    /// <summary>基于用户消息内容自动匹配技能。匹配成功时更新 context.SkillId 并持久化到会话，支持触发词覆盖已选技能</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="lastUserContent">最后一条用户消息文本</param>
     protected virtual void ResolveSkillByContent(IChatContext context, String? lastUserContent)
     {
-        if (skillService == null || context.SkillId > 0) return;
+        if (skillService == null) return;
 
         var matched = skillService.MatchSkillByContent(lastUserContent);
-        if (matched != null)
-            context.SkillId = matched.Id;
+        if (matched == null || matched.Id == context.SkillId) return;
+
+        context.SkillId = matched.Id;
+
+        // 持久化到会话，使触发词匹配的技能够"粘滞"
+        if (context is MessageFlowContext flow)
+        {
+            var conversation = flow.Conversation;
+            if (conversation.SkillId != matched.Id)
+            {
+                conversation.SkillId = matched.Id;
+                conversation.SkillName = matched.Name;
+                conversation.Update();
+            }
+        }
     }
 
     /// <summary>构建技能目录。列出所有启用技能的编码、名称和描述</summary>
