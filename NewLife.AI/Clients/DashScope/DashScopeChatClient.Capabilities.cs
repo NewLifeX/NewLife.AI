@@ -538,6 +538,7 @@ public partial class DashScopeChatClient
             {
                 "mp3" => "mp3",
                 "wav" => "wav",
+                "opus" => "opus",
                 "pcm" => "pcm",
                 _ => request.ResponseFormat,
             };
