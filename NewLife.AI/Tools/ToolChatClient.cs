@@ -177,6 +177,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var contentSb = Pool.StringBuilder.Get();
             var reasoningSb = Pool.StringBuilder.Get();
             UsageDetails? iterUsage = null;
+            // 记录已在流式传输阶段提前发出 start 事件的工具调用 ID，避免 Step 1 重复发送
+            var earlyStartedToolIds = new HashSet<String>();
 
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(ChatRequest.Create(workMessages, workOptions, stream: true), cancellationToken).ConfigureAwait(false))
             {
@@ -205,6 +207,21 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                             foreach (var tc in delta.ToolCalls)
                             {
                                 MergeToolCallDelta(toolCalls, tc);
+                            }
+
+                            // 函数名首次已知时立即发出 tool_call_start 事件，打破 SVG/HTML 大参数流式传输期间的 SSE 静默。
+                            // ask_user（检查点）需要前端用完整 arguments 解析问题组，故排除在外（其参数短，不会触发长时间静默）
+                            foreach (var earlyTc in toolCalls)
+                            {
+                                var earlyName = earlyTc.Function?.Name;
+                                if (earlyName.IsNullOrEmpty()) continue;
+                                if (earlyName.EqualIgnoreCase("ask_user")) continue;
+                                if (earlyTc.Id.IsNullOrEmpty()) continue;
+                                if (!earlyStartedToolIds.Add(earlyTc.Id)) continue;
+                                yield return new ChatResponse
+                                {
+                                    ToolCallEvents = [new ToolCallEventInfo("start", earlyTc.Id, earlyName, null)]
+                                };
                             }
                         }
                     }
@@ -259,17 +276,22 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 ToolCalls = toolCalls.ToList(),
             });
 
-            // Step 1: yield 全部 start 事件，同时并行启动工具任务（每次调用独立上下文，无共享竞争）
+            // Step 1: yield start 事件并并行启动工具任务。
+            // 已在流式传输阶段提前发出 start 的工具（show_widget 等大参数工具）跳过，避免前端重复添加同一工具调用条目。
+            // ask_user 等短参数工具在此处首次发出含完整 arguments 的 start 事件（前端需据此解析问题组）。
             var tasks = new Task<String>[toolCalls.Count];
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                yield return new ChatResponse
+                if (!earlyStartedToolIds.Contains(tc.Id ?? ""))
                 {
-                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
-                };
+                    yield return new ChatResponse
+                    {
+                        ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
+                    };
+                }
 
                 var ctx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
                 tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
