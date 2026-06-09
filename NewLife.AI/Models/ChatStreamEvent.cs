@@ -56,6 +56,9 @@ public class ChatStreamEvent
 
     /// <summary>会话标题。首条消息自动生成标题时返回</summary>
     public String? Title { get; set; }
+
+    /// <summary>音频 URL。TTS 分支下 message_done 时附带，前端收到后自动播放</summary>
+    public String? AudioUrl { get; set; }
     #endregion
 
     #region 工厂方法
@@ -89,9 +92,10 @@ public class ChatStreamEvent
     /// <param name="usage">用量统计</param>
     /// <param name="title">标题（可选）</param>
     /// <param name="finishReason">完成原因（可选）</param>
+    /// <param name="audioUrl">音频 URL（TTS 分支专用，前端自动播放）</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? finishReason = null) =>
-        new() { Type = "message_done", Usage = usage, Title = title, FinishReason = finishReason };
+    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? finishReason = null, String? audioUrl = null) =>
+        new() { Type = "message_done", Usage = usage, Title = title, FinishReason = finishReason, AudioUrl = audioUrl };
 
     /// <summary>错误事件</summary>
     /// <param name="code">错误码</param>
