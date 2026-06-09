@@ -162,6 +162,10 @@ public class GatewayService(UsageService usageService, ModelService modelService
             messages.Add(msg);
         }
 
+        // 模型配置启用提示缓存时，给 system prompt 和首条用户消息打上 cache_control 标记
+        if (config.EnablePromptCache)
+            MessageFlow.ApplyCacheControl(messages, config);
+
         return messages;
     }
     #endregion

@@ -107,12 +107,20 @@ public partial class UsageRecord
     public Int32 TotalTokens { get => _TotalTokens; set { if (OnPropertyChanging("TotalTokens", value)) { _TotalTokens = value; OnPropertyChanged("TotalTokens"); } } }
 
     private Int32 _CachedInputTokens;
-    /// <summary>缓存输入Token数</summary>
-    [DisplayName("缓存输入Token数")]
-    [Description("缓存输入Token数")]
+    /// <summary>缓存命中Token数。从已创建缓存中读取的Token数</summary>
+    [DisplayName("缓存命中Token数")]
+    [Description("缓存命中Token数。从已创建缓存中读取的Token数")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("CachedInputTokens", "缓存输入Token数", "")]
+    [BindColumn("CachedInputTokens", "缓存命中Token数。从已创建缓存中读取的Token数", "")]
     public Int32 CachedInputTokens { get => _CachedInputTokens; set { if (OnPropertyChanging("CachedInputTokens", value)) { _CachedInputTokens = value; OnPropertyChanged("CachedInputTokens"); } } }
+
+    private Int32 _CacheCreationTokens;
+    /// <summary>缓存创建Token数。首次创建显式缓存消耗的输入Token数</summary>
+    [DisplayName("缓存创建Token数")]
+    [Description("缓存创建Token数。首次创建显式缓存消耗的输入Token数")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("CacheCreationTokens", "缓存创建Token数。首次创建显式缓存消耗的输入Token数", "")]
+    public Int32 CacheCreationTokens { get => _CacheCreationTokens; set { if (OnPropertyChanging("CacheCreationTokens", value)) { _CacheCreationTokens = value; OnPropertyChanged("CacheCreationTokens"); } } }
 
     private Int32 _ReasoningTokens;
     /// <summary>推理Token数</summary>
@@ -217,6 +225,7 @@ public partial class UsageRecord
             "OutputTokens" => _OutputTokens,
             "TotalTokens" => _TotalTokens,
             "CachedInputTokens" => _CachedInputTokens,
+            "CacheCreationTokens" => _CacheCreationTokens,
             "ReasoningTokens" => _ReasoningTokens,
             "InputAudioTokens" => _InputAudioTokens,
             "InputTextTokens" => _InputTextTokens,
@@ -244,6 +253,7 @@ public partial class UsageRecord
                 case "OutputTokens": _OutputTokens = value.ToInt(); break;
                 case "TotalTokens": _TotalTokens = value.ToInt(); break;
                 case "CachedInputTokens": _CachedInputTokens = value.ToInt(); break;
+                case "CacheCreationTokens": _CacheCreationTokens = value.ToInt(); break;
                 case "ReasoningTokens": _ReasoningTokens = value.ToInt(); break;
                 case "InputAudioTokens": _InputAudioTokens = value.ToInt(); break;
                 case "InputTextTokens": _InputTextTokens = value.ToInt(); break;
@@ -423,8 +433,11 @@ public partial class UsageRecord
         /// <summary>总Token数</summary>
         public static readonly Field TotalTokens = FindByName("TotalTokens");
 
-        /// <summary>缓存输入Token数</summary>
+        /// <summary>缓存命中Token数。从已创建缓存中读取的Token数</summary>
         public static readonly Field CachedInputTokens = FindByName("CachedInputTokens");
+
+        /// <summary>缓存创建Token数。首次创建显式缓存消耗的输入Token数</summary>
+        public static readonly Field CacheCreationTokens = FindByName("CacheCreationTokens");
 
         /// <summary>推理Token数</summary>
         public static readonly Field ReasoningTokens = FindByName("ReasoningTokens");
@@ -492,8 +505,11 @@ public partial class UsageRecord
         /// <summary>总Token数</summary>
         public const String TotalTokens = "TotalTokens";
 
-        /// <summary>缓存输入Token数</summary>
+        /// <summary>缓存命中Token数。从已创建缓存中读取的Token数</summary>
         public const String CachedInputTokens = "CachedInputTokens";
+
+        /// <summary>缓存创建Token数。首次创建显式缓存消耗的输入Token数</summary>
+        public const String CacheCreationTokens = "CacheCreationTokens";
 
         /// <summary>推理Token数</summary>
         public const String ReasoningTokens = "ReasoningTokens";

@@ -126,6 +126,15 @@ public partial class ModelConfig
     [BindColumn("SupportEmbedding", "嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景", "")]
     public Boolean SupportEmbedding { get => _SupportEmbedding; set { if (OnPropertyChanging("SupportEmbedding", value)) { _SupportEmbedding = value; OnPropertyChanged("SupportEmbedding"); } } }
 
+    private Boolean _EnablePromptCache;
+    /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
+    [Category("计费")]
+    [DisplayName("启用提示缓存")]
+    [Description("启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("EnablePromptCache", "启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本", "")]
+    public Boolean EnablePromptCache { get => _EnablePromptCache; set { if (OnPropertyChanging("EnablePromptCache", value)) { _EnablePromptCache = value; OnPropertyChanged("EnablePromptCache"); } } }
+
     private String? _SystemPrompt;
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     [DisplayName("系统提示词")]
@@ -259,6 +268,7 @@ public partial class ModelConfig
             "SupportImage" => _SupportImage,
             "SupportVideo" => _SupportVideo,
             "SupportEmbedding" => _SupportEmbedding,
+            "EnablePromptCache" => _EnablePromptCache,
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
@@ -291,6 +301,7 @@ public partial class ModelConfig
                 case "SupportImage": _SupportImage = value.ToBoolean(); break;
                 case "SupportVideo": _SupportVideo = value.ToBoolean(); break;
                 case "SupportEmbedding": _SupportEmbedding = value.ToBoolean(); break;
+                case "EnablePromptCache": _EnablePromptCache = value.ToBoolean(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
@@ -378,13 +389,14 @@ public partial class ModelConfig
     /// <param name="supportImage">图像。是否支持文生图</param>
     /// <param name="supportVideo">视频生成。是否支持文生视频</param>
     /// <param name="supportEmbedding">嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</param>
+    /// <param name="enablePromptCache">启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? enablePromptCache, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -397,6 +409,7 @@ public partial class ModelConfig
         if (supportImage != null) exp &= _.SupportImage == supportImage;
         if (supportVideo != null) exp &= _.SupportVideo == supportVideo;
         if (supportEmbedding != null) exp &= _.SupportEmbedding == supportEmbedding;
+        if (enablePromptCache != null) exp &= _.EnablePromptCache == enablePromptCache;
         if (enable != null) exp &= _.Enable == enable;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -447,6 +460,9 @@ public partial class ModelConfig
 
         /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
         public static readonly Field SupportEmbedding = FindByName("SupportEmbedding");
+
+        /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
+        public static readonly Field EnablePromptCache = FindByName("EnablePromptCache");
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
@@ -531,6 +547,9 @@ public partial class ModelConfig
 
         /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
         public const String SupportEmbedding = "SupportEmbedding";
+
+        /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
+        public const String EnablePromptCache = "EnablePromptCache";
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";

@@ -143,7 +143,8 @@
         <Column Name="InputTokens" DataType="Int32" Description="输入Token数" />
         <Column Name="OutputTokens" DataType="Int32" Description="输出Token数" />
         <Column Name="TotalTokens" DataType="Int32" Description="总Token数" />
-        <Column Name="CachedInputTokens" DataType="Int32" Description="缓存输入Token数" />
+        <Column Name="CachedInputTokens" DataType="Int32" Description="缓存命中Token数。从已创建缓存中读取的Token数" />
+        <Column Name="CacheCreationTokens" DataType="Int32" Description="缓存创建Token数。首次创建显式缓存消耗的输入Token数" />
         <Column Name="ReasoningTokens" DataType="Int32" Description="推理Token数" />
         <Column Name="InputAudioTokens" DataType="Int32" Description="音频输入Token数" />
         <Column Name="InputTextTokens" DataType="Int32" Description="文本输入Token数" />
@@ -206,6 +207,7 @@
         <Column Name="SupportImage" DataType="Boolean" Description="图像。是否支持文生图" />
         <Column Name="SupportVideo" DataType="Boolean" Description="视频生成。是否支持文生视频" />
         <Column Name="SupportEmbedding" DataType="Boolean" Description="嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景" />
+        <Column Name="EnablePromptCache" DataType="Boolean" Description="启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本" Category="计费" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />

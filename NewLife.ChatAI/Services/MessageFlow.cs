@@ -516,17 +516,20 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             });
         }
 
-        // 启用提示缓存时，给 system prompt 和首条用户消息打上 cache_control 标记
-        if (setting.EnablePromptCache)
-            ApplyCacheControl(messages);
+        // 模型配置启用提示缓存时，给 system prompt 和首条用户消息打上 cache_control 标记
+        if (modelConfig != null)
+            ApplyCacheControl(messages, modelConfig);
 
         return messages;
     }
 
     /// <summary>对消息列表添加缓存标记。给 system 消息和第一条 user 消息的 TextContent 设置 CacheControl="ephemeral"</summary>
     /// <param name="messages">构建完成的上下文消息列表</param>
-    private static void ApplyCacheControl(IList<AiChatMessage> messages)
+    /// <param name="modelConfig">模型配置，用于读取 EnablePromptCache 开关</param>
+    internal static void ApplyCacheControl(IList<AiChatMessage> messages, ModelConfig modelConfig)
     {
+        if (!modelConfig.EnablePromptCache) return;
+
         // 最多标记 2 个消息：system prompt + 首条用户消息，遵守 ≤4 个 cache_control 约束
         foreach (var msg in messages)
         {
