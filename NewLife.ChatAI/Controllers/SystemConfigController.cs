@@ -38,6 +38,7 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
             LogoUrl = chatSetting.LogoUrl,
             WelcomeMessage = chatSetting.WelcomeMessage.IsNullOrEmpty() ? null : chatSetting.WelcomeMessage,
             ShareExpireMinutes = chatSetting.ShareExpireMinutes,
+            AllowAnonymousShare = chatSetting.AllowAnonymousShare,
             SuggestedQuestions = questions,
         });
     }

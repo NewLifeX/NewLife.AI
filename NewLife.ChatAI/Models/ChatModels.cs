@@ -177,6 +177,9 @@ public class SystemConfigDto
     /// <summary>分享链接默认有效期（分钟），0 表示永不过期</summary>
     public Int32 ShareExpireMinutes { get; set; }
 
+    /// <summary>允许匿名访问分享</summary>
+    public Boolean AllowAnonymousShare { get; set; }
+
     /// <summary>欢迎页推荐问题列表</summary>
     public SuggestedQuestionDto[] SuggestedQuestions { get; set; } = [];
 }

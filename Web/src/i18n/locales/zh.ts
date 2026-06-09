@@ -228,6 +228,8 @@ export default {
       defaultImageSizeDesc: '图像生成的默认输出尺寸',
       shareExpireMinutes: '分享链接有效期（分钟）',
       shareExpireMinutesDesc: '分享链接的默认过期分钟数，0 表示永不过期',
+      allowAnonymousShare: '允许匿名访问分享',
+      allowAnonymousShareDesc: '开启后未登录用户也可查看分享链接；关闭后必须登录才能访问',
     },
     gateway: {
       enableGateway: '启用网关',

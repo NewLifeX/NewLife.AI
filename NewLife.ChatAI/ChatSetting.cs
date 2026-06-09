@@ -41,6 +41,7 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("对话行为")]
     [Description("自动生成标题。首条消息后是否自动生成会话标题")]
     public Boolean AutoGenerateTitle { get; set; } = true;
+    
     /// <summary>默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型</summary>
     [Category("对话行为")]
     [Description("默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型")]
@@ -50,6 +51,34 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("对话行为")]
     [Description("默认思考模式。Auto=自动，Think=深度思考，Fast=快速响应")]
     public ThinkingMode DefaultThinkingMode { get; set; } = ThinkingMode.Auto;
+
+    /// <summary>学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型</summary>
+    [Category("对话行为")]
+    [Description("学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型")]
+    public String LearningModel { get; set; } = "";
+
+    /// <summary>轻量模型编码。简单任务（标题/摘要/蒸馏）使用，为空时自动选择</summary>
+    /// <remarks>对应 ModelConfig.Code；自动选择策略：优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型。</remarks>
+    [Category("对话行为")]
+    [Description("轻量模型。标题生成、摘要压缩、知识蒸馏等简单任务调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型")]
+    public String LightweightModel { get; set; } = "";
+
+    /// <summary>嵌入模型编码。向量检索/嵌入场景使用，为空时自动选择</summary>
+    /// <remarks>对应 ModelConfig.Code；自动选择策略：优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入。</remarks>
+    [Category("对话行为")]
+    [Description("嵌入模型。向量检索/向量嵌入场景调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入")]
+    public String EmbedModel { get; set; } = "";
+
+    /// <summary>重排序模型编码。CrossEncoder 二次精排场景使用，为空时跳过重排步骤</summary>
+    /// <remarks>对应 ModelConfig.Code，模型必须支持 IRerankClient 接口（如 gte-rerank）。为空时召回结果直接按 BM25+向量融合分使用，不做 CrossEncoder 重排。</remarks>
+    [Category("对话行为")]
+    [Description("重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分")]
+    public String RerankModel { get; set; } = "";
+
+    /// <summary>图像生成默认尺寸</summary>
+    [Category("对话行为")]
+    [Description("图像生成默认尺寸")]
+    public String DefaultImageSize { get; set; } = "1024x1024";
 
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
     [Category("对话行为")]
@@ -83,15 +112,15 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("允许的文件扩展名")]
     public String AllowedExtensions { get; set; } = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.doc,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv";
 
-    /// <summary>图像生成默认尺寸</summary>
-    [Category("附件与分享")]
-    [Description("图像生成默认尺寸")]
-    public String DefaultImageSize { get; set; } = "1024x1024";
-
     /// <summary>分享有效期（分钟）。共享链接有效时间，0 表示永不过期，默认 30 分钟</summary>
     [Category("附件与分享")]
     [Description("分享有效期（分钟）。共享链接有效时间，0 表示永不过期，默认 30 分钟")]
     public Int32 ShareExpireMinutes { get; set; } = 30;
+
+    /// <summary>允许匿名访问分享。开启后未登录用户也可查看分享链接；关闭后必须登录才能访问</summary>
+    [Category("附件与分享")]
+    [Description("允许匿名访问分享。开启后未登录用户也可查看分享链接；关闭后必须登录才能访问")]
+    public Boolean AllowAnonymousShare { get; set; } = false;
     #endregion
 
     #region API 网关
@@ -181,26 +210,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("知识进化")]
     [Description("启用自动学习。对话结束后异步提取用户记忆，构建用户画像")]
     public Boolean EnableAutoLearning { get; set; } = true;
-
-    /// <summary>学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型</summary>
-    [Category("知识进化")]
-    [Description("学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型")]
-    public String LearningModel { get; set; } = "";
-
-    /// <summary>轻量模型。标题生成、摘要压缩、知识蒸馏等简单任务调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型</summary>
-    [Category("知识进化")]
-    [Description("轻量模型。标题生成、摘要压缩、知识蒸馏等简单任务调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型")]
-    public String LightweightModel { get; set; } = "";
-
-    /// <summary>嵌入模型。向量检索/向量嵌入场景调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入</summary>
-    [Category("知识进化")]
-    [Description("嵌入模型。向量检索/向量嵌入场景调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的嵌入模型（SupportEmbedding=true），没有时退化为本地哈希嵌入")]
-    public String EmbedModel { get; set; } = "";
-
-    /// <summary>重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分</summary>
-    [Category("知识进化")]
-    [Description("重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分")]
-    public String RerankModel { get; set; } = "";
 
     /// <summary>学习最低字数。用户消息总字数低于该值且仅 1 轮时跳过记忆提取</summary>
     [Category("知识进化")]

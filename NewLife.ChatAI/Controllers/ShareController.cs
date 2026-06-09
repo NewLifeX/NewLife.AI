@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using NewLife.Cube;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
+using XCode.Membership;
 
 namespace NewLife.ChatAI.Controllers;
 
 /// <summary>分享控制器</summary>
-public class ShareController(ChatApplicationService chatService) : ChatApiControllerBase
+public class ShareController(ChatApplicationService chatService, ChatSetting chatSetting) : ChatApiControllerBase
 {
     /// <summary>创建共享链接</summary>
     /// <param name="conversationId">会话编号</param>
@@ -23,7 +24,7 @@ public class ShareController(ChatApplicationService chatService) : ChatApiContro
         return Ok(result);
     }
 
-    /// <summary>获取共享对话内容（公开接口，无需登录）</summary>
+    /// <summary>获取共享对话内容（根据配置决定是否需要登录）</summary>
     /// <param name="token">分享令牌</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
@@ -31,6 +32,9 @@ public class ShareController(ChatApplicationService chatService) : ChatApiContro
     [HttpGet("api/share/{token}")]
     public async Task<IActionResult> GetAsync([FromRoute] String token, CancellationToken cancellationToken)
     {
+        if (!chatSetting.AllowAnonymousShare && ManageProvider.User == null)
+            return Unauthorized(new { code = "UNAUTHORIZED", message = "请登录后查看分享内容" });
+
         var result = await chatService.GetShareContentAsync(token, cancellationToken).ConfigureAwait(false);
         if (result == null) return NotFound(new { code = "SHARE_NOT_FOUND", message = "共享链接不存在或已过期" });
         return Ok(result);

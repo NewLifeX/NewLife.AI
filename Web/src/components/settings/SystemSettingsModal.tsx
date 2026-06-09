@@ -36,6 +36,7 @@ const defaultSettings: SystemSettings = {
   allowedExtensions: '',
   defaultImageSize: '1024x1024',
   shareExpireMinutes: 30,
+  allowAnonymousShare: false,
   enableGateway: false,
   gatewayRateLimit: 0,
   upstreamRetryCount: 2,

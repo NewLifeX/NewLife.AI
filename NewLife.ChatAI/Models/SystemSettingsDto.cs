@@ -46,6 +46,9 @@ public class SystemSettingsDto
 
     /// <summary>分享有效期（天），0=永不过期</summary>
     public Int32 ShareExpireMinutes { get; set; }
+
+        /// <summary>允许匿名访问分享</summary>
+    public Boolean AllowAnonymousShare { get; set; }
     #endregion
 
     #region API 网关
@@ -166,6 +169,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>分享有效期（天）</summary>
     public Int32? ShareExpireMinutes { get; set; }
+
+    /// <summary>允许匿名访问分享</summary>
+    public Boolean? AllowAnonymousShare { get; set; }
     #endregion
 
     #region API 网关

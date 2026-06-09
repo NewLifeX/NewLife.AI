@@ -228,6 +228,8 @@ export default {
       defaultImageSizeDesc: 'Default output size for image generation',
       shareExpireMinutes: 'Share Link Expiry (minutes)',
       shareExpireMinutesDesc: 'Default expiry minutes for share links, 0 = never expire',
+      allowAnonymousShare: 'Allow Anonymous Share Access',
+      allowAnonymousShareDesc: 'When enabled, unauthenticated users can view shared conversation links; when disabled, login is required',
     },
     gateway: {
       enableGateway: 'Enable Gateway',
