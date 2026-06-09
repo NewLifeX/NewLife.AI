@@ -20,6 +20,21 @@ public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IRea
     /// EnableCodeInterpreter(bool) / VlHighResolutionImages(bool) / MaxPixels(int)
     /// </summary>
     public IDictionary<String, Object?>? Options { get; init; }
+
+    /// <summary>语音合成模型编码。非空时表示 TTS 模式：服务端将文字转为音频并作为助手消息返回，不调用 AI 推理</summary>
+    public String? TtsModel { get; init; }
+
+    /// <summary>语音合成音色。TTS 模式专用</summary>
+    public String? TtsVoice { get; init; }
+
+    /// <summary>语音合成格式。mp3/wav/pcm，TTS 模式专用</summary>
+    public String? TtsFormat { get; init; }
+
+    /// <summary>语速倍率。0.5~2.0，TTS 模式专用</summary>
+    public Double? TtsSpeed { get; init; }
+
+    /// <summary>采样率。24000/16000/8000，TTS 模式专用</summary>
+    public Int32? TtsSampleRate { get; init; }
 }
 
 /// <summary>消息数据。向前端返回的消息 DTO，包含内容、思考、工具调用、用量统计与反馈</summary>
