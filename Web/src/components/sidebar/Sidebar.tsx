@@ -27,6 +27,9 @@ interface SidebarProps {
   onLogoutClick?: () => void
   collapsed?: boolean
   className?: string
+  supportText?: string
+  supportUrl?: string
+  supportPosition?: number
 }
 
 export function Sidebar({
@@ -50,6 +53,9 @@ export function Sidebar({
   onLogoutClick,
   collapsed = false,
   className,
+  supportText,
+  supportUrl,
+  supportPosition = 3,
 }: SidebarProps) {
   const { t } = useTranslation()
 
@@ -100,6 +106,21 @@ export function Sidebar({
         </button>
       </div>
 
+      {/* 客服链接 — 新对话按钮下方 */}
+      {supportText && supportPosition === 2 && (
+        <div className="px-3 pb-1">
+          <a
+            href={supportUrl ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-start space-x-2 rounded-lg px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <Icon name="help" size="base" />
+            <span>{supportText}</span>
+          </a>
+        </div>
+      )}
+
       <NavLinks items={navItems ?? undefined} onItemClick={onNavItemClick} />
 
       <ConversationList
@@ -111,6 +132,21 @@ export function Sidebar({
         onRename={onConversationRename}
         onLoadMore={onLoadMore}
       />
+
+      {/* 客服链接 — 侧边栏底部 */}
+      {supportText && supportPosition === 1 && (
+        <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-2">
+          <a
+            href={supportUrl ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+          >
+            <Icon name="help" size="base" />
+            <span>{supportText}</span>
+          </a>
+        </div>
+      )}
 
       <UserProfile name={userName ?? t('common.user')} avatarUrl={userAvatar} isSystem={isSystem} onSettingsClick={onSettingsClick} onSystemSettingsClick={onSystemSettingsClick} onAdminClick={onAdminClick} onLogoutClick={onLogoutClick} />
     </aside>

@@ -726,6 +726,12 @@ export interface SystemConfig {
   brandGradient?: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage?: string
+  /** 客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示 */
+  supportText?: string
+  /** 客服链接。点击客服文本跳转的 URL */
+  supportUrl?: string
+  /** 客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
+  supportPosition?: number
   /** 分享链接默认有效期（分钟），0 表示永不过期 */
   shareExpireMinutes?: number
   suggestedQuestions: SuggestedQuestion[]
@@ -744,6 +750,12 @@ export interface SystemSettings {
   logoUrl: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage: string
+  /** 客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示 */
+  supportText: string
+  /** 客服链接。点击客服文本跳转的 URL */
+  supportUrl: string
+  /** 客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
+  supportPosition: number
   autoGenerateTitle: boolean
   // 对话默认
   defaultModel: number

@@ -16,6 +16,15 @@ public class SystemSettingsDto
     /// <summary>欢迎语。欢迎页大标题，为空时前端使用默认文案</summary>
     public String WelcomeMessage { get; set; } = "";
 
+    /// <summary>客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示</summary>
+    public String SupportText { get; set; } = "";
+
+    /// <summary>客服链接。点击客服文本跳转的 URL</summary>
+    public String SupportUrl { get; set; } = "";
+
+    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
+    public Int32 SupportPosition { get; set; }
+
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     public Boolean AutoGenerateTitle { get; set; }
     #endregion
@@ -138,6 +147,15 @@ public class SystemSettingsUpdateDto
 
     /// <summary>欢迎语</summary>
     public String? WelcomeMessage { get; set; }
+
+    /// <summary>客服文本</summary>
+    public String? SupportText { get; set; }
+
+    /// <summary>客服链接</summary>
+    public String? SupportUrl { get; set; }
+
+    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
+    public Int32? SupportPosition { get; set; }
 
     /// <summary>自动生成标题</summary>
     public Boolean? AutoGenerateTitle { get; set; }

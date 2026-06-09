@@ -58,6 +58,9 @@ function ChatApp() {
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
   const [welcomeMessage, setWelcomeMessage] = useState<string | undefined>(undefined)
+  const [supportText, setSupportText] = useState<string | undefined>(undefined)
+  const [supportUrl, setSupportUrl] = useState<string | undefined>(undefined)
+  const [supportPosition, setSupportPosition] = useState<number>(3)
   const [draftInput, setDraftInput] = useState('')
 
   // URL 参数直发：解析跳转参数（仅在组件挂载时初始化一次）
@@ -113,6 +116,9 @@ function ChatApp() {
           document.title = cfg.siteTitle
           setSuggestedQuestions(cfg.suggestedQuestions)
           if (cfg.welcomeMessage) setWelcomeMessage(cfg.welcomeMessage)
+          if (cfg.supportText) setSupportText(cfg.supportText)
+          if (cfg.supportUrl) setSupportUrl(cfg.supportUrl)
+          if (cfg.supportPosition != null) setSupportPosition(cfg.supportPosition)
           applyBrandTheme(cfg.themeColor, cfg.brandGradient)
         })
         .catch(() => {}),
@@ -258,6 +264,9 @@ function ChatApp() {
         conversationTitle={activeConv?.title}
         userName={userName}
         userAvatar={userAvatar}
+        supportText={supportText}
+        supportUrl={supportUrl}
+        supportPosition={supportPosition}
         modelSelector={
           <div className="flex items-center gap-2">
           <ModelSelector

@@ -91,6 +91,47 @@ export function SiteConfigSettings({ settings, onChange }: Props) {
           className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.siteConfig.supportText')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.siteConfig.supportTextDesc')}</p>
+        <input
+          type="text"
+          value={settings.supportText}
+          onChange={(e) => onChange({ supportText: e.target.value })}
+          placeholder={t('systemSettings.siteConfig.supportTextPlaceholder')}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.siteConfig.supportUrl')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.siteConfig.supportUrlDesc')}</p>
+        <input
+          type="text"
+          value={settings.supportUrl}
+          onChange={(e) => onChange({ supportUrl: e.target.value })}
+          placeholder="https://..."
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.siteConfig.supportPosition')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.siteConfig.supportPositionDesc')}</p>
+        <select
+          value={settings.supportPosition}
+          onChange={(e) => onChange({ supportPosition: Number(e.target.value) })}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+          <option value={1}>{t('systemSettings.siteConfig.supportPositionSidebarBottom')}</option>
+          <option value={2}>{t('systemSettings.siteConfig.supportPositionBelowNewChat')}</option>
+          <option value={3}>{t('systemSettings.siteConfig.supportPositionFloatingButton')}</option>
+        </select>
+      </div>
       <Toggle
         checked={settings.autoGenerateTitle}
         onChange={(v) => onChange({ autoGenerateTitle: v })}

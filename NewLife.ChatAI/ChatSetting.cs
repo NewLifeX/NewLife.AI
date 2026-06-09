@@ -34,6 +34,21 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("外观与品牌")]
     [Description("欢迎语。欢迎页大标题，为空时使用前端默认文案")]
     public String WelcomeMessage { get; set; } = "";
+
+    /// <summary>客服文本。侧边栏或悬浮球中显示的帮助链接文字，如"联系客服"；为空时不展示</summary>
+    [Category("外观与品牌")]
+    [Description("客服文本。侧边栏或悬浮球中显示的帮助链接文字，如「联系客服」；为空时不展示")]
+    public String SupportText { get; set; } = "";
+
+    /// <summary>客服链接。点击客服文本跳转的 URL，支持 https://、mailto: 等</summary>
+    [Category("外观与品牌")]
+    [Description("客服链接。点击客服文本跳转的 URL，支持 https://、mailto: 等")]
+    public String SupportUrl { get; set; } = "";
+
+    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）</summary>
+    [Category("外观与品牌")]
+    [Description("客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）")]
+    public Int32 SupportPosition { get; set; } = 3;
     #endregion
 
     #region 对话行为
@@ -41,7 +56,7 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("对话行为")]
     [Description("自动生成标题。首条消息后是否自动生成会话标题")]
     public Boolean AutoGenerateTitle { get; set; } = true;
-    
+
     /// <summary>默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型</summary>
     [Category("对话行为")]
     [Description("默认模型。新用户的默认模型配置Id，0表示自动选择优先级最高的可用文本模型")]
