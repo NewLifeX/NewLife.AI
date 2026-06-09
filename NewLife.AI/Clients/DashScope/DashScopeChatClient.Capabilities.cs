@@ -569,6 +569,10 @@ public partial class DashScopeChatClient
             },
         };
 
+        // 语速倍率。CosyVoice HTTP API 参数名为 rate，默认 1.0（正常语速）
+        if (request.Speed is > 0 and not 1.0)
+            ((Dictionary<String, Object>)body["input"]!)["rate"] = request.Speed;
+
         using var span = Tracer?.NewSpan("ai:DashScopeTts", new { model = body["model"], format, voice = request.Voice });
         try
         {
