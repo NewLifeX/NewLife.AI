@@ -124,8 +124,16 @@ public partial class Skill
     [DisplayName("系统")]
     [Description("系统。是否系统内置，内置技能不可删除")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("IsSystem", "系统。是否系统内置，内置技能不可删除", "")]
+    [BindColumn("IsSystem", "系统。系统技能无需引用或关键词匹配，每次对话自动注入 system 消息；用户不可删除", "")]
     public Boolean IsSystem { get => _IsSystem; set { if (OnPropertyChanging("IsSystem", value)) { _IsSystem = value; OnPropertyChanged("IsSystem"); } } }
+
+    private Boolean _IsPrimary;
+    /// <summary>主技能。标记为场景级技能（Agent），意图门控模式下作为可匹配的场景入口</summary>
+    [DisplayName("主技能")]
+    [Description("主技能。标记为场景级技能（Agent），意图门控模式下作为可匹配的场景入口")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("IsPrimary", "主技能。标记为场景级技能（Agent），意图门控模式下作为可匹配的场景入口", "")]
+    public Boolean IsPrimary { get => _IsPrimary; set { if (OnPropertyChanging("IsPrimary", value)) { _IsPrimary = value; OnPropertyChanged("IsPrimary"); } } }
 
     private Int32 _Version;
     /// <summary>版本。每次编辑自增</summary>
@@ -238,6 +246,7 @@ public partial class Skill
             "Sort" => _Sort,
             "Enable" => _Enable,
             "IsSystem" => _IsSystem,
+            "IsPrimary" => _IsPrimary,
             "Version" => _Version,
             "CreateUser" => _CreateUser,
             "CreateUserID" => _CreateUserID,
@@ -267,6 +276,7 @@ public partial class Skill
                 case "Sort": _Sort = value.ToInt(); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "IsSystem": _IsSystem = value.ToBoolean(); break;
+                case "IsPrimary": _IsPrimary = value.ToBoolean(); break;
                 case "Version": _Version = value.ToInt(); break;
                 case "CreateUser": _CreateUser = Convert.ToString(value); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -386,6 +396,9 @@ public partial class Skill
         /// <summary>系统。是否系统内置，内置技能不可删除</summary>
         public static readonly Field IsSystem = FindByName("IsSystem");
 
+        /// <summary>主技能。标记为场景级技能（Agent），意图门控模式下作为可匹配的场景入口</summary>
+        public static readonly Field IsPrimary = FindByName("IsPrimary");
+
         /// <summary>版本。每次编辑自增</summary>
         public static readonly Field Version = FindByName("Version");
 
@@ -460,6 +473,9 @@ public partial class Skill
 
         /// <summary>系统。是否系统内置，内置技能不可删除</summary>
         public const String IsSystem = "IsSystem";
+
+        /// <summary>主技能。标记为场景级技能（Agent），意图门控模式下作为可匹配的场景入口</summary>
+        public const String IsPrimary = "IsPrimary";
 
         /// <summary>版本。每次编辑自增</summary>
         public const String Version = "Version";

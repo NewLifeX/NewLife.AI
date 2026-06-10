@@ -401,7 +401,8 @@
         <Column Name="ExitHints" DataType="String" Length="200" Description="退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
-        <Column Name="IsSystem" DataType="Boolean" Description="系统。是否系统内置，内置技能不可删除" />
+        <Column Name="IsSystem" DataType="Boolean" Description="系统。系统技能无需引用或关键词匹配，每次对话自动注入 system 消息；用户不可删除" />
+        <Column Name="IsPrimary" DataType="Boolean" Description="主技能。标记为场景级技能（Agent），意图门控模式下作为可匹配的场景入口" />
         <Column Name="Version" DataType="Int32" Description="版本。每次编辑自增" />
         <Column Name="CreateUser" DataType="String" Description="创建者" Category="扩展" Model="False" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />

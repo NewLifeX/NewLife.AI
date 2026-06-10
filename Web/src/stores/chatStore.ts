@@ -389,6 +389,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
             break
 
           case 'error': {
+            // 意图门控拒绝：显示为正常完成消息而非错误
+            if (event.code === 'intent_gate_no_match' && event.message) {
+              const gateMsg = event.message ?? '抱歉，暂不支持该问题。'
+              if (assistantMsgId != null) {
+                set((s) => ({
+                  messages: s.messages.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: gateMsg, status: 'done' as const }
+                      : m,
+                  ),
+                  isGenerating: false,
+                  _abortController: null,
+                  _generatingMsgId: null,
+                }))
+              }
+              break
+            }
+
             const errorMsg = event.message || event.error || '发生错误'
             if (assistantMsgId != null) {
               set((s) => ({

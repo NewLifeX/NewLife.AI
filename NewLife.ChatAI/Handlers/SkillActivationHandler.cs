@@ -112,6 +112,9 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
     {
         if (skillService == null) return;
 
+        // IntentGateHandler 已设置 SkillId 时跳过，避免覆盖门控的匹配结果
+        if (context.SkillId > 0) return;
+
         var matched = skillService.MatchSkillByContent(lastUserContent);
         if (matched == null || matched.Id == context.SkillId) return;
 

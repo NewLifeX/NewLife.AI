@@ -311,16 +311,19 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         return p.GetList<Int32>();
     }
 
-    /// <summary>根据用户消息内容匹配触发词技能。遍历所有启用且设置了触发词的技能，消息包含任一触发词时返回该技能（按Sort降序优先）</summary>
+    /// <summary>根据用户消息内容匹配所有命中的技能。遍历启用技能，消息包含任一触发词时加入结果列表（按Sort降序）</summary>
     /// <param name="content">用户消息内容</param>
-    /// <returns>匹配到的技能，无匹配返回 null</returns>
-    public Skill? MatchSkillByContent(String? content)
+    /// <param name="primaryOnly">仅匹配主技能（IsPrimary=true）</param>
+    /// <returns>匹配到的技能列表，无匹配返回空列表</returns>
+    public IList<Skill> MatchSkillsByContent(String? content, Boolean primaryOnly = false)
     {
-        if (content.IsNullOrWhiteSpace()) return null;
+        var result = new List<Skill>();
+        if (content.IsNullOrWhiteSpace()) return result;
 
         var allSkills = GetAllEnabledSkillsForTriggerMatch();
-        foreach (var skill in allSkills.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id))
+        foreach (var skill in allSkills)
         {
+            if (primaryOnly && !skill.IsPrimary) continue;
             if (skill.Triggers.IsNullOrWhiteSpace()) continue;
 
             var triggers = skill.Triggers.Split(',', '，');
@@ -328,11 +331,36 @@ public class SkillService(IChatSetting chatSetting, ILog log)
             {
                 var word = trigger.Trim();
                 if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
-                    return skill;
+                {
+                    result.Add(skill);
+                    break;
+                }
             }
         }
 
-        return null;
+        result.Sort((a, b) =>
+        {
+            var sortCompare = b.Sort.CompareTo(a.Sort);
+            return sortCompare != 0 ? sortCompare : b.Id.CompareTo(a.Id);
+        });
+
+        return result;
+    }
+
+    /// <summary>根据用户消息内容匹配触发词技能。遍历所有启用且设置了触发词的技能，消息包含任一触发词时返回该技能（按Sort降序优先）</summary>
+    /// <param name="content">用户消息内容</param>
+    /// <returns>匹配到的技能，无匹配返回 null</returns>
+    public Skill? MatchSkillByContent(String? content) => MatchSkillsByContent(content).FirstOrDefault();
+
+    /// <summary>获取所有启用的主技能列表（IsPrimary=true），按Sort降序</summary>
+    /// <returns></returns>
+    public IList<Skill> GetPrimarySkills()
+    {
+        return GetAllSkills()
+            .Where(e => e.IsPrimary)
+            .OrderByDescending(e => e.Sort)
+            .ThenByDescending(e => e.Id)
+            .ToList();
     }
 
     /// <summary>根据消息内容匹配原生工具触发词。仅返回启用且 IsSystem=false 的工具名称集合</summary>
