@@ -124,7 +124,12 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
         if (msg.Content.IsNullOrEmpty())
         {
             if (hasError)
-                msg.Content = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
+            {
+                // 错误时优先保留已有部分推理内容（ThinkingContent 已在 OnAfter 中从 ThinkingBuilder 写入），
+                // 避免只用 "[生成失败]" 覆盖掉部分数据；Content 为空但 ThinkingContent 有值时保留推理记录
+                var fallback = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
+                msg.Content = msg.ThinkingContent.IsNullOrEmpty() ? fallback : fallback;
+            }
             else if (msg.ThinkingContent.IsNullOrEmpty())
                 msg.Content = "[已中断]";
         }
@@ -132,7 +137,10 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
         {
             msg.Content += $"\n\n[错误] {errorDetail}";
         }
-        if (usage != null)
+
+        // 仅当 LLM 返回有效 Token 数据时才写入，避免用全零 UsageDetails 覆盖消息已有数据
+        // （全零 UsageDetails 通常来自异常路径中 lastUsage ??= new UsageDetails() 创建的虚假对象）
+        if (usage is { TotalTokens: > 0 })
         {
             msg.InputTokens = usage.InputTokens;
             msg.OutputTokens = usage.OutputTokens;

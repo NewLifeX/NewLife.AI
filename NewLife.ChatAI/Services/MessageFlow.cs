@@ -687,7 +687,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         yield return ev;
                         break;
                     case "message_done":
-                        if (ev.Usage != null) context.Usage = ev.Usage;
+                        // 仅当 Usage 含有效 Token 数时才覆盖，避免 LLM 未返回 usage 时
+                        // InvokeLlmAsync 创建的全零 UsageDetails 覆盖已在流中正确设置的值
+                        if (ev.Usage is { TotalTokens: > 0 }) context.Usage = ev.Usage;
                         yield return ev;
                         break;
                     case "error":
@@ -806,11 +808,15 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (thinkingBuilder.Length > 0) yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
 
         streamSw.Stop();
-        lastUsage ??= new UsageDetails();
-        lastUsage.ElapsedMs = (Int32)streamSw.ElapsedMilliseconds;
+        if (lastUsage != null)
+        {
+            lastUsage.ElapsedMs = (Int32)streamSw.ElapsedMilliseconds;
+        }
 
         context.FinishReason = lastFinishReason;
 
+        // 仅当 LLM 返回有效 usage 时才发送 MessageDone（含 Token 统计），
+        // 避免用全零 UsageDetails 覆盖 context.Usage 中已在流式循环中正确设置的值
         yield return ChatStreamEvent.MessageDone(lastUsage, finishReason: lastFinishReason);
     }
 
@@ -854,10 +860,13 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 context.ContentBuilder.Append(text);
         }
 
-        // 写入用量
-        var usage = response.Usage ?? new UsageDetails();
-        usage.ElapsedMs = (Int32)sw.ElapsedMilliseconds;
-        context.Usage = usage;
+        // 写入用量（仅当 LLM 返回有效 usage 时；否则保持 context.Usage 原值，避免覆盖为全零）
+        if (response.Usage != null)
+        {
+            var usage = response.Usage;
+            usage.ElapsedMs = (Int32)sw.ElapsedMilliseconds;
+            context.Usage = usage;
+        }
 
         context.FinishReason = response.Messages?.FirstOrDefault()?.FinishReason?.ToApiString();
     }
