@@ -336,7 +336,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
               set((s) => ({
                 messages: s.messages.map((m) =>
                   m.id === assistantMsgId
-                    ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).some(t => t.id === event.toolCallId)
+                        ? (m.toolCalls ?? []).map(t => t.id === event.toolCallId ? { ...t, arguments: event.arguments } : t)
+                        : [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
                     : m,
                 ),
               }))
@@ -485,7 +487,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
               set((s) => ({
                 messages: s.messages.map((m) =>
                   m.id === currentId
-                    ? { ...m, toolCalls: [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
+                    ? { ...m, toolCalls: (m.toolCalls ?? []).some(t => t.id === event.toolCallId)
+                        ? (m.toolCalls ?? []).map(t => t.id === event.toolCallId ? { ...t, arguments: event.arguments } : t)
+                        : [...(m.toolCalls ?? []), { id: event.toolCallId!, name: event.name ?? '', status: 'calling' as const, arguments: event.arguments }] }
                     : m,
                 ),
               }))

@@ -268,6 +268,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // 追加 assistant 消息（含工具调用）
+            // 防御：空 arguments 替换为 "{}"，避免 liteLLM/DashScope 因 function.arguments 为空字符串返回 400
+            foreach (var tc in toolCalls)
+            {
+                if (tc.Function != null && tc.Function.Arguments.IsNullOrEmpty())
+                    tc.Function.Arguments = "{}";
+            }
+
             workMessages.Add(new ChatMessage
             {
                 Role = "assistant",
@@ -277,21 +284,18 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             });
 
             // Step 1: yield start 事件并并行启动工具任务。
-            // 已在流式传输阶段提前发出 start 的工具（show_widget 等大参数工具）跳过，避免前端重复添加同一工具调用条目。
-            // ask_user 等短参数工具在此处首次发出含完整 arguments 的 start 事件（前端需据此解析问题组）。
+            // 始终发送含完整 arguments 的 start 事件（流式阶段的 earlyStart 仅作 UX 预览，此处补充完整参数）。
+            // CoreStreamAsync 层会按 toolCallId 去重：已存在则更新 Arguments，不追加重复条目。
             var tasks = new Task<String>[toolCalls.Count];
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                if (!earlyStartedToolIds.Contains(tc.Id ?? ""))
+                yield return new ChatResponse
                 {
-                    yield return new ChatResponse
-                    {
-                        ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
-                    };
-                }
+                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
+                };
 
                 var ctx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
                 tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);

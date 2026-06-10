@@ -695,7 +695,17 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         yield return ev;
                         break;
                     case "tool_call_start":
-                        toolCalls.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments, ContentOffset: contentBuilder.Length));
+                        // 去重：相同 id 的 start（如 earlyStart 无参 + Step1 完整参），更新已有条目的 Arguments 而非追加
+                        var existingIdx = toolCalls.FindIndex(t => t.Id == ev.ToolCallId);
+                        if (existingIdx >= 0)
+                        {
+                            var existing = toolCalls[existingIdx];
+                            toolCalls[existingIdx] = existing with { Arguments = ev.Arguments };
+                        }
+                        else
+                        {
+                            toolCalls.Add(new ToolCallDto(ev.ToolCallId + "", ev.Name + "", ToolCallStatus.Calling, ev.Arguments, ContentOffset: contentBuilder.Length));
+                        }
                         yield return ev;
                         break;
                     case "tool_call_done":
@@ -751,7 +761,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         {
             // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
             // MessageFlow 只需取最后一次非空 Usage，无需跨 chunk 自行累加
-            if (chunk.Usage != null) lastUsage = chunk.Usage;
+            // 立即写入 context.Usage，确保流式中途异常中断时 Token 用量不丢失
+            if (chunk.Usage != null)
+            {
+                lastUsage = chunk.Usage;
+                context.Usage = chunk.Usage;
+            }
 
             if (chunk is ChatResponse cr && cr.ToolCallEvents is { Count: > 0 } events)
             {
