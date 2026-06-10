@@ -107,6 +107,10 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
                     conversation.ElapsedMs += context.Usage.ElapsedMs;
                 }
                 if (context.ModelConfig != null) conversation.ModelName = context.ModelConfig.Name;
+
+                // 聚合会话级技能列表：合并本轮用户消息 SkillNames 与会话已有 SkillNames，去重
+                MergeConversationSkillNames(context, conversation);
+
                 conversation.Update();
             }
         }
@@ -159,5 +163,38 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
         if (context.Options.MaxTokens > 0) msg.MaxTokens = context.Options.MaxTokens.Value;
         if (context.Options.Temperature != null) msg.Temperature = context.Options.Temperature.Value;
         if (!context.FinishReason.IsNullOrEmpty()) msg.FinishReason = context.FinishReason;
+    }
+
+    /// <summary>合并本轮消息的技能到会话级技能列表，去重</summary>
+    private static void MergeConversationSkillNames(IChatContext context, Conversation conversation)
+    {
+        //// 收集本轮用户消息的 SkillNames
+        //var newSkills = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        //if (context.UserMessage is DbChatMessage userMsg && !userMsg.SkillNames.IsNullOrEmpty())
+        //{
+        //    foreach (var s in userMsg.SkillNames!.Split(','))
+        //    {
+        //        var trimmed = s.Trim();
+        //        if (!trimmed.IsNullOrEmpty()) newSkills.Add(trimmed);
+        //    }
+        //}
+
+        //if (newSkills.Count == 0) return;
+
+        //// 合并会话已有 SkillNames
+        //if (!conversation.SkillNames.IsNullOrEmpty())
+        //{
+        //    foreach (var s in conversation.SkillNames!.Split(','))
+        //    {
+        //        var trimmed = s.Trim();
+        //        if (!trimmed.IsNullOrEmpty()) newSkills.Add(trimmed);
+        //    }
+        //}
+
+        //conversation.SkillNames = String.Join(",", newSkills);
+        if (conversation.SkillName.IsNullOrEmpty() && context.UserMessage is DbChatMessage userMsg)
+        {
+            conversation.SkillName = userMsg.SkillNames!.Split(',').FirstOrDefault();
+        }
     }
 }
