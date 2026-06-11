@@ -171,6 +171,17 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 软删除旧消息，保留历史版本；为本次重新生成创建新消息实体
         var oldMsg = flow.AssistantMessage;
+
+        // 重新生成次数检查：同一消息最多允许 3 次连续重新生成
+        var regenKey = $"RegenerateCount_{oldMsg.Id}";
+        var regenCount = flow.Items.TryGetValue(regenKey, out var raw) && raw is Int32 val ? val : 0;
+        if (regenCount >= 3)
+        {
+            yield return ChatStreamEvent.ErrorEvent("REGENERATE_LIMIT", "该消息已达到重新生成次数上限（3 次），请发送新消息开始新一轮对话");
+            yield break;
+        }
+        flow.Items[regenKey] = regenCount + 1;
+
         var newMsg = new DbChatMessage
         {
             ConversationId = oldMsg.ConversationId,
@@ -179,11 +190,16 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             Enable = true,
         };
         newMsg.Insert();
+        if (newMsg.Id <= 0)
+            throw new InvalidOperationException("新消息插入失败，未获取有效 Id");
         oldMsg.Enable = false;
         oldMsg.Update();
         flow.HistoryMessages.Remove(oldMsg);
         flow.HistoryMessages.Add(newMsg);
         flow.AssistantMessage = newMsg;
+
+        // 显式查找并设置 UserMessage：从历史中取 oldMsg 之前最后一条 user 角色消息
+        flow.UserMessage = flow.HistoryMessages.LastOrDefault(e => e.Id < oldMsg.Id && e.Role.EqualIgnoreCase("user"));
 
         // Step2: 构建对话上下文
         await BuildContextForRegenerateAsync(flow, cancellationToken).ConfigureAwait(false);
@@ -439,6 +455,15 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         var entity = flow.AssistantMessage;
         var beforeMessages = flow.HistoryMessages.Where(e => e.Id < entity.Id).ToList();
+
+        // 防御：确保上下文至少包含一条用户消息，否则模型将无法理解任务
+        var hasUserMessage = beforeMessages.Any(e => e.Role.EqualIgnoreCase("user"));
+        if (!hasUserMessage)
+        {
+            var errMsg = $"重新生成上下文缺少用户消息。AssistantMessage.Id={entity.Id}, HistoryMessages.Count={flow.HistoryMessages.Count}, beforeMessages.Count={beforeMessages.Count}";
+            log?.Error(errMsg);
+            throw new InvalidOperationException(errMsg);
+        }
 
         var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
         if (beforeMessages.Count > maxCount)
@@ -753,6 +778,15 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         using var streamClient = BuildPipelineClient(rawClient, context);
 
+        // 防御：上下文缺少用户消息时直接报错，避免模型在无任务约束下空转
+        var hasUserMessage = contextMessages.Any(m => m.Role == "user");
+        if (!hasUserMessage)
+        {
+            log?.Warn("LLM 上下文缺少用户消息，即将跳过调用。ContextMessages.Count={0}", contextMessages.Count);
+            yield return ChatStreamEvent.ErrorEvent("EMPTY_CONTEXT", "对话上下文异常：缺少用户问题，请刷新页面后重试");
+            yield break;
+        }
+
         var thinkingBuilder = new StringBuilder();
         UsageDetails? lastUsage = null;
         Int64 thinkingStart = 0;
@@ -1018,6 +1052,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         //history.Reverse();
         //!!! 不能使用 Reverse ，它未能让列表完全倒置
         history = history.OrderBy(e => e.Id).ToList();
+
+        // 过滤空内容的 assistant 占位消息（多次重新生成失败留下的残留）
+        history = history.Where(e => !ShouldSkipHistoryMessage(e)).ToList();
+
         return history;
     }
 
