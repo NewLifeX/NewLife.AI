@@ -83,6 +83,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         flow.HistoryMessages.Add(newMsg);
         flow.AssistantMessage = newMsg;
 
+        // 显式查找并设置 UserMessage：从历史中取 oldMsg 之前最后一条 user 角色消息
+        flow.UserMessage = flow.HistoryMessages.LastOrDefault(e => e.Id < oldMsg.Id && e.Role.EqualIgnoreCase("user"));
+
         try
         {
             // Step2: 构建对话上下文
