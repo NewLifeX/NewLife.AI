@@ -58,7 +58,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
 
         // 优先从 UserMessage 取内容（不经 ApplyCacheControl 清零），Regenerate 场景 UserMessage 为 null 时回退到 ContextMessages
         var lastUserContent = context.UserMessage?.Content
-            ?? context.ContextMessages.LastOrDefault(m => m.Role == "user")?.Content as String;
+            ?? context.ContextMessages?.LastOrDefault(m => m.Role == "user")?.Content as String;
 
         // 基于用户消息内容自动匹配技能（StarChat 与 ChatAI 均支持）
         ResolveSkillByContent(context, lastUserContent);

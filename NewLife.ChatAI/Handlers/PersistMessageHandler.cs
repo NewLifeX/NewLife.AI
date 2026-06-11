@@ -89,7 +89,7 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
             // 用户消息
             if (context.UserMessage is DbChatMessage userMessage)
             {
-                userMessage.ThinkingContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
+                userMessage.ThinkingContent = context.ContextMessages?.FirstOrDefault(m => m.Role == "system")?.Content as String;
                 userMessage.ToolNames = context.AvailableToolNames?.Join();
                 userMessage.Update();
             }

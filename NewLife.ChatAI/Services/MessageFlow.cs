@@ -975,6 +975,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (!hasMiddle && !hasTail) return;
 
         var messages = context.ContextMessages;
+        if (messages == null) return;
         var systemMsg = messages.FirstOrDefault(m => m.Role == "system");
 
         // 构建追加内容（中段 + 末段按顺序拼接）
