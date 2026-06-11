@@ -194,7 +194,7 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
         //conversation.SkillNames = String.Join(",", newSkills);
         if (conversation.SkillName.IsNullOrEmpty() && context.UserMessage is DbChatMessage userMsg)
         {
-            conversation.SkillName = userMsg.SkillNames!.Split(',').FirstOrDefault();
+            conversation.SkillName = userMsg.SkillNames?.Split(',').FirstOrDefault();
         }
     }
 }
