@@ -37,6 +37,9 @@ jobs:
     - name: Pack NewLife.AI
       run: dotnet pack -c Release -o out NewLife.AI/NewLife.AI.csproj
 
+    - name: Pack NewLife.AI.Extensions
+      run: dotnet pack -c Release -o out NewLife.AI.Extensions/NewLife.AI.Extensions.csproj
+
     - name: Pack ChatAI
       run: dotnet pack -c Release -o out NewLife.ChatAI/NewLife.ChatAI.csproj
 

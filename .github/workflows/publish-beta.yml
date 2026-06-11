@@ -5,6 +5,7 @@ on:
     branches: [ master ]
     paths:
       - 'NewLife.AI/**'
+      - 'NewLife.AI.Extensions/**'
       - 'NewLife.ChatAI/**'
       - 'Web/**'
   workflow_dispatch:
@@ -40,6 +41,9 @@ jobs:
 
     - name: Pack NewLife.AI beta
       run: dotnet pack --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.AI/NewLife.AI.csproj
+
+    - name: Pack NewLife.AI.Extensions beta
+      run: dotnet pack --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.AI.Extensions/NewLife.AI.Extensions.csproj
 
     - name: Pack ChatAI beta
       run: dotnet pack --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.ChatAI/NewLife.ChatAI.csproj
