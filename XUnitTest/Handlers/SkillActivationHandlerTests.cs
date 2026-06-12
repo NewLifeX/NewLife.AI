@@ -150,6 +150,7 @@ public class SkillActivationHandlerTests
         public String? CancelMessage { get; set; }
         public ChatFlowSource Source { get; set; } = ChatFlowSource.Web;
         public IDictionary<String, Object?> Items { get; } = new Dictionary<String, Object?>(StringComparer.OrdinalIgnoreCase);
+        public IList<ISkill> ActivatedSkills => [];
         public Object? this[String key]
         {
             get => Items.TryGetValue(key, out var v) ? v : null;

@@ -58,10 +58,11 @@ public class SkillController : EntityController<Skill>
         var category = p["category"];
         var isSystem = p["isSystem"]?.ToBoolean();
         var enable = p["enable"]?.ToBoolean();
+        var isPrimary = p["isPrimary"]?.ToBoolean();
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return Skill.Search(code, category, isSystem, enable, start, end, p["Q"], p);
+        return Skill.Search(code, category, isSystem, isPrimary, enable, start, end, p["Q"], p);
     }
 }

@@ -11,6 +11,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Xml.Serialization;
 using NewLife;
+using NewLife.AI.Interfaces;
 using NewLife.Data;
 using NewLife.Log;
 using NewLife.Model;
@@ -26,7 +27,7 @@ using XCode.Shards;
 
 namespace NewLife.ChatAI.Entity;
 
-public partial class Skill : Entity<Skill>
+public partial class Skill : Entity<Skill>, ISkill
 {
     #region 对象操作
     // 控制最大缓存数量，Find/FindAll查询方法在表行数小于该值时走实体缓存

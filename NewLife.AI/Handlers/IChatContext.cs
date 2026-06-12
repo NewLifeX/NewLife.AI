@@ -26,6 +26,10 @@ public interface IChatContext : IExtend
     /// <summary>会话技能编号（0 表示无技能；处理器内部可在执行过程中重写）</summary>
     Int32 SkillId { get; set; }
 
+    /// <summary>本轮已激活的技能列表。由 SkillActivationHandler 填充，按 Sort 降序。
+    /// IntentGateHandler 据此判断是否满足门控模式要求，不含系统技能（IsSystem=true）</summary>
+    IList<ISkill> ActivatedSkills { get; }
+
     /// <summary>思考模式</summary>
     ThinkingMode ThinkingMode { get; set; }
 

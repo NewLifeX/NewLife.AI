@@ -22,6 +22,9 @@ public class MessageFlowContext : IChatContext
     /// <summary>技能编号（0 表示无技能）</summary>
     public Int32 SkillId { get; set; }
 
+    /// <summary>本轮已激活的技能列表。由 SkillActivationHandler 填充，按 Sort 降序。不含系统技能</summary>
+    public List<ISkill> ActivatedSkills { get; } = [];
+
     #endregion
 
     #region 实体引用
@@ -143,6 +146,9 @@ public class MessageFlowContext : IChatContext
 
     /// <inheritdoc />
     IChatMessage IChatContext.AssistantMessage { get => AssistantMessage; set => AssistantMessage = (DbChatMessage)value; }
+
+    /// <inheritdoc />
+    IList<ISkill> IChatContext.ActivatedSkills => ActivatedSkills;
 
     ///// <inheritdoc />
     //IList<AiChatMessage> IChatContext.ContextMessages { get => ContextMessages; set => ContextMessages = value; }

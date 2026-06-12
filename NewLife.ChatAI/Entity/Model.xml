@@ -397,8 +397,6 @@
         <Column Name="Description" DataType="String" Length="500" Description="描述。一句话说明该技能做什么" />
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
         <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译" />
-        <Column Name="ContinueHints" DataType="String" Length="200" Description="延续提示词。逗号分隔，匹配时保持技能活跃，如：继续翻译,再翻一段" />
-        <Column Name="ExitHints" DataType="String" Length="200" Description="退出提示词。逗号分隔，匹配时清除会话技能，如：不用翻译了,换个话题" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。系统技能无需引用或关键词匹配，每次对话自动注入 system 消息；用户不可删除" />

@@ -52,6 +52,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
                         conversation.Update();
                     }
                     flow.SkillId = skill.Id;
+                    flow.ActivatedSkills.Add(skill);
                 }
             }
         }
@@ -62,6 +63,18 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
 
         // 基于用户消息内容自动匹配技能（StarChat 与 ChatAI 均支持）
         ResolveSkillByContent(context, lastUserContent);
+
+        // 续轮粘滞：会话已有绑定技能且上述路径未覆盖时，加入 ActivatedSkills
+        if (context.SkillId > 0 && context is MessageFlowContext flow2)
+        {
+            var stickySkill = Skill.FindById(context.SkillId);
+            if (stickySkill != null && stickySkill.Enable && !stickySkill.IsSystem)
+            {
+                // 避免重复添加（RequestSkillCode 或触发词可能已命中同一技能）
+                if (!flow2.ActivatedSkills.Any(s => s.Id == stickySkill.Id))
+                    flow2.ActivatedSkills.Add(stickySkill);
+            }
+        }
 
         // 注入技能 Prompt（已选中工具由 ToolContextHandler 在上游填充）
         var skillNames = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
@@ -105,29 +118,40 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
         return Task.CompletedTask;
     }
 
-    /// <summary>基于用户消息内容自动匹配技能。匹配成功时更新 context.SkillId 并持久化到会话，支持触发词覆盖已选技能</summary>
+    /// <summary>基于用户消息内容自动匹配技能。所有命中技能加入 ActivatedSkills，取 Sort 最高者为当前 SkillId（不覆盖已有显式选择）。
+    /// 仅匹配非系统技能（IsSystem=false），系统技能无条件注入 prompt 不参与门控</summary>
     /// <param name="context">对话上下文</param>
     /// <param name="lastUserContent">最后一条用户消息文本</param>
     protected virtual void ResolveSkillByContent(IChatContext context, String? lastUserContent)
     {
         if (skillService == null) return;
 
-        // IntentGateHandler 已设置 SkillId 时跳过，避免覆盖门控的匹配结果
-        if (context.SkillId > 0) return;
+        var matches = skillService.MatchSkillsByContent(lastUserContent);
+        if (matches.Count == 0) return;
 
-        var matched = skillService.MatchSkillByContent(lastUserContent);
-        if (matched == null || matched.Id == context.SkillId) return;
-
-        context.SkillId = matched.Id;
-
-        // 持久化到会话，使触发词匹配的技能够"粘滞"
+        // 全部命中技能加入 ActivatedSkills，供 IntentGateHandler 做模式判断
         if (context is MessageFlowContext flow)
         {
-            var conversation = flow.Conversation;
-            if (conversation.SkillId != matched.Id)
+            foreach (var skill in matches)
             {
-                conversation.SkillId = matched.Id;
-                conversation.SkillName = matched.Name;
+                if (!skill.IsSystem && !flow.ActivatedSkills.Any(s => s.Id == skill.Id))
+                    flow.ActivatedSkills.Add(skill);
+            }
+        }
+
+        // 若尚无显式激活的技能（RequestSkillCode 未设置），取 Sort 最高者作为当前技能并持久化
+        if (context.SkillId > 0) return;
+
+        var best = matches[0];
+        context.SkillId = best.Id;
+
+        if (context is MessageFlowContext flow2)
+        {
+            var conversation = flow2.Conversation;
+            if (conversation.SkillId != best.Id)
+            {
+                conversation.SkillId = best.Id;
+                conversation.SkillName = best.Name;
                 conversation.Update();
             }
         }
