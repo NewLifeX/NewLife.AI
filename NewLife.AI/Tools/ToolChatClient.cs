@@ -107,11 +107,25 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             });
 
             // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
+            // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）
+            var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
             var tasks = new Task<String>[toolCalls.Count];
             for (var i = 0; i < tasks.Length; i++)
             {
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
+
+                // 去重：重复调用不执行，直接返回占位结果
+                if (!tc.Function.Name.EqualIgnoreCase("ask_user"))
+                {
+                    var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
+                    if (!dedupKeys.Add(key))
+                    {
+                        tasks[i] = Task.FromResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行");
+                        continue;
+                    }
+                }
+
                 var ctx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
                 tasks[i] = ExecuteToolAsync(tc.Function!.Name, tc.Function!.Arguments, toolMap, ctx, cancellationToken);
             }
@@ -283,6 +297,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 ToolCalls = toolCalls.ToList(),
             });
 
+            // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）
+            var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
+            var isDedup = new Boolean[toolCalls.Count];
+
             // Step 1: yield start 事件并并行启动工具任务。
             // 始终发送含完整 arguments 的 start 事件（流式阶段的 earlyStart 仅作 UX 预览，此处补充完整参数）。
             // CoreStreamAsync 层会按 toolCallId 去重：已存在则更新 Arguments，不追加重复条目。
@@ -291,6 +309,20 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             {
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
+
+                // 去重检查（ask_user 豁免，它每次调用问题不同）
+                if (!tc.Function.Name.EqualIgnoreCase("ask_user"))
+                {
+                    var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
+                    if (!dedupKeys.Add(key))
+                    {
+                        Log.Info("跳过重复工具调用 {0} (同名同参已执行)", tc.Function.Name);
+                        isDedup[i] = true;
+                        tasks[i] = Task.FromResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行");
+                        // 不 yield start 事件，前端不渲染重复卡片
+                        continue;
+                    }
+                }
 
                 yield return new ChatResponse
                 {
@@ -318,12 +350,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     Content = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(result) : $"[已渲染到客户端：{tc.Function.Name}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径"
                 });
 
-                // SSE 事件：Frontend 路由时发送完整结果，Llm-only 时发送空内容的完成信号
+                // SSE 事件：重复工具调用不发结果到前端（null），前端收到后不渲染卡片
+                var eventResult = isDedup[i] ? null : (routing.HasFlag(ToolResponseRouting.Frontend) ? result : null);
                 var eventType = ToolError.IsToolError(result) ? "error" : "done";
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name,
-                    routing.HasFlag(ToolResponseRouting.Frontend) ? result : null)]
+                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, eventResult)]
                 };
             }
 
