@@ -140,6 +140,14 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
                 response.Usage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
                 span?.Value = response.Usage.TotalTokens;
             }
+
+            if (span != null)
+            {
+                var txt = response.Text;
+                if (!txt.IsNullOrEmpty())
+                    span.AppendTag($"\n<=[{txt.Length}]\n{txt}");
+            }
+
             return response;
         }
         catch (Exception ex)
