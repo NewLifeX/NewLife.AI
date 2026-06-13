@@ -1215,7 +1215,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (collector[i].Id == toolCallId)
             {
                 var orig = collector[i];
-                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value, orig.ContentOffset);
+                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value, null, null, orig.ContentOffset);
                 break;
             }
         }

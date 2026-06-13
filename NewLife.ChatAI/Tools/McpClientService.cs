@@ -99,16 +99,17 @@ public class McpClientService(ILog log) : IToolProvider
         return list;
     }
 
-    /// <summary>实现 <see cref="IToolProvider.GetTools(ISet{String}?)"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>
-    /// <param name="selectedTools">工具可见性过滤集合；null 返回全部已启用 MCP 工具，非 null 时仅返回 selectedTools 中包含的工具</param>
+    /// <summary>实现 <see cref="IToolProvider.GetTools(ISet{String}?, Boolean)"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>
+    /// <param name="filterNames">工具可见性过滤集合；null 返回全部已启用 MCP 工具，非 null 时仅返回匹配工具</param>
+    /// <param name="includeSystem">MCP 工具无系统工具概念，此参数忽略</param>
     /// <returns>工具定义列表，供注入 ChatCompletionRequest.Tools</returns>
-    public IList<ChatTool> GetTools(ISet<String>? selectedTools = null)
+    public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
     {
         var mcpTools = GetAllTools();
         var tools = new List<ChatTool>(mcpTools.Count);
         foreach (var t in mcpTools)
         {
-            if (selectedTools != null && !selectedTools.Contains(t.Name)) continue;
+            if (filterNames != null && !filterNames.Contains(t.Name)) continue;
 
             tools.Add(new ChatTool
             {
@@ -191,26 +192,26 @@ public class McpClientService(ILog log) : IToolProvider
 
     /// <summary>实现 <see cref="IToolProvider.CallToolAsync"/>。按工具名在已启用服务中查找并调用</summary>
     /// <param name="toolName">工具名称</param>
-    /// <param name="argumentsJson">参数 JSON 字符串</param>
+    /// <param name="arguments">参数 JSON 字符串</param>
     /// <param name="context">调用上下文，可为 null</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>调用结果文本；工具未找到时抛 <see cref="KeyNotFoundException"/></returns>
-    async Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context, CancellationToken cancellationToken)
+    async Task<IToolResult> IToolProvider.CallToolAsync(String toolName, String? arguments, ToolCallContext? context, CancellationToken cancellationToken)
     {
         var allTools = GetAllTools();
         var tool = allTools.FirstOrDefault(t => t.Name.EqualIgnoreCase(toolName));
         if (tool == null) throw new KeyNotFoundException($"MCP tool not found: '{toolName}'");
 
         var args = new Dictionary<String, Object?>();
-        if (!argumentsJson.IsNullOrEmpty())
+        if (!arguments.IsNullOrEmpty())
         {
-            var parsed = argumentsJson.ToJsonEntity<Dictionary<String, Object?>>();
+            var parsed = arguments.ToJsonEntity<Dictionary<String, Object?>>();
             if (parsed != null) args = parsed;
         }
         var result = await CallToolAsync(tool.ServerId, toolName, args, cancellationToken).ConfigureAwait(false);
 
-        if (result.Content == null || result.Content.Count == 0) return String.Empty;
-        return String.Join("\n", result.Content.Select(c => c.Text));
+        if (result.Content == null || result.Content.Count == 0) return new ToolResult(String.Empty);
+        return new ToolResult(String.Join("\n", result.Content.Select(c => c.Text)));
     }
     #endregion
 

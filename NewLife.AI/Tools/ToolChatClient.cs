@@ -70,7 +70,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var (mergedTools, toolMap, toolRoutingMap) = GetMergedTools(request);
+        var (mergedTools, toolMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
             return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -109,7 +109,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
             // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）
             var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
-            var tasks = new Task<String>[toolCalls.Count];
+            var tasks = new Task<IToolResult>[toolCalls.Count];
             for (var i = 0; i < tasks.Length; i++)
             {
                 var tc = toolCalls[i];
@@ -121,7 +121,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
                     if (!dedupKeys.Add(key))
                     {
-                        tasks[i] = Task.FromResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行");
+                        tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行"));
                         continue;
                     }
                 }
@@ -131,27 +131,24 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // Phase 2：顺序 await + 写入（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
+            var toolResults = new Dictionary<String, IToolResult>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < tasks.Length; i++)
             {
                 if (tasks[i] == null) continue;
                 var tc = toolCalls[i];
-                var result = await tasks[i].ConfigureAwait(false);
-                var routing = toolRoutingMap.TryGetValue(tc.Function!.Name, out var r2) ? r2 : ToolResponseRouting.Both;
+                var toolResult = await tasks[i].ConfigureAwait(false);
+                toolResults[tc.Function!.Name] = toolResult;
+                var llmContent = GetLlmContent(toolResult, tc.Function.Name);
                 workMessages.Add(new ChatMessage
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
-                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? result : $"[已渲染到客户端：{tc.Function.Name}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径"
+                    Content = llmContent
                 });
             }
 
-            // 若本轮所有工具均为纯 Frontend 路由（不回传 LLM），继续循环无意义，直接退出
-            // show_widget 等展示类工具返回占位 "[已渲染到客户端]"，LLM 收到后容易误判任务未完成而重复调用
-            if (toolCalls.All(call =>
-            {
-                var rCall = toolRoutingMap.TryGetValue(call.Function?.Name ?? "", out var rtCall) ? rtCall : ToolResponseRouting.Both;
-                return !rtCall.HasFlag(ToolResponseRouting.Llm);
-            })) break;
+            // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
+            if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) break;
         }
 
         // 将所有轮次的 Token 用量累加值写回最终 response，供上层（如 InvokeLlmDirectAsync）使用
@@ -169,7 +166,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
-        var (mergedTools, toolMap, toolRoutingMap) = GetMergedTools(request);
+        var (mergedTools, toolMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
         {
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
@@ -304,7 +301,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // Step 1: yield start 事件并并行启动工具任务。
             // 始终发送含完整 arguments 的 start 事件（流式阶段的 earlyStart 仅作 UX 预览，此处补充完整参数）。
             // CoreStreamAsync 层会按 toolCallId 去重：已存在则更新 Arguments，不追加重复条目。
-            var tasks = new Task<String>[toolCalls.Count];
+            var tasks = new Task<IToolResult>[toolCalls.Count];
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
@@ -318,7 +315,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     {
                         Log.Info("跳过重复工具调用 {0} (同名同参已执行)", tc.Function.Name);
                         isDedup[i] = true;
-                        tasks[i] = Task.FromResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行");
+                        tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行"));
                         // 不 yield start 事件，前端不渲染重复卡片
                         continue;
                     }
@@ -334,38 +331,35 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // Step 2: 按序 await（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
+            var toolResults = new Dictionary<String, IToolResult>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
                 if (tasks[i] == null) continue;
 
-                var result = await tasks[i].ConfigureAwait(false);
-                var routing = toolRoutingMap.TryGetValue(tc.Function!.Name, out var r) ? r : ToolResponseRouting.Both;
+                var toolResult = await tasks[i].ConfigureAwait(false);
+                toolResults[tc.Function!.Name] = toolResult;
 
-                // LLM 消息：Llm 路由时写截断版，仅 Frontend 路由时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
+                // LLM 消息：提取 Llm 受众内容；无 Llm 内容时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
+                var llmContent = GetLlmContent(toolResult, tc.Function.Name);
                 workMessages.Add(new ChatMessage
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
-                    Content = routing.HasFlag(ToolResponseRouting.Llm) ? TruncateResult(result) : $"[已渲染到客户端：{tc.Function.Name}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径"
+                    Content = TruncateResult(llmContent)
                 });
 
                 // SSE 事件：重复工具调用不发结果到前端（null），前端收到后不渲染卡片
-                var eventResult = isDedup[i] ? null : (routing.HasFlag(ToolResponseRouting.Frontend) ? result : null);
-                var eventType = ToolError.IsToolError(result) ? "error" : "done";
+                var userContent = isDedup[i] ? null : GetUserContent(toolResult);
+                var eventType = toolResult.IsError ? "error" : "done";
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, eventResult)]
+                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent)]
                 };
             }
 
-            // 若本轮所有工具均为纯 Frontend 路由（不回传 LLM），继续循环无意义，直接退出
-            // show_widget 等展示类工具返回占位 "[已渲染到客户端]"，LLM 收到后容易误判任务未完成而重复调用
-            if (toolCalls.All(call =>
-            {
-                var rCall = toolRoutingMap.TryGetValue(call.Function?.Name ?? "", out var rtCall) ? rtCall : ToolResponseRouting.Both;
-                return !rtCall.HasFlag(ToolResponseRouting.Llm);
-            })) yield break;
+            // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
+            if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) yield break;
             // 继续下一轮（下一轮流的 chunk 透传给调用方）
         }
         // 超过最大轮次，静默退出（调用方已收到全部 chunk）
@@ -381,7 +375,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="toolMap">工具名到 Provider 的路由字典</param>
     /// <param name="context">工具调用上下文，透传至工具方法</param>
     /// <param name="cancellationToken">取消令牌</param>
-    private async Task<String> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
+    private async Task<IToolResult> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
         using var span = Tracer?.NewSpan($"ai:tool:{toolName}", argumentsJson);
         // 先尝试从预构建路由表查找，找不到则动态 fallback（目录调用：AI 在 system 中看到工具名但未获得 schema）
@@ -402,13 +396,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
             var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
             if (tier == ToolApprovalTier.Deny)
-                return ToolError.Create("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）").ToJson();
+                return ToolErrorResult("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）");
 
             if (tier == ToolApprovalTier.Ask && ApprovalProvider != null)
             {
                 var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
                 if (!approval.Approved)
-                    return ToolError.Create("USER_DENIED", $"工具 {toolName} 被用户拒绝执行").ToJson();
+                    return ToolErrorResult("USER_DENIED", $"工具 {toolName} 被用户拒绝执行");
             }
             // tier == Allow：低风险工具直接放行，无需审批
 
@@ -417,10 +411,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (!breaker.TryAcquire())
             {
                 var remaining = breaker.RemainingCooldownSeconds;
-                return ToolError.Create("CIRCUIT_OPEN", $"工具提供者暂时不可用（熔断中），预计 {remaining}s 后恢复。如需立即重试请联系管理员重置熔断器").ToJson();
+                return ToolErrorResult("CIRCUIT_OPEN", $"工具提供者暂时不可用（熔断中），预计 {remaining}s 后恢复。如需立即重试请联系管理员重置熔断器");
             }
 
-            String callResult;
+            IToolResult callResult;
             try
             {
                 callResult = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
@@ -432,9 +426,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 throw;
             }
 
-            var result = callResult;
-            span?.AppendTag(result, result.Length);
-            return result!;
+            span?.AppendTag(callResult);
+            return callResult;
         }
         catch (Exception ex)
         {
@@ -445,10 +438,50 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (isCatalogCall && provider != null)
             {
                 var hint = GetSchemaHint(toolName, provider);
-                return ToolError.Create("INVALID_ARGUMENTS", ex.Message, hint).ToJson();
+                return ToolErrorResult("INVALID_ARGUMENTS", ex.Message, hint);
             }
-            return ToolError.Create("EXECUTION_ERROR", ex.Message).ToJson();
+            return ToolErrorResult("EXECUTION_ERROR", ex.Message);
         }
+    }
+
+    /// <summary>从 IToolResult 中提取 LLM 受众内容。无 Llm 内容时返回占位文本</summary>
+    /// <param name="result">工具结果</param>
+    /// <param name="toolName">工具名称</param>
+    /// <returns>LLM 受众内容或占位文本</returns>
+    private static String GetLlmContent(IToolResult result, String toolName)
+    {
+        var llmParts = result.Contents
+            .Where(c => c.Audience.HasFlag(ToolAudience.Llm))
+            .Select(c => c.Data)
+            .ToList();
+        if (llmParts.Count > 0) return String.Join("\n", llmParts);
+
+        // 无 Llm 内容时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
+        return $"[已渲染到客户端：{toolName}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径";
+    }
+
+    /// <summary>从 IToolResult 中提取前端用户内容</summary>
+    /// <param name="result">工具结果</param>
+    /// <returns>用户受众内容或 null</returns>
+    private static String? GetUserContent(IToolResult result)
+    {
+        var userParts = result.Contents
+            .Where(c => c.Audience.HasFlag(ToolAudience.User))
+            .Select(c => c.Data)
+            .ToList();
+        return userParts.Count > 0 ? String.Join("\n", userParts) : null;
+    }
+
+    /// <summary>检查指定工具的执行结果是否包含 LLM 受众内容</summary>
+    private static Boolean HasLlmAudience(Dictionary<String, IToolResult> results, String toolName)
+        => results.TryGetValue(toolName, out var result)
+            && result.Contents.Any(c => c.Audience.HasFlag(ToolAudience.Llm));
+
+    /// <summary>创建错误工具结果</summary>
+    private static ToolResult ToolErrorResult(String code, String message, String? hint = null)
+    {
+        var error = ToolError.Create(code, message, hint).ToJson();
+        return new ToolResult(error) { IsError = true };
     }
 
     /// <summary>从 Provider 中提取工具的参数 Schema，作为 INVALID_ARGUMENTS 错误的修复建议</summary>
@@ -510,12 +543,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
     }
 
-    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典和路由策略字典</summary>
-    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap, Dictionary<String, ToolResponseRouting> toolRoutingMap) GetMergedTools(IChatRequest? options)
+    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典</summary>
+    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap) GetMergedTools(IChatRequest? options)
     {
         var tools = new List<ChatTool>();
         var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
-        var toolRoutingMap = new Dictionary<String, ToolResponseRouting>(StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
         foreach (var provider in Providers)
         {
@@ -526,7 +558,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
                 tools.Add(t);
                 toolMap[name] = provider;
-                toolRoutingMap[name] = t.Function!.Routing;
             }
         }
         if (options?.Tools != null)
@@ -543,7 +574,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             schemaSpan?.AppendTag(toolNames);
         }
 
-        return (tools, toolMap, toolRoutingMap);
+        return (tools, toolMap);
     }
 
     /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>

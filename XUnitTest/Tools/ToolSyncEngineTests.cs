@@ -50,7 +50,7 @@ public class ToolSyncEngineTests
         public Boolean Enable { get; set; }
         public Boolean IsSystem { get; set; }
         public Boolean IsLocked { get; set; }
-        public ToolResponseRouting Routing { get; set; } = ToolResponseRouting.Both;
+        // ToolResponseRouting 已移除，路由由 IToolResult.Contents.Audience 替代
         public String? Providers { get; set; }
         public String? Endpoint { get; set; }
         public String? ApiKey { get; set; }

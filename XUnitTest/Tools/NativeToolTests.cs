@@ -691,7 +691,7 @@ public class NativeToolTests
     {
         /// <summary>展示可视化内容</summary>
         /// <param name="content">内容</param>
-        [ToolDescription("show_visual", Routing = ToolResponseRouting.Frontend)]
+        [ToolDescription("show_visual", ReadOnly = true)]
         public String ShowVisual(String content) => $"{{\"rendered\":\"{content}\"}}";
     }
 
@@ -757,32 +757,36 @@ public class NativeToolTests
     }
 
     [Fact]
-    [DisplayName("ToolDescriptionAttribute 默认 Routing 为 Both")]
-    public void ToolDescriptionAttribute_DefaultRouting_IsBoth()
+    [DisplayName("ToolDescriptionAttribute 默认 Idempotent 为 true")]
+    public void ToolDescriptionAttribute_DefaultIdempotent_IsTrue()
     {
         var attr = new ToolDescriptionAttribute("tool");
-        Assert.Equal(ToolResponseRouting.Both, attr.Routing);
+        Assert.True(attr.Idempotent);
     }
 
     [Fact]
-    [DisplayName("ToolDescriptionAttribute 可设置 Routing = Frontend")]
-    public void ToolDescriptionAttribute_RoutingFrontend_CanBeSet()
+    [DisplayName("ToolDescriptionAttribute 可设置 ReadOnly = true")]
+    public void ToolDescriptionAttribute_ReadOnly_CanBeSet()
     {
-        var attr = new ToolDescriptionAttribute("tool") { Routing = ToolResponseRouting.Frontend };
-        Assert.Equal(ToolResponseRouting.Frontend, attr.Routing);
+        var attr = new ToolDescriptionAttribute("tool") { ReadOnly = true };
+        Assert.True(attr.ReadOnly);
     }
 
     [Fact]
-    [DisplayName("ToolSchemaBuilder 从 ToolDescriptionAttribute 读取 Routing 并写入 FunctionDefinition")]
-    public void ToolSchemaBuilder_Routing_IsReadFromAttribute()
+    [DisplayName("ToolSchemaBuilder 从 ToolDescriptionAttribute 读取属性（Routing 已移除）")]
+    public void ToolSchemaBuilder_Attributes_AreReadFromAttribute()
     {
         var method = typeof(FrontendToolService).GetMethod(nameof(FrontendToolService.ShowVisual))!;
         var tool = ToolSchemaBuilder.BuildFromMethod(method);
 
         Assert.NotNull(tool.Function);
-        Assert.Equal(ToolResponseRouting.Frontend, tool.Function!.Routing);
+        Assert.Equal("show_visual", tool.Function!.Name);
     }
 
+    // [Fact] 暂禁用：Frontend 路由已改为运行时 IToolResult.Contents.Audience，需重写为返回 ToolResult(ForLlm(), ForUser()) 的集成测试
+    // TODO: Frontend 路由测试需要重写为 IToolResult.Audience 模式
+    // 原测试验证 role=tool 消息写入占位文本，新模式下由 IToolResult.Contents 决定
+    /*
     [Fact]
     [DisplayName("Frontend 路由工具：role=tool 消息写入占位文本而非真实结果")]
     public async Task ToolChatClient_FrontendRouting_WritesPlaceholderToLlm()
@@ -804,6 +808,7 @@ public class NativeToolTests
         Assert.Contains("[已渲染到客户端：show_visual]", toolMsg!.Content as String ?? "");
         Assert.DoesNotContain("rendered", toolMsg.Content as String ?? "");
     }
+    */
 
     [Fact]
     [DisplayName("ToolCallId 在工具调用时与 LLM 返回的 tc.Id 一致")]

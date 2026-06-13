@@ -31,6 +31,7 @@ public class ToolRegistry : IToolProvider
     private readonly List<ChatTool> _tools = [];
     private readonly List<Type> _registeredTypes = [];
     private readonly Dictionary<String, Func<String?, ToolCallContext?, CancellationToken, Task<String>>> _handlers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<String> _systemNames = new(StringComparer.OrdinalIgnoreCase);
     #endregion
 
     #region 注册方法
@@ -331,6 +332,10 @@ public class ToolRegistry : IToolProvider
 
         if (_handlers.ContainsKey(toolName)) return;  // 已注册则跳过，不覆盖
 
+        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>();
+        if (attr is { IsSystem: true })
+            _systemNames.Add(toolName);
+
         _tools.Add(tool);
         _handlers[toolName] = (args, ctx, ct) => InvokeMethodAsync(method, instance, args, ctx, ct);
     }
@@ -561,14 +566,21 @@ public class ToolRegistry : IToolProvider
 
     #region IToolProvider
 
-    IList<ChatTool> IToolProvider.GetTools(ISet<String>? selectedTools)
+    IList<ChatTool> IToolProvider.GetTools(ISet<String>? filterNames, Boolean includeSystem)
     {
-        if (selectedTools == null) return [.. _tools];
-        return [.. _tools.Where(t => t.Function?.Name != null && selectedTools.Contains(t.Function.Name))];
+        var query = _tools.AsEnumerable();
+        if (!includeSystem)
+            query = query.Where(t => t.Function?.Name is not null && !_systemNames.Contains(t.Function.Name));
+        if (filterNames != null && filterNames.Count > 0)
+            query = query.Where(t => t.Function?.Name != null && filterNames.Contains(t.Function.Name));
+        return [.. query];
     }
 
-    Task<String> IToolProvider.CallToolAsync(String toolName, String? argumentsJson, ToolCallContext? context, CancellationToken cancellationToken)
-        => InvokeAsync(toolName, argumentsJson, context, cancellationToken);
+    async Task<IToolResult> IToolProvider.CallToolAsync(String toolName, String? arguments, ToolCallContext? context, CancellationToken cancellationToken)
+    {
+        var result = await InvokeAsync(toolName, arguments, context, cancellationToken).ConfigureAwait(false);
+        return new ToolResult(result);
+    }
 
     #endregion
 }

@@ -43,6 +43,12 @@ public sealed class ToolDescriptionAttribute : Attribute
     /// <summary>是否启用。false 时同步到配置表后将保持禁用状态，可用于临时下线工具</summary>
     public Boolean Enable { get; set; } = true;
 
-    /// <summary>工具响应路由。决定执行结果的输出目标，默认同时发给 LLM 和前端</summary>
-    public ToolResponseRouting Routing { get; set; } = ToolResponseRouting.Both;
+    /// <summary>只读工具。true 时表示该工具不改变外部世界状态，可安全重试/并发</summary>
+    public Boolean ReadOnly { get; set; }
+
+    /// <summary>破坏性工具。true 时表示该工具可能产生不可逆副作用（如删除/发送），需审批</summary>
+    public Boolean Destructive { get; set; }
+
+    /// <summary>幂等工具。true 时同参重复调用结果相同，可按同名同参去重</summary>
+    public Boolean Idempotent { get; set; } = true;
 }

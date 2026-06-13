@@ -44,7 +44,6 @@ public static class ToolSchemaBuilder
                 Name = toolName,
                 Description = methodSummary,
                 Parameters = schema,
-                Routing = attr?.Routing ?? ToolResponseRouting.Both,
             }
         };
     }
