@@ -38,17 +38,41 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
             // 用户消息
             if (context.UserMessage is DbChatMessage userMessage)
             {
-                // 提取系统提示词：首个 system 消息内容 + 尚未 flush 的 SystemSegments 片段
-                // （FlushSystemSegments 在所有 OnBefore 完成后才执行，此时 SystemSegments 已由各处理器注入内容）
+                // 提取最终 system 消息全文：与 FlushSystemSegments 逻辑对齐，
+                // 拼接 ContextMessages[首个system] + SystemSegments + TailSegments，完整还原发给 LLM 的内容
                 var systemContent = context.ContextMessages.FirstOrDefault(m => m.Role == "system")?.Content as String;
-                if (context.SystemSegments.Count > 0)
+                var hasMiddle = context.SystemSegments.Count > 0;
+                var hasTail = context.TailSegments.Count > 0;
+                if (hasMiddle || hasTail)
                 {
-                    var extra = String.Join("\n\n", context.SystemSegments);
+                    var parts = new List<String>(context.SystemSegments.Count + context.TailSegments.Count);
+                    foreach (var s in context.SystemSegments)
+                        parts.Add(s);
+                    foreach (var s in context.TailSegments)
+                        parts.Add(s);
+                    var extra = String.Join("\n\n", parts);
                     systemContent = systemContent.IsNullOrEmpty() ? extra : systemContent + "\n\n" + extra;
                 }
                 userMessage.ThinkingContent = systemContent;
-                userMessage.ToolNames = context.AvailableToolNames?.Join();
+                // Before 阶段 AvailableToolNames 尚未填充（由 BuildPipelineClient 在 Core 阶段填充），
+                // 此处保存用户 @引用的工具（SelectedTools），After 阶段再覆盖为实际注入 LLM 的工具
+                if (context.SelectedTools.Count > 0)
+                    userMessage.ToolNames = String.Join(",", context.SelectedTools);
                 userMessage.Update();
+            }
+
+            // 助手消息 Before 快照：尽早记录激活技能，便于极端错误（管道构建失败）时分析
+            if (context.AssistantMessage is DbChatMessage assistantBefore)
+            {
+                // 记录本轮激活的非系统技能
+                var activatedSkills = context.ActivatedSkills
+                    .Where(s => !s.IsSystem && !s.Name.IsNullOrEmpty())
+                    .Select(s => s.Name)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (activatedSkills.Count > 0)
+                    assistantBefore.SkillNames = String.Join(",", activatedSkills);
+                assistantBefore.Update();
             }
         }
 
@@ -79,6 +103,15 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
                     assistantMsg.ToolCalls = toolCalls.ToJson();
                     assistantMsg.ToolNames = toolCalls.Select(t => t.Name).Distinct().Join();
                 }
+
+                // 记录本轮激活的非系统技能（Loop 过程中可能变化，覆盖 Before 快照）
+                var activatedSkills = context.ActivatedSkills
+                    .Where(s => !s.IsSystem && !s.Name.IsNullOrEmpty())
+                    .Select(s => s.Name)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (activatedSkills.Count > 0)
+                    assistantMsg.SkillNames = String.Join(",", activatedSkills);
 
                 // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
                 ApplyUsageToMessage(assistantMsg, context.Usage, context.HasError, (context as MessageFlowContext)?.DeferredError?.Error);

@@ -1,5 +1,4 @@
-﻿using NewLife.AI.Models;
-using NewLife.Cube;
+﻿using NewLife.Cube;
 using NewLife.Cube.Extensions;
 using NewLife.Cube.ViewModels;
 using NewLife.Web;
@@ -17,7 +16,7 @@ public class ChatMessageController : ChatEntityController<ChatMessage>
     {
         //LogOnChange = true;
 
-        //ListFields.RemoveField("Id", "Creator");
+        ListFields.RemoveField("Id", "MaxTokens", "Temperature", "Feedback*");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{
