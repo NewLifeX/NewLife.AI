@@ -59,6 +59,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>各 Provider 的熔断器实例（按引用相等性索引）</summary>
     private readonly ConcurrentDictionary<IToolProvider, CircuitBreakerPolicy> _breakers = new();
 
+    /// <summary>跨轮次去重集合。记录本轮对话已执行过的 show_* 工具名+参数，避免同一工具在同一用户请求的多轮工具循环中重复执行。</summary>
+    private readonly HashSet<String> _sessionDedupKeys = new(StringComparer.Ordinal);
+
     #endregion
 
     #region 方法
@@ -81,6 +84,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         IChatResponse response;
         var iterations = 0;
         UsageDetails? accumulatedUsage = null;
+
+        _sessionDedupKeys.Clear();
 
         while (true)
         {
@@ -115,12 +120,25 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                // 去重：重复调用不执行，直接返回占位结果
+                // 去重：重复调用不执行，直接返回占位结果（ask_user 豁免，它每次调用问题不同）
                 if (!tc.Function.Name.EqualIgnoreCase("ask_user"))
                 {
                     var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
+
+                    // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次
+                    if (tc.Function.Name.StartsWith("show_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!_sessionDedupKeys.Add(key))
+                        {
+                            Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", tc.Function.Name);
+                            tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行"));
+                            continue;
+                        }
+                    }
+
                     if (!dedupKeys.Add(key))
                     {
+                        Log.Info("跳过同轮重复工具调用 {0}（同名同参）", tc.Function.Name);
                         tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行"));
                         continue;
                     }
@@ -178,6 +196,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var workMessages = request.Messages.ToList();
 
         UsageDetails? accumulatedUsage = null;
+
+        _sessionDedupKeys.Clear();
 
         for (var iteration = 0; iteration < MaxIterations; iteration++)
         {
@@ -311,9 +331,23 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (!tc.Function.Name.EqualIgnoreCase("ask_user"))
                 {
                     var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
+
+                    // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次
+                    if (tc.Function.Name.StartsWith("show_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!_sessionDedupKeys.Add(key))
+                        {
+                            Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", tc.Function.Name);
+                            isDedup[i] = true;
+                            tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行"));
+                            // 不 yield start 事件，前端不渲染重复卡片
+                            continue;
+                        }
+                    }
+
                     if (!dedupKeys.Add(key))
                     {
-                        Log.Info("跳过重复工具调用 {0} (同名同参已执行)", tc.Function.Name);
+                        Log.Info("跳过同轮重复工具调用 {0}（同名同参已执行）", tc.Function.Name);
                         isDedup[i] = true;
                         tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行"));
                         // 不 yield start 事件，前端不渲染重复卡片
