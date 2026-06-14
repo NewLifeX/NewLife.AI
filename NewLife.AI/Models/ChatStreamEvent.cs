@@ -134,5 +134,14 @@ public class ChatStreamEvent
     /// <returns></returns>
     public static ChatStreamEvent ToolCallError(String toolCallId, String error) =>
         new() { Type = "tool_call_error", ToolCallId = toolCallId, Error = error };
+
+    /// <summary>记忆确认事件。message_done 后推送给前端，提示用户核实助手推断的信息是否准确</summary>
+    /// <param name="confirmationId">确认条目编号</param>
+    /// <param name="question">向用户展示的确认问句</param>
+    /// <param name="memoryKey">记忆主题（用于前端展示）</param>
+    /// <param name="memoryValue">当前记忆内容（用于前端展示）</param>
+    /// <returns></returns>
+    public static ChatStreamEvent MemoryConfirmation(Int64 confirmationId, String question, String? memoryKey = null, String? memoryValue = null) =>
+        new() { Type = "memory_confirmation", MessageId = confirmationId, Content = question, Name = memoryKey, Result = memoryValue };
     #endregion
 }

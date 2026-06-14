@@ -136,7 +136,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         {
             var txt = request.Messages?.LastOrDefault()?.Content as String;
             if (!txt.IsNullOrEmpty())
-                span.AppendTag($"\n=>[{txt.Length}]\n{(txt.Length > 800 ? txt[..800] : txt)}");
+                span.AppendTag($"\n=>[{txt.Length}]\n{(txt.Length > 500 ? txt[..500] : txt)}");
         }
         try
         {

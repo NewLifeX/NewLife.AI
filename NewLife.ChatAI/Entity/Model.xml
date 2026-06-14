@@ -427,6 +427,7 @@
         <Column Name="Value" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="内容。提取到的具体信息" />
         <Column Name="Confidence" DataType="Int32" Description="置信度。0~100，越高越可信" />
         <Column Name="Scope" DataType="String" Description="作用域。user=用户级/team=团队级/global=全局" />
+        <Column Name="Source" DataType="String" Description="记忆来源。user=用户直接陈述/assistant_inferred=助手推断未确认/assistant_confirmed=助手推断已用户确认/user_confirmed=用户经确认卡确认" />
         <Column Name="Status" DataType="Int32" Description="状态。0=待审核/1=已生效/2=已拒绝/3=已废弃" />
         <Column Name="ReviewUserId" DataType="Int32" Description="审核人" />
         <Column Name="ReviewTime" DataType="DateTime" Description="审核时间" />

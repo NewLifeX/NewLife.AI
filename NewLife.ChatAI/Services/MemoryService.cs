@@ -118,6 +118,7 @@ public class MemoryService(ITracer tracer, ILog log)
         String value,
         Int32 confidence,
         Int64 conversationId,
+        String? source = null,
         CancellationToken cancellationToken = default)
     {
         await Task.Yield(); // 允许调用方继续（实体操作为同步，保持异步接口一致性）
@@ -135,6 +136,7 @@ public class MemoryService(ITracer tracer, ILog log)
                 existing.Value = value;
                 existing.Confidence = confidence;
                 existing.ConversationId = conversationId;
+                if (!source.IsNullOrEmpty()) existing.Source = source;
                 existing.Enable = true;
                 existing.Version++;
                 existing.Update();
@@ -152,6 +154,7 @@ public class MemoryService(ITracer tracer, ILog log)
             Confidence = confidence,
             ConversationId = conversationId,
             Scope = "user",
+            Source = source,
             Status = 1,
             Version = 1,
             Enable = true,

@@ -48,18 +48,29 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         - skill：技能专长（编程语言熟练度、工具/框架掌握、专业能力评级）
         - instruction：交互指令（用户对 AI 行为的明确要求和持久化指令）
 
+        ## 来源可信度（origin / confirmed 字段，必填）
+        每条记忆必须标注两个来源字段，用于后续置信度校正：
+        - origin：信息的原始来源
+          - "user"：该信息来自用户消息（含用户主动陈述、用户回答助手提问）
+          - "assistant"：该信息来自助手消息（含助手的推断、建议、补充说明）
+        - confirmed：若 origin="assistant"，用户是否在同一对话中明确认可（回复"对/是的/没错/确实"等肯定词）
+          - true：助手所说被用户当场明确认可
+          - false：默认值；助手推断/建议，用户未明确响应
+        - 若 origin="user"，confirmed 固定为 false（无需确认）
+
         ## 输出格式
         请以 JSON 格式返回，其中：
-        - memories：记忆条目列表，每条包含 category（上述英文枚举值）、key（简短中文标识）、value（具体内容，优先用中文描述）、confidence（0-100 置信度）
+        - memories：记忆条目列表，每条包含 category（上述英文枚举值）、key（简短中文标识）、value（具体内容，优先用中文描述）、confidence（0-100 置信度）、origin（"user" 或 "assistant"）、confirmed（true 或 false）
 
         ## 规则
         - 只提取能明确从对话中推断的信息，无法确定的不要猜测
         - category 必须使用上述 10 个英文枚举值之一
         - key 和 value 优先使用中文
         - 如果没有可提取的信息，返回空列表
+        - 【来源规则】助手的推断/建议（origin=assistant, confirmed=false）不属于已验证事实，confidence 不超过 50；只有用户明确认可后（confirmed=true）置信度才可给高分
 
         返回格式示例：
-        {"memories": [{"category": "preference", "key": "回答语言", "value": "中文", "confidence": 95}, {"category": "profession", "key": "职位", "value": "后端开发工程师", "confidence": 85}]}
+        {"memories": [{"category": "preference", "key": "回答语言", "value": "中文", "confidence": 95, "origin": "user", "confirmed": false}, {"category": "profession", "key": "职位", "value": "后端开发工程师", "confidence": 85, "origin": "user", "confirmed": false}]}
         """;
 
     #region 分析
@@ -198,8 +209,25 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         foreach (var m in parsed.Memories)
         {
             if (m.Key.IsNullOrEmpty() || m.Value.IsNullOrEmpty()) continue;
+
+            // ── 来源置信度档位映射（单次硬封顶，不叠乘）────────────────────────
+            var source = "user";
+            if (m.Origin.EqualIgnoreCase("assistant"))
+            {
+                if (m.Confirmed)
+                {
+                    source = "assistant_confirmed";
+                    m.Confidence = Math.Max(m.Confidence, 75);
+                }
+                else
+                {
+                    source = "assistant_inferred";
+                    m.Confidence = Math.Min(m.Confidence, 40);
+                }
+            }
+
             var category = NormalizeCategory(m.Category);
-            await MemoryService.UpsertMemoryAsync(userId, category, m.Key!, m.Value!, m.Confidence, conversationId, cancellationToken).ConfigureAwait(false);
+            await MemoryService.UpsertMemoryAsync(userId, category, m.Key!, m.Value!, m.Confidence, conversationId, source, cancellationToken).ConfigureAwait(false);
             count++;
         }
 
@@ -229,6 +257,10 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         public String? Key { get; set; }
         public String? Value { get; set; }
         public Int32 Confidence { get; set; } = 70;
+        /// <summary>来源：user=用户直接陈述；assistant=助手推断/建议</summary>
+        public String? Origin { get; set; }
+        /// <summary>用户是否明确认可（仅 origin=assistant 时有效）：true=当场确认，false=未确认</summary>
+        public Boolean Confirmed { get; set; }
     }
     #endregion
 }

@@ -88,6 +88,14 @@ public partial class UserMemory
     [BindColumn("Scope", "作用域。user=用户级/team=团队级/global=全局", "")]
     public String? Scope { get => _Scope; set { if (OnPropertyChanging("Scope", value)) { _Scope = value; OnPropertyChanged("Scope"); } } }
 
+    private String? _Source;
+    /// <summary>记忆来源。user=用户直接陈述/assistant_inferred=助手推断未确认/assistant_confirmed=助手推断已用户确认/user_confirmed=用户经确认卡确认</summary>
+    [DisplayName("记忆来源")]
+    [Description("记忆来源。user=用户直接陈述/assistant_inferred=助手推断未确认/assistant_confirmed=助手推断已用户确认/user_confirmed=用户经确认卡确认")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("Source", "记忆来源。user=用户直接陈述/assistant_inferred=助手推断未确认/assistant_confirmed=助手推断已用户确认/user_confirmed=用户经确认卡确认", "")]
+    public String? Source { get => _Source; set { if (OnPropertyChanging("Source", value)) { _Source = value; OnPropertyChanged("Source"); } } }
+
     private Int32 _Status;
     /// <summary>状态。0=待审核/1=已生效/2=已拒绝/3=已废弃</summary>
     [DisplayName("状态")]
@@ -188,6 +196,7 @@ public partial class UserMemory
             "Value" => _Value,
             "Confidence" => _Confidence,
             "Scope" => _Scope,
+            "Source" => _Source,
             "Status" => _Status,
             "ReviewUserId" => _ReviewUserId,
             "ReviewTime" => _ReviewTime,
@@ -212,6 +221,7 @@ public partial class UserMemory
                 case "Value": _Value = Convert.ToString(value); break;
                 case "Confidence": _Confidence = value.ToInt(); break;
                 case "Scope": _Scope = Convert.ToString(value); break;
+                case "Source": _Source = Convert.ToString(value); break;
                 case "Status": _Status = value.ToInt(); break;
                 case "ReviewUserId": _ReviewUserId = value.ToInt(); break;
                 case "ReviewTime": _ReviewTime = value.ToDateTime(); break;
@@ -371,6 +381,9 @@ public partial class UserMemory
         /// <summary>作用域。user=用户级/team=团队级/global=全局</summary>
         public static readonly Field Scope = FindByName("Scope");
 
+        /// <summary>记忆来源。user=用户直接陈述/assistant_inferred=助手推断未确认/assistant_confirmed=助手推断已用户确认/user_confirmed=用户经确认卡确认</summary>
+        public static readonly Field Source = FindByName("Source");
+
         /// <summary>状态。0=待审核/1=已生效/2=已拒绝/3=已废弃</summary>
         public static readonly Field Status = FindByName("Status");
 
@@ -430,6 +443,9 @@ public partial class UserMemory
 
         /// <summary>作用域。user=用户级/team=团队级/global=全局</summary>
         public const String Scope = "Scope";
+
+        /// <summary>记忆来源。user=用户直接陈述/assistant_inferred=助手推断未确认/assistant_confirmed=助手推断已用户确认/user_confirmed=用户经确认卡确认</summary>
+        public const String Source = "Source";
 
         /// <summary>状态。0=待审核/1=已生效/2=已拒绝/3=已废弃</summary>
         public const String Status = "Status";
