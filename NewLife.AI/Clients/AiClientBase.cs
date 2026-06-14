@@ -131,7 +131,13 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
 
         var startMs = Runtime.TickCount64;
-        using var span = Tracer?.NewSpan($"ai:Chat:{request.Model}", request.Messages?.LastOrDefault()?.Content);
+        using var span = Tracer?.NewSpan($"ai:Chat:{request.Model}");
+        if (span != null)
+        {
+            var txt = request.Messages?.LastOrDefault()?.Content as String;
+            if (!txt.IsNullOrEmpty())
+                span.AppendTag($"\n=>[{txt.Length}]\n{(txt.Length > 800 ? txt[..800] : txt)}");
+        }
         try
         {
             var response = await ChatAsync(request, cancellationToken);
