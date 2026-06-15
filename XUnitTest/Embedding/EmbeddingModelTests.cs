@@ -275,12 +275,12 @@ public class EmbeddingModelTests
     }
 
     [Fact]
-    [DisplayName("OpenAIChatClient—默认 Timeout 为 2 分钟")]
-    public void OpenAIChatClient_DefaultTimeout_TwoMinutes()
+    [DisplayName("OpenAIChatClient—默认 Timeout 为 5 分钟")]
+    public void OpenAIChatClient_DefaultTimeout_FiveMinutes()
     {
         var opts = new AiClientOptions { ApiKey = "sk-test" };
         var client = new OpenAIChatClient(opts);
-        Assert.Equal(TimeSpan.FromMinutes(2), client.Timeout);
+        Assert.Equal(TimeSpan.FromMinutes(5), client.Timeout);
     }
 
     #endregion

@@ -179,14 +179,16 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        server.Port = 20015;
+        server.Port = 0;
 
         // Act
         server.Start();
 
         // Assert
         Assert.NotNull(server.Server);
-        Assert.Equal(20015, server.Port);
+        // 端口 0 由系统分配，验证分配后端口为正数且已同步
+        Assert.True(server.Port > 0);
+        Assert.Equal(server.Port, server.Server.Port);
     }
 
     [Fact]
@@ -208,14 +210,15 @@ public class HttpMcpServerTests : IDisposable
     public void Start_ShouldConfigureHttpServerWithCorrectPort()
     {
         // Arrange
-        var server = new HttpMcpServer { Port = 9999 };
+        var server = new HttpMcpServer { Port = 0 };
 
         // Act
         server.Start();
 
         // Assert
         Assert.NotNull(server.Server);
-        Assert.Equal(9999, server.Server.Port);
+        Assert.True(server.Server.Port > 0);
+        Assert.Equal(server.Port, server.Server.Port);
     }
 
     [Fact]
@@ -237,7 +240,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var mockLog = new MockLog();
-        var server = new HttpMcpServer { Log = mockLog };
+        var server = new HttpMcpServer { Log = mockLog, Port = 0 };
 
         // Act
         server.Start();
@@ -268,7 +271,7 @@ public class HttpMcpServerTests : IDisposable
     public void Start_ShouldUseNullCoalescingOperatorCorrectly()
     {
         // Arrange
-        var server = new HttpMcpServer { Port = 7777 };
+        var server = new HttpMcpServer { Port = 0 };
         Assert.Null(server.Server); // 确保初始为null
 
         // Act
@@ -276,7 +279,8 @@ public class HttpMcpServerTests : IDisposable
 
         // Assert
         Assert.NotNull(server.Server);
-        Assert.Equal(7777, server.Server.Port);
+        Assert.True(server.Server.Port > 0);
+        Assert.Equal(server.Port, server.Server.Port);
     }
     #endregion
 
@@ -467,7 +471,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        server.Port = 20016;
+        server.Port = 0;
 
         // Act & Assert - 不应该抛出异常
         var exception = Record.Exception(() => server.Start());
@@ -479,7 +483,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        server.Port = 20014;
+        server.Port = 0;
 
         // Act - 多次调用Start
         server.Start();
@@ -512,7 +516,7 @@ public class HttpMcpServerTests : IDisposable
         var customLog = new MockLog();
         var server = new HttpMcpServer
         {
-            Port = 20018,
+            Port = 0,
             Log = customLog
         };
 
@@ -523,7 +527,8 @@ public class HttpMcpServerTests : IDisposable
 
         // Assert
         Assert.NotNull(server.Server);
-        Assert.Equal(20018, server.Server.Port);
+        Assert.True(server.Server.Port > 0);
+        Assert.Equal(server.Port, server.Server.Port);
         Assert.Same(server, server.Server.ServiceProvider);
         Assert.Same(customLog, server.Server.Log);
         Assert.Equal(server.Tracer, server.Server.Tracer);
@@ -537,7 +542,7 @@ public class HttpMcpServerTests : IDisposable
         // Arrange
         var server = new HttpMcpServer
         {
-            Port = 8888,
+            Port = 0,
             Log = new MockLog()
         };
 
@@ -550,7 +555,7 @@ public class HttpMcpServerTests : IDisposable
 
         // Assert
         Assert.NotNull(server.Server);
-        Assert.Equal(8888, server.Server.Port);
+        Assert.True(server.Server.Port > 0);
         Assert.Same(server, server.Server.ServiceProvider);
         Assert.True(server.Manager.Services.Count > 0);
     }
@@ -560,7 +565,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange & Act
         var server = new HttpMcpServer();
-        server.Port = 9000;
+        server.Port = 0;
 
         var mockServiceProvider = new MockServiceProvider();
         var tools = new TestTools();
@@ -571,9 +576,9 @@ public class HttpMcpServerTests : IDisposable
         server.Start();
 
         // Assert
-        Assert.Equal(9000, server.Port);
+        Assert.True(server.Port > 0);
         Assert.NotNull(server.Server);
-        Assert.Equal(9000, server.Server.Port);
+        Assert.Equal(server.Port, server.Server.Port);
         Assert.Same(server, server.Server.ServiceProvider);
         Assert.True(server.Manager.Services.Count > 0);
     }
@@ -608,7 +613,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        server.Port = 20011;
+        server.Port = 0;
         server.Start();
 
         // Act & Assert - 不应该抛出异常
@@ -620,7 +625,7 @@ public class HttpMcpServerTests : IDisposable
     public void Dispose_ShouldCleanupResourcesWithoutException()
     {
         // Arrange
-        var server = new HttpMcpServer();
+        var server = new HttpMcpServer { Port = 0 };
         server.Start();
 
         // Act & Assert - 不应该抛出异常（测试HttpMcpServer本身不需要Dispose）
@@ -637,7 +642,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        server.Port = 20012;
+        server.Port = 0;
 
         // Act
         server.Start();
@@ -651,11 +656,12 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange & Act
         var server = new HttpMcpServer();
-        server.Port = 20013;
+        server.Port = 0;
         server.Start();
 
         // Assert
-        Assert.Equal(20013, server.Server.Port);
+        Assert.True(server.Server.Port > 0);
+        Assert.Equal(server.Port, server.Server.Port);
         Assert.Same(server, server.Server.ServiceProvider);
     }
 
@@ -666,7 +672,7 @@ public class HttpMcpServerTests : IDisposable
         var customLog = new MockLog();
         var server = new HttpMcpServer
         {
-            Port = 8765,
+            Port = 0,
             Log = customLog
         };
 
@@ -674,7 +680,8 @@ public class HttpMcpServerTests : IDisposable
         server.Start();
 
         // Assert
-        Assert.Equal(8765, server.Server.Port);
+        Assert.True(server.Server.Port > 0);
+        Assert.Equal(server.Port, server.Server.Port);
         Assert.Same(customLog, server.Server.Log);
         Assert.Equal(server.Tracer, server.Server.Tracer);
     }

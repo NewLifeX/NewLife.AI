@@ -1985,7 +1985,7 @@ public class DashScopeIntegrationTests
     {
         var request = new SpeechRequest
         {
-            Model = "cosyvoice-v3.5-flash",
+            Model = "cosyvoice-v3-flash",
             Input = "今天天气真不错。",
             Voice = "longanyang",
             ResponseFormat = "wav",
@@ -1994,7 +1994,7 @@ public class DashScopeIntegrationTests
         var option = CreateOptions();
         option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
         option.ApiKey = _apiKey;
-        option.Model = "cosyvoice-v3.5-flash";
+        option.Model = "cosyvoice-v3-flash";
 
         var client = new DashScopeChatClient(option);
         var audioBytes = await client.SpeechAsync(request);

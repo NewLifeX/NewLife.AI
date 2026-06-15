@@ -49,20 +49,21 @@ public class ModelExtendedTests
     // ── ThinkingMode 枚举 ─────────────────────────────────────────────────
 
     [Fact]
-    [DisplayName("ThinkingMode—Auto=0, Think=1, Fast=2")]
+    [DisplayName("ThinkingMode—Auto=0, Think=1, Fast=2, Clarify=3")]
     public void ThinkingMode_Values_Correct()
     {
         Assert.Equal(0, (Int32)ThinkingMode.Auto);
         Assert.Equal(1, (Int32)ThinkingMode.Think);
         Assert.Equal(2, (Int32)ThinkingMode.Fast);
+        Assert.Equal(3, (Int32)ThinkingMode.Clarify);
     }
 
     [Fact]
-    [DisplayName("ThinkingMode—共 3 个枚举值")]
-    public void ThinkingMode_Count_Three()
+    [DisplayName("ThinkingMode—共 4 个枚举值")]
+    public void ThinkingMode_Count_Four()
     {
         var values = Enum.GetValues<ThinkingMode>();
-        Assert.Equal(3, values.Length);
+        Assert.Equal(4, values.Length);
     }
 
     // ── FeedbackType 枚举 ─────────────────────────────────────────────────

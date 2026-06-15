@@ -37,6 +37,9 @@ public class HttpMcpServer : McpServer
         server.Map("/", ProcessRequest);
         server.Start();
 
+        // 端口 0 时由系统分配，同步回实际端口
+        Port = server.Port;
+
         Server = server;
     }
 
