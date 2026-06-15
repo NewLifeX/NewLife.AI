@@ -48,7 +48,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
     }
 
     /// <summary>获取@提及下拉列表的技能。按用户最近使用优先，支持关键词模糊过滤</summary>
-    /// <summary>获取@提及下拉列表的技能和工具。工具排在前面，技能跟在后面，均支持关键词过滤</summary>
+    /// <summary>获取@提及下拉列表的技能和工具。技能排在前面，工具跟在后面，均支持关键词过滤</summary>
     /// <param name="keyword">搜索关键词（可选）</param>
     /// <param name="limit">最大返回数量，默认20</param>
     /// <returns></returns>
@@ -60,7 +60,14 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
 
         var result = new List<SkillDto>();
 
-        // 工具排在前面
+        // 技能排在前面
+        var skills = skillService.GetMentionSkills(userId, keyword, limit);
+        foreach (var skill in skills)
+        {
+            result.Add(ToDto(skill));
+        }
+
+        // 工具跟在后面
         var tools = NativeTool.FindAllEnabled();
         if (!String.IsNullOrEmpty(keyword))
             tools = tools.Where(e =>
@@ -76,13 +83,6 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
                 Description = tool.Description,
                 Type = "tool",
             });
-        }
-
-        // 技能跟在后面
-        var skills = skillService.GetMentionSkills(userId, keyword, limit);
-        foreach (var skill in skills)
-        {
-            result.Add(ToDto(skill));
         }
 
         return Ok(result.Take(limit).ToList());
