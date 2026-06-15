@@ -50,5 +50,8 @@ public interface IChatSetting
     /// <summary>启用函数调用</summary>
     Boolean EnableFunctionCalling { get; }
 
+    /// <summary>后台继续生成。浏览器关闭后模型继续生成，切换会话后再切回可恢复</summary>
+    Boolean BackgroundGeneration { get; }
+
     #endregion
 }
