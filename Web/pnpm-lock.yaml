@@ -26,6 +26,12 @@ importers:
       katex:
         specifier: ^0.16.33
         version: 0.16.33
+      material-icons:
+        specifier: ^1.13.14
+        version: 1.13.14
+      material-symbols:
+        specifier: ^0.45.1
+        version: 0.45.1
       mermaid:
         specifier: ^11.12.3
         version: 11.12.3
@@ -1671,6 +1677,12 @@ packages:
     resolution: {integrity: sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA==}
     engines: {node: '>= 20'}
     hasBin: true
+
+  material-icons@1.13.14:
+    resolution: {integrity: sha512-kZOfc7xCC0rAT8Q3DQixYAeT+tBqZnxkseQtp2bxBxz7q5pMAC+wmit7vJn1g/l7wRU+HEPq23gER4iPjGs5Cg==}
+
+  material-symbols@0.45.1:
+    resolution: {integrity: sha512-iQibeoKymxHthNqTjYg/jCN2pRySFQ+DAD0sYK9FS7rUpf38i1qR3N4I1jfi/bLS5qdEKvkkJAvf2mE89amSZw==}
 
   mdast-util-find-and-replace@3.0.2:
     resolution: {integrity: sha512-Tmd1Vg/m3Xz43afeNxDIhWRtFZgM2VLyaf4vSTYwudTyeuTneoL3qtWMA5jeLyz/O1vDJmmV4QuScFCA2tBPwg==}
@@ -3820,6 +3832,10 @@ snapshots:
   markdown-table@3.0.4: {}
 
   marked@16.4.2: {}
+
+  material-icons@1.13.14: {}
+
+  material-symbols@0.45.1: {}
 
   mdast-util-find-and-replace@3.0.2:
     dependencies:
