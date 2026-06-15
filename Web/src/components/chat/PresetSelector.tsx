@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
@@ -8,24 +9,30 @@ interface PresetSelectorProps {
   onSelect: (preset: Preset) => void
 }
 
+const POPUP_WIDTH = 224 // w-56 = 14rem
+
 export function PresetSelector({ onSelect }: PresetSelectorProps) {
   const { t } = useTranslation()
   const [presets, setPresets] = useState<Preset[]>([])
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [popupPos, setPopupPos] = useState<{ bottom: number; left: number } | null>(null)
 
   useEffect(() => {
     fetchPresets().then(setPresets).catch(() => {})
   }, [])
 
-  // 点击外部关闭
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+  // 使用 portal 渲染弹出层，彻底脱离祖先 overflow: hidden 裁剪
+  useLayoutEffect(() => {
+    if (open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPopupPos({
+        bottom: window.innerHeight - rect.top + 8,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - POPUP_WIDTH - 8)),
+      })
+    } else {
+      setPopupPos(null)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
   const handleSelect = useCallback((preset: Preset) => {
@@ -36,8 +43,9 @@ export function PresetSelector({ onSelect }: PresetSelectorProps) {
   if (presets.length === 0) return null
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors',
@@ -51,28 +59,35 @@ export function PresetSelector({ onSelect }: PresetSelectorProps) {
         <span className="hidden sm:inline">{t('preset.title')}</span>
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
-          {presets.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => handleSelect(p)}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-700 dark:text-gray-200 truncate">{p.name}</div>
-                {p.modelName && (
-                  <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{p.modelName}</div>
+      {open && popupPos && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed w-56 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[9999] max-h-64 overflow-y-auto"
+            style={{ bottom: popupPos.bottom, left: popupPos.left }}
+          >
+            {presets.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => handleSelect(p)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-700 dark:text-gray-200 truncate">{p.name}</div>
+                  {p.modelName && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{p.modelName}</div>
+                  )}
+                </div>
+                {p.isDefault && (
+                  <span className="ml-2 text-xs text-primary">
+                    <Icon name="star" size="xs" />
+                  </span>
                 )}
-              </div>
-              {p.isDefault && (
-                <span className="ml-2 text-xs text-primary">
-                  <Icon name="star" size="xs" />
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body,
       )}
     </div>
   )
