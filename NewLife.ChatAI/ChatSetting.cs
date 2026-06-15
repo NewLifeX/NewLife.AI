@@ -67,12 +67,7 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("默认思考模式。Auto=自动，Think=深度思考，Fast=快速响应")]
     public ThinkingMode DefaultThinkingMode { get; set; } = ThinkingMode.Auto;
 
-    /// <summary>学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型</summary>
-    [Category("对话行为")]
-    [Description("学习分析模型。用于提取记忆的模型编码，为空时复用当前对话模型")]
-    public String LearningModel { get; set; } = "";
-
-    /// <summary>轻量模型编码。简单任务（标题/摘要/蒸馏）使用，为空时自动选择</summary>
+    /// <summary>轻量模型编码。简单任务（标题/摘要/蒸馏/记忆提取）使用，为空时自动选择</summary>
     /// <remarks>对应 ModelConfig.Code；自动选择策略：优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型。</remarks>
     [Category("对话行为")]
     [Description("轻量模型。标题生成、摘要压缩、知识蒸馏等简单任务调用的模型编码（ModelConfig.Code）；为空时自动选择优先级最高的 flash/lite/mini/small 轻量文本模型，没有时回退到主模型")]
@@ -149,11 +144,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("网关限流。每分钟每用户最大请求次数")]
     public Int32 GatewayRateLimit { get; set; } = 60;
 
-    /// <summary>上游重试次数。模型返回 429 时最大重试</summary>
-    [Category("API 网关")]
-    [Description("上游重试次数。模型返回 429 时最大重试")]
-    public Int32 UpstreamRetryCount { get; set; } = 5;
-
     /// <summary>网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析</summary>
     [Category("API 网关")]
     [Description("网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析")]
@@ -191,20 +181,20 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("工具仓位上限。每次请求注入完整 Schema 的工具数上限；超出的工具降级为纯文本目录；0 表示不限制，默认15")]
     public Int32 ToolSlotLimit { get; set; } = 15;
 
-    /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认8000</summary>
+    /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认80000</summary>
     [Category("工具与扩展")]
-    [Description("工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认8000")]
-    public Int32 ToolResultMaxChars { get; set; } = 8000;
+    [Description("工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认80000")]
+    public Int32 ToolResultMaxChars { get; set; } = 80000;
 
     /// <summary>工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10</summary>
     [Category("工具与扩展")]
     [Description("工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10")]
     public Int32 ToolMaxIterations { get; set; } = 10;
 
-    /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000</summary>
+    /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000</summary>
     [Category("工具与扩展")]
-    [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000")]
-    public Int32 SkillBudgetChars { get; set; } = 8000;
+    [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000")]
+    public Int32 SkillBudgetChars { get; set; } = 80000;
     #endregion
 
     #region 功能开关
@@ -213,11 +203,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("启用用量统计")]
     public Boolean EnableUsageStats { get; set; } = true;
 
-    /// <summary>启用提示缓存。给 system prompt 和历史消息打上 cache_control 标记，
-    /// 兼容 DeepSeek/Qwen/OpenAI 等提供商的提示缓存功能</summary>
-    [Category("功能开关")]
-    [Description("启用提示缓存。给 system prompt 和历史消息打上 cache_control 标记，兼容 DeepSeek/Qwen/OpenAI 等提供商的提示缓存功能")]
-    public Boolean EnablePromptCache { get; set; } = true;
     #endregion
 
     #region 知识进化

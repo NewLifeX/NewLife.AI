@@ -247,8 +247,7 @@ export default {
       enableGatewayDesc: '开启模型网关路由与负载均衡',
       gatewayRateLimit: '网关限流（次/分钟）',
       gatewayRateLimitDesc: '每分钟每用户最大请求次数',
-      upstreamRetryCount: '上游重试次数',
-      upstreamRetryCountDesc: '上游 AI 接口失败时的重试次数',
+
       enableGatewayRecording: '启用网关录制',
       enableGatewayRecordingDesc: '记录通过网关的完整请求与响应',
     },
@@ -281,8 +280,7 @@ export default {
     learning: {
       enableAutoLearning: '启用自动学习',
       enableAutoLearningDesc: '自动从对话中提取知识并存入记忆库',
-      learningModel: '学习使用的模型',
-      learningModelDesc: '用于知识提取的 AI 模型，留空则使用默认模型',
+
       lightweightModel: '轻量模型',
       lightweightModelDesc: '用于标题生成、摘要压缩等简单任务的模型编码，留空自动选择',
       embedModel: '嵌入模型',

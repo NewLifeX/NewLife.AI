@@ -163,8 +163,9 @@ public class GatewayService(UsageService usageService, ModelService modelService
         }
 
         // 模型配置启用提示缓存时，给 system prompt 和首条用户消息打上 cache_control 标记
-        if (config.EnablePromptCache)
-            MessageFlow.ApplyCacheControl(messages, config);
+        // EnablePromptCache 已硬编码为 true，依赖 ModelConfig 的 EnablePromptCache 开关
+        //if (config.EnablePromptCache)
+        MessageFlow.ApplyCacheControl(messages, config);
 
         return messages;
     }
@@ -190,7 +191,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         using var client = clientBuilder.Build();
 
         ChatResponse? response = null;
-        var maxRetry = chatSetting.UpstreamRetryCount;
+        const Int32 maxRetry = 5;
         for (var i = 0; i <= maxRetry; i++)
         {
             try
@@ -234,7 +235,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         using var streamClient = streamBuilder.Build();
 
         IAsyncEnumerable<IChatResponse>? stream = null;
-        var maxRetry = chatSetting.UpstreamRetryCount;
+        const Int32 maxRetry = 5;
         for (var i = 0; i <= maxRetry; i++)
         {
             try

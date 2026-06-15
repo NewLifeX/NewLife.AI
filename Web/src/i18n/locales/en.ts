@@ -247,8 +247,7 @@ export default {
       enableGatewayDesc: 'Enable model gateway routing and load balancing',
       gatewayRateLimit: 'Gateway Rate Limit (req/min)',
       gatewayRateLimitDesc: 'Maximum requests per user per minute',
-      upstreamRetryCount: 'Upstream Retry Count',
-      upstreamRetryCountDesc: 'Retry attempts when upstream AI fails',
+
       enableGatewayRecording: 'Enable Gateway Recording',
       enableGatewayRecordingDesc: 'Record complete requests and responses through the gateway',
     },
@@ -281,8 +280,7 @@ export default {
     learning: {
       enableAutoLearning: 'Enable Auto Learning',
       enableAutoLearningDesc: 'Automatically extract knowledge from conversations into memory',
-      learningModel: 'Learning Model',
-      learningModelDesc: 'AI model used for knowledge extraction, leave empty to use default',
+
       lightweightModel: 'Lightweight Model',
       lightweightModelDesc: 'Model for lightweight tasks like title generation and summarization, leave empty to auto-select',
       embedModel: 'Embedding Model',

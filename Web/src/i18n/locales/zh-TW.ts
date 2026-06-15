@@ -241,8 +241,7 @@ export default {
 
       gatewayRateLimit: '閘道限流（次/分鐘）',
       gatewayRateLimitDesc: '每分鐘每使用者最大請求次數',
-      upstreamRetryCount: '上游重試次數',
-      upstreamRetryCountDesc: '上游 AI 介面失敗時的重試次數',
+
       enableGatewayRecording: '啟用閘道錄製',
       enableGatewayRecordingDesc: '記錄通過閘道的完整請求與回應',
     },
@@ -275,8 +274,7 @@ export default {
     learning: {
       enableAutoLearning: '啟用自動學習',
       enableAutoLearningDesc: '自動從對話中提取知識並存入記憶庫',
-      learningModel: '學習使用的模型',
-      learningModelDesc: '用於知識提取的 AI 模型，留空則使用預設模型',
+
       lightweightModel: '輕量模型',
       lightweightModelDesc: '用於標題生成、摘要壓縮等簡單任務的模型編碼，留空自動選擇',
       embedModel: '嵌入模型',

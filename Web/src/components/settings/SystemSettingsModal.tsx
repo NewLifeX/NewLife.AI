@@ -42,7 +42,6 @@ const defaultSettings: SystemSettings = {
   allowAnonymousShare: false,
   enableGateway: false,
   gatewayRateLimit: 0,
-  upstreamRetryCount: 2,
   enableGatewayRecording: false,
   enableFunctionCalling: true,
   enableMcp: true,

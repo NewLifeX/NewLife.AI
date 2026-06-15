@@ -67,9 +67,6 @@ public class SystemSettingsDto
     /// <summary>网关限流（每分钟每用户）</summary>
     public Int32 GatewayRateLimit { get; set; }
 
-    /// <summary>上游重试次数</summary>
-    public Int32 UpstreamRetryCount { get; set; }
-
     /// <summary>网关对话记录</summary>
     public Boolean EnableGatewayRecording { get; set; }
     #endregion
@@ -114,9 +111,6 @@ public class SystemSettingsDto
     #region 自学习
     /// <summary>启用自动学习</summary>
     public Boolean EnableAutoLearning { get; set; }
-
-    /// <summary>学习分析模型</summary>
-    public String LearningModel { get; set; } = "";
 
     /// <summary>轻量模型编码</summary>
     public String LightweightModel { get; set; } = "";
@@ -199,9 +193,6 @@ public class SystemSettingsUpdateDto
     /// <summary>网关限流</summary>
     public Int32? GatewayRateLimit { get; set; }
 
-    /// <summary>上游重试次数</summary>
-    public Int32? UpstreamRetryCount { get; set; }
-
     /// <summary>网关对话记录</summary>
     public Boolean? EnableGatewayRecording { get; set; }
     #endregion
@@ -246,9 +237,6 @@ public class SystemSettingsUpdateDto
     #region 自学习
     /// <summary>启用自动学习</summary>
     public Boolean? EnableAutoLearning { get; set; }
-
-    /// <summary>学习分析模型</summary>
-    public String? LearningModel { get; set; }
 
     /// <summary>轻量模型编码</summary>
     public String? LightweightModel { get; set; }

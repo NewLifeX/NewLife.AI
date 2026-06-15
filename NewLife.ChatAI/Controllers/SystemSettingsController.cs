@@ -45,7 +45,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             // API 网关
             EnableGateway = chatSetting.EnableGateway,
             GatewayRateLimit = chatSetting.GatewayRateLimit,
-            UpstreamRetryCount = chatSetting.UpstreamRetryCount,
             EnableGatewayRecording = chatSetting.EnableGatewayRecording,
             // 工具与能力
             EnableFunctionCalling = chatSetting.EnableFunctionCalling,
@@ -62,7 +61,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             MaxMessagesPerMinute = chatSetting.MaxMessagesPerMinute,
             // 自学习
             EnableAutoLearning = chatSetting.EnableAutoLearning,
-            LearningModel = chatSetting.LearningModel,
             LightweightModel = chatSetting.LightweightModel,
             EmbedModel = chatSetting.EmbedModel,
             MinLearningContentLength = chatSetting.MinLearningContentLength,
@@ -103,7 +101,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         // API 网关
         if (dto.EnableGateway.HasValue) chatSetting.EnableGateway = dto.EnableGateway.Value;
         if (dto.GatewayRateLimit.HasValue) chatSetting.GatewayRateLimit = dto.GatewayRateLimit.Value;
-        if (dto.UpstreamRetryCount.HasValue) chatSetting.UpstreamRetryCount = dto.UpstreamRetryCount.Value;
         if (dto.EnableGatewayRecording.HasValue) chatSetting.EnableGatewayRecording = dto.EnableGatewayRecording.Value;
         // 工具与能力
         if (dto.EnableFunctionCalling.HasValue) chatSetting.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
@@ -120,7 +117,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.MaxMessagesPerMinute.HasValue) chatSetting.MaxMessagesPerMinute = dto.MaxMessagesPerMinute.Value;
         // 自学习
         if (dto.EnableAutoLearning.HasValue) chatSetting.EnableAutoLearning = dto.EnableAutoLearning.Value;
-        if (dto.LearningModel != null) chatSetting.LearningModel = dto.LearningModel;
         if (dto.LightweightModel != null) chatSetting.LightweightModel = dto.LightweightModel;
         if (dto.EmbedModel != null) chatSetting.EmbedModel = dto.EmbedModel;
         if (dto.MinLearningContentLength.HasValue) chatSetting.MinLearningContentLength = dto.MinLearningContentLength.Value;

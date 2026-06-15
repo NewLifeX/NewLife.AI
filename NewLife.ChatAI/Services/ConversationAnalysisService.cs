@@ -169,10 +169,10 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
 
     private ModelConfig? GetAnalysisModel()
     {
-        // 优先使用配置的学习模型
-        if (!chatSetting.LearningModel.IsNullOrWhiteSpace())
+        // 优先使用配置的轻量模型（LearningModel 已合并到 LightweightModel）
+        if (!chatSetting.LightweightModel.IsNullOrWhiteSpace())
         {
-            var configured = modelService.ResolveModelByCode(chatSetting.LearningModel);
+            var configured = modelService.ResolveModelByCode(chatSetting.LightweightModel);
             if (configured != null) return configured;
         }
 

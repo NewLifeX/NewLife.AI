@@ -771,7 +771,6 @@ export interface SystemSettings {
   // 网关
   enableGateway: boolean
   gatewayRateLimit: number
-  upstreamRetryCount: number
   enableGatewayRecording: boolean
   // 工具能力
   enableFunctionCalling: boolean
@@ -788,7 +787,6 @@ export interface SystemSettings {
   maxMessagesPerMinute: number
   // 学习记忆
   enableAutoLearning: boolean
-  learningModel: string
   lightweightModel: string
   embedModel: string
   minLearningContentLength: number

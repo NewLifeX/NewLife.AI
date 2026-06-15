@@ -29,7 +29,6 @@ public class ChatAITests
         Assert.Contains(".jpg", setting.AllowedExtensions);
         Assert.True(setting.EnableGateway);
         Assert.Equal(60, setting.GatewayRateLimit);
-        Assert.Equal(5, setting.UpstreamRetryCount);
         Assert.True(setting.EnableFunctionCalling);
         Assert.True(setting.EnableMcp);
         Assert.Equal("1024x1024", setting.DefaultImageSize);
