@@ -16,7 +16,7 @@ export function PresetSelector({ onSelect }: PresetSelectorProps) {
   const [presets, setPresets] = useState<Preset[]>([])
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [popupPos, setPopupPos] = useState<{ bottom: number; left: number } | null>(null)
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
     fetchPresets().then(setPresets).catch(() => {})
@@ -27,7 +27,7 @@ export function PresetSelector({ onSelect }: PresetSelectorProps) {
     if (open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setPopupPos({
-        bottom: window.innerHeight - rect.top + 8,
+        top: rect.bottom + 8,
         left: Math.max(8, Math.min(rect.left, window.innerWidth - POPUP_WIDTH - 8)),
       })
     } else {
@@ -64,7 +64,7 @@ export function PresetSelector({ onSelect }: PresetSelectorProps) {
           <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
           <div
             className="fixed w-56 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[9999] max-h-64 overflow-y-auto"
-            style={{ bottom: popupPos.bottom, left: popupPos.left }}
+            style={{ top: popupPos.top, left: popupPos.left }}
           >
             {presets.map((p) => (
               <button
