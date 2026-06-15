@@ -127,6 +127,7 @@ export function SiteConfigSettings({ settings, onChange }: Props) {
           onChange={(e) => onChange({ supportPosition: Number(e.target.value) })}
           className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
         >
+          <option value={0}>{t('systemSettings.siteConfig.supportPositionHidden')}</option>
           <option value={1}>{t('systemSettings.siteConfig.supportPositionSidebarBottom')}</option>
           <option value={2}>{t('systemSettings.siteConfig.supportPositionBelowNewChat')}</option>
           <option value={3}>{t('systemSettings.siteConfig.supportPositionFloatingButton')}</option>

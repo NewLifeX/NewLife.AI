@@ -29,7 +29,7 @@ const defaultSettings: SystemSettings = {
   welcomeMessage: '',
   supportText: '',
   supportUrl: '',
-  supportPosition: 3,
+  supportPosition: 0,
   autoGenerateTitle: true,
   defaultModel: 0,
   defaultThinkingMode: 0,

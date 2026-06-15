@@ -22,7 +22,7 @@ public class SystemSettingsDto
     /// <summary>客服链接。点击客服文本跳转的 URL</summary>
     public String SupportUrl { get; set; } = "";
 
-    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
+    /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
     public Int32 SupportPosition { get; set; }
 
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
@@ -154,7 +154,7 @@ public class SystemSettingsUpdateDto
     /// <summary>客服链接</summary>
     public String? SupportUrl { get; set; }
 
-    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
+    /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
     public Int32? SupportPosition { get; set; }
 
     /// <summary>自动生成标题</summary>

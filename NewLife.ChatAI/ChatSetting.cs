@@ -47,8 +47,8 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
 
     /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）</summary>
     [Category("外观与品牌")]
-    [Description("客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）")]
-    public Int32 SupportPosition { get; set; } = 3;
+    [Description("客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）")]
+    public Int32 SupportPosition { get; set; } = 0;
     #endregion
 
     #region 对话行为

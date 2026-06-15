@@ -60,7 +60,7 @@ export function ChatLayout({
   userAvatar,
   supportText,
   supportUrl,
-  supportPosition = 3,
+  supportPosition = 0,
   className,
 }: ChatLayoutProps) {
   const { t } = useTranslation()

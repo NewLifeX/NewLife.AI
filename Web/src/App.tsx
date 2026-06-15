@@ -60,7 +60,7 @@ function ChatApp() {
   const [welcomeMessage, setWelcomeMessage] = useState<string | undefined>(undefined)
   const [supportText, setSupportText] = useState<string | undefined>(undefined)
   const [supportUrl, setSupportUrl] = useState<string | undefined>(undefined)
-  const [supportPosition, setSupportPosition] = useState<number>(3)
+  const [supportPosition, setSupportPosition] = useState<number>(0)
   const [draftInput, setDraftInput] = useState('')
 
   // URL 参数直发：解析跳转参数（仅在组件挂载时初始化一次）

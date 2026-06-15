@@ -210,6 +210,7 @@ export default {
       supportUrlDesc: 'URL to open when clicking the support text.',
       supportPosition: 'Display Position',
       supportPositionDesc: 'Where to show the support entry on the page',
+      supportPositionHidden: 'Hidden',
       supportPositionSidebarBottom: 'Sidebar Bottom',
       supportPositionBelowNewChat: 'Below New Chat',
       supportPositionFloatingButton: 'Floating Button (bottom-right)',

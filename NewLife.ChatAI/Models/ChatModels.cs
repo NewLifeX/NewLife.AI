@@ -180,7 +180,7 @@ public class SystemConfigDto
     /// <summary>客服链接。点击客服文本跳转的 URL</summary>
     public String? SupportUrl { get; set; }
 
-    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
+    /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
     public Int32 SupportPosition { get; set; }
 
     /// <summary>分享链接默认有效期（分钟），0 表示永不过期</summary>

@@ -55,7 +55,7 @@ export function Sidebar({
   className,
   supportText,
   supportUrl,
-  supportPosition = 3,
+  supportPosition = 0,
 }: SidebarProps) {
   const { t } = useTranslation()
 

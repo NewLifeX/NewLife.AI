@@ -730,7 +730,7 @@ export interface SystemConfig {
   supportText?: string
   /** 客服链接。点击客服文本跳转的 URL */
   supportUrl?: string
-  /** 客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
+  /** 客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
   supportPosition?: number
   /** 分享链接默认有效期（分钟），0 表示永不过期 */
   shareExpireMinutes?: number
@@ -754,7 +754,7 @@ export interface SystemSettings {
   supportText: string
   /** 客服链接。点击客服文本跳转的 URL */
   supportUrl: string
-  /** 客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
+  /** 客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
   supportPosition: number
   autoGenerateTitle: boolean
   // 对话默认

@@ -210,6 +210,7 @@ export default {
       supportUrlDesc: '点击客服文本跳转的 URL',
       supportPosition: '展示位置',
       supportPositionDesc: '客服入口在页面中的展示位置',
+      supportPositionHidden: '不显示',
       supportPositionSidebarBottom: '侧边栏底部',
       supportPositionBelowNewChat: '新对话按钮下方',
       supportPositionFloatingButton: '右下角悬浮球',
