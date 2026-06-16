@@ -6,7 +6,7 @@ namespace NewLife.AI.Tools;
 /// <summary>网络工具服务。提供网页抓取、搜索、IP 归属地查询、实时天气、文本翻译等能力，通过 ToolRegistry 注册后供 AI 模型调用</summary>
 /// <remarks>
 /// 通过 IServiceProvider 在内部解析各服务接口集合，遍历尝试每个实现直到获取有效结果。
-/// newlife 远程兜底实现建议注册在最后，作为最终降级方案。
+/// 注册多个实现时，按注册顺序依次尝试，首个返回有效结果的作为最终结果。
 /// </remarks>
 /// <remarks>初始化网络工具服务，从 IServiceProvider 内部解析各服务集合</remarks>
 /// <param name="serviceProvider">依赖注入服务提供者</param>
@@ -34,11 +34,11 @@ public class NetworkToolService(IServiceProvider serviceProvider)
         var _fetchServices = Resolve<IWebFetchService>(serviceProvider);
         foreach (var svc in _fetchServices)
         {
-            var result = await svc.FetchAsync(url, maxLength, cancellationToken).ConfigureAwait(false);
-            if (result != null) return result;
+        var result = await svc.FetchAsync(url, maxLength, cancellationToken).ConfigureAwait(false);
+        if (result != null) return result;
         }
 
-        return new { error = "all web fetch providers failed" };
+        return new { error = "web fetch failed" };
     }
 
     /// <summary>使用搜索引擎检索互联网信息，返回标题、链接和摘要列表。适用于查找最新资讯、事实核查等场景</summary>

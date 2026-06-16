@@ -169,13 +169,11 @@ public static class ChatAIExtensions
     /// <param name="services">服务集合</param>
     private static void RegisterToolServices(IServiceCollection services)
     {
-        const String url = "https://ai.newlifex.com";
-
         // 从 NativeTool 表读取配置，首次启动表为空时使用硬编码默认值
         var toolMap = LoadToolConfigFromDb();
 
         var ipTool = toolMap.GetValueOrDefault("get_ip_location");
-        var ipProviders = ipTool?.Providers ?? "pconline,ipapi";
+        var ipProviders = ipTool?.Providers ?? "pconline";
 
         var weatherTool = toolMap.GetValueOrDefault("get_weather");
         var weatherProviders = weatherTool?.Providers ?? "nmc,wttr";
@@ -186,11 +184,9 @@ public static class ChatAIExtensions
         var searchTool = toolMap.GetValueOrDefault("web_search");
         var searchProviders = searchTool?.Providers ?? "bing,duckduckgo";
         var searchKey = searchTool?.ApiKey ?? "";
-        var searchRemoteUrl = searchTool?.Endpoint ?? url;
 
         var fetchTool = toolMap.GetValueOrDefault("web_fetch");
         var fetchProviders = fetchTool?.Providers ?? "direct";
-        var fetchRemoteUrl = fetchTool?.Endpoint ?? url;
 
         // IP 归属地
         foreach (var name in SplitProviders(ipProviders))
@@ -198,10 +194,6 @@ public static class ChatAIExtensions
             switch (name)
             {
                 case "pconline": services.AddSingleton<IIpLocationService, IpLocationPconlineService>(); break;
-                case "ipapi": services.AddSingleton<IIpLocationService, IpLocationIpApiService>(); break;
-                case "newlife":
-                    var ipRemote = ipTool?.Endpoint ?? url;
-                    services.AddSingleton<IIpLocationService>(sp => new IpLocationRemoteService(ipRemote)); break;
             }
         }
 
@@ -212,9 +204,6 @@ public static class ChatAIExtensions
             {
                 case "nmc": services.AddSingleton<IWeatherService, WeatherNmcService>(); break;
                 case "wttr": services.AddSingleton<IWeatherService, WeatherWttrService>(); break;
-                case "newlife":
-                    var weatherRemote = weatherTool?.Endpoint ?? url;
-                    services.AddSingleton<IWeatherService>(sp => new WeatherRemoteService(weatherRemote)); break;
             }
         }
 
@@ -224,9 +213,6 @@ public static class ChatAIExtensions
             switch (name)
             {
                 case "mymemory": services.AddSingleton<ITranslateService, TranslateMyMemoryService>(); break;
-                case "newlife":
-                    var translateRemote = translateTool?.Endpoint ?? url;
-                    services.AddSingleton<ITranslateService>(sp => new TranslateRemoteService(translateRemote)); break;
             }
         }
 
@@ -238,7 +224,6 @@ public static class ChatAIExtensions
                 case "bing": services.AddSingleton<ISearchService>(sp => new SearchBingService(searchKey)); break;
                 case "serper": services.AddSingleton<ISearchService>(sp => new SearchSerperService(searchKey)); break;
                 case "duckduckgo": services.AddSingleton<ISearchService, SearchDuckDuckGoService>(); break;
-                case "newlife": services.AddSingleton<ISearchService>(sp => new SearchRemoteService(searchRemoteUrl)); break;
             }
         }
 
@@ -248,7 +233,6 @@ public static class ChatAIExtensions
             switch (name)
             {
                 case "direct": services.AddSingleton<IWebFetchService, WebFetchDirectService>(); break;
-                case "newlife": services.AddSingleton<IWebFetchService>(sp => new WebFetchRemoteService(fetchRemoteUrl)); break;
             }
         }
     }
