@@ -64,6 +64,15 @@ public static class AiClientExtensions
     public static IServiceCollection AddOpenAI(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
         => services.AddSingleton<IChatClient>(_ => new OpenAIChatClient(apiKey, model, endpoint));
 
+    /// <summary>注册 DeepSeek <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="apiKey">DeepSeek API 密钥</param>
+    /// <param name="model">默认模型；为空时由每次请求自行指定</param>
+    /// <param name="endpoint">API 地址覆盖；为空时使用内置默认地址</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddDeepSeek(this IServiceCollection services, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddSingleton<IChatClient>(_ => new DeepSeekChatClient(apiKey, model, endpoint));
+
     /// <summary>注册阿里百炼 DashScope <see cref="IChatClient"/> 单例</summary>
     /// <param name="services">服务集合</param>
     /// <param name="apiKey">阿里云 API Key</param>
@@ -165,6 +174,16 @@ public static class AiClientExtensions
     /// <returns>服务集合（支持链式调用）</returns>
     public static IServiceCollection AddKeyedOpenAI(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
         => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new OpenAIChatClient(apiKey, model, endpoint));
+
+    /// <summary>注册 Keyed DeepSeek <see cref="IChatClient"/> 单例</summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="serviceKey">服务键</param>
+    /// <param name="apiKey">DeepSeek API 密钥</param>
+    /// <param name="model">默认模型</param>
+    /// <param name="endpoint">API 地址覆盖</param>
+    /// <returns>服务集合（支持链式调用）</returns>
+    public static IServiceCollection AddKeyedDeepSeek(this IServiceCollection services, String serviceKey, String apiKey, String? model = null, String? endpoint = null)
+        => services.AddKeyedSingleton<IChatClient>(serviceKey, (_, _) => new DeepSeekChatClient(apiKey, model, endpoint));
 
     /// <summary>注册 Keyed 阿里百炼 DashScope <see cref="IChatClient"/> 单例</summary>
     /// <param name="services">服务集合</param>

@@ -1,4 +1,5 @@
 ﻿using NewLife.AI.Models;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.OpenAI;
 
@@ -14,7 +15,7 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
 [AiClientModel("deepseek-chat", "DeepSeek Chat", Code = "DeepSeek", FunctionCalling = true)]
 [AiClientModel("deepseek-reasoner", "DeepSeek Reasoner", Code = "DeepSeek", Thinking = true)]
-public class DeepSeekChatClient : OpenAIClientBase
+public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
 {
     #region 属性
     /// <inheritdoc/>
@@ -73,6 +74,45 @@ public class DeepSeekChatClient : OpenAIClientBase
         }
 
         return dic;
+    }
+    #endregion
+
+    #region 余额查询
+    /// <summary>查询 DeepSeek 账号余额。调用 GET https://api.deepseek.com/user/balance</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>余额信息，查询失败时返回 null</returns>
+    public async Task<BalanceResponse?> GetBalanceAsync(CancellationToken cancellationToken = default)
+    {
+        var url = BuildApiUrl("/user/balance");
+        var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
+        if (json == null) return null;
+
+        var dic = JsonParser.Decode(json);
+        if (dic == null) return null;
+
+        var response = new BalanceResponse
+        {
+            IsAvailable = dic.TryGetValue("is_available", out var ia) && ia.ToBoolean(),
+        };
+
+        if (dic["balance_infos"] is IList<Object> list)
+        {
+            var infos = new List<BalanceInfo>(list.Count);
+            foreach (var item in list)
+            {
+                if (item is not IDictionary<String, Object> d) continue;
+                infos.Add(new BalanceInfo
+                {
+                    Currency = d.TryGetValue("currency", out var c) ? c as String : null,
+                    TotalBalance = d.TryGetValue("total_balance", out var tb) ? tb.ToDecimal() : null,
+                    GrantedBalance = d.TryGetValue("granted_balance", out var gb) ? gb.ToDecimal() : null,
+                    ToppedUpBalance = d.TryGetValue("topped_up_balance", out var tub) ? tub.ToDecimal() : null,
+                });
+            }
+            response.BalanceInfos = [.. infos];
+        }
+
+        return response;
     }
     #endregion
 }
