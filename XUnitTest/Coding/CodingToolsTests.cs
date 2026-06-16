@@ -225,15 +225,17 @@ public class TestClass
     #region ask_user
 
     [Fact]
-    [DisplayName("ask_user—返回非空回答（模拟需交互）")]
+    [DisplayName("ask_user—通过 UserInputProvider 回调返回回答")]
     public async Task AskUser_ReturnsAnswer()
     {
-        // 注意：此测试在自动测试环境下无法真正读取控制台输入，
-        // 但应能正常返回（即使 answer 为空字符串）
+        // 注入模拟输入提供者，避免 Console.ReadLine 阻塞测试
+        _tools.UserInputProvider = q => $"回答: {q}";
+
         var result = await _tools.AskUserAsync("测试问题");
 
-        // 在无交互环境下，ReadLine 可能返回 null，此时返回 ""
         Assert.NotNull(result);
+        Assert.Contains("测试问题", result);
+        Assert.Equal("回答: 测试问题", result);
     }
 
     #endregion

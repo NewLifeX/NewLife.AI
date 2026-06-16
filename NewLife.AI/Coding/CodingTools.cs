@@ -21,6 +21,9 @@ public class CodingTools(String? workspacePath = null)
 
     /// <summary>工具审批提供者。工作区外的文件操作需经此审批；为 null 时直接拒绝</summary>
     public IToolApprovalProvider? ApprovalProvider { get; set; }
+
+    /// <summary>用户输入提供者。设置后 AskUserAsync 通过此委托获取用户回答，而非阻塞控制台读取；常用于自动化测试场景</summary>
+    public Func<String, String>? UserInputProvider { get; set; }
     #endregion
 
     #region 文件读写
@@ -541,6 +544,10 @@ public class CodingTools(String? workspacePath = null)
     public Task<String> AskUserAsync(
         [Description("向用户提出的问题")] String question)
     {
+        // 如果注入了 UserInputProvider，优先通过回调获取回答（不阻塞控制台，适用于自动化测试）
+        if (UserInputProvider != null)
+            return Task.FromResult(UserInputProvider(question));
+
         Console.WriteLine();
         Console.WriteLine($"🤖 [Agent 提问] {question}");
         Console.Write("👤 [你的回答] > ");
