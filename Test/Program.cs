@@ -1,5 +1,6 @@
 ﻿using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Coding;
 using NewLife.AI.Models;
 using NewLife.Log;
 
@@ -13,7 +14,8 @@ class Program
 
         try
         {
-            Test1();
+            //Test1();
+            CodingAgentDemo().Wait();
         }
         catch (Exception ex)
         {
@@ -82,5 +84,51 @@ class Program
         Console.WriteLine();
 
         XTrace.WriteLine("阿里百炼测试完成！");
+    }
+
+    /// <summary>编程智能体示例。演示 ACP 三阶段管道</summary>
+    static async Task CodingAgentDemo()
+    {
+        XTrace.WriteLine("编程智能体示例开始……");
+
+        var apiKey = "sk-NewLifeAI2026";
+        var baseClient = new NewLifeAIChatClient(apiKey, "qwen3.5-flash", "http://localhost:5080");
+
+        // 使用 Test 项目自身的工作区
+        var workspacePath = Environment.CurrentDirectory;
+        XTrace.WriteLine($"工作区: {workspacePath}");
+
+        var tools = new CodingTools(workspacePath);
+
+        // 创建 CodingAgent，自动加载 Copilot 技能
+        var agent = new CodingAgent(baseClient, tools, workspacePath);
+
+        // 订阅事件
+        agent.OnPhaseChanged += (phase, msg) => XTrace.WriteLine($"[{phase}] {msg}");
+        agent.OnLog += (level, msg) => XTrace.WriteLine($"[{level}] {msg}");
+
+        // 先用简单演示需求
+        var requirement = "分析当前项目的 Program.cs 文件结构，并给出代码改进建议（不要实际修改文件）";
+
+        XTrace.WriteLine($"需求: {requirement}");
+        XTrace.WriteLine("开始 ACP 管道……");
+
+        var report = await agent.RunAsync(requirement);
+
+        if (report.Plan != null)
+        {
+            XTrace.WriteLine($"规划摘要: {report.Plan.Summary}");
+            XTrace.WriteLine($"任务数量: {report.Plan.Tasks.Count}");
+        }
+
+        foreach (var taskResult in report.TaskResults)
+        {
+            XTrace.WriteLine($"任务 [{taskResult.Task.Id}]: {(taskResult.Passed ? "通过" : "未通过")}");
+        }
+
+        if (report.Error != null)
+            XTrace.WriteLine($"错误: {report.Error}");
+
+        XTrace.WriteLine("编程智能体示例完成！");
     }
 }
