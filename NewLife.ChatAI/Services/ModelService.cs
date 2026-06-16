@@ -341,6 +341,60 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             : $"{providerConfig.Name} 发现 {models.Length} 个模型：{models.Join("、")}";
     }
 
+    /// <summary>遍历所有 ModelConfig 记录，从 AiClientDescriptor 刷新模型能力（含 ReasoningEfforts）</summary>
+    /// <remarks>
+    /// 启动时由 DataPreloadService 调用一次，确保所有模型的能力字段与最新的 [AiClientModel] 注解保持一致。
+    /// <para>保护策略：仅当模型全部能力标记均为默认值（false/空）时才覆盖，若管理员已手动配置过任何能力字段则跳过，避免覆盖人工调整。</para>
+    /// </remarks>
+    public async Task RefreshModelCapabilitiesAsync()
+    {
+        var allModels = ModelConfig.FindAll();
+        var count = 0;
+
+        foreach (var model in allModels)
+        {
+            try
+            {
+                var provider = model.ProviderInfo;
+                if (provider == null || provider.Provider.IsNullOrEmpty()) continue;
+
+                var descriptor = _registry.GetDescriptor(provider.Provider);
+                if (descriptor == null) continue;
+
+                var caps = descriptor.FindModelCapabilities(model.Code);
+                if (caps == null) continue;
+
+                // 保护策略：仅当全部能力标记仍为默认值时覆盖（管理员未手动配置过）
+                // 若有任一能力已被手动设置，只安全写入 ReasoningEfforts（新增字段，不可能已有手动配置）
+                var isUntouched = !model.SupportThinking && !model.SupportVision && !model.SupportImage && !model.SupportAudio && !model.SupportVideo && !model.SupportEmbedding && !model.SupportFunction;
+                if (isUntouched)
+                {
+                    model.SupportThinking = caps.SupportThinking;
+                    model.SupportFunction = caps.SupportFunction;
+                    model.SupportVision = caps.SupportVision;
+                    model.SupportAudio = caps.SupportAudio;
+                    model.SupportImage = caps.SupportImage;
+                    model.SupportVideo = caps.SupportVideo;
+                    model.SupportEmbedding = caps.SupportEmbedding;
+                    if (caps.ContextLength > 0) model.ContextLength = caps.ContextLength;
+                }
+
+                // ReasoningEfforts 是新增字段，当前 DB 中必然为 null，安全写入
+                if (model.ReasoningEfforts.IsNullOrEmpty() && !caps.ReasoningEfforts.IsNullOrEmpty())
+                    model.ReasoningEfforts = caps.ReasoningEfforts;
+
+                count += model.Save();
+            }
+            catch (Exception ex)
+            {
+                log?.Debug("刷新模型能力 {0}/{1} 失败：{2}", model.ProviderId, model.Code, ex.Message);
+            }
+        }
+
+        if (count > 0)
+            XTrace.WriteLine("刷新模型能力完成，更新 {0} 个模型配置", count);
+    }
+
     /// <summary>遍历所有已启用提供商并触发模型发现。由后台定时器周期调用</summary>
     public async Task DoDiscoverAsync()
     {
@@ -630,6 +684,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                     config.SupportImage = caps.SupportImage;
                     config.SupportVideo = caps.SupportVideo;
                     config.SupportEmbedding = caps.SupportEmbedding;
+                    if (config.ReasoningEfforts.IsNullOrEmpty())
+                        config.ReasoningEfforts = caps.ReasoningEfforts;
                     if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
                 }
             }

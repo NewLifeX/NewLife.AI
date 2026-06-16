@@ -1,7 +1,7 @@
 ﻿namespace NewLife.ChatAI.Models;
 
 /// <summary>模型信息</summary>
-public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunction, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImage, Boolean SupportVideo, Boolean SupportEmbedding = false, Int32 ContextLength = 0, String Provider = "");
+public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunction, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImage, Boolean SupportVideo, Boolean SupportEmbedding = false, Int32 ContextLength = 0, String? ReasoningEfforts = null, String Provider = "");
 
 #region 提供商管理 DTO
 /// <summary>提供商配置（管理视图）。ApiKey 已脱敏</summary>

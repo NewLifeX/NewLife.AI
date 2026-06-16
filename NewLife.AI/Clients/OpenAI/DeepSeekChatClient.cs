@@ -13,8 +13,8 @@ namespace NewLife.AI.Clients.OpenAI;
 /// </list>
 /// </remarks>
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
-[AiClientModel("deepseek-chat", "DeepSeek Chat", Code = "DeepSeek", FunctionCalling = true)]
-[AiClientModel("deepseek-reasoner", "DeepSeek Reasoner", Code = "DeepSeek", Thinking = true)]
+[AiClientModel("deepseek-chat", "DeepSeek Chat", Code = "DeepSeek", FunctionCalling = true, ReasoningEfforts = "high,max")]
+[AiClientModel("deepseek-reasoner", "DeepSeek Reasoner", Code = "DeepSeek", Thinking = true, ReasoningEfforts = "high,max")]
 public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
 {
     #region 属性
@@ -74,6 +74,47 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
         }
 
         return dic;
+    }
+    #endregion
+
+    #region 模型能力推断
+    /// <summary>推断 DeepSeek 模型能力。覆盖基类推断，精确描述 deepseek 系列各模型特性</summary>
+    /// <remarks>
+    /// DeepSeek 各系列模型能力差异：
+    /// <list type="bullet">
+    ///   <item><description>deepseek-chat / deepseek-v4：支持思考模式（高/最大两档）、工具调用、上下文65K</description></item>
+    ///   <item><description>deepseek-reasoner：始终推理、不支持工具调用与采样参数、上下文65K</description></item>
+    /// </list>
+    /// </remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断的能力信息</returns>
+    public override AiProviderCapabilities? InferModelCapabilities(String? modelId)
+    {
+        if (modelId.IsNullOrEmpty()) return null;
+
+        // deepseek-reasoner：始终推理，不支持工具调用，不支持 temperature/top_p 等采样参数
+        if (modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
+        {
+            return new AiProviderCapabilities(
+                SupportThinking: true,
+                SupportFunction: false,
+                ContextLength: 65_536,
+                ReasoningEfforts: "high,max");
+        }
+
+        // deepseek-chat / deepseek-v4 系列：支持思考模式（thinking: {type: enabled}）、工具调用、上下文65K
+        if (modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("deepseek-v4", StringComparison.OrdinalIgnoreCase))
+        {
+            return new AiProviderCapabilities(
+                SupportThinking: true,
+                SupportFunction: true,
+                ContextLength: 65_536,
+                ReasoningEfforts: "high,max");
+        }
+
+        // 其他 DeepSeek 模型（如 deepseek-r1、deepseek-prover 等）回退基类推断
+        return base.InferModelCapabilities(modelId);
     }
     #endregion
 

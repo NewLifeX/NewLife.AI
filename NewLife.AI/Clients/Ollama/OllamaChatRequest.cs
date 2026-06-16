@@ -80,6 +80,10 @@ public class OllamaChatRequest : IChatRequest
         set { Options ??= new OllamaOptions(); Options.Stop = value is List<String> list ? list : value != null ? new List<String>(value) : null; }
     }
 
+    /// <summary>推理强度适配</summary>
+    [IgnoreDataMember]
+    String? IChatRequest.ReasoningEffort { get; set; }
+
     /// <summary>是否启用思考模式适配。映射到 Think</summary>
     [IgnoreDataMember]
     Boolean? IChatRequest.EnableThinking

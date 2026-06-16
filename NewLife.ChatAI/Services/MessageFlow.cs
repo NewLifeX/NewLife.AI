@@ -367,6 +367,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             ThinkingMode.Fast => false,
             _ => flow.ModelConfig.SupportThinking ? true : null,
         };
+        flow.Options.ReasoningEffort = request.ReasoningEffort;
 
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
@@ -585,6 +586,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             _ => modelConfig.SupportThinking ? true : null,
         };
         flow.Options.UserId = userId > 0 ? userId.ToString() : null;
+        flow.Options.User = userId > 0 ? userId.ToString() : null; // 透传给 LLM 服务商（内容安全/KVCache 隔离）
         flow.Options.ConversationId = conversation.Id > 0 ? conversation.Id.ToString() : null;
         ApplyResponseStyle(flow.Options, flow.Options.UserId);
         //// Options.Items 与 context.Items 共享同一引用，后续对 context.Items 的写入无需再复制

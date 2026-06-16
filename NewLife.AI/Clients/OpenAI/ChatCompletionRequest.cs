@@ -49,6 +49,9 @@ public class ChatCompletionRequest : IChatRequest
     /// <summary>用户标识。用于追踪和限流</summary>
     public String? User { get; set; }
 
+    /// <summary>推理强度。支持值由模型决定，如 high/max（DeepSeek），low/medium/high（OpenAI o3/o4）</summary>
+    public String? ReasoningEffort { get; set; }
+
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭。仅支持的模型有效（如 Qwen3 系列、QwQ 等）</summary>
     public Boolean? EnableThinking { get; set; }
 
@@ -95,6 +98,7 @@ public class ChatCompletionRequest : IChatRequest
             ToolChoice = request.ToolChoice,
             User = request.User,
             EnableThinking = request.EnableThinking,
+            ReasoningEffort = request.ReasoningEffort,
             ResponseFormat = request.ResponseFormat,
             ParallelToolCalls = request.ParallelToolCalls,
             UserId = request.UserId,
@@ -217,6 +221,7 @@ public class ChatCompletionRequest : IChatRequest
             dic["tools"] = tools;
         }
         if (request.ToolChoice != null) dic["tool_choice"] = request.ToolChoice;
+        if (request.ReasoningEffort != null) dic["reasoning_effort"] = request.ReasoningEffort;
         if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
         if (request.ResponseFormat != null) dic["response_format"] = request.ResponseFormat;
         if (request.ParallelToolCalls != null) dic["parallel_tool_calls"] = request.ParallelToolCalls.Value;

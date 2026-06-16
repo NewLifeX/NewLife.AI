@@ -135,6 +135,10 @@ public class GeminiRequest : IChatRequest
     [IgnoreDataMember]
     public String? User { get; set; }
 
+    /// <summary>推理强度</summary>
+    [IgnoreDataMember]
+    public String? ReasoningEffort { get; set; }
+
     /// <summary>是否启用思考模式</summary>
     [IgnoreDataMember]
     public Boolean? EnableThinking { get; set; }

@@ -147,6 +147,18 @@ public class ChatOptions : IExtend
     /// </remarks>
     public String? User { get; set; }
 
+    /// <summary>推理强度。支持值由模型决定，如 high/max（DeepSeek），low/medium/high（OpenAI o3/o4）</summary>
+    /// <remarks>
+    /// 控制模型在思考模式下投入的推理计算量：
+    /// <list type="bullet">
+    ///   <item><description>DeepSeek：high（默认）、max（复杂任务）</description></item>
+    ///   <item><description>OpenAI：none、minimal、low、medium、high、xhigh（model-dependent）</description></item>
+    /// </list>
+    /// null=沿用模型默认行为，不发送此参数。
+    /// 仅在 <see cref="EnableThinking"/> 为 true 时有效，不支持推理强度的模型会忽略此参数。
+    /// </remarks>
+    public String? ReasoningEffort { get; set; }
+
     /// <summary>是否启用思考模式。null=不设置，true=开启，false=关闭</summary>
     /// <remarks>
     /// 部分模型（如 QwQ、DeepSeek-R1、Claude 3.7 Sonnet）支持显式的"思考"（Chain-of-Thought）阶段，
