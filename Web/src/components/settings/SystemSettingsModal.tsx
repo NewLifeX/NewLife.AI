@@ -55,7 +55,6 @@ const defaultSettings: SystemSettings = {
   backgroundGeneration: true,
   maxMessagesPerMinute: 0,
   enableAutoLearning: false,
-  learningModel: '',
   lightweightModel: '',
   embedModel: '',
   minLearningContentLength: 200,
