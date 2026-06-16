@@ -8,7 +8,7 @@ using NewLife.Serialization;
 
 namespace NewLife.AI.Coding;
 
-/// <summary>编程智能体。实现 ACP（自主编码管道）三阶段编排：Plan → Implement → Review</summary>
+/// <summary>编程智能体。实现"规划-实现-审查"三阶段自主编码管道</summary>
 /// <remarks>
 /// 自动加载 Copilot 技能和指令，将编码规范注入到各阶段的 System Prompt 中。
 /// 支持编译-修复闭环和审查-修复闭环。
@@ -103,7 +103,7 @@ public class CodingAgent
 
     #region 核心方法
 
-    /// <summary>执行完整的 ACP 管道</summary>
+    /// <summary>执行完整的自主编码管道</summary>
     /// <param name="requirement">用户需求描述</param>
     /// <returns>编码报告</returns>
     public async Task<CodingReport> RunAsync(String requirement)
@@ -115,13 +115,23 @@ public class CodingAgent
 
         try
         {
-            using var span = Tracer?.NewSpan("ai:CodingAgent.Run");
+            using var span = Tracer?.NewSpan("ai:CodingAgent:Run");
 
-            // Phase 1: Plan
-            EmitPhase("Plan", "开始分析需求并拆解任务……");
+            // Phase 1: 规划
+            EmitPhase("规划", "开始分析需求并拆解任务……");
             var plan = await PlanAsync(requirement);
             report.Plan = plan;
-            WriteLog("规划完成：{0} 个任务", plan.Tasks.Count);
+
+            if (plan.Tasks.Count > 0)
+            {
+                WriteLog("规划完成，共 {0} 个任务:", plan.Tasks.Count);
+                foreach (var t in plan.Tasks)
+                    WriteLog("  [{0}] {1}", t.Id, t.Description);
+            }
+            else
+            {
+                WriteLog("规划完成：{0} 个任务", plan.Tasks.Count);
+            }
 
             if (plan.Tasks.Count == 0)
             {
@@ -129,13 +139,13 @@ public class CodingAgent
                 return report;
             }
 
-            // Phase 2-3: 逐任务 Implement + Review
+            // Phase 2-3: 逐任务执行 实现→审查
             foreach (var task in plan.Tasks)
             {
                 report.TaskResults.Add(await ExecuteTaskAsync(task));
             }
 
-            EmitPhase("Done", "ACP 管道执行完成");
+            EmitPhase("Done", "自主编码管道执行完成");
         }
         catch (Exception ex)
         {
@@ -162,9 +172,13 @@ public class CodingAgent
 
         try
         {
-            var response = toolClient.StreamChatAsync(messages);
-            var text = await ReadStreamResponseAsync(response);
-            var plan = ParsePlanFromResponse(text);
+            var options = new ChatOptions
+            {
+                EnableThinking = false,
+                ResponseFormat = new { type = "json_object" },
+            };
+            var response = await toolClient.GetResponseAsync(messages, options);
+            var plan = ParsePlanFromResponse(response?.Text);
 
             // 补充影响文件分析
             if (plan.Tasks.Count > 0)
@@ -173,14 +187,64 @@ public class CodingAgent
                 {
                     task.FilesToModify ??= [];
                 }
+                return plan;
             }
 
-            return plan;
+            // 工具规划未产出任务，尝试无工具纯文本降级
+            WriteLog("工具模式未产出任务，尝试纯文本规划……");
+            return await PlanFallbackAsync(requirement);
         }
         catch (Exception ex)
         {
-            WriteLog("规划阶段失败: {0}", ex.Message);
-            return new CodingPlan { Requirement = requirement, Summary = $"规划失败: {ex.Message}" };
+            WriteLog("规划阶段异常，尝试降级: {0}", ex.Message);
+            return await PlanFallbackAsync(requirement);
+        }
+    }
+
+    /// <summary>无工具降级规划：仅用模型文本能力分析需求并输出 JSON 计划</summary>
+    private async Task<CodingPlan> PlanFallbackAsync(String requirement)
+    {
+        var fallbackPrompt = """
+你是一名资深系统架构师，请直接分析以下需求并拆解为编码任务。
+你当前无法访问文件系统，请基于需求描述和常见项目结构进行推理。
+
+严格输出以下 JSON 格式（不要包含其他文字）：
+```json
+{
+  "summary": "整体方案简述",
+  "tasks": [
+    {
+      "id": "F001",
+      "description": "任务描述",
+      "dependencies": [],
+      "acceptanceCriteria": ["验收条件"],
+      "filesToModify": ["预估涉及文件"],
+      "estimatedComplexity": "Low|Medium|High"
+    }
+  ]
+}
+```
+""";
+
+        var messages = new List<ChatMessage>
+        {
+            new() { Role = "system", Content = fallbackPrompt },
+            new() { Role = "user", Content = $"请分析以下需求并生成编码计划：\n\n{requirement}" },
+        };
+
+        try
+        {
+            var options = new ChatOptions
+            {
+                EnableThinking = false,
+                ResponseFormat = new { type = "json_object" },
+            };
+            var response = await BaseClient.GetResponseAsync(messages, options);
+            return ParsePlanFromResponse(response?.Text);
+        }
+        catch (Exception ex)
+        {
+            return new CodingPlan { Requirement = requirement, Summary = $"降级规划也失败: {ex.Message}" };
         }
     }
 
@@ -248,9 +312,13 @@ public class CodingAgent
 
         try
         {
-            var response = toolClient.StreamChatAsync(messages);
-            var text = await ReadStreamResponseAsync(response);
-            return ParseReviewFromResponse(text) ?? new ReviewResult
+            var options = new ChatOptions
+            {
+                EnableThinking = false,
+                ResponseFormat = new { type = "json_object" },
+            };
+            var response = await toolClient.GetResponseAsync(messages, options);
+            return ParseReviewFromResponse(response?.Text) ?? new ReviewResult
             {
                 Passed = true,
                 Summary = "审查完成（无法解析 JSON，默认通过）",
@@ -282,9 +350,8 @@ public class CodingAgent
 
         try
         {
-            var response = toolClient.StreamChatAsync(messages);
-            var text = await ReadStreamResponseAsync(response);
-            return text ?? "修复完成";
+            var response = await toolClient.GetResponseAsync(messages);
+            return response?.Text ?? "修复完成";
         }
         catch (Exception ex)
         {
@@ -315,16 +382,16 @@ public class CodingAgent
 
         try
         {
-            using var span = Tracer?.NewSpan("ExecuteTask", task.Id);
+            using var span = Tracer?.NewSpan("ai:CodingAgent:ExecuteTask", task.Id);
 
-            EmitPhase("Implement", $"执行任务: [{task.Id}] {task.Description}");
+            EmitPhase("实现", $"执行任务: [{task.Id}] {task.Description}");
 
             // Implement
             var code = await ImplementAsync(task);
             taskResult.Code = code;
 
             // Review
-            EmitPhase("Review", $"审查任务: [{task.Id}] {task.Description}");
+            EmitPhase("审查", $"审查任务: [{task.Id}] {task.Description}");
             var review = await ReviewAsync(code, task);
 
             var reviewRetries = 0;
@@ -635,7 +702,7 @@ public class CodingAgent
     /// <summary>从流式响应中读取完整文本</summary>
     private static async Task<String?> ReadStreamResponseAsync(IAsyncEnumerable<IChatResponse> stream)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         await foreach (var chunk in stream)
         {
             var delta = chunk.Messages?.FirstOrDefault()?.Delta;
@@ -714,7 +781,7 @@ public class CodingAgent
     #endregion
 }
 
-/// <summary>编码报告。聚合 ACP 管道执行结果</summary>
+/// <summary>编码报告。聚合自主编码管道执行结果</summary>
 public class CodingReport
 {
     /// <summary>用户需求</summary>
