@@ -129,7 +129,28 @@ class Program
 
         foreach (var taskResult in report.TaskResults)
         {
-            XTrace.WriteLine($"任务 [{taskResult.Task.Id}]: {(taskResult.Passed ? "通过" : "未通过")}");
+            var status = taskResult.Passed ? "通过" : "未通过";
+            XTrace.WriteLine($"任务 [{taskResult.Task.Id}]: {status}");
+
+            // 输出分析/实现结果
+            if (!String.IsNullOrEmpty(taskResult.Code))
+            {
+                XTrace.WriteLine($"--- [{taskResult.Task.Id}] 输出 ---");
+                XTrace.WriteLine(taskResult.Code);
+                XTrace.WriteLine($"--- [{taskResult.Task.Id}] 结束 ---");
+            }
+
+            if (taskResult.Review?.Issues is { Count: > 0 })
+            {
+                XTrace.WriteLine($"审查问题 ({taskResult.Review.Issues.Count}):");
+                foreach (var issue in taskResult.Review.Issues)
+                {
+                    XTrace.WriteLine($"  [{issue.Severity}] {issue.Description}");
+                }
+            }
+
+            if (!String.IsNullOrEmpty(taskResult.Error))
+                XTrace.WriteLine($"错误: {taskResult.Error}");
         }
 
         if (report.Error != null)

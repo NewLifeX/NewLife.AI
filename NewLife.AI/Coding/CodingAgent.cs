@@ -48,11 +48,17 @@ public class CodingAgent
     /// <summary>编译修复最大重试次数。默认 3</summary>
     public Int32 MaxFixRetries { get; set; } = 3;
 
-    /// <summary>审查修复最大重试次数。默认 2</summary>
-    public Int32 MaxReviewRetries { get; set; } = 2;
+    /// <summary>审查修复最大重试次数。默认 3</summary>
+    public Int32 MaxReviewRetries { get; set; } = 3;
 
-    /// <summary>工具调用最大轮次。默认 10</summary>
+    /// <summary>工具调用最大轮次（实现阶段）。默认 10</summary>
     public Int32 MaxToolIterations { get; set; } = 10;
+
+    /// <summary>规划阶段工具调用最大轮次。默认 3</summary>
+    public Int32 MaxPlanIterations { get; set; } = 3;
+
+    /// <summary>审查阶段工具调用最大轮次。默认 3</summary>
+    public Int32 MaxReviewIterations { get; set; } = 3;
 
     /// <summary>模型名称</summary>
     public String? Model { get; set; }
@@ -168,7 +174,7 @@ public class CodingAgent
     public async Task<CodingPlan> PlanAsync(String requirement)
     {
         var prompt = GetEffectivePlanPrompt();
-        var toolClient = CreatePhaseClient(PlanToolNames, prompt);
+        var toolClient = CreatePhaseClient(PlanToolNames, prompt, MaxPlanIterations);
 
         var messages = new List<ChatMessage>
         {
@@ -260,7 +266,10 @@ public class CodingAgent
     public async Task<String> ImplementAsync(CodingTask task)
     {
         var prompt = GetEffectiveImplementPrompt(task);
-        var toolClient = CreatePhaseClient(ImplementToolNames, prompt);
+
+        // Analysis 任务只用只读工具，Modification 任务用完整工具集
+        var toolNames = task.TaskType == CodingTaskType.Analysis ? PlanToolNames : ImplementToolNames;
+        var toolClient = CreatePhaseClient(toolNames, prompt, MaxToolIterations);
 
         var user = BuildImplementUserMessage(task);
         WriteLog(user);
@@ -311,7 +320,7 @@ public class CodingAgent
     public async Task<ReviewResult> ReviewAsync(String code, CodingTask task)
     {
         var prompt = GetEffectiveReviewPrompt();
-        var toolClient = CreatePhaseClient(ReviewToolNames, prompt);
+        var toolClient = CreatePhaseClient(ReviewToolNames, prompt, MaxReviewIterations);
 
         var messages = new List<ChatMessage>
         {
@@ -343,18 +352,26 @@ public class CodingAgent
     /// <summary>根据审查问题修复代码</summary>
     /// <param name="code">原代码变更摘要</param>
     /// <param name="issues">审查问题列表</param>
+    /// <param name="task">对应的编码任务（用于判断任务类型，防御性拒绝分析任务的修复）</param>
     /// <returns>修复后的代码</returns>
-    public async Task<String> FixAsync(String code, IList<ReviewIssue> issues)
+    public async Task<String> FixAsync(String code, IList<ReviewIssue> issues, CodingTask? task = null)
     {
-        var prompt = GetEffectiveImplementPrompt(null);
-        var toolClient = CreatePhaseClient(ImplementToolNames, prompt);
+        // Analysis 任务不应进入修复流程，防御性检查
+        if (task?.TaskType == CodingTaskType.Analysis)
+        {
+            WriteLog("Analysis 任务不应进入修复流程，跳过");
+            return code;
+        }
+
+        var prompt = GetEffectiveImplementPrompt(task);
+        var toolClient = CreatePhaseClient(ImplementToolNames, prompt, MaxToolIterations);
 
         var issuesText = String.Join("\n", issues.Select(i => $"- [{i.Severity}] {i.Description}" + (i.Suggestion != null ? $" → 建议: {i.Suggestion}" : "")));
 
         var messages = new List<ChatMessage>
         {
             new() { Role = "system", Content = prompt },
-            new() { Role = "user", Content = $"以下代码审查未通过，请修复以下问题：\n\n{issuesText}\n\n原代码变更：\n{code}" },
+            new() { Role = "user", Content = $"以下代码审查未通过，请仅修复审查列出的具体问题（不要重构、不要新增功能）：\n\n{issuesText}\n\n原代码变更：\n{code}" },
         };
 
         try
@@ -373,14 +390,14 @@ public class CodingAgent
 
     #region 内部方法
 
-    private IChatClient CreatePhaseClient(ISet<String> toolNames, String systemPrompt)
+    private IChatClient CreatePhaseClient(ISet<String> toolNames, String systemPrompt, Int32 maxIterations)
     {
         var registry = new ToolRegistry();
         registry.AddTools(Tools);
 
         var toolClient = new ToolChatClient(BaseClient, registry)
         {
-            MaxIterations = MaxToolIterations,
+            MaxIterations = maxIterations,
             MaxResultLength = 3000,
             SelectedTools = toolNames,
         };
@@ -399,7 +416,7 @@ public class CodingAgent
         return toolClient;
     }
 
-    /// <summary>逐任务执行：Implement → Review → Fix 循环</summary>
+    /// <summary>逐任务执行：Implement → Review → Fix 循环。Analysis 类型任务跳过编译审查</summary>
     private async Task<TaskResult> ExecuteTaskAsync(CodingTask task)
     {
         var taskResult = new TaskResult { Task = task };
@@ -409,13 +426,29 @@ public class CodingAgent
         {
             using var span = Tracer?.NewSpan("ai:CodingAgent:ExecuteTask", task.Id);
 
-            EmitPhase("实现", $"执行任务: [{task.Id}] {task.Description}");
+            var isAnalysis = task.TaskType == CodingTaskType.Analysis;
+            EmitPhase("实现", $"执行任务: [{task.Id}] {task.Description}{(isAnalysis ? " (分析)" : "")}");
 
             // Implement
             var code = await ImplementAsync(task);
             taskResult.Code = code;
 
-            // Review
+            // Analysis 任务：跳过编译修复和审查修复闭环，直接标记完成
+            if (isAnalysis)
+            {
+                taskResult.Passed = true;
+                task.Status = CodingTaskStatus.Completed;
+                WriteLog("分析任务 [{0}] 完成", task.Id);
+                // 输出分析结果预览（截取前500字）
+                if (!String.IsNullOrEmpty(code))
+                {
+                    var preview = code.Length > 500 ? code[..500] + "..." : code;
+                    WriteLog("分析结果:\n{0}", preview);
+                }
+                return taskResult;
+            }
+
+            // Modification 任务：走审查-修复闭环
             EmitPhase("审查", $"审查任务: [{task.Id}] {task.Description}");
             var review = await ReviewAsync(code, task);
 
@@ -424,7 +457,7 @@ public class CodingAgent
             {
                 reviewRetries++;
                 WriteLog("审查不通过，第 {0} 次修复……", reviewRetries);
-                code = await FixAsync(code, review.Issues);
+                code = await FixAsync(code, review.Issues, task);
                 review = await ReviewAsync(code, task);
             }
 
@@ -494,10 +527,16 @@ public class CodingAgent
 你是一名资深系统架构师，负责分析用户需求并拆解为可执行的编码任务。
 
 ## 工作方式
-1. 先用 list_dir 工具了解项目根目录结构
-2. 用 glob_search 和 grep_search 探索相关代码文件
-3. 分析需求影响范围，确定需要修改的文件
-4. 将需求拆解为独立可执行的编码任务
+1. 先用 list_dir 工具了解项目根目录结构（最多调用一次）
+2. 用 glob_search 和 grep_search 探索相关代码文件（仅探索相关目录，禁止重复探索同一目录）
+3. 分析需求影响范围，确定涉及的文件
+4. 判断需求性质：是纯分析/审查/建议，还是需要修改代码
+5. 将需求拆解为独立可执行的任务
+
+## 任务类型判断（关键）
+分析需求中的关键词，确定每个任务的 taskType：
+- **Analysis**：需求含"分析/审查/检查/评估/建议/报告/不要修改/只读"等词 → 只需读取文件、输出分析报告，**不写代码、不编译**
+- **Modification**（默认）：需求含"新增/修改/实现/重构/修复/优化/添加/删除"等词 → 需要写代码并编译验证
 
 ## 输出格式
 严格输出以下 JSON 格式（不要包含其他文字）：
@@ -511,7 +550,8 @@ public class CodingAgent
       "dependencies": [],
       "acceptanceCriteria": ["验收条件1", "验收条件2"],
       "filesToModify": ["相对路径/文件.cs"],
-      "estimatedComplexity": "Low|Medium|High"
+      "estimatedComplexity": "Low|Medium|High",
+      "taskType": "Modification|Analysis"
     }
   ],
   "affectedFiles": ["文件路径1", "文件路径2"]
@@ -522,19 +562,29 @@ public class CodingAgent
 - 只做规划和代码探索，不修改任何文件
 - 任务按依赖关系排序，无依赖的任务优先
 - 每个任务应在 1-2 小时内可完成
-- 标记任务复杂度：Low（简单修改）、Medium（新增/重构方法）、High（新增类/模块）
+- 标记任务复杂度：Low（简单修改/分析）、Medium（新增/重构方法）、High（新增类/模块）
+- Analysis 类型任务的 filesToModify 填被分析的文件（只读），非修改目标
 """;
 
     private static readonly String _defaultImplementPrompt = """
-你是一名高级 C# 开发工程师，负责根据任务描述实现代码。
+你是一名高级 C# 开发工程师，负责根据任务描述实现代码或输出分析报告。
 
 ## 工作流程
-1. 先用 read_file 理解需要修改的文件及其上下文
+1. 先用 read_file 理解需要处理的文件及其上下文
 2. 用 grep_search 查找相关代码引用
-3. 编写/修改代码，通过 write_file 写入
-4. 用 run_command 执行 `dotnet build` 验证编译
-5. 编译失败时分析错误并修复，最多重试 3 次
-6. 完成所有修改后回复修改摘要
+3. 根据任务类型执行不同操作：
+   - Analysis 任务：只读取和分析代码，输出结构化分析报告。**禁止调用 write_file、run_command**
+   - Modification 任务：编写/修改代码，通过 write_file 写入，run_command 编译验证
+4. Modification 任务编译失败时分析错误并修复，最多重试 3 次
+5. 完成所有工作后回复摘要
+
+## 执行约束（必须遵守）
+- 仅操作 filesToModify 中列出的文件
+- 禁止创建不在任务范围内的新文件
+- 禁止虚构示例代码（如伪造的 Startup 类、不存在的服务实现、臆造的接口）
+- 务必基于现有代码结构修改，保持架构一致
+- 若无法理解文件内容，使用 ask_user 工具提问，不要猜测
+- Analysis 任务只需输出报告文本，不写文件、不运行编译
 
 ## 编码规范（必须遵守）
 1. 类型名使用 .NET 正式名：String/Int32/Boolean/Int64/Double/Object
@@ -565,6 +615,12 @@ public class CodingAgent
 
 ## 审查清单
 对每处修改，逐条检查：
+
+### 语义正确性（优先）
+- [ ] 代码是否基于现有项目结构（非凭空虚构类/接口/方法）
+- [ ] 引用的类型和方法是否真实存在（非臆造 API）
+- [ ] 修改内容是否与任务描述一致，未引入不在任务范围内的变更
+- [ ] 是否仅修改了 filesToModify 列出的文件
 
 ### 命名
 - [ ] 类型名是否使用 .NET 正式名（String/Int32/Boolean，非 string/int/bool）
@@ -694,6 +750,7 @@ public class CodingAgent
         sb.AppendLine("## 任务");
         sb.AppendLine($"- ID: {task.Id}");
         sb.AppendLine($"- 描述: {task.Description}");
+        sb.AppendLine($"- 类型: {task.TaskType}");
 
         if (task.AcceptanceCriteria.Count > 0)
         {
@@ -714,14 +771,26 @@ public class CodingAgent
         }
 
         sb.AppendLine();
-        sb.AppendLine("请按照工作流程实现上述任务。先理解相关代码上下文，再编写修改，最后编译验证。");
+
+        if (task.TaskType == CodingTaskType.Analysis)
+            sb.AppendLine("这是一个**分析任务**，请只读取和分析涉及文件，输出结构化分析报告。**禁止调用 write_file、run_command，禁止修改任何文件。**");
+        else
+            sb.AppendLine("请按照工作流程实现上述任务。先理解相关代码上下文，再编写修改，最后编译验证。");
 
         return sb.ToString();
     }
 
     private String BuildReviewUserMessage(String code, CodingTask task)
     {
-        return $"请审查以下任务 [{task.Id}] {task.Description} 的代码变更：\n\n{code}";
+        var sb = new StringBuilder();
+        sb.AppendLine($"请审查以下任务 [{task.Id}] {task.Description} 的代码变更：");
+        sb.AppendLine($"- 任务类型: {task.TaskType}");
+        if (task.FilesToModify is { Count: > 0 })
+            sb.AppendLine($"- 预期涉及文件: {String.Join(", ", task.FilesToModify)}");
+        sb.AppendLine();
+        sb.AppendLine(code);
+
+        return sb.ToString();
     }
 
     /// <summary>从流式响应中读取完整文本</summary>
