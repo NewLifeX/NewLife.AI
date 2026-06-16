@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
@@ -55,6 +56,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private Int32 _cooldownSeconds = 60;
     /// <summary>熔断冷却秒数。Open 状态持续此时长后允许一次 HalfOpen 探测，探测成功则恢复 Closed。默认 60</summary>
     public Int32 CooldownSeconds { get => _cooldownSeconds; set => _cooldownSeconds = value > 0 ? value : 60; }
+
+    /// <summary>工具执行回调。每次工具调用完成后触发，供外部监听工具调用情况。回调异常不中断工具执行</summary>
+    public Func<ToolCallEventArgs, Task>? OnToolExecuted { get; set; }
 
     /// <summary>各 Provider 的熔断器实例（按引用相等性索引）</summary>
     private readonly ConcurrentDictionary<IToolProvider, CircuitBreakerPolicy> _breakers = new();
@@ -412,6 +416,25 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private async Task<IToolResult> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
     {
         using var span = Tracer?.NewSpan($"ai:tool:{toolName}", argumentsJson);
+        var sw = Stopwatch.StartNew();
+
+        // 工具回调辅助方法：安全调用 OnToolExecuted，回调异常不中断工具执行
+        async Task FireCallbackAsync(IToolResult result)
+        {
+            if (OnToolExecuted == null) return;
+            try
+            {
+                var content = GetUserContent(result) ?? GetLlmContent(result, toolName);
+                var summary = TruncateSummary(content);
+                var args = new ToolCallEventArgs(toolName, argumentsJson, summary, result.IsError, sw.ElapsedMilliseconds);
+                await OnToolExecuted(args).ConfigureAwait(false);
+            }
+            catch
+            {
+                // 回调异常不应中断工具执行流程
+            }
+        }
+
         // 先尝试从预构建路由表查找，找不到则动态 fallback（目录调用：AI 在 system 中看到工具名但未获得 schema）
         var isCatalogCall = !toolMap.TryGetValue(toolName, out var provider);
         try
@@ -430,13 +453,21 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）
             var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
             if (tier == ToolApprovalTier.Deny)
-                return ToolErrorResult("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）");
+            {
+                var result = ToolErrorResult("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）");
+                await FireCallbackAsync(result).ConfigureAwait(false);
+                return result;
+            }
 
             if (tier == ToolApprovalTier.Ask && ApprovalProvider != null)
             {
                 var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
                 if (!approval.Approved)
-                    return ToolErrorResult("USER_DENIED", $"工具 {toolName} 被用户拒绝执行");
+                {
+                    var result = ToolErrorResult("USER_DENIED", $"工具 {toolName} 被用户拒绝执行");
+                    await FireCallbackAsync(result).ConfigureAwait(false);
+                    return result;
+                }
             }
             // tier == Allow：低风险工具直接放行，无需审批
 
@@ -445,7 +476,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (!breaker.TryAcquire())
             {
                 var remaining = breaker.RemainingCooldownSeconds;
-                return ToolErrorResult("CIRCUIT_OPEN", $"工具提供者暂时不可用（熔断中），预计 {remaining}s 后恢复。如需立即重试请联系管理员重置熔断器");
+                var result = ToolErrorResult("CIRCUIT_OPEN", $"工具提供者暂时不可用（熔断中），预计 {remaining}s 后恢复。如需立即重试请联系管理员重置熔断器");
+                await FireCallbackAsync(result).ConfigureAwait(false);
+                return result;
             }
 
             IToolResult callResult;
@@ -461,6 +494,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             span?.AppendTag(callResult);
+            await FireCallbackAsync(callResult).ConfigureAwait(false);
             return callResult;
         }
         catch (Exception ex)
@@ -472,9 +506,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (isCatalogCall && provider != null)
             {
                 var hint = GetSchemaHint(toolName, provider);
-                return ToolErrorResult("INVALID_ARGUMENTS", ex.Message, hint);
+                var result = ToolErrorResult("INVALID_ARGUMENTS", ex.Message, hint);
+                await FireCallbackAsync(result).ConfigureAwait(false);
+                return result;
             }
-            return ToolErrorResult("EXECUTION_ERROR", ex.Message);
+            var errorResult = ToolErrorResult("EXECUTION_ERROR", ex.Message);
+            await FireCallbackAsync(errorResult).ConfigureAwait(false);
+            return errorResult;
         }
     }
 
@@ -504,6 +542,17 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             .Select(c => c.Data)
             .ToList();
         return userParts.Count > 0 ? String.Join("\n", userParts) : null;
+    }
+
+    /// <summary>截断工具结果摘要到合理长度（默认 200 字符），供回调事件使用</summary>
+    /// <param name="content">原始内容</param>
+    /// <param name="maxLength">最大字符数，默认 200</param>
+    /// <returns>截断后的摘要</returns>
+    private static String? TruncateSummary(String? content, Int32 maxLength = 200)
+    {
+        if (String.IsNullOrWhiteSpace(content)) return content;
+        if (content.Length <= maxLength) return content;
+        return content[..maxLength] + "...";
     }
 
     /// <summary>检查指定工具的执行结果是否包含 LLM 受众内容</summary>

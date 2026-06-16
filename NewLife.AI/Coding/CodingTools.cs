@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,30 +11,16 @@ namespace NewLife.AI.Coding;
 /// <remarks>
 /// 支持工作区沙箱：设置 WorkspacePath 后，所有文件操作限制在工作区范围内；超出范围的操作需通过 ApprovalProvider 审批。
 /// </remarks>
-public class CodingTools
+/// <remarks>初始化编码工具集并指定工作区路径</remarks>
+/// <param name="workspacePath">工作区根路径</param>
+public class CodingTools(String? workspacePath = null)
 {
     #region 属性
-
     /// <summary>工作区根路径。设置后所有文件操作限制在此范围内；为 null 时不限制</summary>
-    public String? WorkspacePath { get; set; }
+    public String? WorkspacePath { get; set; } = workspacePath;
 
     /// <summary>工具审批提供者。工作区外的文件操作需经此审批；为 null 时直接拒绝</summary>
     public IToolApprovalProvider? ApprovalProvider { get; set; }
-
-    #endregion
-
-    #region 构造
-
-    /// <summary>初始化编码工具集</summary>
-    public CodingTools() { }
-
-    /// <summary>初始化编码工具集并指定工作区路径</summary>
-    /// <param name="workspacePath">工作区根路径</param>
-    public CodingTools(String workspacePath)
-    {
-        WorkspacePath = workspacePath;
-    }
-
     #endregion
 
     #region 文件读写

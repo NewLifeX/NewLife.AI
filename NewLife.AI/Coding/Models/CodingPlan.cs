@@ -1,4 +1,4 @@
-using NewLife.Serialization;
+﻿using NewLife.Serialization;
 
 namespace NewLife.AI.Coding.Models;
 
@@ -25,4 +25,7 @@ public class CodingPlan
 
     /// <summary>序列化为 JSON</summary>
     public String ToJson() => this.ToJson();
+
+    /// <summary>字符串表示，显示任务数量和摘要</summary>
+    public override String ToString() => $"[{Tasks?.Count}] {Summary}";
 }

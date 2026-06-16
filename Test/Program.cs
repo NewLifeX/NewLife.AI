@@ -2,6 +2,7 @@
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Coding;
 using NewLife.AI.Models;
+using NewLife.AI.Tools;
 using NewLife.Log;
 
 namespace Test;
@@ -105,7 +106,12 @@ class Program
 
         // 订阅事件
         agent.OnPhaseChanged += (phase, msg) => XTrace.WriteLine($"[{phase}] {msg}");
-        agent.OnLog += (level, msg) => XTrace.WriteLine($"[{level}] {msg}");
+        agent.OnToolCall += (phase, args) =>
+        {
+            var icon = args.IsError ? "❌" : "🔧";
+            var target = args.Arguments?.Length > 100 ? args.Arguments[..100] + "..." : args.Arguments;
+            XTrace.WriteLine($"  {icon} [{phase}] {args.ToolName}({target}) → {args.ResultSummary ?? "(无摘要)"} ({args.ElapsedMs}ms)");
+        };
 
         // 先用简单演示需求
         var requirement = "分析当前项目的 Program.cs 文件结构，并给出代码改进建议（不要实际修改文件）";

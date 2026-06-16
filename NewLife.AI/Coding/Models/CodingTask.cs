@@ -1,4 +1,4 @@
-namespace NewLife.AI.Coding.Models;
+﻿namespace NewLife.AI.Coding.Models;
 
 /// <summary>单个编码任务。由规划阶段产出，包含验收条件和依赖关系</summary>
 public class CodingTask
@@ -23,6 +23,9 @@ public class CodingTask
 
     /// <summary>任务状态</summary>
     public CodingTaskStatus Status { get; set; } = CodingTaskStatus.Pending;
+
+    /// <summary>任务执行结果或备注信息</summary>
+    public override String ToString() => $"[{Id}]{Description}";
 }
 
 /// <summary>编码任务状态</summary>

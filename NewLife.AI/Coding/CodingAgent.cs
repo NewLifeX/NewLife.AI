@@ -64,11 +64,17 @@ public class CodingAgent
     /// <summary>阶段变化事件。参数：(阶段名, 消息)</summary>
     public event Action<String, String>? OnPhaseChanged;
 
+    /// <summary>工具调用事件。参数：(阶段名, 工具调用参数)。在规划/实现/审查/修复各阶段每次工具执行完成后触发</summary>
+    public event Action<String, ToolCallEventArgs>? OnToolCall;
+
     /// <summary>日志</summary>
-    public ILog Log { get; set; } = NewLife.Log.Logger.Null;
+    public ILog Log { get; set; } = Logger.Null;
 
     /// <summary>性能追踪</summary>
     public ITracer? Tracer { get; set; }
+
+    /// <summary>当前执行阶段名称</summary>
+    private String _currentPhase = "";
 
     #endregion
 
@@ -256,10 +262,13 @@ public class CodingAgent
         var prompt = GetEffectiveImplementPrompt(task);
         var toolClient = CreatePhaseClient(ImplementToolNames, prompt);
 
+        var user = BuildImplementUserMessage(task);
+        WriteLog(user);
+
         var messages = new List<ChatMessage>
         {
             new() { Role = "system", Content = prompt },
-            new() { Role = "user", Content = BuildImplementUserMessage(task) },
+            new() { Role = "user", Content = user },
         };
 
         // 编译-修复闭环
@@ -369,9 +378,25 @@ public class CodingAgent
         var registry = new ToolRegistry();
         registry.AddTools(Tools);
 
-        return new ChatClientBuilder(BaseClient)
-            .UseTools(MaxToolIterations, 3000, toolNames, registry)
-            .Build();
+        var toolClient = new ToolChatClient(BaseClient, registry)
+        {
+            MaxIterations = MaxToolIterations,
+            MaxResultLength = 3000,
+            SelectedTools = toolNames,
+        };
+
+        // 继承日志和追踪
+        if (toolClient is ILogFeature logFeature) logFeature.Log = Log;
+        if (toolClient is ITracerFeature tracerFeature) tracerFeature.Tracer = Tracer;
+
+        // 接线工具回调：将 ToolChatClient 层事件转发为 CodingAgent 层事件
+        toolClient.OnToolExecuted = args =>
+        {
+            OnToolCall?.Invoke(_currentPhase, args);
+            return TaskEx.CompletedTask;
+        };
+
+        return toolClient;
     }
 
     /// <summary>逐任务执行：Implement → Review → Fix 循环</summary>
@@ -738,6 +763,7 @@ public class CodingAgent
 
     private void EmitPhase(String phase, String message)
     {
+        _currentPhase = phase;
         OnPhaseChanged?.Invoke(phase, message);
     }
 
