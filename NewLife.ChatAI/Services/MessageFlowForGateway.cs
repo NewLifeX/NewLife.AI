@@ -14,6 +14,10 @@ namespace NewLife.ChatAI.Services;
 /// </summary>
 public class MessageFlowForGateway : MessageFlow
 {
+    #region 字段
+    private readonly ChatSetting _setting;
+    #endregion
+
     #region 构造
     /// <summary>初始化网关消息流</summary>
     /// <param name="modelService">模型服务</param>
@@ -24,6 +28,8 @@ public class MessageFlowForGateway : MessageFlow
     public MessageFlowForGateway(ModelService modelService, ChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null)
         : base(modelService, null, setting, tracer, log, services)
     {
+        _setting = setting;
+
         // 按来源和链模式从全量 Handler 集合中过滤：
         //   EnableGatewayHandlers=false → 精简链（Core 级处理器：配额、用量等）
         //   EnableGatewayHandlers=true  → 完整链（含知识进化、记忆图谱等高级能力）
@@ -134,6 +140,8 @@ public class MessageFlowForGateway : MessageFlow
                     _ => modelConfig.SupportThinking ? true : null,
                 },
                 UserId = userId > 0 ? userId.ToString() : null,
+                // 用户隔离：启用时向 LLM 服务商透传 AppKey.UserId，用于 KVCache 隔离
+                User = _setting.EnableUserIsolation && userId > 0 ? userId.ToString() : null,
                 ConversationId = conversationId > 0 ? conversationId.ToString() : null,
                 // 透传客户端工具定义：透传模式下不装配 ToolChatClient，由原始客户端直接传给 LLM
                 Tools = request?.Tools,

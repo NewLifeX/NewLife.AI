@@ -586,7 +586,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             _ => modelConfig.SupportThinking ? true : null,
         };
         flow.Options.UserId = userId > 0 ? userId.ToString() : null;
-        flow.Options.User = userId > 0 ? userId.ToString() : null; // 透传给 LLM 服务商（内容安全/KVCache 隔离）
+        // 用户隔离：启用时向 LLM 服务商透传用户标识，用于 KVCache 隔离
+        if (setting.EnableUserIsolation)
+            flow.Options.User = userId > 0 ? userId.ToString() : null;
         flow.Options.ConversationId = conversation.Id > 0 ? conversation.Id.ToString() : null;
         ApplyResponseStyle(flow.Options, flow.Options.UserId);
         //// Options.Items 与 context.Items 共享同一引用，后续对 context.Items 的写入无需再复制

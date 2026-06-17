@@ -100,6 +100,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("后台继续生成。浏览器关闭后模型继续生成")]
     public Boolean BackgroundGeneration { get; set; } = true;
 
+    /// <summary>用户隔离。启用后向LLM服务商透传User字段（Web=用户ID，Gateway/Channel=AppKey.UserId），用于服务商侧KVCache隔离</summary>
+    [Category("对话行为")]
+    [Description("用户隔离。启用后向LLM服务商透传User字段（Web=用户ID，Gateway/Channel=AppKey.UserId），用于服务商侧KVCache隔离；关闭时不发送User字段，减少对外信息暴露")]
+    public Boolean EnableUserIsolation { get; set; } = false;
+
     /// <summary>聊天消息限流。每用户每分钟最大消息发送次数，0 表示不限制</summary>
     [Category("对话行为")]
     [Description("聊天消息限流。每用户每分钟最大消息发送次数，0 表示不限制")]

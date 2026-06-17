@@ -53,5 +53,8 @@ public interface IChatSetting
     /// <summary>后台继续生成。浏览器关闭后模型继续生成，切换会话后再切回可恢复</summary>
     Boolean BackgroundGeneration { get; }
 
+    /// <summary>用户隔离。启用后向LLM服务商透传User字段，用于服务商侧KVCache隔离</summary>
+    Boolean EnableUserIsolation { get; }
+
     #endregion
 }
