@@ -108,6 +108,7 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
                     entity.SupportAudio = model.Capabilities.SupportAudio;
                     entity.SupportImage = model.Capabilities.SupportImage;
                     entity.SupportVideo = model.Capabilities.SupportVideo;
+                    entity.ReasoningEfforts = model.Capabilities.ReasoningEfforts;
                 }
 
                 count += entity.Save();

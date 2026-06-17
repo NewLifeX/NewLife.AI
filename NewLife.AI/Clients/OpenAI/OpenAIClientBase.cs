@@ -300,7 +300,17 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
             contextLength = 65_536;
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, false, contextLength);
+        // === 推理强度 ===
+        String? reasoningEfforts = null;
+        if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
+            reasoningEfforts = "low,medium,high";
+        else if (thinking)
+            // 其他支持思考的模型默认提供基础推理强度
+            reasoningEfforts = "high";
+
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, false, contextLength, reasoningEfforts);
     }
 
     /// <summary>根据模型 ID 推断可读显示名称。将连字符分隔的各段首字母大写，如 qwen3.7-max → Qwen3.7 Max</summary>

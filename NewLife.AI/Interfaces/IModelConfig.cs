@@ -50,6 +50,9 @@ public partial interface IModelConfig
     /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
     Boolean SupportEmbedding { get; set; }
 
+    /// <summary>推理强度。支持的值，逗号分隔如 "high,max"；空表示不支持强度设置</summary>
+    String? ReasoningEfforts { get; set; }
+
     /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
     String? SystemPrompt { get; set; }
 

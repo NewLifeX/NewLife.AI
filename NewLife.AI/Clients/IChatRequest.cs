@@ -50,6 +50,17 @@ public interface IChatRequest : IExtend
     /// <summary>用户标识</summary>
     String? User { get; set; }
 
+    /// <summary>推理强度。支持值由模型决定，如 high/max（DeepSeek），low/medium/high（OpenAI o3/o4）</summary>
+    /// <remarks>
+    /// 控制模型在思考模式下投入的推理计算量：
+    /// <list type="bullet">
+    ///   <item><description>DeepSeek：high（默认）、max（复杂任务）</description></item>
+    ///   <item><description>OpenAI：none、minimal、low、medium、high、xhigh（model-dependent）</description></item>
+    /// </list>
+    /// null=沿用模型默认行为。
+    /// </remarks>
+    String? ReasoningEffort { get; set; }
+
     /// <summary>是否启用思考模式</summary>
     Boolean? EnableThinking { get; set; }
 

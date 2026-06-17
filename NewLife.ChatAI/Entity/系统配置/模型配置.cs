@@ -126,6 +126,14 @@ public partial class ModelConfig
     [BindColumn("SupportEmbedding", "嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景", "")]
     public Boolean SupportEmbedding { get => _SupportEmbedding; set { if (OnPropertyChanging("SupportEmbedding", value)) { _SupportEmbedding = value; OnPropertyChanged("SupportEmbedding"); } } }
 
+    private String? _ReasoningEfforts;
+    /// <summary>推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持</summary>
+    [DisplayName("推理强度")]
+    [Description("推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持")]
+    [DataObjectField(false, false, true, 50)]
+    [BindColumn("ReasoningEfforts", "推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持", "")]
+    public String? ReasoningEfforts { get => _ReasoningEfforts; set { if (OnPropertyChanging("ReasoningEfforts", value)) { _ReasoningEfforts = value; OnPropertyChanged("ReasoningEfforts"); } } }
+
     private Boolean _EnablePromptCache;
     /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
     [Category("计费")]
@@ -268,6 +276,7 @@ public partial class ModelConfig
             "SupportImage" => _SupportImage,
             "SupportVideo" => _SupportVideo,
             "SupportEmbedding" => _SupportEmbedding,
+            "ReasoningEfforts" => _ReasoningEfforts,
             "EnablePromptCache" => _EnablePromptCache,
             "SystemPrompt" => _SystemPrompt,
             "RoleIds" => _RoleIds,
@@ -301,6 +310,7 @@ public partial class ModelConfig
                 case "SupportImage": _SupportImage = value.ToBoolean(); break;
                 case "SupportVideo": _SupportVideo = value.ToBoolean(); break;
                 case "SupportEmbedding": _SupportEmbedding = value.ToBoolean(); break;
+                case "ReasoningEfforts": _ReasoningEfforts = Convert.ToString(value); break;
                 case "EnablePromptCache": _EnablePromptCache = value.ToBoolean(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
@@ -461,6 +471,9 @@ public partial class ModelConfig
         /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
         public static readonly Field SupportEmbedding = FindByName("SupportEmbedding");
 
+        /// <summary>推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持</summary>
+        public static readonly Field ReasoningEfforts = FindByName("ReasoningEfforts");
+
         /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
         public static readonly Field EnablePromptCache = FindByName("EnablePromptCache");
 
@@ -547,6 +560,9 @@ public partial class ModelConfig
 
         /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
         public const String SupportEmbedding = "SupportEmbedding";
+
+        /// <summary>推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持</summary>
+        public const String ReasoningEfforts = "ReasoningEfforts";
 
         /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
         public const String EnablePromptCache = "EnablePromptCache";

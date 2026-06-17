@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -207,6 +207,7 @@
         <Column Name="SupportImage" DataType="Boolean" Description="图像。是否支持文生图" />
         <Column Name="SupportVideo" DataType="Boolean" Description="视频生成。是否支持文生视频" />
         <Column Name="SupportEmbedding" DataType="Boolean" Description="嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景" />
+        <Column Name="ReasoningEfforts" DataType="String" Description="推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持" />
         <Column Name="EnablePromptCache" DataType="Boolean" Description="启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本" Category="计费" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />

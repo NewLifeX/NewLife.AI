@@ -42,4 +42,11 @@ public sealed class AiClientModelAttribute(String model, String displayName) : A
 
     /// <summary>上下文窗口大小（Token 数）。0 表示未知</summary>
     public Int32 ContextLength { get; set; }
+
+    /// <summary>推理强度选项。逗号分隔的可用值字符串，如 "high,max"（DeepSeek）、"low,medium,high"（OpenAI o3/o4）</summary>
+    /// <remarks>
+    /// null 或空字符串表示不支持推理强度控制。
+    /// 各提供商支持的强度范围不同，前端据此生成推理强度选择器。
+    /// </remarks>
+    public String? ReasoningEfforts { get; set; }
 }

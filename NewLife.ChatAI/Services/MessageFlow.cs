@@ -367,6 +367,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             ThinkingMode.Fast => false,
             _ => flow.ModelConfig.SupportThinking ? true : null,
         };
+        flow.Options.ReasoningEffort = request.ReasoningEffort;
 
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, request.Content, cancellationToken).ConfigureAwait(false);
@@ -585,6 +586,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             _ => modelConfig.SupportThinking ? true : null,
         };
         flow.Options.UserId = userId > 0 ? userId.ToString() : null;
+        flow.Options.User = userId > 0 ? userId.ToString() : null; // 透传给 LLM 服务商（内容安全/KVCache 隔离）
         flow.Options.ConversationId = conversation.Id > 0 ? conversation.Id.ToString() : null;
         ApplyResponseStyle(flow.Options, flow.Options.UserId);
         //// Options.Items 与 context.Items 共享同一引用，后续对 context.Items 的写入无需再复制
@@ -957,6 +959,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         String? lastFinishReason = null;
         var streamSw = Stopwatch.StartNew();
 
+        // 透传模式（无 ToolChatClient）下，原始客户端流式返回的 tool_call delta 需在此累积并转换为 SSE 事件
+        var rawToolCalls = new List<AiToolCall>();
+        var emittedToolCallIds = new HashSet<String>(StringComparer.Ordinal);
+
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false))
         {
             // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
@@ -1001,6 +1007,34 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             var text = delta.Content as String;
             if (!String.IsNullOrEmpty(text))
                 yield return ChatStreamEvent.ContentDelta(text);
+
+            // 透传模式：处理原始客户端的 tool_call delta（无 ToolChatClient 时生效）
+            if (delta.ToolCalls != null && delta.ToolCalls.Count > 0)
+            {
+                foreach (var tc in delta.ToolCalls)
+                {
+                    MergeToolCallDelta(rawToolCalls, tc);
+
+                    var name = tc.Function?.Name;
+                    var id = tc.Id;
+                    if (!name.IsNullOrEmpty() && !id.IsNullOrEmpty() && emittedToolCallIds.Add(id))
+                    {
+                        var accumulated = rawToolCalls.FirstOrDefault(t => t.Id == id);
+                        yield return ChatStreamEvent.ToolCallStart(id, name, accumulated?.Function?.Arguments);
+                    }
+                }
+            }
+        }
+
+        // 透传模式：流式结束后，对所有已累积的工具调用发出 tool_call_done
+        // （finish_reason=="tool_calls" 时 LLM 已完成工具调用描述，客户端应执行工具）
+        if (rawToolCalls.Count > 0)
+        {
+            foreach (var tc in rawToolCalls)
+            {
+                var args = tc.Function?.Arguments;
+                yield return ChatStreamEvent.ToolCallDone(tc.Id, args, false);
+            }
         }
 
         if (thinkingBuilder.Length > 0) yield return ChatStreamEvent.ThinkingDone((Int32)(Runtime.TickCount64 - thinkingStart));
@@ -1178,6 +1212,47 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
 
         return clientBuilder.Build();
+    }
+
+    /// <summary>合并流式 tool_call 增量到收集列表。与 <see cref="ToolChatClient"/> 中的 MergeToolCallDelta 保持一致，
+    /// 用于透传模式（无 ToolChatClient 时）将原始客户端流式返回的 tool_call delta 累积为完整工具调用描述</summary>
+    /// <param name="collector">累积列表</param>
+    /// <param name="delta">增量 tool_call</param>
+    protected static void MergeToolCallDelta(List<AiToolCall> collector, AiToolCall delta)
+    {
+        if (delta == null) return;
+
+        AiToolCall? existing = null;
+        if (!String.IsNullOrEmpty(delta.Id))
+            existing = collector.FirstOrDefault(t => t.Id == delta.Id);
+        else if (delta.Index != null)
+            existing = collector.FirstOrDefault(t => t.Index == delta.Index);
+        else if (collector.Count > 0)
+            existing = collector[^1];  // 兜底取最后一个（单工具调用时常见）
+
+        if (existing == null && !String.IsNullOrEmpty(delta.Id))
+        {
+            collector.Add(new AiToolCall
+            {
+                Index = delta.Index,
+                Id = delta.Id,
+                Type = delta.Type,
+                Function = new AiFunctionCall
+                {
+                    Name = delta.Function?.Name ?? String.Empty,
+                    Arguments = delta.Function?.Arguments ?? String.Empty,
+                },
+            });
+            return;
+        }
+
+        if (existing?.Function != null && delta.Function != null)
+        {
+            if (!String.IsNullOrEmpty(delta.Function.Name))
+                existing.Function.Name += delta.Function.Name;
+            if (!String.IsNullOrEmpty(delta.Function.Arguments))
+                existing.Function.Arguments += delta.Function.Arguments;
+        }
     }
 
     /// <summary>根据用户回应风格设置采样参数。仅在请求未显式指定时设置</summary>

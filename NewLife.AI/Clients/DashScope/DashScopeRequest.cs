@@ -142,6 +142,10 @@ public class DashScopeRequest : IChatRequest
         set => Parameters.ToolChoice = value;
     }
 
+    /// <summary>推理强度适配</summary>
+    [IgnoreDataMember]
+    String? IChatRequest.ReasoningEffort { get; set; }
+
     /// <summary>是否启用思考模式适配</summary>
     [IgnoreDataMember]
     Boolean? IChatRequest.EnableThinking

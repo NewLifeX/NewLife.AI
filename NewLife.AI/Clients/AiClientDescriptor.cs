@@ -10,6 +10,7 @@
 /// <param name="SupportVideo">是否支持文生视频。如 Sora、Wan2</param>
 /// <param name="SupportEmbedding">是否支持嵌入向量。如 text-embedding-3、text-embedding-v3，可用于 RAG/知识库场景</param>
 /// <param name="ContextLength">上下文窗口大小（Token 数）。0 表示未知</param>
+/// <param name="ReasoningEfforts">推理强度选项。逗号分隔的可用值，如 "high,max"；空=不支持</param>
 public record AiProviderCapabilities(
     Boolean SupportThinking = false,
     Boolean SupportFunction = false,
@@ -18,7 +19,8 @@ public record AiProviderCapabilities(
     Boolean SupportImage = false,
     Boolean SupportVideo = false,
     Boolean SupportEmbedding = false,
-    Int32 ContextLength = 0);
+    Int32 ContextLength = 0,
+    String? ReasoningEfforts = null);
 
 /// <summary>AI 模型信息。描述服务商旗下某具体模型的标识与能力</summary>
 /// <param name="Model">模型标识，即 API 请求中 model 字段的值，如 "gpt-4o"</param>

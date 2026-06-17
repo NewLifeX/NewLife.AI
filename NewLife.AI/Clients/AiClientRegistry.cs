@@ -157,7 +157,7 @@ public class AiClientRegistry
         var models = allModels
             .Where(m => isSingle ? (m.Code == null || m.Code == attr.Code) : m.Code == attr.Code)
             .Select(m => new AiModelInfo(m.Model, m.DisplayName,
-                new AiProviderCapabilities(m.Thinking, m.FunctionCalling, m.Vision, m.Audio, m.ImageGeneration, m.VideoGeneration, m.Embedding, m.ContextLength)))
+                new AiProviderCapabilities(m.Thinking, m.FunctionCalling, m.Vision, m.Audio, m.ImageGeneration, m.VideoGeneration, m.Embedding, m.ContextLength, m.ReasoningEfforts)))
             .ToArray();
 
         // 找接受 AiClientOptions 为第一参数的构造函数

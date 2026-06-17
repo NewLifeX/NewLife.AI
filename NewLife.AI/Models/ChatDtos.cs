@@ -6,6 +6,9 @@
 /// <param name="AttachmentIds">附件编号列表（前端上传后返回的 Id 字符串）</param>
 public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IReadOnlyList<String>? AttachmentIds)
 {
+    /// <summary>推理强度。由模型 ReasoningEfforts 字段定义可选值，如 high/max</summary>
+    public String? ReasoningEffort { get; init; }
+
     /// <summary>技能编码。激活对应技能的系统提示词</summary>
     public String? SkillCode { get; init; }
 

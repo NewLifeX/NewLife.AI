@@ -1,6 +1,41 @@
 import mermaid from 'mermaid'
 
 /**
+ * 修复 LLM 生成的 `&amp;` HTML 实体，在 Mermaid 代码中还原为 `&`。
+ * 例如：`入参校验 &amp; 协议转换` → `入参校验 & 协议转换`
+ */
+function fixAmpersandEntities(code: string): string {
+  return code.replace(/&amp;/g, '&')
+}
+
+/**
+ * 移除 LLM 生成的 `&nbsp;` HTML 实体。`&nbsp;` 在 Mermaid 语法位置（非引号标签内）
+ * 属于无效 token，会导致行解析失败。
+ */
+function fixNbspInCode(code: string): string {
+  return code.replace(/&nbsp;/g, ' ')
+}
+
+/**
+ * 修复 LLM 将 Markdown 表格管道 `|` 与 Mermaid 连线 `-->` 混淆的问题。
+ * LLM 有时生成 `C1(Node) |--> 说明`，`|` 在 Mermaid 中为边标签保留分隔符，
+ * 后接 `-->` 导致 parse 失败（got 'PIPE'）。仅替换行首（含前导空白）的 `|-->`，
+ * 保护引号标签内字面量。
+ */
+function fixPipeArrowConfusion(code: string): string {
+  return code.replace(/^(\s*)\|-->/gm, '$1-->')
+}
+
+/**
+ * 删除 LLM 幻想的"布局控制"伪指令行。
+ * LLM 有时生成 `layoutTB[隐藏默认连线方向]` 等不存在的语法，
+ * 意图控制图表方向（Mermaid 不支持此类内联布局指令）。
+ */
+function removePseudoLayoutDirectives(code: string): string {
+  return code.replace(/^\s*layout(?:TB|LR|RL|BT)\s*\[[^\n]*\n?/gim, '')
+}
+
+/**
  * 修复 classDef 中 stroke-dasharray 值含空格的问题。
  * LLM 常生成 `stroke-dasharray: 5 5`，Mermaid 解析器以空格分割属性 token，
  * 导致 `5 5` 被拆为两个无效 token，整个 classDef 块失效。
@@ -104,7 +139,11 @@ function fixQuotesInBracketLabels(code: string): string {
  * 不处理顶层的 `{...}`，避免破坏合法的菱形节点语法。
  */
 export function normalizeMermaidCode(code: string): string {
-  // 先做正则预处理（顺序：dasharray → class colons → invalid props → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
+  // 先做正则预处理（顺序：实体还原 → 管道箭头 → 伪指令删除 → dasharray → class colons → invalid props → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
+  code = fixAmpersandEntities(code)
+  code = fixNbspInCode(code)
+  code = fixPipeArrowConfusion(code)
+  code = removePseudoLayoutDirectives(code)
   code = fixClassDefStrokeDasharray(code)
   code = fixClassApplicationColons(code)
   code = fixClassDefInvalidProps(code)
