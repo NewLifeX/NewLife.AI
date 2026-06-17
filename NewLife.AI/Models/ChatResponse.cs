@@ -107,6 +107,45 @@ public class ChatResponse : IChatResponse
 
         return choice;
     }
+
+    /// <summary>添加工具调用增量块。用于透传模式下将 tool_call delta 转换为 OpenAI 兼容的流式块</summary>
+    /// <param name="toolCallId">工具调用编号</param>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="arguments">当前已累积的参数字符串</param>
+    /// <param name="finishReason">结束原因</param>
+    /// <returns>新添加的项</returns>
+    public ChatChoice AddToolCallDelta(String toolCallId, String toolName, String? arguments = null, FinishReason? finishReason = null)
+    {
+        var msgs = Messages ??= [];
+
+        var choice = new ChatChoice
+        {
+            Index = 0,
+            FinishReason = finishReason
+        };
+        choice.Delta = new ChatMessage
+        {
+            Role = "assistant",
+            ToolCalls =
+            [
+                new ToolCall
+                {
+                    Index = 0,
+                    Id = toolCallId,
+                    Type = "function",
+                    Function = new FunctionCall
+                    {
+                        Name = toolName,
+                        Arguments = arguments,
+                    },
+                }
+            ]
+        };
+
+        msgs.Add(choice);
+
+        return choice;
+    }
     #endregion
 }
 

@@ -289,6 +289,15 @@ public class GatewayService(UsageService usageService, ModelService modelService
             case "thinking_delta":
                 chunk.AddDelta(null, evt.Content);
                 return chunk;
+            case "tool_call_start":
+                chunk.AddToolCallDelta(evt.ToolCallId, evt.Name, evt.Arguments);
+                return chunk;
+            case "tool_call_done":
+                chunk.AddToolCallDelta(evt.ToolCallId, evt.Name, evt.Result, FinishReason.ToolCalls);
+                return chunk;
+            case "tool_call_error":
+                chunk.AddToolCallDelta(evt.ToolCallId, evt.Name, evt.Error, FinishReason.ToolCalls);
+                return chunk;
             case "message_done":
                 chunk.AddDelta(null, finishReason: FinishReason.Stop);
                 if (evt.Usage != null) chunk.Usage = evt.Usage;
