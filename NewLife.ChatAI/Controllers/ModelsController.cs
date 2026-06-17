@@ -79,6 +79,18 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
         model.SupportImage = dto.SupportImage;
         model.SupportVideo = dto.SupportVideo;
         model.SupportEmbedding = dto.SupportEmbedding;
+
+        // 仅当 support* 特性字段有变动时才锁定，防止自动探测覆盖
+        if (dto.SupportThinking != model.SupportThinking ||
+            dto.SupportFunction != model.SupportFunction ||
+            dto.SupportVision != model.SupportVision ||
+            dto.SupportAudio != model.SupportAudio ||
+            dto.SupportImage != model.SupportImage ||
+            dto.SupportVideo != model.SupportVideo ||
+            dto.SupportEmbedding != model.SupportEmbedding)
+        {
+            model.Locked = true;
+        }
         model.Save();
 
         return Ok(new ModelManageDto

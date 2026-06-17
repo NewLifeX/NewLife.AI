@@ -191,6 +191,14 @@ public partial class ModelConfig
     [BindColumn("Sort", "排序。越大越靠前", "")]
     public Int32 Sort { get => _Sort; set { if (OnPropertyChanging("Sort", value)) { _Sort = value; OnPropertyChanged("Sort"); } } }
 
+    private Boolean _Locked;
+    /// <summary>锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改</summary>
+    [DisplayName("锁定")]
+    [Description("锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("Locked", "锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改", "")]
+    public Boolean Locked { get => _Locked; set { if (OnPropertyChanging("Locked", value)) { _Locked = value; OnPropertyChanged("Locked"); } } }
+
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
     [Category("扩展")]
@@ -284,6 +292,7 @@ public partial class ModelConfig
             "ModelTime" => _ModelTime,
             "Enable" => _Enable,
             "Sort" => _Sort,
+            "Locked" => _Locked,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -318,6 +327,7 @@ public partial class ModelConfig
                 case "ModelTime": _ModelTime = value.ToDateTime(); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
+                case "Locked": _Locked = value.ToBoolean(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -400,13 +410,14 @@ public partial class ModelConfig
     /// <param name="supportVideo">视频生成。是否支持文生视频</param>
     /// <param name="supportEmbedding">嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</param>
     /// <param name="enablePromptCache">启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</param>
+    /// <param name="locked">锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? enablePromptCache, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? enablePromptCache, Boolean? locked, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -420,6 +431,7 @@ public partial class ModelConfig
         if (supportVideo != null) exp &= _.SupportVideo == supportVideo;
         if (supportEmbedding != null) exp &= _.SupportEmbedding == supportEmbedding;
         if (enablePromptCache != null) exp &= _.EnablePromptCache == enablePromptCache;
+        if (locked != null) exp &= _.Locked == locked;
         if (enable != null) exp &= _.Enable == enable;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -494,6 +506,9 @@ public partial class ModelConfig
 
         /// <summary>排序。越大越靠前</summary>
         public static readonly Field Sort = FindByName("Sort");
+
+        /// <summary>锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改</summary>
+        public static readonly Field Locked = FindByName("Locked");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -584,6 +599,9 @@ public partial class ModelConfig
 
         /// <summary>排序。越大越靠前</summary>
         public const String Sort = "Sort";
+
+        /// <summary>锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改</summary>
+        public const String Locked = "Locked";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

@@ -364,10 +364,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 var caps = descriptor.FindModelCapabilities(model.Code);
                 if (caps == null) continue;
 
-                // 保护策略：仅当全部能力标记仍为默认值时覆盖（管理员未手动配置过）
-                // 若有任一能力已被手动设置，只安全写入 ReasoningEfforts（新增字段，不可能已有手动配置）
-                var isUntouched = !model.SupportThinking && !model.SupportVision && !model.SupportImage && !model.SupportAudio && !model.SupportVideo && !model.SupportEmbedding && !model.SupportFunction;
-                if (isUntouched)
+                // 保护策略：仅当模型未锁定时覆盖（管理员手动保存后自动锁定，禁止自动覆盖）
+                if (!model.Locked)
                 {
                     model.SupportThinking = caps.SupportThinking;
                     model.SupportFunction = caps.SupportFunction;
@@ -671,8 +669,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
 
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
 
-            // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动配置）
-            if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImage))
+            // 推断模型能力：新建模型总是推断；已有模型仅当未锁定时才覆盖
+            if (isNew || !config.Locked)
             {
                 var caps = descriptor?.FindModelCapabilities(model.Id) ?? (client as OpenAIClientBase)?.InferModelCapabilities(model.Id);
                 if (caps != null)

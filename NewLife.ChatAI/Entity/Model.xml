@@ -215,6 +215,7 @@
         <Column Name="ModelTime" DataType="DateTime" Description="模型时间。提供商侧的模型创建或最后更新时间" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
+        <Column Name="Locked" DataType="Boolean" Description="锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
