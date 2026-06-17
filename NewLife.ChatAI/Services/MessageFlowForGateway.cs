@@ -9,13 +9,11 @@ namespace NewLife.ChatAI.Services;
 /// <list type="bullet">
 ///   <item>不从数据库加载历史消息（<see cref="LoadHistoryMessages"/> 始终返回空列表）</item>
 ///   <item><see cref="MessageFlow.Chain"/> 由 <see cref="ChatHandlerChain.BuildFor"/> 按 <see cref="ChatFlowSource.Gateway"/> 过滤，<c>EnableGatewayHandlers=false</c> 时仅保留 Core 级处理器（精简链），为 true 时保留全部处理器（完整链）</item>
-///   <item>工具调用：默认透传模式（<c>EnableGatewayAutoTools=false</c>），客户端传入的工具定义原样传给 LLM，tool_calls 原样返回由客户端执行；开启后恢复 ToolChatClient 服务端自动执行（兼容模式）</item>
+///   <item>工具调用：始终透传，不装配 ToolChatClient。客户端传入的工具定义原样传给 LLM，tool_calls 原样返回由客户端执行。派生类（如 StarChatMessageFlowForGateway）可覆盖以按 AppKey 条件启用服务端工具调用</item>
 /// </list>
 /// </summary>
 public class MessageFlowForGateway : MessageFlow
 {
-    private readonly ChatSetting _chatSetting;
-
     #region 构造
     /// <summary>初始化网关消息流</summary>
     /// <param name="modelService">模型服务</param>
@@ -26,7 +24,6 @@ public class MessageFlowForGateway : MessageFlow
     public MessageFlowForGateway(ModelService modelService, ChatSetting setting, ITracer? tracer, ILog? log, IServiceProvider? services = null)
         : base(modelService, null, setting, tracer, log, services)
     {
-        _chatSetting = setting;
         // 按来源和链模式从全量 Handler 集合中过滤：
         //   EnableGatewayHandlers=false → 精简链（Core 级处理器：配额、用量等）
         //   EnableGatewayHandlers=true  → 完整链（含知识进化、记忆图谱等高级能力）
@@ -85,9 +82,10 @@ public class MessageFlowForGateway : MessageFlow
         return result;
     }
 
-    /// <summary>覆盖：Gateway 默认不装配 ToolChatClient（透传模式），仅当 EnableGatewayAutoTools 开启时恢复自动工具执行。
-    /// 透传模式下客户端传入的 tools 已通过 <see cref="CreateGatewayFlowContext"/> 写入 <c>ChatOptions.Tools</c>，
-    /// 由原始 IChatClient 直接传给 LLM；tool_calls 由 LLM 返回后原样透传给客户端。</summary>
+    /// <summary>覆盖：网关始终不装配 ToolChatClient（纯透传模式）。
+    /// 客户端传入的 tools 已通过 <see cref="CreateGatewayFlowContext"/> 写入 <c>ChatOptions.Tools</c>，
+    /// 由原始 IChatClient 直接传给 LLM；tool_calls 由 LLM 返回后原样透传给客户端。
+    /// 派生类（如 StarChatMessageFlowForGateway）可覆盖以按 AppKey 条件启用工具调用。</summary>
     /// <param name="rawClient">原始模型客户端</param>
     /// <param name="context">对话上下文</param>
     /// <returns>管道客户端</returns>
@@ -97,20 +95,7 @@ public class MessageFlowForGateway : MessageFlow
         foreach (var filter in ChatFilters)
             clientBuilder = clientBuilder.UseFilters(filter);
 
-        // 透传模式：不装配 ToolChatClient，客户端传入的工具定义直接由原始客户端传给 LLM
-        if (_chatSetting.EnableGatewayAutoTools)
-        {
-            var providers = ToolProviders;
-            if (providers.Length > 0)
-            {
-                clientBuilder = clientBuilder.UseTools(_chatSetting.ToolMaxIterations, _chatSetting.ToolResultMaxChars, context.SelectedTools, providers);
-
-                foreach (var p in providers)
-                    foreach (var t in p.GetTools(context.SelectedTools))
-                        if (t.Function?.Name != null) context.AvailableToolNames.Add(t.Function.Name);
-            }
-        }
-
+        // ChatAI 社区版：网关始终透传，不装配 ToolChatClient
         return clientBuilder.Build();
     }
 
@@ -156,6 +141,12 @@ public class MessageFlowForGateway : MessageFlow
             },
         };
         ApplyResponseStyle(flow.Options, flow.Options.UserId);
+        // 复制请求扩展数据到流上下文，供下游 Handler/派生类读取（如 AppKey 工具配置）
+        if (request?.Items != null)
+        {
+            foreach (var kv in request.Items)
+                flow.Items[kv.Key] = kv.Value;
+        }
         //flow.Options.Items = flow.Items;
         return flow;
     }

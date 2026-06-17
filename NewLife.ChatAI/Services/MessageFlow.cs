@@ -962,6 +962,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 透传模式（无 ToolChatClient）下，原始客户端流式返回的 tool_call delta 需在此累积并转换为 SSE 事件
         var rawToolCalls = new List<AiToolCall>();
         var emittedToolCallIds = new HashSet<String>(StringComparer.Ordinal);
+        var hasToolChatClient = false;
 
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false))
         {
@@ -974,8 +975,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 context.Usage = chunk.Usage;
             }
 
+            // ToolChatClient 发射的工具调用事件：由 ToolChatClient 完成工具执行后的聚合事件
             if (chunk is ChatResponse cr && cr.ToolCallEvents is { Count: > 0 } events)
             {
+                hasToolChatClient = true;
                 foreach (var evt in events)
                 {
                     switch (evt.Type)
@@ -1008,8 +1011,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (!String.IsNullOrEmpty(text))
                 yield return ChatStreamEvent.ContentDelta(text);
 
-            // 透传模式：处理原始客户端的 tool_call delta（无 ToolChatClient 时生效）
-            if (delta.ToolCalls != null && delta.ToolCalls.Count > 0)
+            // 透传模式：仅当 ToolChatClient 未装配时处理原始客户端的 tool_call delta
+            if (!hasToolChatClient && delta.ToolCalls != null && delta.ToolCalls.Count > 0)
             {
                 foreach (var tc in delta.ToolCalls)
                 {
@@ -1026,9 +1029,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             }
         }
 
-        // 透传模式：流式结束后，对所有已累积的工具调用发出 tool_call_done
-        // （finish_reason=="tool_calls" 时 LLM 已完成工具调用描述，客户端应执行工具）
-        if (rawToolCalls.Count > 0)
+        // 透传模式：仅当 ToolChatClient 未装配时，发出累积的 tool_call_done
+        if (!hasToolChatClient && rawToolCalls.Count > 0)
         {
             foreach (var tc in rawToolCalls)
             {
