@@ -153,11 +153,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("API 网关")]
     [Description("网关处理器链。开启后网关对话与 Web 对话走完全相同的 IChatHandler 链（含知识进化、记忆图谱等高级能力），默认关闭（轻量直连 LLM）")]
     public Boolean EnableGatewayHandlers { get; set; } = false;
-
-    /// <summary>网关自动工具执行。开启后网关自动装配 ToolChatClient 服务端执行工具调用，关闭（默认）则工具调用透传给客户端自行处理，与主流 AI 网关行为一致</summary>
-    [Category("API 网关")]
-    [Description("网关自动工具执行。开启后网关自动装配 ToolChatClient 服务端执行工具调用，关闭（默认）则工具调用透传给客户端自行处理，与主流 AI 网关行为一致")]
-    public Boolean EnableGatewayAutoTools { get; set; } = false;
     #endregion
 
     #region 工具与扩展
