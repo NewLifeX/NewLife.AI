@@ -2,15 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.DashScope;
-using NewLife.AI.Models;
 using Xunit;
 using Xunit.Sdk;
 using XUnitTest.Helpers;
@@ -152,7 +148,7 @@ public class DashScopeOmniIntegrationTests
         };
 
         using var client = new DashScopeChatClient(CreateOptions());
-        var response = await client.GetResponseAsync(request);
+        var response = await client.GetResponseAsync(request, cancellationToken: default);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Text));
@@ -194,7 +190,7 @@ public class DashScopeOmniIntegrationTests
         };
 
         using var client = new DashScopeChatClient(CreateOptions());
-        var response = await client.GetResponseAsync(request);
+        var response = await client.GetResponseAsync(request, cancellationToken: default);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Text));
@@ -213,7 +209,7 @@ public class DashScopeOmniIntegrationTests
         request["EnableSearch"] = true;
 
         using var client = new DashScopeChatClient(CreateOptions());
-        var response = await client.GetResponseAsync(request);
+        var response = await client.GetResponseAsync(request, cancellationToken: default);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Text));
@@ -242,7 +238,7 @@ public class DashScopeOmniIntegrationTests
         };
 
         using var client = new DashScopeChatClient(CreateOptions());
-        var response = await client.GetResponseAsync(request);
+        var response = await client.GetResponseAsync(request, cancellationToken: default);
 
         Assert.NotNull(response);
         Assert.False(String.IsNullOrWhiteSpace(response.Text));

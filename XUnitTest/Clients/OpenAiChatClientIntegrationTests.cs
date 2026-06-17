@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -71,7 +71,7 @@ public class OpenAiChatClientIntegrationTests
     private async Task<IChatResponse> ChatAsync(ChatRequest request, AiClientOptions? opts = null)
     {
         using var client = CreateClient(opts);
-        return await client.GetResponseAsync(request);
+        return await client.GetResponseAsync(request, cancellationToken: default);
     }
 
     /// <summary>创建客户端并执行流式请求</summary>

@@ -91,7 +91,7 @@ public class DeepSeekIntegrationTests
             try
             {
                 using var client = new DeepSeekChatClient(opts ?? CreateOptions());
-                return await client.GetResponseAsync(request);
+                return await client.GetResponseAsync(request, cancellationToken: default);
             }
             catch (HttpRequestException ex) when (retries-- > 0 && IsTransientNetworkError(ex))
             {
