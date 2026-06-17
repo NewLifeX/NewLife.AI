@@ -280,9 +280,8 @@ public class NativeToolTests
             finalReply: "计算结果是 30");
 
         var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
-        IList<ChatMessage> messages = [new ChatMessage { Role = "user", Content = "10 + 20 等于多少？" }];
 
-        var response = await nativeClient.GetResponseAsync(messages);
+        var response = await nativeClient.GetResponseAsync("10 + 20 等于多少？", cancellationToken: default);
         var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
 
         Assert.Equal("计算结果是 30", content);
@@ -323,7 +322,7 @@ public class NativeToolTests
         inputOptions["EnableSource"] = true;
         inputOptions["EnableSearchExtension"] = false;
 
-        await nativeClient.GetResponseAsync([new ChatMessage { Role = "user", Content = "ping" }], inputOptions);
+        await nativeClient.GetResponseAsync("ping", inputOptions, default);
 
         Assert.NotNull(captured);
         Assert.True(captured.EnableThinking);
@@ -602,7 +601,7 @@ public class NativeToolTests
             tier: ToolApprovalTier.Allow,
             onRequest: () => { approvalRequested = true; return ToolApprovalResult.Allow; });
 
-        await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "1+2?" }]);
+        await client.GetResponseAsync("1+2?", cancellationToken: default);
         Assert.False(approvalRequested, "Allow 档位不应调用 RequestApprovalAsync");
     }
 
@@ -621,7 +620,7 @@ public class NativeToolTests
             tier: ToolApprovalTier.Deny,
             onRequest: () => { approvalRequested = true; return ToolApprovalResult.Allow; });
 
-        await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "1+2?" }]);
+        await client.GetResponseAsync("1+2?", cancellationToken: default);
         Assert.False(approvalRequested, "Deny 档位不应调用 RequestApprovalAsync");
     }
 
@@ -641,7 +640,7 @@ public class NativeToolTests
             onRequest: () => ToolApprovalResult.Deny);
 
         // 不应抛出异常，错误被结构化返回给模型
-        var response = await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "1+2?" }]);
+        var response = await client.GetResponseAsync("1+2?", cancellationToken: default);
         Assert.NotNull(response);
     }
 
@@ -662,7 +661,7 @@ public class NativeToolTests
         var client = new ToolChatClient(innerClient, (IToolProvider)registry);
 
         // 不应抛出 — 异常被捕获为结构化错误传给模型
-        var response = await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "fail" }]);
+        var response = await client.GetResponseAsync("fail", cancellationToken: default);
         Assert.NotNull(response);
     }
 
@@ -800,7 +799,7 @@ public class NativeToolTests
             finalReply: "已渲染");
 
         var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
-        await nativeClient.GetResponseAsync([new ChatMessage { Role = "user", Content = "渲染图表" }]);
+        await nativeClient.GetResponseAsync("渲染图表", cancellationToken: default);
 
         // 第二次调用（工具结束后）发送给 LLM 的消息里，role=tool 内容应为占位符而非 JSON
         var toolMsg = innerClient.SecondCallMessages?.FirstOrDefault(m => m.Role == "tool");
@@ -825,7 +824,7 @@ public class NativeToolTests
 
         var innerClient = new ToolCallThenReplyClient("id_capture", "{}", "done");
         var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
-        await nativeClient.GetResponseAsync([new ChatMessage { Role = "user", Content = "test" }]);
+        await nativeClient.GetResponseAsync("test", cancellationToken: default);
 
         Assert.Equal("call_001", capturedToolCallId);
     }
@@ -852,7 +851,7 @@ public class NativeToolTests
             SelectedTools = new System.Collections.Generic.HashSet<String>(System.StringComparer.OrdinalIgnoreCase) { "dummy_tool" }
         };
 
-        await client.GetResponseAsync([new ChatMessage { Role = "user", Content = "test" }]);
+        await client.GetResponseAsync("test", cancellationToken: default);
 
         // 工具结果写回 role=tool 消息后，第二轮 LLM 调用会收到该消息
         var toolMsg = capturingInner.SecondCallMessages?.FirstOrDefault(m => m.Role == "tool");

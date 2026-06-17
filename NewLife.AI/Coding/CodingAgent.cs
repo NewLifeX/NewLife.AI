@@ -1,8 +1,8 @@
-﻿using NewLife.AI.Clients;
+﻿using System.Text;
+using NewLife.AI.Clients;
 using NewLife.AI.Coding.Models;
 using NewLife.AI.Models;
 using NewLife.AI.Tools;
-using System.Text;
 using NewLife.Log;
 using NewLife.Serialization;
 
@@ -117,8 +117,9 @@ public class CodingAgent
 
     /// <summary>执行完整的自主编码管道</summary>
     /// <param name="requirement">用户需求描述</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns>编码报告</returns>
-    public async Task<CodingReport> RunAsync(String requirement)
+    public async Task<CodingReport> RunAsync(String requirement, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrWhiteSpace(requirement))
             throw new ArgumentNullException(nameof(requirement));
@@ -131,7 +132,7 @@ public class CodingAgent
 
             // Phase 1: 规划
             EmitPhase("规划", "开始分析需求并拆解任务……");
-            var plan = await PlanAsync(requirement);
+            var plan = await PlanAsync(requirement, cancellationToken);
             report.Plan = plan;
 
             if (plan.Tasks.Count > 0)
@@ -154,7 +155,7 @@ public class CodingAgent
             // Phase 2-3: 逐任务执行 实现→审查
             foreach (var task in plan.Tasks)
             {
-                report.TaskResults.Add(await ExecuteTaskAsync(task));
+                report.TaskResults.Add(await ExecuteTaskAsync(task, cancellationToken));
             }
 
             EmitPhase("Done", "自主编码管道执行完成");
@@ -170,8 +171,9 @@ public class CodingAgent
 
     /// <summary>规划阶段：分析需求，拆解为编码任务</summary>
     /// <param name="requirement">用户需求</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns>编码规划</returns>
-    public async Task<CodingPlan> PlanAsync(String requirement)
+    public async Task<CodingPlan> PlanAsync(String requirement, CancellationToken cancellationToken = default)
     {
         var prompt = GetEffectivePlanPrompt();
         var toolClient = CreatePhaseClient(PlanToolNames, prompt, MaxPlanIterations);
@@ -189,7 +191,7 @@ public class CodingAgent
                 EnableThinking = false,
                 ResponseFormat = new { type = "json_object" },
             };
-            var response = await toolClient.GetResponseAsync(messages, options);
+            var response = await toolClient.GetResponseAsync(messages, options, cancellationToken);
             var plan = ParsePlanFromResponse(response?.Text);
 
             // 补充影响文件分析
@@ -204,17 +206,19 @@ public class CodingAgent
 
             // 工具规划未产出任务，尝试无工具纯文本降级
             WriteLog("工具模式未产出任务，尝试纯文本规划……");
-            return await PlanFallbackAsync(requirement);
+            return await PlanFallbackAsync(requirement, cancellationToken);
         }
         catch (Exception ex)
         {
             WriteLog("规划阶段异常，尝试降级: {0}", ex.Message);
-            return await PlanFallbackAsync(requirement);
+            return await PlanFallbackAsync(requirement, cancellationToken);
         }
     }
 
     /// <summary>无工具降级规划：仅用模型文本能力分析需求并输出 JSON 计划</summary>
-    private async Task<CodingPlan> PlanFallbackAsync(String requirement)
+    /// <param name="requirement">用户需求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private async Task<CodingPlan> PlanFallbackAsync(String requirement, CancellationToken cancellationToken = default)
     {
         var fallbackPrompt = """
 你是一名资深系统架构师，请直接分析以下需求并拆解为编码任务。
@@ -251,7 +255,7 @@ public class CodingAgent
                 EnableThinking = false,
                 ResponseFormat = new { type = "json_object" },
             };
-            var response = await BaseClient.GetResponseAsync(messages, options);
+            var response = await BaseClient.GetResponseAsync(messages, options, cancellationToken);
             return ParsePlanFromResponse(response?.Text);
         }
         catch (Exception ex)
@@ -262,8 +266,9 @@ public class CodingAgent
 
     /// <summary>实现阶段：执行单个编码任务</summary>
     /// <param name="task">编码任务</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns>编码结果摘要</returns>
-    public async Task<String> ImplementAsync(CodingTask task)
+    public async Task<String> ImplementAsync(CodingTask task, CancellationToken cancellationToken = default)
     {
         var prompt = GetEffectiveImplementPrompt(task);
 
@@ -295,7 +300,7 @@ public class CodingAgent
                     });
                 }
 
-                var response = toolClient.StreamChatAsync(messages);
+                var response = toolClient.StreamChatAsync(messages, cancellationToken: cancellationToken);
                 var text = await ReadStreamResponseAsync(response);
                 return text ?? "实现完成（无详细输出）";
             }
@@ -316,8 +321,9 @@ public class CodingAgent
     /// <summary>审查阶段：按检查清单审查代码</summary>
     /// <param name="code">代码变更摘要</param>
     /// <param name="task">对应的编码任务</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns>审查结果</returns>
-    public async Task<ReviewResult> ReviewAsync(String code, CodingTask task)
+    public async Task<ReviewResult> ReviewAsync(String code, CodingTask task, CancellationToken cancellationToken = default)
     {
         var prompt = GetEffectiveReviewPrompt();
         var toolClient = CreatePhaseClient(ReviewToolNames, prompt, MaxReviewIterations);
@@ -335,7 +341,7 @@ public class CodingAgent
                 EnableThinking = false,
                 ResponseFormat = new { type = "json_object" },
             };
-            var response = await toolClient.GetResponseAsync(messages, options);
+            var response = await toolClient.GetResponseAsync(messages, options, cancellationToken);
             return ParseReviewFromResponse(response?.Text) ?? new ReviewResult
             {
                 Passed = true,
@@ -354,7 +360,7 @@ public class CodingAgent
     /// <param name="issues">审查问题列表</param>
     /// <param name="task">对应的编码任务（用于判断任务类型，防御性拒绝分析任务的修复）</param>
     /// <returns>修复后的代码</returns>
-    public async Task<String> FixAsync(String code, IList<ReviewIssue> issues, CodingTask? task = null)
+    public async Task<String> FixAsync(String code, IList<ReviewIssue> issues, CodingTask? task = null, CancellationToken cancellationToken = default)
     {
         // Analysis 任务不应进入修复流程，防御性检查
         if (task?.TaskType == CodingTaskType.Analysis)
@@ -376,7 +382,7 @@ public class CodingAgent
 
         try
         {
-            var response = await toolClient.GetResponseAsync(messages);
+            var response = await toolClient.GetResponseAsync((IList<ChatMessage>)messages, null, cancellationToken);
             return response?.Text ?? "修复完成";
         }
         catch (Exception ex)
@@ -417,7 +423,9 @@ public class CodingAgent
     }
 
     /// <summary>逐任务执行：Implement → Review → Fix 循环。Analysis 类型任务跳过编译审查</summary>
-    private async Task<TaskResult> ExecuteTaskAsync(CodingTask task)
+    /// <param name="task">编码任务</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private async Task<TaskResult> ExecuteTaskAsync(CodingTask task, CancellationToken cancellationToken = default)
     {
         var taskResult = new TaskResult { Task = task };
         task.Status = CodingTaskStatus.InProgress;
@@ -430,7 +438,7 @@ public class CodingAgent
             EmitPhase("实现", $"执行任务: [{task.Id}] {task.Description}{(isAnalysis ? " (分析)" : "")}");
 
             // Implement
-            var code = await ImplementAsync(task);
+            var code = await ImplementAsync(task, cancellationToken);
             taskResult.Code = code;
 
             // Analysis 任务：跳过编译修复和审查修复闭环，直接标记完成
@@ -450,15 +458,15 @@ public class CodingAgent
 
             // Modification 任务：走审查-修复闭环
             EmitPhase("审查", $"审查任务: [{task.Id}] {task.Description}");
-            var review = await ReviewAsync(code, task);
+            var review = await ReviewAsync(code, task, cancellationToken);
 
             var reviewRetries = 0;
             while (!review.Passed && reviewRetries < MaxReviewRetries)
             {
                 reviewRetries++;
                 WriteLog("审查不通过，第 {0} 次修复……", reviewRetries);
-                code = await FixAsync(code, review.Issues, task);
-                review = await ReviewAsync(code, task);
+                code = await FixAsync(code, review.Issues, task, cancellationToken);
+                review = await ReviewAsync(code, task, cancellationToken);
             }
 
             taskResult.Review = review;

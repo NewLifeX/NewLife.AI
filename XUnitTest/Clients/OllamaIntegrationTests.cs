@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
-using NewLife.AI.Models;
 using NewLife.Remoting;
 using NewLife.Serialization;
 using Xunit;
@@ -344,11 +343,11 @@ public class OllamaIntegrationTests
         // Temperature = 0（确定性输出），验证有正常响应
         var req = SimpleRequest("say hi", 50);
         req.Temperature = 0.0;
-        var resp = await client.GetResponseAsync(req);
+        var resp = await client.GetResponseAsync(req, cancellationToken: default);
         Assert.NotEmpty(resp?.Messages?[0].Message?.Content as String);
 
         // MaxTokens 极小值（验证截断，FinishReason 应为 length）
-        resp = await client.GetResponseAsync(SimpleRequest("write a long story about a robot", 5));
+        resp = await client.GetResponseAsync(SimpleRequest("write a long story about a robot", 5), cancellationToken: default);
         Assert.NotNull(resp?.Messages);
         Assert.True(
             resp.Messages[0].FinishReason == FinishReason.Length ||
@@ -358,7 +357,7 @@ public class OllamaIntegrationTests
         // Stop 停止词（验证请求被截断后仍能正常返回）
         req = SimpleRequest("count from 1 to 10, comma separated", 200);
         req.Stop = ["5"];
-        resp = await client.GetResponseAsync(req);
+        resp = await client.GetResponseAsync(req, cancellationToken: default);
         Assert.NotNull(resp?.Messages);
         Assert.True(
             resp.Messages[0].FinishReason == FinishReason.Stop ||
@@ -756,7 +755,7 @@ public class OllamaIntegrationTests
     public async Task Options_TrailingSlash_Handled()
     {
         using var client = new OllamaChatClient(null, LightModel, "http://localhost:11434/");
-        var response = await client.GetResponseAsync(SimpleRequest("hi", 50));
+        var response = await client.GetResponseAsync(SimpleRequest("hi", 50), cancellationToken: default);
         Assert.NotNull(response?.Messages);
     }
 

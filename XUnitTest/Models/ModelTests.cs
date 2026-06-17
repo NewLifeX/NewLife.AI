@@ -662,7 +662,7 @@ public class ModelTests
         var inner = new FakeClient("delegated");
         var client = new PassThroughClient(inner);
         var req = new ChatRequest { Messages = [new ChatMessage { Role = "user", Content = "test" }] };
-        var resp = await client.GetResponseAsync(req);
+        var resp = await client.GetResponseAsync(req, cancellationToken: default);
         Assert.Equal("delegated", resp.Text);
     }
 

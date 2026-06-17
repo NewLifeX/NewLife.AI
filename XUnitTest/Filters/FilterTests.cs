@@ -88,7 +88,7 @@ public class FilterTests
     {
         var client = new FilteredChatClient(new FakeClient("hello"));
         IList<ChatMessage> messages = [new ChatMessage { Role = "user", Content = "hi" }];
-        var resp = await client.GetResponseAsync(messages);
+        var resp = await client.GetResponseAsync(messages, cancellationToken: default);
 
         Assert.Equal("hello", resp.Messages![0].Message!.Content?.ToString());
     }
@@ -99,7 +99,7 @@ public class FilterTests
     {
         var filter = new RecordingFilter("f1");
         var client = new FilteredChatClient(new FakeClient(), [filter]);
-        await client.GetResponseAsync((IList<ChatMessage>)[]);
+        await client.GetResponseAsync((IList<ChatMessage>)[], cancellationToken: default);
 
         Assert.Equal(["before-f1", "after-f1"], filter.Calls);
     }
@@ -111,7 +111,7 @@ public class FilterTests
         var f1 = new RecordingFilter("f1");
         var f2 = new RecordingFilter("f2");
         var client = new FilteredChatClient(new FakeClient(), [f1, f2]);
-        await client.GetResponseAsync((IList<ChatMessage>)[]);
+        await client.GetResponseAsync((IList<ChatMessage>)[], cancellationToken: default);
 
         // 洋葱圈：f1-before → f2-before → (inner) → f2-after → f1-after
         Assert.Equal(["before-f1"], f1.Calls.GetRange(0, 1));
@@ -131,7 +131,7 @@ public class FilterTests
         var client = new FilteredChatClient(new FakeClient(), [filter]);
 
         IList<ChatMessage> messages = [];
-        await client.GetResponseAsync(messages);
+        await client.GetResponseAsync(messages, cancellationToken: default);
 
         // RequestModifyingFilter 在 before 阶段修改了 Request.User
         Assert.Equal("modified-by-filter", filter.CapturedUser);
@@ -146,7 +146,7 @@ public class FilterTests
             .UseFilters(filter)
             .Build();
 
-        await client.GetResponseAsync((IList<ChatMessage>)[]);
+        await client.GetResponseAsync((IList<ChatMessage>)[], cancellationToken: default);
 
         Assert.Contains("before-builderFilter", filter.Calls);
         Assert.Contains("after-builderFilter", filter.Calls);

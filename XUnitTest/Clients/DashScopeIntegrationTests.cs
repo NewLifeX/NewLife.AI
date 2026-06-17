@@ -13,7 +13,6 @@ using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.DashScope;
 using NewLife.AI.Clients.OpenAI;
-using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
 using Xunit.Sdk;
@@ -106,7 +105,7 @@ public class DashScopeIntegrationTests
             try
             {
                 using var client = new DashScopeChatClient(opts ?? CreateOptions());
-                return await client.GetResponseAsync(request);
+                return await client.GetResponseAsync(request, cancellationToken: default);
             }
             catch (HttpRequestException ex) when (retries-- > 0 && IsTransientNetworkError(ex))
             {

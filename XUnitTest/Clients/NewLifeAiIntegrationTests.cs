@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
-using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
 using XUnitTest.Gateway;
@@ -73,7 +72,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
     {
         using var client = CreateClient();
-        return await client.GetResponseAsync(request);
+        return await client.GetResponseAsync(request, cancellationToken: default);
     }
 
     /// <summary>创建客户端并执行流式对话</summary>
