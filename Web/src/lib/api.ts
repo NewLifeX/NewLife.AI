@@ -748,6 +748,8 @@ export interface SystemSettings {
   name: string
   siteTitle: string
   logoUrl: string
+  /** 全局系统指令。注入每一个用户的每一次对话，置于模型指令之后作为兜底行为准则 */
+  systemInstruction: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage: string
   /** 客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示 */
