@@ -227,6 +227,9 @@ export default {
       thinkingFast: 'Fast',
       defaultContextRounds: 'Default Context Rounds',
       defaultContextRoundsDesc: 'Number of history message rounds to carry (0 = all)',
+      systemInstruction: 'Global System Instruction',
+      systemInstructionDesc: 'Injected into every conversation for every user, placed after model instructions as a fallback behavior rule. No effect when empty.',
+      systemInstructionPlaceholder: 'Enter global system instruction (Markdown)...',
     },
     upload: {
       maxAttachmentSize: 'Max Attachment Size (MB)',

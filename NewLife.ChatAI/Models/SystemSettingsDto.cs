@@ -13,6 +13,9 @@ public class SystemSettingsDto
     /// <summary>Logo地址。欢迎页自定义Logo图片URL，为空时显示默认图标</summary>
     public String LogoUrl { get; set; } = "";
 
+    /// <summary>全局系统指令。注入每一个用户的每一次对话，置于模型指令之后作为兜底行为准则</summary>
+    public String SystemInstruction { get; set; } = "";
+
     /// <summary>欢迎语。欢迎页大标题，为空时前端使用默认文案</summary>
     public String WelcomeMessage { get; set; } = "";
 
@@ -138,6 +141,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>Logo地址</summary>
     public String? LogoUrl { get; set; }
+
+    /// <summary>全局系统指令</summary>
+    public String? SystemInstruction { get; set; }
 
     /// <summary>欢迎语</summary>
     public String? WelcomeMessage { get; set; }

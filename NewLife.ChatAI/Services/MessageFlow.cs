@@ -1379,6 +1379,13 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
             parts.Add(model.SystemPrompt.Trim());
 
+        // 4.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一个用户的每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
+        {
+            var chatSetting = ChatSetting.Current;
+            if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
+                parts.Add(chatSetting.SystemInstruction.Trim());
+        }
+
         // 5. 多轮对话时强调最新消息优先级
         if (userHistoryCount > 1)
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
@@ -1418,6 +1425,13 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 2. 模型级系统提示词（项目接入仍遵从模型配置指令）
         if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
             parts.Add(model.SystemPrompt.Trim());
+
+        // 2.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
+        {
+            var chatSetting = ChatSetting.Current;
+            if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
+                parts.Add(chatSetting.SystemInstruction.Trim());
+        }
 
         // 3. 多轮对话时强调最新消息优先级
         if (userHistoryCount > 1)

@@ -227,6 +227,9 @@ export default {
       thinkingFast: '快速',
       defaultContextRounds: '默认上下文轮数',
       defaultContextRoundsDesc: '携带的历史消息轮数（0 = 全部）',
+      systemInstruction: '全局系统指令',
+      systemInstructionDesc: '注入每一个用户的每一次对话，置于模型指令之后作为兜底行为准则。为空时不注入',
+      systemInstructionPlaceholder: '输入全局系统指令（Markdown）...',
     },
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',

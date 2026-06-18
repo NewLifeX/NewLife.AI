@@ -26,6 +26,7 @@ const defaultSettings: SystemSettings = {
   name: '',
   siteTitle: '',
   logoUrl: '',
+  systemInstruction: '',
   welcomeMessage: '',
   supportText: '',
   supportUrl: '',

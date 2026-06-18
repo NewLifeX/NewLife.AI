@@ -52,6 +52,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     #endregion
 
     #region 对话行为
+    /// <summary>全局系统指令。注入每一个用户的每一次对话，置于 System Prompt 首部作为全局行为准则。为空时不注入</summary>
+    [Category("对话行为")]
+    [Description("全局系统指令。注入每一个用户的每一次对话，置于 System Prompt 首部作为全局行为准则。为空时不注入")]
+    public String SystemInstruction { get; set; } = "";
+
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     [Category("对话行为")]
     [Description("自动生成标题。首条消息后是否自动生成会话标题")]
