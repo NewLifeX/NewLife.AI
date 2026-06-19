@@ -634,7 +634,7 @@ public class ChatAITests
         var conv = await service.CreateConversationAsync(new CreateConversationRequest("旧标题", 0), CancellationToken.None);
         Assert.Equal("旧标题", conv.Title);
 
-        var updated = await service.UpdateConversationAsync(conv.Id, new UpdateConversationRequest("新标题", 0), CancellationToken.None);
+        var updated = await service.UpdateConversationAsync(conv.Id, new UpdateConversationRequest("新标题", 0, null), CancellationToken.None);
         Assert.NotNull(updated);
         Assert.Equal("新标题", updated.Title);
     }
@@ -643,7 +643,7 @@ public class ChatAITests
     public async Task UpdateNonExistentConversationReturnsNull()
     {
         var service = new InMemoryChatApplicationService();
-        var result = await service.UpdateConversationAsync(99999, new UpdateConversationRequest("test", 0), CancellationToken.None);
+        var result = await service.UpdateConversationAsync(99999, new UpdateConversationRequest("test", 0, null), CancellationToken.None);
         Assert.Null(result);
     }
 
@@ -786,7 +786,7 @@ public class ChatAITests
     [Fact]
     public void UpdateConversationRequestHasFields()
     {
-        var req = new UpdateConversationRequest("新标题", 3);
+        var req = new UpdateConversationRequest("新标题", 3, null);
         Assert.Equal("新标题", req.Title);
         Assert.Equal(3, req.ModelId);
     }

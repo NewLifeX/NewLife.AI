@@ -6,7 +6,8 @@ namespace NewLife.ChatAI.Models;
 public record CreateConversationRequest(String? Title, Int32 ModelId);
 
 /// <summary>更新会话请求</summary>
-public record UpdateConversationRequest(String? Title, Int32 ModelId);
+/// <remarks>CardStyle 为 null 表示不修改，空字符串表示清除偏好，非空字符串表示设置为指定风格</remarks>
+public record UpdateConversationRequest(String? Title, Int32 ModelId, String? CardStyle);
 
 /// <summary>编辑消息请求</summary>
 public record EditMessageRequest(String Content);
