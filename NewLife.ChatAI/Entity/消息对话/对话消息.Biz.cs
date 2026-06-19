@@ -86,6 +86,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
 
     /// <summary>根据会话查找，按创建时间降序排列</summary>
     /// <param name="conversationId">会话</param>
+    /// <param name="count">数量限制，-1 表示不限制</param>
     /// <returns>实体列表</returns>
     public static IList<ChatMessage> FindAllByConversationIdDesc(Int64 conversationId, Int32 count = -1)
     {
@@ -96,6 +97,7 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
 
     /// <summary>根据会话查找，按创建时间升序排列</summary>
     /// <param name="conversationId">会话</param>
+    /// <param name="count">数量限制，-1 表示不限制</param>
     /// <returns>实体列表</returns>
     public static IList<ChatMessage> FindAllByConversationIdOrdered(Int64 conversationId, Int32 count = -1)
     {

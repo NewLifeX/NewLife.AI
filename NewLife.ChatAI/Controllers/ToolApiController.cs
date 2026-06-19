@@ -10,6 +10,7 @@ namespace NewLife.ChatAI.Controllers;
 /// <summary>公共工具 API。免密钥对外提供 IP 归属地、天气、翻译、搜索、网页爬取等能力</summary>
 /// <remarks>初始化工具 API 控制器</remarks>
 /// <param name="serviceProvider">服务提供者，用于按需解析各工具服务</param>
+/// <param name="cacheProvider">缓存提供者</param>
 [ApiController]
 [AllowAnonymous]
 public class ToolApiController(IServiceProvider serviceProvider, ICacheProvider cacheProvider) : ControllerBase

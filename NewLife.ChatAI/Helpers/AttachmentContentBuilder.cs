@@ -28,6 +28,7 @@ public static class AttachmentContentBuilder
     /// </remarks>
     /// <param name="attachmentsJson">附件 ID 列表 JSON（Int64 或字符串数组）</param>
     /// <param name="textContent">用户文本内容</param>
+    /// <param name="inlineImages">内联图片列表（可选），用于直接传入图片内容而非附件 ID</param>
     /// <returns>多模态或纯文本 AiChatMessage</returns>
     public static AiChatMessage Build(String attachmentsJson, String? textContent, IList<ImageContent>? inlineImages = null)
     {

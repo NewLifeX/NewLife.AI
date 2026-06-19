@@ -109,6 +109,7 @@ public class MemoryService(ITracer tracer, ILog log)
     /// <param name="value">值</param>
     /// <param name="confidence">置信度（0-100）</param>
     /// <param name="conversationId">来源会话ID</param>
+    /// <param name="source">来源标识（可选），如消息 ID 或引用来源</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>保存后的记忆实体</returns>
     public virtual async Task<UserMemory> UpsertMemoryAsync(
