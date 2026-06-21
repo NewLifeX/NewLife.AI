@@ -79,7 +79,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         newMsg.Insert();
         oldMsg.Enable = false;
         oldMsg.Update();
-        flow.HistoryMessages.Remove(oldMsg);
+        flow.HistoryMessages = flow.HistoryMessages.Where(e => e.Id != oldMsg.Id).ToList();
         flow.HistoryMessages.Add(newMsg);
         flow.AssistantMessage = newMsg;
 
@@ -237,7 +237,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             throw new InvalidOperationException("新消息插入失败，未获取有效 Id");
         oldMsg.Enable = false;
         oldMsg.Update();
-        flow.HistoryMessages.Remove(oldMsg);
+        flow.HistoryMessages = flow.HistoryMessages.Where(e => e.Id != oldMsg.Id).ToList();
         flow.HistoryMessages.Add(newMsg);
         flow.AssistantMessage = newMsg;
 
