@@ -388,6 +388,19 @@ public class ToolRegistry : IToolProvider
             result = resultProp?.GetValue(result);
         }
         if (result == null) return "null";
+
+        // IToolResult：存入上下文供 CallToolAsync 直接使用，本方法返回 LLM 受众内容（兼容 InvokeAsync 调用者）
+        if (result is IToolResult toolResult)
+        {
+            context?.ToolResult = toolResult;
+
+            var llmContent = toolResult.Contents
+                .Where(c => c.Audience.HasFlag(ToolAudience.Llm))
+                .Select(c => c.Data)
+                .Join("\n");
+            return llmContent.IsNullOrEmpty() ? "工具已执行" : llmContent;
+        }
+
         if (result is String str) return str;
 
         return result.ToJson();
@@ -579,6 +592,11 @@ public class ToolRegistry : IToolProvider
     async Task<IToolResult> IToolProvider.CallToolAsync(String toolName, String? arguments, ToolCallContext? context, CancellationToken cancellationToken)
     {
         var result = await InvokeAsync(toolName, arguments, context, cancellationToken).ConfigureAwait(false);
+
+        // 检查上下文：若工具方法返回了 IToolResult，直接使用（保留受众分离），避免重复包装为 Both
+        if (context?.ToolResult is { } toolResult)
+            return toolResult;
+
         return new ToolResult(result);
     }
 

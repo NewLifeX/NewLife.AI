@@ -49,5 +49,13 @@ public class ToolResult : IToolResult, IExtend
     #region 转换
     /// <summary>String → ToolResult 隐式转换。现有 return "result" 代码零改动</summary>
     public static implicit operator ToolResult(String content) => new(content);
+
+    /// <summary>ToolResult → String 隐式转换。提取首个 User 受众内容（优先）或首个内容块，便于测试和日志场景</summary>
+    public static implicit operator String(ToolResult result)
+    {
+        if (result.Contents.Count == 0) return "";
+        var user = result.Contents.FirstOrDefault(c => c.Audience.HasFlag(ToolAudience.User));
+        return user?.Data ?? result.Contents[0].Data;
+    }
     #endregion
 }
