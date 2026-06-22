@@ -1,4 +1,6 @@
 ﻿using System.Net.Http.Headers;
+using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
@@ -622,6 +624,247 @@ public partial class DashScopeChatClient
             throw;
         }
     }
+
+    /// <summary>流式语音合成。通过 CosyVoice WebSocket 实现边合成边返回音频分片，支持边生成边播放</summary>
+    /// <remarks>
+    /// WebSocket 端点：wss://dashscope.aliyuncs.com/api-ws/v1/inference<br/>
+    /// 流程：握手 → run-task → task-started → continue-task（分片发文本）→ result-generated + binary frame（音频）→ finish-task → task-finished<br/>
+    /// 文本按 ≤500 字符分片发送。详见 Doc/《CosyVoice WebSocket 流式合成.md》。
+    /// </remarks>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>逐段返回音频字节分片</returns>
+    public override async IAsyncEnumerable<Byte[]> SpeechStreamAsync(SpeechRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
+
+        // 解析音色与格式（与 SpeechAsync 保持一致）
+        var format = request.ResponseFormat ?? "mp3";
+        format = format switch { "mp3" => "mp3", "wav" => "wav", "opus" => "opus", "pcm" => "pcm", _ => format };
+
+        var voice = request.Voice;
+        if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
+            voice = "longxiaochun_v3";
+
+        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3.5-flash";
+        if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
+            throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+
+        // CosyVoice WebSocket 流式合成仅 v3.5-flash 及以上版本支持，旧版回退到 HTTP API
+        if (!modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase)
+            && !modelCode.StartsWith("cosyvoice-v4", StringComparison.OrdinalIgnoreCase))
+            throw new NotSupportedException($"模型 '{modelCode}' 不支持 CosyVoice WebSocket 流式合成，请使用 cosyvoice-v3.5-flash 或更高版本");
+
+        var sampleRate = request.SampleRate ?? 24000;
+        var rate = request.Speed ?? 1.0;
+
+        // 连接 WebSocket
+        using var ws = new ClientWebSocket();
+        if (!_options.ApiKey.IsNullOrEmpty())
+            ws.Options.SetRequestHeader("Authorization", $"Bearer {_options.ApiKey}");
+        ws.Options.SetRequestHeader("user-agent", "NewLife.AI");
+
+        var taskId = Guid.NewGuid().ToString("D");
+        using var span = Tracer?.NewSpan("ai:DashScopeTtsStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
+
+        // 收集音频分片（不能用 yield return 在 try-catch 内，先收集再输出）
+        var audioChunks = new List<Byte[]>();
+        try
+        {
+            await RunWebSocketTtsAsync(ws, taskId, modelCode, voice, format, sampleRate, rate, request, audioChunks, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            span?.SetError(ex, null);
+            throw;
+        }
+        finally
+        {
+            if (ws.State == WebSocketState.Open)
+            {
+                try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
+            }
+        }
+
+        foreach (var chunk in audioChunks)
+            yield return chunk;
+    }
+
+    #region WebSocket 辅助方法
+
+    /// <summary>执行 CosyVoice WebSocket TTS 全流程，将音频分片收集到 audioChunks</summary>
+    private async Task RunWebSocketTtsAsync(ClientWebSocket ws, String taskId, String modelCode, String voice, String format, Int32 sampleRate, Double rate, SpeechRequest request, List<Byte[]> audioChunks, CancellationToken cancellationToken)
+    {
+        await ws.ConnectAsync(new Uri("wss://dashscope.aliyuncs.com/api-ws/v1/inference"), cancellationToken).ConfigureAwait(false);
+
+        // 发送 run-task
+        var runTaskBody = new Dictionary<String, Object?>
+        {
+            ["header"] = new Dictionary<String, Object>
+            {
+                ["task_id"] = taskId,
+                ["action"] = "run-task",
+                ["streaming"] = "out",
+            },
+            ["payload"] = new Dictionary<String, Object>
+            {
+                ["model"] = modelCode,
+                ["task_group"] = "audio",
+                ["task"] = "tts",
+                ["parameters"] = new Dictionary<String, Object>
+                {
+                    ["voice"] = voice,
+                    ["format"] = format,
+                    ["sample_rate"] = sampleRate,
+                    ["rate"] = rate,
+                },
+            },
+        };
+        await SendWebSocketJsonAsync(ws, runTaskBody, cancellationToken).ConfigureAwait(false);
+
+        // 等待 task-started
+        var started = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+        if (started == null || GetHeaderAction(started) != "task-started")
+        {
+            var reason = _lastCloseReason.IsNullOrEmpty() ? "" : $"。连接关闭原因: {_lastCloseReason}";
+            throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}");
+        }
+
+        // 文本分片发送（每片 ≤500 UTF-8 字节，保守取 ≤166 字符）
+        var text = request.Input;
+        var maxChunkSize = 500;
+        var offset = 0;
+        while (offset < text.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var chunkLen = Math.Min(maxChunkSize / 3, text.Length - offset);
+            if (offset + chunkLen < text.Length && Char.IsHighSurrogate(text[offset + chunkLen - 1]))
+                chunkLen--;
+            var chunk = text.Substring(offset, chunkLen);
+            offset += chunkLen;
+
+            var continueBody = new Dictionary<String, Object?>
+            {
+                ["header"] = new Dictionary<String, Object> { ["task_id"] = taskId, ["action"] = "continue-task" },
+                ["payload"] = new Dictionary<String, Object>
+                {
+                    ["model"] = modelCode,
+                    ["input"] = new Dictionary<String, Object> { ["text"] = chunk },
+                },
+            };
+            await SendWebSocketJsonAsync(ws, continueBody, cancellationToken).ConfigureAwait(false);
+        }
+
+        // 发送 finish-task
+        var finishBody = new Dictionary<String, Object?>
+        {
+            ["header"] = new Dictionary<String, Object> { ["task_id"] = taskId, ["action"] = "finish-task" },
+            ["payload"] = new Dictionary<String, Object>(),
+        };
+        await SendWebSocketJsonAsync(ws, finishBody, cancellationToken).ConfigureAwait(false);
+
+        // 循环接收 result-generated + binary / task-finished
+        while (ws.State == WebSocketState.Open)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var json = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+            if (json == null) break;
+
+            var action = GetHeaderAction(json);
+            switch (action)
+            {
+                case "result-generated":
+                    var audioBytes = await ReceiveWebSocketBinaryAsync(ws, cancellationToken).ConfigureAwait(false);
+                    if (audioBytes != null && audioBytes.Length > 0)
+                        audioChunks.Add(audioBytes);
+                    break;
+
+                case "task-finished":
+                    if (json.TryGetValue("payload", out var fp) && fp is IDictionary<String, Object> fpDic
+                        && fpDic.TryGetValue("usage", out var u) && u is IDictionary<String, Object> uDic
+                        && uDic.TryGetValue("characters", out var chars))
+                        request.CharactersUsed = chars.ToInt();
+                    await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "task-finished", cancellationToken).ConfigureAwait(false);
+                    return;
+
+                case "task-failed":
+                    var errMsg = "未知错误";
+                    if (json.TryGetValue("payload", out var ep) && ep is IDictionary<String, Object> epDic
+                        && epDic.TryGetValue("message", out var em))
+                        errMsg = em as String ?? errMsg;
+                    throw new InvalidOperationException($"CosyVoice WebSocket 任务失败: {errMsg}");
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    /// <summary>发送 JSON 文本帧</summary>
+    private async Task SendWebSocketJsonAsync(ClientWebSocket ws, Object body, CancellationToken cancellationToken)
+    {
+        var json = JsonHost.Write(body, JsonOptions) ?? "{}";
+        var bytes = Encoding.UTF8.GetBytes(json);
+        await ws.SendAsync(new ArraySegment<Byte>(bytes), WebSocketMessageType.Text, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>接收一条 JSON 文本帧并解析为字典。非文本帧返回 null（Close 帧通过 out 参数传出原因）</summary>
+    private async Task<IDictionary<String, Object?>?> ReceiveWebSocketJsonAsync(ClientWebSocket ws, CancellationToken cancellationToken)
+    {
+        var buffer = new ArraySegment<Byte>(new Byte[65536]);
+        using var ms = new MemoryStream();
+        WebSocketReceiveResult result;
+        do
+        {
+            result = await ws.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+            if (result.MessageType == WebSocketMessageType.Close)
+            {
+                _lastCloseReason = result.CloseStatusDescription ?? result.CloseStatus?.ToString() ?? "未知";
+                return null;
+            }
+            if (result.MessageType != WebSocketMessageType.Text)
+                return null;
+            ms.Write(buffer.Array!, buffer.Offset, result.Count);
+        } while (!result.EndOfMessage);
+
+        var json = Encoding.UTF8.GetString(ms.ToArray());
+        return JsonParser.Decode(json) as IDictionary<String, Object?>;
+    }
+
+    /// <summary>最近一次 WebSocket Close 帧的原因描述。由 ReceiveWebSocketJsonAsync 在收到 Close 时设置</summary>
+    private String _lastCloseReason = "";
+
+    /// <summary>接收一条二进制帧。非二进制帧返回 null</summary>
+    private async Task<Byte[]?> ReceiveWebSocketBinaryAsync(ClientWebSocket ws, CancellationToken cancellationToken)
+    {
+        var buffer = new ArraySegment<Byte>(new Byte[65536]);
+        using var ms = new MemoryStream();
+        WebSocketReceiveResult result;
+        do
+        {
+            result = await ws.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+            if (result.MessageType == WebSocketMessageType.Close)
+                return null;
+            if (result.MessageType != WebSocketMessageType.Binary)
+                return null;
+            ms.Write(buffer.Array!, buffer.Offset, result.Count);
+        } while (!result.EndOfMessage);
+
+        return ms.ToArray();
+    }
+
+    /// <summary>从 WebSocket JSON 事件字典中提取 header.action</summary>
+    private String? GetHeaderAction(IDictionary<String, Object?>? dic)
+    {
+        if (dic == null) return null;
+        if (dic.TryGetValue("header", out var headerObj) && headerObj is IDictionary<String, Object?> header
+            && header.TryGetValue("action", out var action))
+            return action as String;
+        return null;
+    }
+
+    #endregion
     #endregion
 
     #region 嵌入向量（IEmbeddingClient 实现）

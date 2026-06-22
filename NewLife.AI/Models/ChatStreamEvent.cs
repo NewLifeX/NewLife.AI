@@ -59,6 +59,15 @@ public class ChatStreamEvent
 
     /// <summary>音频 URL。TTS 分支下 message_done 时附带，前端收到后自动播放</summary>
     public String? AudioUrl { get; set; }
+
+    /// <summary>TTS 流式音频分片的 Base64 编码数据。tts_audio_chunk 事件专用</summary>
+    public String? AudioBase64 { get; set; }
+
+    /// <summary>TTS 流式合成当前已处理的字符位置（0-based）</summary>
+    public Int32 CharIndex { get; set; }
+
+    /// <summary>TTS 流式合成总字符数</summary>
+    public Int32 TotalChars { get; set; }
     #endregion
 
     #region 工厂方法
@@ -96,6 +105,14 @@ public class ChatStreamEvent
     /// <returns></returns>
     public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? finishReason = null, String? audioUrl = null) =>
         new() { Type = "message_done", Usage = usage, Title = title, FinishReason = finishReason, AudioUrl = audioUrl };
+
+    /// <summary>TTS 流式音频分片事件。边合成边推送，前端逐段接收播放并更新进度条</summary>
+    /// <param name="audioBase64">音频分片 Base64 编码</param>
+    /// <param name="charIndex">当前已处理字符位置</param>
+    /// <param name="totalChars">总字符数</param>
+    /// <returns></returns>
+    public static ChatStreamEvent TtsAudioChunk(String audioBase64, Int32 charIndex, Int32 totalChars) =>
+        new() { Type = "tts_audio_chunk", AudioBase64 = audioBase64, CharIndex = charIndex, TotalChars = totalChars };
 
     /// <summary>错误事件</summary>
     /// <param name="code">错误码</param>
