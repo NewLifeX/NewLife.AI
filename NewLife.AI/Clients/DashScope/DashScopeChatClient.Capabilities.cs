@@ -562,18 +562,8 @@ public partial class DashScopeChatClient
         var body = new Dictionary<String, Object?>
         {
             ["model"] = modelCode,
-            ["input"] = new Dictionary<String, Object>
-            {
-                ["text"] = request.Input,
-                ["voice"] = voice,
-                ["format"] = format,
-                ["sample_rate"] = sampleRate,
-            },
+            ["input"] = BuildTtsInput(request, voice, format, sampleRate),
         };
-
-        // 语速倍率。CosyVoice HTTP API 参数名为 rate，默认 1.0（正常语速）
-        if (request.Speed is > 0 and not 1.0)
-            ((Dictionary<String, Object>)body["input"]!)["rate"] = request.Speed;
 
         using var span = Tracer?.NewSpan("ai:DashScopeTts", new { model = body["model"], format, voice = request.Voice });
         try
@@ -623,6 +613,37 @@ public partial class DashScopeChatClient
             span?.SetError(ex, null);
             throw;
         }
+    }
+
+    /// <summary>构建 CosyVoice TTS HTTP API 的 input 参数字典</summary>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="voice">已解析的音色</param>
+    /// <param name="format">音频格式</param>
+    /// <param name="sampleRate">采样率</param>
+    /// <returns>input 字典</returns>
+    private static Dictionary<String, Object> BuildTtsInput(SpeechRequest request, String voice, String format, Int32 sampleRate)
+    {
+        var input = new Dictionary<String, Object>
+        {
+            ["text"] = request.Input,
+            ["voice"] = voice,
+            ["format"] = format,
+            ["sample_rate"] = sampleRate,
+        };
+
+        // 语速倍率。CosyVoice HTTP API 参数名为 rate，默认 1.0（正常语速）
+        if (request.Speed is > 0 and not 1.0)
+            input["rate"] = request.Speed;
+
+        // 音量。CosyVoice HTTP API 参数名为 volume，默认 50
+        if (request.Volume is > 0 and not 50)
+            input["volume"] = request.Volume;
+
+        // 音调。CosyVoice HTTP API 参数名为 pitch，默认 1.0
+        if (request.Pitch is > 0 and not 1.0)
+            input["pitch"] = request.Pitch;
+
+        return input;
     }
 
     /// <summary>流式语音合成。通过 CosyVoice WebSocket 实现边合成边返回音频分片，支持边生成边播放</summary>
@@ -739,8 +760,8 @@ public partial class DashScopeChatClient
                     format,
                     sample_rate = sampleRate,
                     rate,
-                    volume = 50,
-                    pitch = 1.0,
+                    volume = request.Volume ?? 50,
+                    pitch = request.Pitch ?? 1.0,
                     enable_ssml = false,
                 },
                 input = new Dictionary<String, Object>(),

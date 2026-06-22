@@ -38,6 +38,12 @@ public record SendMessageRequest(String Content, ThinkingMode ThinkingMode, IRea
 
     /// <summary>采样率。24000/16000/8000，TTS 模式专用</summary>
     public Int32? TtsSampleRate { get; init; }
+
+    /// <summary>音量。0~100，默认 50，TTS 模式专用</summary>
+    public Int32? TtsVolume { get; init; }
+
+    /// <summary>音调。0.5~2.0，默认 1.0，TTS 模式专用</summary>
+    public Double? TtsPitch { get; init; }
 }
 
 /// <summary>消息数据。向前端返回的消息 DTO，包含内容、思考、工具调用、用量统计与反馈</summary>

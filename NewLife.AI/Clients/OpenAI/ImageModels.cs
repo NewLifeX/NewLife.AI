@@ -58,6 +58,12 @@ public class SpeechRequest
     /// <summary>采样率。如 24000、16000、8000，默认 24000</summary>
     public Int32? SampleRate { get; set; }
 
+    /// <summary>音量。0~100，默认 50</summary>
+    public Int32? Volume { get; set; }
+
+    /// <summary>音调倍率。0.5~2.0，默认 1.0</summary>
+    public Double? Pitch { get; set; }
+
     /// <summary>关联消息编号。传入后优先从数据库加载消息文本，无需传 Input</summary>
     public Int64? MessageId { get; set; }
 
