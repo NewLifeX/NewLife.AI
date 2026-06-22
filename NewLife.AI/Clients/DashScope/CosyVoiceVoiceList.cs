@@ -51,6 +51,10 @@ public static class CosyVoiceVoiceList
     /// <param name="modelCode">模型编码</param>
     /// <param name="voiceId">音色标识</param>
     /// <returns>合法音色返回 true；不在列表内返回 false（含 OpenAI 兼容音色如 alloy/echo 等，这些由客户端映射处理）</returns>
+    /// <remarks>
+    /// v3.5 系列模型（cosyvoice-v3.5-flash、cosyvoice-v3-plus）仅支持声音复刻/设计音色，无系统音色。<br/>
+    /// 对于 v3.5 模型：若音色为已知系统音色则拒绝（引导用户切换模型），否则接受（视为自定义声音克隆 ID）。
+    /// </remarks>
     public static Boolean IsValidVoice(String modelCode, String voiceId)
     {
         if (voiceId.IsNullOrEmpty()) return false;
@@ -60,7 +64,25 @@ public static class CosyVoiceVoiceList
             return true;
 
         var voices = GetVoices(modelCode);
-        return voices.Any(v => v.Id.EqualIgnoreCase(voiceId));
+
+        // 模型有声色列表时，直接校验
+        if (voices.Count > 0)
+            return voices.Any(v => v.Id.EqualIgnoreCase(voiceId));
+
+        // 模型无声色列表（如 v3.5 系列仅支持声音复刻）：
+        // 拒绝已知系统音色（引导用户切换到 v3 系列），接受自定义声音克隆 ID
+        if (IsKnownSystemVoice(voiceId))
+            return false;
+
+        // 非已知系统音色，视为自定义声音克隆 ID，放行
+        return true;
+    }
+
+    /// <summary>检查音色是否为任意模型下的已知系统音色</summary>
+    private static Boolean IsKnownSystemVoice(String voiceId)
+    {
+        EnsureLoaded();
+        return _models!.Any(m => m.Voices.Any(v => v.Id.EqualIgnoreCase(voiceId)));
     }
 
     #region 加载

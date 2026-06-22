@@ -553,7 +553,7 @@ public partial class DashScopeChatClient
             voice = "longxiaochun_v3";
 
         // 校验音色是否合法
-        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3.5-flash";
+        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
         if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
             throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
 
@@ -647,13 +647,14 @@ public partial class DashScopeChatClient
         if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
             voice = "longxiaochun_v3";
 
-        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3.5-flash";
+        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
         if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
             throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
 
-        // 直接尝试 WebSocket 连接，不进行版本前缀检测。
-        // 若模型不支持 WebSocket，DashScope 服务端会关闭连接并返回 Close 帧，
-        // 异常向上传播后由 MessagesController 回退到 HTTP API 完整合成。
+        // v3 系列模型（cosyvoice-v3-*，不含 v3.5）不支持 WebSocket 流式合成，仅支持 HTTP REST API。
+        // 直接抛出 NotSupportedException，由上层回退到 HTTP 完整合成。
+        if (IsV3ModelWithoutWebSocket(modelCode))
+            throw new NotSupportedException($"模型 '{modelCode}' 不支持 WebSocket 流式合成，将回退到 HTTP API 完整合成");
 
         var sampleRate = request.SampleRate ?? 24000;
         var rate = request.Speed ?? 1.0;
@@ -692,14 +693,24 @@ public partial class DashScopeChatClient
 
     #region WebSocket 辅助方法
 
-    /// <summary>构建 CosyVoice WebSocket 地址。若配置了 Organization（MaaS 业务空间 ID），使用专属端点；否则从 HTTP Endpoint 派生</summary>
+    /// <summary>判断模型是否为不支持 WebSocket 流式合成的 v3 系列（非 v3.5）</summary>
+    /// <remarks>v3 系列模型（cosyvoice-v3-flash、cosyvoice-v3-plus）仅支持 HTTP REST API，不支持 WebSocket 流式合成。v3.5 系列支持 WebSocket。</remarks>
+    private static Boolean IsV3ModelWithoutWebSocket(String modelCode)
+    {
+        if (modelCode.IsNullOrEmpty()) return false;
+        return modelCode.StartsWith("cosyvoice-v3", StringComparison.OrdinalIgnoreCase)
+            && !modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>构建 CosyVoice WebSocket 地址。北京地域使用 MaaS 业务空间端点，其它地域从 HTTP Endpoint 派生</summary>
+    /// <remarks>官方文档：北京地域 URL 为 wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference</remarks>
     private String BuildWebSocketUrl()
     {
-        // 优先：MaaS 业务空间专属端点
+        // 北京地域：v3.5 系列模型仅北京可用，必须走 MaaS 业务空间端点
         if (!_options.Organization.IsNullOrEmpty())
             return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference";
 
-        // 回退：从 HTTP Endpoint 派生通用端点
+        // 其它地域（如新加坡）：从 HTTP Endpoint 派生
         var httpHost = GetHost();
         var wsHost = httpHost.Replace("https://", "wss://").Replace("http://", "ws://");
         return $"{wsHost}/api-ws/v1/inference";
@@ -708,34 +719,33 @@ public partial class DashScopeChatClient
     /// <summary>执行 CosyVoice WebSocket TTS 全流程，将音频分片收集到 audioChunks</summary>
     private async Task RunWebSocketTtsAsync(ClientWebSocket ws, String taskId, String modelCode, String voice, String format, Int32 sampleRate, Double rate, SpeechRequest request, List<Byte[]> audioChunks, CancellationToken cancellationToken)
     {
-        // 构建 WebSocket 地址：优先使用 Organization（MaaS 业务空间），否则从 HTTP Endpoint 派生
         var wsUrl = BuildWebSocketUrl();
         await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
 
         // 发送 run-task
-        var runTaskBody = new Dictionary<String, Object?>
+        await SendWebSocketJsonAsync(ws, new
         {
-            ["header"] = new Dictionary<String, Object>
+            header = new { task_id = taskId, action = "run-task", streaming = "duplex" },
+            payload = new
             {
-                ["task_id"] = taskId,
-                ["action"] = "run-task",
-                ["streaming"] = "duplex",
-            },
-            ["payload"] = new Dictionary<String, Object>
-            {
-                ["model"] = modelCode,
-                ["task_group"] = "audio",
-                ["task"] = "tts",
-                ["parameters"] = new Dictionary<String, Object>
+                model = modelCode,
+                task_group = "audio",
+                task = "tts",
+                function = "SpeechSynthesizer",
+                parameters = new
                 {
-                    ["voice"] = voice,
-                    ["format"] = format,
-                    ["sample_rate"] = sampleRate,
-                    ["rate"] = rate,
+                    text_type = "PlainText",
+                    voice,
+                    format,
+                    sample_rate = sampleRate,
+                    rate,
+                    volume = 50,
+                    pitch = 1.0,
+                    enable_ssml = false,
                 },
+                input = new Dictionary<String, Object>(),
             },
-        };
-        await SendWebSocketJsonAsync(ws, runTaskBody, cancellationToken).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
         // 等待 task-started
         var started = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
@@ -758,25 +768,22 @@ public partial class DashScopeChatClient
             var chunk = text.Substring(offset, chunkLen);
             offset += chunkLen;
 
-            var continueBody = new Dictionary<String, Object?>
+            await SendWebSocketJsonAsync(ws, new
             {
-                ["header"] = new Dictionary<String, Object> { ["task_id"] = taskId, ["action"] = "continue-task" },
-                ["payload"] = new Dictionary<String, Object>
+                header = new { task_id = taskId, action = "continue-task", streaming = "duplex" },
+                payload = new
                 {
-                    ["model"] = modelCode,
-                    ["input"] = new Dictionary<String, Object> { ["text"] = chunk },
+                    input = new { text = chunk },
                 },
-            };
-            await SendWebSocketJsonAsync(ws, continueBody, cancellationToken).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
         }
 
         // 发送 finish-task
-        var finishBody = new Dictionary<String, Object?>
+        await SendWebSocketJsonAsync(ws, new
         {
-            ["header"] = new Dictionary<String, Object> { ["task_id"] = taskId, ["action"] = "finish-task" },
-            ["payload"] = new Dictionary<String, Object>(),
-        };
-        await SendWebSocketJsonAsync(ws, finishBody, cancellationToken).ConfigureAwait(false);
+            header = new { task_id = taskId, action = "finish-task", streaming = "duplex" },
+            payload = new { input = new Dictionary<String, Object>() },
+        }, cancellationToken).ConfigureAwait(false);
 
         // 循环接收 result-generated + binary / task-finished
         while (ws.State == WebSocketState.Open)
@@ -843,7 +850,7 @@ public partial class DashScopeChatClient
         } while (!result.EndOfMessage);
 
         var json = Encoding.UTF8.GetString(ms.ToArray());
-        return JsonParser.Decode(json) as IDictionary<String, Object?>;
+        return JsonParser.Decode(json);
     }
 
     /// <summary>最近一次 WebSocket Close 帧的原因描述。由 ReceiveWebSocketJsonAsync 在收到 Close 时设置</summary>
