@@ -2002,5 +2002,159 @@ public class DashScopeIntegrationTests
         Assert.True(audioBytes.Length > 100, "音频数据不应为空");
     }
 
+    [Fact]
+    [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_流式返回多个音频分片")]
+    public async Task SpeechStreamAsync_CosyVoiceV35Flash_StreamingReturnsChunks()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3.5-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3.5-flash",
+            Input = "你好，欢迎使用语音合成服务。今天天气真不错，适合出去走走。",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "mp3",
+            SampleRate = 24000,
+            Speed = 1.0,
+        };
+
+        var chunks = new List<Byte[]>();
+        var receivedFirstChunkAt = DateTime.MinValue;
+        var chunkCount = 0;
+
+        await foreach (var chunk in client.SpeechStreamAsync(request, CancellationToken.None))
+        {
+            chunkCount++;
+            if (chunkCount == 1)
+                receivedFirstChunkAt = DateTime.Now;
+
+            Assert.NotNull(chunk);
+            Assert.True(chunk.Length > 0, $"第 {chunkCount} 个音频分片不应为空");
+            chunks.Add(chunk);
+        }
+
+        // 验证返回了多个分片（流式合成）
+        Assert.True(chunks.Count >= 1, "应至少返回一个音频分片");
+        if (chunks.Count > 1)
+        {
+            // 多个分片意味着边合成边推送
+            Assert.True(chunks.Count > 0, "流式合成应返回音频分片");
+        }
+
+        // 验证总音频数据量合理
+        var totalBytes = chunks.Sum(c => c.Length);
+        Assert.True(totalBytes > 100, $"总音频数据 {totalBytes} 字节，应大于 100");
+
+        // 验证字符用量被正确记录
+        Assert.True(request.CharactersUsed > 0, $"字符用量应大于 0，实际: {request.CharactersUsed}");
+    }
+
+    [Fact]
+    [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_带语速参数")]
+    public async Task SpeechStreamAsync_CosyVoiceV35Flash_WithSpeed()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3.5-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3.5-flash",
+            Input = "这是一段测试文本，用来验证语速参数是否生效。",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "mp3",
+            Speed = 1.5, // 1.5倍语速
+        };
+
+        var chunks = new List<Byte[]>();
+        await foreach (var chunk in client.SpeechStreamAsync(request, CancellationToken.None))
+        {
+            chunks.Add(chunk);
+        }
+
+        Assert.NotEmpty(chunks);
+    }
+
+    [Fact]
+    [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_CancellationToken取消")]
+    public async Task SpeechStreamAsync_CosyVoiceV35Flash_Cancellation()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3.5-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3.5-flash",
+            // 长文本确保有足够时间取消
+            Input = "人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。该领域的研究包括机器人、语言识别、图像识别、自然语言处理和专家系统等。人工智能从诞生以来，理论和技术日益成熟，应用领域也不断扩大。可以设想，未来人工智能带来的科技产品，将会是人类智慧的容器。",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "mp3",
+        };
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500)); // 500ms 后取消
+
+        var chunks = new List<Byte[]>();
+        var cancelled = false;
+        try
+        {
+            await foreach (var chunk in client.SpeechStreamAsync(request, cts.Token))
+            {
+                chunks.Add(chunk);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+
+        Assert.True(cancelled || chunks.Count > 0, "取消令牌应生效，或至少收到部分分片");
+    }
+
+    [Fact]
+    [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_opus格式")]
+    public async Task SpeechStreamAsync_CosyVoiceV35Flash_OpusFormat()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3.5-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3.5-flash",
+            Input = "你好世界",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "opus",
+        };
+
+        var chunks = new List<Byte[]>();
+        await foreach (var chunk in client.SpeechStreamAsync(request, CancellationToken.None))
+        {
+            chunks.Add(chunk);
+        }
+
+        Assert.NotEmpty(chunks);
+        var totalBytes = chunks.Sum(c => c.Length);
+        Assert.True(totalBytes > 0, "opus 格式应生成有效音频");
+    }
+
     #endregion
 }

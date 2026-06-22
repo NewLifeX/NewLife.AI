@@ -651,10 +651,9 @@ public partial class DashScopeChatClient
         if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
             throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
 
-        // CosyVoice WebSocket 流式合成仅 v3.5-flash 及以上版本支持，旧版回退到 HTTP API
-        if (!modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase)
-            && !modelCode.StartsWith("cosyvoice-v4", StringComparison.OrdinalIgnoreCase))
-            throw new NotSupportedException($"模型 '{modelCode}' 不支持 CosyVoice WebSocket 流式合成，请使用 cosyvoice-v3.5-flash 或更高版本");
+        // 直接尝试 WebSocket 连接，不进行版本前缀检测。
+        // 若模型不支持 WebSocket，DashScope 服务端会关闭连接并返回 Close 帧，
+        // 异常向上传播后由 MessagesController 回退到 HTTP API 完整合成。
 
         var sampleRate = request.SampleRate ?? 24000;
         var rate = request.Speed ?? 1.0;
@@ -693,10 +692,25 @@ public partial class DashScopeChatClient
 
     #region WebSocket 辅助方法
 
+    /// <summary>构建 CosyVoice WebSocket 地址。若配置了 Organization（MaaS 业务空间 ID），使用专属端点；否则从 HTTP Endpoint 派生</summary>
+    private String BuildWebSocketUrl()
+    {
+        // 优先：MaaS 业务空间专属端点
+        if (!_options.Organization.IsNullOrEmpty())
+            return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference";
+
+        // 回退：从 HTTP Endpoint 派生通用端点
+        var httpHost = GetHost();
+        var wsHost = httpHost.Replace("https://", "wss://").Replace("http://", "ws://");
+        return $"{wsHost}/api-ws/v1/inference";
+    }
+
     /// <summary>执行 CosyVoice WebSocket TTS 全流程，将音频分片收集到 audioChunks</summary>
     private async Task RunWebSocketTtsAsync(ClientWebSocket ws, String taskId, String modelCode, String voice, String format, Int32 sampleRate, Double rate, SpeechRequest request, List<Byte[]> audioChunks, CancellationToken cancellationToken)
     {
-        await ws.ConnectAsync(new Uri("wss://dashscope.aliyuncs.com/api-ws/v1/inference"), cancellationToken).ConfigureAwait(false);
+        // 构建 WebSocket 地址：优先使用 Organization（MaaS 业务空间），否则从 HTTP Endpoint 派生
+        var wsUrl = BuildWebSocketUrl();
+        await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
 
         // 发送 run-task
         var runTaskBody = new Dictionary<String, Object?>
@@ -705,7 +719,7 @@ public partial class DashScopeChatClient
             {
                 ["task_id"] = taskId,
                 ["action"] = "run-task",
-                ["streaming"] = "out",
+                ["streaming"] = "duplex",
             },
             ["payload"] = new Dictionary<String, Object>
             {
@@ -727,8 +741,8 @@ public partial class DashScopeChatClient
         var started = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
         if (started == null || GetHeaderAction(started) != "task-started")
         {
-            var reason = _lastCloseReason.IsNullOrEmpty() ? "" : $"。连接关闭原因: {_lastCloseReason}";
-            throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}");
+            var reason = _lastCloseReason.IsNullOrEmpty() ? "" : $"，连接关闭原因: {_lastCloseReason}";
+            throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}。请确认模型 {modelCode} 支持 WebSocket 流式合成，且 API Key 已开通 DashScope WebSocket 权限");
         }
 
         // 文本分片发送（每片 ≤500 UTF-8 字节，保守取 ≤166 字符）

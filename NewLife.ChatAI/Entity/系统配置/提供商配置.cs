@@ -79,6 +79,14 @@ public partial class ProviderConfig
     [BindColumn("ApiProtocol", "API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini", "")]
     public String? ApiProtocol { get => _ApiProtocol; set { if (OnPropertyChanging("ApiProtocol", value)) { _ApiProtocol = value; OnPropertyChanged("ApiProtocol"); } } }
 
+    private String? _Organization;
+    /// <summary>组织。提供商组织或业务空间标识，如阿里百炼业务空间(llm-xxx)、OpenAI组织。用于语音合成等场景的多端点派生</summary>
+    [DisplayName("组织")]
+    [Description("组织。提供商组织或业务空间标识，如阿里百炼业务空间(llm-xxx)、OpenAI组织。用于语音合成等场景的多端点派生")]
+    [DataObjectField(false, false, true, 200)]
+    [BindColumn("Organization", "组织。提供商组织或业务空间标识，如阿里百炼业务空间(llm-xxx)、OpenAI组织。用于语音合成等场景的多端点派生", "")]
+    public String? Organization { get => _Organization; set { if (OnPropertyChanging("Organization", value)) { _Organization = value; OnPropertyChanged("Organization"); } } }
+
     private String? _ModelFilter;
     /// <summary>模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek</summary>
     [DisplayName("模型过滤")]
@@ -206,6 +214,7 @@ public partial class ProviderConfig
             "Endpoint" => _Endpoint,
             "ApiKey" => _ApiKey,
             "ApiProtocol" => _ApiProtocol,
+            "Organization" => _Organization,
             "ModelFilter" => _ModelFilter,
             "ModelLimit" => _ModelLimit,
             "RoleIds" => _RoleIds,
@@ -232,6 +241,7 @@ public partial class ProviderConfig
                 case "Endpoint": _Endpoint = Convert.ToString(value); break;
                 case "ApiKey": _ApiKey = Convert.ToString(value); break;
                 case "ApiProtocol": _ApiProtocol = Convert.ToString(value); break;
+                case "Organization": _Organization = Convert.ToString(value); break;
                 case "ModelFilter": _ModelFilter = Convert.ToString(value); break;
                 case "ModelLimit": _ModelLimit = value.ToInt(); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
@@ -310,6 +320,9 @@ public partial class ProviderConfig
         /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
         public static readonly Field ApiProtocol = FindByName("ApiProtocol");
 
+        /// <summary>组织。提供商组织或业务空间标识，如阿里百炼业务空间(llm-xxx)、OpenAI组织。用于语音合成等场景的多端点派生</summary>
+        public static readonly Field Organization = FindByName("Organization");
+
         /// <summary>模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek</summary>
         public static readonly Field ModelFilter = FindByName("ModelFilter");
 
@@ -375,6 +388,9 @@ public partial class ProviderConfig
 
         /// <summary>API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini</summary>
         public const String ApiProtocol = "ApiProtocol";
+
+        /// <summary>组织。提供商组织或业务空间标识，如阿里百炼业务空间(llm-xxx)、OpenAI组织。用于语音合成等场景的多端点派生</summary>
+        public const String Organization = "Organization";
 
         /// <summary>模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek</summary>
         public const String ModelFilter = "ModelFilter";

@@ -173,6 +173,7 @@
         <Column Name="Endpoint" DataType="String" ItemType="url" Length="200" Description="接口地址。API地址" />
         <Column Name="ApiKey" DataType="String" ShowIn="Auto,-List,-Search" Length="200" Description="密钥。API访问密钥" />
         <Column Name="ApiProtocol" DataType="String" Description="API协议。ChatCompletions/ResponseApi/AnthropicMessages/Gemini" />
+        <Column Name="Organization" DataType="String" Length="200" Description="组织。提供商组织或业务空间标识，如阿里百炼业务空间(llm-xxx)、OpenAI组织。用于语音合成等场景的多端点派生" />
         <Column Name="ModelFilter" DataType="String" ShowIn="Auto,-List" Length="500" Description="模型过滤。逗号分隔的模型前缀或关键词，为空时发现全部。如：qwen-plus,qwen-max,deepseek" />
         <Column Name="ModelLimit" DataType="Int32" DefaultValue="10" Description="发现上限。单次模型发现的最大数量，0表示不限制，默认10" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />

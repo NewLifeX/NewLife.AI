@@ -227,6 +227,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             ApiKey = model.GetEffectiveApiKey(),
             Model = model.GetEffectiveModelCode(),
             Protocol = providerConfig?.ApiProtocol,
+            Organization = providerConfig?.Organization,
         };
     }
     #endregion
