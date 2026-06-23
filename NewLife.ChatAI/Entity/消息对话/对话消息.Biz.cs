@@ -40,6 +40,9 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
 
         // 在新插入数据或者修改了指定字段时进行修正
 
+        // 超长截断，防止超出数据库字段长度
+        this.TrimExtraLong(_.SkillNames, _.ToolNames);
+
         // 处理当前已登录用户信息，可以由UserInterceptor拦截器代劳
         /*var user = ManageProvider.User;
         if (user != null)
