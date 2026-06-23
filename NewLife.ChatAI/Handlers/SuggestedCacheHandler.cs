@@ -110,7 +110,7 @@ public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cachePro
                 foreach (var tc in toolCallDtos)
                 {
                     yield return new ChatStreamEvent { Type = "tool_call_start", ToolCallId = tc.Id, Name = tc.Name, Arguments = tc.Arguments };
-                    yield return new ChatStreamEvent { Type = "tool_call_done", ToolCallId = tc.Id, Name = tc.Name, Result = tc.Result, Success = tc.Status != ToolCallStatus.Error };
+                    yield return new ChatStreamEvent { Type = "tool_call_done", ToolCallId = tc.Id, Name = tc.Name, Result = tc.Result };
                 }
             }
         }

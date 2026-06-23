@@ -80,12 +80,11 @@ public class ChatAITests
     [Fact]
     public void ChatStreamEventMessageStartHasAllFields()
     {
-        var ev = ChatStreamEvent.MessageStart(1001, "qwen-max", ThinkingMode.Think);
+        var ev = ChatStreamEvent.MessageStart(1001, "qwen-max");
 
         Assert.Equal("message_start", ev.Type);
         Assert.Equal(1001, ev.MessageId);
         Assert.Equal("qwen-max", ev.Model);
-        Assert.Equal(ThinkingMode.Think, ev.ThinkingMode);
     }
 
     [Fact]
@@ -162,12 +161,11 @@ public class ChatAITests
     [Fact]
     public void ChatStreamEventToolCallDoneHasResult()
     {
-        var ev = ChatStreamEvent.ToolCallDone("call_001", "{\"temp\":25}", true);
+        var ev = ChatStreamEvent.ToolCallDone("call_001", "{\"temp\":25}");
 
         Assert.Equal("tool_call_done", ev.Type);
         Assert.Equal("call_001", ev.ToolCallId);
         Assert.Equal("{\"temp\":25}", ev.Result);
-        Assert.True(ev.Success);
     }
 
     [Fact]
@@ -193,14 +191,14 @@ public class ChatAITests
 
         var events = new[]
         {
-            ChatStreamEvent.MessageStart(1, "m", 0),
+            ChatStreamEvent.MessageStart(1, "m"),
             ChatStreamEvent.ThinkingDelta("t"),
             ChatStreamEvent.ThinkingDone(100),
             ChatStreamEvent.ContentDelta("c"),
             ChatStreamEvent.MessageDone(),
             ChatStreamEvent.ErrorEvent("e", "m"),
             ChatStreamEvent.ToolCallStart("id", "name", "args"),
-            ChatStreamEvent.ToolCallDone("id", "r", true),
+            ChatStreamEvent.ToolCallDone("id", "r"),
             ChatStreamEvent.ToolCallError("id", "err"),
         };
 
@@ -726,7 +724,7 @@ public class ChatAITests
     [Fact]
     public void ChatStreamEventMessageStartWithZeroValues()
     {
-        var ev = ChatStreamEvent.MessageStart(0, "", 0);
+        var ev = ChatStreamEvent.MessageStart(0, "");
         Assert.Equal("message_start", ev.Type);
         Assert.Equal(0, ev.MessageId);
         Assert.Equal("", ev.Model);
@@ -752,9 +750,8 @@ public class ChatAITests
     [Fact]
     public void ChatStreamEventToolCallDoneWithFailure()
     {
-        var ev = ChatStreamEvent.ToolCallDone("id", null, false);
+        var ev = ChatStreamEvent.ToolCallDone("id", null);
         Assert.Equal("tool_call_done", ev.Type);
-        Assert.False(ev.Success);
         Assert.Null(ev.Result);
     }
     #endregion
@@ -931,10 +928,9 @@ public class ChatAITests
             chunks.Add(chunk);
         }
 
-        // message_start 事件应包含思考模式
+        // message_start 事件应存在
         var start = chunks.FirstOrDefault(e => e.Type == "message_start");
         Assert.NotNull(start);
-        Assert.Equal(ThinkingMode.Think, start.ThinkingMode);
     }
 
     [Fact]

@@ -143,7 +143,7 @@ public class InMemoryChatApplicationService
 
         var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelId.ToString() : "qwen-max";
         var assistantId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        yield return ChatStreamEvent.MessageStart(assistantId, modelCode, source.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantId, modelCode);
 
         var answer = "这是编辑后重新生成的流式回复。";
         var content = new StringBuilder();
@@ -190,7 +190,7 @@ public class InMemoryChatApplicationService
         }
 
         var modelCode = _conversations.TryGetValue(source.ConversationId, out var conv) ? conv.ModelId.ToString() : "qwen-max";
-        yield return ChatStreamEvent.MessageStart(source.Id, modelCode, source.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(source.Id, modelCode);
 
         var answer = "这是重新生成的流式回复。";
         var content = new StringBuilder();
@@ -234,7 +234,7 @@ public class InMemoryChatApplicationService
 
         // message_start（含模型和思考模式）
         var modelCode = _conversations.TryGetValue(conversationId, out var conv) ? conv.ModelId.ToString() : "qwen-max";
-        yield return ChatStreamEvent.MessageStart(assistantMessageId, modelCode, request.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMessageId, modelCode);
 
         var answer = "这是流式回复骨架。后续可接入真实模型推理与上下文管理。";
         var chunks = answer.Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

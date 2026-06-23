@@ -15,9 +15,6 @@ public class ChatStreamEvent
     /// <summary>模型编码</summary>
     public String? Model { get; set; }
 
-    /// <summary>思考模式</summary>
-    public ThinkingMode ThinkingMode { get; set; }
-
     /// <summary>文本内容。content_delta / thinking_delta 时的增量文本</summary>
     public String? Content { get; set; }
 
@@ -36,9 +33,6 @@ public class ChatStreamEvent
     /// <summary>工具返回结果</summary>
     public String? Result { get; set; }
 
-    /// <summary>是否成功</summary>
-    public Boolean Success { get; set; }
-
     /// <summary>错误信息</summary>
     public String? Error { get; set; }
 
@@ -47,9 +41,6 @@ public class ChatStreamEvent
 
     /// <summary>错误描述</summary>
     public String? Message { get; set; }
-
-    /// <summary>完成原因。stop/length/tool_calls/content_filter</summary>
-    public String? FinishReason { get; set; }
 
     /// <summary>令牌用量统计</summary>
     public UsageDetails? Usage { get; set; }
@@ -74,10 +65,9 @@ public class ChatStreamEvent
     /// <summary>消息开始事件</summary>
     /// <param name="messageId">消息编号</param>
     /// <param name="model">模型编码</param>
-    /// <param name="thinkingMode">思考模式</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageStart(Int64 messageId, String model, ThinkingMode thinkingMode) =>
-        new() { Type = "message_start", MessageId = messageId, Model = model, ThinkingMode = thinkingMode };
+    public static ChatStreamEvent MessageStart(Int64 messageId, String model) =>
+        new() { Type = "message_start", MessageId = messageId, Model = model };
 
     /// <summary>思考增量事件</summary>
     /// <param name="content">思考内容</param>
@@ -100,11 +90,10 @@ public class ChatStreamEvent
     /// <summary>消息完成事件</summary>
     /// <param name="usage">用量统计</param>
     /// <param name="title">标题（可选）</param>
-    /// <param name="finishReason">完成原因（可选）</param>
     /// <param name="audioUrl">音频 URL（TTS 分支专用，前端自动播放）</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? finishReason = null, String? audioUrl = null) =>
-        new() { Type = "message_done", Usage = usage, Title = title, FinishReason = finishReason, AudioUrl = audioUrl };
+    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? audioUrl = null) =>
+        new() { Type = "message_done", Usage = usage, Title = title, AudioUrl = audioUrl };
 
     /// <summary>TTS 流式音频分片事件。边合成边推送，前端逐段接收播放并更新进度条</summary>
     /// <param name="audioBase64">音频分片 Base64 编码</param>
@@ -139,11 +128,10 @@ public class ChatStreamEvent
 
     /// <summary>工具调用完成事件</summary>
     /// <param name="toolCallId">调用编号</param>
-    /// <param name="result">返回结果（前端用户内容）</param>
-    /// <param name="success">是否成功</param>
+    /// <param name="result">返回结果</param>
     /// <returns></returns>
-    public static ChatStreamEvent ToolCallDone(String toolCallId, String? result, Boolean success) =>
-        new() { Type = "tool_call_done", ToolCallId = toolCallId, Result = result, Success = success };
+    public static ChatStreamEvent ToolCallDone(String toolCallId, String? result) =>
+        new() { Type = "tool_call_done", ToolCallId = toolCallId, Result = result };
 
     /// <summary>工具调用失败事件</summary>
     /// <param name="toolCallId">调用编号</param>
@@ -152,13 +140,5 @@ public class ChatStreamEvent
     public static ChatStreamEvent ToolCallError(String toolCallId, String error) =>
         new() { Type = "tool_call_error", ToolCallId = toolCallId, Error = error };
 
-    /// <summary>记忆确认事件。message_done 后推送给前端，提示用户核实助手推断的信息是否准确</summary>
-    /// <param name="confirmationId">确认条目编号</param>
-    /// <param name="question">向用户展示的确认问句</param>
-    /// <param name="memoryKey">记忆主题（用于前端展示）</param>
-    /// <param name="memoryValue">当前记忆内容（用于前端展示）</param>
-    /// <returns></returns>
-    public static ChatStreamEvent MemoryConfirmation(Int64 confirmationId, String question, String? memoryKey = null, String? memoryValue = null) =>
-        new() { Type = "memory_confirmation", MessageId = confirmationId, Content = question, Name = memoryKey, Result = memoryValue };
     #endregion
 }

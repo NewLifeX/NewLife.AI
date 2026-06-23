@@ -284,14 +284,12 @@ export interface ChatStreamEvent {
   type: 'message_start' | 'thinking_delta' | 'thinking_done' | 'content_delta' | 'tool_call_start' | 'tool_call_done' | 'tool_call_error' | 'message_done' | 'error'
   messageId?: string
   model?: string
-  thinkingMode?: number
   content?: string
   thinkingTime?: number
   toolCallId?: string
   name?: string
   arguments?: string
   result?: string
-  success?: boolean
   error?: string
   code?: string
   message?: string

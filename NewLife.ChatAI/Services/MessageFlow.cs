@@ -144,7 +144,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
 
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!, userMessage.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!);
 
         // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成）
         var useBackground = backgroundService != null && setting.BackgroundGeneration;
@@ -249,7 +249,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // message_start
         var assistantMessage = flow.AssistantMessage;
-        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!, assistantMessage.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!);
 
         // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成）
         var useBackground = backgroundService != null && setting.BackgroundGeneration;
@@ -374,7 +374,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // message_start
         using var span = tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!, request.ThinkingMode);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!);
 
         // 记录请求选项供 Handler 读取
         if (request.Options is { Count: > 0 })
@@ -993,7 +993,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                             // LlmResult 是给 LLM 历史回放用的，不经过 SSE 前端，暂存到 context.Items
                             if (evt.LlmResult != null)
                                 context.Items[$"ToolCallLlm/{evt.ToolCallId}"] = evt.LlmResult;
-                            yield return ChatStreamEvent.ToolCallDone(evt.ToolCallId, evt.Value, true);
+                            yield return ChatStreamEvent.ToolCallDone(evt.ToolCallId, evt.Value);
                             break;
                         case "error": yield return ChatStreamEvent.ToolCallError(evt.ToolCallId, evt.Value ?? String.Empty); break;
                     }
@@ -1045,7 +1045,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             foreach (var tc in rawToolCalls)
             {
                 var args = tc.Function?.Arguments;
-                yield return ChatStreamEvent.ToolCallDone(tc.Id, args, false);
+                yield return ChatStreamEvent.ToolCallDone(tc.Id, args);
             }
         }
 
@@ -1061,7 +1061,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 仅当 LLM 返回有效 usage 时才发送 MessageDone（含 Token 统计），
         // 避免用全零 UsageDetails 覆盖 context.Usage 中已在流式循环中正确设置的值
-        yield return ChatStreamEvent.MessageDone(lastUsage, finishReason: lastFinishReason);
+        yield return ChatStreamEvent.MessageDone(lastUsage);
     }
 
     /// <summary>非流式 LLM 调用。链路最内层节点（非流式路径专用）：组装过滤器链 + 工具装配 + 单次 GetResponseAsync。

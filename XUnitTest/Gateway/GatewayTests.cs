@@ -354,7 +354,7 @@ public class GatewayTests
     [Fact]
     public void ChatStreamEventFactoryMethodsCreateCorrectTypes()
     {
-        var start = ChatStreamEvent.MessageStart(1001, "gpt-4o", 0);
+        var start = ChatStreamEvent.MessageStart(1001, "gpt-4o");
         Assert.Equal("message_start", start.Type);
         Assert.Equal(1001, start.MessageId);
         Assert.Equal("gpt-4o", start.Model);
@@ -390,9 +390,8 @@ public class GatewayTests
         Assert.Equal("call_001", toolStart.ToolCallId);
         Assert.Equal("get_weather", toolStart.Name);
 
-        var toolDone = ChatStreamEvent.ToolCallDone("call_001", "{\"temp\":25}", true);
+        var toolDone = ChatStreamEvent.ToolCallDone("call_001", "{\"temp\":25}");
         Assert.Equal("tool_call_done", toolDone.Type);
-        Assert.True(toolDone.Success);
 
         var toolError = ChatStreamEvent.ToolCallError("call_001", "服务不可用");
         Assert.Equal("tool_call_error", toolError.Type);
