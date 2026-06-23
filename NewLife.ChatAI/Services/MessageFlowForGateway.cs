@@ -32,7 +32,7 @@ public class MessageFlowForGateway : MessageFlow
 
         // 按来源和链模式从全量 Handler 集合中过滤：
         //   EnableGatewayHandlers=false → 精简链（Core 级处理器：配额、用量等）
-        //   EnableGatewayHandlers=true  → 完整链（含知识进化、记忆图谱等高级能力）
+        //   EnableGatewayHandlers=true  → 完整链（含知识进化、用户记忆等高级能力）
         var allHandlers = services?.GetServices<IChatHandler>() ?? [];
         Chain = ChatHandlerChain.BuildFor(allHandlers, ChatFlowSource.Gateway, setting.EnableGatewayHandlers);
     }
