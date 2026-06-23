@@ -59,6 +59,9 @@ public class ChatStreamEvent
 
     /// <summary>TTS 流式合成总字符数</summary>
     public Int32 TotalChars { get; set; }
+
+    /// <summary>知识引用列表。knowledge_refs 事件专用，JSON 数组 [{"id":1,"title":"xxx"}]</summary>
+    public String? KnowledgeRefs { get; set; }
     #endregion
 
     #region 工厂方法
@@ -117,6 +120,11 @@ public class ChatStreamEvent
     /// <summary>SSE 保活心跳事件。无正式事件推送时每隔一段时间发送，防止反向代理因连接静默而断连</summary>
     /// <returns></returns>
     public static ChatStreamEvent Heartbeat() => new() { Type = "heartbeat" };
+
+    /// <summary>知识引用事件。携带 AI 回复中引用的知识条目元数据</summary>
+    /// <param name="knowledgeRefs">JSON 数组 [{"id":1,"title":"xxx"}]</param>
+    /// <returns></returns>
+    public static ChatStreamEvent KnowledgeRefsEvent(String knowledgeRefs) => new() { Type = "knowledge_refs", KnowledgeRefs = knowledgeRefs };
 
     /// <summary>工具调用开始事件</summary>
     /// <param name="toolCallId">调用编号</param>

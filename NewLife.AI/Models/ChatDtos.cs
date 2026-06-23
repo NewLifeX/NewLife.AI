@@ -83,4 +83,7 @@ public record MessageDto(Int64 Id, Int64 ConversationId, String Role, String Con
 
     /// <summary>本次对话费用（元）</summary>
     public Decimal TotalCost { get; set; }
+
+    /// <summary>知识引用列表。knowledge_refs 事件同款 JSON 数组 [{"id":1,"title":"xxx"}]，历史消息加载时由后端根据 ArticleIds 解析填充</summary>
+    public String? KnowledgeRefs { get; set; }
 }

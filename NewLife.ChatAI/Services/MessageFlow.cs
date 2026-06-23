@@ -969,7 +969,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var emittedToolCallIds = new HashSet<String>(StringComparer.Ordinal);
         var hasToolChatClient = false;
 
-        await foreach (var chunk in streamClient.GetStreamingResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false))
+        var request = ChatRequest.Create(contextMessages, context.Options, stream: true);
+        request["IChatContext"] = context;
+        await foreach (var chunk in streamClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
         {
             // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
             // MessageFlow 只需取最后一次非空 Usage，无需跨 chunk 自行累加
@@ -1086,7 +1088,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var directClient = BuildPipelineClient(rawClient, context);
 
         var sw = Stopwatch.StartNew();
-        var response = ChatResponse.From(await directClient.GetResponseAsync(contextMessages, context.Options, cancellationToken).ConfigureAwait(false));
+        var request = ChatRequest.Create(contextMessages, context.Options, stream: false);
+        request["IChatContext"] = context;
+        var response = ChatResponse.From(await directClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false));
         sw.Stop();
 
         //// 提取系统提示词（首个 system 消息）
