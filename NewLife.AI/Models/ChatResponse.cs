@@ -256,4 +256,5 @@ public class UsageDetails
 /// <param name="ToolCallId">工具调用编号</param>
 /// <param name="Name">工具名称</param>
 /// <param name="Value">事件值。start 时为 Arguments，done 时为 Result，error 时为错误信息</param>
-public record ToolCallEventInfo(String Type, String ToolCallId, String Name, String? Value);
+/// <param name="LlmResult">LLM 摘要。done 事件专用，role=tool 历史回放时优先使用；null 时回退到 Value</param>
+public record ToolCallEventInfo(String Type, String ToolCallId, String Name, String? Value, String? LlmResult = null);

@@ -139,7 +139,7 @@ public class ChatStreamEvent
 
     /// <summary>工具调用完成事件</summary>
     /// <param name="toolCallId">调用编号</param>
-    /// <param name="result">返回结果</param>
+    /// <param name="result">返回结果（前端用户内容）</param>
     /// <param name="success">是否成功</param>
     /// <returns></returns>
     public static ChatStreamEvent ToolCallDone(String toolCallId, String? result, Boolean success) =>

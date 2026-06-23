@@ -97,6 +97,12 @@ public class DbToolProvider(ToolRegistry registry, IChatSetting chatSetting) : I
     async Task<IToolResult> IToolProvider.CallToolAsync(String toolName, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
         var result = await registry.InvokeAsync(toolName, arguments, context, cancellationToken).ConfigureAwait(false);
+
+        // InvokeAsync 已将原始 IToolResult 存入 context.ToolResult（当工具方法返回 IToolResult 时），
+        // 优先返回它以保留 ForUser/ForLlm 受众分离；否则用返回字符串构造 ToolResult
+        if (context?.ToolResult is { } toolResult)
+            return toolResult;
+
         return new ToolResult(result);
     }
 

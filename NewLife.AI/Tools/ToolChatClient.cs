@@ -392,7 +392,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var eventType = toolResult.IsError ? "error" : "done";
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent)]
+                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent, llmContent)]
                 };
             }
 

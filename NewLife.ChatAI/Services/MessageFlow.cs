@@ -687,7 +687,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         {
                             Role = "tool",
                             ToolCallId = tc.Id,
-                            Content = tc.Result ?? String.Empty,
+                            // 优先使用 LLM 摘要（简短，省 token），null 时回退到完整结果
+                            Content = tc.LlmResult ?? tc.Result ?? String.Empty,
                         });
                     }
                     if (!String.IsNullOrEmpty(msg.Content))
@@ -904,7 +905,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         yield return ev;
                         break;
                     case "tool_call_done":
-                        UpdateToolCallStatus(toolCalls, ev.ToolCallId, ToolCallStatus.Done, ev.Result);
+                        // 从 context.Items 读取暂存的 LlmResult（由 InvokeLlmAsync 存入），不经过 SSE 事件
+                        var llmResult = context.Items[$"ToolCallLlm/{ev.ToolCallId}"] as String;
+                        UpdateToolCallStatus(toolCalls, ev.ToolCallId, ToolCallStatus.Done, ev.Result, llmResult);
                         yield return ev;
                         break;
                     case "tool_call_error":
@@ -986,7 +989,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                     switch (evt.Type)
                     {
                         case "start": yield return ChatStreamEvent.ToolCallStart(evt.ToolCallId, evt.Name, evt.Value); break;
-                        case "done": yield return ChatStreamEvent.ToolCallDone(evt.ToolCallId, evt.Value, true); break;
+                        case "done":
+                            // LlmResult 是给 LLM 历史回放用的，不经过 SSE 前端，暂存到 context.Items
+                            if (evt.LlmResult != null)
+                                context.Items[$"ToolCallLlm/{evt.ToolCallId}"] = evt.LlmResult;
+                            yield return ChatStreamEvent.ToolCallDone(evt.ToolCallId, evt.Value, true);
+                            break;
                         case "error": yield return ChatStreamEvent.ToolCallError(evt.ToolCallId, evt.Value ?? String.Empty); break;
                     }
                 }
@@ -1462,14 +1470,15 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="toolCallId">工具调用编号</param>
     /// <param name="status">新状态</param>
     /// <param name="value">结果或错误信息</param>
-    protected static void UpdateToolCallStatus(List<ToolCallDto> collector, String? toolCallId, ToolCallStatus status, String? value)
+    /// <param name="llmResult">LLM 摘要。非 null 时存入 LlmResult 字段，历史回放优先使用</param>
+    protected static void UpdateToolCallStatus(List<ToolCallDto> collector, String? toolCallId, ToolCallStatus status, String? value, String? llmResult = null)
     {
         for (var i = collector.Count - 1; i >= 0; i--)
         {
             if (collector[i].Id == toolCallId)
             {
                 var orig = collector[i];
-                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value, null, null, orig.ContentOffset);
+                collector[i] = new ToolCallDto(orig.Id, orig.Name, status, orig.Arguments, value, llmResult, null, orig.ContentOffset);
                 break;
             }
         }
