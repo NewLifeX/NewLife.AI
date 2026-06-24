@@ -82,7 +82,7 @@ public partial class ChatMessage
     /// <summary>技能列表。本轮激活的技能名称，多个逗号分隔</summary>
     [DisplayName("技能列表")]
     [Description("技能列表。本轮激活的技能名称，多个逗号分隔")]
-    [DataObjectField(false, false, true, 500)]
+    [DataObjectField(false, false, true, 2000)]
     [BindColumn("SkillNames", "技能列表。本轮激活的技能名称，多个逗号分隔", "")]
     public String? SkillNames { get => _SkillNames; set { if (OnPropertyChanging("SkillNames", value)) { _SkillNames = value; OnPropertyChanged("SkillNames"); } } }
 
@@ -90,7 +90,7 @@ public partial class ChatMessage
     /// <summary>工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）</summary>
     [DisplayName("工具列表")]
     [Description("工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）")]
-    [DataObjectField(false, false, true, 500)]
+    [DataObjectField(false, false, true, 2000)]
     [BindColumn("ToolNames", "工具列表。role=user时记录本轮可用工具名（逗号分隔）；role=assistant时记录实际调用的工具名（逗号分隔）", "")]
     public String? ToolNames { get => _ToolNames; set { if (OnPropertyChanging("ToolNames", value)) { _ToolNames = value; OnPropertyChanged("ToolNames"); } } }
 

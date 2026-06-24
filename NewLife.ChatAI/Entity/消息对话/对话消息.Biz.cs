@@ -35,13 +35,13 @@ public partial class ChatMessage : Entity<ChatMessage>, IChatMessage
         // 如果没有脏数据，则不需要进行任何处理
         if (!HasDirty) return true;
 
+        // 超长截断，防止超出数据库字段长度
+        this.TrimExtraLong(_.SkillNames, _.ToolNames);
+
         // 建议先调用基类方法，基类方法会做一些统一处理
         if (!base.Valid(method)) return false;
 
         // 在新插入数据或者修改了指定字段时进行修正
-
-        // 超长截断，防止超出数据库字段长度
-        this.TrimExtraLong(_.SkillNames, _.ToolNames);
 
         // 处理当前已登录用户信息，可以由UserInterceptor拦截器代劳
         /*var user = ManageProvider.User;
