@@ -138,8 +138,57 @@ function fixQuotesInBracketLabels(code: string): string {
  *
  * 不处理顶层的 `{...}`，避免破坏合法的菱形节点语法。
  */
+
+/**
+ * 修复 gantt 图的纯时间 dateFormat（如 HH:mm），Mermaid parser 不接受无日期的纯时间格式。
+ * 自动补虚拟日期 2000-01-01，配合 axisFormat %H:%M 保持界面只显示时间。
+ * 仅处理 gantt 图 + dateFormat 不含 Y/M/D/d 日期组件的情况。
+ */
+function fixGanttTimeFormat(code: string): string {
+  // 仅处理 gantt 图
+  if (!/^\s*gantt\b/m.test(code)) return code
+
+  // 检测 dateFormat 是否只含时间组件（无 Y/M/D/d 等日期组件）
+  const dfMatch = code.match(/^(\s*dateFormat\s+)(.+)$/m)
+  if (!dfMatch) return code
+
+  const fmt = dfMatch[2].trim()
+  if (/[YMDd]/.test(fmt)) return code
+
+  // 替换 dateFormat 为含日期的格式
+  const dummyDate = '2000-01-01'
+  code = code.replace(/^(\s*dateFormat\s+).+$/m, `$1YYYY-MM-DD ${fmt}`)
+
+  // 逐行处理：给任务属性区的裸 HH:MM 值补虚拟日期
+  const lines = code.split('\n')
+  const result: string[] = []
+
+  for (const line of lines) {
+    // 用 lastIndexOf 精准定位任务名与属性的分隔符 " :"
+    const sepIdx = line.lastIndexOf(' :')
+    if (sepIdx < 0) {
+      result.push(line)
+      continue
+    }
+
+    const desc = line.substring(0, sepIdx)
+    const attrs = line.substring(sepIdx + 2)
+
+    // 属性中的裸 HH:MM → 2000-01-01 HH:MM
+    const fixedAttrs = attrs.replace(
+      /\b(\d{1,2}:\d{2})\b/g,
+      (_: string, time: string) => `${dummyDate} ${time}`,
+    )
+
+    result.push(`${desc} : ${fixedAttrs}`)
+  }
+
+  return result.join('\n')
+}
+
 export function normalizeMermaidCode(code: string): string {
-  // 先做正则预处理（顺序：实体还原 → 管道箭头 → 伪指令删除 → dasharray → class colons → invalid props → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
+  // 先做正则预处理（顺序：gantt时间修复 → 实体还原 → 管道箭头 → 伪指令删除 → dasharray → class colons → invalid props → pipe in labels → newlines → br修复 → 引号修复 → 字符扫描）
+  code = fixGanttTimeFormat(code)
   code = fixAmpersandEntities(code)
   code = fixNbspInCode(code)
   code = fixPipeArrowConfusion(code)
