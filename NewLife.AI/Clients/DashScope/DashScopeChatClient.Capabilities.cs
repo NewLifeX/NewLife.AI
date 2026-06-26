@@ -644,6 +644,31 @@ public partial class DashScopeChatClient
         && modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts")
         && modelId.Contains("-realtime", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>判断指定模型是否支持流式语音合成</summary>
+    /// <remarks>
+    /// 支持流式合成的模型类型：
+    /// <list type="bullet">
+    /// <item>CosyVoice 全系列（cosyvoice-*：v2/v3/v3.5）：通过 run-task WebSocket 实现</item>
+    /// <item>Qwen-TTS-Realtime 系列（*-realtime）：通过 session.* WebSocket 实现</item>
+    /// </list>
+    /// 以上两类均需要所在提供商配置了 Organization（业务空间 ID）才能构建 WebSocket 端点。
+    /// </remarks>
+    /// <param name="modelId">模型编码，null 时取客户端默认模型</param>
+    /// <returns>支持流式合成返回 true</returns>
+    public override Boolean SupportsSpeechStreaming(String? modelId)
+    {
+        var id = modelId ?? _options.Model;
+        if (id.IsNullOrEmpty()) return false;
+
+        // CosyVoice 全系列和 Qwen-TTS-Realtime 系列支持 WebSocket 流式合成
+        if (!id.StartsWithIgnoreCase("cosyvoice")
+            && !id.EndsWith("-realtime", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // WebSocket 端点需要 Organization（业务空间 ID）
+        return !_options.Organization.IsNullOrEmpty();
+    }
+
     /// <summary>构建 CosyVoice TTS HTTP API 的 input 参数字典</summary>
     /// <param name="request">语音合成请求</param>
     /// <param name="voice">已解析的音色</param>

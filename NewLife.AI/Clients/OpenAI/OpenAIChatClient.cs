@@ -127,6 +127,11 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     {
         throw new NotSupportedException($"[{nameof(ISpeechClient)}] 流式语音合成暂未实现");
     }
+
+    /// <summary>判断是否支持指定模型的流式语音合成（WebSocket / SSE 逻片式）。默认返回 false，子类按需重写</summary>
+    /// <param name="modelId">要判断的模型编码或 null（将使用当前客户端默认模型）</param>
+    /// <returns>支持流式合成返回 true</returns>
+    public virtual Boolean SupportsSpeechStreaming(String? modelId) => false;
     #endregion
 
     #region 文生视频
