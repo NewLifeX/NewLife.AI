@@ -21,6 +21,18 @@ namespace NewLife.AI.Clients.DashScope;
 // ===== TTS 语音合成模型 =====
 [AiClientModel("cosyvoice-v3-flash", "CosyVoice V3 Flash", Audio = true, FunctionCalling = false)]
 [AiClientModel("cosyvoice-v3-plus", "CosyVoice V3 Plus", Audio = true, FunctionCalling = false)]
+// Qwen-TTS 非实时 HTTP 合成（稳定版别名）
+[AiClientModel("qwen-tts", "千问 TTS", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-instruct-flash", "千问3 TTS Instruct Flash", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vd", "千问3 TTS VD", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vc", "千问3 TTS VC", Audio = true, FunctionCalling = false)]
+// Qwen-TTS-Realtime WebSocket 实时合成（稳定版别名）
+[AiClientModel("qwen-tts-realtime", "千问 TTS Realtime", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-instruct-flash-realtime", "千问3 TTS Instruct Flash Realtime", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vd-realtime", "千问3 TTS VD Realtime", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vc-realtime", "千问3 TTS VC Realtime", Audio = true, FunctionCalling = false)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
 [AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true)]
@@ -99,7 +111,7 @@ public partial class DashScopeChatClient
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // 非对话模型：嵌入、重排序、语音识别/合成等
+        // 非对话模型：嵌入、重排序、语音识别等
         if (modelId.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase) ||
@@ -108,12 +120,16 @@ public partial class DashScopeChatClient
             modelId.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("sensevoice", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWithIgnoreCase("qwen3-asr", "qwen3-tts", "qwen-tts", "qwen-voice"))
+            modelId.StartsWithIgnoreCase("qwen3-asr", "qwen-voice"))
             return new AiProviderCapabilities(false, false, false, false);
 
-    // TTS 语音合成模型：cosyvoice* 支持音频能力
-    if (modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase))
-        return new AiProviderCapabilities(false, false, false, true);
+        // Qwen-TTS 语音合成模型：包含非实时和 Realtime WebSocket 变体
+        if (modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts"))
+            return new AiProviderCapabilities(false, false, false, true);
+
+        // TTS 语音合成模型：cosyvoice* 支持音频能力
+        if (modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(false, false, false, true);
 
         var thinking = false;
         var vision = false;

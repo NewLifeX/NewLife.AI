@@ -518,69 +518,80 @@ public partial class DashScopeChatClient
     #endregion
 
     #region 语音合成（TTS）
-    /// <summary>语音合成（TTS）。DashScope CosyVoice 使用原生端点，返回音频字节流</summary>
+    /// <summary>语音合成（TTS）。根据模型前缀自动路由：CosyVoice 系列使用原生端点；Qwen-TTS 系列同样使用原生 TTS 端点</summary>
     /// <remarks>
-    /// 原生端点：POST /api/v1/services/audio/tts/SpeechSynthesizer<br/>
-    /// 请求格式：{"model":"cosyvoice-v3.5-flash","input":{"text":"...","voice":"...","format":"wav"}}<br/>
+    /// 统一端点：POST /api/v1/services/audio/tts/SpeechSynthesizer<br/>
+    /// 请求格式：{"model":"...","input":{"text":"...","voice":"...","format":"wav"}}<br/>
     /// 响应格式：JSON → output.audio.url → 下载音频字节流<br/>
-    /// 官方文档：https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api
+    /// CosyVoice 文档：https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api<br/>
+    /// Qwen-TTS 文档：https://help.aliyun.com/zh/model-studio/qwen-tts-api
     /// </remarks>
     /// <param name="request">语音合成请求</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>音频字节流</returns>
     public override async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
     {
-        // DashScope CosyVoice TTS 仅支持原生端点，始终使用原生路径，与全局端点配置解耦
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
+
         var nativeUrl = GetNativeBaseUrl() + "/services/audio/tts/SpeechSynthesizer";
 
-        var format = "wav";
-        if (request.ResponseFormat != null)
+        var format = request.ResponseFormat switch
         {
-            format = request.ResponseFormat switch
-            {
-                "mp3" => "mp3",
-                "wav" => "wav",
-                "opus" => "opus",
-                "pcm" => "pcm",
-                _ => request.ResponseFormat,
-            };
-        }
+            "mp3" => "mp3",
+            "opus" => "opus",
+            "pcm" => "pcm",
+            "wav" or null => "wav",
+            var f => f,
+        };
 
-        // 先确定模型，再决定音色映射策略（仅对有系统音色的模型映射 OAPI 音色）
         var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
 
-        // OpenAI 兼容音色映射为 DashScope 系统音色。仅当模型有系统预设音色时才映射，
-        // 避免 v3-plus / v3.5 等仅支持声音复刻的模型被映射到无效的系统音色
-        var voice = request.Voice;
-        if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
+        String voice;
+        Dictionary<String, Object> input;
+
+        if (IsQwenTtsModel(modelCode))
         {
-            if (CosyVoiceVoiceList.GetVoices(modelCode).Count > 0)
-                voice = "longxiaochun_v3";
+            // Qwen-TTS 系列：默认音色 Cherry，OAPI 兼容音色映射到 Cherry
+            voice = request.Voice;
+            if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
+            {
+                if (QwenTtsVoiceList.GetVoices(modelCode).Count > 0)
+                    voice = "Cherry";
+            }
+            if (!QwenTtsVoiceList.IsValidVoice(modelCode, voice))
+                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+            input = BuildQwenTtsInput(request, voice, format, request.SampleRate ?? 24000);
         }
-
-        // 校验音色是否合法
-        if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
-            throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
-
-        var sampleRate = request.SampleRate ?? 24000;
+        else
+        {
+            // CosyVoice 系列：默认音色 longxiaochun_v3，OAPI 兼容音色映射到 longxiaochun_v3
+            voice = request.Voice;
+            if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
+            {
+                if (CosyVoiceVoiceList.GetVoices(modelCode).Count > 0)
+                    voice = "longxiaochun_v3";
+            }
+            if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
+                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
+            input = BuildCosyVoiceTtsInput(request, voice, format, request.SampleRate ?? 24000);
+        }
 
         var body = new Dictionary<String, Object?>
         {
             ["model"] = modelCode,
-            ["input"] = BuildTtsInput(request, voice, format, sampleRate),
+            ["input"] = input,
         };
 
-        using var span = Tracer?.NewSpan("ai:DashScopeTts", new { model = body["model"], format, voice = request.Voice });
+        using var span = Tracer?.NewSpan("ai:DashScopeTts", new { model = modelCode, format, voice = request.Voice });
         try
         {
             var json = await PostAsync(nativeUrl, body, null, _options, cancellationToken).ConfigureAwait(false);
 
-            // 解析响应获取音频 URL
             var dic = JsonParser.Decode(json);
             if (dic == null)
                 throw new InvalidOperationException("无法解析 DashScope TTS 响应");
 
-            // 检查错误码
             var code = dic["code"] as String;
             if (!String.IsNullOrEmpty(code))
             {
@@ -588,23 +599,24 @@ public partial class DashScopeChatClient
                 throw new HttpRequestException($"[DashScope] TTS 错误 {code}: {message}");
             }
 
-            var output = dic["output"] as IDictionary<String, Object>;
-            if (output == null)
-                throw new InvalidOperationException("DashScope TTS 响应缺少 output 字段");
-
-            var audio = output["audio"] as IDictionary<String, Object>;
-            if (audio == null)
-                throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio 字段");
-
+            var output = dic["output"] as IDictionary<String, Object>
+                ?? throw new InvalidOperationException("DashScope TTS 响应缺少 output 字段");
+            var audio = output["audio"] as IDictionary<String, Object>
+                ?? throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio 字段");
             var audioUrl = audio["url"] as String;
             if (String.IsNullOrWhiteSpace(audioUrl))
                 throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio.url");
 
-            // 解析字符用量
+            // 解析用量：Qwen-TTS 用 total_tokens，CosyVoice 用 characters，两者兼容
             if (dic["usage"] is IDictionary<String, Object> usage)
-                request.CharactersUsed = usage["characters"].ToInt();
+            {
+                var chars = 0;
+                if (chars == 0 && usage.TryGetValue("total_tokens", out var tt)) chars = tt.ToInt();
+                if (chars == 0 && usage.TryGetValue("characters", out var ch)) chars = ch.ToInt();
+                if (chars == 0 && usage.TryGetValue("input_characters", out var ic)) chars = ic.ToInt();
+                request.CharactersUsed = chars;
+            }
 
-            // 从 URL 下载音频字节流
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 #if NET5_0_OR_GREATER
             var audioBytes = await httpClient.GetByteArrayAsync(audioUrl, cancellationToken).ConfigureAwait(false);
@@ -620,13 +632,25 @@ public partial class DashScopeChatClient
         }
     }
 
+    /// <summary>判断是否为 Qwen-TTS 非实时 HTTP 合成模型（qwen-tts* / qwen3-tts*，不含 -realtime）</summary>
+    private static Boolean IsQwenTtsModel(String modelId) =>
+        !modelId.IsNullOrEmpty()
+        && modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts")
+        && !modelId.Contains("-realtime", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>判断是否为 Qwen-TTS-Realtime WebSocket 实时合成模型（含 -realtime 后缀）</summary>
+    private static Boolean IsQwenTtsRealtimeModel(String modelId) =>
+        !modelId.IsNullOrEmpty()
+        && modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts")
+        && modelId.Contains("-realtime", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>构建 CosyVoice TTS HTTP API 的 input 参数字典</summary>
     /// <param name="request">语音合成请求</param>
     /// <param name="voice">已解析的音色</param>
     /// <param name="format">音频格式</param>
     /// <param name="sampleRate">采样率</param>
     /// <returns>input 字典</returns>
-    private static Dictionary<String, Object> BuildTtsInput(SpeechRequest request, String voice, String format, Int32 sampleRate)
+    private static Dictionary<String, Object> BuildCosyVoiceTtsInput(SpeechRequest request, String voice, String format, Int32 sampleRate)
     {
         var input = new Dictionary<String, Object>
         {
@@ -651,7 +675,40 @@ public partial class DashScopeChatClient
         return input;
     }
 
-    /// <summary>流式语音合成。通过 CosyVoice WebSocket 实现边合成边返回音频分片，支持边生成边播放</summary>
+    /// <summary>构建 Qwen-TTS HTTP API 的 input 参数字典</summary>
+    /// <param name="request">语音合成请求</param>
+    /// <param name="voice">已解析的音色</param>
+    /// <param name="format">音频格式</param>
+    /// <param name="sampleRate">采样率</param>
+    /// <returns>input 字典</returns>
+    private static Dictionary<String, Object> BuildQwenTtsInput(SpeechRequest request, String voice, String format, Int32 sampleRate)
+    {
+        var input = new Dictionary<String, Object>
+        {
+            ["text"] = request.Input,
+            ["voice"] = voice,
+            ["format"] = format,
+            ["sample_rate"] = sampleRate,
+        };
+
+        // 语速倍率（与 CosyVoice 相同参数名）
+        if (request.Speed is > 0 and not 1.0)
+            input["rate"] = request.Speed;
+
+        // Qwen-TTS 特有参数：通过 request.Items 字典传入
+        var languageType = request["language_type"] as String;
+        if (!languageType.IsNullOrEmpty())
+            input["language_type"] = languageType!;
+
+        // Qwen3-TTS-Instruct-Flash 指令控制（通过指令自然语言控制语音表现力）
+        var instructions = request["instructions"] as String;
+        if (!instructions.IsNullOrEmpty())
+            input["instructions"] = instructions!;
+
+        return input;
+    }
+
+    /// <summary>流式语音合成。根据模型自动路由：CosyVoice 使用 run-task/continue-task WebSocket 协议；Qwen-TTS-Realtime 使用 session.*/input_text_buffer.* 实时协议</summary>
     /// <remarks>
     /// WebSocket 端点：wss://dashscope.aliyuncs.com/api-ws/v1/inference<br/>
     /// 流程：握手 → run-task → task-started → continue-task（分片发文本）→ result-generated + binary frame（音频）→ finish-task → task-finished<br/>
@@ -665,54 +722,84 @@ public partial class DashScopeChatClient
         if (request == null) throw new ArgumentNullException(nameof(request));
         if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
 
-        // 解析格式
         var format = request.ResponseFormat ?? "mp3";
         format = format switch { "mp3" => "mp3", "wav" => "wav", "opus" => "opus", "pcm" => "pcm", _ => format };
 
-        // 确定模型（CosyVoice 全系列均支持 WebSocket 流式合成）
         var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
-
-        // OpenAI 兼容音色映射为 DashScope 系统音色。仅当模型有系统预设音色时才映射，
-        // v3.5 系列无系统音色，直接透传自定义音色 ID
-        var voice = request.Voice;
-        if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
-        {
-            if (CosyVoiceVoiceList.GetVoices(modelCode).Count > 0)
-                voice = "longxiaochun_v3";
-        }
-
-        // 校验音色是否合法
-        if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
-            throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
-
-        var sampleRate = request.SampleRate ?? 24000;
-        var rate = request.Speed ?? 1.0;
-
-        // 连接 WebSocket
-        using var ws = new ClientWebSocket();
-        if (!_options.ApiKey.IsNullOrEmpty())
-            ws.Options.SetRequestHeader("Authorization", $"Bearer {_options.ApiKey}");
-        ws.Options.SetRequestHeader("user-agent", "NewLife.AI");
-
-        var taskId = Guid.NewGuid().ToString("D");
-        using var span = Tracer?.NewSpan("ai:DashScopeTtsStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
-
-        // 收集音频分片（不能用 yield return 在 try-catch 内，先收集再输出）
         var audioChunks = new List<Byte[]>();
-        try
+
+        if (IsQwenTtsRealtimeModel(modelCode))
         {
-            await RunWebSocketTtsAsync(ws, taskId, modelCode, voice, format, sampleRate, rate, request, audioChunks, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            span?.SetError(ex, null);
-            throw;
-        }
-        finally
-        {
-            if (ws.State == WebSocketState.Open)
+            // Qwen-TTS-Realtime：session.*/input_text_buffer.* 协议，音频在 response.audio.delta JSON 事件内（base64）
+            var voice = request.Voice;
+            if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
             {
-                try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
+                if (QwenTtsVoiceList.GetVoices(modelCode).Count > 0)
+                    voice = "Cherry";
+            }
+            if (!QwenTtsVoiceList.IsValidVoice(modelCode, voice))
+                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+
+            using var ws = new ClientWebSocket();
+            if (!_options.ApiKey.IsNullOrEmpty())
+                ws.Options.SetRequestHeader("Authorization", $"Bearer {_options.ApiKey}");
+            ws.Options.SetRequestHeader("user-agent", "NewLife.AI");
+
+            using var span = Tracer?.NewSpan("ai:QwenTtsRealtimeStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
+            try
+            {
+                await RunQwenTtsRealtimeWebSocketAsync(ws, modelCode, voice, format, request, audioChunks, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                span?.SetError(ex, null);
+                throw;
+            }
+            finally
+            {
+                if (ws.State == WebSocketState.Open)
+                {
+                    try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
+                }
+            }
+        }
+        else
+        {
+            // CosyVoice：run-task/continue-task 协议，音频以独立 binary frame 传输
+            var voice = request.Voice;
+            if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
+            {
+                if (CosyVoiceVoiceList.GetVoices(modelCode).Count > 0)
+                    voice = "longxiaochun_v3";
+            }
+            if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
+                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+
+            var sampleRate = request.SampleRate ?? 24000;
+            var rate = request.Speed ?? 1.0;
+
+            using var ws = new ClientWebSocket();
+            if (!_options.ApiKey.IsNullOrEmpty())
+                ws.Options.SetRequestHeader("Authorization", $"Bearer {_options.ApiKey}");
+            ws.Options.SetRequestHeader("user-agent", "NewLife.AI");
+
+            var taskId = Guid.NewGuid().ToString("D");
+            using var span = Tracer?.NewSpan("ai:DashScopeTtsStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
+            try
+            {
+                await RunWebSocketTtsAsync(ws, taskId, modelCode, voice, format, sampleRate, rate, request, audioChunks, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                span?.SetError(ex, null);
+                throw;
+            }
+            finally
+            {
+                if (ws.State == WebSocketState.Open)
+                {
+                    try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
+                }
             }
         }
 
@@ -735,6 +822,162 @@ public partial class DashScopeChatClient
             throw new InvalidOperationException("CosyVoice WebSocket 实时语音合成需北京地域 MaaS 业务空间。请在 AiClientOptions.Organization 中设置工作空间 ID（阿里云百炼控制台 → 业务空间 → 复制空间ID）");
 
         return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference";
+    }
+
+    /// <summary>构建 Qwen-TTS-Realtime WebSocket 连接地址。模型通过 URL 查询参数指定</summary>
+    /// <remarks>
+    /// 官方文档：wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model={modelCode}<br/>
+    /// 与 CosyVoice 不同，模型通过 URL query string 传递，不在消息体内。
+    /// </remarks>
+    private String BuildQwenTtsRealtimeWebSocketUrl(String modelCode)
+    {
+        if (_options.Organization.IsNullOrEmpty())
+            throw new InvalidOperationException("Qwen-TTS Realtime WebSocket 实时语音合成需北京地域 MaaS 业务空间。请在 AiClientOptions.Organization 中设置工作空间 ID");
+
+        return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model={Uri.EscapeDataString(modelCode)}";
+    }
+
+    /// <summary>执行 Qwen-TTS-Realtime WebSocket 全流程</summary>
+    /// <remarks>
+    /// 流程：连接 → session.created → session.update → session.updated → input_text_buffer.append（分片）
+    /// → input_text_buffer.commit → input_text_buffer.committed → response.created → response.audio.delta（base64 音频）
+    /// → response.done → session.finish → session.finished
+    /// </remarks>
+    private async Task RunQwenTtsRealtimeWebSocketAsync(ClientWebSocket ws, String modelCode, String voice, String format, SpeechRequest request, List<Byte[]> audioChunks, CancellationToken cancellationToken)
+    {
+        var wsUrl = BuildQwenTtsRealtimeWebSocketUrl(modelCode);
+        await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
+
+        // 1. 等待 session.created
+        var sessionCreated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+        if (GetEventType(sessionCreated) != "session.created")
+            throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.created，实际收到 {GetEventType(sessionCreated) ?? "(null/Close)"}");
+
+        // 2. 发送 session.update 配置音色/格式/模式
+        var sampleRate = request.SampleRate ?? 24000;
+        var mode = request["mode"] as String ?? "commit";
+        var languageType = request["language_type"] as String;
+        var instructions = request["instructions"] as String;
+        var sessionUpdateId = Guid.NewGuid().ToString("N")[..20];
+
+        var sessionConfig = new Dictionary<String, Object>
+        {
+            ["voice"] = voice,
+            ["mode"] = mode,
+            ["response_format"] = format,
+            ["sample_rate"] = sampleRate,
+        };
+        if (!languageType.IsNullOrEmpty()) sessionConfig["language_type"] = languageType!;
+        if (!instructions.IsNullOrEmpty()) sessionConfig["instructions"] = instructions!;
+
+        await SendRealtimeEventAsync(ws, new
+        {
+            event_id = sessionUpdateId,
+            type = "session.update",
+            session = sessionConfig,
+        }, cancellationToken).ConfigureAwait(false);
+
+        // 3. 等待 session.updated
+        var sessionUpdated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+        if (GetEventType(sessionUpdated) != "session.updated")
+            throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.updated，实际收到 {GetEventType(sessionUpdated) ?? "(null/Close)"}");
+
+        // 4. 分批发送文本到缓冲区（每片 ≤500 字符）
+        var text = request.Input;
+        var maxChunkLen = 500;
+        var offset = 0;
+        while (offset < text.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var chunkLen = Math.Min(maxChunkLen, text.Length - offset);
+            if (offset + chunkLen < text.Length && Char.IsHighSurrogate(text[offset + chunkLen - 1]))
+                chunkLen--;
+            var chunk = text.Substring(offset, chunkLen);
+            offset += chunkLen;
+
+            await SendRealtimeEventAsync(ws, new
+            {
+                event_id = Guid.NewGuid().ToString("N")[..20],
+                type = "input_text_buffer.append",
+                text = chunk,
+            }, cancellationToken).ConfigureAwait(false);
+        }
+
+        // 5. 提交文本缓冲区触发合成（commit 模式必须显式提交）
+        await SendRealtimeEventAsync(ws, new
+        {
+            event_id = Guid.NewGuid().ToString("N")[..20],
+            type = "input_text_buffer.commit",
+        }, cancellationToken).ConfigureAwait(false);
+
+        // 6. 接收音频事件流，直到 response.done
+        while (ws.State == WebSocketState.Open)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var ev = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+            if (ev == null) break;
+
+            var evType = GetEventType(ev);
+            switch (evType)
+            {
+                case "response.audio.delta":
+                    // 音频数据在 JSON 文本帧内以 base64 编码（不同于 CosyVoice 的 binary frame）
+                    if (ev.TryGetValue("delta", out var deltaVal) && deltaVal is String base64Audio && base64Audio.Length > 0)
+                        audioChunks.Add(Convert.FromBase64String(base64Audio));
+                    break;
+
+                case "response.done":
+                    // 提取用量（usage.characters 或 usage.total_tokens）
+                    if (ev.TryGetValue("response", out var respObj) && respObj is IDictionary<String, Object?> resp
+                        && resp.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object?> usageDic)
+                    {
+                        var chars = 0;
+                        if (chars == 0 && usageDic.TryGetValue("characters", out var uc)) chars = uc.ToInt();
+                        if (chars == 0 && usageDic.TryGetValue("total_tokens", out var ut)) chars = ut.ToInt();
+                        request.CharactersUsed = chars;
+                    }
+                    break;
+
+                case "session.finished":
+                    return;
+
+                case "error":
+                    var errMsg = "未知错误";
+                    if (ev.TryGetValue("error", out var errObj) && errObj is IDictionary<String, Object?> errDic
+                        && errDic.TryGetValue("message", out var em))
+                        errMsg = em as String ?? errMsg;
+                    throw new InvalidOperationException($"Qwen-TTS Realtime 错误: {errMsg}");
+
+                default:
+                    // input_text_buffer.committed / response.created / response.output_item.added / response.content_part.*  等中间事件，忽略继续
+                    break;
+            }
+
+            // response.done 收到后发 session.finish，然后等 session.finished
+            if (evType == "response.done")
+            {
+                await SendRealtimeEventAsync(ws, new
+                {
+                    event_id = Guid.NewGuid().ToString("N")[..20],
+                    type = "session.finish",
+                }, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>发送 Qwen-TTS Realtime JSON 事件帧</summary>
+    private async Task SendRealtimeEventAsync(ClientWebSocket ws, Object eventObj, CancellationToken cancellationToken)
+    {
+        var json = JsonHost.Write(eventObj, JsonOptions) ?? "{}";
+        var bytes = Encoding.UTF8.GetBytes(json);
+        await ws.SendAsync(new ArraySegment<Byte>(bytes), WebSocketMessageType.Text, true, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>从事件字典中提取 type 字段</summary>
+    private static String? GetEventType(IDictionary<String, Object?>? dic)
+    {
+        if (dic == null) return null;
+        return dic.TryGetValue("type", out var t) ? t as String : null;
     }
 
     /// <summary>执行 CosyVoice WebSocket TTS 全流程，将音频分片收集到 audioChunks</summary>

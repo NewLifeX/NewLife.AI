@@ -69,6 +69,21 @@ public class SpeechRequest
 
     /// <summary>本次合成消耗的字符数。由 SpeechAsync 回填，供上层用量追踪</summary>
     public Int32 CharactersUsed { get; set; }
+
+    /// <summary>扩展属性字典。用于传递服务商特有参数，如 DashScope 的 language_type / instructions / mode</summary>
+    public IDictionary<String, Object?>? Items { get; set; }
+
+    /// <summary>按键获取或设置扩展属性</summary>
+    /// <param name="key">属性键名</param>
+    public Object? this[String key]
+    {
+        get => Items?.TryGetValue(key, out var v) == true ? v : null;
+        set
+        {
+            Items ??= new Dictionary<String, Object?>();
+            Items[key] = value;
+        }
+    }
 }
 
 /// <summary>图像编辑请求。对应 OpenAI /v1/images/edits（multipart/form-data）接口参数，以及 DashScope 原生多模态图像编辑接口参数</summary>

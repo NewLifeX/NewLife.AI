@@ -1,0 +1,74 @@
+{
+  "models": [
+    {
+      "code": "qwen-tts",
+      "name": "千问 TTS",
+      "voices": [
+        { "id": "Cherry", "name": "Cherry", "description": "温柔知性女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Stella", "name": "Stella", "description": "活泼阳光女声", "age": "20~25岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Brendan", "name": "Brendan", "description": "成熟稳重男声", "age": "30~40岁", "language": "zh-CN,en", "scenario": "通用", "gender": "male" },
+        { "id": "Ethan", "name": "Ethan", "description": "磁性睿智男声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "通用", "gender": "male" },
+        { "id": "Serena", "name": "Serena", "description": "优雅平静女声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Aisha", "name": "Aisha", "description": "柔和细腻女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" }
+      ]
+    },
+    {
+      "code": "qwen3-tts-flash",
+      "name": "千问3 TTS Flash",
+      "voices": [
+        { "id": "Cherry", "name": "Cherry", "description": "温柔知性女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Stella", "name": "Stella", "description": "活泼阳光女声", "age": "20~25岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Brendan", "name": "Brendan", "description": "成熟稳重男声", "age": "30~40岁", "language": "zh-CN,en", "scenario": "通用", "gender": "male" },
+        { "id": "Ethan", "name": "Ethan", "description": "磁性睿智男声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "通用", "gender": "male" },
+        { "id": "Serena", "name": "Serena", "description": "优雅平静女声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Aisha", "name": "Aisha", "description": "柔和细腻女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" }
+      ]
+    },
+    {
+      "code": "qwen3-tts-instruct-flash",
+      "name": "千问3 TTS Instruct Flash",
+      "voices": [
+        { "id": "Cherry", "name": "Cherry", "description": "温柔知性女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Stella", "name": "Stella", "description": "活泼阳光女声", "age": "20~25岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Brendan", "name": "Brendan", "description": "成熟稳重男声", "age": "30~40岁", "language": "zh-CN,en", "scenario": "通用", "gender": "male" },
+        { "id": "Ethan", "name": "Ethan", "description": "磁性睿智男声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "通用", "gender": "male" },
+        { "id": "Serena", "name": "Serena", "description": "优雅平静女声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" },
+        { "id": "Aisha", "name": "Aisha", "description": "柔和细腻女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "通用", "gender": "female" }
+      ]
+    },
+    {
+      "code": "qwen-tts-realtime",
+      "name": "千问 TTS Realtime",
+      "voices": [
+        { "id": "Cherry", "name": "Cherry", "description": "温柔知性女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Stella", "name": "Stella", "description": "活泼阳光女声", "age": "20~25岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Brendan", "name": "Brendan", "description": "成熟稳重男声", "age": "30~40岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "male" },
+        { "id": "Ethan", "name": "Ethan", "description": "磁性睿智男声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "male" },
+        { "id": "Serena", "name": "Serena", "description": "优雅平静女声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Aisha", "name": "Aisha", "description": "柔和细腻女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" }
+      ]
+    },
+    {
+      "code": "qwen3-tts-flash-realtime",
+      "name": "千问3 TTS Flash Realtime",
+      "voices": [
+        { "id": "Cherry", "name": "Cherry", "description": "温柔知性女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Stella", "name": "Stella", "description": "活泼阳光女声", "age": "20~25岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Brendan", "name": "Brendan", "description": "成熟稳重男声", "age": "30~40岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "male" },
+        { "id": "Ethan", "name": "Ethan", "description": "磁性睿智男声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "male" },
+        { "id": "Serena", "name": "Serena", "description": "优雅平静女声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Aisha", "name": "Aisha", "description": "柔和细腻女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" }
+      ]
+    },
+    {
+      "code": "qwen3-tts-instruct-flash-realtime",
+      "name": "千问3 TTS Instruct Flash Realtime",
+      "voices": [
+        { "id": "Cherry", "name": "Cherry", "description": "温柔知性女声", "age": "20~30岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Stella", "name": "Stella", "description": "活泼阳光女声", "age": "20~25岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "female" },
+        { "id": "Brendan", "name": "Brendan", "description": "成熟稳重男声", "age": "30~40岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "male" },
+        { "id": "Ethan", "name": "Ethan", "description": "磁性睿智男声", "age": "25~35岁", "language": "zh-CN,en", "scenario": "实时合成", "gender": "male" }
+      ]
+    }
+  ]
+}
