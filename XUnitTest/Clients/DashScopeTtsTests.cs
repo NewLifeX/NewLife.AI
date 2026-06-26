@@ -28,11 +28,13 @@ namespace XUnitTest.Clients;
 public class DashScopeTtsTests
 {
     private readonly String _apiKey;
+    private readonly String? _organization;
 
     public DashScopeTtsTests()
     {
         var cfg = LoadConfig();
         _apiKey = cfg?.ApiKey ?? "";
+        _organization = cfg?.Organization;
 
         var envKey = Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
         if (!envKey.IsNullOrEmpty()) _apiKey = envKey;
@@ -97,6 +99,7 @@ public class DashScopeTtsTests
     private AiClientOptions CreateOptions() => new()
     {
         ApiKey = _apiKey,
+        Organization = _organization,
     };
 
     /// <summary>确保已配置可用 ApiKey。未配置时跳过依赖真实服务的集成测试</summary>

@@ -518,11 +518,13 @@ public partial class DashScopeChatClient
     #endregion
 
     #region 语音合成（TTS）
-    /// <summary>语音合成（TTS）。根据模型前缀自动路由：CosyVoice 系列使用原生端点；Qwen-TTS 系列同样使用原生 TTS 端点</summary>
+    /// <summary>语音合成（TTS）。根据模型前缀自动路由：CosyVoice 系列走 SpeechSynthesizer 端点；Qwen-TTS 系列走 multimodal-generation 端点</summary>
     /// <remarks>
-    /// 统一端点：POST /api/v1/services/audio/tts/SpeechSynthesizer<br/>
-    /// 请求格式：{"model":"...","input":{"text":"...","voice":"...","format":"wav"}}<br/>
-    /// 响应格式：JSON → output.audio.url → 下载音频字节流<br/>
+    /// CosyVoice 端点：POST /api/v1/services/audio/tts/SpeechSynthesizer<br/>
+    /// 请求格式：{"model":"...","input":{"text":"...","voice":"...","format":"wav","sample_rate":24000}}<br/>
+    /// Qwen-TTS 端点：POST /api/v1/services/aigc/multimodal-generation/generation<br/>
+    /// 请求格式：{"model":"...","input":{"text":"...","voice":"..."},"parameters":{}}<br/>
+    /// 两者响应相同：JSON → output.audio.url → 下载音频字节流<br/>
     /// CosyVoice 文档：https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api<br/>
     /// Qwen-TTS 文档：https://help.aliyun.com/zh/model-studio/qwen-tts-api
     /// </remarks>
@@ -533,8 +535,6 @@ public partial class DashScopeChatClient
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
         if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
-
-        var nativeUrl = GetNativeBaseUrl() + "/services/audio/tts/SpeechSynthesizer";
 
         var format = request.ResponseFormat switch
         {
@@ -549,10 +549,13 @@ public partial class DashScopeChatClient
 
         String voice;
         Dictionary<String, Object> input;
+        String ttsUrl;
+        Dictionary<String, Object?> body;
 
         if (IsQwenTtsModel(modelCode))
         {
-            // Qwen-TTS 系列：默认音色 Cherry，OAPI 兼容音色映射到 Cherry
+            // Qwen-TTS 系列：走 multimodal-generation 端点，默认音色 Cherry
+            ttsUrl = GetNativeBaseUrl() + "/services/aigc/multimodal-generation/generation";
             voice = request.Voice;
             if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
             {
@@ -562,10 +565,17 @@ public partial class DashScopeChatClient
             if (!QwenTtsVoiceList.IsValidVoice(modelCode, voice))
                 throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
             input = BuildQwenTtsInput(request, voice, format, request.SampleRate ?? 24000);
+            body = new Dictionary<String, Object?>
+            {
+                ["model"] = modelCode,
+                ["input"] = input,
+                ["parameters"] = new Dictionary<String, Object>(),  // Qwen-TTS 必须携带空 parameters
+            };
         }
         else
         {
-            // CosyVoice 系列：默认音色 longxiaochun_v3，OAPI 兼容音色映射到 longxiaochun_v3
+            // CosyVoice 系列：走 SpeechSynthesizer 端点，默认音色 longxiaochun_v3
+            ttsUrl = GetNativeBaseUrl() + "/services/audio/tts/SpeechSynthesizer";
             voice = request.Voice;
             if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
             {
@@ -575,18 +585,17 @@ public partial class DashScopeChatClient
             if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
                 throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
             input = BuildCosyVoiceTtsInput(request, voice, format, request.SampleRate ?? 24000);
+            body = new Dictionary<String, Object?>
+            {
+                ["model"] = modelCode,
+                ["input"] = input,
+            };
         }
-
-        var body = new Dictionary<String, Object?>
-        {
-            ["model"] = modelCode,
-            ["input"] = input,
-        };
 
         using var span = Tracer?.NewSpan("ai:DashScopeTts", new { model = modelCode, format, voice = request.Voice });
         try
         {
-            var json = await PostAsync(nativeUrl, body, null, _options, cancellationToken).ConfigureAwait(false);
+            var json = await PostAsync(ttsUrl, body, null, _options, cancellationToken).ConfigureAwait(false);
 
             var dic = JsonParser.Decode(json);
             if (dic == null)
@@ -701,10 +710,14 @@ public partial class DashScopeChatClient
     }
 
     /// <summary>构建 Qwen-TTS HTTP API 的 input 参数字典</summary>
+    /// <remarks>
+    /// Qwen-TTS 与 CosyVoice 参数不同：Qwen-TTS 仅支持 text / voice / language_type，不支持 format / sample_rate。
+    /// 携带 CosyVoice 专属参数会导致 DashScope 路由层误判模型类型，返回 url error。
+    /// </remarks>
     /// <param name="request">语音合成请求</param>
     /// <param name="voice">已解析的音色</param>
-    /// <param name="format">音频格式</param>
-    /// <param name="sampleRate">采样率</param>
+    /// <param name="format">音频格式（Qwen-TTS 不支持，忽略）</param>
+    /// <param name="sampleRate">采样率（Qwen-TTS 不支持，忽略）</param>
     /// <returns>input 字典</returns>
     private static Dictionary<String, Object> BuildQwenTtsInput(SpeechRequest request, String voice, String format, Int32 sampleRate)
     {
@@ -712,11 +725,12 @@ public partial class DashScopeChatClient
         {
             ["text"] = request.Input,
             ["voice"] = voice,
-            ["format"] = format,
-            ["sample_rate"] = sampleRate,
         };
 
-        // 语速倍率（与 CosyVoice 相同参数名）
+        // Qwen-TTS 不支持 format/sample_rate 参数，仅 CosyVoice 支持
+        // 这些参数会误导 DashScope 路由层将请求识别为 CosyVoice 类型，导致 url error
+
+        // 语速倍率
         if (request.Speed is > 0 and not 1.0)
             input["rate"] = request.Speed;
 

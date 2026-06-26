@@ -33,11 +33,22 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     protected virtual String CompatiblePath => "/compatible-mode";
 
     /// <summary>从配置地址中提取 scheme+host，用于构建完整 API 地址</summary>
+    /// <remarks>
+    /// 优先使用显式配置的 Endpoint；未配置时，若已设置 Organization（百炼业务空间 ID），
+    /// 使用 MaaS 专属域名 https://{Organization}.cn-beijing.maas.aliyuncs.com；
+    /// 否则回退到公共域名 https://dashscope.aliyuncs.com。
+    /// Qwen-TTS 系列模型必须使用 MaaS 专属域名才能正常调用。
+    /// </remarks>
     private String GetHost()
     {
         var endpoint = _options.Endpoint;
         if (!endpoint.IsNullOrWhiteSpace() && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
             return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+
+        // 已配置业务空间 ID 时使用 MaaS 专属域名（Qwen-TTS 必须，CosyVoice 亦适用）
+        if (!_options.Organization.IsNullOrEmpty())
+            return $"https://{_options.Organization}.cn-beijing.maas.aliyuncs.com";
+
         return "https://dashscope.aliyuncs.com";
     }
 
