@@ -425,6 +425,7 @@ public class ChatApplicationService
                 ContextRounds = 10,
                 DefaultSkill = "general",
                 EnableLearning = true,
+                ThinkingCollapsed = true,
             };
             if (userId > 0) entity.Insert(); // 新登录用户首次访问，持久化默认设置
         }

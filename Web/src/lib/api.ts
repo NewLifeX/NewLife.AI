@@ -465,7 +465,7 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     showToolCalls: dto.showToolCalls ?? false,
     allowTraining: dto.allowTraining,
     contentWidth: dto.contentWidth || 960,
-    thinkingCollapsed: dto.thinkingCollapsed ?? false,
+    thinkingCollapsed: dto.thinkingCollapsed ?? true,
     enableLearning: dto.enableLearning ?? true,
   }
 }
@@ -494,7 +494,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       mcpEnabled: settings.mcpEnabled,
       showToolCalls: settings.showToolCalls ?? false,
       contentWidth: settings.contentWidth ?? 960,
-      thinkingCollapsed: settings.thinkingCollapsed ?? false,
+      thinkingCollapsed: settings.thinkingCollapsed ?? true,
       enableLearning: settings.enableLearning ?? true,
     }),
   })

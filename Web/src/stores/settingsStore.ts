@@ -50,7 +50,7 @@ const defaults: UserSettings = {
   allowTraining: false,
   enableLearning: true,
   contentWidth: 960,
-  thinkingCollapsed: false,
+  thinkingCollapsed: true,
 }
 
 export const useSettingsStore = create<SettingsState>()(
