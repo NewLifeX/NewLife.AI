@@ -28,6 +28,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             LogoUrl = chatSetting.LogoUrl,
             SystemInstruction = chatSetting.SystemInstruction,
             WelcomeMessage = chatSetting.WelcomeMessage,
+            WelcomeSubtitle = chatSetting.WelcomeSubtitle,
             SupportText = chatSetting.SupportText,
             SupportUrl = chatSetting.SupportUrl,
             SupportPosition = chatSetting.SupportPosition,
@@ -85,6 +86,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.LogoUrl != null) chatSetting.LogoUrl = dto.LogoUrl;
         if (dto.SystemInstruction != null) chatSetting.SystemInstruction = dto.SystemInstruction;
         if (dto.WelcomeMessage != null) chatSetting.WelcomeMessage = dto.WelcomeMessage;
+        if (dto.WelcomeSubtitle != null) chatSetting.WelcomeSubtitle = dto.WelcomeSubtitle;
         if (dto.SupportText != null) chatSetting.SupportText = dto.SupportText;
         if (dto.SupportUrl != null) chatSetting.SupportUrl = dto.SupportUrl;
         if (dto.SupportPosition.HasValue) chatSetting.SupportPosition = dto.SupportPosition.Value;

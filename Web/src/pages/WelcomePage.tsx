@@ -10,6 +10,7 @@ interface WelcomePageProps {
   onSend: (message: string) => void
   siteTitle?: string
   welcomeMessage?: string
+  welcomeSubtitle?: string
   suggestedQuestions?: SuggestedQuestion[]
   attachments?: Attachment[]
   onAttachmentAdd?: (file: File) => void
@@ -18,7 +19,7 @@ interface WelcomePageProps {
   onPrefillConsumed?: () => void
 }
 
-export function WelcomePage({ onSend, siteTitle, welcomeMessage, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove, prefillValue, onPrefillConsumed }: WelcomePageProps) {
+export function WelcomePage({ onSend, siteTitle, welcomeMessage, welcomeSubtitle, suggestedQuestions, attachments = [], onAttachmentAdd, onAttachmentRemove, prefillValue, onPrefillConsumed }: WelcomePageProps) {
   const { t } = useTranslation()
   const sendShortcut = useSettingsStore((s) => s.sendShortcut)
   const contentWidth = useSettingsStore((s) => s.contentWidth)
@@ -64,7 +65,7 @@ export function WelcomePage({ onSend, siteTitle, welcomeMessage, suggestedQuesti
               {welcomeMessage || t('welcome.greeting')}
             </h1>
             <p className="text-[var(--color-text-secondary)] text-sm">
-              {t('welcome.subtitle')}
+              {welcomeSubtitle || t('welcome.subtitle')}
             </p>
           </div>
 

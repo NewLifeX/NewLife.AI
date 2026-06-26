@@ -58,6 +58,7 @@ function ChatApp() {
   const [siteTitle, setSiteTitle] = useState('智能助手')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
   const [welcomeMessage, setWelcomeMessage] = useState<string | undefined>(undefined)
+  const [welcomeSubtitle, setWelcomeSubtitle] = useState<string | undefined>(undefined)
   const [supportText, setSupportText] = useState<string | undefined>(undefined)
   const [supportUrl, setSupportUrl] = useState<string | undefined>(undefined)
   const [supportPosition, setSupportPosition] = useState<number>(0)
@@ -116,6 +117,7 @@ function ChatApp() {
           document.title = cfg.siteTitle
           setSuggestedQuestions(cfg.suggestedQuestions)
           if (cfg.welcomeMessage) setWelcomeMessage(cfg.welcomeMessage)
+          if (cfg.welcomeSubtitle) setWelcomeSubtitle(cfg.welcomeSubtitle)
           if (cfg.supportText) setSupportText(cfg.supportText)
           if (cfg.supportUrl) setSupportUrl(cfg.supportUrl)
           if (cfg.supportPosition != null) setSupportPosition(cfg.supportPosition)
@@ -308,6 +310,7 @@ function ChatApp() {
             onSend={sendMessage}
             siteTitle={siteTitle}
             welcomeMessage={welcomeMessage}
+            welcomeSubtitle={welcomeSubtitle}
             suggestedQuestions={suggestedQuestions}
             attachments={pendingAttachments}
             onAttachmentAdd={addAttachment}

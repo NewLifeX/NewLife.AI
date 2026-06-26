@@ -28,6 +28,7 @@ const defaultSettings: SystemSettings = {
   logoUrl: '',
   systemInstruction: '',
   welcomeMessage: '',
+  welcomeSubtitle: '',
   supportText: '',
   supportUrl: '',
   supportPosition: 0,

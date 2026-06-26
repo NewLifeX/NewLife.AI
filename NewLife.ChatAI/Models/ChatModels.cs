@@ -174,6 +174,9 @@ public class SystemConfigDto
     /// <summary>欢迎语。欢迎页大标题，为空时前端使用默认文案</summary>
     public String? WelcomeMessage { get; set; }
 
+    /// <summary>欢迎副标题。欢迎页大标题下方的引导文案，为空时前端使用默认文案</summary>
+    public String? WelcomeSubtitle { get; set; }
+
     /// <summary>客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示</summary>
     public String? SupportText { get; set; }
 

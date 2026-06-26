@@ -724,6 +724,8 @@ export interface SystemConfig {
   brandGradient?: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage?: string
+  /** 欢迎副标题。欢迎页大标题下方的引导文案，空值时前端使用默认文案 */
+  welcomeSubtitle?: string
   /** 客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示 */
   supportText?: string
   /** 客服链接。点击客服文本跳转的 URL */
@@ -750,6 +752,8 @@ export interface SystemSettings {
   systemInstruction: string
   /** 欢迎语。欢迎页大标题，空值时前端使用默认文案 */
   welcomeMessage: string
+  /** 欢迎副标题。欢迎页大标题下方的引导文案，空值时前端使用默认文案 */
+  welcomeSubtitle: string
   /** 客服文本。侧边栏或悬浮球中显示的帮助链接文字，为空时不展示 */
   supportText: string
   /** 客服链接。点击客服文本跳转的 URL */

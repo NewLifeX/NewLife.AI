@@ -37,6 +37,7 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
             SiteTitle = chatSetting.SiteTitle,
             LogoUrl = chatSetting.LogoUrl,
             WelcomeMessage = chatSetting.WelcomeMessage.IsNullOrEmpty() ? null : chatSetting.WelcomeMessage,
+            WelcomeSubtitle = chatSetting.WelcomeSubtitle.IsNullOrEmpty() ? null : chatSetting.WelcomeSubtitle,
             SupportText = chatSetting.SupportText.IsNullOrEmpty() ? null : chatSetting.SupportText,
             SupportUrl = chatSetting.SupportUrl.IsNullOrEmpty() ? null : chatSetting.SupportUrl,
             SupportPosition = chatSetting.SupportPosition,

@@ -93,6 +93,19 @@ export function SiteConfigSettings({ settings, onChange }: Props) {
       </div>
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.siteConfig.welcomeSubtitle')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.siteConfig.welcomeSubtitleDesc')}</p>
+        <input
+          type="text"
+          value={settings.welcomeSubtitle}
+          onChange={(e) => onChange({ welcomeSubtitle: e.target.value })}
+          placeholder={t('welcome.subtitle')}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
           {t('systemSettings.siteConfig.supportText')}
         </label>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.siteConfig.supportTextDesc')}</p>

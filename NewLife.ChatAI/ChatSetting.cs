@@ -35,6 +35,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Description("欢迎语。欢迎页大标题，为空时使用前端默认文案")]
     public String WelcomeMessage { get; set; } = "";
 
+    /// <summary>欢迎副标题。欢迎页大标题下方的引导文案，为空时使用前端默认文案"选择一个技能开始，或直接输入你的问题"</summary>
+    [Category("外观与品牌")]
+    [Description("欢迎副标题。欢迎页大标题下方的引导文案，为空时使用前端默认文案")]
+    public String WelcomeSubtitle { get; set; } = "";
+
     /// <summary>客服文本。侧边栏或悬浮球中显示的帮助链接文字，如"联系客服"；为空时不展示</summary>
     [Category("外观与品牌")]
     [Description("客服文本。侧边栏或悬浮球中显示的帮助链接文字，如「联系客服」；为空时不展示")]
