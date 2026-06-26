@@ -100,9 +100,23 @@
       "voices": []
     },
     {
-      "code": "cosyvoice-v3-plus",
-      "name": "CosyVoice V3 Plus（仅支持声音复刻，无系统音色）",
+      "code": "cosyvoice-v3.5-plus",
+      "name": "CosyVoice V3.5 Plus（仅支持声音复刻，无系统音色）",
       "voices": []
+    },
+    {
+      "code": "cosyvoice-v3-plus",
+      "name": "CosyVoice V3 Plus",
+      "voices": [
+        { "id": "longxiaochun_v3", "name": "龙小淳", "description": "知性积极女", "age": "25~30岁", "language": "zh-CN,en", "scenario": "语音助手", "gender": "female" },
+        { "id": "longxiaoxia_v3", "name": "龙小夏", "description": "沉稳权威女", "age": "25~30岁", "language": "zh-CN,en", "scenario": "语音助手", "gender": "female" },
+        { "id": "longyumi_v3", "name": "YUMI", "description": "正经青年女", "age": "20~25岁", "language": "zh-CN,en", "scenario": "语音助手", "gender": "female" },
+        { "id": "longanyang", "name": "龙安洋", "description": "阳光大男孩（标杆）", "age": "20~30岁", "language": "zh-CN,en", "scenario": "社交陪伴", "gender": "male" },
+        { "id": "longfei_v3", "name": "龙飞", "description": "热血磁性男", "age": "30~35岁", "language": "zh-CN,en", "scenario": "诗词朗诵", "gender": "male" },
+        { "id": "longshuo_v3", "name": "龙硕", "description": "博才干练男", "age": "25~30岁", "language": "zh-CN,en", "scenario": "新闻播报", "gender": "male" },
+        { "id": "loongbella_v3", "name": "Bella3.0", "description": "精准干练女", "age": "25~30岁", "language": "zh-CN,en", "scenario": "新闻播报", "gender": "female" },
+        { "id": "longlaotie_v3", "name": "龙老铁", "description": "东北直率男", "age": "25~30岁", "language": "zh-CN,东北话,en", "scenario": "方言", "gender": "male" }
+      ]
     },
     {
       "code": "cosyvoice-v2",

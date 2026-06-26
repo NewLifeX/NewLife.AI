@@ -546,14 +546,19 @@ public partial class DashScopeChatClient
             };
         }
 
-        // DashScope CosyVoice 使用中文音色名，需要将 OpenAI 兼容音色映射为默认值
-        // OpenAI 音色：alloy, echo, fable, nova, onyx, shimmer
+        // 先确定模型，再决定音色映射策略（仅对有系统音色的模型映射 OAPI 音色）
+        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
+
+        // OpenAI 兼容音色映射为 DashScope 系统音色。仅当模型有系统预设音色时才映射，
+        // 避免 v3-plus / v3.5 等仅支持声音复刻的模型被映射到无效的系统音色
         var voice = request.Voice;
         if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
-            voice = "longxiaochun_v3";
+        {
+            if (CosyVoiceVoiceList.GetVoices(modelCode).Count > 0)
+                voice = "longxiaochun_v3";
+        }
 
         // 校验音色是否合法
-        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
         if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
             throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
 
@@ -660,22 +665,25 @@ public partial class DashScopeChatClient
         if (request == null) throw new ArgumentNullException(nameof(request));
         if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
 
-        // 解析音色与格式（与 SpeechAsync 保持一致）
+        // 解析格式
         var format = request.ResponseFormat ?? "mp3";
         format = format switch { "mp3" => "mp3", "wav" => "wav", "opus" => "opus", "pcm" => "pcm", _ => format };
 
+        // 确定模型（CosyVoice 全系列均支持 WebSocket 流式合成）
+        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
+
+        // OpenAI 兼容音色映射为 DashScope 系统音色。仅当模型有系统预设音色时才映射，
+        // v3.5 系列无系统音色，直接透传自定义音色 ID
         var voice = request.Voice;
         if (voice.IsNullOrEmpty() || voice.EqualIgnoreCase("alloy", "echo", "fable", "nova", "onyx", "shimmer"))
-            voice = "longxiaochun_v3";
+        {
+            if (CosyVoiceVoiceList.GetVoices(modelCode).Count > 0)
+                voice = "longxiaochun_v3";
+        }
 
-        var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
+        // 校验音色是否合法
         if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
             throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
-
-        // v3 系列模型（cosyvoice-v3-*，不含 v3.5）不支持 WebSocket 流式合成，仅支持 HTTP REST API。
-        // 直接抛出 NotSupportedException，由上层回退到 HTTP 完整合成。
-        if (IsV3ModelWithoutWebSocket(modelCode))
-            throw new NotSupportedException($"模型 '{modelCode}' 不支持 WebSocket 流式合成，将回退到 HTTP API 完整合成");
 
         var sampleRate = request.SampleRate ?? 24000;
         var rate = request.Speed ?? 1.0;
@@ -714,27 +722,19 @@ public partial class DashScopeChatClient
 
     #region WebSocket 辅助方法
 
-    /// <summary>判断模型是否为不支持 WebSocket 流式合成的 v3 系列（非 v3.5）</summary>
-    /// <remarks>v3 系列模型（cosyvoice-v3-flash、cosyvoice-v3-plus）仅支持 HTTP REST API，不支持 WebSocket 流式合成。v3.5 系列支持 WebSocket。</remarks>
-    private static Boolean IsV3ModelWithoutWebSocket(String modelCode)
-    {
-        if (modelCode.IsNullOrEmpty()) return false;
-        return modelCode.StartsWith("cosyvoice-v3", StringComparison.OrdinalIgnoreCase)
-            && !modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>构建 CosyVoice WebSocket 地址。北京地域使用 MaaS 业务空间端点，其它地域从 HTTP Endpoint 派生</summary>
-    /// <remarks>官方文档：北京地域 URL 为 wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference</remarks>
+    /// <summary>构建 CosyVoice WebSocket 地址。仅支持华北2（北京）MaaS 业务空间端点</summary>
+    /// <remarks>
+    /// 官方文档：CosyVoice WebSocket 实时语音合成仅在北京地域可用，必须使用 MaaS 业务空间端点：
+    /// wss://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference
+    /// 标准端点（dashscope.aliyuncs.com）不支持 CosyVoice WebSocket。
+    /// </remarks>
     private String BuildWebSocketUrl()
     {
-        // 北京地域：v3.5 系列模型仅北京可用，必须走 MaaS 业务空间端点
-        if (!_options.Organization.IsNullOrEmpty())
-            return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference";
+        // CosyVoice WebSocket 仅限北京 MaaS 端点，必须提供 Organization（工作空间 ID）
+        if (_options.Organization.IsNullOrEmpty())
+            throw new InvalidOperationException("CosyVoice WebSocket 实时语音合成需北京地域 MaaS 业务空间。请在 AiClientOptions.Organization 中设置工作空间 ID（阿里云百炼控制台 → 业务空间 → 复制空间ID）");
 
-        // 其它地域（如新加坡）：从 HTTP Endpoint 派生
-        var httpHost = GetHost();
-        var wsHost = httpHost.Replace("https://", "wss://").Replace("http://", "ws://");
-        return $"{wsHost}/api-ws/v1/inference";
+        return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference";
     }
 
     /// <summary>执行 CosyVoice WebSocket TTS 全流程，将音频分片收集到 audioChunks</summary>
@@ -773,7 +773,10 @@ public partial class DashScopeChatClient
         if (started == null || GetHeaderAction(started) != "task-started")
         {
             var reason = _lastCloseReason.IsNullOrEmpty() ? "" : $"，连接关闭原因: {_lastCloseReason}";
-            throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}。请确认模型 {modelCode} 支持 WebSocket 流式合成，且 API Key 已开通 DashScope WebSocket 权限");
+            var extra = modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase)
+                ? "。v3.5 模型仅限北京地域 MaaS 业务空间（需设置 Organization），且仅支持声音复刻（自定义音色）"
+                : "";
+            throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}{extra}");
         }
 
         // 文本分片发送（每片 ≤500 UTF-8 字节，保守取 ≤166 字符）

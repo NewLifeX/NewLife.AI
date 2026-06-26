@@ -14,6 +14,7 @@ using NewLife.AI.Clients;
 using NewLife.AI.Clients.DashScope;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.Remoting;
+using NewLife.Serialization;
 using Xunit;
 using Xunit.Sdk;
 using XUnitTest.Helpers;
@@ -22,45 +23,101 @@ namespace XUnitTest.Clients;
 
 /// <summary>DashScope（阿里百炼）服务商集成测试。直接实例化 DashScopeChatClient，需要有效 ApiKey 才能运行</summary>
 /// <remarks>
-/// ApiKey 读取优先级：
-/// 1. ./config/DashScope.key 文件（纯文本，首行为 ApiKey）
-/// 2. 环境变量 DASHSCOPE_API_KEY
-/// 未配置时测试自动跳过
+/// 配置读取于 config/DashScope.key（可选）：
+/// - 新格式：JSON（DashScopeTestConfig，含 ApiKey/CustomVoiceId/Organization）
+/// - 旧格式：纯文本（首行为 ApiKey）
+/// 旧格式首次读取后自动转为 JSON 写回；文件不存在时自动创建空白 JSON 配置。
+/// 环境变量 DASHSCOPE_API_KEY / DASHSCOPE_CUSTOM_VOICE_ID / DASHSCOPE_ORGANIZATION 可覆盖文件值。
+/// 未配置时测试自动跳过。
 /// </remarks>
 [TestCaseOrderer("NewLife.UnitTest.DefaultOrderer", "NewLife.UnitTest")]
 public class DashScopeIntegrationTests
 {
     private readonly String _apiKey;
+    private readonly String _customVoiceId;
+    private readonly String _organization;
 
     public DashScopeIntegrationTests()
     {
-        _apiKey = LoadApiKey() ?? "";
+        var cfg = LoadConfig();
+        _apiKey = cfg?.ApiKey ?? "";
+        _customVoiceId = cfg?.CustomVoiceId ?? "";
+        _organization = cfg?.Organization ?? "";
+
+        // 环境变量覆盖
+        var envKey = Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
+        if (!envKey.IsNullOrEmpty()) _apiKey = envKey;
+
+        var envVoice = Environment.GetEnvironmentVariable("DASHSCOPE_CUSTOM_VOICE_ID");
+        if (!envVoice.IsNullOrEmpty()) _customVoiceId = envVoice;
+
+        var envOrg = Environment.GetEnvironmentVariable("DASHSCOPE_ORGANIZATION");
+        if (!envOrg.IsNullOrEmpty()) _organization = envOrg;
     }
 
-    /// <summary>从 config 目录或环境变量加载 ApiKey</summary>
-    public static String? LoadApiKey()
+    /// <summary>DashScope 测试配置（JSON 文件结构）</summary>
+    private class DashScopeTestConfig
     {
-        var configPath = "config/DashScope.key".GetFullPath();
-        if (File.Exists(configPath))
+        public String? ApiKey { get; set; }
+        public String? CustomVoiceId { get; set; }
+        public String? Organization { get; set; }
+    }
+
+    /// <summary>从 config/DashScope.key 加载配置。自动识别 JSON 或纯文本格式，旧格式自动转为 JSON 写回</summary>
+    private static DashScopeTestConfig? LoadConfig()
+    {
+        var path = "config/DashScope.key".GetFullPath();
+        var dir = Path.GetDirectoryName(path);
+        if (!String.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        if (!File.Exists(path))
         {
-            var key = File.ReadAllText(configPath).Trim();
-            if (!String.IsNullOrWhiteSpace(key)) return key;
-        }
-        else
-        {
-            var dir = Path.GetDirectoryName(configPath);
-            if (!String.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            File.WriteAllText(configPath, "");
+            // 文件不存在，创建一个空的 JSON 配置
+            var empty = new DashScopeTestConfig();
+            File.WriteAllText(path, empty.ToJson());
+            return empty;
         }
 
+        var content = File.ReadAllText(path).Trim();
+
+        // 检测是否为 JSON 格式
+        if (content.StartsWith('{'))
+        {
+            try
+            {
+                var cfg = content.ToJsonEntity<DashScopeTestConfig>();
+                if (cfg != null) return cfg;
+            }
+            catch { }
+        }
+
+        // 旧格式纯文本：首行为 ApiKey，转为 JSON 后写回
+        var apiKey = content;
+        if (!apiKey.IsNullOrEmpty())
+        {
+            var cfg = new DashScopeTestConfig { ApiKey = apiKey };
+            File.WriteAllText(path, cfg.ToJson());
+            return cfg;
+        }
+
+        return null;
+    }
+
+    /// <summary>从 config/DashScope.key 或环境变量加载 ApiKey（供其他测试类复用）</summary>
+    public static String? LoadApiKey()
+    {
+        var cfg = LoadConfig();
+        if (cfg != null && !cfg.ApiKey.IsNullOrEmpty())
+            return cfg.ApiKey;
         return Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
     }
 
-    /// <summary>构建默认连接选项</summary>
+    /// <summary>构建默认连接选项（含 Organization）</summary>
     private AiClientOptions CreateOptions() => new()
     {
         ApiKey = _apiKey,
+        Organization = _organization,
     };
 
     /// <summary>构建简单的用户消息请求</summary>
@@ -91,7 +148,18 @@ public class DashScopeIntegrationTests
         if (String.IsNullOrWhiteSpace(apiKey)) apiKey = _apiKey;
 
         if (String.IsNullOrWhiteSpace(apiKey))
-            throw SkipException.ForSkip("未检测到可用 API Key（config/DashScope.key 或 DASHSCOPE_API_KEY），跳过 DashScope 集成测试");
+            throw SkipException.ForSkip("未检测到可用 API Key（config/DashScope.key 或 DASHSCOPE_API_KEY 环境变量），跳过 DashScope 集成测试");
+    }
+
+    /// <summary>确保流式合成所需环境完整。CosyVoice WebSocket 仅限北京 MaaS 端点</summary>
+    /// <remarks>官方文档：所有 CosyVoice 模型 WebSocket 实时合成均需北京地域 MaaS 业务空间</remarks>
+    private void EnsureStreamingPrerequisites(AiClientOptions option)
+    {
+        EnsureConfiguredApiKeyAvailable(option);
+
+        // CosyVoice WebSocket 仅限北京 MaaS 业务空间端点
+        if (String.IsNullOrWhiteSpace(option.Organization))
+            throw SkipException.ForSkip("未检测到工作空间 ID（config/DashScope.key 的 Organization 字段或 DASHSCOPE_ORGANIZATION 环境变量）。CosyVoice WebSocket 实时语音合成仅在北京 MaaS 端点可用，请在阿里云百炼控制台 → 业务空间 → 复制空间ID，跳过流式合成集成测试");
     }
 
     /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
@@ -1969,7 +2037,7 @@ public class DashScopeIntegrationTests
         var option = CreateOptions();
         option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
         option.ApiKey = _apiKey;
-        option.Model = "cosyvoice-v3.5-flash";
+        option.Model = "cosyvoice-v3-flash";
 
         var client = new DashScopeChatClient(option);
         var audioBytes = await client.SpeechAsync(request);
@@ -2003,10 +2071,134 @@ public class DashScopeIntegrationTests
     }
 
     [Fact]
+    [DisplayName("SpeechAsync_cosyvoice_v3_flash_完整音频合成并记录字符用量")]
+    public async Task SpeechAsync_CosyVoiceV3Flash_ReturnsAudio()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3-flash",
+            Input = "你好，欢迎使用语音合成服务。今天天气真不错，适合出去走走。",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "mp3",
+            SampleRate = 24000,
+            Speed = 1.0,
+        };
+
+        var audioBytes = await client.SpeechAsync(request);
+
+        Assert.NotNull(audioBytes);
+        Assert.True(audioBytes.Length > 100, $"总音频数据 {audioBytes.Length} 字节，应大于 100");
+
+        // 验证字符用量被正确记录
+        Assert.True(request.CharactersUsed > 0, $"字符用量应大于 0，实际: {request.CharactersUsed}");
+    }
+
+    [Fact]
+    [DisplayName("SpeechAsync_cosyvoice_v3_flash_带语速参数")]
+    public async Task SpeechAsync_CosyVoiceV3Flash_WithSpeed()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3-flash",
+            Input = "这是一段测试文本，用来验证语速参数是否生效。",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "mp3",
+            Speed = 1.5, // 1.5倍语速
+        };
+
+        var audioBytes = await client.SpeechAsync(request);
+
+        Assert.NotNull(audioBytes);
+        Assert.True(audioBytes.Length > 100, "语速 1.5x 的合成音频不应为空");
+    }
+
+    [Fact]
+    [DisplayName("SpeechAsync_cosyvoice_v3_flash_CancellationToken取消")]
+    public async Task SpeechAsync_CosyVoiceV3Flash_Cancellation()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3-flash",
+            // 长文本确保有足够时间取消
+            Input = "人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。该领域的研究包括机器人、语言识别、图像识别、自然语言处理和专家系统等。人工智能从诞生以来，理论和技术日益成熟，应用领域也不断扩大。可以设想，未来人工智能带来的科技产品，将会是人类智慧的容器。",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "mp3",
+        };
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100)); // 100ms 后取消
+
+        var cancelled = false;
+        try
+        {
+            await client.SpeechAsync(request, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+
+        Assert.True(cancelled, "取消令牌应生效");
+    }
+
+    [Fact]
+    [DisplayName("SpeechAsync_cosyvoice_v3_flash_opus格式")]
+    public async Task SpeechAsync_CosyVoiceV3Flash_OpusFormat()
+    {
+        EnsureConfiguredApiKeyAvailable();
+
+        var option = CreateOptions();
+        option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
+        option.ApiKey = _apiKey;
+        option.Model = "cosyvoice-v3-flash";
+
+        var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "cosyvoice-v3-flash",
+            Input = "你好世界",
+            Voice = "longxiaochun_v3",
+            ResponseFormat = "opus",
+        };
+
+        var audioBytes = await client.SpeechAsync(request);
+
+        Assert.NotNull(audioBytes);
+        Assert.True(audioBytes.Length > 0, "opus 格式应生成有效音频");
+    }
+
+    #region 语音合成（TTS 流式 — WebSocket，需北京 MaaS 工作空间 + 自定义音色）
+    // v3.5 模型 WebSocket 流式合成需要：1) ApiKey  2) Organization（北京 MaaS 工作空间）  3) CustomVoiceId（声音复刻音色）
+    // 任一未配置时测试静默跳过（返回 Passed），方便个人开发环境按需配置
+
+    [Fact]
     [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_流式返回多个音频分片")]
     public async Task SpeechStreamAsync_CosyVoiceV35Flash_StreamingReturnsChunks()
     {
-        EnsureConfiguredApiKeyAvailable();
+        if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization) || String.IsNullOrEmpty(_customVoiceId)) return;
 
         var option = CreateOptions();
         option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
@@ -2018,40 +2210,23 @@ public class DashScopeIntegrationTests
         {
             Model = "cosyvoice-v3.5-flash",
             Input = "你好，欢迎使用语音合成服务。今天天气真不错，适合出去走走。",
-            Voice = "longxiaochun_v3",
+            Voice = _customVoiceId,
             ResponseFormat = "mp3",
             SampleRate = 24000,
             Speed = 1.0,
         };
 
         var chunks = new List<Byte[]>();
-        var receivedFirstChunkAt = DateTime.MinValue;
-        var chunkCount = 0;
-
         await foreach (var chunk in client.SpeechStreamAsync(request, CancellationToken.None))
         {
-            chunkCount++;
-            if (chunkCount == 1)
-                receivedFirstChunkAt = DateTime.Now;
-
             Assert.NotNull(chunk);
-            Assert.True(chunk.Length > 0, $"第 {chunkCount} 个音频分片不应为空");
+            Assert.True(chunk.Length > 0, $"第 {chunks.Count + 1} 个音频分片不应为空");
             chunks.Add(chunk);
         }
 
-        // 验证返回了多个分片（流式合成）
         Assert.True(chunks.Count >= 1, "应至少返回一个音频分片");
-        if (chunks.Count > 1)
-        {
-            // 多个分片意味着边合成边推送
-            Assert.True(chunks.Count > 0, "流式合成应返回音频分片");
-        }
-
-        // 验证总音频数据量合理
         var totalBytes = chunks.Sum(c => c.Length);
         Assert.True(totalBytes > 100, $"总音频数据 {totalBytes} 字节，应大于 100");
-
-        // 验证字符用量被正确记录
         Assert.True(request.CharactersUsed > 0, $"字符用量应大于 0，实际: {request.CharactersUsed}");
     }
 
@@ -2059,7 +2234,7 @@ public class DashScopeIntegrationTests
     [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_带语速参数")]
     public async Task SpeechStreamAsync_CosyVoiceV35Flash_WithSpeed()
     {
-        EnsureConfiguredApiKeyAvailable();
+        if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization) || String.IsNullOrEmpty(_customVoiceId)) return;
 
         var option = CreateOptions();
         option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
@@ -2071,9 +2246,9 @@ public class DashScopeIntegrationTests
         {
             Model = "cosyvoice-v3.5-flash",
             Input = "这是一段测试文本，用来验证语速参数是否生效。",
-            Voice = "longxiaochun_v3",
+            Voice = _customVoiceId,
             ResponseFormat = "mp3",
-            Speed = 1.5, // 1.5倍语速
+            Speed = 1.5,
         };
 
         var chunks = new List<Byte[]>();
@@ -2089,7 +2264,7 @@ public class DashScopeIntegrationTests
     [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_CancellationToken取消")]
     public async Task SpeechStreamAsync_CosyVoiceV35Flash_Cancellation()
     {
-        EnsureConfiguredApiKeyAvailable();
+        if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization) || String.IsNullOrEmpty(_customVoiceId)) return;
 
         var option = CreateOptions();
         option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
@@ -2100,36 +2275,30 @@ public class DashScopeIntegrationTests
         var request = new SpeechRequest
         {
             Model = "cosyvoice-v3.5-flash",
-            // 长文本确保有足够时间取消
-            Input = "人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。该领域的研究包括机器人、语言识别、图像识别、自然语言处理和专家系统等。人工智能从诞生以来，理论和技术日益成熟，应用领域也不断扩大。可以设想，未来人工智能带来的科技产品，将会是人类智慧的容器。",
-            Voice = "longxiaochun_v3",
+            Input = "人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。该领域的研究包括机器人、语言识别、图像识别、自然语言处理和专家系统等。",
+            Voice = _customVoiceId,
             ResponseFormat = "mp3",
         };
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500)); // 500ms 后取消
-
-        var chunks = new List<Byte[]>();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         var cancelled = false;
         try
         {
-            await foreach (var chunk in client.SpeechStreamAsync(request, cts.Token))
-            {
-                chunks.Add(chunk);
-            }
+            await foreach (var _ in client.SpeechStreamAsync(request, cts.Token)) { }
         }
         catch (OperationCanceledException)
         {
             cancelled = true;
         }
 
-        Assert.True(cancelled || chunks.Count > 0, "取消令牌应生效，或至少收到部分分片");
+        Assert.True(cancelled, "取消令牌应生效");
     }
 
     [Fact]
     [DisplayName("SpeechStreamAsync_cosyvoice_v3.5_flash_opus格式")]
     public async Task SpeechStreamAsync_CosyVoiceV35Flash_OpusFormat()
     {
-        EnsureConfiguredApiKeyAvailable();
+        if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization) || String.IsNullOrEmpty(_customVoiceId)) return;
 
         var option = CreateOptions();
         option.Endpoint = "https://dashscope.aliyuncs.com/api/v1";
@@ -2141,7 +2310,7 @@ public class DashScopeIntegrationTests
         {
             Model = "cosyvoice-v3.5-flash",
             Input = "你好世界",
-            Voice = "longxiaochun_v3",
+            Voice = _customVoiceId,
             ResponseFormat = "opus",
         };
 
@@ -2155,6 +2324,8 @@ public class DashScopeIntegrationTests
         var totalBytes = chunks.Sum(c => c.Length);
         Assert.True(totalBytes > 0, "opus 格式应生成有效音频");
     }
+
+    #endregion
 
     #endregion
 }

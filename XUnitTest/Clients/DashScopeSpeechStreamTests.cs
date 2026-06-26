@@ -11,10 +11,11 @@ using Xunit;
 
 namespace XUnitTest.Clients;
 
-/// <summary>DashScope CosyVoice WebSocket 流式语音合成单元测试</summary>
+/// <summary>DashScope CosyVoice v3 语音合成单元测试</summary>
 /// <remarks>
 /// 不依赖真实 API Key。测试 GetHeaderAction 纯逻辑、参数校验。
-/// 真实 WebSocket 端到端测试请参见 DashScopeIntegrationTests。
+/// v3 模型支持系统音色（120+ 预设音色），v3.5 不支持。
+/// 真实端到端测试请参见 DashScopeIntegrationTests。
 /// </remarks>
 public class DashScopeSpeechStreamTests
 {
@@ -28,7 +29,7 @@ public class DashScopeSpeechStreamTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.NotNull(method);
 
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         var result = method!.Invoke(client, [null!]);
         Assert.Null(result);
     }
@@ -41,7 +42,7 @@ public class DashScopeSpeechStreamTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.NotNull(method);
 
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         var header = new Dictionary<String, Object?> { ["action"] = "task-started" };
         var dic = new Dictionary<String, Object?> { ["header"] = header };
 
@@ -57,7 +58,7 @@ public class DashScopeSpeechStreamTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.NotNull(method);
 
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         var header = new Dictionary<String, Object?>
         {
             ["task_id"] = "abc-123",
@@ -78,7 +79,7 @@ public class DashScopeSpeechStreamTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.NotNull(method);
 
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         var dic = new Dictionary<String, Object?> { ["payload"] = new { } };
 
         var result = method!.Invoke(client, [dic]);
@@ -93,7 +94,7 @@ public class DashScopeSpeechStreamTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         Assert.NotNull(method);
 
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         var dic = new Dictionary<String, Object?> { ["header"] = "not-a-dict" };
 
         var result = method!.Invoke(client, [dic]);
@@ -108,7 +109,7 @@ public class DashScopeSpeechStreamTests
     [DisplayName("SpeechStreamAsync null 请求应抛出 ArgumentNullException")]
     public async Task SpeechStreamAsync_NullRequest_ThrowsArgumentNullException()
     {
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
         {
             await foreach (var _ in client.SpeechStreamAsync(null!, CancellationToken.None))
@@ -121,8 +122,8 @@ public class DashScopeSpeechStreamTests
     [DisplayName("SpeechStreamAsync 空输入应抛出 ArgumentException")]
     public async Task SpeechStreamAsync_EmptyInput_ThrowsArgumentException()
     {
-        var client = CreateClient("cosyvoice-v3.5-flash");
-        var request = new SpeechRequest { Model = "cosyvoice-v3.5-flash", Input = "", Voice = "longxiaochun_v3" };
+        var client = CreateClient("cosyvoice-v3-flash");
+        var request = new SpeechRequest { Model = "cosyvoice-v3-flash", Input = "", Voice = "longxiaochun_v3" };
 
         await Assert.ThrowsAsync<ArgumentException>(async () =>
         {
@@ -131,25 +132,32 @@ public class DashScopeSpeechStreamTests
     }
 
     [Fact]
-    [DisplayName("SpeechStreamAsync 无效音色应抛出 ArgumentException")]
-    public async Task SpeechStreamAsync_InvalidVoice_ThrowsArgumentException()
+    [DisplayName("SpeechStreamAsync v3 模型接受系统音色 longxiaochun_v3")]
+    public async Task SpeechStreamAsync_V3_AcceptsSystemVoice()
     {
-        var client = CreateClient("cosyvoice-v3.5-flash");
-        var request = new SpeechRequest { Model = "cosyvoice-v3.5-flash", Input = "测试", Voice = "invalid_xyz" };
+        var client = CreateClient("cosyvoice-v3-flash");
+        // v3 模型支持 120+ 系统预设音色，longxiaochun_v3 应通过校验
+        var request = new SpeechRequest { Model = "cosyvoice-v3-flash", Input = "测试", Voice = "longxiaochun_v3" };
 
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
+        // 无真实 API Key → 连接失败，但不应因音色校验抛 ArgumentException
+        var ex = await Record.ExceptionAsync(async () =>
         {
             await foreach (var _ in client.SpeechStreamAsync(request, CancellationToken.None)) { }
         });
+
+        Assert.NotNull(ex);
+        Assert.IsNotType<ArgumentException>(ex);
     }
 
     [Fact]
-    [DisplayName("SpeechStreamAsync OpenAI 兼容音色 alloy 应通过校验")]
-    public async Task SpeechStreamAsync_OapiVoice_Alloy_PassesVoiceCheck()
+    [DisplayName("SpeechStreamAsync v3 模型接受 OpenAI 兼容音色 alloy")]
+    public async Task SpeechStreamAsync_V3_AcceptsOapiVoiceAlloy()
     {
-        var client = CreateClient("cosyvoice-v3.5-flash");
-        var request = new SpeechRequest { Model = "cosyvoice-v3.5-flash", Input = "测试", Voice = "alloy" };
+        var client = CreateClient("cosyvoice-v3-flash");
+        // v3 模型支持系统音色，alloy 映射为 longxiaochun_v3 后应通过校验
+        var request = new SpeechRequest { Model = "cosyvoice-v3-flash", Input = "测试", Voice = "alloy" };
 
+        // 无真实 API Key → 连接失败，但不应因音色校验抛 ArgumentException
         var ex = await Record.ExceptionAsync(async () =>
         {
             await foreach (var _ in client.SpeechStreamAsync(request, CancellationToken.None)) { }
@@ -163,8 +171,9 @@ public class DashScopeSpeechStreamTests
     [DisplayName("SpeechStreamAsync 使用 request.Model 而非 _options.Model")]
     public async Task SpeechStreamAsync_UsesRequestModel_NotOptionsModel()
     {
-        var client = CreateClient("cosyvoice-v3-flash");
-        var request = new SpeechRequest { Model = "cosyvoice-v3.5-flash", Input = "测试", Voice = "longxiaochun_v3" };
+        // 用 v3-plus 构造客户端，但 request 指定 v3-flash（不同 v3 变体）
+        var client = CreateClient("cosyvoice-v3-plus");
+        var request = new SpeechRequest { Model = "cosyvoice-v3-flash", Input = "测试", Voice = "longxiaochun_v3" };
 
         var ex = await Record.ExceptionAsync(async () =>
         {
@@ -172,6 +181,7 @@ public class DashScopeSpeechStreamTests
         });
 
         Assert.NotNull(ex);
+        // 非 ArgumentException 说明 request.Model（v3-flash）被正确使用，未回退到 _options.Model（v3-plus）
         Assert.IsNotType<ArgumentException>(ex);
     }
 
@@ -179,7 +189,7 @@ public class DashScopeSpeechStreamTests
     [DisplayName("SpeechStreamAsync 空 request.Model 时回退到 _options.Model")]
     public async Task SpeechStreamAsync_NullModel_FallsBackToOptions()
     {
-        var client = CreateClient("cosyvoice-v3.5-flash");
+        var client = CreateClient("cosyvoice-v3-flash");
         var request = new SpeechRequest { Model = null!, Input = "测试", Voice = "longxiaochun_v3" };
 
         // 无真实 API Key → WebSocket 连接失败，但不因版本检测抛异常
@@ -195,8 +205,8 @@ public class DashScopeSpeechStreamTests
     [DisplayName("SpeechStreamAsync 无 API Key 时连接失败应抛异常")]
     public async Task SpeechStreamAsync_NoApiKey_ThrowsOnConnect()
     {
-        var client = CreateClient("cosyvoice-v3.5-flash");
-        var request = new SpeechRequest { Model = "cosyvoice-v3.5-flash", Input = "测试", Voice = "longxiaochun_v3" };
+        var client = CreateClient("cosyvoice-v3-flash");
+        var request = new SpeechRequest { Model = "cosyvoice-v3-flash", Input = "测试", Voice = "longxiaochun_v3" };
 
         // 无 API Key → WebSocket 连接被拒，抛异常
         await Assert.ThrowsAnyAsync<Exception>(async () =>
