@@ -178,6 +178,17 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     public static IList<SuggestedQuestion> FindAllCachedEnabled()
         => Meta.Cache.FindAll(q => q.Enable);
 
+    /// <summary>从实体缓存中获取启用的推荐问题，按更新时间降序取前N条。用于欢迎页等只需展示少量问题的场景</summary>
+    /// <param name="top">返回条数上限，默认50</param>
+    /// <returns>启用的推荐问题列表</returns>
+    public static IList<SuggestedQuestion> FindTopEnabledByUpdateTime(Int32 top = 50)
+    {
+        var all = Meta.Cache.FindAll(q => q.Enable);
+        if (all.Count <= top) return all;
+
+        return all.OrderByDescending(q => q.UpdateTime).Take(top).ToList();
+    }
+
     /// <summary>从实体缓存中查找今日匹配指定问题且已关联助手消息的推荐问题。用于命中缓存时直接返回</summary>
     /// <param name="question">问题内容</param>
     /// <returns>匹配的推荐问题，未命中返回 null</returns>
