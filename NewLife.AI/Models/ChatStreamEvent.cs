@@ -54,6 +54,9 @@ public class ChatStreamEvent
     /// <summary>TTS 流式音频分片的 Base64 编码数据。tts_audio_chunk 事件专用</summary>
     public String? AudioBase64 { get; set; }
 
+    /// <summary>TTS 流式音频格式。前端根据此字段选择 MediaSource codec，如 mp3→audio/mpeg、opus→audio/ogg;codecs=opus</summary>
+    public String? AudioFormat { get; set; }
+
     /// <summary>TTS 流式合成当前已处理的字符位置（0-based）</summary>
     public Int32 CharIndex { get; set; }
 
@@ -102,9 +105,10 @@ public class ChatStreamEvent
     /// <param name="audioBase64">音频分片 Base64 编码</param>
     /// <param name="charIndex">当前已处理字符位置</param>
     /// <param name="totalChars">总字符数</param>
+    /// <param name="audioFormat">音频格式，如 mp3/opus/wav，前端用于选择 MediaSource codec</param>
     /// <returns></returns>
-    public static ChatStreamEvent TtsAudioChunk(String audioBase64, Int32 charIndex, Int32 totalChars) =>
-        new() { Type = "tts_audio_chunk", AudioBase64 = audioBase64, CharIndex = charIndex, TotalChars = totalChars };
+    public static ChatStreamEvent TtsAudioChunk(String audioBase64, Int32 charIndex, Int32 totalChars, String? audioFormat = null) =>
+        new() { Type = "tts_audio_chunk", AudioBase64 = audioBase64, CharIndex = charIndex, TotalChars = totalChars, AudioFormat = audioFormat };
 
     /// <summary>错误事件</summary>
     /// <param name="code">错误码</param>

@@ -765,7 +765,6 @@ public partial class DashScopeChatClient
         format = format switch { "mp3" => "mp3", "wav" => "wav", "opus" => "opus", "pcm" => "pcm", _ => format };
 
         var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
-        var audioChunks = new List<Byte[]>();
 
         if (IsQwenTtsRealtimeModel(modelCode))
         {
@@ -784,23 +783,10 @@ public partial class DashScopeChatClient
                 ws.Options.SetRequestHeader("Authorization", $"Bearer {_options.ApiKey}");
             ws.Options.SetRequestHeader("user-agent", "NewLife.AI");
 
-            using var span = Tracer?.NewSpan("ai:QwenTtsRealtimeStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
-            try
-            {
-                await RunQwenTtsRealtimeWebSocketAsync(ws, modelCode, voice, format, request, audioChunks, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                span?.SetError(ex, null);
-                throw;
-            }
-            finally
-            {
-                if (ws.State == WebSocketState.Open)
-                {
-                    try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
-                }
-            }
+            // RunQwenTtsRealtimeWebSocketAsync 现在返回 IAsyncEnumerable<Byte[]>，每收到 WebSocket 音频帧即实时 yield
+            // yield return 在所有 try-catch 块之外，符合 C# 异步迭代器规则
+            await foreach (var chunk in RunQwenTtsRealtimeWebSocketAsync(ws, modelCode, voice, format, request, cancellationToken).ConfigureAwait(false))
+                yield return chunk;
         }
         else
         {
@@ -823,27 +809,9 @@ public partial class DashScopeChatClient
             ws.Options.SetRequestHeader("user-agent", "NewLife.AI");
 
             var taskId = Guid.NewGuid().ToString("D");
-            using var span = Tracer?.NewSpan("ai:DashScopeTtsStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
-            try
-            {
-                await RunWebSocketTtsAsync(ws, taskId, modelCode, voice, format, sampleRate, rate, request, audioChunks, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                span?.SetError(ex, null);
-                throw;
-            }
-            finally
-            {
-                if (ws.State == WebSocketState.Open)
-                {
-                    try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
-                }
-            }
+            await foreach (var chunk in RunWebSocketTtsAsync(ws, taskId, modelCode, voice, format, sampleRate, rate, request, cancellationToken).ConfigureAwait(false))
+                yield return chunk;
         }
-
-        foreach (var chunk in audioChunks)
-            yield return chunk;
     }
 
     #region WebSocket 辅助方法
@@ -876,130 +844,154 @@ public partial class DashScopeChatClient
         return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model={Uri.EscapeDataString(modelCode)}";
     }
 
-    /// <summary>执行 Qwen-TTS-Realtime WebSocket 全流程</summary>
+    /// <summary>执行 Qwen-TTS-Realtime WebSocket 全流程，逐帧产出音频块</summary>
     /// <remarks>
     /// 流程：连接 → session.created → session.update → session.updated → input_text_buffer.append（分片）
-    /// → input_text_buffer.commit → input_text_buffer.committed → response.created → response.audio.delta（base64 音频）
-    /// → response.done → session.finish → session.finished
+    /// → input_text_buffer.commit → input_text_buffer.committed → response.created → response.audio.delta（base64 音频，即时 yield）
+    /// → response.done → session.finish → session.finished<br/>
+    /// 改造要点：setup 阶段（连接+握手+发文本）使用 try-catch 跟踪错误；接收阶段使用 try-finally（无 catch），
+    /// 两段独立 try 块均符合 C# 异步迭代器对 yield 的约束（yield 不得在含 catch 子句的 try 内）。
     /// </remarks>
-    private async Task RunQwenTtsRealtimeWebSocketAsync(ClientWebSocket ws, String modelCode, String voice, String format, SpeechRequest request, List<Byte[]> audioChunks, CancellationToken cancellationToken)
+    private async IAsyncEnumerable<Byte[]> RunQwenTtsRealtimeWebSocketAsync(ClientWebSocket ws, String modelCode, String voice, String format, SpeechRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var wsUrl = BuildQwenTtsRealtimeWebSocketUrl(modelCode);
-        await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
+        using var span = Tracer?.NewSpan("ai:QwenTtsRealtimeStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
 
-        // 1. 等待 session.created
-        var sessionCreated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
-        if (GetEventType(sessionCreated) != "session.created")
-            throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.created，实际收到 {GetEventType(sessionCreated) ?? "(null/Close)"}");
-
-        // 2. 发送 session.update 配置音色/格式/模式
-        var sampleRate = request.SampleRate ?? 24000;
-        var mode = request["mode"] as String ?? "commit";
-        var languageType = request["language_type"] as String;
-        var instructions = request["instructions"] as String;
-        var sessionUpdateId = Guid.NewGuid().ToString("N")[..20];
-
-        var sessionConfig = new Dictionary<String, Object>
+        // Setup 阶段：连接 + 握手 + 发送文本。此 try-catch 块内无 yield，符合 C# 规则
+        try
         {
-            ["voice"] = voice,
-            ["mode"] = mode,
-            ["response_format"] = format,
-            ["sample_rate"] = sampleRate,
-        };
-        if (!languageType.IsNullOrEmpty()) sessionConfig["language_type"] = languageType!;
-        if (!instructions.IsNullOrEmpty()) sessionConfig["instructions"] = instructions!;
+            await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
 
-        await SendRealtimeEventAsync(ws, new
-        {
-            event_id = sessionUpdateId,
-            type = "session.update",
-            session = sessionConfig,
-        }, cancellationToken).ConfigureAwait(false);
+            // 1. 等待 session.created
+            var sessionCreated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+            if (GetEventType(sessionCreated) != "session.created")
+                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.created，实际收到 {GetEventType(sessionCreated) ?? "(null/Close)"}");
 
-        // 3. 等待 session.updated
-        var sessionUpdated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
-        if (GetEventType(sessionUpdated) != "session.updated")
-            throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.updated，实际收到 {GetEventType(sessionUpdated) ?? "(null/Close)"}");
+            // 2. 发送 session.update 配置音色/格式/模式
+            var sampleRate = request.SampleRate ?? 24000;
+            var mode = request["mode"] as String ?? "commit";
+            var languageType = request["language_type"] as String;
+            var instructions = request["instructions"] as String;
+            var sessionUpdateId = Guid.NewGuid().ToString("N")[..20];
 
-        // 4. 分批发送文本到缓冲区（每片 ≤500 字符）
-        var text = request.Input;
-        var maxChunkLen = 500;
-        var offset = 0;
-        while (offset < text.Length)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var chunkLen = Math.Min(maxChunkLen, text.Length - offset);
-            if (offset + chunkLen < text.Length && Char.IsHighSurrogate(text[offset + chunkLen - 1]))
-                chunkLen--;
-            var chunk = text.Substring(offset, chunkLen);
-            offset += chunkLen;
+            var sessionConfig = new Dictionary<String, Object>
+            {
+                ["voice"] = voice,
+                ["mode"] = mode,
+                ["response_format"] = format,
+                ["sample_rate"] = sampleRate,
+            };
+            if (!languageType.IsNullOrEmpty()) sessionConfig["language_type"] = languageType!;
+            if (!instructions.IsNullOrEmpty()) sessionConfig["instructions"] = instructions!;
 
             await SendRealtimeEventAsync(ws, new
             {
-                event_id = Guid.NewGuid().ToString("N")[..20],
-                type = "input_text_buffer.append",
-                text = chunk,
+                event_id = sessionUpdateId,
+                type = "session.update",
+                session = sessionConfig,
             }, cancellationToken).ConfigureAwait(false);
-        }
 
-        // 5. 提交文本缓冲区触发合成（commit 模式必须显式提交）
-        await SendRealtimeEventAsync(ws, new
-        {
-            event_id = Guid.NewGuid().ToString("N")[..20],
-            type = "input_text_buffer.commit",
-        }, cancellationToken).ConfigureAwait(false);
+            // 3. 等待 session.updated
+            var sessionUpdated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+            if (GetEventType(sessionUpdated) != "session.updated")
+                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.updated，实际收到 {GetEventType(sessionUpdated) ?? "(null/Close)"}");
 
-        // 6. 接收音频事件流，直到 response.done
-        while (ws.State == WebSocketState.Open)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var ev = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
-            if (ev == null) break;
-
-            var evType = GetEventType(ev);
-            switch (evType)
+            // 4. 分批发送文本到缓冲区（每片 ≤500 字符）
+            var text = request.Input;
+            var maxChunkLen = 500;
+            var offset = 0;
+            while (offset < text.Length)
             {
-                case "response.audio.delta":
-                    // 音频数据在 JSON 文本帧内以 base64 编码（不同于 CosyVoice 的 binary frame）
-                    if (ev.TryGetValue("delta", out var deltaVal) && deltaVal is String base64Audio && base64Audio.Length > 0)
-                        audioChunks.Add(Convert.FromBase64String(base64Audio));
-                    break;
+                cancellationToken.ThrowIfCancellationRequested();
+                var chunkLen = Math.Min(maxChunkLen, text.Length - offset);
+                if (offset + chunkLen < text.Length && Char.IsHighSurrogate(text[offset + chunkLen - 1]))
+                    chunkLen--;
+                var chunk = text.Substring(offset, chunkLen);
+                offset += chunkLen;
 
-                case "response.done":
-                    // 提取用量（usage.characters 或 usage.total_tokens）
-                    if (ev.TryGetValue("response", out var respObj) && respObj is IDictionary<String, Object?> resp
-                        && resp.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object?> usageDic)
-                    {
-                        var chars = 0;
-                        if (chars == 0 && usageDic.TryGetValue("characters", out var uc)) chars = uc.ToInt();
-                        if (chars == 0 && usageDic.TryGetValue("total_tokens", out var ut)) chars = ut.ToInt();
-                        request.CharactersUsed = chars;
-                    }
-                    break;
-
-                case "session.finished":
-                    return;
-
-                case "error":
-                    var errMsg = "未知错误";
-                    if (ev.TryGetValue("error", out var errObj) && errObj is IDictionary<String, Object?> errDic
-                        && errDic.TryGetValue("message", out var em))
-                        errMsg = em as String ?? errMsg;
-                    throw new InvalidOperationException($"Qwen-TTS Realtime 错误: {errMsg}");
-
-                default:
-                    // input_text_buffer.committed / response.created / response.output_item.added / response.content_part.*  等中间事件，忽略继续
-                    break;
-            }
-
-            // response.done 收到后发 session.finish，然后等 session.finished
-            if (evType == "response.done")
-            {
                 await SendRealtimeEventAsync(ws, new
                 {
                     event_id = Guid.NewGuid().ToString("N")[..20],
-                    type = "session.finish",
+                    type = "input_text_buffer.append",
+                    text = chunk,
                 }, cancellationToken).ConfigureAwait(false);
+            }
+
+            // 5. 提交文本缓冲区触发合成（commit 模式必须显式提交）
+            await SendRealtimeEventAsync(ws, new
+            {
+                event_id = Guid.NewGuid().ToString("N")[..20],
+                type = "input_text_buffer.commit",
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            span?.SetError(ex, null);
+            throw;
+        }
+
+        // 接收阶段：try-finally（无 catch），yield return 合法
+        try
+        {
+            // 6. 接收音频事件流，直到 session.finished
+            while (ws.State == WebSocketState.Open)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var ev = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+                if (ev == null) break;
+
+                var evType = GetEventType(ev);
+                switch (evType)
+                {
+                    case "response.audio.delta":
+                        // 音频数据在 JSON 文本帧内以 base64 编码，即时 yield 给调用方实现流式播放
+                        if (ev.TryGetValue("delta", out var deltaVal) && deltaVal is String base64Audio && base64Audio.Length > 0)
+                            yield return Convert.FromBase64String(base64Audio);
+                        break;
+
+                    case "response.done":
+                        // 提取用量（usage.characters 或 usage.total_tokens）
+                        if (ev.TryGetValue("response", out var respObj) && respObj is IDictionary<String, Object?> resp
+                            && resp.TryGetValue("usage", out var usageObj) && usageObj is IDictionary<String, Object?> usageDic)
+                        {
+                            var chars = 0;
+                            if (chars == 0 && usageDic.TryGetValue("characters", out var uc)) chars = uc.ToInt();
+                            if (chars == 0 && usageDic.TryGetValue("total_tokens", out var ut)) chars = ut.ToInt();
+                            request.CharactersUsed = chars;
+                        }
+                        break;
+
+                    case "session.finished":
+                        yield break;
+
+                    case "error":
+                        var errMsg = "未知错误";
+                        if (ev.TryGetValue("error", out var errObj) && errObj is IDictionary<String, Object?> errDic
+                            && errDic.TryGetValue("message", out var em))
+                            errMsg = em as String ?? errMsg;
+                        throw new InvalidOperationException($"Qwen-TTS Realtime 错误: {errMsg}");
+
+                    default:
+                        // input_text_buffer.committed / response.created / response.output_item.added / response.content_part.*  等中间事件，忽略继续
+                        break;
+                }
+
+                // response.done 收到后发 session.finish，然后等 session.finished
+                if (evType == "response.done")
+                {
+                    await SendRealtimeEventAsync(ws, new
+                    {
+                        event_id = Guid.NewGuid().ToString("N")[..20],
+                        type = "session.finish",
+                    }, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+        finally
+        {
+            if (ws.State == WebSocketState.Open)
+            {
+                try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
             }
         }
     }
@@ -1019,111 +1011,132 @@ public partial class DashScopeChatClient
         return dic.TryGetValue("type", out var t) ? t as String : null;
     }
 
-    /// <summary>执行 CosyVoice WebSocket TTS 全流程，将音频分片收集到 audioChunks</summary>
-    private async Task RunWebSocketTtsAsync(ClientWebSocket ws, String taskId, String modelCode, String voice, String format, Int32 sampleRate, Double rate, SpeechRequest request, List<Byte[]> audioChunks, CancellationToken cancellationToken)
+    /// <summary>执行 CosyVoice WebSocket TTS 全流程，逐帧产出音频块</summary>
+    private async IAsyncEnumerable<Byte[]> RunWebSocketTtsAsync(ClientWebSocket ws, String taskId, String modelCode, String voice, String format, Int32 sampleRate, Double rate, SpeechRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var wsUrl = BuildWebSocketUrl();
-        await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
+        using var span = Tracer?.NewSpan("ai:DashScopeTtsStream", new { model = modelCode, format, voice, textLength = request.Input.Length });
 
-        // 发送 run-task
-        await SendWebSocketJsonAsync(ws, new
+        // Setup 阶段：连接 + 握手 + 发送文本。此 try-catch 块内无 yield，符合 C# 规则
+        try
         {
-            header = new { task_id = taskId, action = "run-task", streaming = "duplex" },
-            payload = new
-            {
-                model = modelCode,
-                task_group = "audio",
-                task = "tts",
-                function = "SpeechSynthesizer",
-                parameters = new
-                {
-                    text_type = "PlainText",
-                    voice,
-                    format,
-                    sample_rate = sampleRate,
-                    rate,
-                    volume = request.Volume ?? 50,
-                    pitch = request.Pitch ?? 1.0,
-                    enable_ssml = false,
-                },
-                input = new Dictionary<String, Object>(),
-            },
-        }, cancellationToken).ConfigureAwait(false);
+            await ws.ConnectAsync(new Uri(wsUrl), cancellationToken).ConfigureAwait(false);
 
-        // 等待 task-started
-        var started = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
-        if (started == null || GetHeaderAction(started) != "task-started")
-        {
-            var reason = _lastCloseReason.IsNullOrEmpty() ? "" : $"，连接关闭原因: {_lastCloseReason}";
-            var extra = modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase)
-                ? "。v3.5 模型仅限北京地域 MaaS 业务空间（需设置 Organization），且仅支持声音复刻（自定义音色）"
-                : "";
-            throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}{extra}");
-        }
-
-        // 文本分片发送（每片 ≤500 UTF-8 字节，保守取 ≤166 字符）
-        var text = request.Input;
-        var maxChunkSize = 500;
-        var offset = 0;
-        while (offset < text.Length)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var chunkLen = Math.Min(maxChunkSize / 3, text.Length - offset);
-            if (offset + chunkLen < text.Length && Char.IsHighSurrogate(text[offset + chunkLen - 1]))
-                chunkLen--;
-            var chunk = text.Substring(offset, chunkLen);
-            offset += chunkLen;
-
+            // 发送 run-task
             await SendWebSocketJsonAsync(ws, new
             {
-                header = new { task_id = taskId, action = "continue-task", streaming = "duplex" },
+                header = new { task_id = taskId, action = "run-task", streaming = "duplex" },
                 payload = new
                 {
-                    input = new { text = chunk },
+                    model = modelCode,
+                    task_group = "audio",
+                    task = "tts",
+                    function = "SpeechSynthesizer",
+                    parameters = new
+                    {
+                        text_type = "PlainText",
+                        voice,
+                        format,
+                        sample_rate = sampleRate,
+                        rate,
+                        volume = request.Volume ?? 50,
+                        pitch = request.Pitch ?? 1.0,
+                        enable_ssml = false,
+                    },
+                    input = new Dictionary<String, Object>(),
                 },
             }, cancellationToken).ConfigureAwait(false);
+
+            // 等待 task-started
+            var started = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+            if (started == null || GetHeaderAction(started) != "task-started")
+            {
+                var reason = _lastCloseReason.IsNullOrEmpty() ? "" : $"，连接关闭原因: {_lastCloseReason}";
+                var extra = modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase)
+                    ? "。v3.5 模型仅限北京地域 MaaS 业务空间（需设置 Organization），且仅支持声音复刻（自定义音色）"
+                    : "";
+                throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}{extra}");
+            }
+
+            // 文本分片发送（每片 ≤500 UTF-8 字节，保守取 ≤166 字符）
+            var text = request.Input;
+            var maxChunkSize = 500;
+            var offset = 0;
+            while (offset < text.Length)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var chunkLen = Math.Min(maxChunkSize / 3, text.Length - offset);
+                if (offset + chunkLen < text.Length && Char.IsHighSurrogate(text[offset + chunkLen - 1]))
+                    chunkLen--;
+                var chunk = text.Substring(offset, chunkLen);
+                offset += chunkLen;
+
+                await SendWebSocketJsonAsync(ws, new
+                {
+                    header = new { task_id = taskId, action = "continue-task", streaming = "duplex" },
+                    payload = new
+                    {
+                        input = new { text = chunk },
+                    },
+                }, cancellationToken).ConfigureAwait(false);
+            }
+
+            // 发送 finish-task
+            await SendWebSocketJsonAsync(ws, new
+            {
+                header = new { task_id = taskId, action = "finish-task", streaming = "duplex" },
+                payload = new { input = new Dictionary<String, Object>() },
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            span?.SetError(ex, null);
+            throw;
         }
 
-        // 发送 finish-task
-        await SendWebSocketJsonAsync(ws, new
+        // 接收阶段：try-finally（无 catch），yield return 合法
+        try
         {
-            header = new { task_id = taskId, action = "finish-task", streaming = "duplex" },
-            payload = new { input = new Dictionary<String, Object>() },
-        }, cancellationToken).ConfigureAwait(false);
-
-        // 循环接收 result-generated + binary / task-finished
-        while (ws.State == WebSocketState.Open)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var json = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
-            if (json == null) break;
-
-            var action = GetHeaderAction(json);
-            switch (action)
+            // 循环接收 result-generated + binary / task-finished
+            while (ws.State == WebSocketState.Open)
             {
-                case "result-generated":
-                    var audioBytes = await ReceiveWebSocketBinaryAsync(ws, cancellationToken).ConfigureAwait(false);
-                    if (audioBytes != null && audioBytes.Length > 0)
-                        audioChunks.Add(audioBytes);
-                    break;
+                cancellationToken.ThrowIfCancellationRequested();
+                var json = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
+                if (json == null) break;
 
-                case "task-finished":
-                    if (json.TryGetValue("payload", out var fp) && fp is IDictionary<String, Object> fpDic
-                        && fpDic.TryGetValue("usage", out var u) && u is IDictionary<String, Object> uDic
-                        && uDic.TryGetValue("characters", out var chars))
-                        request.CharactersUsed = chars.ToInt();
-                    await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "task-finished", cancellationToken).ConfigureAwait(false);
-                    return;
+                var action = GetHeaderAction(json);
+                switch (action)
+                {
+                    case "result-generated":
+                        var audioBytes = await ReceiveWebSocketBinaryAsync(ws, cancellationToken).ConfigureAwait(false);
+                        if (audioBytes != null && audioBytes.Length > 0)
+                            yield return audioBytes;
+                        break;
 
-                case "task-failed":
-                    var errMsg = "未知错误";
-                    if (json.TryGetValue("payload", out var ep) && ep is IDictionary<String, Object> epDic
-                        && epDic.TryGetValue("message", out var em))
-                        errMsg = em as String ?? errMsg;
-                    throw new InvalidOperationException($"CosyVoice WebSocket 任务失败: {errMsg}");
+                    case "task-finished":
+                        if (json.TryGetValue("payload", out var fp) && fp is IDictionary<String, Object> fpDic
+                            && fpDic.TryGetValue("usage", out var u) && u is IDictionary<String, Object> uDic
+                            && uDic.TryGetValue("characters", out var chars))
+                            request.CharactersUsed = chars.ToInt();
+                        yield break;
 
-                default:
-                    break;
+                    case "task-failed":
+                        var errMsg = "未知错误";
+                        if (json.TryGetValue("payload", out var ep) && ep is IDictionary<String, Object> epDic
+                            && epDic.TryGetValue("message", out var em))
+                            errMsg = em as String ?? errMsg;
+                        throw new InvalidOperationException($"CosyVoice WebSocket 任务失败: {errMsg}");
+
+                    default:
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            if (ws.State == WebSocketState.Open)
+            {
+                try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "task-finished", CancellationToken.None).ConfigureAwait(false); } catch { }
             }
         }
     }
