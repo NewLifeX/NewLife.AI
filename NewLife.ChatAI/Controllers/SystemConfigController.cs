@@ -41,6 +41,7 @@ public class SystemConfigController(ChatSetting chatSetting) : ChatApiController
             SupportText = chatSetting.SupportText.IsNullOrEmpty() ? null : chatSetting.SupportText,
             SupportUrl = chatSetting.SupportUrl.IsNullOrEmpty() ? null : chatSetting.SupportUrl,
             SupportPosition = chatSetting.SupportPosition,
+            ErrorGuidance = chatSetting.ErrorGuidance.IsNullOrEmpty() ? null : chatSetting.ErrorGuidance,
             ShareExpireMinutes = chatSetting.ShareExpireMinutes,
             AllowAnonymousShare = chatSetting.AllowAnonymousShare,
             SuggestedQuestions = questions,

@@ -186,6 +186,9 @@ public class SystemConfigDto
     /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
     public Int32 SupportPosition { get; set; }
 
+    /// <summary>错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加</summary>
+    public String? ErrorGuidance { get; set; }
+
     /// <summary>分享链接默认有效期（分钟），0 表示永不过期</summary>
     public Int32 ShareExpireMinutes { get; set; }
 

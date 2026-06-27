@@ -54,6 +54,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("外观与品牌")]
     [Description("客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）")]
     public Int32 SupportPosition { get; set; } = 0;
+
+    /// <summary>错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加</summary>
+    [Category("外观与品牌")]
+    [Description("错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加")]
+    public String ErrorGuidance { get; set; } = "";
     #endregion
 
     #region 对话行为
