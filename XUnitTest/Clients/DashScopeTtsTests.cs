@@ -530,8 +530,8 @@ public class DashScopeTtsTests
     public void QwenTtsVoiceList_IsValidVoice_KnownVoice_ReturnsTrue()
     {
         Assert.True(QwenTtsVoiceList.IsValidVoice("qwen-tts", "Cherry"));
-        Assert.True(QwenTtsVoiceList.IsValidVoice("qwen-tts", "Stella"));
-        Assert.True(QwenTtsVoiceList.IsValidVoice("qwen3-tts-flash", "Brendan"));
+        Assert.True(QwenTtsVoiceList.IsValidVoice("qwen-tts", "Ethan"));
+        Assert.True(QwenTtsVoiceList.IsValidVoice("qwen3-tts-flash", "Stella"));
     }
 
     [Fact]

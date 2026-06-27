@@ -4,7 +4,7 @@ using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
 
-/// <summary>CosyVoice 音色信息</summary>
+/// <summary>音色信息</summary>
 /// <param name="Id">音色标识。如 longxiaochun_v3</param>
 /// <param name="Name">音色名称。如 龙小淳</param>
 /// <param name="Description">音色描述</param>
@@ -12,7 +12,8 @@ namespace NewLife.AI.Clients.DashScope;
 /// <param name="Language">支持语言</param>
 /// <param name="Scenario">适用场景</param>
 /// <param name="Gender">性别。male/female</param>
-public sealed record VoiceInfo(String Id, String Name, String Description, String Age, String Language, String Scenario, String Gender);
+/// <param name="SupportedModels">支持的模型编码列表（逗号分隔）。CosyVoice 模型不使用此字段</param>
+public sealed record VoiceInfo(String Id, String Name, String Description, String Age, String Language, String Scenario, String Gender, String SupportedModels = "");
 
 /// <summary>CosyVoice 模型音色组</summary>
 /// <param name="Code">模型编码。如 cosyvoice-v3-flash</param>
@@ -120,7 +121,8 @@ public static class CosyVoiceVoiceList
                         v.Age ?? String.Empty,
                         v.Language ?? String.Empty,
                         v.Scenario ?? String.Empty,
-                        v.Gender ?? String.Empty
+                        v.Gender ?? String.Empty,
+                        ""
                     )).ToList() ?? []
                 )).ToList() ?? [];
             }

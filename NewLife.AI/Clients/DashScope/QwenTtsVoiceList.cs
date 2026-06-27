@@ -8,7 +8,8 @@ namespace NewLife.AI.Clients.DashScope;
 /// <remarks>
 /// 数据来源：阿里云官方文档"Qwen-TTS音色列表"（https://help.aliyun.com/zh/model-studio/qwen-tts-voice-list）<br/>
 /// 嵌入资源路径：NewLife.AI.Resources.QwenTtsVoices.json<br/>
-/// 支持模型：qwen-tts、qwen3-tts-flash、qwen3-tts-instruct-flash 及对应 Realtime 变体
+/// 支持模型：qwen-tts、qwen3-tts-flash、qwen3-tts-instruct-flash 及对应 Realtime 变体<br/>
+/// JSON 采用音色→模型结构（每个音色标注 supportedModels），加载后按模型分组为 ModelVoices 对外暴露
 /// </remarks>
 public static class QwenTtsVoiceList
 {
@@ -71,6 +72,17 @@ public static class QwenTtsVoiceList
 
     #region 加载
 
+    /// <summary>模型编码→模型名称映射</summary>
+    private static readonly Dictionary<String, String> _modelNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["qwen-tts"] = "千问 TTS",
+        ["qwen3-tts-flash"] = "千问3 TTS Flash",
+        ["qwen3-tts-instruct-flash"] = "千问3 TTS Instruct Flash",
+        ["qwen-tts-realtime"] = "千问 TTS Realtime",
+        ["qwen3-tts-flash-realtime"] = "千问3 TTS Flash Realtime",
+        ["qwen3-tts-instruct-flash-realtime"] = "千问3 TTS Instruct Flash Realtime",
+    };
+
     private static void EnsureLoaded()
     {
         if (_models != null) return;
@@ -94,19 +106,31 @@ public static class QwenTtsVoiceList
                 var json = reader.ReadToEnd();
 
                 var root = json.ToJsonEntity<QwenTtsRoot>();
-                _models = root?.Models?.Select(m => new ModelVoices(
-                    m.Code ?? String.Empty,
-                    m.Name ?? String.Empty,
-                    m.Voices?.Select(v => new VoiceInfo(
-                        v.Id ?? String.Empty,
-                        v.Name ?? String.Empty,
-                        v.Description ?? String.Empty,
-                        v.Age ?? String.Empty,
-                        v.Language ?? String.Empty,
-                        v.Scenario ?? String.Empty,
-                        v.Gender ?? String.Empty
-                    )).ToList() ?? []
+                var allVoices = root?.Voices?.Select(v => new VoiceInfo(
+                    v.Id ?? String.Empty,
+                    v.Name ?? String.Empty,
+                    v.Description ?? String.Empty,
+                    v.Age ?? String.Empty,
+                    v.Language ?? String.Empty,
+                    v.Scenario ?? String.Empty,
+                    v.Gender ?? String.Empty,
+                    v.SupportedModels ?? String.Empty
                 )).ToList() ?? [];
+
+                // 按 SupportedModels 中的每个模型编码分组为 ModelVoices
+                _models = _modelNames
+                    .Select(kv => new ModelVoices(
+                        kv.Key,
+                        kv.Value,
+                        allVoices
+                            .Where(v => v.SupportedModels
+                                .Split(',')
+                                .Select(s => s.Trim())
+                                .Any(s => s.EqualIgnoreCase(kv.Key)))
+                            .ToList()
+                    ))
+                    .Where(m => m.Voices.Count > 0)
+                    .ToList();
             }
             catch (Exception ex)
             {
@@ -122,17 +146,10 @@ public static class QwenTtsVoiceList
 
     private class QwenTtsRoot
     {
-        public List<QwenTtsModel>? Models { get; set; }
+        public List<QwenTtsVoiceDto>? Voices { get; set; }
     }
 
-    private class QwenTtsModel
-    {
-        public String? Code { get; set; }
-        public String? Name { get; set; }
-        public List<QwenTtsVoice>? Voices { get; set; }
-    }
-
-    private class QwenTtsVoice
+    private class QwenTtsVoiceDto
     {
         public String? Id { get; set; }
         public String? Name { get; set; }
@@ -141,6 +158,7 @@ public static class QwenTtsVoiceList
         public String? Language { get; set; }
         public String? Scenario { get; set; }
         public String? Gender { get; set; }
+        public String? SupportedModels { get; set; }
     }
 
     #endregion
