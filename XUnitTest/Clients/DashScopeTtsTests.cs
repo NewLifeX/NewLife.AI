@@ -442,65 +442,71 @@ public class DashScopeTtsTests
     #region 模型能力推断（TTS 系列）
 
     [Fact]
-    [DisplayName("能力推断_qwen-tts_SupportAudio为true")]
-    public void InferCapabilities_QwenTts_AudioTrue()
+    [DisplayName("能力推断_qwen-tts_SupportSpeech为true")]
+    public void InferCapabilities_QwenTts_SpeechTrue()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         var cap = client.InferModelCapabilities("qwen-tts");
         Assert.NotNull(cap);
-        Assert.True(cap!.SupportAudio, "qwen-tts 应返回 SupportAudio=true");
+        Assert.True(cap!.SupportSpeech, "qwen-tts 应返回 SupportSpeech=true（语音合成）");
+        Assert.False(cap.SupportAudio);
         Assert.False(cap.SupportThinking);
         Assert.False(cap.SupportImage);
     }
 
     [Fact]
-    [DisplayName("能力推断_qwen3-tts-flash_SupportAudio为true")]
-    public void InferCapabilities_Qwen3TtsFlash_AudioTrue()
+    [DisplayName("能力推断_qwen3-tts-flash_SupportSpeech为true")]
+    public void InferCapabilities_Qwen3TtsFlash_SpeechTrue()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         var cap = client.InferModelCapabilities("qwen3-tts-flash");
         Assert.NotNull(cap);
-        Assert.True(cap!.SupportAudio, "qwen3-tts-flash 应返回 SupportAudio=true");
+        Assert.True(cap!.SupportSpeech, "qwen3-tts-flash 应返回 SupportSpeech=true（语音合成）");
+        Assert.False(cap.SupportAudio);
     }
 
     [Fact]
-    [DisplayName("能力推断_qwen3-tts-flash-realtime_SupportAudio为true")]
-    public void InferCapabilities_Qwen3TtsFlashRealtime_AudioTrue()
+    [DisplayName("能力推断_qwen3-tts-flash-realtime_SupportSpeech为true")]
+    public void InferCapabilities_Qwen3TtsFlashRealtime_SpeechTrue()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         var cap = client.InferModelCapabilities("qwen3-tts-flash-realtime");
         Assert.NotNull(cap);
-        Assert.True(cap!.SupportAudio, "qwen3-tts-flash-realtime 应返回 SupportAudio=true");
+        Assert.True(cap!.SupportSpeech, "qwen3-tts-flash-realtime 应返回 SupportSpeech=true（语音合成）");
+        Assert.False(cap.SupportAudio);
     }
 
     [Fact]
-    [DisplayName("能力推断_qwen-tts-realtime_SupportAudio为true")]
-    public void InferCapabilities_QwenTtsRealtime_AudioTrue()
+    [DisplayName("能力推断_qwen-tts-realtime_SupportSpeech为true")]
+    public void InferCapabilities_QwenTtsRealtime_SpeechTrue()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         var cap = client.InferModelCapabilities("qwen-tts-realtime");
         Assert.NotNull(cap);
-        Assert.True(cap!.SupportAudio, "qwen-tts-realtime 应返回 SupportAudio=true");
+        Assert.True(cap!.SupportSpeech, "qwen-tts-realtime 应返回 SupportSpeech=true（语音合成）");
+        Assert.False(cap.SupportAudio);
     }
 
     [Fact]
-    [DisplayName("能力推断_qwen3-tts-instruct-flash_SupportAudio为true")]
-    public void InferCapabilities_Qwen3TtsInstructFlash_AudioTrue()
+    [DisplayName("能力推断_qwen3-tts-instruct-flash_SupportSpeech为true")]
+    public void InferCapabilities_Qwen3TtsInstructFlash_SpeechTrue()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         var cap = client.InferModelCapabilities("qwen3-tts-instruct-flash");
         Assert.NotNull(cap);
-        Assert.True(cap!.SupportAudio);
+        Assert.True(cap!.SupportSpeech);
+        Assert.False(cap.SupportAudio);
     }
 
     [Fact]
-    [DisplayName("能力推断_cosyvoice-v3-flash_SupportAudio为true（回归验证）")]
-    public void InferCapabilities_CosyVoiceV3Flash_AudioTrue_Regression()
+    [DisplayName("能力推断_cosyvoice-v3-flash_SupportSpeech为true（回归验证）")]
+    public void InferCapabilities_CosyVoiceV3Flash_SpeechTrue_Regression()
     {
         using var client = new DashScopeChatClient(CreateOptions());
         var cap = client.InferModelCapabilities("cosyvoice-v3-flash");
         Assert.NotNull(cap);
-        Assert.True(cap!.SupportAudio, "cosyvoice-v3-flash 能力推断不应被 qwen-tts 修改影响");
+        Assert.True(cap!.SupportSpeech, "cosyvoice-v3-flash 应返回 SupportSpeech=true（语音合成）");
+        Assert.False(cap.SupportAudio);
     }
 
     #endregion

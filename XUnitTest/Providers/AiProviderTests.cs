@@ -413,12 +413,18 @@ public class AiProviderTests
         var flash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-flash");
         Assert.NotNull(flash);
         Assert.Equal("CosyVoice V3 Flash", flash!.DisplayName);
-        Assert.True(flash.Capabilities!.SupportAudio);
+        Assert.True(flash.Capabilities!.SupportSpeech);
+        Assert.False(flash.Capabilities!.SupportAudio);
 
         var plus = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-plus");
         Assert.NotNull(plus);
         Assert.Equal("CosyVoice V3 Plus", plus!.DisplayName);
-        Assert.True(plus.Capabilities!.SupportAudio);
+        Assert.True(plus.Capabilities!.SupportSpeech);
+        Assert.False(plus.Capabilities!.SupportAudio);
+
+        // v3.5 系列不直接注册 [AiClientModel]，通过 InferModelCapabilities 前缀匹配 cosyvoice-* 推断
+        var v35Flash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3.5-flash");
+        Assert.Null(v35Flash);
     }
 
     [Fact]
@@ -501,10 +507,11 @@ public class AiProviderTests
     [InlineData("wan2.1-i2v-plus", false, false, false, false, false, true)]
     // 非对话模型
     [InlineData("text-embedding-v4", false, false, false, false, false, false)]
-    // TTS 语音合成模型
-    [InlineData("cosyvoice-v3-plus", false, false, false, true, false, false)]
-    [InlineData("cosyvoice-v3-flash", false, false, false, true, false, false)]
-    [InlineData("fun-asr-realtime", false, false, false, false, false, false)]
+    // TTS 语音合成模型（SupportSpeech=true，不是 SupportAudio）
+    [InlineData("cosyvoice-v3-plus", false, false, false, false, false, false)]
+    [InlineData("cosyvoice-v3-flash", false, false, false, false, false, false)]
+    // 语音识别 ASR
+    [InlineData("fun-asr-realtime", false, false, false, true, false, false)]
     // omni 全模态
     [InlineData("qwen-omni-turbo", false, false, true, true, false, false)]
     [InlineData("qwen3.5-omni-plus", false, false, true, true, false, false)]

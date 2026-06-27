@@ -363,6 +363,13 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 if (descriptor == null) continue;
 
                 var caps = descriptor.FindModelCapabilities(model.Code);
+
+                // 未注册的模型通过 InferModelCapabilities 模式匹配推断（如 cosyvoice-v3.5-*、qwen-tts-* 变体）
+                if (caps == null && model.Code != null)
+                {
+                    using var client = descriptor.Factory(new AiClientOptions { Endpoint = "" });
+                    caps = (client as OpenAIClientBase)?.InferModelCapabilities(model.Code);
+                }
                 if (caps == null) continue;
 
                 // 保护策略：仅当模型未锁定时覆盖（管理员手动保存后自动锁定，禁止自动覆盖）
@@ -372,9 +379,11 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                     model.SupportFunction = caps.SupportFunction;
                     model.SupportVision = caps.SupportVision;
                     model.SupportAudio = caps.SupportAudio;
+                    model.SupportSpeech = caps.SupportSpeech;
                     model.SupportImage = caps.SupportImage;
                     model.SupportVideo = caps.SupportVideo;
                     model.SupportEmbedding = caps.SupportEmbedding;
+                    model.SupportRerank = caps.SupportRerank;
                     if (caps.ContextLength > 0) model.ContextLength = caps.ContextLength;
                 }
 

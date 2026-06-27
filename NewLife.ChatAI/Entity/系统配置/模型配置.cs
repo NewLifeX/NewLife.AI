@@ -63,11 +63,11 @@ public partial class ModelConfig
     public String? UpstreamModel { get => _UpstreamModel; set { if (OnPropertyChanging("UpstreamModel", value)) { _UpstreamModel = value; OnPropertyChanged("UpstreamModel"); } } }
 
     private Int32 _ContextLength;
-    /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
-    [DisplayName("上下文长度")]
-    [Description("上下文长度。模型支持的上下文窗口大小（令牌数）")]
+    /// <summary>上下文。模型支持的上下文窗口大小（令牌数）</summary>
+    [DisplayName("上下文")]
+    [Description("上下文。模型支持的上下文窗口大小（令牌数）")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ContextLength", "上下文长度。模型支持的上下文窗口大小（令牌数）", "")]
+    [BindColumn("ContextLength", "上下文。模型支持的上下文窗口大小（令牌数）", "")]
     public Int32 ContextLength { get => _ContextLength; set { if (OnPropertyChanging("ContextLength", value)) { _ContextLength = value; OnPropertyChanged("ContextLength"); } } }
 
     private Boolean _SupportThinking;
@@ -102,6 +102,14 @@ public partial class ModelConfig
     [BindColumn("SupportAudio", "音频。是否支持音频输入输出", "")]
     public Boolean SupportAudio { get => _SupportAudio; set { if (OnPropertyChanging("SupportAudio", value)) { _SupportAudio = value; OnPropertyChanged("SupportAudio"); } } }
 
+    private Boolean _SupportSpeech;
+    /// <summary>语音合成。是否支持语音合成/音频输出（TTS）</summary>
+    [DisplayName("语音合成")]
+    [Description("语音合成。是否支持语音合成/音频输出（TTS）")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SupportSpeech", "语音合成。是否支持语音合成/音频输出（TTS）", "")]
+    public Boolean SupportSpeech { get => _SupportSpeech; set { if (OnPropertyChanging("SupportSpeech", value)) { _SupportSpeech = value; OnPropertyChanged("SupportSpeech"); } } }
+
     private Boolean _SupportImage;
     /// <summary>图像。是否支持文生图</summary>
     [DisplayName("图像")]
@@ -126,6 +134,14 @@ public partial class ModelConfig
     [BindColumn("SupportEmbedding", "嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景", "")]
     public Boolean SupportEmbedding { get => _SupportEmbedding; set { if (OnPropertyChanging("SupportEmbedding", value)) { _SupportEmbedding = value; OnPropertyChanged("SupportEmbedding"); } } }
 
+    private Boolean _SupportRerank;
+    /// <summary>重排序。是否支持重排序接口，用于RAG场景</summary>
+    [DisplayName("重排序")]
+    [Description("重排序。是否支持重排序接口，用于RAG场景")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("SupportRerank", "重排序。是否支持重排序接口，用于RAG场景", "")]
+    public Boolean SupportRerank { get => _SupportRerank; set { if (OnPropertyChanging("SupportRerank", value)) { _SupportRerank = value; OnPropertyChanged("SupportRerank"); } } }
+
     private String? _ReasoningEfforts;
     /// <summary>推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持</summary>
     [DisplayName("推理强度")]
@@ -135,12 +151,12 @@ public partial class ModelConfig
     public String? ReasoningEfforts { get => _ReasoningEfforts; set { if (OnPropertyChanging("ReasoningEfforts", value)) { _ReasoningEfforts = value; OnPropertyChanged("ReasoningEfforts"); } } }
 
     private Boolean _EnablePromptCache;
-    /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
+    /// <summary>提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
     [Category("计费")]
-    [DisplayName("启用提示缓存")]
-    [Description("启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本")]
+    [DisplayName("提示缓存")]
+    [Description("提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("EnablePromptCache", "启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本", "")]
+    [BindColumn("EnablePromptCache", "提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本", "")]
     public Boolean EnablePromptCache { get => _EnablePromptCache; set { if (OnPropertyChanging("EnablePromptCache", value)) { _EnablePromptCache = value; OnPropertyChanged("EnablePromptCache"); } } }
 
     private String? _SystemPrompt;
@@ -281,9 +297,11 @@ public partial class ModelConfig
             "SupportFunction" => _SupportFunction,
             "SupportVision" => _SupportVision,
             "SupportAudio" => _SupportAudio,
+            "SupportSpeech" => _SupportSpeech,
             "SupportImage" => _SupportImage,
             "SupportVideo" => _SupportVideo,
             "SupportEmbedding" => _SupportEmbedding,
+            "SupportRerank" => _SupportRerank,
             "ReasoningEfforts" => _ReasoningEfforts,
             "EnablePromptCache" => _EnablePromptCache,
             "SystemPrompt" => _SystemPrompt,
@@ -316,9 +334,11 @@ public partial class ModelConfig
                 case "SupportFunction": _SupportFunction = value.ToBoolean(); break;
                 case "SupportVision": _SupportVision = value.ToBoolean(); break;
                 case "SupportAudio": _SupportAudio = value.ToBoolean(); break;
+                case "SupportSpeech": _SupportSpeech = value.ToBoolean(); break;
                 case "SupportImage": _SupportImage = value.ToBoolean(); break;
                 case "SupportVideo": _SupportVideo = value.ToBoolean(); break;
                 case "SupportEmbedding": _SupportEmbedding = value.ToBoolean(); break;
+                case "SupportRerank": _SupportRerank = value.ToBoolean(); break;
                 case "ReasoningEfforts": _ReasoningEfforts = Convert.ToString(value); break;
                 case "EnablePromptCache": _EnablePromptCache = value.ToBoolean(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
@@ -406,10 +426,12 @@ public partial class ModelConfig
     /// <param name="supportFunction">函数调用。是否支持Function Calling</param>
     /// <param name="supportVision">视觉。是否支持图片输入</param>
     /// <param name="supportAudio">音频。是否支持音频输入输出</param>
+    /// <param name="supportSpeech">语音合成。是否支持语音合成/音频输出（TTS）</param>
     /// <param name="supportImage">图像。是否支持文生图</param>
     /// <param name="supportVideo">视频生成。是否支持文生视频</param>
     /// <param name="supportEmbedding">嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</param>
-    /// <param name="enablePromptCache">启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</param>
+    /// <param name="supportRerank">重排序。是否支持重排序接口，用于RAG场景</param>
+    /// <param name="enablePromptCache">提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</param>
     /// <param name="locked">锁定。锁定后禁止程序自动覆盖模型特性，仅允许手动修改</param>
     /// <param name="enable">启用</param>
     /// <param name="start">更新时间开始</param>
@@ -417,7 +439,7 @@ public partial class ModelConfig
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? enablePromptCache, Boolean? locked, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<ModelConfig> Search(Int32 providerId, String? code, Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio, Boolean? supportSpeech, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? supportRerank, Boolean? enablePromptCache, Boolean? locked, Boolean? enable, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -427,9 +449,11 @@ public partial class ModelConfig
         if (supportFunction != null) exp &= _.SupportFunction == supportFunction;
         if (supportVision != null) exp &= _.SupportVision == supportVision;
         if (supportAudio != null) exp &= _.SupportAudio == supportAudio;
+        if (supportSpeech != null) exp &= _.SupportSpeech == supportSpeech;
         if (supportImage != null) exp &= _.SupportImage == supportImage;
         if (supportVideo != null) exp &= _.SupportVideo == supportVideo;
         if (supportEmbedding != null) exp &= _.SupportEmbedding == supportEmbedding;
+        if (supportRerank != null) exp &= _.SupportRerank == supportRerank;
         if (enablePromptCache != null) exp &= _.EnablePromptCache == enablePromptCache;
         if (locked != null) exp &= _.Locked == locked;
         if (enable != null) exp &= _.Enable == enable;
@@ -459,7 +483,7 @@ public partial class ModelConfig
         /// <summary>上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）</summary>
         public static readonly Field UpstreamModel = FindByName("UpstreamModel");
 
-        /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
+        /// <summary>上下文。模型支持的上下文窗口大小（令牌数）</summary>
         public static readonly Field ContextLength = FindByName("ContextLength");
 
         /// <summary>思考。是否支持思考模式</summary>
@@ -474,6 +498,9 @@ public partial class ModelConfig
         /// <summary>音频。是否支持音频输入输出</summary>
         public static readonly Field SupportAudio = FindByName("SupportAudio");
 
+        /// <summary>语音合成。是否支持语音合成/音频输出（TTS）</summary>
+        public static readonly Field SupportSpeech = FindByName("SupportSpeech");
+
         /// <summary>图像。是否支持文生图</summary>
         public static readonly Field SupportImage = FindByName("SupportImage");
 
@@ -483,10 +510,13 @@ public partial class ModelConfig
         /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
         public static readonly Field SupportEmbedding = FindByName("SupportEmbedding");
 
+        /// <summary>重排序。是否支持重排序接口，用于RAG场景</summary>
+        public static readonly Field SupportRerank = FindByName("SupportRerank");
+
         /// <summary>推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持</summary>
         public static readonly Field ReasoningEfforts = FindByName("ReasoningEfforts");
 
-        /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
+        /// <summary>提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
         public static readonly Field EnablePromptCache = FindByName("EnablePromptCache");
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
@@ -552,7 +582,7 @@ public partial class ModelConfig
         /// <summary>上游模型。实际发送给上游API的模型编码，为空时使用Code。用于将内部模型标识（如newlife-plus）映射到提供商模型名（如qwen3.6-plus）</summary>
         public const String UpstreamModel = "UpstreamModel";
 
-        /// <summary>上下文长度。模型支持的上下文窗口大小（令牌数）</summary>
+        /// <summary>上下文。模型支持的上下文窗口大小（令牌数）</summary>
         public const String ContextLength = "ContextLength";
 
         /// <summary>思考。是否支持思考模式</summary>
@@ -567,6 +597,9 @@ public partial class ModelConfig
         /// <summary>音频。是否支持音频输入输出</summary>
         public const String SupportAudio = "SupportAudio";
 
+        /// <summary>语音合成。是否支持语音合成/音频输出（TTS）</summary>
+        public const String SupportSpeech = "SupportSpeech";
+
         /// <summary>图像。是否支持文生图</summary>
         public const String SupportImage = "SupportImage";
 
@@ -576,10 +609,13 @@ public partial class ModelConfig
         /// <summary>嵌入向量。是否支持Embedding向量化接口，用于RAG/知识库等场景</summary>
         public const String SupportEmbedding = "SupportEmbedding";
 
+        /// <summary>重排序。是否支持重排序接口，用于RAG场景</summary>
+        public const String SupportRerank = "SupportRerank";
+
         /// <summary>推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持</summary>
         public const String ReasoningEfforts = "ReasoningEfforts";
 
-        /// <summary>启用提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
+        /// <summary>提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本</summary>
         public const String EnablePromptCache = "EnablePromptCache";
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
