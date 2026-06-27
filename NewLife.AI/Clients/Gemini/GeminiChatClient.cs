@@ -21,7 +21,7 @@ namespace NewLife.AI.Clients.Gemini;
 [AiClient("Gemini", "谷歌Gemini", "https://generativelanguage.googleapis.com", Protocol = "Gemini", Description = "谷歌 Gemini 系列多模态大模型，支持超长上下文")]
 [AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true, InputPrice = 8.625, OutputPrice = 69, CachedInputPrice = 0.863)]
 [AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true, InputPrice = 2.07, OutputPrice = 17.25, CachedInputPrice = 0.207)]
-[AiClientModel("imagen-4.0-generate-001", "Imagen 4", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("imagen-4.0-generate-001", "Imagen 4", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.276)]
 public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
 {
     #region 属性

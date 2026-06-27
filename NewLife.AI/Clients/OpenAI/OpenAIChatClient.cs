@@ -18,7 +18,7 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 5.175, OutputPrice = 31.05, CachedInputPrice = 0.518)]
 [AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.59, OutputPrice = 30.36, CachedInputPrice = 1.898)]
 [AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.59, OutputPrice = 30.36, CachedInputPrice = 1.898)]
-[AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false)]
+[AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.276)]
 public partial class OpenAIChatClient : OpenAIClientBase,
     IImageClient, IVideoClient, ISpeechClient, ITranscriptionClient, IEmbeddingClient
 {

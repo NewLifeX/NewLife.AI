@@ -339,50 +339,50 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
 
         // OpenAI 系列
         if (modelId.StartsWith("gpt-4.1-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(2.76m, 11.04m, 0.69m);
+            pricing = new AiModelPricing(2.76m, 11.04m, 0.69m, 0);
         else if (modelId.StartsWith("gpt-4.1", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(13.8m, 55.2m, 3.45m);
+            pricing = new AiModelPricing(13.8m, 55.2m, 3.45m, 0);
         else if (modelId.StartsWith("gpt-4o-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(1.035m, 4.14m, 0.518m);
+            pricing = new AiModelPricing(1.035m, 4.14m, 0.518m, 0);
         else if (modelId.StartsWith("gpt-4o", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(17.25m, 69m, 8.625m);
+            pricing = new AiModelPricing(17.25m, 69m, 8.625m, 0);
         else if (modelId.StartsWith("gpt-4-turbo", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(72m, 216m, 36m);
+            pricing = new AiModelPricing(72m, 216m, 36m, 0);
         else if (modelId.StartsWith("gpt-4", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(216m, 432m);
+            pricing = new AiModelPricing(216m, 432m, 0, 0);
         else if (modelId.StartsWith("gpt-3.5", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(3.6m, 10.8m, 1.8m);
+            pricing = new AiModelPricing(3.6m, 10.8m, 1.8m, 0);
         else if (modelId.StartsWith("gpt-5-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(5.175m, 31.05m, 0.518m);
+            pricing = new AiModelPricing(5.175m, 31.05m, 0.518m, 0);
         else if (modelId.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(17.25m, 103.5m, 4.313m);
+            pricing = new AiModelPricing(17.25m, 103.5m, 4.313m, 0);
         // o 系列
         else if (modelId.StartsWith("o4-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m);
+            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m, 0);
         else if (modelId.StartsWith("o3-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m);
+            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m, 0);
         else if (modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(69m, 276m, 6.9m);
+            pricing = new AiModelPricing(69m, 276m, 6.9m, 0);
         else if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(103.5m, 414m, 10.35m);
+            pricing = new AiModelPricing(103.5m, 414m, 10.35m, 0);
         // Claude 系列（非 Bedrock）
         else if (modelId.StartsWith("claude-opus", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(34.5m, 172.5m, 3.45m);
+            pricing = new AiModelPricing(34.5m, 172.5m, 3.45m, 0);
         else if (modelId.StartsWith("claude-sonnet", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m);
+            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
         else if (modelId.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(6.9m, 34.5m, 0.69m);
+            pricing = new AiModelPricing(6.9m, 34.5m, 0.69m, 0);
         else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m);
+            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
         // DeepSeek V4 系列（官网 2026-Q2 定价）
         else if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(1m, 2m, 0.02m);
+            pricing = new AiModelPricing(1m, 2m, 0.02m, 1m);
         else if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(3m, 6m, 0.025m);
+            pricing = new AiModelPricing(3m, 6m, 0.025m, 3m);
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(1m, 2m, 0.02m);
+            pricing = new AiModelPricing(1m, 2m, 0.02m, 1m);
 
         return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts, pricing);
     }
