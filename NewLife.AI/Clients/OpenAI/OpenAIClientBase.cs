@@ -306,7 +306,10 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         // Claude 系列：200K
         else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
             contextLength = 200_000;
-        // DeepSeek 系列：64K
+        // DeepSeek V4 系列：1M
+        else if (modelId.StartsWith("deepseek-v4", StringComparison.OrdinalIgnoreCase))
+            contextLength = 1_048_576;
+        // DeepSeek 旧系列：64K
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
             contextLength = 65_536;
 
@@ -320,7 +323,58 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             // 其他支持思考的模型默认提供基础推理强度
             reasoningEfforts = "high";
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts);
+        // === 价格推断（元/百万Token，汇率约 7.2）===
+        AiModelPricing? pricing = null;
+
+        // OpenAI 系列
+        if (modelId.StartsWith("gpt-4.1-mini", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 2.88m, OutputPrice: 11.52m, CachedInputPrice: 0.72m);
+        else if (modelId.StartsWith("gpt-4.1", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 14.4m, OutputPrice: 57.6m, CachedInputPrice: 3.6m);
+        else if (modelId.StartsWith("gpt-4o-mini", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 1.08m, OutputPrice: 4.32m, CachedInputPrice: 0.54m);
+        else if (modelId.StartsWith("gpt-4o", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 18m, OutputPrice: 72m, CachedInputPrice: 9m);
+        else if (modelId.StartsWith("gpt-4-turbo", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 72m, OutputPrice: 216m, CachedInputPrice: 36m);
+        else if (modelId.StartsWith("gpt-4", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 216m, OutputPrice: 432m);
+        else if (modelId.StartsWith("gpt-3.5", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 3.6m, OutputPrice: 10.8m, CachedInputPrice: 1.8m);
+        else if (modelId.StartsWith("gpt-5-mini", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 2.52m, OutputPrice: 10.08m, CachedInputPrice: 0.63m);
+        else if (modelId.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 54m, OutputPrice: 216m, CachedInputPrice: 13.5m);
+        // o 系列
+        else if (modelId.StartsWith("o4-mini", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 7.92m, OutputPrice: 31.68m, CachedInputPrice: 1.98m);
+        else if (modelId.StartsWith("o3-mini", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 7.92m, OutputPrice: 31.68m, CachedInputPrice: 1.98m);
+        else if (modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 72m, OutputPrice: 288m, CachedInputPrice: 18m);
+        else if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 108m, OutputPrice: 432m, CachedInputPrice: 27m);
+        // Claude 系列（非 Bedrock）
+        else if (modelId.StartsWith("claude-opus", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 108m, OutputPrice: 540m, CachedInputPrice: 2.7m);
+        else if (modelId.StartsWith("claude-sonnet", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 21.6m, OutputPrice: 108m, CachedInputPrice: 2.16m);
+        else if (modelId.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 5.76m, OutputPrice: 28.8m, CachedInputPrice: 0.58m);
+        else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 21.6m, OutputPrice: 108m, CachedInputPrice: 2.16m);
+        // DeepSeek 系列
+        // DeepSeek V4 系列（官网 2026-Q2 定价）
+        else if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
+                 modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
+                 modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 1m, OutputPrice: 2m, CachedInputPrice: 0.02m);
+        else if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 3m, OutputPrice: 6m, CachedInputPrice: 0.025m);
+        else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 1m, OutputPrice: 2m, CachedInputPrice: 0.02m);
+
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts, pricing);
     }
 
     /// <summary>根据模型 ID 推断可读显示名称。将连字符分隔的各段首字母大写，如 qwen3.7-max → Qwen3.7 Max</summary>

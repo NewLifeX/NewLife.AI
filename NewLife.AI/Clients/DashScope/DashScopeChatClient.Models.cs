@@ -5,17 +5,17 @@ using NewLife.Serialization;
 namespace NewLife.AI.Clients.DashScope;
 
 // ===== 对话模型 =====
-[AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true)]
-[AiClientModel("qwq-plus", "QwQ Plus", Thinking = true)]
-[AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true)]
+[AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true, InputPrice = 2.4, OutputPrice = 14.4, CachedInputPrice = 0.24)]
+[AiClientModel("qwq-plus", "QwQ Plus", Thinking = true, InputPrice = 2, OutputPrice = 12, CachedInputPrice = 0.2)]
+[AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true, InputPrice = 3, OutputPrice = 18, CachedInputPrice = 0.3)]
 [AiClientModel("qwen-image-2.0-pro", "Qwen Image 2.0 Pro", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen-image-edit", "Qwen Image Edit", ImageGeneration = true, FunctionCalling = false)]
-[AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
+[AiClientModel("qwen3-coder-next", "Qwen3 Coder", InputPrice = 2.4, OutputPrice = 14.4, CachedInputPrice = 0.24)]
 // Omni 系列：视觉输入 + 语音识别输入 + 语音合成输出
-[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, Speech = true, FunctionCalling = false)]
-[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, Speech = true, FunctionCalling = false)]
-[AiClientModel("qwen3-omni-flash", "Qwen3 Omni Flash", Vision = true, Audio = true, Speech = true, Thinking = true, FunctionCalling = false)]
-[AiClientModel("qwen-omni-turbo", "Qwen Omni Turbo", Vision = true, Audio = true, Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 3.5, OutputPrice = 14, CachedInputPrice = 0.35)]
+[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
+[AiClientModel("qwen3-omni-flash", "Qwen3 Omni Flash", Vision = true, Audio = true, Speech = true, Thinking = true, FunctionCalling = false, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
+[AiClientModel("qwen-omni-turbo", "Qwen Omni Turbo", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2)]
 [AiClientModel("wan2.6-t2i", "文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "文生视频（万相2.7）", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "图生视频（万相2.7）", Vision = true, VideoGeneration = true, FunctionCalling = false)]
@@ -36,14 +36,16 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen3-tts-vc-realtime", "千问3 TTS VC Realtime", Speech = true, FunctionCalling = false)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
-[AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true)]
-[AiClientModel("qwen3.6-plus", "Qwen3.6 Plus", Thinking = true, Vision = true)]
-[AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true, Vision = true)]
-[AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Thinking = true)]
-[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Thinking = true)]
-[AiClientModel("glm-5.1", "GLM 5.1", Thinking = true)]
-[AiClientModel("kimi-k2.6", "Kimi K2.6", Thinking = true)]
-[AiClientModel("MiniMax-M2.5", "MiniMax M2.5", Thinking = true)]
+[AiClientModel("qwen3.7-max", "Qwen3.7 Max", Thinking = true, InputPrice = 2.4, OutputPrice = 14.4, CachedInputPrice = 0.24)]
+[AiClientModel("qwen3.7-plus", "Qwen3.7 Plus", Thinking = true, Vision = true, InputPrice = 1.6, OutputPrice = 6.4, CachedInputPrice = 0.16)]
+[AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true, InputPrice = 2, OutputPrice = 12, CachedInputPrice = 0.2)]
+[AiClientModel("qwen3.6-plus", "Qwen3.6 Plus", Thinking = true, Vision = true, InputPrice = 1.4, OutputPrice = 5.6, CachedInputPrice = 0.14)]
+[AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true, Vision = true, InputPrice = 0.7, OutputPrice = 2.8, CachedInputPrice = 0.07)]
+[AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Thinking = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2)]
+[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Thinking = true, InputPrice = 0.5, OutputPrice = 2, CachedInputPrice = 0.05)]
+[AiClientModel("glm-5.1", "GLM 5.1", Thinking = true, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
+[AiClientModel("kimi-k2.6", "Kimi K2.6", Thinking = true, InputPrice = 1, OutputPrice = 4, CachedInputPrice = 0.1)]
+[AiClientModel("MiniMax-M2.5", "MiniMax M2.5", Thinking = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2)]
 // ===== 嵌入与重排序模型 =====
 [AiClientModel("text-embedding-v4", "Text Embedding V4", Embedding = true, FunctionCalling = false)]
 [AiClientModel("qwen3-vl-embedding", "Qwen3 VL Embedding", Vision = true, Embedding = true, FunctionCalling = false)]
@@ -214,6 +216,8 @@ public partial class DashScopeChatClient
         // === 上下文长度 ===
         if (modelId.StartsWithIgnoreCase("qwen-long"))
             contextLength = 1_000_000;
+        else if (modelId.StartsWithIgnoreCase("qwen3.7-"))
+            contextLength = 1_048_576;
         else if (modelId.StartsWithIgnoreCase("qwen3.6-max-preview"))
             contextLength = 262_144;
         else if (modelId.StartsWithIgnoreCase("qwen3.6-"))
@@ -232,7 +236,67 @@ public partial class DashScopeChatClient
         else if (modelId.StartsWithIgnoreCase("MiniMax-M2."))
             contextLength = 196_608;
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength);
+        // === 价格推断（阿里百炼 2026-Q2 官网定价，元/百万Token）===
+        AiModelPricing? pricing = null;
+
+        // Qwen3.7 系列
+        if (modelId.StartsWithIgnoreCase("qwen3.7-max"))
+            pricing = new AiModelPricing(InputPrice: 2.4m, OutputPrice: 14.4m, CachedInputPrice: 0.24m);
+        else if (modelId.StartsWithIgnoreCase("qwen3.7-plus"))
+            pricing = new AiModelPricing(InputPrice: 1.6m, OutputPrice: 6.4m, CachedInputPrice: 0.16m);
+        // Qwen3.6 系列
+        else if (modelId.StartsWithIgnoreCase("qwen3.6-max"))
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 12m, CachedInputPrice: 0.2m);
+        else if (modelId.StartsWithIgnoreCase("qwen3.6-plus"))
+            pricing = new AiModelPricing(InputPrice: 1.4m, OutputPrice: 5.6m, CachedInputPrice: 0.14m);
+        else if (modelId.StartsWithIgnoreCase("qwen3.6-flash"))
+            pricing = new AiModelPricing(InputPrice: 0.7m, OutputPrice: 2.8m, CachedInputPrice: 0.07m);
+        // Qwen3 系列
+        else if (modelId.StartsWithIgnoreCase("qwen3-max"))
+            pricing = new AiModelPricing(InputPrice: 2.4m, OutputPrice: 14.4m, CachedInputPrice: 0.24m);
+        else if (modelId.StartsWithIgnoreCase("qwen3-plus"))
+            pricing = new AiModelPricing(InputPrice: 0.8m, OutputPrice: 3.2m, CachedInputPrice: 0.08m);
+        else if (modelId.StartsWithIgnoreCase("qwen3-turbo"))
+            pricing = new AiModelPricing(InputPrice: 0.3m, OutputPrice: 1.2m, CachedInputPrice: 0.03m);
+        else if (modelId.StartsWithIgnoreCase("qwen3-235b"))
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 8m, CachedInputPrice: 0.2m);
+        else if (modelId.StartsWithIgnoreCase("qwq-"))
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 12m, CachedInputPrice: 0.2m);
+        else if (modelId.StartsWithIgnoreCase("qvq-"))
+            pricing = new AiModelPricing(InputPrice: 2.4m, OutputPrice: 14.4m, CachedInputPrice: 0.24m);
+        // 稳定版别名（指向 qwen3 时代）
+        else if (modelId.StartsWithIgnoreCase("qwen-max"))
+            pricing = new AiModelPricing(InputPrice: 2.4m, OutputPrice: 14.4m, CachedInputPrice: 0.24m);
+        else if (modelId.StartsWithIgnoreCase("qwen-plus"))
+            pricing = new AiModelPricing(InputPrice: 0.8m, OutputPrice: 3.2m, CachedInputPrice: 0.08m);
+        else if (modelId.StartsWithIgnoreCase("qwen-turbo"))
+            pricing = new AiModelPricing(InputPrice: 0.3m, OutputPrice: 1.2m, CachedInputPrice: 0.03m);
+        // VL 视觉系列
+        else if (modelId.StartsWithIgnoreCase("qwen-vl-max"))
+            pricing = new AiModelPricing(InputPrice: 3m, OutputPrice: 18m, CachedInputPrice: 0.3m);
+        else if (modelId.StartsWithIgnoreCase("qwen-vl-plus"))
+            pricing = new AiModelPricing(InputPrice: 1.5m, OutputPrice: 9m, CachedInputPrice: 0.15m);
+        // 百炼托管第三方推理模型
+        else if (modelId.StartsWithIgnoreCase("deepseek-v4-pro"))
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 8m, CachedInputPrice: 0.2m);
+        else if (modelId.StartsWithIgnoreCase("deepseek-v4-flash"))
+            pricing = new AiModelPricing(InputPrice: 0.5m, OutputPrice: 2m, CachedInputPrice: 0.05m);
+        else if (modelId.StartsWithIgnoreCase("kimi-k2."))
+            pricing = new AiModelPricing(InputPrice: 1m, OutputPrice: 4m, CachedInputPrice: 0.1m);
+        else if (modelId.StartsWithIgnoreCase("glm-5."))
+            pricing = new AiModelPricing(InputPrice: 1.5m, OutputPrice: 6m, CachedInputPrice: 0.15m);
+        else if (modelId.StartsWithIgnoreCase("MiniMax-M2."))
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 8m, CachedInputPrice: 0.2m);
+        // Omni 全模态
+        else if (modelId.StartsWithIgnoreCase("qwen3.5-omni", "qwen3-omni"))
+            pricing = new AiModelPricing(InputPrice: 3.5m, OutputPrice: 14m, CachedInputPrice: 0.35m);
+        else if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 8m, CachedInputPrice: 0.2m);
+        // 其他 qwen 系列兜底
+        else if (modelId.StartsWith("qwen", StringComparison.OrdinalIgnoreCase))
+            pricing = new AiModelPricing(InputPrice: 0.7m, OutputPrice: 2.8m, CachedInputPrice: 0.07m);
+
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, null, pricing);
     }
     #endregion
 }

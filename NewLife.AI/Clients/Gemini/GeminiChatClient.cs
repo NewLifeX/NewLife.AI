@@ -19,8 +19,8 @@ namespace NewLife.AI.Clients.Gemini;
 /// </remarks>
 /// <remarks>用连接选项初始化 Gemini 客户端</remarks>
 [AiClient("Gemini", "谷歌Gemini", "https://generativelanguage.googleapis.com", Protocol = "Gemini", Description = "谷歌 Gemini 系列多模态大模型，支持超长上下文")]
-[AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true)]
-[AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true)]
+[AiClientModel("gemini-2.5-pro", "Gemini 2.5 Pro", Thinking = true, Vision = true, InputPrice = 18, OutputPrice = 54, CachedInputPrice = 4.5)]
+[AiClientModel("gemini-2.5-flash", "Gemini 2.5 Flash", Thinking = true, Vision = true, InputPrice = 1.8, OutputPrice = 5.4, CachedInputPrice = 0.45)]
 [AiClientModel("imagen-4.0-generate-001", "Imagen 4", ImageGeneration = true, FunctionCalling = false)]
 public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
 {

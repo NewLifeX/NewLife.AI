@@ -8,13 +8,16 @@ namespace NewLife.AI.Clients.OpenAI;
 /// 与标准 OpenAI 协议的主要差异：
 /// <list type="bullet">
 /// <item>思考控制：<see cref="IChatRequest.EnableThinking"/> 映射为 <c>thinking: {type: "enabled"|"disabled"}</c>，而非 OpenAI 不支持的 <c>enable_thinking</c></item>
-/// <item>deepseek-reasoner 始终输出 <c>reasoning_content</c> 思维链，不支持 temperature/top_p/presence_penalty/frequency_penalty 及 Function Calling</item>
+/// <item>deepseek-reasoner 始终输出 <c>reasoning_content</c> 思维链，不支持 temperature/top_p/presence_penalty/frequency_penalty 及部分采样参数</item>
 /// <item>reasoning_content 字段由基类 <see cref="OpenAIClientBase.ParseChatMessage"/> 负责解析，无需额外处理</item>
+/// <item>V4 系列（deepseek-v4-flash/v4-pro）统一上下文 1M，支持工具调用；旧 deepseek-chat/reasoner 作为兼容别名保留</item>
 /// </list>
 /// </remarks>
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
-[AiClientModel("deepseek-chat", "DeepSeek Chat", Code = "DeepSeek", FunctionCalling = true, ReasoningEfforts = "high,max")]
-[AiClientModel("deepseek-reasoner", "DeepSeek Reasoner", Code = "DeepSeek", Thinking = true, ReasoningEfforts = "high,max")]
+[AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Code = "DeepSeek", FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 3, OutputPrice = 6, CachedInputPrice = 0.025)]
+[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Code = "DeepSeek", Thinking = true, FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 1, OutputPrice = 2, CachedInputPrice = 0.02)]
+[AiClientModel("deepseek-chat", "DeepSeek Chat", Code = "DeepSeek", FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 1, OutputPrice = 2, CachedInputPrice = 0.02)]
+[AiClientModel("deepseek-reasoner", "DeepSeek Reasoner", Code = "DeepSeek", Thinking = true, ReasoningEfforts = "high,max", InputPrice = 1, OutputPrice = 2, CachedInputPrice = 0.02)]
 public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
 {
     #region 属性
@@ -82,7 +85,9 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
     /// <remarks>
     /// DeepSeek 各系列模型能力差异：
     /// <list type="bullet">
-    ///   <item><description>deepseek-chat / deepseek-v4：支持思考模式（高/最大两档）、工具调用、上下文65K</description></item>
+    ///   <item><description>deepseek-chat：支持思考模式（高/最大两档）、工具调用、上下文65K</description></item>
+    ///   <item><description>deepseek-v4-pro：DeepSeek V4 标准版，思考+工具调用、上下文1M</description></item>
+    ///   <item><description>deepseek-v4-flash：DeepSeek V4 快速版，思考+工具调用、上下文1M，价格更低</description></item>
     ///   <item><description>deepseek-reasoner：始终推理、不支持工具调用与采样参数、上下文65K</description></item>
     /// </list>
     /// </remarks>
@@ -92,25 +97,28 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // deepseek-reasoner：始终推理，不支持工具调用，不支持 temperature/top_p 等采样参数
-        if (modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
+        // deepseek-v4-flash：DeepSeek V4 快速版（含 chat/reasoner 兼容别名），上下文1M
+        if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
+            modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
         {
             return new AiProviderCapabilities(
-                SupportThinking: true,
-                SupportFunction: false,
-                ContextLength: 65_536,
-                ReasoningEfforts: "high,max");
+                SupportThinking: !modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase),
+                SupportFunction: true,
+                ContextLength: 1_048_576,
+                ReasoningEfforts: "high,max",
+                Pricing: new AiModelPricing(InputPrice: 1m, OutputPrice: 2m, CachedInputPrice: 0.02m));
         }
 
-        // deepseek-chat / deepseek-v4 系列：支持思考模式（thinking: {type: enabled}）、工具调用、上下文65K
-        if (modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("deepseek-v4", StringComparison.OrdinalIgnoreCase))
+        // deepseek-v4-pro：DeepSeek V4 标准版，上下文1M
+        if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
         {
             return new AiProviderCapabilities(
                 SupportThinking: true,
                 SupportFunction: true,
-                ContextLength: 65_536,
-                ReasoningEfforts: "high,max");
+                ContextLength: 1_048_576,
+                ReasoningEfforts: "high,max",
+                Pricing: new AiModelPricing(InputPrice: 3m, OutputPrice: 6m, CachedInputPrice: 0.025m));
         }
 
         // 其他 DeepSeek 模型（如 deepseek-r1、deepseek-prover 等）回退基类推断

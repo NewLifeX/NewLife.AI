@@ -1,5 +1,14 @@
 ﻿namespace NewLife.AI.Clients;
 
+/// <summary>AI 模型 Token 定价。携带输入/输出/缓存命中三档价格（元/百万Token），0 表示未知</summary>
+/// <param name="InputPrice">输入价格，元/百万Token</param>
+/// <param name="OutputPrice">输出价格，元/百万Token</param>
+/// <param name="CachedInputPrice">缓存命中价格，元/百万Token；0 时调用方回退到 InputPrice×0.1</param>
+public record AiModelPricing(
+    Decimal InputPrice = 0,
+    Decimal OutputPrice = 0,
+    Decimal CachedInputPrice = 0);
+
 /// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
 /// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
 /// <param name="SupportThinking">是否支持思考模式。如 DeepSeek-R1、Claude 的 extended thinking</param>
@@ -13,6 +22,7 @@
 /// <param name="SupportRerank">是否支持重排序。如 Qwen3-Rerank，用于 RAG 重排序场景</param>
 /// <param name="ContextLength">上下文窗口大小（Token 数）。0 表示未知</param>
 /// <param name="ReasoningEfforts">推理强度选项。逗号分隔的可用值，如 "high,max"；空=不支持</param>
+/// <param name="Pricing">Token 定价信息。null 表示未知，由调用方按能力分级填充兜底价</param>
 public record AiProviderCapabilities(
     Boolean SupportThinking = false,
     Boolean SupportFunction = false,
@@ -24,13 +34,15 @@ public record AiProviderCapabilities(
     Boolean SupportEmbedding = false,
     Boolean SupportRerank = false,
     Int32 ContextLength = 0,
-    String? ReasoningEfforts = null);
+    String? ReasoningEfforts = null,
+    AiModelPricing? Pricing = null);
 
 /// <summary>AI 模型信息。描述服务商旗下某具体模型的标识与能力</summary>
 /// <param name="Model">模型标识，即 API 请求中 model 字段的值，如 "gpt-4o"</param>
 /// <param name="DisplayName">模型显示名称，用于界面展示，如 "GPT-4o"</param>
 /// <param name="Capabilities">该模型支持的能力</param>
-public record AiModelInfo(String Model, String DisplayName, AiProviderCapabilities Capabilities) { }
+/// <param name="Pricing">该模型的 Token 定价信息，null 表示未知</param>
+public record AiModelInfo(String Model, String DisplayName, AiProviderCapabilities Capabilities, AiModelPricing? Pricing = null) { }
 
 /// <summary>AI 客户端连接选项</summary>
 public class AiClientOptions

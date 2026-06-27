@@ -156,8 +156,14 @@ public class AiClientRegistry
 
         var models = allModels
             .Where(m => isSingle ? (m.Code == null || m.Code == attr.Code) : m.Code == attr.Code)
-            .Select(m => new AiModelInfo(m.Model, m.DisplayName,
-                new AiProviderCapabilities(m.Thinking, m.FunctionCalling, m.Vision, m.Audio, m.Speech, m.ImageGeneration, m.VideoGeneration, m.Embedding, m.Rerank, m.ContextLength, m.ReasoningEfforts)))
+            .Select(m =>
+            {
+                var caps = new AiProviderCapabilities(m.Thinking, m.FunctionCalling, m.Vision, m.Audio, m.Speech, m.ImageGeneration, m.VideoGeneration, m.Embedding, m.Rerank, m.ContextLength, m.ReasoningEfforts);
+                AiModelPricing? pricing = (m.InputPrice > 0 || m.OutputPrice > 0)
+                    ? new AiModelPricing((Decimal)m.InputPrice, (Decimal)m.OutputPrice, (Decimal)m.CachedInputPrice)
+                    : null;
+                return new AiModelInfo(m.Model, m.DisplayName, caps, pricing);
+            })
             .ToArray();
 
         // 找接受 AiClientOptions 为第一参数的构造函数

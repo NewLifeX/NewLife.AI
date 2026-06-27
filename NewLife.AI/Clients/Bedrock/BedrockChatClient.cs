@@ -18,11 +18,11 @@ namespace NewLife.AI.Clients.Bedrock;
 /// </remarks>
 [AiClient("Bedrock", "AWS Bedrock", "https://bedrock-runtime.us-east-1.amazonaws.com",
     Protocol = "Bedrock", Description = "Amazon Bedrock 托管模型服务，支持 Claude/Llama/Mistral 等", Order = 41)]
-[AiClientModel("anthropic.claude-sonnet-4-20250514-v1:0", "Claude Sonnet 4 (Bedrock)", Code = "Bedrock", Vision = true, Thinking = true)]
-[AiClientModel("anthropic.claude-haiku-4-20250514-v1:0", "Claude Haiku 4 (Bedrock)", Code = "Bedrock", Vision = true)]
-[AiClientModel("meta.llama3-3-70b-instruct-v1:0", "Llama 3.3 70B (Bedrock)", Code = "Bedrock", FunctionCalling = true)]
-[AiClientModel("mistral.mistral-large-2407-v1:0", "Mistral Large (Bedrock)", Code = "Bedrock", FunctionCalling = true)]
-[AiClientModel("amazon.nova-pro-v1:0", "Amazon Nova Pro", Code = "Bedrock", Vision = true, FunctionCalling = true)]
+[AiClientModel("anthropic.claude-sonnet-4-20250514-v1:0", "Claude Sonnet 4 (Bedrock)", Code = "Bedrock", Vision = true, Thinking = true, InputPrice = 21.6, OutputPrice = 108, CachedInputPrice = 2.16)]
+[AiClientModel("anthropic.claude-haiku-4-20250514-v1:0", "Claude Haiku 4 (Bedrock)", Code = "Bedrock", Vision = true, InputPrice = 5.76, OutputPrice = 28.8, CachedInputPrice = 0.58)]
+[AiClientModel("meta.llama3-3-70b-instruct-v1:0", "Llama 3.3 70B (Bedrock)", Code = "Bedrock", FunctionCalling = true, InputPrice = 5.76, OutputPrice = 5.76)]
+[AiClientModel("mistral.mistral-large-2407-v1:0", "Mistral Large (Bedrock)", Code = "Bedrock", FunctionCalling = true, InputPrice = 17.28, OutputPrice = 51.84)]
+[AiClientModel("amazon.nova-pro-v1:0", "Amazon Nova Pro", Code = "Bedrock", Vision = true, FunctionCalling = true, InputPrice = 5.76, OutputPrice = 23.04)]
 public class BedrockChatClient : AiClientBase
 {
     #region 属性

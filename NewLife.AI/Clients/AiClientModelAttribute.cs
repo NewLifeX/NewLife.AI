@@ -55,4 +55,13 @@ public sealed class AiClientModelAttribute(String model, String displayName) : A
     /// 各提供商支持的强度范围不同，前端据此生成推理强度选择器。
     /// </remarks>
     public String? ReasoningEfforts { get; set; }
+
+    /// <summary>输入价格（元/百万Token）。0 表示未设置，由 InferModelCapabilities 或兜底逻辑填充</summary>
+    public Double InputPrice { get; set; }
+
+    /// <summary>输出价格（元/百万Token）。0 表示未设置</summary>
+    public Double OutputPrice { get; set; }
+
+    /// <summary>缓存命中输入价格（元/百万Token）。0 表示未设置，回退到 InputPrice×0.1</summary>
+    public Double CachedInputPrice { get; set; }
 }

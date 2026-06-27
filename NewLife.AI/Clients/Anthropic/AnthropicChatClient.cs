@@ -17,9 +17,9 @@ namespace NewLife.AI.Clients.Anthropic;
 /// </remarks>
 /// <remarks>用连接选项初始化 Anthropic 客户端</remarks>
 [AiClient("Anthropic", "Anthropic", "https://api.anthropic.com", Protocol = "AnthropicMessages", Description = "Anthropic Claude 系列模型")]
-[AiClientModel("claude-opus-4-6", "Claude Opus 4.6", Thinking = true, Vision = true)]
-[AiClientModel("claude-sonnet-4-6", "Claude Sonnet 4.6", Thinking = true, Vision = true)]
-[AiClientModel("claude-haiku-4-5", "Claude Haiku 4.5", Thinking = true, Vision = true)]
+[AiClientModel("claude-opus-4-6", "Claude Opus 4.6", Thinking = true, Vision = true, InputPrice = 108, OutputPrice = 540, CachedInputPrice = 2.7)]
+[AiClientModel("claude-sonnet-4-6", "Claude Sonnet 4.6", Thinking = true, Vision = true, InputPrice = 21.6, OutputPrice = 108, CachedInputPrice = 2.16)]
+[AiClientModel("claude-haiku-4-5", "Claude Haiku 4.5", Thinking = true, Vision = true, InputPrice = 5.76, OutputPrice = 28.8, CachedInputPrice = 0.58)]
 public class AnthropicChatClient : AiClientBase
 {
     #region 属性
