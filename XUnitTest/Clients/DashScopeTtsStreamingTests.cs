@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -135,6 +135,10 @@ public class DashScopeTtsStreamingTests
         var totalBytes = chunks.Sum(c => c.Length);
         Assert.True(totalBytes > 100, $"总音频数据 {totalBytes} 字节，应大于 100");
         Assert.True(request.CharactersUsed > 0, $"字符用量应大于 0，实际: {request.CharactersUsed}");
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_CosyVoiceV35Flash_StreamingReturnsChunks)}.mp3");
     }
 
     [Fact]
@@ -165,6 +169,10 @@ public class DashScopeTtsStreamingTests
         }
 
         Assert.NotEmpty(chunks);
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_CosyVoiceV35Flash_WithSpeed)}.mp3");
     }
 
     [Fact]
@@ -230,6 +238,10 @@ public class DashScopeTtsStreamingTests
         Assert.NotEmpty(chunks);
         var totalBytes = chunks.Sum(c => c.Length);
         Assert.True(totalBytes > 0, "opus 格式应生成有效音频");
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_CosyVoiceV35Flash_OpusFormat)}.opus");
     }
 
     #endregion
@@ -266,6 +278,10 @@ public class DashScopeTtsStreamingTests
         Assert.True(chunks.Count >= 1, "应至少返回一个音频分片");
         var total = chunks.Sum(c => c.Length);
         Assert.True(total > 100, $"总音频 {total} 字节，应大于 100");
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_Qwen3TtsFlashRealtime_StreamingReturnsChunks)}.pcm");
     }
 
     [Fact]
@@ -289,6 +305,10 @@ public class DashScopeTtsStreamingTests
             chunks.Add(chunk);
 
         Assert.NotEmpty(chunks);
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_QwenTtsRealtime_CherryVoice)}.pcm");
     }
 
     [Fact]
@@ -313,6 +333,10 @@ public class DashScopeTtsStreamingTests
             chunks.Add(chunk);
 
         Assert.NotEmpty(chunks);
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_Qwen3TtsFlashRealtime_WithLanguageType)}.pcm");
     }
 
     [Fact]
@@ -345,5 +369,19 @@ public class DashScopeTtsStreamingTests
         Assert.True(cancelled, "取消令牌应生效");
     }
 
+    #endregion
+
+    #region 辅助方法
+    /// <summary>将音频字节数据保存到 TestOutput/ 目录（带时间戳前缀），返回保存路径</summary>
+    private static async Task<String> SaveOutputFileAsync(Byte[] data, String fileName)
+    {
+        var dir = "../TestOutput".GetFullPath();
+        dir.EnsureDirectory(false);
+        var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var savePath = Path.Combine(dir, $"{ts}_{fileName}");
+        await File.WriteAllBytesAsync(savePath, data);
+        XTrace.WriteLine($"[TestOutput] 文件已保存: {savePath}");
+        return savePath;
+    }
     #endregion
 }

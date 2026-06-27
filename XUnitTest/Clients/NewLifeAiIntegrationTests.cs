@@ -2,12 +2,16 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
 using XUnitTest.Gateway;
@@ -461,6 +465,37 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         }
 
         Assert.NotNull(response);
+
+        // 保存生成的图片到本地，供人工检查
+        if (response.Data != null)
+        {
+            for (var i = 0; i < response.Data.Length; i++)
+            {
+                var img = response.Data[i];
+                var suffix = response.Data.Length > 1 ? $"_{i}" : "";
+
+                if (!img.Url.IsNullOrEmpty())
+                {
+                    await SaveOutputFileAsync(img.Url, $"{nameof(ImageGenerationsAsync_ReturnsResponse)}{suffix}.png");
+                }
+                else if (!img.B64Json.IsNullOrEmpty())
+                {
+                    var bytes = Convert.FromBase64String(img.B64Json);
+                    await SaveOutputFileAsync(bytes, $"{nameof(ImageGenerationsAsync_ReturnsResponse)}{suffix}.png");
+                }
+                else if (!img.Content.IsNullOrEmpty())
+                {
+                    // Legacy content 字段可能为 base64 或 URL
+                    if (img.Content.StartsWith("http"))
+                        await SaveOutputFileAsync(img.Content, $"{nameof(ImageGenerationsAsync_ReturnsResponse)}{suffix}.png");
+                    else
+                    {
+                        var bytes = Convert.FromBase64String(img.Content);
+                        await SaveOutputFileAsync(bytes, $"{nameof(ImageGenerationsAsync_ReturnsResponse)}{suffix}.png");
+                    }
+                }
+            }
+        }
     }
 
     #endregion
@@ -523,5 +558,33 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         Assert.Equal("NewLifeAI", descriptor!.Code);
     }
 
+    #endregion
+
+    #region 辅助方法
+    /// <summary>将图片字节数据保存到 TestOutput/ 目录（带时间戳前缀），返回保存路径</summary>
+    private static async Task<String> SaveOutputFileAsync(Byte[] data, String fileName)
+    {
+        var dir = "../TestOutput".GetFullPath();
+        dir.EnsureDirectory(false);
+        var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var savePath = Path.Combine(dir, $"{ts}_{fileName}");
+        await File.WriteAllBytesAsync(savePath, data);
+        XTrace.WriteLine($"[TestOutput] 文件已保存: {savePath}");
+        return savePath;
+    }
+
+    /// <summary>从 URL 下载文件并保存到 TestOutput/ 目录（带时间戳前缀），返回保存路径</summary>
+    private static async Task<String> SaveOutputFileAsync(String url, String fileName)
+    {
+        var dir = "../TestOutput".GetFullPath();
+        dir.EnsureDirectory(false);
+        var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var savePath = Path.Combine(dir, $"{ts}_{fileName}");
+        using var http = new HttpClient();
+        var bytes = await http.GetByteArrayAsync(url);
+        await File.WriteAllBytesAsync(savePath, bytes);
+        XTrace.WriteLine($"[TestOutput] 文件已保存: {savePath}");
+        return savePath;
+    }
     #endregion
 }

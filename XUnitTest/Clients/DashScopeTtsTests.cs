@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -148,6 +148,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, "音频数据不应为空");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_OapiVoice_UseDashScopeDefaultVoice)}.wav");
     }
 
     [Fact]
@@ -172,6 +175,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, "音频数据不应为空");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_DashScopeNativeVoice_Works)}.wav");
     }
 
     [Fact]
@@ -201,6 +207,9 @@ public class DashScopeTtsTests
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, $"总音频数据 {audioBytes.Length} 字节，应大于 100");
         Assert.True(request.CharactersUsed > 0, $"字符用量应大于 0，实际: {request.CharactersUsed}");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_CosyVoiceV3Flash_ReturnsAudio)}.mp3");
     }
 
     [Fact]
@@ -228,6 +237,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, "语速 1.5x 的合成音频不应为空");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_CosyVoiceV3Flash_WithSpeed)}.mp3");
     }
 
     [Fact]
@@ -288,6 +300,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 0, "opus 格式应生成有效音频");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_CosyVoiceV3Flash_OpusFormat)}.opus");
     }
 
     #endregion
@@ -315,6 +330,9 @@ public class DashScopeTtsTests
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, $"音频数据 {audioBytes.Length} 字节，应大于 100");
         Assert.True(request.CharactersUsed > 0, $"用量应大于 0，实际: {request.CharactersUsed}");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_QwenTts_ReturnsAudio)}.mp3");
     }
 
     [Fact]
@@ -336,6 +354,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, "qwen3-tts-flash 音频不应为空");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_Qwen3TtsFlash_ReturnsAudio)}.wav");
     }
 
     [Fact]
@@ -358,6 +379,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, "带 language_type 参数的合成不应为空");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_QwenTts_WithLanguageType)}.mp3");
     }
 
     [Fact]
@@ -379,6 +403,9 @@ public class DashScopeTtsTests
 
         Assert.NotNull(audioBytes);
         Assert.True(audioBytes.Length > 100, "OAPI 音色映射后的合成不应为空");
+
+        // 保存音频文件到本地，供人工检查
+        await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_QwenTts_OapiVoiceMappedToCherry)}.mp3");
     }
 
     [Fact]
@@ -558,5 +585,19 @@ public class DashScopeTtsTests
         Assert.Null(req.Items);
     }
 
+    #endregion
+
+    #region 辅助方法
+    /// <summary>将音频字节数据保存到 TestOutput/ 目录（带时间戳前缀），返回保存路径</summary>
+    private static async Task<String> SaveOutputFileAsync(Byte[] data, String fileName)
+    {
+        var dir = "../TestOutput".GetFullPath();
+        dir.EnsureDirectory(false);
+        var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var savePath = Path.Combine(dir, $"{ts}_{fileName}");
+        await File.WriteAllBytesAsync(savePath, data);
+        XTrace.WriteLine($"[TestOutput] 文件已保存: {savePath}");
+        return savePath;
+    }
     #endregion
 }
