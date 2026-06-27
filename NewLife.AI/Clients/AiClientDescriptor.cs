@@ -4,11 +4,13 @@
 /// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
 /// <param name="SupportThinking">是否支持思考模式。如 DeepSeek-R1、Claude 的 extended thinking</param>
 /// <param name="SupportFunction">是否支持 Function Calling / Tool Use</param>
-/// <param name="SupportVision">是否支持图片输入（视觉）。如 GPT-4V、Claude Vision、Qwen-VL</param>
-/// <param name="SupportAudio">是否支持音频输入输出。如 GPT-4o-audio、Qwen-Omni</param>
+/// <param name="SupportVision">是否支持图片/视频帧输入（视觉）。如 GPT-4V、Claude Vision、Qwen-VL</param>
+/// <param name="SupportAudio">是否支持语音识别/音频输入（ASR）。如 Whisper、Qwen-Omni 的语音输入</param>
+/// <param name="SupportSpeech">是否支持语音合成/音频输出（TTS）。如 CosyVoice、Qwen-TTS、Qwen-Omni 的语音输出</param>
 /// <param name="SupportImage">是否支持文生图。如 DALL·E、Qwen 的图像生成</param>
 /// <param name="SupportVideo">是否支持文生视频。如 Sora、Wan2</param>
 /// <param name="SupportEmbedding">是否支持嵌入向量。如 text-embedding-3、text-embedding-v3，可用于 RAG/知识库场景</param>
+/// <param name="SupportRerank">是否支持重排序。如 Qwen3-Rerank，用于 RAG 重排序场景</param>
 /// <param name="ContextLength">上下文窗口大小（Token 数）。0 表示未知</param>
 /// <param name="ReasoningEfforts">推理强度选项。逗号分隔的可用值，如 "high,max"；空=不支持</param>
 public record AiProviderCapabilities(
@@ -16,9 +18,11 @@ public record AiProviderCapabilities(
     Boolean SupportFunction = false,
     Boolean SupportVision = false,
     Boolean SupportAudio = false,
+    Boolean SupportSpeech = false,
     Boolean SupportImage = false,
     Boolean SupportVideo = false,
     Boolean SupportEmbedding = false,
+    Boolean SupportRerank = false,
     Int32 ContextLength = 0,
     String? ReasoningEfforts = null);
 

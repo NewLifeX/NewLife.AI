@@ -256,7 +256,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
     public AiProviderCapabilities InferModelCapabilities(String? modelId, OllamaModelDetails? details)
     {
         if (modelId.IsNullOrEmpty())
-            return new AiProviderCapabilities(false, false, false, false);
+            return new AiProviderCapabilities();
 
         var thinking = false;
         var vision = false;
@@ -298,7 +298,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
         }
 
         // Ollama 本地模型无法通过名称准确推断上下文长度，由 /api/show 接口补充
-        return new AiProviderCapabilities(thinking, funcCall, vision, false, false, false, false, 0);
+        return new AiProviderCapabilities(SupportThinking: thinking, SupportFunction: funcCall, SupportVision: vision);
     }
     #endregion
 }

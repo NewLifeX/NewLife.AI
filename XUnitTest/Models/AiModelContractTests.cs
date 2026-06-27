@@ -78,10 +78,12 @@ public class AiModelContractTests
     }
 
     [Fact]
-    [DisplayName("AiProviderCapabilities—ContextLength 作为第7个参数正确存储")]
+    [DisplayName("AiProviderCapabilities—ContextLength 正确存储")]
     public void AiProviderCapabilities_ContextLength()
     {
-        var caps = new NewLife.AI.Clients.AiProviderCapabilities(true, true, true, false, false, false, false, 131_072);
+        var caps = new NewLife.AI.Clients.AiProviderCapabilities(
+            SupportThinking: true, SupportFunction: true, SupportVision: true,
+            ContextLength: 131_072);
         Assert.True(caps.SupportThinking);
         Assert.True(caps.SupportFunction);
         Assert.True(caps.SupportVision);

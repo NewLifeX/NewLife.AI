@@ -11,28 +11,29 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen-image-2.0-pro", "Qwen Image 2.0 Pro", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen-image-edit", "Qwen Image Edit", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("qwen3-coder-next", "Qwen3 Coder")]
-[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-omni-flash", "Qwen3 Omni Flash", Vision = true, Audio = true, Thinking = true, FunctionCalling = false)]
-[AiClientModel("qwen-omni-turbo", "Qwen Omni Turbo", Vision = true, Audio = true, FunctionCalling = false)]
+// Omni 系列：视觉输入 + 语音识别输入 + 语音合成输出
+[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-omni-flash", "Qwen3 Omni Flash", Vision = true, Audio = true, Speech = true, Thinking = true, FunctionCalling = false)]
+[AiClientModel("qwen-omni-turbo", "Qwen Omni Turbo", Vision = true, Audio = true, Speech = true, FunctionCalling = false)]
 [AiClientModel("wan2.6-t2i", "文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-t2v", "文生视频（万相2.7）", VideoGeneration = true, FunctionCalling = false)]
 [AiClientModel("wan2.7-i2v", "图生视频（万相2.7）", Vision = true, VideoGeneration = true, FunctionCalling = false)]
-// ===== TTS 语音合成模型 =====
-[AiClientModel("cosyvoice-v3-flash", "CosyVoice V3 Flash", Audio = true, FunctionCalling = false)]
-[AiClientModel("cosyvoice-v3-plus", "CosyVoice V3 Plus", Audio = true, FunctionCalling = false)]
+// ===== TTS 语音合成模型（Speech=true 表示音频输出） =====
+[AiClientModel("cosyvoice-v3-flash", "CosyVoice V3 Flash", Speech = true, FunctionCalling = false)]
+[AiClientModel("cosyvoice-v3-plus", "CosyVoice V3 Plus", Speech = true, FunctionCalling = false)]
 // Qwen-TTS 非实时 HTTP 合成（稳定版别名）
-[AiClientModel("qwen-tts", "千问 TTS", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-instruct-flash", "千问3 TTS Instruct Flash", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-vd", "千问3 TTS VD", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-vc", "千问3 TTS VC", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen-tts", "千问 TTS", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-instruct-flash", "千问3 TTS Instruct Flash", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vd", "千问3 TTS VD", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vc", "千问3 TTS VC", Speech = true, FunctionCalling = false)]
 // Qwen-TTS-Realtime WebSocket 实时合成（稳定版别名）
-[AiClientModel("qwen-tts-realtime", "千问 TTS Realtime", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-instruct-flash-realtime", "千问3 TTS Instruct Flash Realtime", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-vd-realtime", "千问3 TTS VD Realtime", Audio = true, FunctionCalling = false)]
-[AiClientModel("qwen3-tts-vc-realtime", "千问3 TTS VC Realtime", Audio = true, FunctionCalling = false)]
+[AiClientModel("qwen-tts-realtime", "千问 TTS Realtime", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-instruct-flash-realtime", "千问3 TTS Instruct Flash Realtime", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vd-realtime", "千问3 TTS VD Realtime", Speech = true, FunctionCalling = false)]
+[AiClientModel("qwen3-tts-vc-realtime", "千问3 TTS VC Realtime", Speech = true, FunctionCalling = false)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
 [AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true)]
@@ -44,10 +45,10 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("kimi-k2.6", "Kimi K2.6", Thinking = true)]
 [AiClientModel("MiniMax-M2.5", "MiniMax M2.5", Thinking = true)]
 // ===== 嵌入与重排序模型 =====
-[AiClientModel("text-embedding-v4", "Text Embedding V4", FunctionCalling = false)]
-[AiClientModel("qwen3-vl-embedding", "Qwen3 VL Embedding", Vision = true, FunctionCalling = false)]
-[AiClientModel("qwen3-rerank", "Qwen3 Rerank", FunctionCalling = false)]
-[AiClientModel("qwen3-vl-rerank", "Qwen3 VL Rerank", Vision = true, FunctionCalling = false)]
+[AiClientModel("text-embedding-v4", "Text Embedding V4", Embedding = true, FunctionCalling = false)]
+[AiClientModel("qwen3-vl-embedding", "Qwen3 VL Embedding", Vision = true, Embedding = true, FunctionCalling = false)]
+[AiClientModel("qwen3-rerank", "Qwen3 Rerank", Rerank = true, FunctionCalling = false)]
+[AiClientModel("qwen3-vl-rerank", "Qwen3 VL Rerank", Vision = true, Rerank = true, FunctionCalling = false)]
 public partial class DashScopeChatClient
 {
     #region 模型列表
@@ -97,7 +98,7 @@ public partial class DashScopeChatClient
     /// <item>qwen3*（除 coder 和 -instruct 后缀）：qwen3 时代全系列支持思考模式</item>
     /// <item>qwen-max/plus/flash/turbo（稳定版别名）：当前均指向 qwen3 时代，支持思考</item>
     /// <item>qwen-long / qwen2* / qwen1*：不支持思考模式</item>
-    /// <item>qwen*-omni*：全模态模型，视觉+音频，使用专用 API</item>
+    /// <item>qwen*-omni*：全模态模型，视觉+语音识别输入+语音合成输出</item>
     /// <item>wanx* / wan2* / flux* / qwen-image* / z-image*：文生图/视频生成</item>
     /// <item>embed* / rerank* / paraformer* / cosyvoice* / sambert* 等：非对话模型</item>
     /// <item>farui* / qwen-mt*：专用模型，不支持函数调用</item>
@@ -111,31 +112,36 @@ public partial class DashScopeChatClient
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // 非对话模型：嵌入、重排序、语音识别等
+        // 嵌入向量模型
         if (modelId.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("paraformer", StringComparison.OrdinalIgnoreCase) ||
+            modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false);
+
+        // 重排序模型
+        if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false);
+
+        // 语音识别（ASR）模型：paraformer / sensevoice / fun-asr / sambert / qwen-audio / qwen3-asr / qwen-voice
+        if (modelId.StartsWith("paraformer", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("sambert", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("sensevoice", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWithIgnoreCase("qwen3-asr", "qwen-voice"))
-            return new AiProviderCapabilities(false, false, false, false);
+            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false);
 
-        // Qwen-TTS 语音合成模型：包含非实时和 Realtime WebSocket 变体
+        // TTS 语音合成模型：qwen-tts / qwen3-tts / cosyvoice（仅音频输出，无对话能力）
         if (modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts"))
-            return new AiProviderCapabilities(false, false, false, true);
-
-        // TTS 语音合成模型：cosyvoice* 支持音频能力
+            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false);
         if (modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, false, true);
+            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false);
 
         var thinking = false;
         var vision = false;
+        var audio = false;
+        var speech = false;
         var imageGen = false;
         var funcCall = true;
-        var audio = false;
         var videoGen = false;
         var contextLength = 32_768;
 
@@ -145,28 +151,26 @@ public partial class DashScopeChatClient
             modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("z-image", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, false, false, true, false, false, 0);
+            return new AiProviderCapabilities(SupportImage: true, SupportFunction: false);
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase) &&
             (modelId.Contains("-t2v", StringComparison.OrdinalIgnoreCase) ||
              modelId.Contains("-i2v", StringComparison.OrdinalIgnoreCase)))
-            return new AiProviderCapabilities(false, false, false, false, false, true, false, 0);
+            return new AiProviderCapabilities(SupportVideo: true, SupportFunction: false);
 
         // 文生图：wan2 其他系列（如 wan2*-t2i*）
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, false, false, true, false, false, 0);
+            return new AiProviderCapabilities(SupportImage: true, SupportFunction: false);
 
-        // === 全模态 Omni 模型 ===
-        // qwen3.5-omni-* 系列：视觉+音频，支持联网搜索，不支持思考和函数调用
+        // === 全模态 Omni 模型：视觉输入 + 语音识别输入 + 语音合成输出 ===
         if (modelId.StartsWith("qwen3.5-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, true, true, false, false, false, 131_072);
+            return new AiProviderCapabilities(SupportVision: true, SupportAudio: true, SupportSpeech: true, SupportFunction: false, ContextLength: 131_072);
         if (modelId.StartsWith("qwen3-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(true, false, true, true, false, false, false, 131_072);
-        // 旧版 Omni 模型（如 qwen-omni-turbo）：视觉+音频，不支持思考和函数调用
+            return new AiProviderCapabilities(SupportThinking: true, SupportVision: true, SupportAudio: true, SupportSpeech: true, SupportFunction: false, ContextLength: 131_072);
+        // 旧版 Omni 模型（如 qwen-omni-turbo）
         if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, true, true, false, false, false, 32_768);
+            return new AiProviderCapabilities(SupportVision: true, SupportAudio: true, SupportSpeech: true, SupportFunction: false, ContextLength: 32_768);
 
         // === 视觉能力 ===
-        // -vl 标识符（视觉语言/OCR）或 qvq- 前缀（视觉推理）
         if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("-ocr", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
@@ -180,22 +184,17 @@ public partial class DashScopeChatClient
             vision = true;
 
         // === 思考/推理能力 ===
-        // 按模型家族精确匹配，-max/-plus 本身不是思考能力的可靠信号
-
-        // 专用推理模型：qwq 纯文本推理，qvq 视觉推理
         if (modelId.StartsWith("qwq-", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
             thinking = true;
 
-        // qwen3 全系列支持思考模式（qwen3-max/qwen3.5-plus/qwen3.5-flash 等）
-        // 排除：coder（instruct-only）、-instruct 后缀（显式非思考版本）
+        // qwen3 全系列支持思考模式，排除 coder / -instruct
         if (modelId.StartsWith("qwen3", StringComparison.OrdinalIgnoreCase) &&
             !modelId.Contains("-coder", StringComparison.OrdinalIgnoreCase) &&
             !modelId.Contains("-instruct", StringComparison.OrdinalIgnoreCase))
             thinking = true;
 
-        // 稳定版别名当前均指向 qwen3 时代，支持思考模式
-        // qwen-max → qwen3-max, qwen-plus → qwen3.6-plus, qwen-flash → qwen3.5-flash
+        // 稳定版别名均指向 qwen3 时代
         if (modelId.StartsWithIgnoreCase("qwen-max", "qwen-plus", "qwen-flash", "qwen-turbo"))
             thinking = true;
 
@@ -203,45 +202,37 @@ public partial class DashScopeChatClient
         if (modelId.StartsWithIgnoreCase("qwen-long", "qwen2", "qwen1"))
             thinking = false;
 
-        // 阿里云百炼第三方推理模型：deepseek-v4、kimi-k2、glm-5、MiniMax-M2 支持思考模式
+        // 百炼托管第三方推理模型
         if (modelId.StartsWithIgnoreCase("deepseek-v4-", "kimi-k2.", "glm-5.", "MiniMax-M2."))
             thinking = true;
 
         // === 函数调用 ===
-        // 专用模型不支持函数调用
         if (modelId.StartsWith("farui", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("qwen-mt", StringComparison.OrdinalIgnoreCase))
             funcCall = false;
 
         // === 上下文长度 ===
-        // qwen-long 专为长文档设计，支持 1M tokens
         if (modelId.StartsWithIgnoreCase("qwen-long"))
             contextLength = 1_000_000;
-        // qwen3.6-max-preview 256K，其他 qwen3.6-* 均为 1M（须在通用 qwen3 分支之前匹配）
         else if (modelId.StartsWithIgnoreCase("qwen3.6-max-preview"))
             contextLength = 262_144;
         else if (modelId.StartsWithIgnoreCase("qwen3.6-"))
             contextLength = 1_048_576;
-        // qwen3/qwen3.5 全系列、稳定版别名（qwen-max/plus/flash/turbo）、推理模型（qwq/qvq）、qwen2.5 系列
         else if (modelId.StartsWithIgnoreCase("qwen3", "qwen-max", "qwen-plus", "qwen-flash", "qwen-turbo",
             "qwq-", "qvq-", "qwen2.5"))
             contextLength = 131_072;
-        // deepseek-v4 系列：1M 上下文（须在通用 deepseek 分支之前匹配）
         else if (modelId.StartsWithIgnoreCase("deepseek-v4-"))
             contextLength = 1_048_576;
-        // deepseek 其他系列（v3、r1 等）
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
             contextLength = 65_536;
-        // 第三方推理模型
         else if (modelId.StartsWithIgnoreCase("kimi-k2."))
             contextLength = 262_144;
         else if (modelId.StartsWithIgnoreCase("glm-5."))
             contextLength = 200_704;
         else if (modelId.StartsWithIgnoreCase("MiniMax-M2."))
             contextLength = 196_608;
-        // 其余对话模型默认 32K（已在变量初始化时设置）
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, false, contextLength);
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength);
     }
     #endregion
 }

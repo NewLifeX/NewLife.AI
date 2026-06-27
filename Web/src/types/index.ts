@@ -54,6 +54,7 @@ export interface ModelInfo {
   supportFunction?: boolean
   supportVision?: boolean
   supportAudio?: boolean
+  supportSpeech?: boolean
   supportImage?: boolean
   supportVideo?: boolean
   contextLength?: number
@@ -113,7 +114,9 @@ export interface ModelManageItem {
   supportFunction: boolean
   supportVision: boolean
   supportAudio: boolean
+  supportSpeech: boolean
   supportImage: boolean
   supportVideo: boolean
+  supportRerank?: boolean
   remark?: string
 }

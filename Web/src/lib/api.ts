@@ -403,6 +403,7 @@ interface ModelInfoDto {
   supportFunction: boolean
   supportVision: boolean
   supportAudio: boolean
+  supportSpeech: boolean
   supportImage: boolean
   supportVideo: boolean
   contextLength: number
@@ -419,6 +420,7 @@ export async function fetchModels(): Promise<ModelInfo[]> {
     supportFunction: d.supportFunction,
     supportVision: d.supportVision,
     supportAudio: d.supportAudio,
+    supportSpeech: d.supportSpeech,
     supportImage: d.supportImage,
     supportVideo: d.supportVideo,
     contextLength: d.contextLength || undefined,
@@ -732,6 +734,8 @@ export interface SystemConfig {
   supportUrl?: string
   /** 客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
   supportPosition?: number
+  /** 错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加 */
+  errorGuidance?: string
   /** 分享链接默认有效期（分钟），0 表示永不过期 */
   shareExpireMinutes?: number
   suggestedQuestions: SuggestedQuestion[]

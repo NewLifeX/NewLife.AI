@@ -28,8 +28,11 @@ public sealed class AiClientModelAttribute(String model, String displayName) : A
     /// <summary>是否支持图片输入（视觉多模态）</summary>
     public Boolean Vision { get; set; }
 
-    /// <summary>是否支持音频输入输出（如 GPT-4o-audio、Qwen-Omni）</summary>
+    /// <summary>是否支持语音识别/音频输入（ASR）。如 Whisper、Qwen-Omni 的语音输入</summary>
     public Boolean Audio { get; set; }
+
+    /// <summary>是否支持语音合成/音频输出（TTS）。如 CosyVoice、Qwen-TTS、Qwen-Omni 的语音输出</summary>
+    public Boolean Speech { get; set; }
 
     /// <summary>是否支持文生图</summary>
     public Boolean ImageGeneration { get; set; }
@@ -39,6 +42,9 @@ public sealed class AiClientModelAttribute(String model, String displayName) : A
 
     /// <summary>是否支持嵌入向量（如 text-embedding-3、text-embedding-v3）</summary>
     public Boolean Embedding { get; set; }
+
+    /// <summary>是否支持重排序（如 Qwen3-Rerank）</summary>
+    public Boolean Rerank { get; set; }
 
     /// <summary>上下文窗口大小（Token 数）。0 表示未知</summary>
     public Int32 ContextLength { get; set; }

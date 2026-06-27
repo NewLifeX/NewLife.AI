@@ -40,12 +40,21 @@ public class ModelInfo
     /// <summary>是否支持图片输入（视觉多模态）</summary>
     public Boolean SupportVision { get; set; }
 
-    /// <summary>是否支持音频输入输出</summary>
+    /// <summary>是否支持语音识别/音频输入（ASR）</summary>
     public Boolean SupportAudio { get; set; }
+
+    /// <summary>是否支持语音合成/音频输出（TTS）</summary>
+    public Boolean SupportSpeech { get; set; }
 
     /// <summary>是否支持文生图（图像生成）</summary>
     public Boolean SupportImage { get; set; }
 
     /// <summary>是否支持文生视频（视频生成）</summary>
     public Boolean SupportVideo { get; set; }
+
+    /// <summary>是否支持嵌入向量</summary>
+    public Boolean SupportEmbedding { get; set; }
+
+    /// <summary>是否支持重排序</summary>
+    public Boolean SupportRerank { get; set; }
 }

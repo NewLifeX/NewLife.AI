@@ -110,8 +110,11 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
                     SupportFunction = d.TryGetValue("support_function", out var sfc) && sfc.ToBoolean(),
                     SupportVision = d.TryGetValue("support_vision", out var sv) && sv.ToBoolean(),
                     SupportAudio = d.TryGetValue("support_audio", out var sa) && sa.ToBoolean(),
+                    SupportSpeech = d.TryGetValue("support_speech", out var sp) && sp.ToBoolean(),
                     SupportImage = d.TryGetValue("support_image", out var sig) && sig.ToBoolean(),
                     SupportVideo = d.TryGetValue("support_video", out var svg) && svg.ToBoolean(),
+                    SupportEmbedding = d.TryGetValue("support_embedding", out var se) && se.ToBoolean(),
+                    SupportRerank = d.TryGetValue("support_rerank", out var sr) && sr.ToBoolean(),
                 });
             }
             response.Data = [.. items];
@@ -221,16 +224,20 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         if (modelId.IsNullOrEmpty()) return null;
 
         // 非对话模型：嵌入、语音合成、语音识别等
-        if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(false, false, false, false);
+        if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false);
+        if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false);
+        if (modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false);
+        if (modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false);
 
         var thinking = false;
         var funcCall = true;
         var vision = false;
         var audio = false;
+        var speech = false;
         var imageGen = false;
         var videoGen = false;
         var contextLength = 0;
@@ -264,9 +271,12 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             funcCall = false;
         }
 
-        // 音频能力：gpt-4o-audio 系列
+        // 音频能力：gpt-4o-audio 系列（既能语音识别输入，也能语音合成输出）
         if (modelId.Contains("-audio", StringComparison.OrdinalIgnoreCase))
+        {
             audio = true;
+            speech = true;
+        }
 
         // 文生视频：Sora 系列
         if (modelId.StartsWith("sora", StringComparison.OrdinalIgnoreCase))
@@ -310,7 +320,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             // 其他支持思考的模型默认提供基础推理强度
             reasoningEfforts = "high";
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, imageGen, videoGen, false, contextLength, reasoningEfforts);
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts);
     }
 
     /// <summary>根据模型 ID 推断可读显示名称。将连字符分隔的各段首字母大写，如 qwen3.7-max → Qwen3.7 Max</summary>
