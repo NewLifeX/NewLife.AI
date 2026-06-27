@@ -160,7 +160,7 @@ public class AiClientRegistry
             {
                 var caps = new AiProviderCapabilities(m.Thinking, m.FunctionCalling, m.Vision, m.Audio, m.Speech, m.ImageGeneration, m.VideoGeneration, m.Embedding, m.Rerank, m.ContextLength, m.ReasoningEfforts);
                 AiModelPricing? pricing = (m.InputPrice > 0 || m.OutputPrice > 0)
-                    ? new AiModelPricing((Decimal)m.InputPrice, (Decimal)m.OutputPrice, (Decimal)m.CachedInputPrice)
+                    ? new AiModelPricing((Decimal)m.InputPrice, (Decimal)m.OutputPrice, (Decimal)m.CachedInputPrice, (Decimal)m.CacheCreationPrice)
                     : null;
                 return new AiModelInfo(m.Model, m.DisplayName, caps, pricing);
             })

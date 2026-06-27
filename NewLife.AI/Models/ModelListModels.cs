@@ -57,4 +57,25 @@ public class ModelInfo
 
     /// <summary>是否支持重排序</summary>
     public Boolean SupportRerank { get; set; }
+
+    /// <summary>计费模式。Token/Image/Video/Embedding/Speech</summary>
+    public String? PricingMode { get; set; }
+
+    /// <summary>输入价格，元/百万Token。非Token模式此字段承载单价</summary>
+    public Decimal InputPrice { get; set; }
+
+    /// <summary>输出价格，元/百万Token</summary>
+    public Decimal OutputPrice { get; set; }
+
+    /// <summary>缓存命中价格，元/百万Token</summary>
+    public Decimal CachedInputPrice { get; set; }
+
+    /// <summary>显式缓存创建价格，元/百万Token。0时回退到InputPrice</summary>
+    public Decimal CacheCreationInputPrice { get; set; }
+
+    /// <summary>非Token模式的单价</summary>
+    public Decimal UnitPrice { get; set; }
+
+    /// <summary>价格单位标签。张/秒/千字符/百万Token</summary>
+    public String? Unit { get; set; }
 }

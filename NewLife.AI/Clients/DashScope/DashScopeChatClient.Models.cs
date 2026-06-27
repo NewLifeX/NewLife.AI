@@ -36,8 +36,8 @@ namespace NewLife.AI.Clients.DashScope;
 [AiClientModel("qwen3-tts-vc-realtime", "千问3 TTS VC Realtime", Speech = true, FunctionCalling = false)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
-[AiClientModel("qwen3.7-max", "Qwen3.7 Max", Thinking = true, InputPrice = 2.4, OutputPrice = 14.4, CachedInputPrice = 0.24)]
-[AiClientModel("qwen3.7-plus", "Qwen3.7 Plus", Thinking = true, Vision = true, InputPrice = 1.6, OutputPrice = 6.4, CachedInputPrice = 0.16)]
+[AiClientModel("qwen3.7-max", "Qwen3.7 Max", Thinking = true, InputPrice = 12, OutputPrice = 36, CachedInputPrice = 2.4)]
+[AiClientModel("qwen3.7-plus", "Qwen3.7 Plus", Thinking = true, Vision = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.4)]
 [AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true, InputPrice = 2, OutputPrice = 12, CachedInputPrice = 0.2)]
 [AiClientModel("qwen3.6-plus", "Qwen3.6 Plus", Thinking = true, Vision = true, InputPrice = 1.4, OutputPrice = 5.6, CachedInputPrice = 0.14)]
 [AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true, Vision = true, InputPrice = 0.7, OutputPrice = 2.8, CachedInputPrice = 0.07)]
@@ -239,11 +239,11 @@ public partial class DashScopeChatClient
         // === 价格推断（阿里百炼 2026-Q2 官网定价，元/百万Token）===
         AiModelPricing? pricing = null;
 
-        // Qwen3.7 系列
+        // Qwen3.7 系列（百炼原价）
         if (modelId.StartsWithIgnoreCase("qwen3.7-max"))
-            pricing = new AiModelPricing(InputPrice: 2.4m, OutputPrice: 14.4m, CachedInputPrice: 0.24m);
+            pricing = new AiModelPricing(InputPrice: 12m, OutputPrice: 36m, CachedInputPrice: 2.4m);
         else if (modelId.StartsWithIgnoreCase("qwen3.7-plus"))
-            pricing = new AiModelPricing(InputPrice: 1.6m, OutputPrice: 6.4m, CachedInputPrice: 0.16m);
+            pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 8m, CachedInputPrice: 0.4m);
         // Qwen3.6 系列
         else if (modelId.StartsWithIgnoreCase("qwen3.6-max"))
             pricing = new AiModelPricing(InputPrice: 2m, OutputPrice: 12m, CachedInputPrice: 0.2m);

@@ -12,12 +12,12 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <remarks>用连接选项初始化 OpenAI 客户端</remarks>
 // ── OpenAI 原生 ──────────────────────────────────────────────────────────────────────
 [AiClient("OpenAI", "OpenAI", "https://api.openai.com", Description = "OpenAI GPT 系列模型", Order = 1)]
-[AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 14.4, OutputPrice = 57.6, CachedInputPrice = 3.6)]
-[AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 18, OutputPrice = 72, CachedInputPrice = 9)]
-[AiClientModel("gpt-4o-mini", "GPT-4o Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 1.08, OutputPrice = 4.32, CachedInputPrice = 0.54)]
-[AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 2.52, OutputPrice = 10.08, CachedInputPrice = 0.63)]
-[AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.92, OutputPrice = 31.68, CachedInputPrice = 1.98)]
-[AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.92, OutputPrice = 31.68, CachedInputPrice = 1.98)]
+[AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 13.8, OutputPrice = 55.2, CachedInputPrice = 3.45)]
+[AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 17.25, OutputPrice = 69, CachedInputPrice = 8.625)]
+[AiClientModel("gpt-4o-mini", "GPT-4o Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 1.035, OutputPrice = 4.14, CachedInputPrice = 0.518)]
+[AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 5.175, OutputPrice = 31.05, CachedInputPrice = 0.518)]
+[AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.59, OutputPrice = 30.36, CachedInputPrice = 1.898)]
+[AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.59, OutputPrice = 30.36, CachedInputPrice = 1.898)]
 [AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false)]
 public partial class OpenAIChatClient : OpenAIClientBase,
     IImageClient, IVideoClient, ISpeechClient, ITranscriptionClient, IEmbeddingClient

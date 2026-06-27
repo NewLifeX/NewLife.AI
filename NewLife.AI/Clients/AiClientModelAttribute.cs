@@ -64,4 +64,7 @@ public sealed class AiClientModelAttribute(String model, String displayName) : A
 
     /// <summary>缓存命中输入价格（元/百万Token）。0 表示未设置，回退到 InputPrice×0.1</summary>
     public Double CachedInputPrice { get; set; }
+
+    /// <summary>缓存创建输入价格（元/百万Token）。0 表示未设置，回退到 InputPrice</summary>
+    public Double CacheCreationPrice { get; set; }
 }

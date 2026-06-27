@@ -115,6 +115,13 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
                     SupportVideo = d.TryGetValue("support_video", out var svg) && svg.ToBoolean(),
                     SupportEmbedding = d.TryGetValue("support_embedding", out var se) && se.ToBoolean(),
                     SupportRerank = d.TryGetValue("support_rerank", out var sr) && sr.ToBoolean(),
+                    PricingMode = d.TryGetValue("pricing_mode", out var pm) ? pm as String : null,
+                    InputPrice = d.TryGetValue("input_price", out var inp) ? inp.ToDecimal() : 0,
+                    OutputPrice = d.TryGetValue("output_price", out var outp) ? outp.ToDecimal() : 0,
+                    CachedInputPrice = d.TryGetValue("cached_input_price", out var cip) ? cip.ToDecimal() : 0,
+                    CacheCreationInputPrice = d.TryGetValue("cache_creation_input_price", out var ccp) ? ccp.ToDecimal() : 0,
+                    UnitPrice = d.TryGetValue("unit_price", out var up) ? up.ToDecimal() : 0,
+                    Unit = d.TryGetValue("unit", out var u) ? u as String : null,
                 });
             }
             response.Data = [.. items];
@@ -225,13 +232,17 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
 
         // 非对话模型：嵌入、语音合成、语音识别等
         if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false);
+            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false,
+                Pricing: new AiModelPricing(InputPrice: 0.5m));
         if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false);
+            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false,
+                Pricing: new AiModelPricing(InputPrice: 1m));
         if (modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false);
+            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false,
+                Pricing: new AiModelPricing(InputPrice: 0.2m));
         if (modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false);
+            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false,
+                Pricing: new AiModelPricing(InputPrice: 0.2m));
 
         var thinking = false;
         var funcCall = true;
@@ -323,56 +334,55 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             // 其他支持思考的模型默认提供基础推理强度
             reasoningEfforts = "high";
 
-        // === 价格推断（元/百万Token，汇率约 7.2）===
+        // === 价格推断（元/百万Token，汇率 6.9）===
         AiModelPricing? pricing = null;
 
         // OpenAI 系列
         if (modelId.StartsWith("gpt-4.1-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 2.88m, OutputPrice: 11.52m, CachedInputPrice: 0.72m);
+            pricing = new AiModelPricing(2.76m, 11.04m, 0.69m);
         else if (modelId.StartsWith("gpt-4.1", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 14.4m, OutputPrice: 57.6m, CachedInputPrice: 3.6m);
+            pricing = new AiModelPricing(13.8m, 55.2m, 3.45m);
         else if (modelId.StartsWith("gpt-4o-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 1.08m, OutputPrice: 4.32m, CachedInputPrice: 0.54m);
+            pricing = new AiModelPricing(1.035m, 4.14m, 0.518m);
         else if (modelId.StartsWith("gpt-4o", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 18m, OutputPrice: 72m, CachedInputPrice: 9m);
+            pricing = new AiModelPricing(17.25m, 69m, 8.625m);
         else if (modelId.StartsWith("gpt-4-turbo", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 72m, OutputPrice: 216m, CachedInputPrice: 36m);
+            pricing = new AiModelPricing(72m, 216m, 36m);
         else if (modelId.StartsWith("gpt-4", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 216m, OutputPrice: 432m);
+            pricing = new AiModelPricing(216m, 432m);
         else if (modelId.StartsWith("gpt-3.5", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 3.6m, OutputPrice: 10.8m, CachedInputPrice: 1.8m);
+            pricing = new AiModelPricing(3.6m, 10.8m, 1.8m);
         else if (modelId.StartsWith("gpt-5-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 2.52m, OutputPrice: 10.08m, CachedInputPrice: 0.63m);
+            pricing = new AiModelPricing(5.175m, 31.05m, 0.518m);
         else if (modelId.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 54m, OutputPrice: 216m, CachedInputPrice: 13.5m);
+            pricing = new AiModelPricing(17.25m, 103.5m, 4.313m);
         // o 系列
         else if (modelId.StartsWith("o4-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 7.92m, OutputPrice: 31.68m, CachedInputPrice: 1.98m);
+            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m);
         else if (modelId.StartsWith("o3-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 7.92m, OutputPrice: 31.68m, CachedInputPrice: 1.98m);
+            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m);
         else if (modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 72m, OutputPrice: 288m, CachedInputPrice: 18m);
+            pricing = new AiModelPricing(69m, 276m, 6.9m);
         else if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 108m, OutputPrice: 432m, CachedInputPrice: 27m);
+            pricing = new AiModelPricing(103.5m, 414m, 10.35m);
         // Claude 系列（非 Bedrock）
         else if (modelId.StartsWith("claude-opus", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 108m, OutputPrice: 540m, CachedInputPrice: 2.7m);
+            pricing = new AiModelPricing(34.5m, 172.5m, 3.45m);
         else if (modelId.StartsWith("claude-sonnet", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 21.6m, OutputPrice: 108m, CachedInputPrice: 2.16m);
+            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m);
         else if (modelId.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 5.76m, OutputPrice: 28.8m, CachedInputPrice: 0.58m);
+            pricing = new AiModelPricing(6.9m, 34.5m, 0.69m);
         else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 21.6m, OutputPrice: 108m, CachedInputPrice: 2.16m);
-        // DeepSeek 系列
+            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m);
         // DeepSeek V4 系列（官网 2026-Q2 定价）
         else if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 1m, OutputPrice: 2m, CachedInputPrice: 0.02m);
+            pricing = new AiModelPricing(1m, 2m, 0.02m);
         else if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 3m, OutputPrice: 6m, CachedInputPrice: 0.025m);
+            pricing = new AiModelPricing(3m, 6m, 0.025m);
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(InputPrice: 1m, OutputPrice: 2m, CachedInputPrice: 0.02m);
+            pricing = new AiModelPricing(1m, 2m, 0.02m);
 
         return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts, pricing);
     }

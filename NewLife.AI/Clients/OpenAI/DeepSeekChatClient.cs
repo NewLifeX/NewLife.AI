@@ -107,7 +107,7 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
                 SupportFunction: true,
                 ContextLength: 1_048_576,
                 ReasoningEfforts: "high,max",
-                Pricing: new AiModelPricing(InputPrice: 1m, OutputPrice: 2m, CachedInputPrice: 0.02m));
+                Pricing: new AiModelPricing(1m, 2m, 0.02m));
         }
 
         // deepseek-v4-pro：DeepSeek V4 标准版，上下文1M
@@ -118,7 +118,7 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
                 SupportFunction: true,
                 ContextLength: 1_048_576,
                 ReasoningEfforts: "high,max",
-                Pricing: new AiModelPricing(InputPrice: 3m, OutputPrice: 6m, CachedInputPrice: 0.025m));
+                Pricing: new AiModelPricing(3m, 6m, 0.025m));
         }
 
         // 其他 DeepSeek 模型（如 deepseek-r1、deepseek-prover 等）回退基类推断

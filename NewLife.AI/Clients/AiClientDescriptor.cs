@@ -1,13 +1,15 @@
 ﻿namespace NewLife.AI.Clients;
 
-/// <summary>AI 模型 Token 定价。携带输入/输出/缓存命中三档价格（元/百万Token），0 表示未知</summary>
-/// <param name="InputPrice">输入价格，元/百万Token</param>
-/// <param name="OutputPrice">输出价格，元/百万Token</param>
-/// <param name="CachedInputPrice">缓存命中价格，元/百万Token；0 时调用方回退到 InputPrice×0.1</param>
+/// <summary>AI 模型 Token 定价。携带输入/输出/缓存命中/缓存创建四档价格（元/百万Token），0 表示未知</summary>
+/// <param name="InputPrice">输入价格，元/百万Token。非Token模式（图片/视频/语音/嵌入/重排序）此字段承载单价</param>
+/// <param name="OutputPrice">输出价格，元/百万Token。非Token模式为0</param>
+/// <param name="CachedInputPrice">缓存命中价格，元/百万Token。0 时调用方回退到 InputPrice×0.1。非Token模式为0</param>
+/// <param name="CacheCreationPrice">缓存创建价格，元/百万Token。0 时调用方回退到 InputPrice。非Token模式为0</param>
 public record AiModelPricing(
     Decimal InputPrice = 0,
     Decimal OutputPrice = 0,
-    Decimal CachedInputPrice = 0);
+    Decimal CachedInputPrice = 0,
+    Decimal CacheCreationPrice = 0);
 
 /// <summary>AI 服务商默认能力信息。表示该服务商主力模型的典型能力</summary>
 /// <remarks>这些是服务商级别的默认值，用户创建具体模型配置时可按实际模型覆盖</remarks>
