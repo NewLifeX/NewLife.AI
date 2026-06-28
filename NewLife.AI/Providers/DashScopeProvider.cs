@@ -106,12 +106,21 @@ public class DashScopeProvider : OpenAiProvider
         new("wanx2.1-t2i-plus",  "万象2.1 Plus",  new(false, false, true, false)),
     ];
 
-    /// <summary>语音合成模型列表。CosyVoice 系列，通过 <see cref="OpenAiProvider.SpeechAsync"/> 调用</summary>
-    /// <remarks>端点：POST /compatible-mode/v1/audio/speech</remarks>
+    /// <summary>语音合成模型列表。CosyVoice 系列与 Qwen3-TTS 系列，通过 <see cref="OpenAiProvider.SpeechAsync"/> 调用</summary>
+    /// <remarks>
+    /// CosyVoice HTTP：POST /api/v1/services/audio/tts/SpeechSynthesizer<br/>
+    /// CosyVoice WebSocket：wss://.../api-ws/v1/inference（run-task/continue-task 协议）<br/>
+    /// Qwen-TTS HTTP：POST /api/v1/services/aigc/multimodal-generation/generation<br/>
+    /// Qwen-TTS Realtime WebSocket：wss://.../api-ws/v1/realtime（session.update 协议）
+    /// </remarks>
     public AiModelInfo[] TtsModels { get; } =
     [
         new("cosyvoice-v3-plus", "CosyVoice V3 Plus", new(false, false, false, true)),
         new("cosyvoice-v3-flash", "CosyVoice V3 Flash", new(false, false, false, true)),
+        new("qwen3-tts-flash", "千问3 TTS Flash", new(false, false, false, true)),
+        new("qwen3-tts-instruct-flash", "千问3 TTS Instruct Flash", new(false, false, false, true)),
+        new("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", new(false, false, false, true)),
+        new("qwen3-tts-instruct-flash-realtime", "千问3 TTS Instruct Flash Realtime", new(false, false, false, true)),
     ];
 
     /// <summary>文档重排序模型列表。GTE-Rerank 系列，通过 <see cref="RerankAsync"/> 调用</summary>
