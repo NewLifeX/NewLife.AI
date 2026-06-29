@@ -406,16 +406,18 @@ public class DashScopeTtsStreamingTests
     }
 
     [Fact]
-    [DisplayName("SpeechStreamAsync_qwen_tts_realtime_opus格式")]
-    public async Task SpeechStreamAsync_QwenTtsRealtime_OpusFormat()
+    [DisplayName("SpeechStreamAsync_qwen3_tts_instruct_flash_realtime_opus格式")]
+    public async Task SpeechStreamAsync_Qwen3TtsInstructFlashRealtime_OpusFormat()
     {
         if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization)) return;
 
         var option = CreateOptions();
+        option.Model = "qwen3-tts-instruct-flash-realtime";
+
         using var client = new DashScopeChatClient(option);
         var request = new SpeechRequest
         {
-            Model = "qwen-tts-realtime",
+            Model = "qwen3-tts-instruct-flash-realtime",
             Input = "你好，这是opus格式流式测试。",
             Voice = "Cherry",
             ResponseFormat = "opus",
@@ -435,7 +437,7 @@ public class DashScopeTtsStreamingTests
 
         // 合并所有分片并保存音频文件到本地，供人工检查
         var combined = chunks.SelectMany(c => c).ToArray();
-        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_QwenTtsRealtime_OpusFormat)}.opus");
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_Qwen3TtsInstructFlashRealtime_OpusFormat)}.opus");
     }
 
     #endregion

@@ -766,10 +766,6 @@ public partial class DashScopeChatClient
 
         var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
 
-        // opus 格式兼容性映射：旧版 qwen-tts-realtime 不支持 opus，自动升级到 qwen3-tts-flash-realtime
-        if (format == "opus" && modelCode.EqualIgnoreCase("qwen-tts-realtime"))
-            modelCode = "qwen3-tts-flash-realtime";
-
         if (IsQwenTtsRealtimeModel(modelCode))
         {
             // Qwen-TTS-Realtime：session.*/input_text_buffer.* 协议，音频在 response.audio.delta JSON 事件内（base64）
