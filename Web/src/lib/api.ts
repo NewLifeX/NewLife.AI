@@ -788,6 +788,7 @@ export interface SystemSettings {
   toolSlotLimit: number
   toolResultMaxChars: number
   toolMaxIterations: number
+  toolMaxTotalTokens: number
   skillBudgetChars: number
   // 系统功能
   enableUsageStats: boolean

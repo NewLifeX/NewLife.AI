@@ -7,7 +7,7 @@ namespace NewLife.ChatAI;
 
 /// <summary>AI对话系统配置（ChatAI 社区版）。继承 Config 自动加载保存到数据库参数字典表</summary>
 [DisplayName("AI对话配置")]
-public class ChatSetting : Config<ChatSetting>, IChatSetting
+public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
 {
     #region 静态
     /// <summary>指向数据库参数字典表</summary>
@@ -210,6 +210,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting
     [Category("工具与扩展")]
     [Description("工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10")]
     public Int32 ToolMaxIterations { get; set; } = 10;
+
+    /// <summary>单条消息Token总限额。工具调用累计Token超过此值时停止继续调用，0表示不限制，默认500万</summary>
+    [Category("工具与扩展")]
+    [Description("单条消息Token总限额。工具调用累计Token超过此值时停止继续调用，0表示不限制，默认500万")]
+    public Int32 ToolMaxTotalTokens { get; set; } = 5_000_000;
 
     /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000</summary>
     [Category("工具与扩展")]

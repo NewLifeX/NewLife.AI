@@ -30,6 +30,9 @@ public interface IChatSetting
     /// <summary>工具调用最大轮次。防止工具调用无限递归，默认10</summary>
     Int32 ToolMaxIterations { get; }
 
+    /// <summary>单条消息Token总限额。工具调用累计Token超过此值时停止继续调用，0表示不限制，默认500万</summary>
+    Int32 ToolMaxTotalTokens { get; }
+
     /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制</summary>
     Int32 ToolResultMaxChars { get; }
 

@@ -2,6 +2,7 @@
 using NewLife.AI.Clients;
 using NewLife.AI.Coding.Models;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -403,8 +404,7 @@ public class CodingAgent
 
         var toolClient = new ToolChatClient(BaseClient, registry)
         {
-            MaxIterations = maxIterations,
-            MaxResultLength = 3000,
+            ToolSetting = new ToolSetting { ToolMaxIterations = maxIterations, ToolResultMaxChars = 3000 },
             SelectedTools = toolNames,
         };
 

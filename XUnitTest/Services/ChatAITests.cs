@@ -34,6 +34,7 @@ public class ChatAITests
         Assert.Equal("1024x1024", setting.DefaultImageSize);
         Assert.True(setting.EnableUsageStats);
         Assert.True(setting.BackgroundGeneration);
+        Assert.Equal(5_000_000, setting.ToolMaxTotalTokens);
         //Assert.NotEmpty(setting.SuggestedQuestions);
     }
 

@@ -52,6 +52,7 @@ const defaultSettings: SystemSettings = {
   toolSlotLimit: 15,
   toolResultMaxChars: 4000,
   toolMaxIterations: 10,
+  toolMaxTotalTokens: 5000000,
   skillBudgetChars: 8000,
   enableUsageStats: true,
   backgroundGeneration: true,

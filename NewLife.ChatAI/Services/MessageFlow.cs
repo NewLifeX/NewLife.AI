@@ -1061,6 +1061,14 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         context.FinishReason = lastFinishReason;
 
+        // Token 总限额检查：ToolChatClient 超限中断时推送错误事件给前端
+        if (streamClient is ToolChatClient tcc && tcc.IsTotalTokenLimitExceeded)
+        {
+            var limitMsg = $"本消息工具调用累计Token已超过限额（{tcc.ToolSetting?.ToolMaxTotalTokens ?? 0:N0}），已停止继续调用。请精简问题或开启新会话。";
+            log?.Warn("Token总限额触发: MaxTotalTokens={0:N0}", tcc.ToolSetting?.ToolMaxTotalTokens ?? 0);
+            yield return ChatStreamEvent.ErrorEvent("total_tokens_exceeded", limitMsg);
+        }
+
         // 仅当 LLM 返回有效 usage 时才发送 MessageDone（含 Token 统计），
         // 避免用全零 UsageDetails 覆盖 context.Usage 中已在流式循环中正确设置的值
         yield return ChatStreamEvent.MessageDone(lastUsage);
@@ -1219,7 +1227,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var providers = ToolProviders;
         if (providers.Length > 0)
         {
-            clientBuilder = clientBuilder.UseTools(setting.ToolMaxIterations, setting.ToolResultMaxChars, context.SelectedTools, providers);
+            clientBuilder = clientBuilder.UseTools((IToolSetting)setting, context.SelectedTools, providers);
 
             // 记录本轮实际注入的工具（与 AI 收到的工具集一致）
             foreach (var p in providers)

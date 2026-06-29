@@ -271,6 +271,8 @@ export default {
       toolResultMaxCharsDesc: '工具调用返回内容的最大长度限制',
       toolMaxIterations: '工具调用最大轮次',
       toolMaxIterationsDesc: '单次对话中工具调用循环的最大次数，超过后停止',
+      toolMaxTotalTokens: '单条消息Token总限额',
+      toolMaxTotalTokensDesc: '工具调用累计Token超限时停止，0=不限制，默认500万',
       skillBudgetChars: '技能内容最大字符数',
       skillBudgetCharsDesc: '技能提示词总长度超过此值时按优先级截断',
     },

@@ -4,6 +4,7 @@ using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Filters;
+using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using NewLife.Log;
 
@@ -122,24 +123,14 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers));
 
-    /// <summary>添加工具中间件，并指定最大调用轮次与工具结果最大字符数</summary>
+    /// <summary>添加工具中间件，并指定工具调用配置与工具可见性过滤集合</summary>
     /// <param name="builder">构建器</param>
-    /// <param name="maxIterations">工具调用最大轮次，防止无限递归；传入 0 或负数自动回退为默认值 10</param>
-    /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
-    /// <param name="providers">工具提供者列表</param>
-    /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxIterations, Int32 maxResultLength, params IToolProvider[] providers)
-        => builder.Use(inner => new ToolChatClient(inner, providers) { MaxIterations = maxIterations, MaxResultLength = maxResultLength });
-
-    /// <summary>添加工具中间件，并指定最大调用轮次、工具结果最大字符数与工具可见性过滤集合</summary>
-    /// <param name="builder">构建器</param>
-    /// <param name="maxIterations">工具调用最大轮次，防止无限递归；传入 0 或负数自动回退为默认值 10</param>
-    /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
+    /// <param name="toolSetting">工具调用配置（MaxIterations / MaxTotalTokens / MaxResultChars）</param>
     /// <param name="selectedTools">工具可见性过滤集合；null 全量，空集合仅系统工具，非空集合系统工具 + 指定工具</param>
     /// <param name="providers">工具提供者列表</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, Int32 maxIterations, Int32 maxResultLength, ISet<String>? selectedTools, params IToolProvider[] providers)
-        => builder.Use(inner => new ToolChatClient(inner, providers) { MaxIterations = maxIterations, MaxResultLength = maxResultLength, SelectedTools = selectedTools });
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolSetting toolSetting, ISet<String>? selectedTools, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers) { ToolSetting = toolSetting, SelectedTools = selectedTools });
 
     /// <summary>添加工具审批中间件。设置后 <see cref="ToolChatClient"/> 在执行每个工具前会请求用户确认</summary>
     /// <param name="builder">构建器</param>
@@ -149,15 +140,14 @@ public static class ChatClientBuilderExtensions
     public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolApprovalProvider approvalProvider, params IToolProvider[] providers)
         => builder.Use(inner => new ToolChatClient(inner, providers) { ApprovalProvider = approvalProvider });
 
-    /// <summary>添加工具审批中间件，并指定最大调用轮次与工具结果最大字符数</summary>
+    /// <summary>添加工具审批中间件，并指定工具调用配置</summary>
     /// <param name="builder">构建器</param>
     /// <param name="approvalProvider">工具审批提供者</param>
-    /// <param name="maxIterations">工具调用最大轮次，防止无限递归；传入 0 或负数自动回退为默认值 10</param>
-    /// <param name="maxResultLength">工具结果最大字符数。0表示不限制</param>
+    /// <param name="toolSetting">工具调用配置</param>
     /// <param name="providers">工具提供者列表</param>
     /// <returns>构建器（支持链式调用）</returns>
-    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolApprovalProvider approvalProvider, Int32 maxIterations, Int32 maxResultLength, params IToolProvider[] providers)
-        => builder.Use(inner => new ToolChatClient(inner, providers) { ApprovalProvider = approvalProvider, MaxIterations = maxIterations, MaxResultLength = maxResultLength });
+    public static ChatClientBuilder UseTools(this ChatClientBuilder builder, IToolApprovalProvider approvalProvider, IToolSetting toolSetting, params IToolProvider[] providers)
+        => builder.Use(inner => new ToolChatClient(inner, providers) { ApprovalProvider = approvalProvider, ToolSetting = toolSetting });
 
     // ── MEAI 风格 Use*() 工厂方法 ─────────────────────────────────────────
 

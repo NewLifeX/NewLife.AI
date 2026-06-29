@@ -56,6 +56,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             ToolSlotLimit = chatSetting.ToolSlotLimit,
             ToolResultMaxChars = chatSetting.ToolResultMaxChars,
             ToolMaxIterations = chatSetting.ToolMaxIterations,
+            ToolMaxTotalTokens = chatSetting.ToolMaxTotalTokens,
             SkillBudgetChars = chatSetting.SkillBudgetChars,
             // 功能开关
             EnableUsageStats = chatSetting.EnableUsageStats,
@@ -114,6 +115,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.ToolSlotLimit.HasValue) chatSetting.ToolSlotLimit = dto.ToolSlotLimit.Value;
         if (dto.ToolResultMaxChars.HasValue) chatSetting.ToolResultMaxChars = dto.ToolResultMaxChars.Value;
         if (dto.ToolMaxIterations.HasValue) chatSetting.ToolMaxIterations = dto.ToolMaxIterations.Value;
+        if (dto.ToolMaxTotalTokens.HasValue) chatSetting.ToolMaxTotalTokens = dto.ToolMaxTotalTokens.Value;
         if (dto.SkillBudgetChars.HasValue) chatSetting.SkillBudgetChars = dto.SkillBudgetChars.Value;
         // 功能开关
         if (dto.EnableUsageStats.HasValue) chatSetting.EnableUsageStats = dto.EnableUsageStats.Value;

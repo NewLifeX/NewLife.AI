@@ -269,6 +269,8 @@ export default {
       toolResultMaxCharsDesc: 'Maximum length limit for tool call return content',
       toolMaxIterations: 'Tool Call Max Iterations',
       toolMaxIterationsDesc: 'Maximum number of tool call loops per conversation, stops after exceeding',
+      toolMaxTotalTokens: 'Message Token Limit',
+      toolMaxTotalTokensDesc: 'Stop tool calls when accumulated tokens exceed this limit. 0=unlimited, default 5M',
       skillBudgetChars: 'Skill Content Max Chars',
       skillBudgetCharsDesc: 'Truncates skill prompts by priority when total length exceeds this value',
     },

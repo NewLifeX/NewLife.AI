@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.Collections;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -16,7 +17,7 @@ namespace NewLife.AI.Tools;
 /// <item>请求前，聚合所有 <see cref="Providers"/> 的工具定义与 <c>ChatOptions.Tools</c></item>
 /// <item>调用内层客户端获取响应</item>
 /// <item>若响应含 <c>tool_calls</c>，按工具名路由到对应 Provider 执行 <see cref="ExecuteToolAsync"/></item>
-/// <item>循环重新调用模型，直到无更多工具调用（最多 <see cref="MaxIterations"/> 轮）</item>
+/// <item>循环重新调用模型，直到无更多工具调用（最多 <see cref="ToolSetting"/> 的 ToolMaxIterations 轮）</item>
 /// </list>
 /// 使用方式：
 /// <code>
@@ -35,12 +36,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>工具提供者列表（按工具名直接路由执行工具调用）</summary>
     public IReadOnlyList<IToolProvider> Providers { get; } = (providers ?? []).ToList().AsReadOnly();
 
-    private Int32 _maxIterations = 10;
-    /// <summary>最大工具调用循环次数，防止无限递归。默认 10；设为 0 或负数时自动回退为 10</summary>
-    public Int32 MaxIterations { get => _maxIterations; set => _maxIterations = value > 0 ? value : 10; }
+    /// <summary>工具调用配置。为 null 时使用内置默认值（MaxIterations=10, MaxTotalTokens=0/不限制, MaxResultChars=0/不限制）</summary>
+    public IToolSetting? ToolSetting { get; set; }
 
-    /// <summary>工具结果最大字符数。超过此长度时自动截断并追加省略提示，0表示不限制</summary>
-    public Int32 MaxResultLength { get; set; }
+    /// <summary>是否因Token总限额触发中断</summary>
+    public Boolean IsTotalTokenLimitExceeded { get; private set; }
+
+    /// <summary>API 不返回 Usage 时的回退估算累计值（基于内联字符估算）</summary>
+    private Int32 _fallbackEstimatedTokens;
 
     /// <summary>工具审批提供者。设置后在每次工具执行前请求审批，未设置时直接执行</summary>
     public IToolApprovalProvider? ApprovalProvider { get; set; }
@@ -85,6 +88,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var workOptions = MergeToolOptions(request, mergedTools);
         var workMessages = request.Messages.ToList();
 
+        var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
+        if (maxIterations <= 0) maxIterations = 10;
+        var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
+
         IChatResponse response;
         var iterations = 0;
         UsageDetails? accumulatedUsage = null;
@@ -97,13 +104,28 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
 
             // 累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）
-            if (response.Usage != null) accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
+            if (response.Usage != null)
+                accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
+            else
+                _fallbackEstimatedTokens += EstimateTokens(workMessages);
+
+            // Token 总限额检查（优先使用 API 返回值，回退字符估算）
+            if (maxTotalTokens > 0)
+            {
+                var totalTokens = accumulatedUsage != null ? accumulatedUsage.TotalTokens : _fallbackEstimatedTokens;
+                if (totalTokens >= maxTotalTokens)
+                {
+                    IsTotalTokenLimitExceeded = true;
+                    Log.Warn("Token总限额已达到 {0:N0}（当前累计 {1:N0}），中断工具调用循环", maxTotalTokens, totalTokens);
+                    break;
+                }
+            }
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
             var toolCalls = assistantMessage?.ToolCalls;
             if (toolCalls == null || toolCalls.Count == 0) break;
-            if (++iterations >= MaxIterations) break;
+            if (++iterations >= maxIterations) break;
 
             // 追加 assistant 消息（含工具调用）
             // DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传，否则 API 返回 400
@@ -199,11 +221,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var workOptions = MergeToolOptions(request, mergedTools);
         var workMessages = request.Messages.ToList();
 
+        var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
+        if (maxIterations <= 0) maxIterations = 10;
+        var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
+
         UsageDetails? accumulatedUsage = null;
 
         _sessionDedupKeys.Clear();
 
-        for (var iteration = 0; iteration < MaxIterations; iteration++)
+        for (var iteration = 0; iteration < maxIterations; iteration++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -277,6 +303,25 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 DefaultSpan.Current?.AppendTag($"Tokens: {iterUsage.InputTokens}+{iterUsage.OutputTokens}={iterUsage.TotalTokens} finishReason: {finishReason}");
 
                 accumulatedUsage = accumulatedUsage?.Add(iterUsage) ?? iterUsage;
+            }
+            else
+            {
+                _fallbackEstimatedTokens += EstimateTokens(workMessages);
+            }
+
+            // Token 总限额检查（优先使用 API 返回值，回退字符估算）
+            if (maxTotalTokens > 0)
+            {
+                var totalTokens = accumulatedUsage != null ? accumulatedUsage.TotalTokens : _fallbackEstimatedTokens;
+                if (totalTokens >= maxTotalTokens)
+                {
+                    IsTotalTokenLimitExceeded = true;
+                    Log.Warn("Token总限额已达到 {0:N0}（当前累计 {1:N0}），中断工具调用循环", maxTotalTokens, totalTokens);
+                    // 兜底补发累计总量后退出
+                    if (accumulatedUsage != null)
+                        yield return new ChatResponse { Usage = accumulatedUsage };
+                    yield break;
+                }
             }
 
             var isToolRound = finishReason.EqualIgnoreCase("tool_calls") || (toolCalls.Count > 0 && finishReason.IsNullOrEmpty());
@@ -406,6 +451,53 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     #endregion
 
     #region 辅助
+
+    /// <summary>估算消息列表的 Token 数（粗略：中文按1.5字/token，英文按4字符/token）。API 不返回 Usage 时作为回退判定依据</summary>
+    /// <param name="messages">消息列表</param>
+    /// <returns>Token 估算值</returns>
+    private static Int32 EstimateTokens(IList<ChatMessage> messages)
+    {
+        if (messages == null || messages.Count == 0) return 0;
+
+        var total = 0;
+        foreach (var msg in messages)
+        {
+            total += 1; // role
+            if (msg.Content is String text)
+                total += EstimateTokens(text);
+            if (msg.ToolCalls != null)
+            {
+                foreach (var tc in msg.ToolCalls)
+                {
+                    total += EstimateTokens(tc.Function?.Name);
+                    total += EstimateTokens(tc.Function?.Arguments);
+                }
+            }
+            if (!msg.ToolCallId.IsNullOrEmpty())
+                total += 2;
+        }
+        return total;
+    }
+
+    /// <summary>估算单段文本的 Token 数</summary>
+    /// <param name="text">文本内容</param>
+    /// <returns>Token 估算值</returns>
+    private static Int32 EstimateTokens(String? text)
+    {
+        if (text.IsNullOrEmpty()) return 0;
+
+        var chineseCount = 0;
+        var otherCount = 0;
+        foreach (var ch in text)
+        {
+            if (ch >= 0x4E00 && ch <= 0x9FFF)
+                chineseCount++;
+            else
+                otherCount++;
+        }
+
+        return (Int32)(chineseCount / 1.5 + otherCount / 4.0);
+    }
 
     /// <summary>按工具名路由到对应 Provider 执行工具调用。未找到则抛 <see cref="InvalidOperationException"/></summary>
     /// <param name="toolName">工具名称</param>
@@ -683,14 +775,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             Items = request?.Items ?? new Dictionary<String, Object?>(),
         };
 
-    /// <summary>按 <see cref="MaxResultLength"/> 截断过长结果，防止撑满 LLM Context Window</summary>
+    /// <summary>按 <see cref="ToolSetting"/> 的 ToolResultMaxChars 截断过长结果，防止撑满 LLM Context Window</summary>
     /// <param name="result">工具原始返回文本</param>
     /// <returns>截断后的文本，不超限时原样返回</returns>
     private String? TruncateResult(String? result)
     {
-        if (MaxResultLength <= 0 || result == null || result.Length <= MaxResultLength)
+        var maxResultChars = ToolSetting?.ToolResultMaxChars ?? 0;
+        if (maxResultChars <= 0 || result == null || result.Length <= maxResultChars)
             return result;
-        return result.Substring(0, MaxResultLength) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {MaxResultLength} 字符]";
+        return result.Substring(0, maxResultChars) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {maxResultChars} 字符]";
     }
 
     #endregion

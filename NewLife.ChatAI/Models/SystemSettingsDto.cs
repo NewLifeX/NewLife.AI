@@ -99,6 +99,9 @@ public class SystemSettingsDto
     /// <summary>工具调用最大轮次</summary>
     public Int32 ToolMaxIterations { get; set; }
 
+    /// <summary>单条消息Token总限额</summary>
+    public Int32 ToolMaxTotalTokens { get; set; }
+
     /// <summary>技能内容最大字符数</summary>
     public Int32 SkillBudgetChars { get; set; }
     #endregion
@@ -230,6 +233,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>工具调用最大轮次</summary>
     public Int32? ToolMaxIterations { get; set; }
+
+    /// <summary>单条消息Token总限额</summary>
+    public Int32? ToolMaxTotalTokens { get; set; }
 
     /// <summary>技能内容最大字符数</summary>
     public Int32? SkillBudgetChars { get; set; }

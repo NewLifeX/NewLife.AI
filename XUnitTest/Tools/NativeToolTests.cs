@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using Xunit;
 
@@ -99,6 +100,87 @@ public class NativeToolTests
                 // 第二次调用：返回最终文本回复
                 resp = new ChatResponse
                 {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = _finalReply
+                            }
+                        }
+                    ]
+                };
+            }
+
+            return Task.FromResult<IChatResponse>(resp);
+        }
+
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
+    /// <summary>返回固定工具调用再回复文本的假客户端，并支持注入 UsageDetails 用于测试 Token 限额</summary>
+    private sealed class ToolCallThenReplyWithUsageClient : IChatClient
+    {
+        private readonly String _toolName;
+        private readonly String _toolArgs;
+        private readonly String _finalReply;
+        private readonly UsageDetails _usage;
+        private Int32 _callCount;
+
+        public ToolCallThenReplyWithUsageClient(String toolName, String toolArgs, String finalReply, UsageDetails usage)
+        {
+            _toolName = toolName;
+            _toolArgs = toolArgs;
+            _finalReply = finalReply;
+            _usage = usage;
+        }
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+        {
+            _callCount++;
+            ChatResponse resp;
+
+            if (_callCount == 1)
+            {
+                resp = new ChatResponse
+                {
+                    Usage = _callCount == 1 ? _usage : null,
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = null,
+                                ToolCalls =
+                                [
+                                    new ToolCall
+                                    {
+                                        Id = "call_001",
+                                        Type = "function",
+                                        Function = new FunctionCall
+                                        {
+                                            Name = _toolName,
+                                            Arguments = _toolArgs
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                };
+            }
+            else
+            {
+                resp = new ChatResponse
+                {
+                    Usage = _usage,
                     Messages =
                     [
                         new ChatChoice
@@ -334,6 +416,83 @@ public class NativeToolTests
         Assert.False(captured.ParallelToolCalls);
         Assert.Equal(99, captured.UserId.ToInt());
         Assert.Equal(888L, captured.ConversationId.ToLong());
+    }
+
+    // ── ToolChatClient MaxTotalTokens 测试 ─────────────────────────────────
+
+    [Fact]
+    [DisplayName("ToolChatClient MaxTotalTokens=0 不限制工具调用")]
+    public async Task ToolChatClient_MaxTotalTokens_Zero_NoLimit()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        var innerClient = new ToolCallThenReplyWithUsageClient(
+            toolName: "add_numbers",
+            toolArgs: "{\"a\":10,\"b\":20}",
+            finalReply: "计算结果是 30",
+            usage: new UsageDetails { InputTokens = 1000000, OutputTokens = 1000, TotalTokens = 1001000 });
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry)
+        {
+            ToolSetting = new ToolSetting { ToolMaxTotalTokens = 0 } // 不限制
+        };
+
+        var response = await nativeClient.GetResponseAsync("10 + 20 等于多少？", cancellationToken: default);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("计算结果是 30", content);
+        Assert.False(nativeClient.IsTotalTokenLimitExceeded);
+    }
+
+    [Fact]
+    [DisplayName("ToolChatClient MaxTotalTokens 超限时中断工具循环")]
+    public async Task ToolChatClient_MaxTotalTokens_StopsWhenExceeded()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 构造多轮工具调用场景：第一轮返回 tool_calls + 大用量，超限后中断
+        var innerClient = new ToolCallThenReplyWithUsageClient(
+            toolName: "add_numbers",
+            toolArgs: "{\"a\":10,\"b\":20}",
+            finalReply: "计算结果是 30",
+            usage: new UsageDetails { InputTokens = 60, OutputTokens = 10, TotalTokens = 70 }); // 累计 70 > 50 限额
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry)
+        {
+            ToolSetting = new ToolSetting { ToolMaxTotalTokens = 50 }
+        };
+
+        var response = await nativeClient.GetResponseAsync("10 + 20 等于多少？", cancellationToken: default);
+
+        Assert.True(nativeClient.IsTotalTokenLimitExceeded);
+        // 第一轮 LLM 调用后 Token 累计 70 > 50，循环中断，不执行工具也不发起第二轮 LLM
+    }
+
+    [Fact]
+    [DisplayName("ToolChatClient MaxTotalTokens 未达限额时正常完成")]
+    public async Task ToolChatClient_MaxTotalTokens_UnderLimit_Completes()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        var innerClient = new ToolCallThenReplyWithUsageClient(
+            toolName: "add_numbers",
+            toolArgs: "{\"a\":10,\"b\":20}",
+            finalReply: "计算结果是 30",
+            usage: new UsageDetails { InputTokens = 10, OutputTokens = 5, TotalTokens = 15 }); // 累计 15 < 10000 限额
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry)
+        {
+            ToolSetting = new ToolSetting { ToolMaxTotalTokens = 10000 }
+        };
+
+        var response = await nativeClient.GetResponseAsync("10 + 20 等于多少？", cancellationToken: default);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("计算结果是 30", content);
+        Assert.False(nativeClient.IsTotalTokenLimitExceeded);
     }
 
     // 测试专用：捕获调用选项的假客户端，不触发工具循环
