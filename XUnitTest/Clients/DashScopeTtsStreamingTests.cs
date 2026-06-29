@@ -369,6 +369,75 @@ public class DashScopeTtsStreamingTests
         Assert.True(cancelled, "取消令牌应生效");
     }
 
+    [Fact]
+    [DisplayName("SpeechStreamAsync_qwen3_tts_flash_realtime_opus格式")]
+    public async Task SpeechStreamAsync_Qwen3TtsFlashRealtime_OpusFormat()
+    {
+        if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization)) return;
+
+        var option = CreateOptions();
+        option.Model = "qwen3-tts-flash-realtime";
+
+        using var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "qwen3-tts-flash-realtime",
+            Input = "你好，这是opus格式流式测试。",
+            Voice = "Cherry",
+            ResponseFormat = "opus",
+            SampleRate = 24000,
+        };
+
+        var chunks = new List<Byte[]>();
+        await foreach (var chunk in client.SpeechStreamAsync(request, CancellationToken.None))
+        {
+            Assert.NotNull(chunk);
+            Assert.True(chunk.Length > 0, $"第 {chunks.Count + 1} 个 opus 分片不应为空");
+            chunks.Add(chunk);
+        }
+
+        Assert.NotEmpty(chunks);
+        var totalBytes = chunks.Sum(c => c.Length);
+        Assert.True(totalBytes > 0, "opus 格式应生成有效音频");
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_Qwen3TtsFlashRealtime_OpusFormat)}.opus");
+    }
+
+    [Fact]
+    [DisplayName("SpeechStreamAsync_qwen_tts_realtime_opus格式")]
+    public async Task SpeechStreamAsync_QwenTtsRealtime_OpusFormat()
+    {
+        if (String.IsNullOrEmpty(_apiKey) || String.IsNullOrEmpty(_organization)) return;
+
+        var option = CreateOptions();
+        using var client = new DashScopeChatClient(option);
+        var request = new SpeechRequest
+        {
+            Model = "qwen-tts-realtime",
+            Input = "你好，这是opus格式流式测试。",
+            Voice = "Cherry",
+            ResponseFormat = "opus",
+            SampleRate = 24000,
+        };
+
+        var chunks = new List<Byte[]>();
+        await foreach (var chunk in client.SpeechStreamAsync(request, CancellationToken.None))
+        {
+            Assert.NotNull(chunk);
+            chunks.Add(chunk);
+        }
+
+        Assert.NotEmpty(chunks);
+        var totalBytes = chunks.Sum(c => c.Length);
+        Assert.True(totalBytes > 0, "opus 格式应生成有效音频");
+
+        // 合并所有分片并保存音频文件到本地，供人工检查
+        var combined = chunks.SelectMany(c => c).ToArray();
+        await SaveOutputFileAsync(combined, $"{nameof(SpeechStreamAsync_QwenTtsRealtime_OpusFormat)}.opus");
+    }
+
     #endregion
 
     #region 辅助方法

@@ -766,6 +766,10 @@ public partial class DashScopeChatClient
 
         var modelCode = request.Model ?? _options.Model ?? "cosyvoice-v3-flash";
 
+        // opus 格式兼容性映射：旧版 qwen-tts-realtime 不支持 opus，自动升级到 qwen3-tts-flash-realtime
+        if (format == "opus" && modelCode.EqualIgnoreCase("qwen-tts-realtime"))
+            modelCode = "qwen3-tts-flash-realtime";
+
         if (IsQwenTtsRealtimeModel(modelCode))
         {
             // Qwen-TTS-Realtime：session.*/input_text_buffer.* 协议，音频在 response.audio.delta JSON 事件内（base64）
@@ -865,7 +869,12 @@ public partial class DashScopeChatClient
             // 1. 等待 session.created
             var sessionCreated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
             if (GetEventType(sessionCreated) != "session.created")
-                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.created，实际收到 {GetEventType(sessionCreated) ?? "(null/Close)"}");
+            {
+                var evType = GetEventType(sessionCreated);
+                var errDetail = evType == "error" ? ExtractErrorDetail(sessionCreated) : null;
+                var suffix = errDetail != null ? $"，错误详情: {errDetail}" : "";
+                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.created，实际收到 {evType ?? "(null/Close)"}{suffix}");
+            }
 
             // 2. 发送 session.update 配置音色/格式/模式
             var sampleRate = request.SampleRate ?? 24000;
@@ -894,7 +903,12 @@ public partial class DashScopeChatClient
             // 3. 等待 session.updated
             var sessionUpdated = await ReceiveWebSocketJsonAsync(ws, cancellationToken).ConfigureAwait(false);
             if (GetEventType(sessionUpdated) != "session.updated")
-                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.updated，实际收到 {GetEventType(sessionUpdated) ?? "(null/Close)"}");
+            {
+                var evType = GetEventType(sessionUpdated);
+                var errDetail = evType == "error" ? ExtractErrorDetail(sessionUpdated) : null;
+                var suffix = errDetail != null ? $"，错误详情: {errDetail}" : "";
+                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.updated，实际收到 {evType ?? "(null/Close)"}{suffix}");
+            }
 
             // 4. 分批发送文本到缓冲区（每片 ≤500 字符）
             var text = request.Input;
@@ -1009,6 +1023,23 @@ public partial class DashScopeChatClient
     {
         if (dic == null) return null;
         return dic.TryGetValue("type", out var t) ? t as String : null;
+    }
+
+    /// <summary>从 DashScope 错误事件中提取可读错误信息（message + code）</summary>
+    /// <param name="ev">JSON 反序列化后的事件字典</param>
+    /// <returns>格式化错误信息；提取失败返回 null</returns>
+    private static String? ExtractErrorDetail(IDictionary<String, Object?>? ev)
+    {
+        if (ev == null) return null;
+        if (!ev.TryGetValue("error", out var errObj) || errObj is not IDictionary<String, Object?> errDic)
+            return null;
+
+        var message = errDic.TryGetValue("message", out var msg) ? msg as String : null;
+        var code = errDic.TryGetValue("code", out var c) ? c as String : null;
+
+        if (message == null && code == null) return null;
+        if (message != null && code != null) return $"[{code}] {message}";
+        return message ?? code;
     }
 
     /// <summary>执行 CosyVoice WebSocket TTS 全流程，逐帧产出音频块</summary>
