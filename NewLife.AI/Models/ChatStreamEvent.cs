@@ -48,20 +48,8 @@ public class ChatStreamEvent
     /// <summary>会话标题。首条消息自动生成标题时返回</summary>
     public String? Title { get; set; }
 
-    /// <summary>音频 URL。TTS 分支下 message_done 时附带，前端收到后自动播放</summary>
-    public String? AudioUrl { get; set; }
-
-    /// <summary>TTS 流式音频分片的 Base64 编码数据。tts_audio_chunk 事件专用</summary>
-    public String? AudioBase64 { get; set; }
-
-    /// <summary>TTS 流式音频格式。前端根据此字段选择 MediaSource codec，如 mp3→audio/mpeg、opus→audio/ogg;codecs=opus</summary>
-    public String? AudioFormat { get; set; }
-
-    /// <summary>TTS 流式合成当前已处理的字符位置（0-based）</summary>
-    public Int32 CharIndex { get; set; }
-
-    /// <summary>TTS 流式合成总字符数</summary>
-    public Int32 TotalChars { get; set; }
+    /// <summary>资源 URL。TTS 分支下 message_done 时附带音频归档地址，前端收到后自动播放；扩展用于其他资源的引用</summary>
+    public String? Url { get; set; }
 
     /// <summary>知识引用列表。knowledge_refs 事件专用，JSON 数组 [{"id":1,"title":"xxx"}]</summary>
     public String? KnowledgeRefs { get; set; }
@@ -96,19 +84,10 @@ public class ChatStreamEvent
     /// <summary>消息完成事件</summary>
     /// <param name="usage">用量统计</param>
     /// <param name="title">标题（可选）</param>
-    /// <param name="audioUrl">音频 URL（TTS 分支专用，前端自动播放）</param>
+    /// <param name="url">资源 URL（TTS 分支专用，前端自动播放）</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? audioUrl = null) =>
-        new() { Type = "message_done", Usage = usage, Title = title, AudioUrl = audioUrl };
-
-    /// <summary>TTS 流式音频分片事件。边合成边推送，前端逐段接收播放并更新进度条</summary>
-    /// <param name="audioBase64">音频分片 Base64 编码</param>
-    /// <param name="charIndex">当前已处理字符位置</param>
-    /// <param name="totalChars">总字符数</param>
-    /// <param name="audioFormat">音频格式，如 mp3/opus/wav，前端用于选择 MediaSource codec</param>
-    /// <returns></returns>
-    public static ChatStreamEvent TtsAudioChunk(String audioBase64, Int32 charIndex, Int32 totalChars, String? audioFormat = null) =>
-        new() { Type = "tts_audio_chunk", AudioBase64 = audioBase64, CharIndex = charIndex, TotalChars = totalChars, AudioFormat = audioFormat };
+    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? url = null) =>
+        new() { Type = "message_done", Usage = usage, Title = title, Url = url };
 
     /// <summary>错误事件</summary>
     /// <param name="code">错误码</param>
