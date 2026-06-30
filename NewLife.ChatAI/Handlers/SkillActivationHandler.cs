@@ -76,6 +76,30 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
             }
         }
 
+        // 默认技能兜底：上述全部路径（RequestSkillCode / 触发词 / 续轮粘滞）均未激活技能时，
+        // 读取 UserSetting.DefaultSkill 作为用户首选技能
+        if (context.SkillId <= 0 && context.UserId > 0 && context is MessageFlowContext flow3)
+        {
+            var userSetting = UserSetting.FindByUserId(context.UserId);
+            var defaultSkillCode = userSetting?.DefaultSkill;
+            if (!defaultSkillCode.IsNullOrEmpty())
+            {
+                var defaultSkill = Skill.FindByCode(defaultSkillCode);
+                if (defaultSkill != null && defaultSkill.Enable)
+                {
+                    var conversation = flow3.Conversation;
+                    if (conversation.SkillId != defaultSkill.Id)
+                    {
+                        conversation.SkillId = defaultSkill.Id;
+                        conversation.SkillName = defaultSkill.Name;
+                        conversation.Update();
+                    }
+                    flow3.SkillId = defaultSkill.Id;
+                    flow3.ActivatedSkills.Add(defaultSkill);
+                }
+            }
+        }
+
         // 注入技能 Prompt（已选中工具由 ToolContextHandler 在上游填充）
         var skillNames = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
         var skillPrompt = skillService.BuildSkillPrompt(context.SkillId, lastUserContent, context.SelectedTools, skillNames);
