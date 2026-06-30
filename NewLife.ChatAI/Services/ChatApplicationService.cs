@@ -400,7 +400,9 @@ public class ChatApplicationService
             });
         }
 
-        var models = list.Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunction, e.SupportVision, e.SupportAudio, e.SupportImage, e.SupportVideo, e.SupportSpeech, e.SupportEmbedding, e.ContextLength, e.ReasoningEfforts, e.ProviderInfo?.Name ?? "")).ToArray();
+        var models = list
+            .Where(e => e.IsChatModel)
+            .Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunction, e.SupportVision, e.SupportAudio, e.SupportImage, e.SupportVideo, e.SupportSpeech, e.SupportEmbedding, e.ContextLength, e.ReasoningEfforts, e.ProviderInfo?.Name ?? "")).ToArray();
         return Task.FromResult(models);
     }
     #endregion

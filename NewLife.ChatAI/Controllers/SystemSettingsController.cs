@@ -18,7 +18,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         // 构建可用模型下拉列表
         var models = new List<ModelOptionDto> { new(0, "默认（第一个可用模型）") };
         foreach (var m in ModelConfig.FindAllEnabled())
-            models.Add(new ModelOptionDto(m.Id, m.Name));
+            models.Add(new ModelOptionDto(m.Id, m.Name, m.IsChatModel));
 
         return Ok(new SystemSettingsDto
         {

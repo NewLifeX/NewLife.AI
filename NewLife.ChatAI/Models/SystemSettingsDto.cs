@@ -270,4 +270,5 @@ public class SystemSettingsUpdateDto
 /// <summary>模型选项。用于系统设置页默认模型下拉列表</summary>
 /// <param name="Id">模型配置Id</param>
 /// <param name="Name">显示名称</param>
-public record ModelOptionDto(Int32 Id, String Name);
+/// <param name="IsChatModel">是否为对话模型（可出现在 /chat 首页选择器中）</param>
+public record ModelOptionDto(Int32 Id, String Name, Boolean IsChatModel = false);

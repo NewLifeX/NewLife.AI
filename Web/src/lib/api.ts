@@ -804,6 +804,7 @@ export interface SystemSettings {
 export interface ModelOption {
   id: number
   name: string
+  isChatModel?: boolean
 }
 
 export interface SystemSettingsWithModels extends SystemSettings {

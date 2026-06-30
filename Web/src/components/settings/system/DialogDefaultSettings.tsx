@@ -23,7 +23,7 @@ export function DialogDefaultSettings({ settings, models, onChange }: Props) {
           className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
         >
           <option value={0}>—</option>
-          {models.map((m) => (
+          {models.filter((m) => m.isChatModel !== false).map((m) => (
             <option key={m.id} value={m.id}>{m.name}</option>
           ))}
         </select>
