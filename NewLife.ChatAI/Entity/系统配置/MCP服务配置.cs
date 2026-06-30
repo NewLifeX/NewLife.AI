@@ -86,6 +86,14 @@ public partial class McpServerConfig
     [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用", "")]
     public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
 
+    private String? _DisabledTools;
+    /// <summary>禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI</summary>
+    [DisplayName("禁用工具")]
+    [Description("禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI")]
+    [DataObjectField(false, false, true, 500)]
+    [BindColumn("DisabledTools", "禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI", "")]
+    public String? DisabledTools { get => _DisabledTools; set { if (OnPropertyChanging("DisabledTools", value)) { _DisabledTools = value; OnPropertyChanged("DisabledTools"); } } }
+
     private Boolean _Enable;
     /// <summary>启用</summary>
     [DisplayName("启用")]
@@ -182,6 +190,7 @@ public partial class McpServerConfig
             "AuthToken" => _AuthToken,
             "AvailableTools" => _AvailableTools,
             "Triggers" => _Triggers,
+            "DisabledTools" => _DisabledTools,
             "Enable" => _Enable,
             "Sort" => _Sort,
             "CreateUserID" => _CreateUserID,
@@ -205,6 +214,7 @@ public partial class McpServerConfig
                 case "AuthToken": _AuthToken = Convert.ToString(value); break;
                 case "AvailableTools": _AvailableTools = Convert.ToString(value); break;
                 case "Triggers": _Triggers = Convert.ToString(value); break;
+                case "DisabledTools": _DisabledTools = Convert.ToString(value); break;
                 case "Enable": _Enable = value.ToBoolean(); break;
                 case "Sort": _Sort = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
@@ -307,6 +317,9 @@ public partial class McpServerConfig
         /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用</summary>
         public static readonly Field Triggers = FindByName("Triggers");
 
+        /// <summary>禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI</summary>
+        public static readonly Field DisabledTools = FindByName("DisabledTools");
+
         /// <summary>启用</summary>
         public static readonly Field Enable = FindByName("Enable");
 
@@ -363,6 +376,9 @@ public partial class McpServerConfig
 
         /// <summary>触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用</summary>
         public const String Triggers = "Triggers";
+
+        /// <summary>禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI</summary>
+        public const String DisabledTools = "DisabledTools";
 
         /// <summary>启用</summary>
         public const String Enable = "Enable";

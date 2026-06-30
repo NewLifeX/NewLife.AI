@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using NewLife;
 using NewLife.AI.ModelContextProtocol;
 using NewLife.AI.Tools;
 using NewLife.Log;
@@ -83,8 +84,13 @@ public class McpClientService(ILog log) : IToolProvider
             var tools = server.AvailableTools.ToJsonEntity<IList<ToolDefinition>>();
             if (tools == null) continue;
 
+            // 解析禁用工具列表（逗号分隔，支持 * 通配）
+            var disabled = ParseDisabledPatterns(server.DisabledTools);
+
             foreach (var tool in tools)
             {
+                if (IsToolDisabled(tool.Name, disabled)) continue;
+
                 list.Add(new McpToolInfo
                 {
                     ServerId = server.Id,
@@ -97,6 +103,36 @@ public class McpClientService(ILog log) : IToolProvider
         }
 
         return list;
+    }
+
+    /// <summary>解析禁用工具字符串为匹配模式列表。逗号分隔，每项支持 * 前缀通配</summary>
+    /// <param name="disabledTools">逗号分隔的禁用工具名列表，如 "dangerous_tool,search_*"</param>
+    /// <returns>禁用匹配模式列表；空数组表示无禁用</returns>
+    private static String[] ParseDisabledPatterns(String? disabledTools)
+    {
+        if (disabledTools.IsNullOrWhiteSpace()) return [];
+
+        return disabledTools
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(p => p.Length > 0)
+            .ToArray();
+    }
+
+    /// <summary>判断工具名是否匹配禁用列表。支持 * 和 ? 通配符匹配</summary>
+    /// <param name="toolName">工具名</param>
+    /// <param name="patterns">禁用匹配模式列表</param>
+    /// <returns>true 表示该工具应被禁用</returns>
+    private static Boolean IsToolDisabled(String toolName, String[] patterns)
+    {
+        if (patterns.Length == 0) return false;
+
+        foreach (var pattern in patterns)
+        {
+            if (pattern.IsMatch(toolName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>实现 <see cref="IToolProvider.GetTools(ISet{String}?, Boolean)"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>

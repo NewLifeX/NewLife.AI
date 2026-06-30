@@ -347,6 +347,7 @@
         <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
         <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
         <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用" />
+        <Column Name="DisabledTools" DataType="String" Length="500" Description="禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
