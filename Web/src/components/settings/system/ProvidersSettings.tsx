@@ -107,6 +107,7 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
     supportFunction: model.supportFunction,
     supportVision: model.supportVision,
     supportAudio: model.supportAudio,
+    supportSpeech: model.supportSpeech,
     supportImage: model.supportImage,
     supportVideo: model.supportVideo,
   })
@@ -134,6 +135,7 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
     ['supportFunction', 'providers.modelEdit.functionCalling'],
     ['supportVision', 'providers.modelEdit.vision'],
     ['supportAudio', 'providers.modelEdit.audio'],
+    ['supportSpeech', 'providers.modelEdit.speech'],
     ['supportImage', 'providers.modelEdit.imageGeneration'],
     ['supportVideo', 'providers.modelEdit.videoGeneration'],
   ] as const
@@ -373,35 +375,40 @@ export function ProvidersSettings() {
                       <div className="text-xs text-gray-400 dark:text-gray-500 font-mono">{model.code}</div>
                     </td>
                     <td className="px-3 py-2">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         {model.supportThinking && (
                           <span title={t('providers.modelEdit.thinking')} className="text-purple-500">
-                            <Icon name="psychology" size="xs" />
+                            <Icon name="psychology" size="base" />
                           </span>
                         )}
                         {model.supportFunction && (
                           <span title={t('providers.modelEdit.functionCalling')} className="text-blue-500">
-                            <Icon name="build" size="xs" />
+                            <Icon name="build" size="base" />
                           </span>
                         )}
                         {model.supportVision && (
                           <span title={t('providers.modelEdit.vision')} className="text-green-500">
-                            <Icon name="image" size="xs" />
+                            <Icon name="image" size="base" />
                           </span>
                         )}
                         {model.supportAudio && (
                           <span title={t('providers.modelEdit.audio')} className="text-orange-500">
-                            <Icon name="volume_up" size="xs" />
+                            <Icon name="volume_up" size="base" />
+                          </span>
+                        )}
+                        {model.supportSpeech && (
+                          <span title={t('providers.modelEdit.speech')} className="text-indigo-500">
+                            <Icon name="record_voice_over" size="base" />
                           </span>
                         )}
                         {model.supportImage && (
                           <span title={t('providers.modelEdit.imageGeneration')} className="text-pink-500">
-                            <Icon name="brush" size="xs" />
+                            <Icon name="brush" size="base" />
                           </span>
                         )}
                         {model.supportVideo && (
                           <span title={t('providers.modelEdit.videoGeneration')} className="text-red-500">
-                            <Icon name="videocam" size="xs" />
+                            <Icon name="videocam" size="base" />
                           </span>
                         )}
                       </div>

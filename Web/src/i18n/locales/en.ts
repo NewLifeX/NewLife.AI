@@ -448,6 +448,7 @@ export default {
       functionCalling: 'Tool Calling',
       vision: 'Vision',
       audio: 'Audio',
+      speech: 'Speech',
       imageGeneration: 'Image Generation',
       videoGeneration: 'Video Generation',
       saved: 'Model saved',

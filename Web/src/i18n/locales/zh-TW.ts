@@ -437,6 +437,7 @@ export default {
       functionCalling: '工具呼叫',
       vision: '圖像識別',
       audio: '語音',
+      speech: '語音合成',
       imageGeneration: '圖像生成',
       videoGeneration: '視頻生成',
       saved: '模型已儲存',

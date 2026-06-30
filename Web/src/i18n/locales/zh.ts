@@ -449,6 +449,7 @@ export default {
       functionCalling: '工具调用',
       vision: '图像识别',
       audio: '语音',
+      speech: '语音合成',
       imageGeneration: '图像生成',
       videoGeneration: '视频生成',
       saved: '模型已保存',
