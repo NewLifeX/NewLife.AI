@@ -288,6 +288,7 @@ export function ChatPage({
           type="file"
           multiple
           className="hidden"
+          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.doc,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv"
           onChange={handleFileChange}
         />
         <ChatInput

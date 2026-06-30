@@ -21,6 +21,8 @@ import {
   type ChatStreamEvent,
 } from '@/lib/api'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { showToast } from '@/stores/toastStore'
+import { isExtensionAllowed } from '@/lib/systemSettings'
 import type { Attachment, ModelInfo } from '@/types'
 
 type ThinkingModeKey = 'fast' | 'auto' | 'think'
@@ -179,6 +181,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addAttachment: async (file) => {
+    // 前端预检：检查文件扩展名是否在允许列表中
+    if (!await isExtensionAllowed(file.name, file.type)) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || file.name
+      showToast('warning', `不支持的文件类型：.${ext}`)
+      return
+    }
+
     // 图片文件先生成本地预览 URL（立即显示缩略图，无需等待上传完成）
     const isImage = file.type.startsWith('image/')
     const localPreview = isImage ? URL.createObjectURL(file) : undefined

@@ -104,6 +104,7 @@ export function WelcomePage({ onSend, siteTitle, welcomeMessage, welcomeSubtitle
           type="file"
           multiple
           className="hidden"
+          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.doc,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv"
           onChange={handleFileChange}
         />
         <ChatInput
