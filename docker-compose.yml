@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  chatai:
+    build:
+      context: ../..
+      dockerfile: NAI/Dockerfile
+    container_name: newlife-chatai
+    ports:
+      - "5080:5080"
+    environment:
+      - ASPNETCORE_URLS=http://+:5080
+      - ASPNETCORE_ENVIRONMENT=Production
+      # 数据库连接串（按需修改；SQLite 使用 Data Source=../Data/chatai.db 可省去 postgres 服务）
+      - ConnectionStrings__ChatAI=Data Source=../Data/chatai.db
+      # 模型提供商密钥（按需配置）
+      # - OpenAi__ApiKey=sk-xxx
+      # - DashScope__ApiKey=sk-xxx
+    volumes:
+      - chatai_data:/app/Data
+    restart: unless-stopped
+
+  # 可选：PostgreSQL 替代 SQLite
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: chatai-postgres
+  #   environment:
+  #     - POSTGRES_DB=chatai
+  #     - POSTGRES_USER=chatai
+  #     - POSTGRES_PASSWORD=chatai123
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+volumes:
+  chatai_data:
+  # pg_data:
