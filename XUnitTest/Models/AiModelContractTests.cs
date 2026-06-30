@@ -66,12 +66,13 @@ public class AiModelContractTests
     [DisplayName("AiProviderCapabilities—多模态参数位置正确")]
     public void AiProviderCapabilities_MultimodalFields()
     {
-        // Vision=true, Audio=true 位于第3、4位
-        var caps = new NewLife.AI.Clients.AiProviderCapabilities(false, false, true, true, true, true);
+        // Vision=true, Audio=true, Speech=true 位于第3、4、5位
+        var caps = new NewLife.AI.Clients.AiProviderCapabilities(false, false, true, true, true, true, true);
         Assert.False(caps.SupportThinking);
         Assert.False(caps.SupportFunction);
         Assert.True(caps.SupportVision);
         Assert.True(caps.SupportAudio);
+        Assert.True(caps.SupportSpeech);
         Assert.True(caps.SupportImage);
         Assert.True(caps.SupportVideo);
         Assert.Equal(0, caps.ContextLength);

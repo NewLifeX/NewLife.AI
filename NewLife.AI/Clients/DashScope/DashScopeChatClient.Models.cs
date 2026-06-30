@@ -22,17 +22,9 @@ namespace NewLife.AI.Clients.DashScope;
 // ===== TTS 语音合成模型（Speech=true 表示音频输出） =====
 [AiClientModel("cosyvoice-v3-flash", "CosyVoice V3 Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
 [AiClientModel("cosyvoice-v3-plus", "CosyVoice V3 Plus", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-// Qwen3-TTS 非实时 HTTP 合成
+// Qwen3-TTS 主力：非实时 HTTP 合成 + WebSocket 实时合成
 [AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-tts-instruct-flash", "千问3 TTS Instruct Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-// Qwen3-TTS-Realtime WebSocket 实时合成
 [AiClientModel("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-tts-instruct-flash-realtime", "千问3 TTS Instruct Flash Realtime", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-// 声音复刻/声音设计（需预创建自定义音色，无系统音色，不作为通用 TTS 模型）
-[AiClientModel("qwen3-tts-vd", "千问3 TTS VD（声音设计）", FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-tts-vc", "千问3 TTS VC（声音复刻）", FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-tts-vd-realtime", "千问3 TTS VD Realtime（声音设计）", FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-tts-vc-realtime", "千问3 TTS VC Realtime（声音复刻）", FunctionCalling = false, InputPrice = 0.2)]
 // ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
 // -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
 [AiClientModel("qwen3.7-max", "Qwen3.7 Max", Thinking = true, InputPrice = 12, OutputPrice = 36, CachedInputPrice = 2.4, CacheCreationPrice = 15)]
@@ -134,10 +126,8 @@ public partial class DashScopeChatClient
             return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 0.2m));
 
-        // TTS 语音合成模型：仅 qwen3-tts-*（排除 vc/vd 声音复刻/声音设计）
-        if (modelId.StartsWith("qwen3-tts", StringComparison.OrdinalIgnoreCase)
-            && !modelId.Contains("-vc", StringComparison.OrdinalIgnoreCase)
-            && !modelId.Contains("-vd", StringComparison.OrdinalIgnoreCase))
+        // TTS 语音合成模型：qwen-tts* / qwen3-tts*（含 vc/vd 声音复刻/声音设计，需预建自定义音色）
+        if (modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts"))
             return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 0.2m));
         if (modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase))
