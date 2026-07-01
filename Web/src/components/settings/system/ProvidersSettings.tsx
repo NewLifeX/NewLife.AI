@@ -149,20 +149,22 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 font-mono">{model.name}</p>
 
-        {/* Enable */}
+        {/* Enable + Locked */}
         <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 mb-3">
-          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-            {t('providers.modelEdit.enable')}
-          </span>
-          <Toggle size="sm" checked={form.enable} onChange={(v) => setField('enable', v)} />
-        </div>
-
-        {/* Locked */}
-        <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 mb-3">
-          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-            {t('providers.modelEdit.locked')}
-          </span>
-          <Toggle size="sm" checked={form.locked} onChange={(v) => setField('locked', v)} />
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Toggle size="sm" checked={form.enable} onChange={(v) => setField('enable', v)} />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                {t('providers.modelEdit.enable')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Toggle size="sm" checked={form.locked} onChange={(v) => setField('locked', v)} />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                {t('providers.modelEdit.locked')}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Context Length */}
@@ -184,7 +186,7 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
           <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
             {t('providers.modelEdit.features')}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {featureKeys.map(([key, labelKey]) => (
               <div
                 key={key}
