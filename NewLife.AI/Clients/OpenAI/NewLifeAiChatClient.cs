@@ -177,7 +177,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     /// <summary>图像生成（简便重载）。POST /v1/images/generations</summary>
     /// <param name="prompt">图像描述提示词</param>
     /// <param name="model">模型名称，为 null 时使用默认</param>
-    /// <param name="size">图像尺寸，如 "1024x1024"，为 null 时使用服务端默认</param>
+    /// <param name="size">图像尺寸，如 "1024*1024"，为 null 时使用服务端默认</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>图像生成响应</returns>
     public virtual Task<ImageGenerationResponse?> ImageGenerationsAsync(String prompt, String? model = null, String? size = null, CancellationToken cancellationToken = default)

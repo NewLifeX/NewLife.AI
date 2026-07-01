@@ -453,7 +453,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
             response = await CreateNewLifeAiClient().ImageGenerationsAsync(
                 "A cute robot reading a book",
                 "qwen3.5-flash",
-                "1024x1024");
+                "1024*1024");
         }
         catch (ApiException ex)
         {

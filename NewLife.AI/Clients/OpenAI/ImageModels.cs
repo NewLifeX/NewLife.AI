@@ -21,7 +21,7 @@ public class ImageGenerationRequest
     /// <summary>生成图像数量。1~10，默认 1</summary>
     public Int32? N { get; set; }
 
-    /// <summary>图像尺寸。如 1024x1024、1024x1792、1792x1024</summary>
+    /// <summary>图像尺寸。如 1024*1024、1024x1792、1792x1024</summary>
     public String? Size { get; set; }
 
     /// <summary>图像质量。standard（默认）或 hd（高清，DALL·E 3 专有）</summary>
@@ -108,7 +108,7 @@ public class ImageEditsRequest
     /// <summary>模型名称，为 null 时使用默认</summary>
     public String? Model { get; set; }
 
-    /// <summary>输出尺寸，为 null 时使用服务端默认。如 1024x1024 或 1024*1024（两种分隔符均支持）</summary>
+    /// <summary>输出尺寸，为 null 时使用服务端默认。如 1024*1024 或 1024*1024（两种分隔符均支持）</summary>
     public String? Size { get; set; }
 
     /// <summary>生成图像数量。1~6，为 null 时使用服务端默认（通常为 1）。仅 DashScope 原生路径有效</summary>

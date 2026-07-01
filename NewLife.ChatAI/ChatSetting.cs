@@ -103,7 +103,7 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     /// <summary>图像生成默认尺寸</summary>
     [Category("对话行为")]
     [Description("图像生成默认尺寸")]
-    public String DefaultImageSize { get; set; } = "1024x1024";
+    public String DefaultImageSize { get; set; } = "1024*1024";
 
     /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
     [Category("对话行为")]

@@ -39,7 +39,7 @@ const defaultSettings: SystemSettings = {
   maxAttachmentSize: 10,
   maxAttachmentCount: 5,
   allowedExtensions: '',
-  defaultImageSize: '1024x1024',
+  defaultImageSize: '1024*1024',
   shareExpireMinutes: 30,
   allowAnonymousShare: false,
   enableGateway: false,

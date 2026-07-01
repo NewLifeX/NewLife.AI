@@ -228,7 +228,7 @@ public partial class DashScopeChatClient
         if (request.N.HasValue) p["n"] = request.N.Value;
         if (!request.Size.IsNullOrEmpty())
         {
-            // 统一分隔符：1024x1024 → 1024*1024（DashScope 原生接口要求 * 分隔）
+            // 统一分隔符：1024*1024 → 1024*1024（DashScope 原生接口要求 * 分隔）
             p["size"] = request.Size.Replace('x', '*').Replace('X', '*');
         }
         return p.Count > 0 ? p : null;
