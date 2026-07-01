@@ -441,6 +441,7 @@ export default {
       imageGeneration: '圖像生成',
       videoGeneration: '視頻生成',
       saved: '模型已儲存',
+      locked: '鎖定保護',
     },
     modelTable: {
       name: '模型',

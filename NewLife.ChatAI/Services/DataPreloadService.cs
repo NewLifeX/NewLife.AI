@@ -43,14 +43,7 @@ public class DataPreloadService(ToolRegistry registry, ModelService modelService
         }
 
         // 启动时同步一次模型列表；后续如需更新，请在 Web 管理界面手动触发
-        try
-        {
-            await modelService.DoDiscoverAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            XTrace.WriteException(ex);
-        }
+        await modelService.DoDiscoverAsync().ConfigureAwait(false);
     }
 
     #endregion

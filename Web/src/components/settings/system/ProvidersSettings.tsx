@@ -110,6 +110,7 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
     supportSpeech: model.supportSpeech,
     supportImage: model.supportImage,
     supportVideo: model.supportVideo,
+    locked: model.locked ?? false,
   })
   const [saving, setSaving] = useState(false)
 
@@ -154,6 +155,14 @@ function ModelEditDialog({ model, onClose, onSaved }: ModelEditDialogProps) {
             {t('providers.modelEdit.enable')}
           </span>
           <Toggle size="sm" checked={form.enable} onChange={(v) => setField('enable', v)} />
+        </div>
+
+        {/* Locked */}
+        <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 mb-3">
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+            {t('providers.modelEdit.locked')}
+          </span>
+          <Toggle size="sm" checked={form.locked} onChange={(v) => setField('locked', v)} />
         </div>
 
         {/* Context Length */}

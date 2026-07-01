@@ -452,6 +452,7 @@ export default {
       imageGeneration: 'Image Generation',
       videoGeneration: 'Video Generation',
       saved: 'Model saved',
+      locked: 'Lock',
     },
     modelTable: {
       name: 'Model',

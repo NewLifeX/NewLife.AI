@@ -118,5 +118,6 @@ export interface ModelManageItem {
   supportImage: boolean
   supportVideo: boolean
   supportRerank?: boolean
+  locked?: boolean
   remark?: string
 }

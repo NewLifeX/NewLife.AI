@@ -73,6 +73,8 @@ public class ModelManageDto
     public Boolean SupportVideo { get; set; }
     /// <summary>支持嵌入向量</summary>
     public Boolean SupportEmbedding { get; set; }
+    /// <summary>锁定。锁定后禁止程序自动覆盖模型特性和价格</summary>
+    public Boolean Locked { get; set; }
 }
 
 /// <summary>模型设置更新请求。含 Enable 及特性标记</summary>
@@ -96,6 +98,8 @@ public class ModelSettingsDto
     public Boolean SupportVideo { get; set; }
     /// <summary>支持嵌入向量</summary>
     public Boolean SupportEmbedding { get; set; }
+    /// <summary>锁定。null 表示不修改锁定状态，true/false 表示显式设置</summary>
+    public Boolean? Locked { get; set; }
 }
 #endregion
 

@@ -1014,6 +1014,7 @@ export async function updateModelSettings(
     supportAudio?: boolean
     supportImage?: boolean
     supportVideo?: boolean
+    locked?: boolean
   },
 ): Promise<void> {
   await request<void>(`/api/models/${id}/settings`, {
