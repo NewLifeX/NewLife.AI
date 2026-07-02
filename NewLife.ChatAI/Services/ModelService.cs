@@ -55,6 +55,85 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         return false;
     }
 
+    /// <summary>获取所有公开可用的模型列表。不做 AppKey 权限过滤，仅保留启用且提供商可用的模型</summary>
+    /// <returns>所有公开模型列表，按排序降序、编号降序排列</returns>
+    public IList<ModelConfig> GetAllPublicModels() => ModelConfig.FindAllEnabled();
+
+    /// <summary>对模型列表做关键字和能力二次过滤</summary>
+    /// <param name="models">待过滤的模型列表</param>
+    /// <param name="keyword">关键字，匹配模型的 Code 或 Name（忽略大小写子串匹配）</param>
+    /// <param name="capabilities">逗号分隔的能力枚举，如 vision,function。要求模型同时具备所列全部能力</param>
+    /// <param name="supportThinking">支持思考</param>
+    /// <param name="supportFunction">支持函数调用</param>
+    /// <param name="supportVision">支持视觉</param>
+    /// <param name="supportAudio">支持音频</param>
+    /// <param name="supportSpeech">支持语音合成</param>
+    /// <param name="supportImage">支持图像生成</param>
+    /// <param name="supportVideo">支持视频生成</param>
+    /// <param name="supportEmbedding">支持嵌入向量</param>
+    /// <param name="supportRerank">支持重排序</param>
+    /// <returns>过滤后的模型列表</returns>
+    public IList<ModelConfig> FilterModels(IList<ModelConfig> models, String? keyword, String? capabilities,
+        Boolean? supportThinking, Boolean? supportFunction, Boolean? supportVision, Boolean? supportAudio,
+        Boolean? supportSpeech, Boolean? supportImage, Boolean? supportVideo, Boolean? supportEmbedding, Boolean? supportRerank)
+    {
+        if (models.Count == 0) return models;
+
+        // 解析能力枚举
+        HashSet<String> capSet = [];
+        if (!capabilities.IsNullOrEmpty())
+        {
+            foreach (var item in capabilities!.Split([',', '，', ';', ' '], StringSplitOptions.RemoveEmptyEntries))
+            {
+                var v = item.Trim();
+                if (v.Length > 0) capSet.Add(v.ToLower());
+            }
+        }
+
+        var query = models.AsEnumerable();
+
+        // 关键字过滤
+        if (!keyword.IsNullOrEmpty())
+        {
+            var kw = keyword!;
+            query = query.Where(e =>
+                (!e.Code.IsNullOrEmpty() && e.Code.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                (!e.Name.IsNullOrEmpty() && e.Name.Contains(kw, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        // 能力枚举过滤（AND 逻辑：模型必须同时具备所有指定能力）
+        foreach (var cap in capSet)
+        {
+            query = cap switch
+            {
+                "chat" => query.Where(e => e.IsChatModel),
+                "thinking" => query.Where(e => e.SupportThinking),
+                "function" => query.Where(e => e.SupportFunction),
+                "vision" => query.Where(e => e.SupportVision),
+                "audio" => query.Where(e => e.SupportAudio),
+                "speech" => query.Where(e => e.SupportSpeech),
+                "image" => query.Where(e => e.SupportImage),
+                "video" => query.Where(e => e.SupportVideo),
+                "embedding" => query.Where(e => e.SupportEmbedding),
+                "rerank" => query.Where(e => e.SupportRerank),
+                _ => query,
+            };
+        }
+
+        // OpenAI 风格独立能力过滤（与能力枚举叠加，AND 逻辑）
+        if (supportThinking.HasValue) query = query.Where(e => e.SupportThinking == supportThinking.Value);
+        if (supportFunction.HasValue) query = query.Where(e => e.SupportFunction == supportFunction.Value);
+        if (supportVision.HasValue) query = query.Where(e => e.SupportVision == supportVision.Value);
+        if (supportAudio.HasValue) query = query.Where(e => e.SupportAudio == supportAudio.Value);
+        if (supportSpeech.HasValue) query = query.Where(e => e.SupportSpeech == supportSpeech.Value);
+        if (supportImage.HasValue) query = query.Where(e => e.SupportImage == supportImage.Value);
+        if (supportVideo.HasValue) query = query.Where(e => e.SupportVideo == supportVideo.Value);
+        if (supportEmbedding.HasValue) query = query.Where(e => e.SupportEmbedding == supportEmbedding.Value);
+        if (supportRerank.HasValue) query = query.Where(e => e.SupportRerank == supportRerank.Value);
+
+        return query.ToList();
+    }
+
     /// <summary>根据模型编号查找模型配置</summary>
     /// <param name="modelId">模型编号</param>
     /// <returns>模型配置，未找到或未启用返回 null</returns>

@@ -19,16 +19,60 @@ namespace NewLife.ChatAI.Controllers;
 public class GatewayController(GatewayService gatewayService, ModelService modelService, ChatSetting chatSetting, MessageFlowForGateway gatewayMessageFlow) : ControllerBase
 {
     #region 模型列表
-    /// <summary>列出当前密钥可使用的模型。兼容 OpenAI GET /v1/models 协议</summary>
+    /// <summary>列出可用模型。兼容 OpenAI GET /v1/models 协议。支持可选查询参数做关键字和能力过滤</summary>
+    /// <param name="key">可选。API 密钥（sk-xxx），作为 Authorization 头的替代方式。未提供时返回所有公开模型</param>
+    /// <param name="keyword">可选。按关键字过滤模型 Code 或 Name（忽略大小写子串匹配）</param>
+    /// <param name="capabilities">可选。逗号分隔的能力枚举（chat/thinking/function/vision/audio/speech/image/video/embedding/rerank），要求同时具备所列全部能力</param>
+    /// <param name="supportThinking">可选。过滤支持思考的模型</param>
+    /// <param name="supportFunction">可选。过滤支持函数调用的模型</param>
+    /// <param name="supportVision">可选。过滤支持视觉的模型</param>
+    /// <param name="supportAudio">可选。过滤支持音频的模型</param>
+    /// <param name="supportSpeech">可选。过滤支持语音合成的模型</param>
+    /// <param name="supportImage">可选。过滤支持图像生成的模型</param>
+    /// <param name="supportVideo">可选。过滤支持视频生成的模型</param>
+    /// <param name="supportEmbedding">可选。过滤支持嵌入向量的模型</param>
+    /// <param name="supportRerank">可选。过滤支持重排序的模型</param>
     /// <param name="cancellationToken">取消令牌</param>
     [HttpGet("v1/models")]
-    public IActionResult ListModelsAsync(CancellationToken cancellationToken)
+    public IActionResult ListModelsAsync(
+        [FromQuery(Name = "key")] String? key,
+        [FromQuery(Name = "keyword")] String? keyword,
+        [FromQuery(Name = "capabilities")] String? capabilities,
+        [FromQuery(Name = "support_thinking")] Boolean? supportThinking,
+        [FromQuery(Name = "support_function")] Boolean? supportFunction,
+        [FromQuery(Name = "support_vision")] Boolean? supportVision,
+        [FromQuery(Name = "support_audio")] Boolean? supportAudio,
+        [FromQuery(Name = "support_speech")] Boolean? supportSpeech,
+        [FromQuery(Name = "support_image")] Boolean? supportImage,
+        [FromQuery(Name = "support_video")] Boolean? supportVideo,
+        [FromQuery(Name = "support_embedding")] Boolean? supportEmbedding,
+        [FromQuery(Name = "support_rerank")] Boolean? supportRerank,
+        CancellationToken cancellationToken)
     {
-        var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
-        if (appKey == null)
-            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+        // 认证：Authorization 头为正式认证（无效则拒绝），key 查询参数为可选补充
+        var hasAuthHeader = !String.IsNullOrWhiteSpace(Request.Headers.Authorization);
+        AppKey? appKey = null;
 
-        var models = modelService.GetModelsForAppKey(appKey);
+        if (hasAuthHeader)
+        {
+            appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
+            if (appKey == null)
+                return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+        }
+        else if (!key.IsNullOrEmpty())
+        {
+            appKey = ValidateAppKeyBySecret(key!);
+        }
+
+        // 获取模型列表：有 AppKey 时按权限过滤，否则返回所有公开模型
+        var models = appKey != null
+            ? modelService.GetModelsForAppKey(appKey)
+            : modelService.GetAllPublicModels();
+
+        // 应用关键字和能力过滤
+        models = modelService.FilterModels(models, keyword, capabilities,
+            supportThinking, supportFunction, supportVision, supportAudio,
+            supportSpeech, supportImage, supportVideo, supportEmbedding, supportRerank);
 
         var data = models.Select(m =>
         {
@@ -60,6 +104,18 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         };
 
         return Content(JsonSerializer.Serialize(result, GatewayService.SnakeCaseOptions), "application/json");
+    }
+
+    /// <summary>通过密钥字符串直接校验 AppKey（用于 key 查询参数场景）</summary>
+    private static AppKey? ValidateAppKeyBySecret(String secret)
+    {
+        if (String.IsNullOrWhiteSpace(secret)) return null;
+
+        var appKey = AppKey.FindBySecret(secret.Trim());
+        if (appKey == null || !appKey.Enable) return null;
+        if (appKey.ExpireTime.Year > 2000 && appKey.ExpireTime < DateTime.Now) return null;
+
+        return appKey;
     }
     #endregion
 

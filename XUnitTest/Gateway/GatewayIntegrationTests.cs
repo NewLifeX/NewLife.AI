@@ -23,6 +23,7 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
     private readonly HttpClient _http;
     private readonly HttpClient _httpBadKey;
+    private readonly HttpClient _httpNoAuth;
 
     public GatewayIntegrationTests(ChatAIWebAppFactory factory)
     {
@@ -35,6 +36,9 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         _httpBadKey.Timeout = TimeSpan.FromSeconds(15);
         _httpBadKey.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", "sk-invalid-key-xyz-000");
+
+        _httpNoAuth = factory.CreateDefaultClient();
+        _httpNoAuth.Timeout = TimeSpan.FromSeconds(15);
     }
 
     /// <inheritdoc/>
@@ -42,6 +46,7 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
     {
         _http.Dispose();
         _httpBadKey.Dispose();
+        _httpNoAuth.Dispose();
     }
 
     /// <summary>构建 application/json 请求体</summary>
@@ -101,6 +106,127 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
         var doc = JsonNode.Parse(await resp.Content.ReadAsStringAsync());
         Assert.Equal("INVALID_API_KEY", doc?["code"]?.GetValue<String>());
+    }
+
+    [Fact]
+    [DisplayName("GET /v1/models 无认证返回公开模型列表（200 OK）")]
+    public async Task ListModels_NoAuth_Returns_PublicModels()
+    {
+        var resp = await _httpNoAuth.GetAsync("v1/models");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+        Assert.Equal("list", doc["object"]?.GetValue<String>());
+        Assert.True(doc["data"]!.AsArray().Count > 0, "公开模型列表不应为空");
+    }
+
+    [Fact]
+    [DisplayName("GET /v1/models?key=sk-xxx 通过查询参数认证并返回模型列表")]
+    public async Task ListModels_KeyQueryParam_Returns_Models()
+    {
+        var resp = await _httpNoAuth.GetAsync($"v1/models?key={ApiKey}");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+        Assert.Equal("list", doc["object"]?.GetValue<String>());
+        Assert.True(doc["data"]!.AsArray().Count > 0, "通过 key 查询参数应返回模型列表");
+    }
+
+    [Fact]
+    [DisplayName("GET /v1/models?keyword=xxx 按关键字过滤模型")]
+    public async Task ListModels_KeywordFilter_Returns_FilteredModels()
+    {
+        var resp = await _http.GetAsync("v1/models?keyword=qwen");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+        var data = doc["data"]!.AsArray();
+        Assert.True(data.Count > 0, "关键字过滤后应有匹配模型");
+
+        // 所有返回模型的 id 或 name 应包含 "qwen"
+        foreach (var item in data)
+        {
+            var id = item!["id"]?.GetValue<String>() ?? "";
+            var name = item["name"]?.GetValue<String>() ?? "";
+            Assert.True(
+                id.Contains("qwen", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("qwen", StringComparison.OrdinalIgnoreCase),
+                $"模型 {id} 的 id/name 应包含关键字 'qwen'");
+        }
+    }
+
+    [Fact]
+    [DisplayName("GET /v1/models?capabilities=vision,function 按能力枚举过滤")]
+    public async Task ListModels_CapabilitiesFilter_Returns_ModelsWithAllCapabilities()
+    {
+        var resp = await _http.GetAsync("v1/models?capabilities=vision,function");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+        var data = doc["data"]!.AsArray();
+
+        // 所有返回模型应同时支持 vision 和 function
+        foreach (var item in data)
+        {
+            Assert.True(item!["support_vision"]?.GetValue<Boolean>() == true,
+                $"模型 {item["id"]} 应支持 vision");
+            Assert.True(item["support_function"]?.GetValue<Boolean>() == true,
+                $"模型 {item["id"]} 应支持 function");
+        }
+    }
+
+    [Fact]
+    [DisplayName("GET /v1/models?support_vision=true OpenAI 风格能力过滤")]
+    public async Task ListModels_OpenAIStyleFilter_Returns_VisionModels()
+    {
+        var resp = await _http.GetAsync("v1/models?support_vision=true");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+        var data = doc["data"]!.AsArray();
+
+        // 所有返回模型应支持 vision
+        foreach (var item in data)
+        {
+            Assert.True(item!["support_vision"]?.GetValue<Boolean>() == true,
+                $"模型 {item["id"]} 应支持 vision");
+        }
+    }
+
+    [Fact]
+    [DisplayName("GET /v1/models keyword+capabilities 组合过滤")]
+    public async Task ListModels_CombinedFilter_KeywordAndCapabilities()
+    {
+        var resp = await _http.GetAsync("v1/models?keyword=qwen&capabilities=vision");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        var doc = JsonNode.Parse(body);
+        Assert.NotNull(doc);
+        var data = doc["data"]!.AsArray();
+
+        // 所有返回模型应同时满足关键字和能力
+        foreach (var item in data)
+        {
+            var id = item!["id"]?.GetValue<String>() ?? "";
+            var name = item["name"]?.GetValue<String>() ?? "";
+            Assert.True(
+                id.Contains("qwen", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("qwen", StringComparison.OrdinalIgnoreCase),
+                $"模型 {id} 的 id/name 应包含关键字 'qwen'");
+            Assert.True(item["support_vision"]?.GetValue<Boolean>() == true,
+                $"模型 {id} 应支持 vision");
+        }
     }
 
     #endregion
