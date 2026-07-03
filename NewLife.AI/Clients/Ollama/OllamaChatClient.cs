@@ -43,7 +43,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
     public static JsonOptions DefaultJsonOptions = new()
     {
         PropertyNaming = PropertyNaming.SnakeCaseLower,
-        IgnoreNullValues = false,
+        IgnoreNullValues = true,
     };
     #endregion
 

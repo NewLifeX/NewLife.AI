@@ -312,7 +312,7 @@ public class OllamaChatModelTests
             EnableThinking = false,
         });
 
-        // 使用 OllamaChatClient.JsonOptions（SnakeCaseLower + IgnoreNullValues=false）序列化，与 PostAsync 保持一致
+        // 使用 OllamaChatClient.JsonOptions（SnakeCaseLower + IgnoreNullValues=true）序列化，与 PostAsync 保持一致
         using var client = new OllamaChatClient("", "qwen3.5:0.8b");
         var json = client.JsonHost.Write(req, client.JsonOptions!)!;
         // Ollama 要求 stream/model/messages 等为小写 snake_case
