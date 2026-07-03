@@ -271,6 +271,12 @@ public class OllamaChatModelTests
         Assert.Single(result.Message.ToolCalls!);
         Assert.Equal("get_weather", result.Message.ToolCalls![0].Function?.Name);
         Assert.NotNull(result.Message.ToolCalls[0].Function?.Arguments);
+
+        // 通过 IChatResponse 接口验证：含 tool_calls 时 FinishReason 应为 ToolCalls
+        IChatResponse resp = result;
+        Assert.NotNull(resp.Messages);
+        Assert.NotEmpty(resp.Messages!);
+        Assert.Equal(FinishReason.ToolCalls, resp.Messages![0].FinishReason);
     }
 
     [Fact]

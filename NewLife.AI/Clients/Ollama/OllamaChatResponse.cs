@@ -85,6 +85,10 @@ public class OllamaChatResponse : IChatResponse
                 var msg = Message.ToChatMessage();
                 var fr = FinishReasonHelper.Parse(DoneReason);
                 if (fr == null && Done) fr = FinishReason.Stop;
+                // Ollama 原生 API 在返回工具调用时 done_reason 始终为 "stop"，
+                // 需手动映射为 "tool_calls" 以便 ToolChatClient 流式路径正确识别
+                if (fr == FinishReason.Stop && Message.ToolCalls is { Count: > 0 })
+                    fr = FinishReason.ToolCalls;
                 _messages = [new ChatChoice { Index = 0, Message = msg, Delta = msg, FinishReason = fr }];
             }
             return _messages;
