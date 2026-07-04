@@ -67,7 +67,7 @@ public class ChatRequest : ChatOptions, IChatRequest
             else
             {
                 foreach (var kv in options.Items)
-                    request.Items[kv.Key] = kv.Value;
+                    request[kv.Key] = kv.Value;
             }
         }
 

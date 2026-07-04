@@ -217,13 +217,13 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 重新生成次数检查：同一消息最多允许 3 次连续重新生成
         var regenKey = $"RegenerateCount_{oldMsg.Id}";
-        var regenCount = flow.Items.TryGetValue(regenKey, out var raw) && raw is Int32 val ? val : 0;
+        var regenCount = flow[regenKey] is Int32 val ? val : 0;
         if (regenCount >= 3)
         {
             yield return ChatStreamEvent.ErrorEvent("REGENERATE_LIMIT", "该消息已达到重新生成次数上限（3 次），请发送新消息开始新一轮对话");
             yield break;
         }
-        flow.Items[regenKey] = regenCount + 1;
+        flow[regenKey] = regenCount + 1;
 
         var newMsg = new DbChatMessage
         {
@@ -380,7 +380,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (request.Options is { Count: > 0 })
         {
             foreach (var kv in request.Options)
-                flow.Items[kv.Key] = kv.Value;
+                flow[kv.Key] = kv.Value;
         }
 
         // Step3: 执行 IChatHandler 三段式调用链（OnBefore 正序 → 核心 LLM 调用 → OnAfter 倒序）
@@ -905,8 +905,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                         yield return ev;
                         break;
                     case "tool_call_done":
-                        // 从 context.Items 读取暂存的 LlmResult（由 InvokeLlmAsync 存入），不经过 SSE 事件
-                        var llmResult = context.Items[$"ToolCallLlm/{ev.ToolCallId}"] as String;
+                        // 从 context 索引器读取暂存的 LlmResult（由 InvokeLlmAsync 存入），不经过 SSE 事件
+                        var llmResult = context[$"ToolCallLlm/{ev.ToolCallId}"] as String;
                         UpdateToolCallStatus(toolCalls, ev.ToolCallId, ToolCallStatus.Done, ev.Result, llmResult);
                         yield return ev;
                         break;
@@ -992,9 +992,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                     {
                         case "start": yield return ChatStreamEvent.ToolCallStart(evt.ToolCallId, evt.Name, evt.Value); break;
                         case "done":
-                            // LlmResult 是给 LLM 历史回放用的，不经过 SSE 前端，暂存到 context.Items
+                            // LlmResult 是给 LLM 历史回放用的，不经过 SSE 前端，暂存到 context
                             if (evt.LlmResult != null)
-                                context.Items[$"ToolCallLlm/{evt.ToolCallId}"] = evt.LlmResult;
+                                context[$"ToolCallLlm/{evt.ToolCallId}"] = evt.LlmResult;
                             yield return ChatStreamEvent.ToolCallDone(evt.ToolCallId, evt.Value);
                             break;
                         case "error": yield return ChatStreamEvent.ToolCallError(evt.ToolCallId, evt.Value ?? String.Empty); break;

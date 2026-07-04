@@ -153,7 +153,7 @@ public class MessageFlowForGateway : MessageFlow
         if (request?.Items != null)
         {
             foreach (var kv in request.Items)
-                flow.Items[kv.Key] = kv.Value;
+                flow[kv.Key] = kv.Value;
         }
         //flow.Options.Items = flow.Items;
         return flow;
