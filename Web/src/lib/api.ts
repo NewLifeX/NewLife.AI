@@ -927,6 +927,23 @@ export async function setConversationSkill(conversationId: string, skillId: numb
   })
 }
 
+// SkillInfo / AgentInfo 类型别名，兼容 StarChat 共享组件
+export type SkillInfo = Skill
+
+export interface AgentInfo {
+  id: number
+  code: string
+  name: string
+  icon?: string
+  category?: string
+  description?: string
+}
+
+export async function fetchAgents(category?: string): Promise<AgentInfo[]> {
+  const params = category ? `?category=${encodeURIComponent(category)}` : ''
+  return request<AgentInfo[]>(`/api/agents${params}`)
+}
+
 // ── Memory ──
 
 export interface MemoryItem {
