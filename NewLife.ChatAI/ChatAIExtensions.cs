@@ -65,6 +65,7 @@ public static class ChatAIExtensions
             registry.AddTools<BuiltinToolService>();
             registry.AddTools<NetworkToolService>();
             registry.AddTools<CurrentUserTool>();
+            registry.AddTools<DbQueryToolService>();
         });
 
         services.TryAddSingleton(sp =>
