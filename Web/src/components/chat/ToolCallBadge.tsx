@@ -11,12 +11,43 @@ interface ToolCallBadgeProps {
   className?: string
 }
 
+export function formatToolCallJson(str: string): string {
+  try {
+    return JSON.stringify(JSON.parse(str), null, 2)
+  } catch {
+    return str
+  }
+}
+
+function getArgCount(args?: string): number {
+  if (!args) return 0
+  try {
+    const parsed = JSON.parse(args)
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed))
+      return Object.keys(parsed).length
+    return 1
+  } catch {
+    return 0
+  }
+}
+
+function getResultSize(str?: string): string {
+  if (!str) return ''
+  const bytes = new TextEncoder().encode(str).length
+  if (bytes < 1024) return `${bytes}B`
+  return `${(bytes / 1024).toFixed(1)}KB`
+}
+
 export function ToolCallBadge({ name, status, arguments: args, result, showDetails, className }: ToolCallBadgeProps) {
   const [expanded, setExpanded] = useState(false)
   const hasDetails = showDetails && Boolean(args || result)
 
+  const argCount = getArgCount(args)
+  const resultSize = getResultSize(result)
+  const hasSummary = hasDetails && (argCount > 0 || resultSize)
+
   return (
-    <div className={cn('w-full', className)}>
+    <div data-testid="tool-call-badge" data-tool-name={name} className={cn('inline-flex', className)}>
       <button
         onClick={() => hasDetails && setExpanded((v) => !v)}
         className={cn(
@@ -43,6 +74,11 @@ export function ToolCallBadge({ name, status, arguments: args, result, showDetai
           )}
         </span>
         <span>{name}</span>
+        {hasSummary && (
+          <span className="opacity-50 font-normal text-[10px]">
+            {argCount > 0 ? `${argCount}p` : ''}{argCount > 0 && resultSize ? ' · ' : ''}{resultSize}
+          </span>
+        )}
         {hasDetails && (
           <Icon name={expanded ? 'expand_less' : 'expand_more'} variant="outlined" size="xs" />
         )}
@@ -53,25 +89,17 @@ export function ToolCallBadge({ name, status, arguments: args, result, showDetai
           {args && (
             <div className="px-3 py-2 border-b border-gray-700/50">
               <div className="text-gray-400 mb-1 text-[10px] uppercase tracking-wider">Arguments</div>
-              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{formatJson(args)}</pre>
+              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{formatToolCallJson(args)}</pre>
             </div>
           )}
           {result && (
             <div className="px-3 py-2">
               <div className="text-gray-400 mb-1 text-[10px] uppercase tracking-wider">Result</div>
-              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{formatJson(result)}</pre>
+              <pre className="whitespace-pre-wrap break-words leading-relaxed max-h-40 overflow-y-auto custom-scrollbar">{formatToolCallJson(result)}</pre>
             </div>
           )}
         </div>
       )}
     </div>
   )
-}
-
-function formatJson(str: string): string {
-  try {
-    return JSON.stringify(JSON.parse(str), null, 2)
-  } catch {
-    return str
-  }
 }

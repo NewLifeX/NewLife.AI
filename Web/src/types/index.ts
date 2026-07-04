@@ -68,6 +68,20 @@ export interface Attachment {
   previewUrl?: string
 }
 
+/** 五维度详细评分 */
+export interface MessageRating {
+  id?: number
+  accuracy: number
+  completeness: number
+  usefulness: number
+  expressionQuality: number
+  creativity: number
+  overall: number
+  suggestion?: string
+  tags?: string
+  result?: string
+}
+
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system'
   language: string
