@@ -109,10 +109,13 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
             new { Title = "通俗解读量子计算原理", Question = "请通俗地解释量子计算的基本原理，以及它与传统计算机的本质区别", Icon = "science", Color = "text-purple-500" },
             new { Title = "了解我喜好的个性化荐书", Question = "请先了解一下我的个人信息，然后结合我的阅读偏好，推荐几本值得精读的经典好书", Icon = "menu_book", Color = "text-orange-500" },
             new { Title = "制定上班族周健身计划", Question = "请帮我制定一份适合上班族的周健身计划，包含有氧和力量训练，每次控制在30分钟内", Icon = "fitness_center", Color = "text-red-500" },
-            new { Title = "搜索AI领域最新进展", Question = "帮我搜索最近大语言模型领域有什么重要进展，整理成摘要", Icon = "search", Color = "text-teal-500" },
-            new { Title = "查询近期节假日安排", Question = "帮我查一下今天是工作日还是假期，近期有哪些连休安排", Icon = "event", Color = "text-green-500" },
-            new { Title = "Mermaid绘制注册流程图", Question = "请用 Mermaid 流程图格式绘制完整的用户注册与登录流程，包含邮箱验证和找回密码路径，使用判断菱形区分成功与失败分支", Icon = "schema", Color = "text-indigo-500" },
-            new { Title = "写一封请假邮件", Question = "请帮我写一封请病假的邮件，收件人是部门主管，语气正式得体，简明扼要", Icon = "edit_note", Color = "text-yellow-500" },
+            new { Title = "先询问需求再规划旅行", Question = "我想计划一次出行。请先向我了解目的地偏好、旅行天数、预算和特殊需求，然后再为我生成包含交通、住宿、景点和餐饮的详细行程", Icon = "travel_explore", Color = "text-indigo-500" },
+            new { Title = "查询数据库中用户数据", Question = "帮我看一下系统里有哪些用户相关的数据表，然后统计今日新增注册用户数量和整体活跃情况", Icon = "storage", Color = "text-teal-500" },
+            new { Title = "编程语言热度与项目看板", Question = "请生成两张数据图表：柱状图对比主流编程语言的 GitHub 热度，饼图展示程序员工作日时间分配；最后帮我制作一个本周冲刺任务看板", Icon = "bar_chart", Color = "text-blue-400" },
+            new { Title = "绘制系统架构与学习知识树", Question = "先画一张前后端分离的系统架构图（涵盖浏览器→网关→后端→数据库各层），再整理一份「系统学习 C#」思维导图，分为语法、特性、工具和实战四大分支", Icon = "account_tree", Color = "text-violet-500" },
+            new { Title = "AI发展历程与科技城市地图", Question = "梳理 AI 领域从 2017 年 Transformer 到最近的关键里程碑做成时间轴，再在中国地图上标注主要科技城市并列出各地代表企业", Icon = "timeline", Color = "text-green-500" },
+            new { Title = "一线城市房产置业对比", Question = "我想在一线城市置业。请先确定当前公认的一线城市有哪些，然后针对每个城市分别分析其房产市场（价格水平、涨跌趋势、投资风险、租金回报），最后汇总对比给我置业建议", Icon = "trending_up", Color = "text-amber-500" },
+            new { Title = "搜索AI领域最新进展", Question = "帮我搜索最近大语言模型领域有什么重要进展，结合我的技术背景指出哪些方向值得重点关注", Icon = "search", Color = "text-pink-500" },
         };
 
         var added = 0;
@@ -134,6 +137,17 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
         }
 
         if (XTrace.Debug) XTrace.WriteLine($"完成初始化SuggestedQuestion[推荐问题]数据，新增 {added} 条！");
+
+        // 修复旧版简历推荐问题中写死"张三"/"前端工程师"的问题，替换为使用当前用户真实信息的表述
+        const String oldResumeQuestion = "请用 @show_widget 工具生成一张个人简历 HTML 卡片，包含圆形头像占位（灰色背景）、姓名（张三）、职位（高级前端工程师）、技能标签（React / TypeScript / Node.js）、最近两段工作经历和联系方式，采用现代渐变卡片风格，宽度 560px";
+        const String newResumeQuestion = "请用 @show_widget 工具根据我的个人信息生成一张简历 HTML 卡片，包含圆形头像占位（灰色背景）、我的真实姓名与职位、相关技能标签、最近两段工作经历和联系方式，采用现代渐变卡片风格，宽度 560px";
+        var stale = Meta.Cache.Find(e => e.Question == oldResumeQuestion);
+        if (stale != null)
+        {
+            stale.Question = newResumeQuestion;
+            stale.Update();
+            if (XTrace.Debug) XTrace.WriteLine("已修复简历推荐问题：移除写死的姓名与职位");
+        }
     }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>

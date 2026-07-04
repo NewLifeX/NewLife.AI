@@ -102,40 +102,33 @@ public partial class Skill : Entity<Skill>, ISkill
     }
 
     /// <summary>新增或补齐内置技能（按 Code 幂等 upsert）。
-    /// 不存在时插入；存在且为系统内置（IsSystem=true）时仅补齐空字段，不覆盖用户已修改的值。</summary>
+    /// 不存在时插入；已存在时仅补齐空字段，不覆盖用户已修改的值。</summary>
     private static void Add(String code, String name, String icon, String category, String description, String content, Int32 sort, String? triggers = null)
     {
         var entity = FindByCode(code);
-        if (entity == null)
+        entity ??= new Skill
         {
-            entity = new Skill
-            {
-                Code = code,
-                Name = name,
-                Icon = icon,
-                Category = category,
-                Description = description,
-                Content = content,
-                Sort = sort,
-                Triggers = triggers,
-                Enable = true,
-                IsSystem = true,
-            };
-            entity.Insert();
-            return;
-        }
+            Code = code,
+            Name = name,
+            Icon = icon,
+            Category = category,
+            Description = description,
+            Content = content,
+            Sort = sort,
+            Triggers = triggers,
+            Enable = true,
+            IsSystem = false,
+        };
 
         // 已存在：只补齐空字段，不覆盖用户的定制
-        var dirty = false;
-        if (entity.Name.IsNullOrEmpty()) { entity.Name = name; dirty = true; }
-        if (entity.Icon.IsNullOrEmpty()) { entity.Icon = icon; dirty = true; }
-        if (entity.Category.IsNullOrEmpty()) { entity.Category = category; dirty = true; }
-        if (entity.Description.IsNullOrEmpty()) { entity.Description = description; dirty = true; }
-        if (entity.Content.IsNullOrEmpty()) { entity.Content = content; dirty = true; }
-        if (entity.Triggers.IsNullOrEmpty() && !triggers.IsNullOrEmpty()) { entity.Triggers = triggers; dirty = true; }
-        if (!entity.IsSystem) { entity.IsSystem = true; dirty = true; }
+        if (entity.Name.IsNullOrEmpty()) entity.Name = name;
+        if (entity.Icon.IsNullOrEmpty()) entity.Icon = icon;
+        if (entity.Category.IsNullOrEmpty()) entity.Category = category;
+        if (entity.Description.IsNullOrEmpty()) entity.Description = description;
+        if (entity.Content.IsNullOrEmpty()) entity.Content = content;
+        if (entity.Triggers.IsNullOrEmpty() && !triggers.IsNullOrEmpty()) entity.Triggers = triggers;
 
-        if (dirty) entity.Update();
+        entity.Save();
     }
 
     /// <summary>案例教学技能的默认提示词内容</summary>
