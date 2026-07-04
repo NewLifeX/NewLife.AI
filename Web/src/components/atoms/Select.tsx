@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 
@@ -28,7 +29,10 @@ export function Select({
 }: SelectProps) {
   const [open, setOpen] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(-1)
+  const [openUpward, setOpenUpward] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState({ left: 0, top: 0, width: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const selected = options.find((o) => o.value === value)
 
@@ -37,15 +41,48 @@ export function Select({
     setFocusedIndex(-1)
   }, [])
 
+  const handleOpen = useCallback(() => {
+    if (disabled) return
+    if (!open) {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        const spaceBelow = window.innerHeight - rect.bottom
+        const upward = spaceBelow < 220
+        setOpenUpward(upward)
+        // 用 fixed 坐标渲染到 body，彻底摆脱 Modal overflow-hidden 裁剪
+        setDropdownPos({
+          left: rect.left,
+          top: upward ? rect.top - 4 : rect.bottom + 4,
+          width: rect.width,
+        })
+      }
+    }
+    setOpen((v) => !v)
+  }, [disabled, open])
+
+  // 点击外部或滚动/缩放时关闭下拉（Portal 模式下下拉列表不在 containerRef 子树，需同时排除）
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      const inTrigger = containerRef.current?.contains(target) ?? false
+      const inDropdown = dropdownRef.current?.contains(target) ?? false
+      if (!inTrigger && !inDropdown) {
         close()
       }
     }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    window.addEventListener('scroll', (e: Event) => {
+      // 下拉列表内部滚动不关闭
+      if (dropdownRef.current?.contains(e.target as Node)) return
+      close()
+    }, { capture: true })
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      window.removeEventListener('scroll', close, { capture: true })
+      window.removeEventListener('resize', close)
+    }
   }, [open, close])
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -56,7 +93,7 @@ export function Select({
       case ' ':
         e.preventDefault()
         if (!open) {
-          setOpen(true)
+          handleOpen()
           setFocusedIndex(options.findIndex((o) => o.value === value))
         } else if (focusedIndex >= 0) {
           onChange(options[focusedIndex].value)
@@ -89,7 +126,7 @@ export function Select({
     <div ref={containerRef} className={cn('relative', className)}>
       <button
         type="button"
-        onClick={() => !disabled && setOpen(!open)}
+        onClick={handleOpen}
         onKeyDown={handleKeyDown}
         disabled={disabled}
         className={cn(
@@ -121,15 +158,23 @@ export function Select({
         />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            left: `${dropdownPos.left}px`,
+            top: openUpward ? `${dropdownPos.top}px` : `${dropdownPos.top}px`,
+            width: `${dropdownPos.width}px`,
+            transform: openUpward ? 'translateY(-100%)' : '',
+          }}
           className={cn(
-            'absolute z-50 mt-1 w-full min-w-[120px]',
+            'z-50 min-w-[120px]',
             'bg-white dark:bg-gray-800 rounded-lg',
             'border border-gray-200 dark:border-gray-700',
             'shadow-menu dark:shadow-black/40',
             'py-1 overflow-auto max-h-60',
-            'animate-slide-up',
+            openUpward ? 'animate-slide-down' : 'animate-slide-up',
           )}
         >
           {options.map((opt, idx) => {
@@ -167,7 +212,8 @@ export function Select({
               </button>
             )
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

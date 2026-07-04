@@ -12,6 +12,23 @@ interface ThinkingBlockProps {
   onCollapsedChange?: (collapsed: boolean) => void
 }
 
+/** 从思考内容中提取关键步骤名（最后一个加粗标题或最后段落首句） */
+function extractKeyStep(content: string): string {
+  if (!content) return ''
+  // 提取所有 **text** 格式的加粗标题
+  const boldMatches = [...content.matchAll(/\*\*([^*\n]{1,60})\*\*/g)]
+  if (boldMatches.length > 0) {
+    return boldMatches[boldMatches.length - 1][1].trim()
+  }
+  // 降级：取最后一个非空段落的首句（不超过 40 字）
+  const paragraphs = content.split('\n').map((l) => l.trim()).filter(Boolean)
+  if (paragraphs.length > 0) {
+    const last = paragraphs[paragraphs.length - 1]
+    return last.length > 40 ? last.slice(0, 40) + '…' : last
+  }
+  return ''
+}
+
 /** 流式推理时的实时计时器 */
 function LiveTimer() {
   const [elapsed, setElapsed] = useState(0)
@@ -25,35 +42,16 @@ function LiveTimer() {
   return <span className="ml-1 tabular-nums opacity-70">({(elapsed / 1000).toFixed(1)}s)</span>
 }
 
-/** 从思考内容中提取最后一个关键步骤标题 */
-function extractKeyStep(content: string): string {
-  const boldRe = /\*\*([^*\n]{1,60})\*\*/g
-  let last = ''
-  let m: RegExpExecArray | null
-  while ((m = boldRe.exec(content)) !== null) {
-    last = m[1].trim()
-  }
-  if (last) return last
-  // 回退：最后一段首句
-  const paras = content.split(/\n{2,}/)
-  const lastPara = paras[paras.length - 1]?.trim()
-  if (lastPara) {
-    const firstSentence = lastPara.split(/[。！？.!?\n]/)[0].trim()
-    if (firstSentence && firstSentence.length <= 40) return firstSentence
-  }
-  return ''
-}
-
 export function ThinkingBlock({
   content,
   isStreaming = false,
   thinkingTime,
   className,
-  defaultCollapsed,
+  defaultCollapsed = false,
   onCollapsedChange,
 }: ThinkingBlockProps) {
   const { t } = useTranslation()
-  const [collapsed, setCollapsed] = useState(defaultCollapsed ?? false)
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
 
   const handleToggle = () => {
     const next = !collapsed
@@ -61,25 +59,23 @@ export function ThinkingBlock({
     onCollapsedChange?.(next)
   }
 
+  // 流式收缩时显示最新步骤名
   const streamingLabel = isStreaming && collapsed
     ? (extractKeyStep(content) || t('chat.thinkingInProgress'))
-    : undefined
+    : t('chat.thinkingInProgress')
 
   return (
-    <div className={cn('mb-4', className)}>
+    <div className={cn('mb-4', className)} data-testid="thinking-block">
       <button
         onClick={handleToggle}
+        title={t('chat.thinkingToggleTip')}
         className="flex items-center space-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg select-none hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors w-fit max-w-full"
       >
         {isStreaming ? (
           <>
             <Icon name="cyclone" variant="symbols" size="sm" className="animate-spin flex-shrink-0" />
-            {collapsed ? (
-              <span className="max-w-[16rem] truncate animate-pulse">{streamingLabel}</span>
-            ) : (
-              <span className="animate-pulse">{t('chat.thinkingInProgress')}</span>
-            )}
-            {!collapsed && <LiveTimer />}
+            <span className="animate-pulse max-w-[16rem] truncate">{streamingLabel}</span>
+            <LiveTimer />
           </>
         ) : (
           <>

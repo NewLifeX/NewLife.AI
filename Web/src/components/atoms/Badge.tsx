@@ -10,11 +10,11 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
-  primary: 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300',
-  success: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-100 dark:border-green-800/50',
-  warning: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
-  info: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+  default: 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]',
+  primary: 'bg-[color:var(--color-brand-50)] dark:bg-[color:var(--color-brand-900)]/40 text-[color:var(--color-brand-700)] dark:text-[color:var(--color-brand-200)] border border-[color:var(--color-brand-100)]/60 dark:border-[color:var(--color-brand-700)]/40',
+  success: 'bg-emerald-50 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-300 border border-emerald-100/70 dark:border-emerald-800/50',
+  warning: 'bg-amber-50 dark:bg-amber-900/25 text-amber-700 dark:text-amber-300 border border-amber-100/70 dark:border-amber-800/50',
+  info: 'bg-cyan-50 dark:bg-cyan-900/25 text-cyan-700 dark:text-cyan-300 border border-cyan-100/70 dark:border-cyan-800/50',
 }
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {

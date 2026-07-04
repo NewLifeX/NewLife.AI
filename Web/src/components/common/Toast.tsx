@@ -8,18 +8,18 @@ const iconMap = {
   info: 'info',
 } as const
 
-const colorMap = {
-  error: 'bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200',
-  warning: 'bg-yellow-50 dark:bg-yellow-950/60 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200',
-  success: 'bg-green-50 dark:bg-green-950/60 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200',
-  info: 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
+const accentMap = {
+  error: 'before:bg-red-500',
+  warning: 'before:bg-amber-500',
+  success: 'before:bg-emerald-500',
+  info: 'before:bg-[color:var(--color-brand-500)]',
 } as const
 
 const iconColorMap = {
   error: 'text-red-500',
-  warning: 'text-yellow-500',
-  success: 'text-green-500',
-  info: 'text-blue-500',
+  warning: 'text-amber-500',
+  success: 'text-emerald-500',
+  info: 'text-[color:var(--color-brand-500)]',
 } as const
 
 export function ToastContainer() {
@@ -33,7 +33,7 @@ export function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-start gap-3 px-4 py-3 rounded-lg border shadow-lg animate-slide-in-right ${colorMap[toast.type]}`}
+          className={`relative flex items-start gap-3 pl-5 pr-4 py-3 rounded-xl glass-panel shadow-menu text-[var(--color-text-primary)] animate-slide-in-right before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-full ${accentMap[toast.type]}`}
         >
           <Icon
             name={iconMap[toast.type]}
@@ -44,7 +44,7 @@ export function ToastContainer() {
           <p className="text-sm flex-1 leading-relaxed">{toast.message}</p>
           <button
             onClick={() => removeToast(toast.id)}
-            className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity mt-0.5"
+            className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity mt-0.5 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
           >
             <Icon name="close" size="sm" />
           </button>

@@ -28,7 +28,7 @@ export function Avatar({ type, src, alt, size = 'md', letter, className }: Avata
     return (
       <div
         className={cn(
-          'rounded-full bg-gradient-to-br from-blue-500 to-purple-600',
+          'rounded-full bg-[image:var(--gradient-brand)] shadow-[0_4px_12px_-4px_rgba(91,91,255,0.55)]',
           'flex items-center justify-center text-white font-bold shadow-sm',
           sizeStyles[size],
           className,
@@ -58,7 +58,7 @@ export function Avatar({ type, src, alt, size = 'md', letter, className }: Avata
           onError={() => setImgError(true)}
         />
       ) : (
-        <span className="text-blue-600 font-bold">{letter ?? 'U'}</span>
+        <span className="text-blue-500 font-semibold">{letter ?? 'U'}</span>
       )}
     </div>
   )

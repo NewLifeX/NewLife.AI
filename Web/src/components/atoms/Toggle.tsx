@@ -30,10 +30,12 @@ export function Toggle({
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={cn(
-        'relative inline-flex flex-shrink-0 cursor-pointer rounded-full transition-colors duration-300 ease-in-out',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900',
+        'relative inline-flex flex-shrink-0 cursor-pointer rounded-full transition-[background-color,box-shadow] duration-300 ease-out',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-500)]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface-0)]',
         trackSize,
-        checked ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600',
+        checked
+          ? 'bg-primary shadow-[0_2px_8px_-2px_rgba(91,91,255,0.55)]'
+          : 'bg-[var(--color-surface-3)]',
         disabled && 'opacity-50 cursor-not-allowed',
         className,
       )}

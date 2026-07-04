@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 function Bone({ className }: { className?: string }) {
   return (
-    <div className={cn('bg-gray-200 dark:bg-gray-700 rounded animate-pulse', className)} />
+    <div className={cn('shimmer rounded', className)} />
   )
 }
 

@@ -37,23 +37,23 @@ export function Slider({
         className={cn(
           'w-full h-2 rounded-lg cursor-pointer',
           'appearance-none outline-none',
-          'bg-gray-200 dark:bg-gray-700',
+          'bg-[var(--slider-track)]',
           '[&::-webkit-slider-thumb]:appearance-none',
           '[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4',
           '[&::-webkit-slider-thumb]:rounded-full',
-          '[&::-webkit-slider-thumb]:bg-primary',
-          '[&::-webkit-slider-thumb]:shadow-sm',
+          '[&::-webkit-slider-thumb]:bg-[var(--color-brand-500)]',
+          '[&::-webkit-slider-thumb]:shadow-[var(--shadow-brand-glow)]',
           '[&::-webkit-slider-thumb]:cursor-pointer',
           '[&::-webkit-slider-thumb]:transition-transform',
           '[&::-webkit-slider-thumb]:hover:scale-110',
           '[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4',
           '[&::-moz-range-thumb]:rounded-full',
-          '[&::-moz-range-thumb]:bg-primary',
+          '[&::-moz-range-thumb]:bg-[var(--color-brand-500)]',
           '[&::-moz-range-thumb]:border-none',
           '[&::-moz-range-thumb]:cursor-pointer',
         )}
         style={{
-          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percent}%, var(--slider-track) ${percent}%, var(--slider-track) 100%)`,
+          background: `linear-gradient(to right, var(--color-brand-500) 0%, var(--color-accent-500) ${percent}%, var(--slider-track) ${percent}%, var(--slider-track) 100%)`,
         }}
         {...props}
       />

@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { Icon } from './Icon'
 
@@ -8,6 +9,7 @@ interface ModalProps {
   children: ReactNode
   className?: string
   maxWidth?: string
+  'data-testid'?: string
 }
 
 export function Modal({
@@ -16,6 +18,7 @@ export function Modal({
   children,
   className,
   maxWidth = 'max-w-4xl',
+  'data-testid': testId,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return
@@ -39,16 +42,20 @@ export function Modal({
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-md:p-0">
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-md animate-fade-in"
         onClick={onClose}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        data-testid={testId}
         className={cn(
-          'relative bg-white dark:bg-[#1e1e20] w-full rounded-2xl shadow-modal',
-          'flex overflow-hidden animate-fade-in',
+          'relative bg-[var(--color-surface-0)] w-full rounded-2xl shadow-modal',
+          'border border-[var(--color-border-subtle)]',
+          'flex overflow-hidden animate-scale-in',
           'max-md:rounded-none max-md:h-full max-md:max-w-none max-md:flex-col',
           maxWidth,
           className,
@@ -56,12 +63,13 @@ export function Modal({
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors rounded-full bg-gray-100 dark:bg-gray-700/60 hover:bg-gray-200 dark:hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          className="absolute top-4 right-4 z-20 w-7 h-7 flex items-center justify-center text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors rounded-full bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-500)]/55 max-md:hidden"
         >
           <Icon name="close" size="sm" />
         </button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
