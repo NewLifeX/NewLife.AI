@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
-import rehypeHighlight from 'rehype-highlight'
+import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
+import { createOnigurumaEngine } from 'shiki/engine/oniguruma'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import 'katex/dist/katex.min.css'
@@ -19,6 +20,77 @@ import { useChatStore } from '@/stores/chatStore'
 import { editImage } from '@/lib/api'
 
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
+
+// ── Shiki 代码高亮单例 ────────────────────────────────────────────────────────
+let _shikiReady: HighlighterCore | null = null
+let _shikiPromise: Promise<unknown> | null = null
+const _shikiListeners: Array<() => void> = []
+
+function ensureShiki(): void {
+  if (_shikiReady || _shikiPromise) return
+  _shikiPromise = createHighlighterCore({
+    themes: [
+      import('shiki/dist/themes/github-light.mjs'),
+      import('shiki/dist/themes/github-dark.mjs'),
+    ],
+    langs: [
+      import('shiki/dist/langs/javascript.mjs'),
+      import('shiki/dist/langs/typescript.mjs'),
+      import('shiki/dist/langs/jsx.mjs'),
+      import('shiki/dist/langs/tsx.mjs'),
+      import('shiki/dist/langs/json.mjs'),
+      import('shiki/dist/langs/jsonc.mjs'),
+      import('shiki/dist/langs/html.mjs'),
+      import('shiki/dist/langs/css.mjs'),
+      import('shiki/dist/langs/scss.mjs'),
+      import('shiki/dist/langs/python.mjs'),
+      import('shiki/dist/langs/bash.mjs'),
+      import('shiki/dist/langs/shell.mjs'),
+      import('shiki/dist/langs/powershell.mjs'),
+      import('shiki/dist/langs/bat.mjs'),
+      import('shiki/dist/langs/java.mjs'),
+      import('shiki/dist/langs/csharp.mjs'),
+      import('shiki/dist/langs/cpp.mjs'),
+      import('shiki/dist/langs/c.mjs'),
+      import('shiki/dist/langs/go.mjs'),
+      import('shiki/dist/langs/rust.mjs'),
+      import('shiki/dist/langs/sql.mjs'),
+      import('shiki/dist/langs/yaml.mjs'),
+      import('shiki/dist/langs/toml.mjs'),
+      import('shiki/dist/langs/xml.mjs'),
+      import('shiki/dist/langs/dockerfile.mjs'),
+      import('shiki/dist/langs/markdown.mjs'),
+    ],
+    engine: createOnigurumaEngine(import('shiki/wasm')),
+  }).then(h => {
+    _shikiReady = h
+    _shikiListeners.splice(0).forEach(fn => fn())
+  }).catch(() => {
+    _shikiPromise = null
+  })
+}
+
+export function shikiHighlight(lang: string, code: string): string | null {
+  if (!_shikiReady) { ensureShiki(); return null }
+  const loaded = _shikiReady.getLoadedLanguages()
+  const safeLang = loaded.includes(lang) ? lang : 'text'
+  try {
+    return _shikiReady.codeToHtml(code, {
+      lang: safeLang,
+      themes: { light: 'github-light', dark: 'github-dark' },
+      defaultColor: false,
+    })
+  } catch {
+    return null
+  }
+}
+
+export function onShikiReady(fn: () => void): () => void {
+  if (_shikiReady) { fn(); return () => {} }
+  _shikiListeners.push(fn)
+  return () => { const i = _shikiListeners.indexOf(fn); if (i >= 0) _shikiListeners.splice(i, 1) }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 let mermaidCounter = 0
 
@@ -69,6 +141,8 @@ function hastToText(node: HastChild): string {
   return ''
 }
 
+const CODE_COLLAPSE_THRESHOLD = 20
+
 function downloadTextFile(fileName: string, content: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
@@ -89,8 +163,8 @@ function MermaidActionButton({ title, icon, onClick, disabled = false, className
       disabled={disabled}
       data-testid={testId}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700/70 bg-gray-900/90 text-gray-300 shadow-sm transition hover:bg-gray-800 hover:text-white',
-        disabled && 'cursor-not-allowed opacity-40 hover:bg-gray-900/90 hover:text-gray-300',
+        'flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200/80 bg-white/95 text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700/80 dark:bg-gray-900/90 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white',
+        disabled && 'cursor-not-allowed opacity-40 hover:bg-white/95 hover:text-gray-600 dark:hover:bg-gray-900/90 dark:hover:text-gray-300',
         className,
       )}
       title={title}
@@ -104,7 +178,7 @@ function MermaidSvgPane({
   code,
   isStreaming = false,
   className,
-  fallbackClassName = 'rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
+  fallbackClassName = 'rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700/50 p-4 overflow-x-auto text-sm leading-relaxed',
   scale = 1,
   expand = false,
   onSvgChange,
@@ -154,12 +228,21 @@ function MermaidSvgPane({
         container.innerHTML = svg
         const svgEl = container.querySelector('svg')
         if (svgEl instanceof SVGSVGElement) {
+          svgEl.style.display = 'block'
+          svgEl.style.height = 'auto'
           if (expand) {
             svgEl.style.width = '100%'
+            svgEl.style.margin = '0 auto'
           } else {
+            const vb = svgEl.getAttribute('viewBox')
+            const vbParts = vb?.trim().split(/[\s,]+/) ?? []
+            if (vbParts.length >= 4) {
+              const vw = parseFloat(vbParts[2])
+              if (vw > 0) svgEl.setAttribute('width', String(Math.ceil(vw)))
+            }
             svgEl.style.maxWidth = '100%'
+            svgEl.style.margin = '0 auto'
           }
-          svgEl.style.height = 'auto'
         }
         onSvgChange?.(svg)
       }
@@ -211,7 +294,7 @@ function MermaidPreviewDialog({ open, code, fallbackClassName, onClose, onCopySo
   if (!open || typeof document === 'undefined') return null
 
   return createPortal(
-    <div data-testid="mermaid-preview-dialog" className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm" onClick={onClose}>
+    <div data-testid="mermaid-preview-dialog" className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="absolute inset-0 flex flex-col" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 text-white">
           <div className="text-sm font-medium">{t('mermaid.title')}</div>
@@ -226,7 +309,7 @@ function MermaidPreviewDialog({ open, code, fallbackClassName, onClose, onCopySo
         </div>
 
         <div className="flex-1 overflow-auto p-6">
-          <div className="mx-auto flex w-full min-h-full items-start justify-center">
+          <div className="mx-auto flex w-full min-h-full items-center justify-center">
             <MermaidSvgPane
               code={code}
               testId="mermaid-preview-pane"
@@ -248,7 +331,7 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
   const [previewOpen, setPreviewOpen] = useState(false)
   const [svgMarkup, setSvgMarkup] = useState<string | null>(null)
 
-  const fallbackClassName = 'rounded-lg bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed'
+  const fallbackClassName = 'rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700/50 p-4 overflow-x-auto text-sm leading-relaxed'
 
   useEffect(() => {
     if (isStreaming) setPreviewOpen(false)
@@ -274,7 +357,7 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
 
   return (
     <>
-      <div data-testid="mermaid-block" className="group/mermaid relative my-4 overflow-x-auto rounded-xl border border-gray-700/70 bg-gray-950/70">
+      <div data-testid="mermaid-block" className="group/mermaid relative my-4 overflow-x-auto rounded-xl border border-gray-200/80 bg-white dark:border-gray-700/60 dark:bg-gray-900/60">
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
           <MermaidActionButton title={t('mermaid.enlarge')} icon="open_in_full" onClick={handleOpenPreview} disabled={!svgMarkup} testId="mermaid-open-preview" />
           <MermaidActionButton title={t('mermaid.downloadSvg')} icon="download" onClick={handleDownloadSvg} disabled={!svgMarkup} testId="mermaid-download-svg" />
@@ -284,7 +367,7 @@ function MermaidBlock({ code, isStreaming }: { code: string; isStreaming?: boole
         <MermaidSvgPane
           code={code}
           testId="mermaid-inline-pane"
-          className="flex justify-center overflow-x-auto p-4 pt-12"
+          className="overflow-x-auto p-4 pt-12"
           fallbackClassName={fallbackClassName}
           onSvgChange={setSvgMarkup}
         />
@@ -348,7 +431,7 @@ function CopyCodeButton({ code }: { code: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="p-1 rounded bg-gray-700/60 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
+      className="p-1 rounded bg-gray-200/80 dark:bg-gray-700/60 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors opacity-0 group-hover/code:opacity-100"
       title="Copy"
     >
       <Icon name="content_copy" size="sm" />
@@ -356,20 +439,16 @@ function CopyCodeButton({ code }: { code: string }) {
   )
 }
 
-const CODE_COLLAPSE_THRESHOLD = 20
-
 interface CollapsibleCodeBlockProps extends ComponentPropsWithoutRef<'pre'> {
   codeStr: string
   lang: string
-  children: ReactNode
+  isStreaming?: boolean
+  children?: ReactNode
 }
 
-function CollapsibleCodeBlock({ codeStr, lang: _lang, children, ...props }: CollapsibleCodeBlockProps) {
+function CollapsibleCodeBlock({ codeStr, lang: _lang, isStreaming = false, children, ...props }: CollapsibleCodeBlockProps) {
   const { t } = useTranslation()
-  const preRef = useRef<HTMLPreElement>(null)
-
-  // effectiveCode：优先用 prop 传入的 codeStr（来自 hast AST），兜底用 DOM 文本内容
-  const [effectiveCode, setEffectiveCode] = useState(codeStr)
+  const lang = _lang ?? ''
   const [lineCount, setLineCount] = useState(() => {
     const text = codeStr.endsWith('\n') ? codeStr.slice(0, -1) : codeStr
     return text ? text.split('\n').length : 0
@@ -377,68 +456,83 @@ function CollapsibleCodeBlock({ codeStr, lang: _lang, children, ...props }: Coll
   const shouldCollapse = lineCount > CODE_COLLAPSE_THRESHOLD
   const [collapsed, setCollapsed] = useState(shouldCollapse)
 
-  // codeStr 变化时同步（流式写入场景）
   useEffect(() => {
     if (codeStr) {
-      setEffectiveCode(codeStr)
       const text = codeStr.endsWith('\n') ? codeStr.slice(0, -1) : codeStr
       setLineCount(text ? text.split('\n').length : 0)
     }
   }, [codeStr])
 
-  // codeStr 为空时从 DOM 兜底测量；useLayoutEffect 在浏览器绘制前同步运行，无闪烁
+  const prevShouldCollapse = useRef(shouldCollapse)
+  useEffect(() => {
+    if (!prevShouldCollapse.current && shouldCollapse) setCollapsed(true)
+    prevShouldCollapse.current = shouldCollapse
+  }, [shouldCollapse])
+
+  // Shiki 高亮（流式期间跳过，等结束后再高亮）
+  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
+  useEffect(() => {
+    if (isStreaming) { setHighlightedHtml(null); return }
+    let cancelled = false
+    return onShikiReady(() => {
+      if (!cancelled) setHighlightedHtml(shikiHighlight(lang, codeStr))
+    })
+  }, [lang, codeStr, isStreaming])
+
+  const preRef = useRef<HTMLPreElement>(null)
   useLayoutEffect(() => {
     if (!codeStr && preRef.current) {
       const domText = preRef.current.textContent ?? ''
       const text = domText.endsWith('\n') ? domText.slice(0, -1) : domText
       const count = text ? text.split('\n').length : 0
       if (count > 0) {
-        setEffectiveCode(domText)
         setLineCount(count)
         if (count > CODE_COLLAPSE_THRESHOLD) setCollapsed(true)
       }
     }
   }, [codeStr])
 
-  // 流式写入时若行数刚越过阈值则自动折叠，否则保持用户选择
-  const prevShouldCollapse = useRef(shouldCollapse)
-  useEffect(() => {
-    if (!prevShouldCollapse.current && shouldCollapse) {
-      setCollapsed(true)
-    }
-    prevShouldCollapse.current = shouldCollapse
-  }, [shouldCollapse])
+  const codeContent = highlightedHtml ? (
+    <div
+      className={cn('shiki-wrapper overflow-x-auto', shouldCollapse ? 'rounded-t-lg' : 'rounded-lg')}
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+    />
+  ) : (
+    <pre
+      ref={preRef}
+      {...props}
+      className={cn(
+        'bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700/50 p-4 overflow-x-auto text-sm leading-relaxed',
+        shouldCollapse ? 'rounded-t-lg' : 'rounded-lg',
+      )}
+    >
+      {children}
+    </pre>
+  )
 
   return (
     <div className="relative group/code">
       <div className={cn(shouldCollapse && collapsed ? 'max-h-[17rem] overflow-hidden relative' : 'relative')}>
-        <pre
-          ref={preRef}
-          {...props}
-          className={cn(
-            'bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 overflow-x-auto text-sm leading-relaxed',
-            shouldCollapse ? 'rounded-t-lg' : 'rounded-lg',
-          )}
-        >
-          {children}
-        </pre>
+        {codeContent}
         {shouldCollapse && collapsed && (
-          <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-gray-900 dark:from-gray-950 to-transparent pointer-events-none" />
+          <div className={cn(
+            'absolute bottom-0 inset-x-0 h-16 pointer-events-none',
+            highlightedHtml ? 'shiki-collapse-fade' : 'bg-gradient-to-t from-gray-50 dark:from-gray-900 to-transparent',
+          )} />
         )}
       </div>
       <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
-        {effectiveCode && <CopyCodeButton code={effectiveCode} />}
+        {codeStr && <CopyCodeButton code={codeStr} />}
       </div>
       {shouldCollapse && (
         <button
           type="button"
-          onClick={() => setCollapsed((v) => !v)}
-          className="w-full flex items-center justify-center gap-1 py-1.5 rounded-b-lg bg-gray-800 dark:bg-gray-900 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700 dark:hover:bg-gray-800 transition-colors border-t border-gray-700/40"
+          onClick={() => setCollapsed(v => !v)}
+          className="w-full flex items-center justify-center gap-1 py-1.5 rounded-b-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border-t border-gray-200 dark:border-gray-700/50"
         >
           <Icon name={collapsed ? 'expand_more' : 'expand_less'} size="sm" />
-          {collapsed
-            ? t('chat.codeExpandAll', { lines: lineCount })
-            : t('chat.codeCollapse')}
+          {collapsed ? t('chat.codeExpandAll', { lines: lineCount }) : t('chat.codeCollapse')}
         </button>
       )}
     </div>
@@ -471,106 +565,109 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
     [images],
   )
 
-  // 将 components 提取为 useMemo，避免每次渲染都生成新函数引用，
-  // 防止 ReactMarkdown 把 pre/code 视为新组件类型而卸载/重挂载（导致折叠状态丢失）
-  const markdownComponents = useMemo(
-    () => ({
-      pre({ children, node: preNode, ...props }: ComponentPropsWithoutRef<'pre'> & { node?: { children?: HastChild[] } }) {
-        // 直接从 hast 节点提取原始文本，比从 React children 解析更可靠
-        const codeHastNode = preNode?.children?.[0]
-        const codeStr = codeHastNode ? hastToText(codeHastNode) : extractText(children)
-        const classNames: string[] = (codeHastNode?.properties?.className as string[] | undefined) ?? []
-        const lang = classNames.find((c) => c.startsWith('language-'))?.replace('language-', '') ?? ''
+  const markdownComponents = useMemo(() => ({
+    pre({ children, node: preNode, ...props }: ComponentPropsWithoutRef<'pre'> & { node?: { children?: HastChild[] } }) {
+      const codeHastNode = preNode?.children?.[0]
+      const codeStr = codeHastNode ? hastToText(codeHastNode) : extractText(children)
+      const classNames: string[] = (codeHastNode?.properties?.className as string[] | undefined) ?? []
+      const lang = classNames.find(c => c.startsWith('language-'))?.replace('language-', '') ?? ''
 
-        if (lang === 'mermaid') {
-          return <MermaidBlock code={codeStr.replace(/\n$/, '')} isStreaming={isStreaming} />
-        }
+      if (lang === 'mermaid') {
+        return <MermaidBlock code={codeStr.replace(/\n$/, '')} isStreaming={isStreaming} />
+      }
 
+      return <CollapsibleCodeBlock codeStr={codeStr} lang={lang} isStreaming={isStreaming} {...props}>{children}</CollapsibleCodeBlock>
+    },
+    code({ className: codeClassName, children, ...props }: ComponentPropsWithoutRef<'code'>) {
+      const isInline = !codeClassName
+      if (isInline) {
         return (
-          <CollapsibleCodeBlock codeStr={codeStr} lang={lang} {...props}>
-            {children}
-          </CollapsibleCodeBlock>
-        )
-      },
-      code({ className: codeClassName, children, ...props }: ComponentPropsWithoutRef<'code'>) {
-        const isInline = !codeClassName
-        if (isInline) {
-          return (
-            <code
-              className="bg-gray-100 dark:bg-gray-800 text-primary dark:text-blue-400 px-1.5 py-0.5 rounded text-sm font-mono"
-              {...props}
-            >
-              {children}
-            </code>
-          )
-        }
-        if (codeClassName?.includes('language-mermaid')) {
-          const codeStr = extractText(children).replace(/\n$/, '')
-          return <MermaidBlock code={codeStr} isStreaming={isStreaming} />
-        }
-        return (
-          <code className={codeClassName} {...props}>
+          <code
+            className="bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded-md text-[0.875em] font-mono border border-gray-200 dark:border-gray-700"
+            {...props}
+          >
             {children}
           </code>
         )
-      },
-      a({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) {
-        return (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-            {...props}
-          >
+      }
+      if (codeClassName?.includes('language-mermaid')) {
+        const codeStr = extractText(children).replace(/\n$/, '')
+        return <MermaidBlock code={codeStr} isStreaming={isStreaming} />
+      }
+      return (
+        <code className={codeClassName} {...props}>
+          {children}
+        </code>
+      )
+    },
+    a({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) {
+      const safeHref = (() => {
+        if (!href) return undefined
+        const h = /^www\./i.test(href) ? `https://${href}` : href
+        try {
+          const url = new URL(h)
+          return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? h : undefined
+        } catch {
+          return href.startsWith('/') || href.startsWith('#') ? href : undefined
+        }
+      })()
+      if (!safeHref) return <span>{children}</span>
+
+      return (
+        <a
+          href={safeHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+          {...props}
+        >
+          {children}
+        </a>
+      )
+    },
+    table({ children, ...props }: ComponentPropsWithoutRef<'table'>) {
+      return (
+        <div className="overflow-x-auto my-2">
+          <table className="border-collapse border border-gray-200 dark:border-gray-700 w-full text-sm" {...props}>
             {children}
-          </a>
-        )
-      },
-      table({ children, ...props }: ComponentPropsWithoutRef<'table'>) {
-        return (
-          <div className="overflow-x-auto my-4">
-            <table className="border-collapse border border-gray-200 dark:border-gray-700 w-full text-sm" {...props}>
-              {children}
-            </table>
-          </div>
-        )
-      },
-      th({ children, ...props }: ComponentPropsWithoutRef<'th'>) {
-        return (
-          <th
-            className="border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-left font-medium"
-            {...props}
-          >
-            {children}
-          </th>
-        )
-      },
-      td({ children, ...props }: ComponentPropsWithoutRef<'td'>) {
-        return (
-          <td className="border border-gray-200 dark:border-gray-700 px-3 py-2" {...props}>
-            {children}
-          </td>
-        )
-      },
-      img({ src, alt }: ComponentPropsWithoutRef<'img'>) {
-        return (
-          <ProgressiveImage
-            src={src}
-            alt={alt ?? ''}
-            onClick={() => src && handleImageClick(src)}
-          />
-        )
-      },
-    }),
-    [isStreaming, handleImageClick],
-  )
+          </table>
+        </div>
+      )
+    },
+    th({ children, ...props }: ComponentPropsWithoutRef<'th'>) {
+      return (
+        <th
+          className="border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-left font-medium"
+          {...props}
+        >
+          {children}
+        </th>
+      )
+    },
+    td({ children, ...props }: ComponentPropsWithoutRef<'td'>) {
+      return (
+        <td className="border border-gray-200 dark:border-gray-700 px-3 py-2" {...props}>
+          {children}
+        </td>
+      )
+    },
+    img({ src, alt }: ComponentPropsWithoutRef<'img'>) {
+      return (
+        <ProgressiveImage
+          src={src}
+          alt={alt ?? ''}
+          onClick={() => src && handleImageClick(src)}
+        />
+      )
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isStreaming, handleImageClick])
 
   return (
     <div className={cn('prose dark:prose-invert max-w-none break-words', isStreaming && 'streaming-prose', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeRaw, [rehypeHighlight, { plainText: ['mermaid'] }], [rehypeKatex, { throwOnError: false, strict: false }]]}
+        rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false, strict: false }]]}
         components={markdownComponents}
       >
         {processedContent}
@@ -596,8 +693,8 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
                 setLightboxIndex(images.length - 1)
                 setLightboxOpen(true)
               }
-            } catch (e) {
-              console.error('Image edit failed:', e)
+            } catch {
+              // 编辑失败静默处理
             }
             setEditImageUrl(null)
           }}

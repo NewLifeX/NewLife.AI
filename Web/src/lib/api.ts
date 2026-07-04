@@ -5,6 +5,21 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const SSE_MAX_RETRIES = 3
 
+const DRAFT_KEY = 'chat.draft'
+
+/** 跳转登录前保存当前输入框内容到 sessionStorage，避免用户已输入内容因整页跳转而丢失。
+ *  背景：Cookie 认证模式下，token 过期后 API 返回 401，
+ *  整页跳转 SSO 会导致 React 状态全部丢失。 */
+function saveDraftBeforeRedirect() {
+  try {
+    const textarea = document.querySelector('textarea') as HTMLTextAreaElement | null
+    const text = textarea?.value?.trim()
+    if (text) {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ text, timestamp: Date.now() }))
+    }
+  } catch { /* 静默忽略 */ }
+}
+
 /** 是否正在跳转登录，防止多次重定向 */
 let isRedirectingToLogin = false
 
@@ -13,6 +28,7 @@ function redirectToLogin() {
   if (isRedirectingToLogin) return
   if (window.location.pathname.toLowerCase().startsWith('/admin/')) return
   isRedirectingToLogin = true
+  saveDraftBeforeRedirect()
   const returnUrl = encodeURIComponent(window.location.href)
   window.location.href = `/Admin/User/Login?r=${returnUrl}`
 }
@@ -34,6 +50,32 @@ async function fetchSSE(
       const res = await fetch(url, init)
       if (!res.ok) {
         if (res.status === 401) redirectToLogin()
+        if (res.status === 403) {
+          try {
+            const body = await res.clone().json()
+            if (body?.code === 'CHAT_FORBIDDEN') {
+              showToast('warning', body.message ?? '您没有发送消息的权限')
+            } else {
+              showToast('warning', '无权限访问该资源')
+            }
+          } catch {
+            showToast('warning', '无权限访问该资源')
+          }
+          throw new DOMException('Forbidden', 'AbortError')
+        }
+        if (res.status === 429) {
+          try {
+            const body = await res.clone().json()
+            if (body?.code === 'QUOTA_EXCEEDED') {
+              showToast('error', body.message ?? '您的用量额度已耗尽，请联系管理员')
+            } else {
+              showToast('error', '请求过于频繁，请稍后再试')
+            }
+          } catch {
+            showToast('error', '请求过于频繁，请稍后再试')
+          }
+          throw new DOMException('Rate limited', 'AbortError')
+        }
         throw new Error(`SSE ${res.status}: ${res.statusText}`)
       }
       const reader = res.body?.getReader()
@@ -101,9 +143,35 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     } else if (res.status === 401) {
       redirectToLogin()
     } else if (res.status === 403) {
-      showToast('warning', '无权限访问该资源')
+      try {
+        const body = await res.clone().json()
+        if (body?.code === 'CHAT_FORBIDDEN') {
+          showToast('warning', body.message ?? '您没有发送消息的权限')
+        } else {
+          showToast('warning', '无权限访问该资源')
+        }
+      } catch {
+        showToast('warning', '无权限访问该资源')
+      }
     } else if (res.status === 429) {
-      showToast('warning', '请求过于频繁，请稍后再试')
+      try {
+        const body = await res.clone().json()
+        if (body?.code === 'QUOTA_EXCEEDED') {
+          showToast('error', body.message ?? '您的用量额度已耗尽，请联系管理员')
+        } else {
+          showToast('error', '请求过于频繁，请稍后再试')
+        }
+      } catch {
+        showToast('error', '请求过于频繁，请稍后再试')
+      }
+    } else if (res.status === 400) {
+      try {
+        const body = await res.clone().json()
+        const msg = typeof body === 'string' ? body : (body?.message || body?.title || '')
+        showToast('error', msg || '请求参数错误')
+      } catch {
+        showToast('error', '请求参数错误')
+      }
     } else if (res.status >= 500) {
       showToast('error', `服务器内部错误 (${res.status})，请稍后重试`)
     } else {
