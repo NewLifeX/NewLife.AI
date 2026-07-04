@@ -4,31 +4,31 @@
 
 /* =============================================================================
  * NewLife · 灵动科技 设计系统 v2
- * 主色：#5B5BFF（蓝紫）  辅色：#8B5CF6（紫）  高光：#22D3EE（青）
+ * 主色：#10B981（翠绿）  辅色：#34D399（浅翠绿）  高光：#22D3EE（青）
  * 风格：玻璃拟态 + 渐变高光 + 微动效
  * 兼容：--color-primary 保留为 brand-500 别名，支持 text-primary / bg-primary 工具类
  * ============================================================================= */
 
 @theme {
-  /* ── 品牌色阶（动态可被 SystemConfig 覆盖） ─────────────────────────── */
-  --color-brand-50: #eef0ff;
-  --color-brand-100: #dee1ff;
-  --color-brand-200: #c2c6ff;
-  --color-brand-300: #9ea3ff;
-  --color-brand-400: #7a7eff;
-  --color-brand-500: #5b5bff;
-  --color-brand-600: #4a4ae6;
-  --color-brand-700: #3b3bbf;
-  --color-brand-800: #2f2f99;
-  --color-brand-900: #25257a;
+  /* ── 品牌色阶（ChatAI 固定为翠绿色系） ─────────────────────────────── */
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
 
-  --color-accent-50: #f5f0ff;
-  --color-accent-100: #ebe0ff;
-  --color-accent-300: #c4a3ff;
-  --color-accent-400: #a87bff;
-  --color-accent-500: #8b5cf6;
-  --color-accent-600: #7a3ee6;
-  --color-accent-700: #6529c2;
+  --color-accent-50: #ecfdf5;
+  --color-accent-100: #d1fae5;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+  --color-accent-600: #059669;
+  --color-accent-700: #047857;
 
   --color-cyan-glow: #22d3ee;
   --color-pink-glow: #f472b6;
@@ -48,13 +48,13 @@
 
   /* ── 阴影体系 ───────────────────────────────────────────────────── */
   --shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --shadow-input: 0 4px 24px -8px rgba(91, 91, 255, 0.18), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-input: 0 4px 24px -8px rgba(16, 185, 129, 0.18), 0 2px 6px rgba(15, 23, 42, 0.04);
   --shadow-modal: 0 24px 60px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.04);
   --shadow-menu: 0 14px 40px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.04);
   --shadow-message: 0 1px 2px rgba(15, 23, 42, 0.05);
   --shadow-tooltip: 0 6px 18px -4px rgba(15, 23, 42, 0.18);
-  --shadow-glow: 0 0 0 4px rgba(91, 91, 255, 0.18);
-  --shadow-brand-glow: 0 8px 24px -8px rgba(91, 91, 255, 0.45), 0 2px 6px rgba(91, 91, 255, 0.18);
+  --shadow-glow: 0 0 0 4px rgba(16, 185, 129, 0.18);
+  --shadow-brand-glow: 0 8px 24px -8px rgba(16, 185, 129, 0.45), 0 2px 6px rgba(16, 185, 129, 0.18);
 
   /* ── 动效曲线 / 时长 ───────────────────────────────────────────── */
   --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
@@ -169,21 +169,21 @@ html.dark {
   --color-border-default: rgba(255, 255, 255, 0.10);
   --color-border-strong: rgba(255, 255, 255, 0.18);
 
-  --gradient-brand: linear-gradient(135deg, #6b6bff 0%, #9b6dff 100%);
-  --gradient-brand-soft: linear-gradient(135deg, rgba(91, 91, 255, 0.12) 0%, rgba(139, 92, 246, 0.10) 100%);
-  --gradient-aurora: radial-gradient(at 20% 20%, rgba(91, 91, 255, 0.42) 0%, transparent 55%),
-                     radial-gradient(at 80% 30%, rgba(139, 92, 246, 0.38) 0%, transparent 55%),
+  --gradient-brand: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(52, 211, 153, 0.10) 100%);
+  --gradient-aurora: radial-gradient(at 20% 20%, rgba(16, 185, 129, 0.42) 0%, transparent 55%),
+                     radial-gradient(at 80% 30%, rgba(52, 211, 153, 0.38) 0%, transparent 55%),
                      radial-gradient(at 60% 80%, rgba(34, 211, 238, 0.28) 0%, transparent 60%);
-  --gradient-mesh-bg: radial-gradient(at 0% 0%, rgba(91, 91, 255, 0.10) 0%, transparent 55%),
-                      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 55%),
+  --gradient-mesh-bg: radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.10) 0%, transparent 55%),
+                      radial-gradient(at 100% 0%, rgba(52, 211, 153, 0.08) 0%, transparent 55%),
                       radial-gradient(at 50% 100%, rgba(34, 211, 238, 0.06) 0%, transparent 55%);
 
   /* 暗色阴影：降低饱和、减弱模糊半径 */
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-input: 0 4px 24px -8px rgba(91, 91, 255, 0.30), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-input: 0 4px 24px -8px rgba(16, 185, 129, 0.30), 0 2px 6px rgba(0, 0, 0, 0.4);
   --shadow-modal: 0 24px 60px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --shadow-menu: 0 14px 40px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --shadow-brand-glow: 0 8px 24px -8px rgba(91, 91, 255, 0.55), 0 2px 6px rgba(91, 91, 255, 0.25);
+  --shadow-brand-glow: 0 8px 24px -8px rgba(16, 185, 129, 0.55), 0 2px 6px rgba(16, 185, 129, 0.25);
 }
 
 html, body {
@@ -207,11 +207,11 @@ body {
 
 /* 选中文本 */
 ::selection {
-  background-color: rgba(91, 91, 255, 0.22);
+  background-color: rgba(16, 185, 129, 0.22);
   color: inherit;
 }
 html.dark ::selection {
-  background-color: rgba(122, 126, 255, 0.32);
+  background-color: rgba(52, 211, 153, 0.32);
 }
 
 /* 主题切换过渡动效：仅在切换瞬间启用 */
@@ -244,7 +244,7 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.18);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(91, 91, 255, 0.45);
+  background-color: rgba(16, 185, 129, 0.45);
 }
 
 .no-scrollbar::-webkit-scrollbar {
