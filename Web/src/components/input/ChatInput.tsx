@@ -49,7 +49,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const { t } = useTranslation()
   const contentWidth = useSettingsStore((s) => s.contentWidth)
-  const widthClass = contentWidth === 'narrow' ? 'max-w-2xl' : contentWidth === 'wide' ? 'max-w-5xl' : 'max-w-3xl'
+  const widthClass = contentWidth != null && contentWidth <= 672 ? 'max-w-2xl' : contentWidth != null && contentWidth >= 1200 ? 'max-w-5xl' : 'max-w-3xl'
   const [value, setValue] = useState('')
 
   // 预设提示词自动填入输入框

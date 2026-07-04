@@ -897,6 +897,7 @@ export interface Skill {
   category?: string
   description?: string
   isSystem: boolean
+  type?: string
 }
 
 export async function fetchAllSkills(category?: string): Promise<Skill[]> {

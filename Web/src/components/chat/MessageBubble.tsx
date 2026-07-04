@@ -6,6 +6,14 @@ import { Icon } from '@/components/common/Icon'
 import { MessageActions } from './MessageActions'
 import { TypingCursor } from './TypingCursor'
 import { ToolCallBadge } from './ToolCallBadge'
+import { WidgetBlock, parseWidgetData } from './WidgetBlock'
+import { ChartBlock, parseChartData } from './ChartBlock'
+import { TimelineBlock, parseTimelineData } from './TimelineBlock'
+import { MindmapBlock, parseMindmapData } from './MindmapBlock'
+import { KanbanBlock, parseKanbanData } from './KanbanBlock'
+import { SlideBlock, parseSlideData } from './SlideBlock'
+import { SpreadsheetBlock, parseSpreadsheetData } from './SpreadsheetBlock'
+import { DocBlock, parseDocData } from './DocBlock'
 
 import { fetchAttachmentInfos, type AttachmentInfo } from '@/lib/api'
 import type { ToolCall, TokenUsage } from '@/types'
@@ -39,6 +47,51 @@ interface MessageBubbleProps {
   usage?: TokenUsage
   model?: string
   className?: string
+}
+
+/** 根据工具名称将结果分发到对应的可视化 Block 组件 */
+function renderToolResult(tc: ToolCall, showToolCalls: boolean) {
+  if (tc.name === 'build_ppt') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成幻灯片…</span></div>)
+    const sd = parseSlideData(tc.result)
+    if (sd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<SlideBlock data={sd} /></div>)
+  }
+  if (tc.name === 'build_excel') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成电子表格…</span></div>)
+    const xd = parseSpreadsheetData(tc.result)
+    if (xd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<SpreadsheetBlock data={xd} /></div>)
+  }
+  if (tc.name === 'build_doc') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成文档…</span></div>)
+    const dd = parseDocData(tc.result)
+    if (dd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<DocBlock data={dd} /></div>)
+  }
+  if (tc.name === 'show_widget' || tc.name === 'show_china_map') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成可视化…</span></div>)
+    const wd = parseWidgetData(tc.result)
+    if (wd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<WidgetBlock data={wd} /></div>)
+  }
+  if (tc.name === 'show_chart') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在渲染图表…</span></div>)
+    const cd = parseChartData(tc.result)
+    if (cd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<ChartBlock spec={cd} /></div>)
+  }
+  if (tc.name === 'show_timeline') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成时间轴…</span></div>)
+    const td = parseTimelineData(tc.result ?? '')
+    if (td) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<TimelineBlock key={td.timelineId} spec={td} /></div>)
+  }
+  if (tc.name === 'show_mindmap') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成思维导图…</span></div>)
+    const md = parseMindmapData(tc.result ?? '')
+    if (md) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<MindmapBlock spec={md} /></div>)
+  }
+  if (tc.name === 'show_kanban') {
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成看板…</span></div>)
+    const kd = parseKanbanData(tc.result ?? '')
+    if (kd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<KanbanBlock spec={kd} /></div>)
+  }
+  return null
 }
 
 export function MessageBubble({
@@ -252,10 +305,14 @@ export function MessageBubble({
           {thinkingBlock}
 
           {showToolCalls && toolCalls && toolCalls.length > 0 && (
-            <div className="flex items-center flex-wrap gap-2 mb-4">
-              {toolCalls.map((tc) => (
-                <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />
-              ))}
+            <div className="flex flex-col gap-3 mb-4">
+              {toolCalls.map((tc) => {
+                const resultBlock = renderToolResult(tc, showToolCalls)
+                if (resultBlock) return resultBlock
+                return (
+                  <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />
+                )
+              })}
             </div>
           )}
 

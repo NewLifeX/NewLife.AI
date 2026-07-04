@@ -275,3 +275,28 @@ export async function resolveRenderableMermaidCode(code: string): Promise<string
 
   return null
 }
+
+/** 已知 Mermaid 图表类型的起始关键词（不区分大小写） */
+const MERMAID_TYPE_RE =
+  /^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram|pie|gantt|gitGraph|journey|timeline|mindmap|quadrantChart|requirementDiagram|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|xychart-beta)\b/i
+
+/** HTML 中 mermaid 占位元素的正则 */
+const HTML_MERMAID_RE = /<(?:pre|div)[^>]+class="[^"]*\bmermaid\b[^"]*"[^>]*>([\s\S]*?)<\/(?:pre|div)>/i
+
+/** 判断字符串是否为 Mermaid 图表语法 */
+export function isMermaidCode(code: string): boolean {
+  const stripped = code.trimStart().replace(/^(?:%%[^\n]*\n?)+/, '')
+  return MERMAID_TYPE_RE.test(stripped.trimStart())
+}
+
+/** 从 show_widget 的 widgetCode 中提取可渲染的 Mermaid 源码 */
+export function extractMermaidCode(code: string): string | null {
+  const trimmed = code.trimStart()
+  if (isMermaidCode(trimmed)) return trimmed
+  const m = HTML_MERMAID_RE.exec(trimmed)
+  if (m) {
+    const inner = m[1].trim()
+    if (isMermaidCode(inner)) return inner
+  }
+  return null
+}
