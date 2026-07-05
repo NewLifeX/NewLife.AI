@@ -131,6 +131,9 @@ public class ChartToolService(ILog log)
             JsonObject jo => jo,
             JsonElement je when je.ValueKind == System.Text.Json.JsonValueKind.Object => JsonSerializer.Deserialize<JsonObject>(je.GetRawText()),
             String str => TryParseJsonObject(str),
+            // 工具框架将 JSON 对象反序列化为 Dictionary<String, Object?>，
+            // 需要转为 JsonObject 才能提取内嵌的 type 字段
+            IDictionary<String, Object?> dict => TryParseJsonObject(JsonSerializer.Serialize(dict)),
             _ => null,
         };
 
