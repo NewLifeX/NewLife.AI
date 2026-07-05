@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Data;
+using System.Text;
 using System.Text.RegularExpressions;
 using NewLife;
 using NewLife.Data;
@@ -59,14 +60,8 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
 
         log.Info("[SearchTable] 匹配 {0} 个表（过滤后 {1} 个）", tables.Count, allowedTables.Count);
 
-        // 构建连接信息
-        var connInfo = BuildConnectionInfo(connName, roleIds);
-
-        // 导出 XML（含表名、注释、字段信息、索引信息）
-        var xml = allowedTables.Count > 0 ? DAL.Export(allowedTables) : "<Tables />";
-
-        // 拼接结果：连接信息 + XML 表结构
-        return connInfo + "\r\n" + (xml ?? "");
+        // 按连接分组输出：每组先写连接头，再跟该连接下的表 XML
+        return BuildGroupedResult(allowedTables, connName, roleIds);
     }
 
     /// <summary>在指定数据库连接上执行SQL查询，返回结果集</summary>
@@ -103,7 +98,12 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
 
         // 3. 获取 DAL
         var dal = GetDal(connName);
-        if (dal == null) throw new InvalidOperationException($"无法获取数据库连接 [{connName}]，请检查连接配置");
+        if (dal == null)
+        {
+            var available = GetAvailableConnNames(null, roleIds);
+            var hint = available.Count > 0 ? $"，可用连接: {String.Join(", ", available)}" : "";
+            throw new InvalidOperationException($"无法获取数据库连接 [{connName}]，请检查连接配置{hint}");
+        }
 
         // 4. 执行SQL
         try
@@ -275,52 +275,94 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         }
     }
 
-    /// <summary>构建数据库连接信息文本</summary>
-    private static String BuildConnectionInfo(String? connName, Int32[] roleIds)
+    /// <summary>收集可用连接名列表</summary>
+    /// <param name="connName">限定连接名，为空则收集所有</param>
+    /// <param name="roleIds">角色ID列表</param>
+    /// <returns>去重排序后的连接名列表</returns>
+    private static List<String> GetAvailableConnNames(String? connName, Int32[] roleIds)
     {
-        // 收集要展示的连接名
         var names = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
         if (!connName.IsNullOrEmpty())
         {
             names.Add(connName);
-        }
-        else
-        {
-            // 从 DbAccessConfig 获取（按角色过滤）
-            var configs = DbAccessConfig.FindAllByRole(roleIds);
-            foreach (var cfg in configs)
-            {
-                if (!cfg.ConnName.IsNullOrEmpty())
-                    names.Add(cfg.ConnName);
-            }
-
-            // 补充 DAL.ConnStrs 中未在配置中出现的连接
-            if (DAL.ConnStrs != null)
-            {
-                foreach (var kv in DAL.ConnStrs)
-                {
-                    if (!kv.Key.IsNullOrEmpty())
-                        names.Add(kv.Key);
-                }
-            }
+            return [.. names.OrderBy(n => n)];
         }
 
-        var lines = new List<String> { "数据库连接列表:" };
-        foreach (var name in names)
+        // 从 DbAccessConfig 获取（按角色过滤）
+        var configs = DbAccessConfig.FindAllByRole(roleIds);
+        foreach (var cfg in configs)
         {
-            try
+            if (!cfg.ConnName.IsNullOrEmpty())
+                names.Add(cfg.ConnName);
+        }
+
+        // 补充 DAL.ConnStrs 中未在配置中出现的连接
+        if (DAL.ConnStrs != null)
+        {
+            foreach (var kv in DAL.ConnStrs)
             {
-                var dal = DAL.Create(name);
-                var dbType = dal.DbType + "";
-                var version = dal.Db?.ServerVersion ?? "-";
-                lines.Add($"- ConnName: {name}, DbType: {dbType}, Version: {version}");
-            }
-            catch
-            {
-                lines.Add($"- ConnName: {name}, DbType: Error, Version: -");
+                if (!kv.Key.IsNullOrEmpty())
+                    names.Add(kv.Key);
             }
         }
-        return String.Join("\r\n", lines);
+
+        return [.. names.OrderBy(n => n)];
+    }
+
+    /// <summary>构建单个连接的头信息</summary>
+    /// <param name="connName">连接名</param>
+    /// <returns>连接头文本</returns>
+    private static String BuildConnectionHeader(String connName)
+    {
+        try
+        {
+            var dal = DAL.Create(connName);
+            var dbType = dal.DbType + "";
+            var version = dal.Db?.ServerVersion ?? "-";
+            return $"## 连接: {connName} ({dbType}, {version})";
+        }
+        catch
+        {
+            return $"## 连接: {connName} (不可用)";
+        }
+    }
+
+    /// <summary>按连接分组构建表结构搜索结果</summary>
+    /// <param name="allowedTables">已过滤的表列表</param>
+    /// <param name="connName">限定连接名</param>
+    /// <param name="roleIds">角色ID列表</param>
+    /// <returns>分组后的搜索结果文本</returns>
+    private static String BuildGroupedResult(List<IDataTable> allowedTables, String? connName, Int32[] roleIds)
+    {
+        if (allowedTables.Count == 0)
+        {
+            var availableConns = GetAvailableConnNames(connName, roleIds);
+            var connList = availableConns.Count > 0
+                ? "可用连接: " + String.Join(", ", availableConns)
+                : "无可用连接";
+            return $"未找到匹配表。{connList}";
+        }
+
+        // 按连接名分组
+        var groups = allowedTables
+            .GroupBy(t => t.ConnName ?? "")
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        var sb = new StringBuilder();
+        foreach (var group in groups)
+        {
+            var header = BuildConnectionHeader(group.Key);
+            sb.AppendLine(header);
+
+            var groupTables = group.ToList();
+            var xml = DAL.Export(groupTables);
+            if (!xml.IsNullOrEmpty())
+                sb.AppendLine(xml);
+        }
+
+        return sb.ToString();
     }
 
     #endregion
