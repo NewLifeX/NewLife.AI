@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -47,7 +48,33 @@ public class MindmapToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (outline.IsNullOrEmpty())
+        {
+            // 记录关键上下文便于排查"参数已生成但解析后为空"类问题
+            log.Warn("[Mindmap] outline 为空！Title={0}，ToolCallId={1}",
+                title, context?.ToolCallId);
             throw new ToolException("参数错误：outline 不能为空", "请使用 Markdown 大纲格式（# / ## / ###）重新构建思维导图内容后重试，或直接回复用户说明无法生成思维导图。示例：# 中心主题\n## 一级分支\n### 子节点");
+        }
+
+        // 防御：限制 outline 最大长度（约 8KB），过大的大纲会导致 JSON 解析/API 传输问题
+        const Int32 maxOutlineBytes = 8192;
+        var outlineByteCount = Encoding.UTF8.GetByteCount(outline);
+        if (outlineByteCount > maxOutlineBytes)
+        {
+            log.Warn("[Mindmap] outline 过大被截断，原始 {0} bytes → 截断为 {1} bytes。Title={2}",
+                outlineByteCount, maxOutlineBytes, title);
+            // 按 UTF-8 字节边界安全截断，避免切割多字节字符
+            var chars = outline.ToCharArray();
+            var byteCount = 0;
+            var cutIndex = 0;
+            for (var i = 0; i < chars.Length; i++)
+            {
+                var charBytes = Encoding.UTF8.GetByteCount(chars, i, 1);
+                if (byteCount + charBytes > maxOutlineBytes) break;
+                byteCount += charBytes;
+                cutIndex = i + 1;
+            }
+            outline = outline[..cutIndex];
+        }
 
         var mindmapId = context?.ToolCallId;
         if (mindmapId.IsNullOrEmpty()) mindmapId = $"mm_{Guid.NewGuid():N}";

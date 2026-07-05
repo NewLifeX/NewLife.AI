@@ -2,6 +2,7 @@
 using System.Reflection;
 using NewLife.AI.Models;
 using NewLife.AI.Interfaces;
+using NewLife.Log;
 using NewLife.Model;
 using NewLife.Serialization;
 
@@ -423,10 +424,12 @@ public class ToolRegistry : IToolProvider
         {
             parsed = JsonParser.Decode(arguments);
         }
-        catch
+        catch (Exception ex)
         {
             // 参数 JSON 格式异常（如流式截断导致不完整 JSON，或 LLM 输出含匿名对象等畸形结构）
             // 后备策略：按参数名逐一提取字段原始 JSON，放宽整体解析要求
+            XTrace.WriteLine("[ToolRegistry] JSON 解析失败，Length={0}，错误：{1}，参数前200字符：{2}",
+                arguments?.Length ?? 0, ex.Message, arguments?.Substring(0, Math.Min(arguments?.Length ?? 0, 200)));
             for (var i = 0; i < parameters.Length; i++)
             {
                 var p = parameters[i];
