@@ -28,12 +28,12 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
 
     #region 表架构搜索
 
-    /// <summary>搜索匹配关键字的数据库表，返回 IDataTable（含字段、索引信息），要求关键字非空</summary>
+    /// <summary>搜索匹配关键字的数据库表，按连接名分组返回</summary>
     /// <param name="keywords">搜索关键字，多个用逗号或空格分隔，不能为空</param>
     /// <param name="connName">限定连接名，为空则搜索所有连接</param>
     /// <param name="maxResults">最大返回条数，默认 10</param>
-    /// <returns>匹配的表架构列表（IDataTable，含字段和索引信息）</returns>
-    public IList<IDataTable> SearchTables(String keywords, String? connName = null, Int32 maxResults = 10)
+    /// <returns>匹配的表字典（key=连接名, value=该连接下匹配的表列表）</returns>
+    public IDictionary<String, IList<IDataTable>> SearchTables(String keywords, String? connName = null, Int32 maxResults = 10)
     {
         if (keywords.IsNullOrEmpty()) throw new ArgumentNullException(nameof(keywords));
 
@@ -67,7 +67,7 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
             }
         }
 
-        // 评分过滤与排序，取前 maxResults 条
+        // 评分过滤与排序，取前 maxResults 条，按连接名分组返回
         return allTables
             .Select(table =>
             {
@@ -80,7 +80,8 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
             .OrderByDescending(x => x.Score)
             .Take(maxResults)
             .Select(x => x.Table)
-            .ToList();
+            .GroupBy(t => t.ConnName ?? "")
+            .ToDictionary(g => g.Key, g => (IList<IDataTable>)g.ToList(), StringComparer.OrdinalIgnoreCase);
     }
     #endregion
 

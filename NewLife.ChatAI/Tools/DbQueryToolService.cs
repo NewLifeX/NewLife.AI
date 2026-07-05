@@ -32,7 +32,7 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         Triggers = "表结构,数据库表,表字段,数据库有哪些表,有什么表",
         AssistantTriggers = "数据库表,表结构,search_table,数据库连接,连接名")]
     [DisplayName("搜索数据库表")]
-    [Description("根据关键字搜索匹配的数据库表结构，返回表名、注释、字段信息、所属连接和数据库类型")]
+    [Description("根据关键字搜索匹配的数据库表结构。返回包含两部分：① 表→连接映射表（Markdown表格，明确每个表属于哪个连接，同名表在不同连接下独立列出）；② 各连接下的表结构 XML 详情。后续 query_sql 须使用映射表中指定的连接名")]
     public String SearchTable(
         [Description("搜索关键字，多个用逗号或空格分隔")] String keywords,
         [Description("限定连接名，为空则搜索所有连接")] String? connName = null,
@@ -43,25 +43,28 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         log.Info("[SearchTable] keywords={0}, connName={1}", keywords, connName);
 
         var roleIds = GetRoleIds(context);
-        var tables = schemaService.SearchTables(keywords, connName);
+        var groupedTables = schemaService.SearchTables(keywords, connName);
 
-        // 访问控制过滤（白名单+黑名单均支持通配符 * 和 ?，黑名单在任意情况下优先拦截）
-        var allowedTables = new List<IDataTable>();
-        foreach (var table in tables)
+        // 访问控制过滤：对每个连接下的表列表逐表检查
+        var filtered = new Dictionary<String, IList<IDataTable>>(StringComparer.OrdinalIgnoreCase);
+        var totalMatched = 0;
+        foreach (var kv in groupedTables)
         {
-            var conn = table.ConnName ?? "";
-            var name = table.TableName ?? "";
+            totalMatched += kv.Value.Count;
 
-            if (!DbAccessConfig.IsTableAllowed(conn, name, roleIds))
-                continue;
-
-            allowedTables.Add(table);
+            var allowed = new List<IDataTable>();
+            foreach (var table in kv.Value)
+            {
+                if (DbAccessConfig.IsTableAllowed(kv.Key, table.TableName ?? "", roleIds))
+                    allowed.Add(table);
+            }
+            if (allowed.Count > 0)
+                filtered[kv.Key] = allowed;
         }
 
-        log.Info("[SearchTable] 匹配 {0} 个表（过滤后 {1} 个）", tables.Count, allowedTables.Count);
+        log.Info("[SearchTable] 匹配 {0} 个表（过滤后 {1} 个）", totalMatched, filtered.Sum(kv => kv.Value.Count));
 
-        // 按连接分组输出：每组先写连接头，再跟该连接下的表 XML
-        return BuildGroupedResult(allowedTables, connName, roleIds);
+        return BuildGroupedResult(filtered, connName, roleIds);
     }
 
     /// <summary>在指定数据库连接上执行SQL查询，返回结果集</summary>
@@ -73,9 +76,9 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         Triggers = "执行SQL,运行SQL,SQL查询,SQL语句",
         AssistantTriggers = "SQL查询,执行查询,query_sql,SQL语句")]
     [DisplayName("查询数据库")]
-    [Description("在指定数据库连接上执行SQL查询，返回结果集。仅允许SELECT和安全的INSERT/UPDATE操作，禁止DDL和DELETE")]
+    [Description("在指定数据库连接上执行SQL查询，返回结果集。仅允许SELECT和安全的INSERT/UPDATE操作，禁止DDL和DELETE。connName 必须与 search_table 返回的映射表中'所属连接'列一致")]
     public String QuerySql(
-        [Description("数据库连接名")] String connName,
+        [Description("数据库连接名（必须与 search_table 返回的映射表中'所属连接'列一致）")] String connName,
         [Description("要执行的SQL语句（仅允许SELECT/INSERT/UPDATE）")] String sql,
         ToolCallContext? context = null)
     {
@@ -329,13 +332,13 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
     }
 
     /// <summary>按连接分组构建表结构搜索结果</summary>
-    /// <param name="allowedTables">已过滤的表列表</param>
+    /// <param name="groupedTables">已按连接名分组的表字典（key=连接名, value=该连接下的表列表）</param>
     /// <param name="connName">限定连接名</param>
     /// <param name="roleIds">角色ID列表</param>
     /// <returns>分组后的搜索结果文本</returns>
-    private static String BuildGroupedResult(List<IDataTable> allowedTables, String? connName, Int32[] roleIds)
+    private static String BuildGroupedResult(IDictionary<String, IList<IDataTable>> groupedTables, String? connName, Int32[] roleIds)
     {
-        if (allowedTables.Count == 0)
+        if (groupedTables.Count == 0)
         {
             var availableConns = GetAvailableConnNames(connName, roleIds);
             var connList = availableConns.Count > 0
@@ -344,25 +347,57 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
             return $"未找到匹配表。{connList}";
         }
 
-        // 按连接名分组
-        var groups = allowedTables
-            .GroupBy(t => t.ConnName ?? "")
-            .OrderBy(g => g.Key)
-            .ToList();
+        // 按连接名排序
+        var groups = groupedTables.OrderBy(kv => kv.Key).ToList();
 
         var sb = new StringBuilder();
-        foreach (var group in groups)
+
+        // 1. 表→连接映射摘要（AI 后续调用 query_sql 时据此选择正确连接）
+        sb.AppendLine("## 表→连接映射");
+        sb.AppendLine("| 表名 | 所属连接 | 数据库类型 | 说明 |");
+        sb.AppendLine("|------|---------|-----------|------|");
+        foreach (var kv in groups)
         {
-            var header = BuildConnectionHeader(group.Key);
+            var cn = kv.Key;
+            var dbType = GetConnectionDbType(cn);
+            foreach (var table in kv.Value.OrderBy(t => t.TableName))
+            {
+                var tableName = table.TableName ?? "";
+                var desc = table.Description ?? "";
+                sb.AppendLine($"| {tableName} | {cn} | {dbType} | {desc} |");
+            }
+        }
+        sb.AppendLine();
+
+        // 2. 分隔：详细表结构 XML
+        sb.AppendLine("---");
+
+        // 3. 每个连接的表结构详情
+        foreach (var kv in groups)
+        {
+            var header = BuildConnectionHeader(kv.Key);
             sb.AppendLine(header);
 
-            var groupTables = group.ToList();
-            var xml = DAL.Export(groupTables);
+            var xml = DAL.Export(kv.Value);
             if (!xml.IsNullOrEmpty())
                 sb.AppendLine(xml);
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>获取连接的数据库类型（仅名称，不含版本）</summary>
+    private static String GetConnectionDbType(String connName)
+    {
+        try
+        {
+            var dal = DAL.Create(connName);
+            return dal.DbType + "";
+        }
+        catch
+        {
+            return "-";
+        }
     }
 
     #endregion
