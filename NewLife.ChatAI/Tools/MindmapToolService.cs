@@ -46,7 +46,8 @@ public class MindmapToolService(ILog log)
         [Description("最大可见深度，1=仅一级分支，2=一二级，默认无限制。节点密集时建议设为 2 保持可读性")] Int32? maxDepth = null,
         ToolCallContext? context = null)
     {
-        if (outline.IsNullOrEmpty()) throw new ArgumentException("outline 不能为空", nameof(outline));
+        if (outline.IsNullOrEmpty())
+            throw new ToolException("参数错误：outline 不能为空", "请使用 Markdown 大纲格式（# / ## / ###）重新构建思维导图内容后重试，或直接回复用户说明无法生成思维导图。示例：# 中心主题\n## 一级分支\n### 子节点");
 
         var mindmapId = context?.ToolCallId;
         if (mindmapId.IsNullOrEmpty()) mindmapId = $"mm_{Guid.NewGuid():N}";

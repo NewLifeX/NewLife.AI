@@ -29,9 +29,13 @@ public class BuildExcelToolService(ILog log)
         [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal），决定表头颜色")] String? theme = null,
         ToolCallContext? context = null)
     {
-        if (sheets.IsNullOrEmpty()) throw new ArgumentException("sheets 不能为空", nameof(sheets));
-        var sheetList = sheets.ToJsonEntity<ExcelSheetModel[]>() ?? throw new ArgumentException("sheets JSON 格式错误");
-        if (sheetList.Length == 0) throw new ArgumentException("sheets 不能为空数组");
+        if (sheets.IsNullOrEmpty())
+            throw new ToolException("参数错误：sheets 不能为空", "请提供工作表 JSON 数组后重试，或直接回复用户说明无法生成 Excel。");
+        var sheetList = sheets.ToJsonEntity<ExcelSheetModel[]>();
+        if (sheetList == null)
+            throw new ToolException("sheets JSON 格式错误", "请检查 JSON 语法后重试，或直接回复用户说明无法生成 Excel。");
+        if (sheetList.Length == 0)
+            throw new ToolException("sheets 不能为空数组", "请提供至少一个工作表后重试，或直接回复用户说明无法生成 Excel。");
 
         log.Info("[BuildExcel] 开始生成：{0}，{1} 个工作表，主题：{2}", title, sheetList.Length, theme ?? "blue");
 

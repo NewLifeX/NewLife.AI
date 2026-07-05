@@ -54,17 +54,19 @@ public class KanbanToolService(ILog log)
         [Description(@"泳道定义 JSON 数组（layout=swimlane 时使用）。示例：[{""id"":""sl1"",""title"":""前端团队"",""columnIds"":[""todo"",""doing""]},{""id"":""sl2"",""title"":""后端团队"",""columnIds"":[""todo"",""doing""]}]")] String? swimlanes = null,
         ToolCallContext? context = null)
     {
-        if (columns.IsNullOrEmpty()) throw new ArgumentException("columns 不能为空", nameof(columns));
+        if (columns.IsNullOrEmpty())
+            throw new ToolException("参数错误：columns 不能为空", "请提供列定义 JSON 数组后重试，或直接回复用户说明无法生成看板。示例：[{\"id\":\"todo\",\"title\":\"待办\",\"cards\":[...]}]");
 
         JsonNode columnsNode;
         try
         {
-            columnsNode = JsonNode.Parse(columns)
-                ?? throw new ArgumentException("columns 解析后为 null", nameof(columns));
+            columnsNode = JsonNode.Parse(columns);
+            if (columnsNode == null)
+                throw new ToolException("columns 解析后为 null", "请检查 JSON 格式后重试，或直接回复用户说明无法生成看板。");
         }
         catch (JsonException ex)
         {
-            throw new ArgumentException($"columns 必须是合法的 JSON 数组：{ex.Message}", nameof(columns));
+            throw new ToolException($"columns JSON 格式错误：{ex.Message}", $"请检查 JSON 语法后重试，或直接回复用户说明情况。");
         }
 
         var kanbanId = context?.ToolCallId;

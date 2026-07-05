@@ -16,6 +16,9 @@ public class ToolError
     /// <summary>人类可读的错误描述，告知模型发生了什么</summary>
     public String Hint { get; set; } = String.Empty;
 
+    /// <summary>面向用户的错误描述（简短，通过 SSE 发送到前端展示）。为空时回退到 <see cref="Hint"/></summary>
+    public String? ForUser { get; set; }
+
     /// <summary>可操作的修复建议（可为空），提示模型下一步应如何修正</summary>
     public String? SuggestedFix { get; set; }
 
@@ -23,8 +26,9 @@ public class ToolError
     /// <param name="errorCode">错误类型码</param>
     /// <param name="hint">错误描述</param>
     /// <param name="suggestedFix">修复建议（可为空）</param>
-    public static ToolError Create(String errorCode, String hint, String? suggestedFix = null)
-        => new() { ErrorCode = errorCode, Hint = hint, SuggestedFix = suggestedFix };
+    /// <param name="forUser">面向用户的错误描述（可为空，默认回退到 hint）</param>
+    public static ToolError Create(String errorCode, String hint, String? suggestedFix = null, String? forUser = null)
+        => new() { ErrorCode = errorCode, Hint = hint, SuggestedFix = suggestedFix, ForUser = forUser ?? hint };
 
     /// <summary>将错误序列化为 JSON 字符串，用作工具执行结果回传给模型</summary>
     public String ToJson()
@@ -35,6 +39,13 @@ public class ToolError
         sb.Append("\",\"hint\":\"");
         AppendJsonEscaped(sb, Hint);
         sb.Append('"');
+        var forUser = ForUser ?? Hint;
+        if (!forUser.IsNullOrEmpty())
+        {
+            sb.Append(",\"for_user\":\"");
+            AppendJsonEscaped(sb, forUser);
+            sb.Append('"');
+        }
         if (!SuggestedFix.IsNullOrEmpty())
         {
             sb.Append(",\"suggested_fix\":\"");

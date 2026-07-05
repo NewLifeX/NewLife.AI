@@ -43,7 +43,8 @@ public class TimelineToolService(ILog log)
         [Description("条目间距：compact（紧凑 12px）/ normal（默认 20px）/ relaxed（宽松 32px）。≤5 条精选事件推荐 relaxed，10+ 条推荐 compact")] String? density = null,
         ToolCallContext? context = null)
     {
-        if (items.IsNullOrEmpty()) throw new ArgumentException("items 不能为空", nameof(items));
+        if (items.IsNullOrEmpty())
+            throw new ToolException("参数错误：items 不能为空", "请重新构建时间轴事件 JSON 数组后重试，或直接回复用户说明无法生成时间轴。示例：[{\"date\":\"2024-01\",\"title\":\"v1.0发布\"}]");
 
         JsonNode itemsNode;
         try
@@ -53,7 +54,7 @@ public class TimelineToolService(ILog log)
         }
         catch (JsonException ex)
         {
-            throw new ArgumentException($"items 必须是合法的 JSON 数组：{ex.Message}", nameof(items));
+            throw new ToolException($"items JSON 格式错误：{ex.Message}", $"请检查 JSON 语法后重试，确保每项包含 date 和 title 字段，或直接回复用户说明情况。");
         }
 
         var timelineId = context?.ToolCallId;

@@ -49,6 +49,54 @@ interface MessageBubbleProps {
   className?: string
 }
 
+/** 工具调用中文显示名 */
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  show_timeline: '时间轴',
+  show_chart: '图表',
+  show_widget: '可视化',
+  show_china_map: '地图',
+  show_mindmap: '思维导图',
+  show_kanban: '看板',
+  build_ppt: '幻灯片',
+  build_excel: '电子表格',
+  build_doc: '文档',
+  ask_user: '提问',
+}
+
+/** 检测技术性内部错误（如 JSON 解析失败），不应直接暴露给用户 */
+function isInternalError(msg: string): boolean {
+  return /JSON 格式错误|LineNumber|BytePositionInLine|Expected either|is invalid after a value/i.test(msg)
+}
+
+/** 从 ToolCall 中提取结构化错误/去重信息（后端通过 ToolException / ToolError / 去重逻辑注入） */
+function getToolOutputInfo(tc: ToolCall): { type: 'error' | 'duplicate'; forUser: string } | null {
+  if (tc.status === 'error') {
+    // ToolException → tc.result 为纯文本，优先显示
+    if (tc.result && !tc.result.startsWith('{')) {
+      // 过滤技术性内部错误，不暴露给用户
+      if (isInternalError(tc.result)) return { type: 'error', forUser: '' }
+      return { type: 'error', forUser: tc.result }
+    }
+    // 通用异常 → tc.result 为 ToolError JSON，提取 for_user 或 hint
+    if (tc.result) {
+      try {
+        const parsed = JSON.parse(tc.result) as Record<string, unknown>
+        const msg = (parsed.for_user ?? parsed.hint ?? '') as string
+        if (msg) return { type: 'error', forUser: msg }
+      } catch { /* ignore */ }
+    }
+    return { type: 'error', forUser: '' }
+  }
+  // 去重调用（status='done' 但 result 为 {"kind":"duplicate","for_user":"..."}）
+  if (tc.result) {
+    try {
+      const parsed = JSON.parse(tc.result) as Record<string, unknown>
+      if (parsed.kind === 'duplicate') return { type: 'duplicate', forUser: (parsed.for_user as string) ?? '' }
+    } catch { /* ignore */ }
+  }
+  return null
+}
+
 /** 根据工具名称将结果分发到对应的可视化 Block 组件 */
 function renderToolResult(tc: ToolCall, showToolCalls: boolean) {
   if (tc.name === 'build_ppt') {
@@ -90,6 +138,24 @@ function renderToolResult(tc: ToolCall, showToolCalls: boolean) {
     if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成看板…</span></div>)
     const kd = parseKanbanData(tc.result ?? '')
     if (kd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<KanbanBlock spec={kd} /></div>)
+  }
+  // 检查工具调用有无结构化错误/去重信息（来自后端 ToolException / 去重逻辑）
+  const outputInfo = getToolOutputInfo(tc)
+  if (outputInfo) {
+    if (outputInfo.type === 'error') {
+      return (
+        <div key={tc.id} className="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} 生成失败`}
+        </div>
+      )
+    }
+    if (outputInfo.type === 'duplicate') {
+      return (
+        <div key={tc.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
+          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} 已跳过（重复调用）`}
+        </div>
+      )
+    }
   }
   return null
 }
@@ -304,11 +370,12 @@ export function MessageBubble({
         >
           {thinkingBlock}
 
-          {showToolCalls && toolCalls && toolCalls.length > 0 && (
+          {toolCalls && toolCalls.length > 0 && (
             <div className="flex flex-col gap-3 mb-4">
               {toolCalls.map((tc) => {
                 const resultBlock = renderToolResult(tc, showToolCalls)
                 if (resultBlock) return resultBlock
+                if (!showToolCalls) return null
                 return (
                   <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />
                 )

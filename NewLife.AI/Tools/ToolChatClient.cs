@@ -157,7 +157,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                         if (!_sessionDedupKeys.Add(key))
                         {
                             Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", tc.Function.Name);
-                            tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行"));
+                            var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
+                            tasks[i] = Task.FromResult<IToolResult>(
+                                new ToolResult(
+                                    ToolContent.ForUser(dupInfo),
+                                    ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行")
+                                )
+                            );
                             continue;
                         }
                     }
@@ -165,7 +171,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     if (!dedupKeys.Add(key))
                     {
                         Log.Info("跳过同轮重复工具调用 {0}（同名同参）", tc.Function.Name);
-                        tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行"));
+                        var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
+                        tasks[i] = Task.FromResult<IToolResult>(
+                            new ToolResult(
+                                ToolContent.ForUser(dupInfo),
+                                ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行")
+                            )
+                        );
                         continue;
                     }
                 }
@@ -388,7 +400,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                         {
                             Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", tc.Function.Name);
                             isDedup[i] = true;
-                            tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行"));
+                            var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
+                            tasks[i] = Task.FromResult<IToolResult>(
+                                new ToolResult(
+                                    ToolContent.ForUser(dupInfo),
+                                    ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行")
+                                )
+                            );
                             // 不 yield start 事件，前端不渲染重复卡片
                             continue;
                         }
@@ -398,7 +416,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     {
                         Log.Info("跳过同轮重复工具调用 {0}（同名同参已执行）", tc.Function.Name);
                         isDedup[i] = true;
-                        tasks[i] = Task.FromResult<IToolResult>(new ToolResult($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行"));
+                        var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
+                        tasks[i] = Task.FromResult<IToolResult>(
+                            new ToolResult(
+                                ToolContent.ForUser(dupInfo),
+                                ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行")
+                            )
+                        );
                         // 不 yield start 事件，前端不渲染重复卡片
                         continue;
                     }
@@ -432,8 +456,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     Content = TruncateResult(llmContent)
                 });
 
-                // SSE 事件：重复工具调用不发结果到前端（null），前端收到后不渲染卡片
-                var userContent = isDedup[i] ? null : GetUserContent(toolResult);
+                // SSE 事件：取用户内容（重复工具调用也会发送结构化 JSON 前端）
+                var userContent = GetUserContent(toolResult);
                 var eventType = toolResult.IsError ? "error" : "done";
                 yield return new ChatResponse
                 {
@@ -588,6 +612,31 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             span?.AppendTag(callResult);
             await FireCallbackAsync(callResult).ConfigureAwait(false);
             return callResult;
+        }
+        catch (ToolException toolEx)
+        {
+            // 工具方法抛出的结构化异常（含 ForUser/ForLlm 受众分离），包装为 ToolResult 以保留受众信息
+            span?.SetError(toolEx, null);
+
+            // 自动构建 ForLlm——工具只需提供差异化恢复指引，框架负责拼接：
+            // 1. 拼接 ForUser 错误描述（若 ForLlm 未以 ForUser 开头，避免重复）
+            // 2. 拼接工具名前缀 [xxx 调用失败]（若工具未自带）
+            var toolPrefix = $"[{toolName} 调用失败] ";
+            var llmContent = toolEx.ForLlm;
+            if (!llmContent.IsNullOrEmpty() &&
+                !llmContent.StartsWith(toolEx.ForUser ?? String.Empty, StringComparison.Ordinal))
+            {
+                llmContent = $"{toolEx.ForUser}。{llmContent}";
+            }
+            if (!llmContent.StartsWith(toolPrefix))
+                llmContent = $"{toolPrefix}{llmContent}";
+
+            var result = new ToolResult(
+                ToolContent.ForUser(toolEx.ForUser),
+                ToolContent.ForLlm(llmContent))
+            { IsError = true };
+            await FireCallbackAsync(result).ConfigureAwait(false);
+            return result;
         }
         catch (Exception ex)
         {

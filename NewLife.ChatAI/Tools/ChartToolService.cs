@@ -64,32 +64,35 @@ public class ChartToolService(ILog log)
         [Description(@"JSON 对象，结构见说明。bar示例：{""xAxis"":[""Q1"",""Q2""],""series"":[{""name"":""收入"",""data"":[100,200]}],""unit"":""万元""} ；radar多系列示例：{""indicators"":[{""name"":""速度"",""max"":100},{""name"":""力量"",""max"":100}],""series"":[{""name"":""A"",""data"":[80,90]},{""name"":""B"",""data"":[70,85]}]} ；⚠️radar要求：indicators数量==每个series[i].data长度，data必须是纯数值数组")] Object data,
         ToolCallContext? context = null)
     {
-        if (data == null) throw new ArgumentNullException(nameof(data));
+        if (data == null)
+            throw new ToolException("参数错误：data 不能为 null", "请提供合法的 JSON 数据对象后重试，或直接回复用户说明无法生成图表。数据格式参见工具说明。");
 
         // 兼容：AI 常把 type 写进 data 内部（如 {"data":{"type":"bar",...}}），从 data 中自动提取
         if (type.IsNullOrEmpty())
             (type, data) = TryExtractTypeFromData(type, data);
 
         if (!_validTypes.Contains(type))
-            throw new ArgumentException($"不支持的图表类型 '{type}'，可选：{String.Join(", ", _validTypes)}", nameof(type));
+            throw new ToolException($"不支持的图表类型 '{type}'", $"请选择有效类型后重试，或直接回复用户说明情况。");
 
         var normalizedType = type.ToLower();
 
         // 统一转为 JSON 字符串：LLM 可能传 JSON 对象（推荐）或已转义的 JSON 字符串（兼容旧版）
         var dataStr = data as String;
         if (dataStr == null) dataStr = JsonSerializer.Serialize(data);
-        if (dataStr.IsNullOrEmpty()) throw new ArgumentException("data 不能为空", nameof(data));
+        if (dataStr.IsNullOrEmpty())
+            throw new ToolException("参数错误：data 不能为空", "请提供合法的 JSON 数据对象后重试，或直接回复用户说明无法生成图表。");
 
         // 验证并解析 data 为 JSON 节点（确保合法 JSON，同时准备嵌入返回值）
         JsonNode dataNode;
         try
         {
-            dataNode = JsonNode.Parse(dataStr)
-                ?? throw new ArgumentException("data 解析后为 null", nameof(data));
+            dataNode = JsonNode.Parse(dataStr);
+            if (dataNode == null)
+                throw new ToolException("data 解析后为 null", "请检查 JSON 格式后重试，或直接回复用户说明无法生成图表。");
         }
         catch (JsonException ex)
         {
-            throw new ArgumentException($"data 必须是合法的 JSON 对象：{ex.Message}", nameof(data));
+            throw new ToolException($"data JSON 格式错误：{ex.Message}", $"请检查 JSON 语法后重试，确保 data 为合法 JSON 对象，或直接回复用户说明情况。");
         }
 
         dataNode = NormalizeDataNode(normalizedType, title, dataNode);
@@ -361,7 +364,7 @@ public class ChartToolService(ILog log)
                 {
                     new JsonObject
                     {
-                        ["name"] = flatSeries[0] is JsonObject first ? (first["name"] ?? JsonValue.Create("数据")) : JsonValue.Create("数据"),
+                        ["name"] = flatSeries[0] is JsonObject first ? (first["name"]?.DeepClone() ?? JsonValue.Create("数据")) : JsonValue.Create("数据"),
                         ["data"] = normalized,
                     }
                 };

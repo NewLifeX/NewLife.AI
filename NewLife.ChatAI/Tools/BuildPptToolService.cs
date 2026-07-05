@@ -66,28 +66,32 @@ public class BuildPptToolService(ILog log)
         var hasSlides = !slides.IsNullOrEmpty();
         var hasWidgetSrc = !widgetSrc.IsNullOrEmpty();
         if (!hasSlides && !hasWidgetSrc)
-            throw new ArgumentException("slides 与 widgetSrc 必须提供其一", nameof(slides));
+            throw new ToolException("参数错误：slides 与 widgetSrc 必须提供其一", "请提供幻灯片 JSON 数组或 show_widget 卡片 ID 列表后重试，或直接回复用户说明无法生成 PPT。");
         if (hasSlides && hasWidgetSrc)
-            throw new ArgumentException("slides 与 widgetSrc 互斥，只能提供其一", nameof(widgetSrc));
+            throw new ToolException("参数错误：slides 与 widgetSrc 互斥，只能提供其一", "请选择一种模式后重试，或直接回复用户说明情况。");
 
         // widgetSrc 模式：从历史消息中提取 show_widget 卡片内容，转换为幻灯片
         if (hasWidgetSrc)
             return await BuildPptFromWidgets(title, widgetSrc!, theme, context).ConfigureAwait(false);
 
         // slides 模式（现有逻辑）
-        if (slides.IsNullOrEmpty()) throw new ArgumentException("slides 不能为空", nameof(slides));
+        if (slides.IsNullOrEmpty())
+            throw new ToolException("参数错误：slides 不能为空", "请提供幻灯片 JSON 数组后重试，或直接回复用户说明无法生成 PPT。");
 
         Models.PptPageModel[] slideList;
         try
         {
-            slideList = slides.ToJsonEntity<Models.PptPageModel[]>() ?? throw new ArgumentException("slides JSON 格式错误");
+            slideList = slides.ToJsonEntity<Models.PptPageModel[]>();
+            if (slideList == null)
+                throw new ToolException("slides JSON 格式错误", "请检查 JSON 语法后重试，或直接回复用户说明无法生成 PPT。");
         }
         catch (Exception ex) when (ex is not ArgumentException)
         {
-            throw new ArgumentException($"slides JSON 解析失败：{ex.Message}", nameof(slides));
+            throw new ToolException($"slides JSON 解析失败：{ex.Message}", $"请检查 JSON 语法后重试，或直接回复用户说明情况。");
         }
 
-        if (slideList.Length == 0) throw new ArgumentException("slides 不能为空数组", nameof(slides));
+        if (slideList.Length == 0)
+            throw new ToolException("slides 不能为空数组", "请提供至少一页幻灯片后重试，或直接回复用户说明无法生成 PPT。");
 
         log.Info("[Slide] 开始生成 PPT：{0}，{1} 页，主题：{2}", title, slideList.Length, theme ?? "blue");
 

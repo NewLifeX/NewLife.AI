@@ -142,8 +142,17 @@ public class MapAnnotationToolService(ILog log)
 
         // 解析入参
         var schemeColors = ResolveColorScheme(colorScheme);
-        var markerList    = ParseMarkers(markers, schemeColors.Markers);
-        var highlightList = ParseHighlights(highlightProvinces, schemeColors.Highlight);
+        List<MarkerItem> markerList;
+        List<HighlightItem> highlightList;
+        try
+        {
+            markerList = ParseMarkers(markers, schemeColors.Markers);
+            highlightList = ParseHighlights(highlightProvinces, schemeColors.Highlight);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ToolException($"参数错误：{ex.Message}", "请检查 JSON 格式后重试，或直接回复用户说明无法生成地图标注。", ex);
+        }
 
         // 组装带标注的 SVG
         var annotatedSvg = BuildAnnotatedSvg(baseSvg, calibration, markerList, highlightList, legendTitle, schemeColors, markerStyle);

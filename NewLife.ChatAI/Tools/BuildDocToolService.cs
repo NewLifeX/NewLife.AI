@@ -31,9 +31,13 @@ public class BuildDocToolService(ILog log)
         [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal）")] String? theme = null,
         ToolCallContext? context = null)
     {
-        if (sections.IsNullOrEmpty()) throw new ArgumentException("sections 不能为空", nameof(sections));
-        var sectionList = sections.ToJsonEntity<DocSectionModel[]>() ?? throw new ArgumentException("sections JSON 格式错误");
-        if (sectionList.Length == 0) throw new ArgumentException("sections 不能为空数组");
+        if (sections.IsNullOrEmpty())
+            throw new ToolException("参数错误：sections 不能为空", "请提供文档节 JSON 数组后重试，或直接回复用户说明无法生成文档。");
+        var sectionList = sections.ToJsonEntity<DocSectionModel[]>();
+        if (sectionList == null)
+            throw new ToolException("sections JSON 格式错误", "请检查 JSON 语法后重试，或直接回复用户说明无法生成文档。");
+        if (sectionList.Length == 0)
+            throw new ToolException("sections 不能为空数组", "请提供至少一个节后重试，或直接回复用户说明无法生成文档。");
 
         log.Info("[BuildDoc] 开始生成：{0}，{1} 节，主题：{2}", title, sectionList.Length, theme ?? "none");
 
