@@ -7,6 +7,18 @@
   <a href="https://github.com/NewLifeX/NewLife.AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/NewLifeX/NewLife.AI.svg" alt="License"></a>
 </p>
 
+<p align="center">
+  <a href="README.en.md">English</a> |
+  <b>简体中文</b> |
+  <a href="README.ja.md">日本語</a> |
+  <a href="README.ko.md">한국어</a> |
+  <a href="README.es.md">Español</a> |
+  <a href="README.fr.md">Français</a> |
+  <a href="README.de.md">Deutsch</a> |
+  <a href="README.ru.md">Русский</a> |
+  <a href="README.pt.md">Português</a>
+</p>
+
 ## 项目介绍
 
 **NewLife.AI** 是面向 .NET 生态的**开源 AI 基础库**，通过统一的 `IChatClient` 接口封装 **46 个主流大模型服务商**，内置函数调用、MCP 协议、流式输出、多模态、多智能体等能力，可作为 NuGet 包嵌入任意 .NET 项目（`net45 / netstandard2.1`）。
@@ -34,6 +46,10 @@
 - **人机决策检查点**：人类可在 AI 多路径中实时选择，支持多问题组模式的决策检查与人工干预
 - **工具调用增强**：引入 ToolCallContext 上下文透传、工具 Provider 熔断器、会话级工具可见性过滤、结构化错误返回与三档权限体系
 - **记忆进化**：记忆整合服务支持去重/合并/过期机制，学习记忆功能自动从对话中提取结构化知识
+- **编程智能体 CodingAgent**：支持分析/只读与代码修改任务分流执行，自动选择最优工具链
+- **全局系统指令**：全局系统指令统一注入所有对话行为约束，支持多租户用户隔离配置
+- **可视化卡片与文档生成**：图表/SVG/HTML/看板/时间轴/脑图/地图标注六大可视化卡片，支持生成 Excel/Word/PPT 文档
+- **Docker 部署**：支持 ChatAI/StarChat 一键 Docker 部署
 
 ---
 

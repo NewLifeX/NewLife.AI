@@ -8,7 +8,7 @@
     <Description>集对话前端、统一 AI 网关、Agent 平台于一身的完整 AI 应用。支持多轮对话、流式输出、函数调用、图像生成、会话管理与使用量统计</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 NewLife</Copyright>
-    <VersionPrefix>1.3</VersionPrefix>
+    <VersionPrefix>1.4</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -35,7 +35,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>知识进化层前端适配与记忆整合服务；SSE 心跳保活机制；Mermaid 渲染健壮性增强；Markdown XSS 防护；推荐问题缓存策略与热度统计；分享链接分钟级有效期配置；决策检查点与澄清模式前端支持；TTS 语音合成前端接口；品牌色动态注入与移动端适配；会话软删除与消息模型编码</PackageReleaseNotes>
+    <PackageReleaseNotes>UI 体系大升级，品牌主色切换翠绿色，组件/主题全面重构；六大可视化卡片（图表/SVG/看板/时间轴/脑图/地图）与 Office 文档生成；Shiki 代码高亮替代 highlight.js；技能栏组件与国际化支持；文件上传白名单校验；意图门控与技能激活链路重构；模型锁定保护与四档定价体系前后端适配；TTS 流式合成与多格式播放；Docker 部署支持；思考过程默认折叠与欢迎页优化</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
