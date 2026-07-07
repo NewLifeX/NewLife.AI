@@ -5,8 +5,6 @@ using System.Xml.Serialization;
 using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Interfaces;
-using NewLife.AI.Models;
-using NewLife.Serialization;
 using NewLife.Common;
 using NewLife.Data;
 using NewLife.Log;
@@ -175,37 +173,6 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
     /// <summary>获取提供商列表，字段缓存10分钟，分组统计数据最多的前20种，用于魔方前台下拉选择</summary>
     /// <returns></returns>
     public static IDictionary<String, String> GetProviderList() => _ProviderCache.FindAllName();
-    #endregion
-
-    #region 模型设置
-    /// <summary>获取嵌入向量模型的定制设置。从 Settings JSON 解析</summary>
-    /// <returns>嵌入设置对象，Settings 为空或解析失败时返回 null</returns>
-    public EmbeddingModelSetting? GetEmbeddingSettings()
-    {
-        if (Settings.IsNullOrEmpty()) return null;
-        try
-        {
-            return Settings.ToJsonEntity<EmbeddingModelSetting>();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>获取或初始化嵌入向量模型的定制设置。Settings 为空时创建默认值并持久化</summary>
-    /// <returns>嵌入设置对象，不会返回 null</returns>
-    public EmbeddingModelSetting GetOrInitEmbeddingSettings()
-    {
-        var settings = GetEmbeddingSettings();
-        if (settings != null) return settings;
-
-        settings = new EmbeddingModelSetting();
-        // 保留 null 字段，使管理员在魔方后台能看到所有可配置项
-        Settings = settings.ToJson(false, false, false);
-        SaveAsync();
-        return settings;
-    }
     #endregion
 
     #region 业务操作

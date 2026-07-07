@@ -4,6 +4,7 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
 using NewLife.AI.Interfaces;
 using NewLife.Log;
+using NewLife.Serialization;
 using XCode.Membership;
 using ILog = NewLife.Log.ILog;
 
@@ -343,20 +344,37 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     /// <summary>构建嵌入请求并应用模型定制设置</summary>
     /// <param name="model">嵌入模型配置</param>
     /// <param name="input">嵌入文本</param>
-    /// <returns>嵌入向量，客户端不可用时返回 null</returns>
+    /// <returns>嵌入请求</returns>
     private static EmbeddingRequest BuildEmbeddingRequest(ModelConfig model, IList<String> input)
     {
         var req = new EmbeddingRequest { Input = input };
 
         // 应用模型定制设置
-        var settings = model.GetOrInitEmbeddingSettings();
-        if (settings != null)
+        if (!model.Settings.IsNullOrEmpty())
         {
-            if (settings.EncodingFormat != null) req.EncodingFormat = settings.EncodingFormat;
-            if (settings.Dimensions != null) req.Dimensions = settings.Dimensions;
+            try
+            {
+                var settings = model.Settings.ToJsonEntity<EmbeddingModelSetting>();
+                if (settings != null)
+                {
+                    if (settings.EncodingFormat != null) req.EncodingFormat = settings.EncodingFormat;
+                    if (settings.Dimensions != null) req.Dimensions = settings.Dimensions;
 
-            // Items 中的额外参数通过 IExtend 传递
-            req.Items = settings.Items;
+                    // Items 中的额外参数通过 IExtend 传递
+                    if (settings.Items is { Count: > 0 })
+                    {
+                        foreach (var kv in settings.Items)
+                        {
+                            if (kv.Value != null)
+                                req.Items[kv.Key] = kv.Value;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 解析失败时忽略，使用默认请求
+            }
         }
 
         return req;
@@ -494,6 +512,13 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 if (model.ReasoningEfforts.IsNullOrEmpty() && !caps.ReasoningEfforts.IsNullOrEmpty())
                     model.ReasoningEfforts = caps.ReasoningEfforts;
 
+                // 嵌入向量模型且 Settings 为空时，自动写入默认设置项（保留 null 字段，使管理员看到可配置项）
+                if (model.SupportEmbedding && model.Settings.IsNullOrEmpty())
+                {
+                    var defaultSettings = new EmbeddingModelSetting();
+                    model.Settings = defaultSettings.ToJson(false, false, false);
+                }
+
                 count += model.Save();
             }
             catch (Exception ex)
@@ -504,6 +529,73 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
 
         if (count > 0)
             XTrace.WriteLine("刷新模型能力完成，更新 {0} 个模型配置", count);
+    }
+
+    /// <summary>初始化指定提供商的所有模型。设置未锁定模型的能力、价格和默认 Settings</summary>
+    /// <param name="providerConfig">提供商配置</param>
+    /// <returns>初始化结果描述</returns>
+    public async Task<String> InitModelsByProviderAsync(ProviderConfig providerConfig)
+    {
+        if (providerConfig == null) return "提供商配置为空";
+
+        var descriptor = _registry.GetDescriptor(providerConfig.Provider)
+            ?? _registry.GetDescriptor(providerConfig.Code);
+        if (descriptor == null) return $"未找到服务商 '{providerConfig.Provider}' 的描述符";
+
+        var models = ModelConfig.FindAllByProviderId(providerConfig.Id);
+        if (models == null || models.Count == 0) return $"提供商 '{providerConfig.Name}' 下没有模型";
+
+        var updated = 0;
+        foreach (var model in models)
+        {
+            var modelInfo = descriptor.FindModelInfo(model.Code);
+            var caps = modelInfo?.Capabilities ?? descriptor.FindModelCapabilities(model.Code);
+            if (caps == null) continue;
+
+            model.Name = modelInfo?.DisplayName ?? model.Name;
+
+            // 未锁定时更新能力
+            if (!model.Locked)
+            {
+                model.SupportThinking = caps.SupportThinking;
+                model.SupportFunction = caps.SupportFunction;
+                model.SupportVision = caps.SupportVision;
+                model.SupportAudio = caps.SupportAudio;
+                model.SupportSpeech = caps.SupportSpeech;
+                model.SupportImage = caps.SupportImage;
+                model.SupportVideo = caps.SupportVideo;
+                model.SupportEmbedding = caps.SupportEmbedding;
+                model.SupportRerank = caps.SupportRerank;
+                if (caps.ContextLength > 0) model.ContextLength = caps.ContextLength;
+            }
+
+            // 价格初始化（StarChat 专属）
+#if STARCHAT
+            if (modelInfo?.Pricing != null)
+            {
+                var pricing = modelInfo.Pricing;
+                model.PricingMode = NewLife.AI.Models.PricingMode.Token;
+                model.InputPrice = pricing.InputPrice;
+                model.OutputPrice = pricing.OutputPrice;
+                model.CachedInputPrice = pricing.CachedInputPrice > 0 ? pricing.CachedInputPrice : 0;
+                model.CacheCreationPrice = pricing.CacheCreationPrice > 0 ? pricing.CacheCreationPrice : 0;
+                // 嵌入/重排序等非对话模型使用 UnitPrice 承载单价
+                if (caps.SupportEmbedding)
+                    model.PricingMode = NewLife.AI.Models.PricingMode.Embedding;
+            }
+#endif
+
+            // 嵌入向量模型且 Settings 为空时自动初始化
+            if (caps.SupportEmbedding && model.Settings.IsNullOrEmpty())
+            {
+                var defaultSettings = new EmbeddingModelSetting();
+                model.Settings = defaultSettings.ToJson(false, false, false);
+            }
+
+            if (model.Save() > 0) updated++;
+        }
+
+        return $"初始化完成，已更新 {updated}/{models.Count} 个模型";
     }
 
     /// <summary>遍历所有已启用提供商并触发模型发现。由后台定时器周期调用</summary>
@@ -685,6 +777,13 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                     config.SupportEmbedding = caps.SupportEmbedding;
                     if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
                 }
+
+                // 嵌入向量模型且 Settings 为空时，自动写入默认设置项
+                if (config.SupportEmbedding && config.Settings.IsNullOrEmpty())
+                {
+                    var defaultSettings = new EmbeddingModelSetting();
+                    config.Settings = defaultSettings.ToJson(false, false, false);
+                }
             }
 
             if (config.Save() > 0)
@@ -798,6 +897,13 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                     if (config.ReasoningEfforts.IsNullOrEmpty())
                         config.ReasoningEfforts = caps.ReasoningEfforts;
                     if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
+                }
+
+                // 嵌入向量模型且 Settings 为空时，自动写入默认设置项
+                if (config.SupportEmbedding && config.Settings.IsNullOrEmpty())
+                {
+                    var defaultSettings = new EmbeddingModelSetting();
+                    config.Settings = defaultSettings.ToJson(false, false, false);
                 }
             }
 
