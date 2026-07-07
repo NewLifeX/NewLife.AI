@@ -788,6 +788,8 @@ export interface SuggestedQuestion {
 export interface SystemConfig {
   appName: string
   siteTitle: string
+  /** Logo地址。欢迎页自定义Logo图片URL，为空时显示默认图标 */
+  logoUrl?: string
   /** 品牌主色 HEX。空值时前端使用默认 #5B5BFF */
   themeColor?: string
   /** 品牌渐变（两个 HEX 逗号分隔，如 "#5B5BFF,#8B5CF6"）。空值时使用默认蓝紫渐变 */

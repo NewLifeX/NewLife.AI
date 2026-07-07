@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer'
 import { Icon } from '@/components/common/Icon'
+import { setPageTitle, setPageUrl } from '@/lib/meta'
 import { fetchSharedConversation, type SharedConversationContent } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -46,9 +47,14 @@ export function SharePage() {
 
   useEffect(() => {
     if (data) {
-      document.title = data.snapshotTitle && data.siteTitle
-        ? `${data.snapshotTitle} - ${data.siteTitle}`
-        : (data.snapshotTitle || data.siteTitle || t('sharePage.title'))
+      if (data.snapshotTitle) {
+        setPageTitle(data.snapshotTitle, data.siteTitle)
+      } else if (data.siteTitle) {
+        setPageTitle(data.siteTitle)
+      } else {
+        setPageTitle(t('sharePage.title'))
+      }
+      setPageUrl(window.location.href)
       if (anchorRef.current) {
         anchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
