@@ -167,6 +167,15 @@ public partial class ModelConfig
     [BindColumn("SystemPrompt", "系统提示词。模型级System Prompt，发送给上游的系统消息", "", ItemType = "markdown", ShowIn = "Auto,-List,-Search")]
     public String? SystemPrompt { get => _SystemPrompt; set { if (OnPropertyChanging("SystemPrompt", value)) { _SystemPrompt = value; OnPropertyChanged("SystemPrompt"); } } }
 
+    private String? _Settings;
+    /// <summary>模型设置。JSON格式的模型定制参数，如嵌入模型的编码格式(encodingFormat)、向量维度(dimensions)等。各模型能力对应的可用设置项见 EmbeddingModelSetting 类的文档注释</summary>
+    [Category("扩展")]
+    [DisplayName("模型设置")]
+    [Description("模型设置。JSON格式的模型定制参数，如嵌入模型的编码格式(encodingFormat)、向量维度(dimensions)等。各模型能力对应的可用设置项见 EmbeddingModelSetting 类的文档注释")]
+    [DataObjectField(false, false, true, 2000)]
+    [BindColumn("Settings", "模型设置。JSON格式的模型定制参数，如嵌入模型的编码格式(encodingFormat)、向量维度(dimensions)等。各模型能力对应的可用设置项见 EmbeddingModelSetting 类的文档注释", "", ItemType = "json")]
+    public String? Settings { get => _Settings; set { if (OnPropertyChanging("Settings", value)) { _Settings = value; OnPropertyChanged("Settings"); } } }
+
     private String? _RoleIds;
     /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
     [DisplayName("角色组")]
@@ -305,6 +314,7 @@ public partial class ModelConfig
             "ReasoningEfforts" => _ReasoningEfforts,
             "EnablePromptCache" => _EnablePromptCache,
             "SystemPrompt" => _SystemPrompt,
+            "Settings" => _Settings,
             "RoleIds" => _RoleIds,
             "DepartmentIds" => _DepartmentIds,
             "ModelTime" => _ModelTime,
@@ -342,6 +352,7 @@ public partial class ModelConfig
                 case "ReasoningEfforts": _ReasoningEfforts = Convert.ToString(value); break;
                 case "EnablePromptCache": _EnablePromptCache = value.ToBoolean(); break;
                 case "SystemPrompt": _SystemPrompt = Convert.ToString(value); break;
+                case "Settings": _Settings = Convert.ToString(value); break;
                 case "RoleIds": _RoleIds = Convert.ToString(value); break;
                 case "DepartmentIds": _DepartmentIds = Convert.ToString(value); break;
                 case "ModelTime": _ModelTime = value.ToDateTime(); break;
@@ -522,6 +533,9 @@ public partial class ModelConfig
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public static readonly Field SystemPrompt = FindByName("SystemPrompt");
 
+        /// <summary>模型设置。JSON格式的模型定制参数，如嵌入模型的编码格式(encodingFormat)、向量维度(dimensions)等。各模型能力对应的可用设置项见 EmbeddingModelSetting 类的文档注释</summary>
+        public static readonly Field Settings = FindByName("Settings");
+
         /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
         public static readonly Field RoleIds = FindByName("RoleIds");
 
@@ -620,6 +634,9 @@ public partial class ModelConfig
 
         /// <summary>系统提示词。模型级System Prompt，发送给上游的系统消息</summary>
         public const String SystemPrompt = "SystemPrompt";
+
+        /// <summary>模型设置。JSON格式的模型定制参数，如嵌入模型的编码格式(encodingFormat)、向量维度(dimensions)等。各模型能力对应的可用设置项见 EmbeddingModelSetting 类的文档注释</summary>
+        public const String Settings = "Settings";
 
         /// <summary>角色组。逗号分隔的角色ID列表，为空时不限制</summary>
         public const String RoleIds = "RoleIds";

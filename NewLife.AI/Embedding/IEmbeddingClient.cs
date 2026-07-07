@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.Embedding;
+﻿using NewLife.Data;
+
+namespace NewLife.AI.Embedding;
 
 /// <summary>AI 嵌入向量客户端接口。将文本转换为浮点向量，用于语义搜索、相似度计算等场景</summary>
 /// <remarks>
@@ -30,8 +32,8 @@ public class EmbeddingClientMetadata
     public String? DefaultModel { get; init; }
 }
 
-/// <summary>嵌入请求。兼容 OpenAI Embeddings API</summary>
-public class EmbeddingRequest
+/// <summary>嵌入请求。兼容 OpenAI Embeddings API。实现 <see cref="IExtend"/> 以支持模型定制化设置的扩展参数传递</summary>
+public class EmbeddingRequest : IExtend
 {
     /// <summary>输入文本列表。每条文本生成一个向量</summary>
     public IList<String> Input { get; set; } = [];
@@ -47,6 +49,12 @@ public class EmbeddingRequest
 
     /// <summary>用户标识。用于追踪和限流</summary>
     public String? User { get; set; }
+
+    /// <summary>扩展参数。由 <see cref="Models.EmbeddingModelSetting"/> 的扩展设置传入，<see cref="Clients.OpenAI.OpenAIChatClient.GenerateAsync"/> 将其序列化到请求体</summary>
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器，方便访问扩展数据</summary>
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
 }
 
 /// <summary>嵌入响应</summary>

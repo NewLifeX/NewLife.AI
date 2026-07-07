@@ -188,6 +188,16 @@ public partial class OpenAIChatClient
         if (request.EncodingFormat != null) dic["encoding_format"] = request.EncodingFormat;
         if (request.User != null) dic["user"] = request.User;
 
+        // IExtend 扩展参数，由模型定制化设置（如 EmbeddingModelSetting）传入
+        if (request.Items is { Count: > 0 })
+        {
+            foreach (var kv in request.Items)
+            {
+                if (kv.Value != null)
+                    dic[kv.Key] = kv.Value;
+            }
+        }
+
         var body = JsonHost.Write(dic);
         var url = BuildApiUrl(EmbeddingPath);
 

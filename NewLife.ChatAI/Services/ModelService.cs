@@ -340,6 +340,28 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         return response.Text;
     }
 
+    /// <summary>构建嵌入请求并应用模型定制设置</summary>
+    /// <param name="model">嵌入模型配置</param>
+    /// <param name="input">嵌入文本</param>
+    /// <returns>嵌入向量，客户端不可用时返回 null</returns>
+    private static EmbeddingRequest BuildEmbeddingRequest(ModelConfig model, IList<String> input)
+    {
+        var req = new EmbeddingRequest { Input = input };
+
+        // 应用模型定制设置
+        var settings = model.GetOrInitEmbeddingSettings();
+        if (settings != null)
+        {
+            if (settings.EncodingFormat != null) req.EncodingFormat = settings.EncodingFormat;
+            if (settings.Dimensions != null) req.Dimensions = settings.Dimensions;
+
+            // Items 中的额外参数通过 IExtend 传递
+            req.Items = settings.Items;
+        }
+
+        return req;
+    }
+
     /// <summary>嵌入单条文本并记录用量。API 客户端不可用时返回 null，调用方自行回退本地哈希嵌入</summary>
     /// <param name="model">嵌入模型配置</param>
     /// <param name="conversation">会话上下文，null 时不记录用量</param>
@@ -352,7 +374,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         using var client = CreateEmbeddingClient(model);
         if (client == null) return null;
 
-        var response = await client.GenerateAsync(new EmbeddingRequest { Input = [text] }, cancellationToken).ConfigureAwait(false);
+        var req = BuildEmbeddingRequest(model, [text]);
+        var response = await client.GenerateAsync(req, cancellationToken).ConfigureAwait(false);
 
         if (conversation != null && usageService != null && response.Usage != null)
         {
@@ -383,7 +406,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         for (var offset = 0; offset < texts.Count; offset += batchSize)
         {
             var batch = texts.Skip(offset).Take(batchSize).ToList();
-            var response = await client.GenerateAsync(new EmbeddingRequest { Input = batch }, cancellationToken).ConfigureAwait(false);
+            var req = BuildEmbeddingRequest(model, batch);
+            var response = await client.GenerateAsync(req, cancellationToken).ConfigureAwait(false);
             var baseIdx = offset;
             foreach (var item in response.Data.OrderBy(x => x.Index))
             {

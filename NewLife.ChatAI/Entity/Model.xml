@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <EntityModel xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:schemaLocation="https://newlifex.com https://newlifex.com/Model202509.xsd" Document="https://newlifex.com/xcode/model" ModelVersion="2.0.2026.130" xmlns="https://newlifex.com/Model202509.xsd">
   <Option>
     <!--类名模板。其中{name}替换为Table.Name，如{name}Model/I{name}Dto等-->
@@ -213,6 +213,7 @@
         <Column Name="ReasoningEfforts" DataType="String" Description="推理强度。支持的推理强度值，逗号分隔如 high,max；空表示不支持" />
         <Column Name="EnablePromptCache" DataType="Boolean" Description="提示缓存。开启后所有请求标记 cache_control 创建上下文缓存，缓存命中时大幅降低输入成本" Category="计费" />
         <Column Name="SystemPrompt" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="2000" Description="系统提示词。模型级System Prompt，发送给上游的系统消息" />
+        <Column Name="Settings" DataType="String" ItemType="json" Length="2000" Description="模型设置。JSON格式的模型定制参数，如嵌入模型的编码格式(encodingFormat)、向量维度(dimensions)等。各模型能力对应的可用设置项见 EmbeddingModelSetting 类的文档注释" Category="扩展" />
         <Column Name="RoleIds" DataType="String" Description="角色组。逗号分隔的角色ID列表，为空时不限制" />
         <Column Name="DepartmentIds" DataType="String" Description="部门组。逗号分隔的部门ID列表，为空时不限制" />
         <Column Name="ModelTime" DataType="DateTime" Description="模型时间。提供商侧的模型创建或最后更新时间" />
