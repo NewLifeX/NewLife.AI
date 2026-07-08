@@ -247,7 +247,8 @@ function MermaidSvgPane({
         onSvgChange?.(svg)
       }
       cleanupBodyById()
-    })().catch(() => {
+    })().catch((err) => {
+      console.error('[Mermaid] render error:', err)
       cleanupBodyById()
       showFallback()
     })

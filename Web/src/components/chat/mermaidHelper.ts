@@ -157,6 +157,7 @@ function fixGanttTimeFormat(code: string): string {
 
   // 替换 dateFormat 为含日期的格式
   const dummyDate = '2000-01-01'
+  const nextDate = '2000-01-02'
   code = code.replace(/^(\s*dateFormat\s+).+$/m, `$1YYYY-MM-DD ${fmt}`)
 
   // 逐行处理：给任务属性区的裸 HH:MM 值补虚拟日期
@@ -174,11 +175,35 @@ function fixGanttTimeFormat(code: string): string {
     const desc = line.substring(0, sepIdx)
     const attrs = line.substring(sepIdx + 2)
 
-    // 属性中的裸 HH:MM → 2000-01-01 HH:MM
-    const fixedAttrs = attrs.replace(
-      /\b(\d{1,2}:\d{2})\b/g,
-      (_: string, time: string) => `${dummyDate} ${time}`,
-    )
+    // 收集属性中所有裸 HH:MM 及其位置
+    const timeRe = /\b(\d{1,2}:\d{2})\b/g
+    const matches: Array<{ full: string; time: string; index: number }> = []
+    let m: RegExpExecArray | null
+    while ((m = timeRe.exec(attrs)) !== null) {
+      matches.push({ full: m[0], time: m[1], index: m.index })
+    }
+
+    if (matches.length === 0) {
+      result.push(line)
+      continue
+    }
+
+    // 判断最后一个时间是否 < 倒数第二个（跨午夜），如果是则用翌日
+    let lastDate = dummyDate
+    if (matches.length >= 2) {
+      const prev = matches[matches.length - 2].time
+      const last = matches[matches.length - 1].time
+      if (last < prev) lastDate = nextDate
+    }
+
+    // 从右向左替换，避免 index 偏移
+    let fixedAttrs = attrs
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const t = matches[i]
+      const date = (i === matches.length - 1 && matches.length >= 2) ? lastDate : dummyDate
+      const replacement = `${date} ${t.time}`
+      fixedAttrs = fixedAttrs.substring(0, t.index) + replacement + fixedAttrs.substring(t.index + t.full.length)
+    }
 
     result.push(`${desc} : ${fixedAttrs}`)
   }
@@ -269,8 +294,12 @@ export async function resolveRenderableMermaidCode(code: string): Promise<string
   if (normalized !== code) candidates.push(normalized)
 
   for (const candidate of candidates) {
-    const parsed = await mermaid.parse(candidate, { suppressErrors: true })
-    if (parsed) return candidate
+    try {
+      const parsed = await mermaid.parse(candidate, { suppressErrors: true })
+      if (parsed) return candidate
+    } catch (err) {
+      console.error('[Mermaid] parse error:', err)
+    }
   }
 
   return null
