@@ -69,6 +69,18 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>跨轮次去重集合。记录本轮对话已执行过的 show_* 工具名+参数，避免同一工具在同一用户请求的多轮工具循环中重复执行。</summary>
     private readonly HashSet<String> _sessionDedupKeys = new(StringComparer.Ordinal);
 
+    /// <summary>连续失败轮数计数器。整轮所有工具均失败（IsError=true）时 +1，任一个成功则归零。
+    /// 达到 <see cref="EscalationThreshold"/> 时向 LLM 注入升级警告，避免死循环消耗 Token。</summary>
+    private Int32 _consecutiveFailureRounds;
+
+    private Int32 _escalationThreshold = 3;
+    /// <summary>连续失败升级阈值。整轮工具调用连续失败达到此次数后，向 LLM 注入警告提示换思路。默认 3；设为 0 或负数时禁用升级检测</summary>
+    public Int32 EscalationThreshold { get => _escalationThreshold; set => _escalationThreshold = value > 0 ? value : 3; }
+
+    /// <summary>工具循环迭代回调。每轮工具执行完成后触发（在所有工具结果收集完毕、下轮 LLM 调用之前）。
+    /// 回调参数包含当前迭代状态（轮次、累计 Token、工具调用历史），供外部做检查点持久化等操作。回调异常不中断循环。</summary>
+    public Func<ToolLoopState, CancellationToken, Task>? OnLoopIteration { get; set; }
+
     #endregion
 
     #region 方法
@@ -188,12 +200,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
             // Phase 2：顺序 await + 写入（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
             var toolResults = new Dictionary<String, IToolResult>(StringComparer.OrdinalIgnoreCase);
+            var roundSummaries = new List<ToolCallSummary>();
             for (var i = 0; i < tasks.Length; i++)
             {
                 if (tasks[i] == null) continue;
                 var tc = toolCalls[i];
                 var toolResult = await tasks[i].ConfigureAwait(false);
                 toolResults[tc.Function!.Name] = toolResult;
+                roundSummaries.Add(new ToolCallSummary(tc.Function.Name, toolResult.IsError, 0));
                 var llmContent = GetLlmContent(toolResult, tc.Function.Name);
                 workMessages.Add(new ChatMessage
                 {
@@ -201,6 +215,31 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     ToolCallId = tc.Id,
                     Content = llmContent
                 });
+            }
+
+            // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
+            var allFailed = roundSummaries.Count > 0 && roundSummaries.All(s => s.IsError);
+            if (allFailed)
+                _consecutiveFailureRounds++;
+            else
+                _consecutiveFailureRounds = 0;
+
+            if (EscalationThreshold > 0 && _consecutiveFailureRounds >= EscalationThreshold)
+            {
+                workMessages.Add(new ChatMessage
+                {
+                    Role = "user",
+                    Content = $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
+                });
+                _consecutiveFailureRounds = 0;
+            }
+
+            // 触发循环迭代回调（检查点持久化等），回调异常不中断循环
+            if (OnLoopIteration != null)
+            {
+                var totalTokens = accumulatedUsage?.TotalTokens ?? _fallbackEstimatedTokens;
+                var state = new ToolLoopState(iterations - 1, maxIterations, totalTokens, roundSummaries, _consecutiveFailureRounds);
+                _ = OnLoopIteration.Invoke(state, cancellationToken);
             }
 
             // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
@@ -439,6 +478,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
             // Step 2: 按序 await（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
             var toolResults = new Dictionary<String, IToolResult>(StringComparer.OrdinalIgnoreCase);
+            var roundSummaries = new List<ToolCallSummary>();
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
@@ -446,6 +486,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
                 var toolResult = await tasks[i].ConfigureAwait(false);
                 toolResults[tc.Function!.Name] = toolResult;
+                roundSummaries.Add(new ToolCallSummary(tc.Function.Name, toolResult.IsError, 0));
 
                 // LLM 消息：提取 Llm 受众内容；无 Llm 内容时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
                 var llmContent = GetLlmContent(toolResult, tc.Function.Name);
@@ -463,6 +504,31 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 {
                     ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent, llmContent)]
                 };
+            }
+
+            // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
+            var allFailed = roundSummaries.Count > 0 && roundSummaries.All(s => s.IsError);
+            if (allFailed)
+                _consecutiveFailureRounds++;
+            else
+                _consecutiveFailureRounds = 0;
+
+            if (EscalationThreshold > 0 && _consecutiveFailureRounds >= EscalationThreshold)
+            {
+                workMessages.Add(new ChatMessage
+                {
+                    Role = "user",
+                    Content = $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
+                });
+                _consecutiveFailureRounds = 0;
+            }
+
+            // 触发循环迭代回调（检查点持久化等），回调异常不中断循环
+            if (OnLoopIteration != null)
+            {
+                var totalTokens = accumulatedUsage?.TotalTokens ?? _fallbackEstimatedTokens;
+                var state = new ToolLoopState(iteration, maxIterations, totalTokens, roundSummaries, _consecutiveFailureRounds);
+                _ = OnLoopIteration.Invoke(state, cancellationToken);
             }
 
             // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
@@ -845,3 +911,22 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     public ITracer? Tracer { get; set; }
     #endregion
 }
+
+/// <summary>工具循环迭代状态快照。供 <see cref="ToolChatClient.OnLoopIteration"/> 回调使用</summary>
+/// <param name="Iteration">当前迭代轮次（0-based）</param>
+/// <param name="MaxIterations">最大迭代轮次</param>
+/// <param name="AccumulatedTokens">累计 Token 用量（API 返回值优先，回退字符估算）</param>
+/// <param name="ToolCallHistory">本轮及之前轮次的工具调用摘要列表</param>
+/// <param name="ConsecutiveFailureRounds">连续失败轮数</param>
+public record ToolLoopState(
+    Int32 Iteration,
+    Int32 MaxIterations,
+    Int32 AccumulatedTokens,
+    IReadOnlyList<ToolCallSummary> ToolCallHistory,
+    Int32 ConsecutiveFailureRounds);
+
+/// <summary>单次工具调用摘要，供 <see cref="ToolLoopState"/> 使用</summary>
+/// <param name="ToolName">工具名称</param>
+/// <param name="IsError">是否失败</param>
+/// <param name="DurationMs">执行耗时（毫秒）</param>
+public record ToolCallSummary(String ToolName, Boolean IsError, Int64 DurationMs);
