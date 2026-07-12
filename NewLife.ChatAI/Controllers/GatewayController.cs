@@ -205,14 +205,11 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
 
         // 路由到模型
-        var config = modelService.ResolveModelByCode(modelCode);
+        var config = modelService.ResolveAvailableModelByCode(modelCode);
         if (config == null)
-            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{modelCode}'" });
         if (!modelService.IsModelAllowed(appKey, config))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
-
-        if (!modelService.IsAvailable(config))
-            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" });
 
         // 通过 ChatCompletions 方式请求图像生成（兼容 OpenAI DALL-E 等通过聊天接口生成图像的场景）
         var size = chatSetting.DefaultImageSize;
@@ -274,14 +271,11 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return BadRequest(new { code = "INVALID_REQUEST", message = "image 文件不能为空" });
 
         // 路由到模型
-        var model = modelService.ResolveModelByCode(modelCode);
+        var model = modelService.ResolveAvailableModelByCode(modelCode);
         if (model == null)
-            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" });
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{modelCode}'" });
         if (!modelService.IsModelAllowed(appKey, model))
             return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
-
-        if (!modelService.IsAvailable(model))
-            return StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{model.GetEffectiveProvider()}'" });
 
         try
         {
@@ -525,15 +519,12 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         if (appKey == null)
             return (Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" }), null);
 
-        var config = modelService.ResolveModelByCode(modelCode);
+        var config = modelService.ResolveAvailableModelByCode(modelCode);
         if (config == null)
-            return (NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到模型 '{modelCode}'" }), null);
+            return (NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{modelCode}'" }), null);
 
         if (!modelService.IsModelAllowed(appKey, config))
             return (StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" }), null);
-
-        if (!modelService.IsAvailable(config))
-            return (StatusCode(503, new { code = "MODEL_UNAVAILABLE", message = $"未找到服务商 '{config.GetEffectiveProvider()}'" }), null);
 
         return (null, config);
     }
@@ -555,10 +546,10 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         }
 
         // 模型路由
-        var config = modelService.ResolveModelByCode(request.Model);
+        var config = modelService.ResolveAvailableModelByCode(request.Model);
         if (config == null)
         {
-            await WriteErrorAsync(404, "MODEL_NOT_FOUND", $"未找到模型 '{request.Model}'").ConfigureAwait(false);
+            await WriteErrorAsync(404, "MODEL_NOT_FOUND", $"未找到可用模型 '{request.Model}'").ConfigureAwait(false);
             return;
         }
         if (!modelService.IsModelAllowed(appKey, config))

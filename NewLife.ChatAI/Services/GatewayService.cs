@@ -35,7 +35,7 @@ public enum GatewayProtocol
 /// <param name="chatFilters">对话过滤器链（日志、监控等横切关注点；ConversationId=0 时过滤器应 graceful no-op）</param>
 /// <param name="chatSetting">对话配置</param>
 /// <param name="log">日志</param>
-public class GatewayService(UsageService usageService, ModelService modelService, IEnumerable<IChatFilter>? chatFilters, ChatSetting chatSetting, ILog log)
+public class GatewayService(UsageService usageService, ModelService modelService, IEnumerable<IChatFilter>? chatFilters, ChatSetting chatSetting, ILog log, IProviderStatusManager? providerStatus = null)
 {
     #region 属性
     /// <summary>对话过滤器链（日志、监控等横切关注点），由 DI 解析</summary>
@@ -43,6 +43,8 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
     /// <summary>重试最大等待时间（秒）</summary>
     private const Int32 MaxRetryDelaySec = 30;
+
+    private readonly IProviderStatusManager? _providerStatus = providerStatus;
 
     /// <summary>snake_case 序列化选项。用于写出符合 OpenAI / Anthropic 协议的响应体</summary>
     public static readonly JsonSerializerOptions SnakeCaseOptions;
@@ -192,6 +194,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
         ChatResponse? response = null;
         const Int32 maxRetry = 5;
+        Exception? lastError = null;
         for (var i = 0; i <= maxRetry; i++)
         {
             try
@@ -201,14 +204,27 @@ public class GatewayService(UsageService usageService, ModelService modelService
             }
             catch (HttpRequestException ex) when (Is429(ex) && i < maxRetry)
             {
+                lastError = ex;
                 var delay = GetRetryDelay(i);
                 log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
+            catch (Exception ex) when (i < maxRetry)
+            {
+                // 非 429 错误（如 5xx、连接超时）：记录失败并继续重试
+                lastError = ex;
+                _providerStatus?.RecordFailure(model.ProviderId);
+                log?.Error("上游错误 {0}，第 {1} 次重试", ex.GetType().Name, i + 1);
+            }
         }
 
         if (response == null)
+        {
+            // 重试耗尽，记录最后一次失败
+            if (lastError != null)
+                _providerStatus?.RecordFailure(model.ProviderId);
             throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
+        }
 
         // 写入用量记录（内部完成费用计算 + 配额累加）
         RecordUsage(appKey, model, request.ConversationId.ToLong(), response.Usage);
@@ -236,6 +252,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
         IAsyncEnumerable<IChatResponse>? stream = null;
         const Int32 maxRetry = 5;
+        Exception? lastError = null;
         for (var i = 0; i <= maxRetry; i++)
         {
             try
@@ -245,14 +262,27 @@ public class GatewayService(UsageService usageService, ModelService modelService
             }
             catch (HttpRequestException ex) when (Is429(ex) && i < maxRetry)
             {
+                lastError = ex;
                 var delay = GetRetryDelay(i);
                 log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
+            catch (Exception ex) when (i < maxRetry)
+            {
+                // 非 429 错误（如 5xx、连接超时）：记录失败并继续重试
+                lastError = ex;
+                _providerStatus?.RecordFailure(config.ProviderId);
+                log?.Error("上游错误 {0}，第 {1} 次重试", ex.GetType().Name, i + 1);
+            }
         }
 
         if (stream == null)
+        {
+            // 重试耗尽，记录最后一次失败
+            if (lastError != null)
+                _providerStatus?.RecordFailure(config.ProviderId);
             throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
+        }
 
         UsageDetails? lastUsage = null;
         await foreach (var rawChunk in stream.WithCancellation(cancellationToken).ConfigureAwait(false))

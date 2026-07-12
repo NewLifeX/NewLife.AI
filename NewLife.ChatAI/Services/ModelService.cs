@@ -15,7 +15,7 @@ namespace NewLife.ChatAI.Services;
 /// 将模型路由（按 ID/Code 查找 ModelConfig）与客户端工厂（BuildOptions + AiClientRegistry.Factory）
 /// 统一收口，业务服务只需注入 ModelService 即可获取可用模型和对应的 IChatClient 实例。
 /// </remarks>
-public class ModelService(IChatSetting chatSetting, UsageService? usageService, ITracer tracer, ILog log)
+public class ModelService(IChatSetting chatSetting, UsageService? usageService, ITracer tracer, ILog log, IProviderStatusManager? providerStatus = null)
 {
     private readonly AiClientRegistry _registry = AiClientRegistry.Default;
 
@@ -251,6 +251,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     #endregion
 
     #region 客户端创建
+    private readonly IProviderStatusManager? _providerStatus = providerStatus;
+
     /// <summary>根据模型配置创建 AI 客户端实例</summary>
     /// <param name="config">模型配置</param>
     /// <returns>已绑定连接参数的客户端实例，服务商未注册时返回 null</returns>
@@ -269,6 +271,46 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         if (client is ILogFeature lf) lf.Log = log;
 
         return client;
+    }
+
+    /// <summary>按模型编码查找所有启用的模型配置（同编码不同提供商），按 Sort 降序排列。
+    /// 首个为最高优先级。可用于主备切换：遍历列表依次检查提供商可用性。</summary>
+    /// <param name="modelCode">模型编码</param>
+    /// <returns>已排序的模型配置列表，未找到返回空列表</returns>
+    public IList<ModelConfig> ResolveModelsByCode(String? modelCode)
+    {
+        if (String.IsNullOrWhiteSpace(modelCode)) return [];
+
+        return ModelConfig.FindAllWithCache()
+            .Where(e => e.Enable && e.Code.EqualIgnoreCase(modelCode) && e.ProviderInfo?.Enable == true)
+            .OrderByDescending(e => e.Sort)
+            .ThenByDescending(e => e.Id)
+            .ToList();
+    }
+
+    /// <summary>按模型编码查找第一个可用的模型配置（主备切换）。
+    /// 遍历同编码的全部 ModelConfig（按 Sort 降序），检查提供商可用性（通过 IsProviderAvailable 回调），
+    /// 返回第一个可用项。全部不可用时返回 null。</summary>
+    /// <param name="modelCode">模型编码</param>
+    /// <returns>可用的模型配置，未找到返回 null</returns>
+    public ModelConfig? ResolveAvailableModelByCode(String? modelCode)
+    {
+        var models = ResolveModelsByCode(modelCode);
+        if (models.Count == 0) return null;
+
+        foreach (var model in models)
+        {
+            var pc = model.ProviderInfo;
+            if (pc == null) continue;
+
+            // 检查提供商可用性（如 ProviderStatusManager）
+            if (_providerStatus != null && !_providerStatus.IsAvailable(pc.Id))
+                continue;
+
+            return model;
+        }
+
+        return null;
     }
 
     /// <summary>检查模型的服务商是否已注册可用</summary>
