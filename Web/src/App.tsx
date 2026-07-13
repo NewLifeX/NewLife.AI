@@ -13,7 +13,6 @@ import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/l
 import { AppSkeleton } from '@/components/common/AppSkeleton'
 import { ToastContainer } from '@/components/common/Toast'
 import { applyBrandTheme } from '@/lib/theme'
-import { setPageTitle, setPageImage } from '@/lib/meta'
 
 function ChatApp() {
   const { conversationId } = useParams<{ conversationId: string }>()
@@ -116,8 +115,6 @@ function ChatApp() {
         .then((cfg) => {
           setSiteTitle(cfg.siteTitle)
           document.title = cfg.siteTitle
-          setPageTitle(cfg.siteTitle)
-          if (cfg.logoUrl) setPageImage(cfg.logoUrl)
           setSuggestedQuestions(cfg.suggestedQuestions)
           if (cfg.welcomeMessage) setWelcomeMessage(cfg.welcomeMessage)
           if (cfg.welcomeSubtitle) setWelcomeSubtitle(cfg.welcomeSubtitle)
@@ -186,13 +183,9 @@ function ChatApp() {
   const currentModel = resolvedModel || models[0]?.id || 0
   const supportsThinking = models.find((m) => m.id === currentModel)?.supportThinking ?? false
 
-  // 当前会话标题变化时更新网页标题和 OG 标签，离开对话时恢复站点名
+  // 当前会话标题变化时更新网页标题，离开对话时恢复站点名
   useEffect(() => {
-    if (activeConv?.title) {
-      setPageTitle(activeConv.title, siteTitle)
-    } else {
-      setPageTitle(siteTitle)
-    }
+    document.title = activeConv?.title ? `${activeConv.title} - ${siteTitle}` : siteTitle
   }, [activeConversationId, activeConv?.title, siteTitle])
 
   // 当前模型不支持思考时，若已选了 think 模式则自动回退到 auto

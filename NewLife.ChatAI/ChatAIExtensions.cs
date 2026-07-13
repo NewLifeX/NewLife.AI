@@ -162,71 +162,6 @@ public static class ChatAIExtensions
 
         app.UseStaticFiles();
 
-        // OG meta 标签注入中间件：拦截 SPA HTML 响应，注入动态 meta 标签
-        // 让 IM 工具（微信/钉钉/飞书等）爬取时显示正确的标题和图标
-        app.Use(async (context, next) =>
-        {
-            var path = context.Request.Path.Value;
-            if (path != null && IsSpaRoute(path))
-            {
-                var originalBody = context.Response.Body;
-                using var memStream = new MemoryStream();
-                context.Response.Body = memStream;
-
-                try
-                {
-                    await next();
-
-                    // 仅修改 200 HTML 响应
-                    if (context.Response.StatusCode == 200 &&
-                        context.Response.ContentType != null &&
-                        context.Response.ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
-                    {
-                        memStream.Seek(0, SeekOrigin.Begin);
-                        var html = await new StreamReader(memStream).ReadToEndAsync();
-
-                        // 从 ChatSetting 读取站点配置
-                        var setting = context.RequestServices.GetRequiredService<ChatSetting>();
-                        var siteTitle = !String.IsNullOrEmpty(setting.SiteTitle) ? setting.SiteTitle : "智能助手";
-                        var appName = !String.IsNullOrEmpty(setting.Name) ? setting.Name : "星语";
-                        var logoUrl = !String.IsNullOrEmpty(setting.LogoUrl) ? setting.LogoUrl : "/logo.svg";
-
-                        // 构建当前请求绝对 URL（用于 og:url）
-                        var req = context.Request;
-                        var baseUrl = $"{req.Scheme}://{req.Host}{req.PathBase}{req.Path}";
-                        // 如果 logoUrl 是相对路径，转为绝对 URL
-                        var absLogoUrl = logoUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                            ? logoUrl
-                            : $"{req.Scheme}://{req.Host}{req.PathBase}{logoUrl}";
-
-                        var metaTags = BuildMetaTags(siteTitle, appName, absLogoUrl, baseUrl);
-
-                        if (html.Contains("</head>"))
-                        {
-                            html = html.Replace("</head>", metaTags + "</head>");
-                        }
-
-                        context.Response.Body = originalBody;
-                        await context.Response.WriteAsync(html);
-                    }
-                    else
-                    {
-                        memStream.Seek(0, SeekOrigin.Begin);
-                        await memStream.CopyToAsync(originalBody);
-                    }
-                }
-                finally
-                {
-                    if (context.Response.Body == memStream)
-                        context.Response.Body = originalBody;
-                }
-            }
-            else
-            {
-                await next();
-            }
-        });
-
         // 独立部署时，根路径自动跳转到 /chat；否则，回退到未匹配路径的 chat.html
         // 子模块模式不注册根路由，保持与主应用的路由体系兼容
         if (redirectToChat)
@@ -337,50 +272,6 @@ public static class ChatAIExtensions
         String.IsNullOrWhiteSpace(providers)
             ? []
             : providers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    #endregion
-
-    #region 辅助
-
-    /// <summary>判断路径是否属于 SPA 前端路由</summary>
-    private static Boolean IsSpaRoute(String path)
-    {
-        if (path == "/" || path == "/chat" || path == "/share") return true;
-
-        // 带子路径的前缀匹配
-        if (path.StartsWith("/chat/", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/share/", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
-
-    /// <summary>构建 OG meta 标签 HTML 片段</summary>
-    /// <param name="title">页面标题</param>
-    /// <param name="siteName">站点名称</param>
-    /// <param name="imageUrl">图片绝对 URL</param>
-    /// <param name="url">页面绝对 URL</param>
-    /// <returns>要在 &lt;/head&gt; 前插入的 HTML 片段</returns>
-    private static String BuildMetaTags(String title, String siteName, String imageUrl, String url)
-    {
-        var encodedTitle = System.Net.WebUtility.HtmlEncode(title);
-        var encodedSiteName = System.Net.WebUtility.HtmlEncode(siteName);
-        var encodedImage = System.Net.WebUtility.HtmlEncode(imageUrl);
-        var encodedUrl = System.Net.WebUtility.HtmlEncode(url);
-
-        return $@"
-    <meta property=""og:title"" content=""{encodedTitle}"" />
-    <meta property=""og:site_name"" content=""{encodedSiteName}"" />
-    <meta property=""og:description"" content=""{encodedTitle} - 智能AI对话助手"" />
-    <meta property=""og:type"" content=""website"" />
-    <meta property=""og:url"" content=""{encodedUrl}"" />
-    <meta property=""og:image"" content=""{encodedImage}"" />
-    <meta name=""twitter:card"" content=""summary_large_image"" />
-    <meta name=""twitter:title"" content=""{encodedTitle}"" />
-    <meta name=""twitter:description"" content=""{encodedTitle} - 智能AI对话助手"" />
-    <meta name=""twitter:image"" content=""{encodedImage}"" />
-";
-    }
 
     #endregion
 }
