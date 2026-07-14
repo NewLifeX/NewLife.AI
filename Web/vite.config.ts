@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vitest/config'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
+import legacy from '@vitejs/plugin-legacy'
 import path from 'path'
 import fs from 'fs'
 
@@ -33,7 +34,7 @@ function removeKatexLegacyFonts(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), renameHtml('index.html', 'chat.html'), removeKatexLegacyFonts()],
+  plugins: [react(), tailwindcss(), ...(process.env.LEGACY ? [legacy({ targets: ['iOS >= 11', 'Android >= 5'] })] : []), renameHtml('index.html', 'chat.html'), removeKatexLegacyFonts()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -51,6 +52,7 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: false,
     target: 'esnext',
+    minify: 'esbuild',
     reportCompressedSize: false,
     rollupOptions: {
       output: {
