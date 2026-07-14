@@ -9,7 +9,7 @@ import { createOnigurumaEngine } from 'shiki/engine/oniguruma'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import 'katex/dist/katex.min.css'
-import mermaid from 'mermaid'
+import { getMermaid } from '@/components/chat/mermaidLazy'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { Lightbox } from '@/components/common/Lightbox'
@@ -19,7 +19,7 @@ import { resolveRenderableMermaidCode } from '@/components/chat/mermaidHelper'
 import { useChatStore } from '@/stores/chatStore'
 import { editImage } from '@/lib/api'
 
-mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
+// mermaid 已改为按需懒加载（getMermaid），此处不再执行顶层初始化
 
 // ── Shiki 代码高亮单例 ────────────────────────────────────────────────────────
 let _shikiReady: HighlighterCore | null = null
@@ -223,7 +223,7 @@ function MermaidSvgPane({
         return
       }
 
-      const { svg } = await mermaid.render(id, renderableCode)
+      const { svg } = await (await getMermaid()).render(id, renderableCode)
       if (!cancelled && containerRef.current === container) {
         container.innerHTML = svg
         const svgEl = container.querySelector('svg')

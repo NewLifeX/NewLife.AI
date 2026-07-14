@@ -1,14 +1,15 @@
-import { useEffect, useCallback, useState, useRef } from 'react'
+import { useEffect, useCallback, useState, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatLayout } from '@/layouts/ChatLayout'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { ChatPage } from '@/pages/ChatPage'
-import { SharePage } from '@/pages/SharePage'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { PresetSelector } from '@/components/chat/PresetSelector'
-import { SettingsModal } from '@/components/settings/SettingsModal'
-import { SystemSettingsModal } from '@/components/settings/SystemSettingsModal'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
+
+const SharePage = lazy(() => import('@/pages/SharePage').then(m => ({ default: m.SharePage })))
+const SettingsModal = lazy(() => import('@/components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
+const SystemSettingsModal = lazy(() => import('@/components/settings/SystemSettingsModal').then(m => ({ default: m.SystemSettingsModal })))
 import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
 import { ToastContainer } from '@/components/common/Toast'
@@ -346,21 +347,29 @@ function ChatApp() {
         )}
       </ChatLayout>
 
-      <SettingsModal
-        open={settingsOpen}
-        onClose={closeSettings}
-        settings={settings}
-        onSettingsChange={settings.update}
-        models={models}
-        onDataCleared={() => {
-          loadConversations()
-          handleNewChat()
-        }}
-      />
-      <SystemSettingsModal
-        open={systemSettingsOpen}
-        onClose={() => setSystemSettingsOpen(false)}
-      />
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsModal
+            open={settingsOpen}
+            onClose={closeSettings}
+            settings={settings}
+            onSettingsChange={settings.update}
+            models={models}
+            onDataCleared={() => {
+              loadConversations()
+              handleNewChat()
+            }}
+          />
+        </Suspense>
+      )}
+      {systemSettingsOpen && (
+        <Suspense fallback={null}>
+          <SystemSettingsModal
+            open={systemSettingsOpen}
+            onClose={() => setSystemSettingsOpen(false)}
+          />
+        </Suspense>
+      )}
     </>
   )
 }
@@ -369,7 +378,7 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/share/:token" element={<SharePage />} />
+        <Route path="/share/:token" element={<Suspense fallback={<div className="min-h-screen bg-[var(--color-surface-0)]" />}><SharePage /></Suspense>} />
         <Route path="/chat/:conversationId" element={<ChatApp />} />
         <Route path="/chat" element={<ChatApp />} />
         <Route path="*" element={<Navigate to="/chat" replace />} />

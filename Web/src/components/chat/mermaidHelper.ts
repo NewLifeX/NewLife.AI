@@ -1,4 +1,4 @@
-import mermaid from 'mermaid'
+import { getMermaid } from '@/components/chat/mermaidLazy'
 
 /**
  * 修复 LLM 生成的 `&amp;` HTML 实体，在 Mermaid 代码中还原为 `&`。
@@ -295,7 +295,7 @@ export async function resolveRenderableMermaidCode(code: string): Promise<string
 
   for (const candidate of candidates) {
     try {
-      const parsed = await mermaid.parse(candidate, { suppressErrors: true })
+      const parsed = await (await getMermaid()).parse(candidate, { suppressErrors: true })
       if (parsed) return candidate
     } catch (err) {
       console.error('[Mermaid] parse error:', err)

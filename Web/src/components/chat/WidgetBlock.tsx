@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import mermaid from 'mermaid'
+import { getMermaid } from '@/components/chat/mermaidLazy'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { resolveRenderableMermaidCode, extractMermaidCode } from '@/components/chat/mermaidHelper'
 import { savePngBlob, copyImageOrFallback } from '@/utils/imageCapture'
 import { MobileImageFallback } from '@/components/atoms/MobileImageFallback'
 
-mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
+// mermaid 已改为按需懒加载（getMermaid），此处不再执行顶层初始化
 
 let mermaidWidgetCounter = 0
 
@@ -384,7 +384,7 @@ function MermaidWidgetPane({ code, onSvgChange, className, expand = false }: Mer
         return
       }
 
-      const { svg } = await mermaid.render(id, renderableCode)
+      const { svg } = await (await getMermaid()).render(id, renderableCode)
       if (!cancelled && containerRef.current === container) {
         container.innerHTML = svg
         const svgEl = container.querySelector('svg')

@@ -54,16 +54,24 @@ export default defineConfig({
     target: 'esnext',
     minify: 'esbuild',
     reportCompressedSize: false,
+    /** 小于此大小的资源内联为 base64，减少 HTTP 请求 */
+    assetsInlineLimit: 4096,
+    modulePreload: {
+      /** 现代浏览器已原生支持 modulepreload，无需 polyfill */
+      polyfill: false,
+    },
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (!id.includes('node_modules')) return
           if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router/')) return 'vendor-react'
-          if (id.includes('/@uiw/')) return 'vendor-react'
           if (id.includes('/react-markdown/') || id.includes('/remark-gfm/')) return 'vendor-markdown'
           if (id.includes('/zustand/') || id.includes('/i18next/') || id.includes('/react-i18next/')) return 'vendor-state'
           if (id.includes('/mermaid/')) return 'vendor-mermaid'
           if (id.includes('/echarts/')) return 'vendor-chart'
+          // shiki 语言/主题已通过动态 import() 按需加载，不做手动分包
+          if (id.includes('/katex/') || id.includes('/rehype-katex/') || id.includes('/remark-math/')) return 'vendor-math'
+          if (id.includes('/html2canvas/') || id.includes('/html-to-image/')) return 'vendor-utils'
         },
       },
     },
