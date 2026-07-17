@@ -1,10 +1,12 @@
-using System.Net.Http;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using NewLife.AI.Tools;
 using NewLife.Collections;
 using NewLife.Log;
-using NewLife.Office;
+using NewLife.Office.Excel;
+using NewLife.Office.Pdf;
+using NewLife.Office.Ppt;
+using NewLife.Office.Word;
 using NewLife.Serialization;
 using Attachment = NewLife.Cube.Entity.Attachment;
 

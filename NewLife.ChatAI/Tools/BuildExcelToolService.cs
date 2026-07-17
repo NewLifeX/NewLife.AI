@@ -5,7 +5,7 @@ using NewLife.AI.Tools;
 using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Log;
-using NewLife.Office;
+using NewLife.Office.Excel;
 using NewLife.Serialization;
 using Attachment = NewLife.Cube.Entity.Attachment;
 
@@ -75,21 +75,21 @@ public class BuildExcelToolService(ILog log)
             var headerBg   = sheet.Style?.HeaderBgColor ?? accentColor;
             var headerFont = sheet.Style?.HeaderFontColor ?? "FFFFFF";
             var stripe     = sheet.Style?.StripeColor ?? ThemeColors.GetLight(theme);
-            var headerStyle = new ExcelCellStyle
+            var headerStyle = new CellFormat
             {
                 Bold = true,
                 FontColor = headerFont,
                 BackgroundColor = headerBg,
-                HAlign = ExcelHorizontalAlignment.Center,
-                Border = ExcelCellBorderStyle.Thin,
+                HAlign = HorizontalAlignment.Center,
+                Border = BorderStyle.Thin,
             };
 
             writer.WriteHeader(sheetName, sheet.Headers ?? [], headerStyle);
 
             if (sheet.Rows is { Length: > 0 })
             {
-                var dataStyle = new ExcelCellStyle { Border = ExcelCellBorderStyle.Thin };
-                var stripeStyle = new ExcelCellStyle { Border = ExcelCellBorderStyle.Thin, BackgroundColor = stripe };
+                var dataStyle = new CellFormat { Border = BorderStyle.Thin };
+                var stripeStyle = new CellFormat { Border = BorderStyle.Thin, BackgroundColor = stripe };
                 var rows = sheet.Rows.Select(r => r.Cast<Object>().ToArray()).ToList();
                 for (var ri = 0; ri < rows.Count; ri++)
                 {

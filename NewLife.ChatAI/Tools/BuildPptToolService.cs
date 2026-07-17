@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using NewLife;
 using NewLife.AI.Tools;
 using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Log;
-using NewLife.Office;
+using NewLife.Office.Ppt;
 using NewLife.Serialization;
 using Attachment = NewLife.Cube.Entity.Attachment;
 
@@ -78,10 +77,10 @@ public class BuildPptToolService(ILog log)
         if (slides.IsNullOrEmpty())
             throw new ToolException("参数错误：slides 不能为空", "请提供幻灯片 JSON 数组后重试，或直接回复用户说明无法生成 PPT。");
 
-        Models.PptPageModel[] slideList;
+        PptPageModel[] slideList;
         try
         {
-            slideList = slides.ToJsonEntity<Models.PptPageModel[]>();
+            slideList = slides.ToJsonEntity<PptPageModel[]>();
             if (slideList == null)
                 throw new ToolException("slides JSON 格式错误", "请检查 JSON 语法后重试，或直接回复用户说明无法生成 PPT。");
         }
@@ -136,7 +135,7 @@ public class BuildPptToolService(ILog log)
 
         log.Info("[Slide] Widget \u5bfc\u5165\u6a21\u5f0f\uff1a{0}\uff0c{1} \u4e2a\u5361\u7247\uff0c\u4e3b\u9898\uff1a{2}", title, widgetIds.Length, theme ?? "blue");
 
-        var pages = new List<Models.PptPageModel>();
+        var pages = new List<PptPageModel>();
         foreach (var wid in widgetIds)
         {
             var widgetCode = FindWidgetContent(wid);
@@ -146,13 +145,13 @@ public class BuildPptToolService(ILog log)
                 continue;
             }
 
-            pages.Add(new Models.PptPageModel
+            pages.Add(new PptPageModel
             {
                 Title = $"Widget: {wid[..Math.Min(wid.Length, 20)]}",
                 Layout = "blank",
                 Elements =
                 [
-                    new Models.PptElement
+                    new PptElement
                     {
                         Type = "text",
                         Role = "caption",
@@ -267,7 +266,7 @@ public class BuildPptToolService(ILog log)
             }
 
             // 由 NewLife.Office.LayoutEngine 自动排版
-            NewLife.Office.LayoutEngine.Apply(powerPointSlide);
+            LayoutEngine.Apply(powerPointSlide);
 
             // 备注
             if (!model.Notes.IsNullOrEmpty())
@@ -310,7 +309,7 @@ public class BuildPptToolService(ILog log)
                     if (elem.Runs != null)
                     {
                         tb.Runs.Clear();
-                        tb.Runs.AddRange(elem.Runs.Select(r => new PptTextRun
+                        tb.Runs.AddRange(elem.Runs.Select(r => new Run
                         {
                             Text = r.Text,
                             FontSize = r.FontSize,
@@ -336,7 +335,7 @@ public class BuildPptToolService(ILog log)
                         if (!ts.HeaderBgColor.IsNullOrEmpty())
                         {
                             var colCount = tableRows[0].Length;
-                            var headerStyle = new PptCellStyle
+                            var headerStyle = new CellStyle
                             {
                                 BackgroundColor = ts.HeaderBgColor,
                                 FontColor = ts.HeaderFontColor,
@@ -347,7 +346,7 @@ public class BuildPptToolService(ILog log)
                         }
                         if (!ts.StripeColor.IsNullOrEmpty())
                         {
-                            var stripeStyle = new PptCellStyle { BackgroundColor = ts.StripeColor };
+                            var stripeStyle = new CellStyle { BackgroundColor = ts.StripeColor };
                             for (var r = 2; r < tableRows.Count; r += 2)
                                 for (var c = 0; c < tableRows[r].Length; c++)
                                     table.CellStyles[(r, c)] = stripeStyle;
@@ -410,17 +409,17 @@ public class BuildPptToolService(ILog log)
         {
             foreach (var s in elem.Series)
             {
-                chart.Series.Add(new PptChartSeries
+                chart.Series.Add(new NewLife.Office.Ppt.ChartSeries
                 {
                     Name = s.Name,
-                    Values = s.Data,
+                    Values = s.Data!.Cast<Double>().ToArray(),
                 });
             }
         }
     }
 
     /// <summary>根据布局类型自动添加视觉装饰元素（分隔线、封面色柱）</summary>
-    private static void AddAutoDecoration(PptxWriter writer, Int32 idx, Models.PptPageModel slide, String accentColor)
+    private static void AddAutoDecoration(PptxWriter writer, Int32 idx, PptPageModel slide, String accentColor)
     {
         const Double marginL = 2.0;
         const Double contentW = 29.87;

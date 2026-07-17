@@ -215,7 +215,7 @@ public static class ThemeColors
 #if STARCHAT
         if (!theme.IsNullOrEmpty())
         {
-            var cardStyle = CardStyle.GetByKey(theme!);
+            var cardStyle = NewLife.StarChat.Entity.CardStyle.GetByKey(theme!);
             if (cardStyle?.Enable == true && !cardStyle.ThemeColors.IsNullOrEmpty())
             {
                 // 尝试解析 JSON 13色槽格式
@@ -269,7 +269,7 @@ public static class ThemeColors
 #if STARCHAT
         if (!theme.IsNullOrEmpty())
         {
-            var cardStyle = CardStyle.GetByKey(theme!);
+            var cardStyle = NewLife.StarChat.Entity.CardStyle.GetByKey(theme!);
             if (cardStyle?.Enable == true && !cardStyle.ThemeColors.IsNullOrEmpty())
             {
                 try

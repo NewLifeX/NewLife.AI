@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using NewLife;
 using NewLife.AI.Tools;
 using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Log;
-using NewLife.Office;
+using NewLife.Office.Word;
 using NewLife.Serialization;
 using Attachment = NewLife.Cube.Entity.Attachment;
 
@@ -64,7 +63,7 @@ public class BuildDocToolService(ILog log)
     {
         using var ms = new MemoryStream();
         var writer = new WordWriter();
-        writer.DocumentProperties = new WordDocumentProperties { Title = title };
+        writer.DocumentProperties = new DocumentProperties { Title = title };
 
         // 从主题取 Accent1 用于表格表头背景色
         var tableHeaderBg = ThemeColors.GetPrimary(theme);
@@ -80,7 +79,7 @@ public class BuildDocToolService(ILog log)
 
             // 正文段落
             if (!section.Content.IsNullOrEmpty())
-                writer.AppendParagraph(section.Content!, WordParagraphStyle.Normal);
+                writer.AppendParagraph(section.Content!, ParagraphStyle.Normal);
 
             // 结构化元素
             if (section.Elements == null) continue;
@@ -90,7 +89,7 @@ public class BuildDocToolService(ILog log)
                 {
                     case "paragraph":
                         if (!elem.Text.IsNullOrEmpty())
-                            writer.AppendParagraph(elem.Text!, WordParagraphStyle.Normal);
+                            writer.AppendParagraph(elem.Text!, ParagraphStyle.Normal);
                         break;
                     case "bullet_list":
                         if (elem.Items is { Length: > 0 })
@@ -106,7 +105,7 @@ public class BuildDocToolService(ILog log)
                             var allRows = new List<IEnumerable<String>> { elem.Headers };
                             allRows.AddRange(elem.Rows.Select(r => r.AsEnumerable()));
                             var tblStyle = !tableHeaderBg.IsNullOrEmpty()
-                                ? new WordTableStyle { HeaderBgColor = tableHeaderBg }
+                                ? new NewLife.Office.Word.TableStyle { HeaderBgColor = tableHeaderBg }
                                 : null;
                             writer.AppendTable(allRows, firstRowHeader: true, tblStyle);
                         }
