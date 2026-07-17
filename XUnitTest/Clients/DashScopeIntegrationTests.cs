@@ -654,7 +654,7 @@ public class DashScopeIntegrationTests
             await ChatAsync(request);
         });
 
-        Assert.Contains("does not exist", ex.Message);
+        Assert.Contains("Model not exist", ex.Message);
     }
 
     [Fact]

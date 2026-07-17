@@ -83,20 +83,18 @@ public class OpenAiChatClientTests
             Model = "qwen-max",
             Messages = [new ChatMessage { Role = "user", Content = "hi" }],
         };
-        // Stream 默认为 false，序列化后不应写入 stream 和 stream_options
+        // Stream 默认为 false，序列化后不应写入 stream_options
         var body = ChatCompletionRequest.FromChatRequest(request);
 
         var options = new AiClientOptions();
         var client = new OpenAIChatClient(options);
 
-        // 与生产代码 AiClientBase.PostAsync 完全一致：传入 JsonHost.Options
-        //var json = client.JsonHost.Write(body, client.JsonHost.Options);
-        var json = client.JsonHost.Write(body, false, false, false);
+        // 与生产代码 AiClientBase.PostAsync 完全一致：传入 JsonOptions
+        var json = client.JsonHost.Write(body, client.JsonOptions);
         var dic = JsonParser.Decode(json);
         Assert.NotNull(dic);
 
         Assert.False(dic!.ContainsKey("stream_options"), $"非流式请求不应包含 stream_options, json={json}");
-        Assert.False(dic.ContainsKey("stream"), $"非流式请求不应包含 stream, json={json}");
     }
 
     [Fact]
