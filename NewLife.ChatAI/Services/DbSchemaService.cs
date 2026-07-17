@@ -67,17 +67,24 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
             }
         }
 
-        // 评分过滤与排序，取前 maxResults 条，按连接名分组返回
+        // 四级 Tier 排序，取前 maxResults 条，按连接名分组返回
+        // Tier 3=表名精确匹配, Tier 2=表名前缀匹配, Tier 1=表名包含匹配, Tier 0=注释匹配；同 Tier 按分数降序
         return allTables
             .Select(table =>
             {
+                var bestTier = -1;
                 var totalScore = 0;
                 foreach (var kw in kwList)
-                    totalScore += CalculateScore(kw, table.TableName ?? "", table.Description ?? "");
-                return (Table: table, Score: totalScore);
+                {
+                    var (tier, score) = CalculateMatchLevel(kw, table.TableName ?? "", table.Description ?? "");
+                    if (tier > bestTier) bestTier = tier;
+                    totalScore += score;
+                }
+                return (Table: table, Score: totalScore, Tier: bestTier);
             })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
+            .Where(x => x.Tier >= 0)
+            .OrderByDescending(x => x.Tier)
+            .ThenByDescending(x => x.Score)
             .Take(maxResults)
             .Select(x => x.Table)
             .GroupBy(t => t.ConnName ?? "")
@@ -173,24 +180,26 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
         return tables;
     }
 
-    /// <summary>计算单个关键字与表名/注释的匹配得分</summary>
-    private static Int32 CalculateScore(String keyword, String tableName, String description)
+    /// <summary>计算单个关键字与表名/注释的匹配层级和分数</summary>
+    /// <remarks>
+    /// 层级（Tier）用于排序优先级，分数用于同层级内排序：
+    /// Tier 3 = 表名精确匹配，Tier 2 = 表名前缀匹配，Tier 1 = 表名包含匹配，Tier 0 = 注释匹配。
+    /// 返回 (-1, 0) 表示无匹配。
+    /// </remarks>
+    private static (Int32 Tier, Int32 Score) CalculateMatchLevel(String keyword, String tableName, String description)
     {
-        var nameScore = 0;
         if (tableName.Equals(keyword, StringComparison.OrdinalIgnoreCase))
-            nameScore = 100;
-        else if (tableName.StartsWith(keyword, StringComparison.OrdinalIgnoreCase))
-            nameScore = 50;
-        else if (tableName.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            nameScore = 20;
-
-        var descScore = 0;
+            return (3, 100);
+        if (tableName.StartsWith(keyword, StringComparison.OrdinalIgnoreCase))
+            return (2, 50);
+        if (tableName.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            return (1, 20);
         if (description.Equals(keyword, StringComparison.OrdinalIgnoreCase))
-            descScore = 30;
-        else if (description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            descScore = 10;
+            return (0, 30);
+        if (description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            return (0, 10);
 
-        return nameScore >= descScore ? nameScore : descScore;
+        return (-1, 0);
     }
 
     /// <summary>将 IDataTable 转换为 TableSchema（向后兼容）</summary>

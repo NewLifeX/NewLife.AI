@@ -347,12 +347,13 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
             return $"未找到匹配表。{connList}";
         }
 
-        // 按连接名排序
-        var groups = groupedTables.OrderBy(kv => kv.Key).ToList();
+        // 保持 SearchTables 的全局排序（精确匹配的连接在前，模糊匹配在后）
+        var groups = groupedTables.ToList();
 
         var sb = new StringBuilder();
 
         // 1. 表→连接映射摘要（AI 后续调用 query_sql 时据此选择正确连接）
+        // 表顺序与 SearchTables 返回一致：精确匹配优先，同级按相关度降序
         sb.AppendLine("## 表→连接映射");
         sb.AppendLine("| 表名 | 所属连接 | 数据库类型 | 说明 |");
         sb.AppendLine("|------|---------|-----------|------|");
@@ -360,7 +361,7 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         {
             var cn = kv.Key;
             var dbType = GetConnectionDbType(cn);
-            foreach (var table in kv.Value.OrderBy(t => t.TableName))
+            foreach (var table in kv.Value)
             {
                 var tableName = table.TableName ?? "";
                 var desc = table.Description ?? "";
