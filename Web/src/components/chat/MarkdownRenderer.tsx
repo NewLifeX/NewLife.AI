@@ -87,6 +87,7 @@ export function shikiHighlight(lang: string, code: string): string | null {
 
 export function onShikiReady(fn: () => void): () => void {
   if (_shikiReady) { fn(); return () => {} }
+  ensureShiki()
   _shikiListeners.push(fn)
   return () => { const i = _shikiListeners.indexOf(fn); if (i >= 0) _shikiListeners.splice(i, 1) }
 }
