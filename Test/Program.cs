@@ -4,6 +4,8 @@ using NewLife.AI.Coding;
 using NewLife.AI.Models;
 using NewLife.AI.Tools;
 using NewLife.Log;
+using NewLife.Serialization;
+using XUnitTest.Helpers;
 
 namespace Test;
 
@@ -30,7 +32,7 @@ class Program
     static async void Test1()
     {
         XTrace.WriteLine("阿里百炼测试开始……");
-        var apiKey = File.ReadAllText("..\\UnitTest\\config\\DashScope.key").Trim();
+        var apiKey = DashScopeKeyLoader.LoadApiKey("..\\UnitTest\\config\\DashScope.key") ?? "";
 
         //var client = AiClientRegistry.Default.CreateClient("DashScope", new AiClientOptions { ApiKey = apiKey, Model = "qwen3.5-flash" });
         apiKey = "sk-NewLifeAI2026";
@@ -158,4 +160,6 @@ class Program
 
         XTrace.WriteLine("编程智能体示例完成！");
     }
+
+
 }

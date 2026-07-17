@@ -9,8 +9,10 @@ using NewLife.AI.Clients;
 using NewLife.AI.Clients.DashScope;
 using NewLife.AI.Embedding;
 using NewLife.AI.Memory;
+using NewLife.Serialization;
 using Xunit;
 using Xunit.Sdk;
+using XUnitTest.Helpers;
 
 namespace XUnitTest.Embedding;
 
@@ -18,6 +20,8 @@ namespace XUnitTest.Embedding;
 [DisplayName("Embedding 集成测试")]
 public class EmbeddingIntegrationTests
 {
+
+
     // ══════════════════════════════════════════════════════════════════════════
     // 第一部分：本地生成器（HashTextEmbedder）端到端集成
     // ══════════════════════════════════════════════════════════════════════════
@@ -141,17 +145,8 @@ public class EmbeddingIntegrationTests
 
     #region DashScope 远程集成
 
-    /// <summary>从 config/DashScope.key 或环境变量 DASHSCOPE_API_KEY 加载 API Key</summary>
-    private static String? LoadDashScopeApiKey()
-    {
-        var configPath = "config/DashScope.key".GetFullPath();
-        if (File.Exists(configPath))
-        {
-            var key = File.ReadAllText(configPath).Trim();
-            if (!String.IsNullOrWhiteSpace(key)) return key;
-        }
-        return Environment.GetEnvironmentVariable("DASHSCOPE_API_KEY");
-    }
+    /// <summary>从 config/DashScope.key 或环境变量 DASHSCOPE_API_KEY 加载 API Key。委托给 DashScopeKeyLoader</summary>
+    private static String? LoadDashScopeApiKey() => DashScopeKeyLoader.LoadApiKey();
 
     /// <summary>未配置 API Key 时跳过远程集成测试</summary>
     private static String EnsureApiKey()

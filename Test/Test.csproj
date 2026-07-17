@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\XUnitTest\Helpers\DashScopeKeyLoader.cs" Link="Helpers\DashScopeKeyLoader.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
   </ItemGroup>
 

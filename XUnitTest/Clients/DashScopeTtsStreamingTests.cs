@@ -13,6 +13,7 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.Serialization;
 using Xunit;
 using Xunit.Sdk;
+using XUnitTest.Helpers;
 
 namespace XUnitTest.Clients;
 
@@ -31,7 +32,7 @@ public class DashScopeTtsStreamingTests
 
     public DashScopeTtsStreamingTests()
     {
-        var cfg = LoadConfig();
+        var cfg = DashScopeKeyLoader.LoadConfig();
         _apiKey = cfg?.ApiKey ?? "";
         _customVoiceId = cfg?.CustomVoiceId ?? "";
         _organization = cfg?.Organization ?? "";
@@ -46,51 +47,7 @@ public class DashScopeTtsStreamingTests
         if (!envOrg.IsNullOrEmpty()) _organization = envOrg;
     }
 
-    /// <summary>DashScope 测试配置（JSON 文件结构）</summary>
-    private class DashScopeTestConfig
-    {
-        public String? ApiKey { get; set; }
-        public String? CustomVoiceId { get; set; }
-        public String? Organization { get; set; }
-    }
 
-    /// <summary>从 config/DashScope.key 加载配置。自动识别 JSON 或纯文本格式</summary>
-    private static DashScopeTestConfig? LoadConfig()
-    {
-        var path = "config/DashScope.key".GetFullPath();
-        var dir = Path.GetDirectoryName(path);
-        if (!String.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-
-        if (!File.Exists(path))
-        {
-            var empty = new DashScopeTestConfig();
-            File.WriteAllText(path, empty.ToJson());
-            return empty;
-        }
-
-        var content = File.ReadAllText(path).Trim();
-
-        if (content.StartsWith('{'))
-        {
-            try
-            {
-                var cfg = content.ToJsonEntity<DashScopeTestConfig>();
-                if (cfg != null) return cfg;
-            }
-            catch { }
-        }
-
-        var apiKey = content;
-        if (!apiKey.IsNullOrEmpty())
-        {
-            var cfg = new DashScopeTestConfig { ApiKey = apiKey };
-            File.WriteAllText(path, cfg.ToJson());
-            return cfg;
-        }
-
-        return null;
-    }
 
     /// <summary>构建默认连接选项（含 Organization）</summary>
     private AiClientOptions CreateOptions() => new()

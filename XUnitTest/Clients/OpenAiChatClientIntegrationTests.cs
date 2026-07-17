@@ -34,7 +34,7 @@ public class OpenAiChatClientIntegrationTests
 
     public OpenAiChatClientIntegrationTests()
     {
-        _apiKey = DashScopeIntegrationTests.LoadApiKey() ?? "";
+        _apiKey = DashScopeKeyLoader.LoadApiKey() ?? "";
     }
 
     /// <summary>构建默认连接选项</summary>

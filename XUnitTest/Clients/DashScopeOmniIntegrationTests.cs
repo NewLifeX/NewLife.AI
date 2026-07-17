@@ -29,7 +29,7 @@ public class DashScopeOmniIntegrationTests
 
     public DashScopeOmniIntegrationTests()
     {
-        _apiKey = DashScopeIntegrationTests.LoadApiKey() ?? "";
+        _apiKey = DashScopeKeyLoader.LoadApiKey() ?? "";
     }
 
     private AiClientOptions CreateOptions() => new() { ApiKey = _apiKey };

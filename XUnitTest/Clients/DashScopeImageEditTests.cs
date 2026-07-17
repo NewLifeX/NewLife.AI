@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.ComponentModel;
 using System.IO;
@@ -84,7 +84,7 @@ public class DashScopeImageEditTests
 
         Assert.NotNull(response);
         Assert.Contains("1024*1024", capturedBody);
-        Assert.DoesNotContain("1024*1024", capturedBody);
+        Assert.DoesNotContain("1024x1024", capturedBody);
     }
 
     [Fact]
