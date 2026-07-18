@@ -81,17 +81,17 @@ public class ChatAIWebAppFactory : WebApplicationFactory<Program>
                 dashScope.Save();
             }
 
-            // 2. 触发 ModelConfig.InitData()（若表为空）并确保 qwen3.5-flash 已启用
+            // 2. 触发 ModelConfig.InitData()（若表为空）并确保 qwen3.6-flash 已启用
             //    全新数据库：InitData 在此时读取到已启用的 DashScope，会以 Enable=true 创建模型
             //    已有数据库：直接更新现有记录
             var models = ModelConfig.FindAll();
-            var model = models.FirstOrDefault(m => m.Code == "qwen3.5-flash");
+            var model = models.FirstOrDefault(m => m.Code == "qwen3.6-flash");
             if (model == null)
             {
                 model = new ModelConfig
                 {
-                    Code = "qwen3.5-flash",
-                    Name = "Qwen3.5 Flash",
+                    Code = "qwen3.6-flash",
+                    Name = "Qwen3.6 Flash",
                     ProviderId = dashScope.Id,
                     Enable = true,
                     Sort = 1,
@@ -103,6 +103,10 @@ public class ChatAIWebAppFactory : WebApplicationFactory<Program>
                 model.Enable = true;
                 model.Save();
             }
+
+            // 清除实体缓存，确保后续 FindAllWithCache() 获取最新数据
+            ProviderConfig.Meta.Cache.Clear("SeedTestData", true);
+            ModelConfig.Meta.Cache.Clear("SeedTestData", true);
         }
         catch
         {

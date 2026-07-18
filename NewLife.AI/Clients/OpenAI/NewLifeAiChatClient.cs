@@ -19,7 +19,7 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <remarks>用连接选项初始化新生命 AI 客户端</remarks>
 /// <param name="options">连接选项（Endpoint、ApiKey、Model 等）</param>
 [AiClient("NewLifeAI", "新生命AI", "https://ai.newlifex.com", Description = "新生命团队星语 AI 网关，统一对接多种大模型")]
-[AiClientModel("qwen3.5-flash", "Qwen3.5 Flash", Thinking = true)]
+[AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true)]
 public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(options), IRerankClient
 {
     #region 属性

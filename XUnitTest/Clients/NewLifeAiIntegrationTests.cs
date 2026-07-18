@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -26,7 +26,7 @@ namespace XUnitTest.Clients;
 public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
 {
     private const String ApiKey = "sk-NewLifeAI2026";
-    private const String TestModel = "qwen3.5-flash";
+    private const String TestModel = "qwen3.6-flash";
 
     private readonly AiClientDescriptor _descriptor = AiClientRegistry.Default.GetDescriptor("NewLifeAI")!;
     private readonly ChatAIWebAppFactory _factory;
@@ -90,7 +90,14 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     /// <summary>创建 NewLifeAI 专用客户端（用于 ResponsesAsync/MessagesAsync 等扩展端点）</summary>
     private NewLifeAIChatClient CreateNewLifeAiClient() => CreateClient();
 
-    #region 元数据验证（不需要 AppKey）
+    #region 辅助方法
+
+    #endregion
+
+    /// <summary>标记需外部 NewLifeAI 服务的测试跳过</summary>
+
+
+    #region 元数据验证（不需要外部服务）
 
     [Fact]
     [DisplayName("元数据_Code正确")]
@@ -119,7 +126,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     {
         Assert.NotNull(_descriptor.Models);
         Assert.NotEmpty(_descriptor.Models);
-        Assert.Contains(_descriptor.Models, m => m.Model.StartsWith("qwen3.5"));
+        Assert.Contains(_descriptor.Models, m => m.Model.StartsWith("qwen3.6"));
     }
 
     [Fact]
@@ -195,7 +202,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
     {
         var request = new ChatRequest
         {
-            Model = "qwen3.5-flash",
+            Model = "qwen3.6-flash",
             Messages =
             [
                 new ChatMessage { Role = "user", Content = "我的名字叫小明，请记住" },
@@ -452,7 +459,7 @@ public class NewLifeAiIntegrationTests : IClassFixture<ChatAIWebAppFactory>
         {
             response = await CreateNewLifeAiClient().ImageGenerationsAsync(
                 "A cute robot reading a book",
-                "qwen3.5-flash",
+                "qwen3.6-flash",
                 "1024*1024");
         }
         catch (ApiException ex)

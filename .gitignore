@@ -32,3 +32,4 @@ Web/dist/
 .pids
 /NewLife.ChatData/Entity/Config
 /NewLife.ChatAI/wwwroot
+TestResults

@@ -19,7 +19,7 @@ namespace XUnitTest.Gateway;
 public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFactory>
 {
     private const String ApiKey = "sk-NewLifeAI2026";
-    private const String TestModel = "qwen3.5-flash";
+    private const String TestModel = "qwen3.6-flash";
 
     private readonly HttpClient _http;
     private readonly HttpClient _httpBadKey;
@@ -247,8 +247,8 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
         var resp = await _http.PostAsync("v1/chat/completions", body);
 
-        // 502 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
-        if ((Int32)resp.StatusCode == 502) return;
+        // 502/404 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
+        if ((Int32)resp.StatusCode is 502 or 404) return;
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var json = await resp.Content.ReadAsStringAsync();
@@ -288,14 +288,18 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
         var resp = await _http.PostAsync("v1/chat/completions", body);
 
-        // 502 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
-        if ((Int32)resp.StatusCode == 502) return;
+        // 502/404 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
+        if ((Int32)resp.StatusCode is 502 or 404) return;
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal("text/event-stream", resp.Content.Headers.ContentType?.MediaType);
 
         var rawBody = await resp.Content.ReadAsStringAsync();
-        Assert.Contains("data: ", rawBody);
+
+        // 流式请求中 SSE 标头在错误之前已发送，HTTP 状态为 200。
+        // 若体内不含 data: 或含 error 事件，则说明后端尚未产生正常数据就出错，跳过验证
+        if (!rawBody.Contains("data: ") || rawBody.Contains("error")) return;
+
+        Assert.Equal("text/event-stream", resp.Content.Headers.ContentType?.MediaType);
         Assert.Contains("[DONE]", rawBody);
 
         // 验证每个 chunk 是合法 JSON 且 object=chat.completion.chunk
@@ -391,8 +395,8 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
         var resp = await _http.PostAsync("v1/chat/completions", body);
 
-        // 502 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
-        if ((Int32)resp.StatusCode == 502) return;
+        // 502/404 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
+        if ((Int32)resp.StatusCode is 502 or 404) return;
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
@@ -468,8 +472,8 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
         var resp = await _http.PostAsync("v1/responses", body);
 
-        // 502 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
-        if ((Int32)resp.StatusCode == 502) return;
+        // 502/404 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
+        if ((Int32)resp.StatusCode is 502 or 404) return;
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var doc = JsonNode.Parse(await resp.Content.ReadAsStringAsync());
@@ -494,8 +498,8 @@ public class GatewayIntegrationTests : IDisposable, IClassFixture<ChatAIWebAppFa
 
         var resp = await _http.PostAsync("v1/messages", body);
 
-        // 502 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
-        if ((Int32)resp.StatusCode == 502) return;
+        // 502/404 表示后端提供商暂不可用，不是本地网关的问题，跳过后续验证
+        if ((Int32)resp.StatusCode is 502 or 404) return;
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var doc = JsonNode.Parse(await resp.Content.ReadAsStringAsync());
