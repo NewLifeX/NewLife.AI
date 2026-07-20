@@ -69,7 +69,7 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
 
     /// <summary>在指定数据库连接上执行SQL查询，返回结果集</summary>
     /// <param name="connName">数据库连接名</param>
-    /// <param name="sql">SQL语句（仅允许SELECT/INSERT/UPDATE）</param>
+    /// <param name="query">SQL语句（仅允许SELECT/INSERT/UPDATE）</param>
     /// <param name="context">工具调用上下文</param>
     /// <returns>查询结果（JSON格式）</returns>
     [ToolDescription("query_sql", IsSystem = false,
@@ -79,19 +79,19 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
     [Description("在指定数据库连接上执行SQL查询，返回结果集。仅允许SELECT和安全的INSERT/UPDATE操作，禁止DDL和DELETE。connName 必须与 search_table 返回的映射表中'所属连接'列一致")]
     public String QuerySql(
         [Description("数据库连接名（必须与 search_table 返回的映射表中'所属连接'列一致）")] String connName,
-        [Description("要执行的SQL语句（仅允许SELECT/INSERT/UPDATE）")] String sql,
+        [Description("要执行的SQL语句（仅允许SELECT/INSERT/UPDATE）。参数名 query（不是 sql）")] [ParameterAlias("sql")] String query,
         ToolCallContext? context = null)
     {
         if (connName.IsNullOrEmpty()) throw new ArgumentNullException(nameof(connName), "connName 不能为空");
-        if (sql.IsNullOrEmpty()) throw new ArgumentNullException(nameof(sql), "sql 不能为空");
+        if (query.IsNullOrEmpty()) throw new ArgumentNullException(nameof(query), "query 不能为空");
 
-        log.Info("[QuerySql] connName={0}, sql.length={1}", connName, sql.Length);
+        log.Info("[QuerySql] connName={0}, query.length={1}", connName, query.Length);
 
         // 1. SQL 安全检查
-        ValidateSql(sql);
+        ValidateSql(query);
 
         // 2. 表权限校验
-        var tableNames = ExtractTableNames(sql);
+        var tableNames = ExtractTableNames(query);
         var roleIds = GetRoleIds(context);
         foreach (var tableName in tableNames)
         {
@@ -111,7 +111,7 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         // 4. 执行SQL
         try
         {
-            var table = dal.Query(sql);
+            var table = dal.Query(query);
 
             if (table == null || table.Rows == null || table.Rows.Count == 0)
                 return new { rows = Array.Empty<Object>(), columns = Array.Empty<Object>(), total = 0 }.ToJson();

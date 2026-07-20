@@ -103,7 +103,6 @@ public class ToolContextHandler(IEnumerable<IToolProvider> toolProviders, SkillS
                     context.SelectedTools.Add(n);
             }
 
-            InjectToolGuidanceIfNeeded(context);
             return Task.CompletedTask;
         }
 
@@ -150,27 +149,10 @@ public class ToolContextHandler(IEnumerable<IToolProvider> toolProviders, SkillS
         if (!catalog.IsNullOrWhiteSpace())
             context.SystemSegments.Add(catalog);
 
-        InjectToolGuidanceIfNeeded(context);
         return Task.CompletedTask;
     }
 
     #region 辅助
-
-    /// <summary>当上下文中存在 search_table 或 query_sql 时，注入工具选择引导</summary>
-    private static void InjectToolGuidanceIfNeeded(IChatContext context)
-    {
-        var hasDbTool = context.SelectedTools.Contains("search_table", StringComparer.OrdinalIgnoreCase) ||
-                        context.SelectedTools.Contains("query_sql", StringComparer.OrdinalIgnoreCase);
-        if (!hasDbTool) return;
-
-        context.SystemSegments.Add("""
-            ## 工具使用原则
-            - 优先使用业务专用查询工具获取数据，它们已封装了表结构和业务逻辑
-            - search_table 和 query_sql 是底层数据库工具，仅在需要探索不熟悉的表结构或执行专用工具无法覆盖的自定义查询时使用
-            - 不要用 search_table + query_sql 替代已有的专用查询工具
-            - search_table 返回的映射表明确标注了每个表所属的连接名，query_sql 的 connName 必须与映射表中"所属连接"列一致
-            """);
-    }
 
     /// <summary>计算两个向量的余弦相似度（-1 ~ 1，归一化向量返回 0 ~ 1）</summary>
     /// <param name="a">向量 a</param>

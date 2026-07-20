@@ -419,6 +419,8 @@ public class ToolRegistry : IToolProvider
     private static Object?[] DeserializeArguments(ParameterInfo[] parameters, String arguments)
     {
         var result = new Object?[parameters.Length];
+
+        // Phase 1: 标准 JSON 解析
         IDictionary<String, Object?>? parsed;
         try
         {
@@ -426,36 +428,15 @@ public class ToolRegistry : IToolProvider
         }
         catch (Exception ex)
         {
-            // 参数 JSON 格式异常（如流式截断导致不完整 JSON，或 LLM 输出含匿名对象等畸形结构）
-            // 后备策略：按参数名逐一提取字段原始 JSON，放宽整体解析要求
+            // Phase 2: 后备 — 从格式异常的原始字符串中手动提取
             XTrace.WriteLine("[ToolRegistry] JSON 解析失败，Length={0}，错误：{1}，参数前200字符：{2}",
                 arguments?.Length ?? 0, ex.Message, arguments?.Substring(0, Math.Min(arguments?.Length ?? 0, 200)));
-            for (var i = 0; i < parameters.Length; i++)
-            {
-                var p = parameters[i];
-                if (p.Name == null) continue;
-                var rawJson = TryExtractFieldJson(arguments, p.Name);
-                if (rawJson != null)
-                {
-                    try
-                    {
-                        var val = JsonParser.Decode(rawJson);
-                        result[i] = ConvertValue(val ?? (Object?)rawJson, p.ParameterType);
-                    }
-                    catch
-                    {
-                        if (p.HasDefaultValue) result[i] = p.DefaultValue;
-                    }
-                }
-                else if (p.HasDefaultValue)
-                {
-                    result[i] = p.DefaultValue;
-                }
-            }
+            ExtractFromRawString(arguments, parameters, result);
             return result;
         }
         if (parsed == null) return result;
 
+        // Phase 1: 从已解析的字典中精确匹配 → 别名匹配 → 默认值
         for (var i = 0; i < parameters.Length; i++)
         {
             var p = parameters[i];
@@ -463,10 +444,117 @@ public class ToolRegistry : IToolProvider
 
             if (parsed.TryGetValue(p.Name, out var value))
                 result[i] = ConvertValue(value, p.ParameterType);
+            else if (TryMatchAlias(parsed, p, out var aliasValue))
+                result[i] = aliasValue;
             else if (p.HasDefaultValue)
                 result[i] = p.DefaultValue;
+            // 无默认值的必需参数保持 null，由工具方法自行校验
         }
         return result;
+    }
+
+    /// <summary>从已解析的字典中尝试按别名匹配参数值</summary>
+    /// <param name="parsed">已解析的 JSON 参数字典</param>
+    /// <param name="p">参数信息</param>
+    /// <param name="value">匹配成功时输出转换后的值</param>
+    /// <returns>是否找到匹配的别名</returns>
+    private static Boolean TryMatchAlias(IDictionary<String, Object?> parsed, ParameterInfo p, out Object? value)
+    {
+        value = null;
+        var attr = p.GetCustomAttribute<ParameterAliasAttribute>();
+        if (attr == null) return false;
+
+        foreach (var alias in attr.Aliases)
+        {
+            if (parsed.TryGetValue(alias, out var v))
+            {
+                value = ConvertValue(v, p.ParameterType);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>从格式异常的原始 JSON 字符串中按字段名逐一提取参数值（后备路径）</summary>
+    private static void ExtractFromRawString(String? json, ParameterInfo[] parameters, Object?[] result)
+    {
+        if (json.IsNullOrWhiteSpace()) return;
+
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var p = parameters[i];
+            if (p.Name == null) continue;
+
+            // 尝试精确匹配
+            if (TryDecodeField(json, p.Name!, p.ParameterType, out var val))
+            {
+                result[i] = val;
+                continue;
+            }
+
+            // 尝试别名匹配
+            var attr = p.GetCustomAttribute<ParameterAliasAttribute>();
+            if (attr != null)
+            {
+                foreach (var alias in attr.Aliases)
+                {
+                    if (TryDecodeField(json, alias, p.ParameterType, out val))
+                    {
+                        result[i] = val;
+                        break;
+                    }
+                }
+            }
+
+            // 都不匹配时使用默认值
+            if (result[i] == null && p.HasDefaultValue)
+                result[i] = p.DefaultValue;
+        }
+    }
+
+    /// <summary>从原始 JSON 字符串中提取指定字段的值并解析为目标类型。
+    /// 简单类型先 Decode 再 Convert，避免 raw 字符串带引号；
+    /// 复杂类型走 ConvertValue 的 Qwen JSON 字符串分支。</summary>
+    private static Boolean TryDecodeField(String? json, String fieldName, Type targetType, out Object? value)
+    {
+        value = null;
+        var raw = TryExtractFieldJson(json, fieldName);
+        if (raw == null) return false;
+
+        // 简单类型（String/数值/布尔/枚举）：必须先 Decode 去除 JSON 包裹（引号等）
+        if (IsSimpleType(targetType))
+        {
+            try
+            {
+                var decoded = JsonParser.Decode(raw);
+                value = ConvertValue(decoded ?? (Object?)raw, targetType);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // 复杂类型：ConvertValue 内部有 Qwen 兼容的 JSON 字符串→对象转换
+        value = ConvertValue(raw, targetType);
+        return true;
+    }
+
+    /// <summary>判断类型是否为简单类型。复杂类型由 ConvertValue 的 Qwen 分支处理 JSON 字符串→对象转换</summary>
+    private static Boolean IsSimpleType(Type type)
+    {
+        var underlying = Nullable.GetUnderlyingType(type) ?? type;
+        return underlying == typeof(String) ||
+               underlying == typeof(Boolean) ||
+               underlying == typeof(Int32) ||
+               underlying == typeof(Int64) ||
+               underlying == typeof(Int16) ||
+               underlying == typeof(Byte) ||
+               underlying == typeof(Double) ||
+               underlying == typeof(Single) ||
+               underlying == typeof(Decimal) ||
+               underlying.IsEnum;
     }
 
     private static Object? ConvertValue(Object? value, Type targetType)
