@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer'
 import { Icon } from '@/components/common/Icon'
 import { fetchSharedConversation, type SharedConversationContent } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { cn, smoothScrollIntoView } from '@/lib/utils'
 
 export function SharePage() {
   const { token } = useParams<{ token: string }>()
@@ -54,7 +54,7 @@ export function SharePage() {
         document.title = t('sharePage.title')
       }
       if (anchorRef.current) {
-        anchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        smoothScrollIntoView(anchorRef.current, { block: 'center' })
       }
     }
   }, [data, t])
