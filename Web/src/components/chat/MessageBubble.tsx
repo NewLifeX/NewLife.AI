@@ -98,44 +98,44 @@ function getToolOutputInfo(tc: ToolCall): { type: 'error' | 'duplicate'; forUser
 }
 
 /** 根据工具名称将结果分发到对应的可视化 Block 组件 */
-function renderToolResult(tc: ToolCall, showToolCalls: boolean) {
+function renderToolResult(tc: ToolCall, showToolCalls: boolean, t: (key: string, options?: Record<string, unknown>) => string) {
   if (tc.name === 'build_ppt') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成幻灯片…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingSlides')}</span></div>)
     const sd = parseSlideData(tc.result)
     if (sd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<SlideBlock data={sd} /></div>)
   }
   if (tc.name === 'build_excel') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成电子表格…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingSpreadsheet')}</span></div>)
     const xd = parseSpreadsheetData(tc.result)
     if (xd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<SpreadsheetBlock data={xd} /></div>)
   }
   if (tc.name === 'build_doc') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成文档…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingDocument')}</span></div>)
     const dd = parseDocData(tc.result)
     if (dd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<DocBlock data={dd} /></div>)
   }
   if (tc.name === 'show_widget' || tc.name === 'show_china_map') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成可视化…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingVisualization')}</span></div>)
     const wd = parseWidgetData(tc.result)
     if (wd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<WidgetBlock data={wd} /></div>)
   }
   if (tc.name === 'show_chart') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在渲染图表…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.renderingChart')}</span></div>)
     const cd = parseChartData(tc.result)
     if (cd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<ChartBlock spec={cd} /></div>)
   }
   if (tc.name === 'show_timeline') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成时间轴…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingTimeline')}</span></div>)
     const td = parseTimelineData(tc.result ?? '')
     if (td) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<TimelineBlock key={td.timelineId} spec={td} /></div>)
   }
   if (tc.name === 'show_mindmap') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成思维导图…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingMindmap')}</span></div>)
     const md = parseMindmapData(tc.result ?? '')
     if (md) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<MindmapBlock spec={md} /></div>)
   }
   if (tc.name === 'show_kanban') {
-    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>正在生成看板…</span></div>)
+    if (tc.status === 'calling') return (<div key={tc.id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse"><Icon name="hourglass_top" size="sm" /><span>{t('chat.generatingKanban')}</span></div>)
     const kd = parseKanbanData(tc.result ?? '')
     if (kd) return (<div key={tc.id} className="mt-4">{showToolCalls && <ToolCallBadge name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} showDetails={showToolCalls} />}<KanbanBlock spec={kd} /></div>)
   }
@@ -145,14 +145,14 @@ function renderToolResult(tc: ToolCall, showToolCalls: boolean) {
     if (outputInfo.type === 'error') {
       return (
         <div key={tc.id} className="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">
-          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} 生成失败`}
+          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} ${t('chat.genFailed')}`}
         </div>
       )
     }
     if (outputInfo.type === 'duplicate') {
       return (
         <div key={tc.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
-          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} 已跳过（重复调用）`}
+          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} ${t('chat.duplicateSkipped')}`}
         </div>
       )
     }
@@ -373,7 +373,7 @@ export function MessageBubble({
           {toolCalls && toolCalls.length > 0 && (
             <div className="flex flex-col gap-3 mb-4">
               {toolCalls.map((tc) => {
-                const resultBlock = renderToolResult(tc, showToolCalls)
+                const resultBlock = renderToolResult(tc, showToolCalls, t)
                 if (resultBlock) return resultBlock
                 if (!showToolCalls) return null
                 return (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { ToolCallBadge } from './ToolCallBadge'
@@ -19,6 +20,7 @@ interface ToolCallGroupProps {
  * 同类操作分组模式：相邻同名工具调用达到阈值时折叠为组，减少界面噪声（详见 Doc/借鉴分析/ 6.3 节）。
  */
 export function ToolCallGroup({ calls, showDetails, className }: ToolCallGroupProps) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   if (calls.length === 0) return null
   const name = calls[0].name
@@ -43,8 +45,8 @@ export function ToolCallGroup({ calls, showDetails, className }: ToolCallGroupPr
         <Icon name={expanded ? 'expand_more' : 'chevron_right'} size="sm" />
         <span className="font-mono font-medium">{name}</span>
         <span className="text-gray-400">×{calls.length}</span>
-        {running && <span className="text-[color:var(--color-brand-500)] animate-pulse">运行中</span>}
-        {errors > 0 && <span className="text-red-500">{errors} 失败</span>}
+        {running && <span className="text-[color:var(--color-brand-500)] animate-pulse">{t('chat.toolRunning')}</span>}
+        {errors > 0 && <span className="text-red-500">{t('chat.toolErrors', { errors })}</span>}
       </button>
       {expanded && (
         <div className="flex flex-col gap-1 px-3 py-2 border-t border-gray-200 dark:border-gray-700">

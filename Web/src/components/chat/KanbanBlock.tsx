@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { captureDomAsPng, copyImageOrFallback, savePngBlob } from '@/utils/imageCapture'
 import { MobileImageFallback } from '@/components/atoms/MobileImageFallback'
@@ -157,6 +158,7 @@ interface CardDetailModalProps {
 }
 
 function KanbanCardDetailModal({ card, onClose }: CardDetailModalProps) {
+  const { t } = useTranslation()
   const priority = card.priority ? PRIORITY_STYLES[card.priority] : null
   const overdue = isOverdue(card.dueDate)
   const checklistDone = card.checklist ? card.checklist.filter((c) => c.done).length : 0
@@ -205,7 +207,7 @@ function KanbanCardDetailModal({ card, onClose }: CardDetailModalProps) {
             <div className={cn('flex items-center gap-2 text-xs', overdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400')}>
               <Icon name="calendar_today" size="sm" />
               <span>{card.dueDate}</span>
-              {overdue && <span className="font-semibold">已过期</span>}
+              {overdue && <span className="font-semibold">{t('chat.overdue')}</span>}
             </div>
           )}
 
@@ -221,7 +223,7 @@ function KanbanCardDetailModal({ card, onClose }: CardDetailModalProps) {
           {card.progress != null && (
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>进度</span>
+                <span>{t('chat.progress')}</span>
                 <span>{card.progress}%</span>
               </div>
               <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -237,7 +239,7 @@ function KanbanCardDetailModal({ card, onClose }: CardDetailModalProps) {
           {card.checklist && card.checklist.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>子任务</span>
+                <span>{t('chat.subtasks')}</span>
                 <span>{checklistDone}/{checklistTotal}</span>
               </div>
               <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -303,6 +305,7 @@ interface KanbanCardItemProps {
 }
 
 function KanbanCardItem({ card, columnId, isHidden, onDragStart, onClick }: KanbanCardItemProps) {
+  const { t } = useTranslation()
   const priority = card.priority ? PRIORITY_STYLES[card.priority] : null
   const overdue = isOverdue(card.dueDate)
 
@@ -389,7 +392,7 @@ function KanbanCardItem({ card, columnId, isHidden, onDragStart, onClick }: Kanb
       {/* 子任务勾选指示 */}
       {card.checklist && card.checklist.length > 0 && (
         <div className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-          {card.checklist.filter((c) => c.done).length}/{card.checklist.length} 子任务
+          {card.checklist.filter((c) => c.done).length}/{card.checklist.length} {t('chat.subtasks')}
         </div>
       )}
 
@@ -494,6 +497,7 @@ interface KanbanBlockProps {
 }
 
 export function KanbanBlock({ spec, className }: KanbanBlockProps) {
+  const { t } = useTranslation()
   // ── 本地可变状态（列数据，用于拖拽等交互） ──
   const [columns, setColumns] = useState<KanbanColumn[]>(() =>
     spec.columns.map((c) => ({ ...c, cards: [...c.cards] })),
@@ -689,7 +693,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
   if (spec.columns.length === 0) {
     return (
       <div className={cn('rounded-xl border border-[var(--color-border-subtle)] p-4 text-sm text-[var(--color-text-secondary)]', className)}>
-        看板暂无数据
+        {t('chat.noKanbanData')}
       </div>
     )
   }
@@ -699,7 +703,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
       {/* 标题栏 */}
       {(spec.title || true) && (
         <div className="flex items-center justify-between px-5 pt-4 pb-3 bg-[var(--color-surface-0)] border-b border-[var(--color-border-subtle)]">
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{spec.title || '看板'}</h3>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{spec.title || t('chat.kanban')}</h3>
           <div className="flex items-center gap-0.5" data-no-capture>
             <button
               type="button"

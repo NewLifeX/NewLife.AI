@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { captureDomAsPng, copyImageOrFallback, savePngBlob } from '@/utils/imageCapture'
 import { MobileImageFallback } from '@/components/atoms/MobileImageFallback'
@@ -560,6 +561,7 @@ interface TimelineBlockProps {
 }
 
 export function TimelineBlock({ spec, className }: TimelineBlockProps) {
+  const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
   const [imageCopied, setImageCopied] = useState(false)
   const [imageCopyErr, setImageCopyErr] = useState(false)
@@ -615,7 +617,7 @@ export function TimelineBlock({ spec, className }: TimelineBlockProps) {
   const iconBtnClass = 'flex items-center justify-center w-6 h-6 rounded transition-colors hover:bg-gray-100 dark:hover:bg-gray-700'
 
   if (items.length === 0) {
-    return <div className={cn('rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-500', className)}>时间轴暂无数据</div>
+    return <div className={cn('rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-500', className)}>{t('chat.noTimelineData')}</div>
   }
 
   const LayoutRenderer = LAYOUT_RENDERERS[layout]

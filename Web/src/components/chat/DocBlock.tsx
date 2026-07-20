@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 
@@ -35,6 +36,7 @@ function formatSize(bytes: number): string {
 }
 
 export function DocBlock({ data, className }: DocBlockProps) {
+  const { t } = useTranslation()
   const colors = THEME_COLORS[data.theme ?? 'blue'] ?? THEME_COLORS['blue']
   return (
     <div className={cn('my-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 overflow-hidden', className)} data-testid="doc-block">
@@ -44,7 +46,7 @@ export function DocBlock({ data, className }: DocBlockProps) {
           <span style={{ color: colors.text, opacity: 0.85 }}><Icon name="description" size="sm" /></span>
           <span className="text-sm font-medium truncate" style={{ color: colors.text }}>{data.title}</span>
         </div>
-        <span className="shrink-0 ml-2 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: colors.text }}>{data.sectionCount} 节</span>
+        <span className="shrink-0 ml-2 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: colors.text }}>{t('chat.sections', { n: data.sectionCount })}</span>
       </div>
       {/* 节结构示意 */}
       <div className="px-3 py-3">
@@ -61,7 +63,7 @@ export function DocBlock({ data, className }: DocBlockProps) {
       {/* 下载 */}
       <div className="flex items-center justify-between px-3 pb-3 gap-3">
         <span className="text-xs text-gray-400 dark:text-gray-500">DOCX · {formatSize(data.fileSize)}</span>
-        <a href={data.downloadUrl} download className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90" style={{ backgroundColor: colors.accent }}><Icon name="download" size="sm" />下载 DOCX</a>
+        <a href={data.downloadUrl} download className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90" style={{ backgroundColor: colors.accent }}><Icon name="download" size="sm" />{t('chat.downloadDocx')}</a>
       </div>
     </div>
   )

@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { Icon } from '@/components/common/Icon'
+import i18n from '@/i18n'
 
 interface ErrorBoundaryProps {
   /** 子节点 */
@@ -46,16 +47,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
           <Icon name="error_outline" size="xl" className="text-[var(--color-text-tertiary)]" />
           <div>
-            <p className="text-sm font-medium text-[var(--color-text-secondary)]">页面加载失败</p>
+            <p className="text-sm font-medium text-[var(--color-text-secondary)]">{i18n.t('chat.pageLoadFailed')}</p>
             <p className="text-xs text-[var(--color-text-tertiary)] mt-1">
-              {this.state.error?.message ?? '未知错误'}
+              {this.state.error?.message ?? i18n.t('chat.unknownError')}
             </p>
           </div>
           <button
             onClick={this.handleRetry}
             className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-brand-500)] text-white hover:bg-[color:var(--color-brand-600)] transition-colors"
           >
-            重试
+            {i18n.t('common.retry')}
           </button>
         </div>
       )
