@@ -9,6 +9,13 @@ import 'material-symbols/outlined.css'
 import '@/styles/index.css'
 import App from './App.tsx'
 
+// 低版本浏览器 ResizeObserver polyfill（iOS < 13.4, Android < 5 等）
+if (typeof ResizeObserver === 'undefined') {
+  import('resize-observer-polyfill').then(() => {
+    console.log('[polyfill] ResizeObserver loaded')
+  }).catch(() => {})
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

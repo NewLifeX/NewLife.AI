@@ -750,9 +750,16 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => chartRef.current?.resize())
-    ro.observe(el)
-    return () => ro.disconnect()
+    // 低版本浏览器 fallback：ResizeObserver 不可用时降级为 window.resize
+    try {
+      const ro = new ResizeObserver(() => chartRef.current?.resize())
+      ro.observe(el)
+      return () => ro.disconnect()
+    } catch {
+      const onResize = () => chartRef.current?.resize()
+      window.addEventListener('resize', onResize)
+      return () => window.removeEventListener('resize', onResize)
+    }
   }, [])
 
   const getChartBlob = useCallback(async (): Promise<Blob> => {

@@ -303,10 +303,18 @@ function SCurveLayout({ items, density, perRow }: LayoutRendererProps) {
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const ro = new ResizeObserver(([entry]) => { if (entry) setContainerW(entry.contentRect.width) })
-    ro.observe(el)
-    setContainerW(el.clientWidth)
-    return () => ro.disconnect()
+    // 低版本浏览器 fallback：ResizeObserver 不可用时降级为 window.resize
+    try {
+      const ro = new ResizeObserver(([entry]) => { if (entry) setContainerW(entry.contentRect.width) })
+      ro.observe(el)
+      setContainerW(el.clientWidth)
+      return () => ro.disconnect()
+    } catch {
+      const onResize = () => setContainerW(el.clientWidth)
+      setContainerW(el.clientWidth)
+      window.addEventListener('resize', onResize)
+      return () => window.removeEventListener('resize', onResize)
+    }
   }, [])
 
   const CARD_W = density === 'compact' ? 120 : density === 'relaxed' ? 180 : 145

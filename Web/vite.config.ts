@@ -25,7 +25,7 @@ function removeKatexLegacyFonts(): Plugin {
       const assetsDir = path.join(path.resolve(__dirname, '../NewLife.ChatAI/wwwroot'), 'assets')
       if (!fs.existsSync(assetsDir)) return
       const removed = fs.readdirSync(assetsDir)
-        .filter(f => f.startsWith('KaTeX_') && (f.endsWith('.woff') || f.endsWith('.ttf')))
+        .filter(f => f.startsWith('KaTeX_') && f.endsWith('.ttf'))
       removed.forEach(f => fs.unlinkSync(path.join(assetsDir, f)))
       if (removed.length > 0) console.log(`[remove-katex-legacy-fonts] 已删除 ${removed.length} 个旧格式字体文件`)
     },

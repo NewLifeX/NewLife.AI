@@ -259,14 +259,22 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
  * 通用工具类
  * ============================================================================= */
 
+/* backdrop-filter 低版本浏览器兼容：Safari 9+ 需要 -webkit- 前缀 */
+[class*="backdrop-blur"] {
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+}
+
 /* 玻璃拟态面板（菜单/Toast/Tooltip 通用） */
 .glass-panel {
+  /* fallback: 低版本浏览器不支持 color-mix() */
+  background-color: rgba(255, 255, 255, 0.86);
   background-color: color-mix(in srgb, var(--color-surface-0) 86%, transparent);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
   border: 1px solid var(--color-border-subtle);
 }
 html.dark .glass-panel {
+  background-color: rgba(22, 22, 32, 0.80);
   background-color: color-mix(in srgb, var(--color-surface-1) 80%, transparent);
 }
 
@@ -277,6 +285,7 @@ html.dark .glass-panel {
 .gradient-border-focus::before {
   content: "";
   position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0; /* fallback: iOS 11~14 不支持 inset */
   inset: 0;
   border-radius: inherit;
   padding: 1px;
@@ -305,6 +314,7 @@ html.dark .glass-panel {
 /* 极光光晕装饰（欢迎页 hero / 空态用） */
 .aurora-blob {
   position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0; /* fallback: iOS 11~14 不支持 inset */
   inset: 0;
   background: var(--gradient-aurora);
   filter: blur(60px);
@@ -315,6 +325,13 @@ html.dark .glass-panel {
 
 /* Shimmer skeleton */
 .shimmer {
+  /* fallback: 低版本浏览器不支持 color-mix()，用纯色渐变代替 */
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 0%,
+    #d1fae5 50%,
+    var(--color-surface-2) 100%
+  );
   background: linear-gradient(
     90deg,
     var(--color-surface-2) 0%,
@@ -325,6 +342,13 @@ html.dark .glass-panel {
   animation: shimmer 1.6s linear infinite;
 }
 html.dark .shimmer {
+  /* fallback: 低版本浏览器不支持 color-mix() */
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 0%,
+    #065f46 50%,
+    var(--color-surface-2) 100%
+  );
   background: linear-gradient(
     90deg,
     var(--color-surface-2) 0%,
@@ -447,15 +471,27 @@ html.dark .shimmer {
 }
 .prose h2 {
   padding-left: 0.6rem;
+  /* fallback: 低版本浏览器不支持 color-mix() */
+  border-left: 3px solid rgba(16, 185, 129, 0.6);
   border-left: 3px solid color-mix(in srgb, var(--color-primary, #6366f1) 60%, transparent);
 }
 
 /* 表格斑马纹 + 悬停高亮 */
 .prose table tbody tr:nth-child(even) {
+  /* fallback: 低版本浏览器不支持 color-mix() */
+  background-color: rgba(0, 0, 0, 0.04);
   background-color: color-mix(in srgb, currentColor 4%, transparent);
 }
+html.dark .prose table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
 .prose table tbody tr:hover {
+  /* fallback: 低版本浏览器不支持 color-mix() */
+  background-color: rgba(16, 185, 129, 0.08);
   background-color: color-mix(in srgb, var(--color-primary, #6366f1) 8%, transparent);
+}
+html.dark .prose table tbody tr:hover {
+  background-color: rgba(52, 211, 153, 0.12);
 }
 
 /* KaTeX 块级公式溢出处理 */

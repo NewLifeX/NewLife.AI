@@ -349,22 +349,30 @@ export function MindmapECharts({ spec, layout, className, onChartReady }: Mindma
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const ro = new ResizeObserver(entries => {
-      const rect = entries[0]?.contentRect
-      if (rect && rect.width > 0) {
-        setContainerSize(prev => {
-          if (Math.abs(prev.w - rect.width) > 2 || Math.abs(prev.h - rect.height) > 2)
-            return { w: rect.width, h: rect.height }
-          return prev
-        })
-      }
-      chartRef.current?.resize()
-    })
-    ro.observe(el)
+    // 低版本浏览器 fallback：ResizeObserver 不可用时降级为 window.resize
+    let ro: ResizeObserver | null = null
+    try {
+      ro = new ResizeObserver(entries => {
+        const rect = entries[0]?.contentRect
+        if (rect && rect.width > 0) {
+          setContainerSize(prev => {
+            if (Math.abs(prev.w - rect.width) > 2 || Math.abs(prev.h - rect.height) > 2)
+              return { w: rect.width, h: rect.height }
+            return prev
+          })
+        }
+        chartRef.current?.resize()
+      })
+      ro.observe(el)
+    } catch {
+      const onResize = () => chartRef.current?.resize()
+      window.addEventListener('resize', onResize)
+      return () => window.removeEventListener('resize', onResize)
+    }
     // 初始化时立即读取
     const rect = el.getBoundingClientRect()
     if (rect.width > 0) setContainerSize({ w: rect.width, h: rect.height })
-    return () => ro.disconnect()
+    return () => ro?.disconnect()
   }, [])
 
   const { w: cw, h: ch } = containerSize

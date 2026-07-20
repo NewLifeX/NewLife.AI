@@ -122,7 +122,7 @@ export function ChatLayout({
 
   return (
     <div
-      className={cn('h-dvh flex overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100', className)}
+      className={cn('h-full h-dvh flex overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100', className)}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
