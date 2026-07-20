@@ -220,6 +220,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Category("工具与扩展")]
     [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000")]
     public Int32 SkillBudgetChars { get; set; } = 80000;
+
+    /// <summary>SQL查询允许的非查询操作。逗号分隔，默认允许 INSERT 和 UPDATE；SELECT/WITH 始终允许不受此限制</summary>
+    [Category("工具与扩展")]
+    [Description("SQL查询允许的非查询操作（逗号分隔）。默认允许 INSERT,UPDATE；SELECT/WITH 查询始终允许不受此限制。添加 DELETE/ALTER/DROP 等需谨慎")]
+    public String QuerySqlAllowedOperations { get; set; } = "INSERT,UPDATE";
     #endregion
 
     #region 功能开关

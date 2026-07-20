@@ -2,9 +2,8 @@
 using System.Data;
 using System.Text;
 using System.Text.RegularExpressions;
-using NewLife;
-using NewLife.Data;
 using NewLife.AI.Tools;
+using NewLife.Data;
 using NewLife.Log;
 using NewLife.Serialization;
 using XCode;
@@ -12,14 +11,15 @@ using XCode.DataAccessLayer;
 
 namespace NewLife.ChatAI.Tools;
 
-/// <summary>数据库查询工具服务。提供 search_table 和 query_sql 两个 AI 工具</summary>
+/// <summary>数据库查询工具服务。提供 search_table 和 run_sql 两个 AI 工具</summary>
 /// <remarks>
-/// 工具1 search_table：输入关键字搜索匹配的数据库表结构
-/// 工具2 query_sql：传入连接名和SQL，执行查询后返回 JSON 结果集
+/// 工具1 search_table：按关键字搜索匹配的数据库表结构
+/// 工具2 run_sql：传入连接名和SQL，执行查询或写操作后返回 JSON 结果集
 /// </remarks>
 /// <param name="schemaService">架构信息服务</param>
+/// <param name="chatSetting">对话配置（读取 QuerySqlAllowedOperations 控制非查询操作权限）</param>
 /// <param name="log">日志</param>
-public class DbQueryToolService(DbSchemaService schemaService, ILog log)
+public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chatSetting, ILog log)
 {
     #region 工具方法
 
@@ -32,7 +32,7 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         Triggers = "表结构,数据库表,表字段,数据库有哪些表,有什么表",
         AssistantTriggers = "数据库表,表结构,search_table,数据库连接,连接名")]
     [DisplayName("搜索数据库表")]
-    [Description("根据关键字搜索匹配的数据库表结构。返回包含两部分：① 表→连接映射表（Markdown表格，明确每个表属于哪个连接，同名表在不同连接下独立列出）；② 各连接下的表结构 XML 详情。后续 query_sql 须使用映射表中指定的连接名")]
+    [Description("根据关键字搜索匹配的数据库表结构。返回包含两部分：① 表→连接映射表（Markdown表格，明确每个表属于哪个连接，同名表在不同连接下独立列出）；② 各连接下的表结构 XML 详情。后续 run_sql 须使用映射表中指定的连接名")]
     public String SearchTable(
         [Description("搜索关键字，多个用逗号或空格分隔")] String keywords,
         [Description("限定连接名，为空则搜索所有连接")] String? connName = null,
@@ -67,31 +67,31 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
         return BuildGroupedResult(filtered, connName, roleIds);
     }
 
-    /// <summary>在指定数据库连接上执行SQL查询，返回结果集</summary>
-    /// <param name="connName">数据库连接名</param>
-    /// <param name="query">SQL语句（仅允许SELECT/INSERT/UPDATE）</param>
+    /// <summary>在指定数据库连接上执行SQL语句，返回结果集</summary>
+    /// <param name="connName">数据库连接名（来自 search_table 的'所属连接'列）</param>
+    /// <param name="sql">SQL语句。SELECT/WITH 查询返回结果集；INSERT/UPDATE/DELETE 等非查询操作返回受影响行数</param>
     /// <param name="context">工具调用上下文</param>
-    /// <returns>查询结果（JSON格式）</returns>
-    [ToolDescription("query_sql", IsSystem = false,
+    /// <returns>查询或执行结果（JSON格式）</returns>
+    [ToolDescription("run_sql", IsSystem = false,
         Triggers = "执行SQL,运行SQL,SQL查询,SQL语句",
-        AssistantTriggers = "SQL查询,执行查询,query_sql,SQL语句")]
-    [DisplayName("查询数据库")]
-    [Description("在指定数据库连接上执行SQL查询，返回结果集。仅允许SELECT和安全的INSERT/UPDATE操作，禁止DDL和DELETE。connName 必须与 search_table 返回的映射表中'所属连接'列一致")]
+        AssistantTriggers = "SQL查询,执行查询,run_sql,SQL语句")]
+    [DisplayName("执行SQL")]
+    [Description("在指定数据库连接上执行SQL语句。SELECT/WITH 查询返回数据行；INSERT/UPDATE/DELETE 等非查询操作返回受影响行数。connName 必须与 search_table 返回的映射表中'所属连接'列一致")]
     public String QuerySql(
-        [Description("数据库连接名（必须与 search_table 返回的映射表中'所属连接'列一致）")] String connName,
-        [Description("要执行的SQL语句（仅允许SELECT/INSERT/UPDATE）。参数名 query（不是 sql）")] [ParameterAlias("sql")] String query,
+        [Description("数据库连接名（来自 search_table 的'所属连接'列）")] String connName,
+        [Description("SQL语句。SELECT/WITH 返回结果集，非查询操作返回受影响行数")] String sql,
         ToolCallContext? context = null)
     {
         if (connName.IsNullOrEmpty()) throw new ArgumentNullException(nameof(connName), "connName 不能为空");
-        if (query.IsNullOrEmpty()) throw new ArgumentNullException(nameof(query), "query 不能为空");
+        if (sql.IsNullOrEmpty()) throw new ArgumentNullException(nameof(sql), "sql 不能为空");
 
-        log.Info("[QuerySql] connName={0}, query.length={1}", connName, query.Length);
+        log.Info("[QuerySql] connName={0}, sql.length={1}", connName, sql.Length);
 
-        // 1. SQL 安全检查
-        ValidateSql(query);
+        // 1. SQL 安全检查 — 由 ChatSetting.QuerySqlAllowedOperations 控制允许的非查询操作
+        ValidateSql(sql);
 
         // 2. 表权限校验
-        var tableNames = ExtractTableNames(query);
+        var tableNames = ExtractTableNames(sql);
         var roleIds = GetRoleIds(context);
         foreach (var tableName in tableNames)
         {
@@ -108,46 +108,57 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
             throw new InvalidOperationException($"无法获取数据库连接 [{connName}]，请检查连接配置{hint}");
         }
 
-        // 4. 执行SQL
+        // 4. 执行SQL — 查询类走 Query，其他走 Execute
         try
         {
-            var table = dal.Query(query);
-
-            if (table == null || table.Rows == null || table.Rows.Count == 0)
-                return new { rows = Array.Empty<Object>(), columns = Array.Empty<Object>(), total = 0 }.ToJson();
-
-            const Int32 maxRows = 1000;
-            var rowCount = table.Rows.Count;
-            var displayRows = Math.Min(rowCount, maxRows);
-
-            // 构建列信息
-            var columns = new List<Object>();
-            for (var i = 0; i < table.Columns.Length; i++)
+            if (IsQuerySql(sql))
             {
-                var dataType = table.Types?[i].Name ?? "String";
-                columns.Add(new { name = table.Columns[i], dataType });
-            }
+                var table = dal.Query(sql);
 
-            // 构建行数据
-            var rows = new List<Object>();
-            for (var i = 0; i < displayRows; i++)
-            {
-                var row = new Dictionary<String, Object?>();
-                var values = table.Rows[i];
-                for (var j = 0; j < table.Columns.Length; j++)
+                if (table == null || table.Rows == null || table.Rows.Count == 0)
+                    return new { rows = Array.Empty<Object>(), columns = Array.Empty<Object>(), total = 0 }.ToJson();
+
+                const Int32 maxRows = 1000;
+                var rowCount = table.Rows.Count;
+                var displayRows = Math.Min(rowCount, maxRows);
+
+                // 构建列信息
+                var columns = new List<Object>();
+                for (var i = 0; i < table.Columns.Length; i++)
                 {
-                    var val = values[j];
-                    row[table.Columns[j]] = val == DBNull.Value ? null : val;
+                    var dataType = table.Types?[i].Name ?? "String";
+                    columns.Add(new { name = table.Columns[i], dataType });
                 }
-                rows.Add(row);
+
+                // 构建行数据
+                var rows = new List<Object>();
+                for (var i = 0; i < displayRows; i++)
+                {
+                    var row = new Dictionary<String, Object?>();
+                    var values = table.Rows[i];
+                    for (var j = 0; j < table.Columns.Length; j++)
+                    {
+                        var val = values[j];
+                        row[table.Columns[j]] = val == DBNull.Value ? null : val;
+                    }
+                    rows.Add(row);
+                }
+
+                if (rowCount > maxRows)
+                    log.Warn("[QuerySql] 结果 {0} 行，截断至 {1} 行", rowCount, maxRows);
+
+                log.Info("[QuerySql] 返回 {0} 行 {1} 列", displayRows, table.Columns.Length);
+
+                return new { rows = rows.ToArray(), columns = columns.ToArray(), total = rowCount, type = "query" }.ToJson();
             }
+            else
+            {
+                var affected = dal.Execute(sql);
 
-            if (rowCount > maxRows)
-                log.Warn("[QuerySql] 结果 {0} 行，截断至 {1} 行", rowCount, maxRows);
+                log.Info("[QuerySql] 执行完成，影响 {0} 行", affected);
 
-            log.Info("[QuerySql] 返回 {0} 行 {1} 列", displayRows, table.Columns.Length);
-
-            return new { rows = rows.ToArray(), columns = columns.ToArray(), total = rowCount }.ToJson();
+                return new { success = true, rowsAffected = affected, type = "execute" }.ToJson();
+            }
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
@@ -160,35 +171,44 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
 
     #region SQL安全
 
-    private static readonly HashSet<String> _forbiddenKeywords = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>判断 SQL 是否为查询类语句（SELECT / WITH）</summary>
+    private static Boolean IsQuerySql(String sql)
     {
-        "DROP", "ALTER", "TRUNCATE", "CREATE",
-        "EXEC", "EXECUTE", "GRANT", "REVOKE", "DENY",
-        "BACKUP", "RESTORE", "KILL", "SHUTDOWN",
-    };
-
-    /// <summary>验证SQL安全性</summary>
-    private static void ValidateSql(String sql)
-    {
-        var cleaned = RemoveStringLiterals(sql);
-        cleaned = RemoveComments(cleaned);
-        var upperSql = cleaned.ToUpperInvariant();
-
-        foreach (var kw in _forbiddenKeywords)
-        {
-            if (Regex.IsMatch(upperSql, $@"\b{kw}\b", RegexOptions.None, TimeSpan.FromSeconds(1)))
-                throw new InvalidOperationException($"SQL中包含禁止的操作 [{kw}]，仅允许 SELECT/INSERT/UPDATE");
-        }
+        var trimmed = sql.TrimStart();
+        return trimmed.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.StartsWith("WITH", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static String RemoveStringLiterals(String sql)
-        => Regex.Replace(sql, @"'[^']*'", "''", RegexOptions.None, TimeSpan.FromSeconds(1));
-
-    private static String RemoveComments(String sql)
+    /// <summary>提取SQL语句的首个操作关键字（SELECT/INSERT/UPDATE/DELETE/CREATE 等）</summary>
+    private static String GetSqlOperation(String sql)
     {
-        sql = Regex.Replace(sql, @"--[^\r\n]*", "", RegexOptions.None, TimeSpan.FromSeconds(1));
-        sql = Regex.Replace(sql, @"/\*[\s\S]*?\*/", "", RegexOptions.None, TimeSpan.FromSeconds(1));
-        return sql;
+        // 移除字符串字面量和注释，避免误匹配
+        var cleaned = Regex.Replace(sql, @"'[^']*'", "''", RegexOptions.None, TimeSpan.FromSeconds(1));
+        cleaned = Regex.Replace(cleaned, @"--[^\r\n]*", "", RegexOptions.None, TimeSpan.FromSeconds(1));
+        cleaned = Regex.Replace(cleaned, @"/\*[\s\S]*?\*/", "", RegexOptions.None, TimeSpan.FromSeconds(1));
+
+        var trimmed = cleaned.TrimStart();
+        var idx = trimmed.IndexOf(' ');
+        if (idx < 0) idx = trimmed.Length;
+
+        return trimmed[..idx].ToUpperInvariant();
+    }
+
+    /// <summary>验证SQL安全性。SELECT/WITH 始终允许；其他操作须在 IChatSetting.QuerySqlAllowedOperations 白名单中</summary>
+    private void ValidateSql(String sql)
+    {
+        if (IsQuerySql(sql)) return;
+
+        var operation = GetSqlOperation(sql);
+        var allowed = chatSetting.QuerySqlAllowedOperations;
+        if (allowed.IsNullOrEmpty())
+            throw new InvalidOperationException($"非查询操作 [{operation}] 被禁止（QuerySqlAllowedOperations 为空）。仅允许 SELECT/WITH 查询");
+
+        var ops = allowed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var allowedSet = new HashSet<String>(ops, StringComparer.OrdinalIgnoreCase);
+
+        if (!allowedSet.Contains(operation))
+            throw new InvalidOperationException($"非查询操作 [{operation}] 不被允许。当前允许的操作: {allowed}；仅允许 SELECT/WITH 查询");
     }
 
     /// <summary>提取SQL中的表名</summary>
@@ -352,7 +372,7 @@ public class DbQueryToolService(DbSchemaService schemaService, ILog log)
 
         var sb = new StringBuilder();
 
-        // 1. 表→连接映射摘要（AI 后续调用 query_sql 时据此选择正确连接）
+        // 1. 表→连接映射摘要（AI 后续调用 run_sql 时据此选择正确连接）
         // 表顺序与 SearchTables 返回一致：精确匹配优先，同级按相关度降序
         sb.AppendLine("## 表→连接映射");
         sb.AppendLine("| 表名 | 所属连接 | 数据库类型 | 说明 |");

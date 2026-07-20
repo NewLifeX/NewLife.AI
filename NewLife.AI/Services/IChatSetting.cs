@@ -44,6 +44,9 @@ public interface IChatSetting
 
     /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000</summary>
     Int32 SkillBudgetChars { get; }
+
+    /// <summary>SQL查询允许的非查询操作。逗号分隔，SELECT/WITH 始终允许不受此限制。默认 INSERT,UPDATE</summary>
+    String QuerySqlAllowedOperations { get; }
     #endregion
 
     #region 系统指令
