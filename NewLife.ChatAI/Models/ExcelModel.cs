@@ -14,8 +14,17 @@ public class ExcelSheetModel
     [Description("数据行（平铺的单元格值），按列顺序排列，自动按表头数量分组")]
     public String[]? Rows { get; set; }
 
-    [Description("表头样式（可选）：headerBgColor 表头背景色（16进制RGB）/ headerFontColor 表头文字色")]
-    public ExcelSheetStyle? Style { get; set; }
+    [Description("表头样式（可选）：headerBgColor 表头背景色、headerFontColor 表头字色、stripeColor 斑马纹色")]
+    public TableStyle? Style { get; set; }
+
+    [Description("列宽数组（可选），如 [12, 20, 15]，数字单位近似字符宽度")]
+    public Int32[]? ColumnWidths { get; set; }
+
+    [Description("数字格式（可选），如 \"#,##0.00\" 或 \"yyyy-MM-dd\"")]
+    public String? NumberFormat { get; set; }
+
+    [Description("条件格式数组（可选）。每项字段：range（如\"C2:C10\"）、type（dataBar/colorScale/greaterThan/lessThan 等）、color（主色）、value（阈值）")]
+    public ConditionalFormat[]? ConditionalFormats { get; set; }
 
     [Description("图表定义数组（可选）：type=bar/line/pie + title + categories + series")]
     public ExcelChartModel[]? Charts { get; set; }
@@ -30,17 +39,20 @@ public class ExcelSheetModel
     public ExcelDropdownModel[]? Dropdowns { get; set; }
 }
 
-/// <summary>Excel 表头样式</summary>
-public class ExcelSheetStyle
+/// <summary>条件格式定义（数据条/色阶/阈值规则）</summary>
+public class ConditionalFormat
 {
-    [Description("表头行背景色（16进制RGB，如 \"2563EB\"）")]
-    public String? HeaderBgColor { get; set; }
+    [Description("应用范围（如 \"C2:C10\"）")]
+    public String? Range { get; set; }
 
-    [Description("表头行文字颜色（16进制RGB，如 \"FFFFFF\"）")]
-    public String? HeaderFontColor { get; set; }
+    [Description("条件类型：dataBar（数据条）/ colorScale（色阶）/ greaterThan（大于）/ lessThan（小于）/ equal（等于）/ between（介于）")]
+    public String? Type { get; set; }
 
-    [Description("斑马纹颜色（偶数行背景色，如 \"EFF6FF\"，为空则不设置）")]
-    public String? StripeColor { get; set; }
+    [Description("颜色（16进制 RGB，如 \"2563EB\"），用于数据条/色阶/高亮")]
+    public String? Color { get; set; }
+
+    [Description("阈值或公式（如 \"1000\" 或 \"=AVERAGE(C2:C10)\"）")]
+    public String? Value { get; set; }
 }
 
 /// <summary>Excel 图表定义</summary>

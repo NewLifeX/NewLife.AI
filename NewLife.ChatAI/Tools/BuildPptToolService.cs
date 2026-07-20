@@ -56,11 +56,14 @@ public class BuildPptToolService(ILog log)
     [Description("生成 PowerPoint 演示文稿（.pptx）并返回下载链接。两种输入模式互斥：①slides模式=AI描述结构化内容自动排版；②widgetSrc模式=嵌入已生成的show_widget卡片为幻灯片图片。theme参数使用卡片风格 Key（如 tech-blue/dark-mode/corporate）或内置名（blue/dark/green/warm/corporate/minimal）。")]
     public async Task<ToolResult> BuildPpt(
         [Description("演示文稿标题（≤ 30 字），如「Q2季度汇报」")] String title,
-        [Description(@"幻灯片数组（JSON）。1个元素=单页；多个=完整PPT。与widgetSrc互斥，二选一。每页字段：title、layout(title_only/title_content/two_column/chart_only/blank)、background(背景色16进制)、footer(页脚)、showPageNumber(显示页码true/false)、elements(元素列表)、notes(备注)、transition(切换)。elements支持：text(role=title/subtitle/body/kpi/caption，可加alignment=l/ctr/r、backgroundColor、color、runs富文本数组)、table(headers+rows，rows为平铺单元格值自动按headers长度分组，可加tableStyle={headerBgColor/headerFontColor/stripeColor}美化)、chart(chartType=bar/line/pie/area/scatter+categories+series)、image(src)、shape(shape={shapeType=rect/ellipse/roundRect/triangle/diamond,fillColor,lineColor,text,fontColor})。示例：[{""title"":""封面"",""layout"":""title_only"",""background"":""0F172A"",""elements"":[{""type"":""text"",""role"":""title"",""content"":""Q2汇报"",""alignment"":""ctr"",""color"":""60A5FA""},{""type"":""text"",""role"":""subtitle"",""content"":""新生命团队"",""color"":""94A3B8""}]}]")] String? slides = null,
+        [Description(@"幻灯片数组（JSON）。1个元素=单页；多个=完整PPT。与widgetSrc互斥，二选一。每页字段：title、layout(title_only/title_content/two_column/chart_only/blank)、background(背景色16进制)、footer(页脚)、showPageNumber(显示页码true/false)、elements(元素列表)、notes(备注)、transition(切换)。elements支持：text(role=title/subtitle/body/kpi/caption，可选bold/italic/underline/alignment=l/ctr/r/backgroundColor/color)、table(headers+rows，rows为平铺单元格值自动按headers长度分组，可加tableStyle={headerBgColor/headerFontColor/stripeColor})、chart(chartType=bar/line/pie/area/scatter+categories+series)、image(src)、shape(shape={shapeType,fillColor,lineColor,text,fontColor})。示例：[{""title"":""封面"",""layout"":""title_only"",""background"":""0F172A"",""elements"":[{""type"":""text"",""role"":""title"",""content"":""Q2汇报"",""alignment"":""ctr"",""color"":""60A5FA""},{""type"":""text"",""role"":""subtitle"",""content"":""新生命团队"",""color"":""94A3B8""}]}]")] String? slides = null,
         [Description("show_widget 卡片 ID 列表（逗号分隔），如 'call_abc123,call_def456'。与slides互斥，二选一。将已生成的卡片渲染结果嵌入为幻灯片图片")] String? widgetSrc = null,
         [Description("主题（可选）：blue（科技蓝，默认）/ dark（深色紫）/ corporate（商务灰）/ warm（暖橙）/ green（清新绿）/ minimal（极简白）/ ocean（深海蓝）/ sunset（日落橙紫）/ forest（翠绿森林）/ slate（高级石板）/ amber（琥珀金）")] String? theme = null,
         ToolCallContext? context = null)
     {
+        if (title.IsNullOrEmpty())
+            throw new ToolException("参数错误：title 不能为空", "请提供演示文稿标题后重试。");
+
         // slides 与 widgetSrc 互斥校验
         var hasSlides = !slides.IsNullOrEmpty();
         var hasWidgetSrc = !widgetSrc.IsNullOrEmpty();
@@ -297,6 +300,9 @@ public class BuildPptToolService(ILog log)
             {
                 var fontSize = elem.FontSize ?? DefaultFontSize(elem.Role);
                 var bold = elem.Bold ?? elem.Role is "title" or "kpi";
+                var hasItalic = elem.Italic == true;
+                var hasUnderline = elem.Underline == true;
+
                 // 临时坐标 (0,0,1,1)，LayoutEngine.Apply 会重新计算
                 var tb = writer.AddTextBox(idx, elem.Runs != null ? String.Empty : (elem.Content ?? String.Empty),
                     0, 0, 1, 1, fontSize, bold);
@@ -306,6 +312,21 @@ public class BuildPptToolService(ILog log)
                     if (!elem.Color.IsNullOrEmpty()) tb.FontColor = elem.Color;
                     if (!elem.Alignment.IsNullOrEmpty()) tb.Alignment = elem.Alignment;
                     if (!elem.BackgroundColor.IsNullOrEmpty()) tb.BackgroundColor = elem.BackgroundColor;
+
+                    // italic/underline 只能在 Run 层面设置，若无 Runs 则构造一个
+                    if (hasItalic || hasUnderline && elem.Runs == null && !elem.Content.IsNullOrEmpty())
+                    {
+                        tb.Runs.Add(new Run
+                        {
+                            Text = elem.Content!,
+                            FontSize = fontSize,
+                            Bold = bold,
+                            Italic = hasItalic,
+                            Underline = hasUnderline,
+                            FontColor = elem.Color,
+                        });
+                    }
+
                     if (elem.Runs != null)
                     {
                         tb.Runs.Clear();
@@ -315,6 +336,7 @@ public class BuildPptToolService(ILog log)
                             FontSize = r.FontSize,
                             Bold = r.Bold,
                             Italic = r.Italic,
+                            Underline = r.Underline,
                             FontColor = r.Color,
                             HyperlinkUrl = r.HyperlinkUrl,
                         }));
@@ -519,6 +541,8 @@ public class BuildPptToolService(ILog log)
 
     private static String CleanFileName(String name)
     {
+        if (name.IsNullOrEmpty()) return "未命名";
+
         var invalid = Path.GetInvalidFileNameChars();
         var sb = Pool.StringBuilder.Get();
         foreach (var c in name)

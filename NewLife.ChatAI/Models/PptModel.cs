@@ -62,6 +62,14 @@ public class PptElement
     [Description("是否加粗，默认 false")]
     public Boolean? Bold { get; set; }
 
+    /// <summary>是否斜体</summary>
+    [Description("是否斜体（type=text 时可选），默认 false")]
+    public Boolean? Italic { get; set; }
+
+    /// <summary>是否下划线</summary>
+    [Description("是否下划线（type=text 时可选），默认 false")]
+    public Boolean? Underline { get; set; }
+
     /// <summary>文字颜色（16进制 RGB，如 "FFFFFF"）</summary>
     [Description("文字颜色，16进制 RGB，如 \"FFFFFF\"。不填时继承主题文字色")]
     public String? Color { get; set; }
@@ -141,6 +149,10 @@ public class TextRun
     /// <summary>是否斜体</summary>
     [Description("是否斜体")]
     public Boolean Italic { get; set; }
+
+    /// <summary>是否下划线</summary>
+    [Description("是否下划线")]
+    public Boolean Underline { get; set; }
 
     /// <summary>文字颜色（16进制 RGB，如 \"FF6B6B\"）</summary>
     [Description("文字颜色，16进制 RGB，如 \"FF6B6B\"")]
