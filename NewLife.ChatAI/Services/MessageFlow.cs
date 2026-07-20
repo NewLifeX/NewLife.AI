@@ -755,6 +755,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var ranBefore = new HashSet<IChatHandler>(ReferenceEqualityComparer.Instance);
 
         // 1. OnBefore 按 BeforeOrder 升序执行
+        var beforeFailed = false;
+        var beforeErrorMsg = (String?)null;
         foreach (var handler in Chain.BeforeHandlers)
         {
             var name = handler.GetType().Name.TrimSuffix("Handler");
@@ -766,25 +768,38 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                throw;
+                log?.Error("Handler [{0}] OnBefore 执行失败: {1}", name, ex.Message);
+                context.HasError = true;
+                beforeFailed = true;
+                beforeErrorMsg = $"处理器 {name} 执行失败: {ex.Message}";
+                // 跳过后续 OnBefore 和 LLM 核心阶段，直接进入 OnAfter
+                context.FlowControl = ChatFlowControl.Cancel;
+                break;
             }
 
             ranBefore.Add(handler);
             if (context.FlowControl != ChatFlowControl.Continue) break;
         }
 
+        // OnBefore 阶段有 Handler 失败时，推送错误事件
+        if (beforeFailed)
+        {
+            yield return ChatStreamEvent.ErrorEvent("HANDLER_ERROR", beforeErrorMsg!);
+        }
+
         // 所有 OnBefore 完成后，将 SystemSegments 结果统一写入 system 消息
         FlushSystemSegments(context);
 
         // 2. 核心阶段（Cancel 时跳过；SkipRemaining 时仍正常运行）
-        if (context.FlowControl != ChatFlowControl.Cancel)
+        // OnBefore 失败导致的 Cancel 已单独推送错误事件，此处不再重复
+        if (!beforeFailed && context.FlowControl != ChatFlowControl.Cancel)
         {
             await foreach (var ev in CoreStreamAsync(context, cancellationToken).ConfigureAwait(false))
                 yield return ev;
         }
-        else
+        else if (!beforeFailed)
         {
-            // 取消时回写一次 error 事件，便于客户端展示原因
+            // 正常 Cancel（非 Handler 异常导致的）
             yield return ChatStreamEvent.ErrorEvent(context.CancelCode ?? "CANCELED", context.CancelMessage ?? "请求已取消");
         }
 
@@ -804,7 +819,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                throw;
+                log?.Error("Handler [{0}] OnAfter 执行失败: {1}", name, ex.Message);
+                context.HasError = true;
+                // OnAfter 异常不应阻断后续 Handler 的执行
             }
         }
     }
@@ -1147,7 +1164,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                throw;
+                log?.Error("Handler [{0}] OnBefore 执行失败（非流式）: {1}", name, ex.Message);
+                context.HasError = true;
+                context.FlowControl = ChatFlowControl.Cancel;
+                break;
             }
 
             ranBefore.Add(handler);
@@ -1177,7 +1197,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                throw;
+                log?.Error("Handler [{0}] OnAfter 执行失败（非流式）: {1}", name, ex.Message);
+                context.HasError = true;
+                // OnAfter 异常不应阻断后续 Handler 的执行
             }
         }
     }

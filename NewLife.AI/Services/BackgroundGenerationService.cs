@@ -168,6 +168,16 @@ public class BackgroundGenerationService(ILog log)
             if (_cancellations.TryRemove(task.MessageId, out var removedCts))
                 removedCts.Dispose();
 
+            // 任务完成后延迟清理，给最后的订阅者回放机会（5分钟后移除，释放 StringBuilder 和事件列表）
+            _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
+            {
+                if (_tasks.TryRemove(task.MessageId, out var removed))
+                {
+                    removed.ContentBuilder.Clear();
+                    removed.ThinkingBuilder.Clear();
+                }
+            });
+
             if (onComplete != null)
             {
                 try

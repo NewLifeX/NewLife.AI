@@ -59,6 +59,12 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
     public void OnActionExecuted(ActionExecutedContext context) { }
 
     #region SSE 辅助
+    /// <summary>SSE 心跳间隔（毫秒）。无新事件时按此间隔推送保活帧，防止反向代理因连接静默而断连</summary>
+    private const Int32 SseHeartbeatIntervalMs = 20_000;
+
+    /// <summary>SSE 心跳事件（单例复用，避免每次分配）</summary>
+    private static readonly ChatStreamEvent _heartbeatEvent = ChatStreamEvent.Heartbeat();
+
     /// <summary>设置 SSE 响应头</summary>
     protected void SetSseHeaders()
     {
@@ -68,29 +74,73 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
         Response.Headers.Append("X-Accel-Buffering", "no");  // 告知 Nginx 等反向代理禁用响应缓冲，保证 SSE 实时推送
     }
 
-    /// <summary>流式写入 SSE 事件序列，统一处理取消与异常</summary>
+    /// <summary>流式写入 SSE 事件序列，统一处理取消与异常。每隔 20 秒无新事件时自动推送心跳保活帧</summary>
     /// <param name="events">事件异步序列</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="errorCode">异常时向客户端推送的错误码</param>
     /// <param name="onError">异常回调，可用于埋点等副作用</param>
     protected async Task StreamEventsAsync(IAsyncEnumerable<ChatStreamEvent> events, CancellationToken cancellationToken, String errorCode = "STREAM_ERROR", Action<Exception>? onError = null)
     {
+        var enumerator = events.GetAsyncEnumerator(cancellationToken);
         try
         {
-            await foreach (var ev in events.ConfigureAwait(false))
+            var nextTask = enumerator.MoveNextAsync().AsTask();
+            var heartbeatDelay = Task.Delay(SseHeartbeatIntervalMs, cancellationToken);
+
+            while (true)
             {
-                await WriteSseEventAsync(ev, cancellationToken).ConfigureAwait(false);
+                var winner = await Task.WhenAny(nextTask, heartbeatDelay).ConfigureAwait(false);
+
+                if (winner == heartbeatDelay)
+                {
+                    // 超过心跳间隔仍无新事件，推送保活帧并重置计时
+                    await WriteSseEventAsync(_heartbeatEvent, cancellationToken).ConfigureAwait(false);
+                    heartbeatDelay = Task.Delay(SseHeartbeatIntervalMs, cancellationToken);
+                    continue;
+                }
+
+                // 有新事件到达：重置心跳计时
+                heartbeatDelay = Task.Delay(SseHeartbeatIntervalMs, cancellationToken);
+
+                if (!await nextTask.ConfigureAwait(false)) break;
+                await WriteSseEventAsync(enumerator.Current, cancellationToken).ConfigureAwait(false);
+                nextTask = enumerator.MoveNextAsync().AsTask();
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // 用户取消，不需要额外处理
+            // 用户主动取消（关闭 Tab / 导航离开），正常退出，不需要额外处理
+        }
+        catch (OperationCanceledException ex)
+        {
+            // 非用户取消的超时或内部取消（如 HttpClient.Timeout / 下游管道超时）
+            DefaultSpan.Current?.SetError(ex);
+            onError?.Invoke(ex);
+            try
+            {
+                await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(errorCode, "生成超时，请重试"), CancellationToken.None).ConfigureAwait(false);
+            }
+            catch
+            {
+                // 客户端已断开连接，无法推送错误事件，仅记录日志
+            }
         }
         catch (Exception ex)
         {
             DefaultSpan.Current?.SetError(ex);
             onError?.Invoke(ex);
-            await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(errorCode, ex.Message), CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(errorCode, ex.Message), CancellationToken.None).ConfigureAwait(false);
+            }
+            catch
+            {
+                // 客户端已断开连接，无法推送错误事件，仅记录日志
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
         }
     }
 
