@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ECharts, EChartsOption } from 'echarts'
-import { cn } from '@/lib/utils'
+import { cn, withTimeout } from '@/lib/utils'
 
 // ── ECharts 懒加载（首屏不加载 ~1MB 的图表库，首次渲染图表时才拉取）───────────
 let _echartsModule: typeof import('echarts') | null = null
@@ -49,7 +49,7 @@ function ensureChinaMap(): Promise<void> {
     let lastError: Error | null = null
     for (const url of CHINA_GEO_URLS) {
       try {
-        const response = await fetch(url, { signal: AbortSignal.timeout(10000) })
+        const response = await fetch(url, { signal: withTimeout(10000) })
         if (!response.ok) {
           lastError = new Error(`HTTP ${response.status} from ${url}`)
           continue
