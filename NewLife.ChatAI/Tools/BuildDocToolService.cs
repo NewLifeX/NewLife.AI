@@ -26,7 +26,7 @@ public class BuildDocToolService(ILog log)
     [Description("生成 Word 文档（.docx）并返回下载链接。支持标题/段落/列表/表格/图片/分页。sections JSON 数组描述每个节，每节包含 heading（节标题）、content（正文）、elements（结构化元素）。建议配合 build-doc 技能使用。")]
     public async Task<ToolResult> BuildDoc(
         [Description("文档标题（≤ 30 字），如「Q2季度总结报告」")] String title,
-        [Description(@"文档节数组（JSON）。每节字段：heading（节标题文字）、headingLevel（级别1~3，默认1）、content（正文段落，可选）、elements（元素数组，可选）。elements 元素类型：paragraph（{type,text}）、bullet_list（{type,items}）、ordered_list（{type,items}）、table（{type,headers,rows}）、image（{type,src,widthCm?,heightCm?}）、page_break（{type}）。示例：[{""heading"":""本周完成"",""headingLevel"":1,""elements"":[{""type"":""bullet_list"",""items"":[""功能A上线"",""Bug修复3项""]}]},{""heading"":""下周计划"",""content"":""下周重点工作："",""elements"":[{""type"":""ordered_list"",""items"":[""继续推进功能B"",""性能优化""]}]}]")] String sections,
+        [Description(@"文档节数组（JSON）。每节字段：heading（节标题文字）、headingLevel（级别1~3，默认1）、content（正文段落，可选）、elements（元素数组，可选）。elements 元素类型：paragraph（{type,text}）、bullet_list（{type,items}）、ordered_list（{type,items}）、table（{type,headers,rows}，rows 为平铺单元格值，自动按 headers 长度分组）、image（{type,src,widthCm?,heightCm?}）、page_break（{type}）。示例：[{""heading"":""本周完成"",""headingLevel"":1,""elements"":[{""type"":""bullet_list"",""items"":[""功能A上线"",""Bug修复3项""]}]},{""heading"":""下周计划"",""content"":""下周重点工作："",""elements"":[{""type"":""ordered_list"",""items"":[""继续推进功能B"",""性能优化""]}]}]")] String sections,
         [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal）")] String? theme = null,
         ToolCallContext? context = null)
     {
@@ -103,7 +103,8 @@ public class BuildDocToolService(ILog log)
                         if (elem.Headers is { Length: > 0 } && elem.Rows is { Length: > 0 })
                         {
                             var allRows = new List<IEnumerable<String>> { elem.Headers };
-                            allRows.AddRange(elem.Rows.Select(r => r.AsEnumerable()));
+                            var cols = elem.Headers.Length;
+                            allRows.AddRange(elem.Rows.Chunk(cols).Select(c => c.AsEnumerable()));
                             var tblStyle = !tableHeaderBg.IsNullOrEmpty()
                                 ? new NewLife.Office.Word.TableStyle { HeaderBgColor = tableHeaderBg }
                                 : null;

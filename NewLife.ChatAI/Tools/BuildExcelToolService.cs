@@ -25,7 +25,7 @@ public class BuildExcelToolService(ILog log)
     [Description("生成 Excel 电子表格（.xlsx）并返回下载链接。支持多工作表、表头样式、冻结窗格、自动筛选、下拉验证。theme 参数使用卡片风格 Key 或内置名（blue/dark/corporate/warm/green）。建议配合 build-excel 技能使用。")]
     public async Task<ToolResult> BuildExcel(
         [Description("工作簿标题（≤ 30 字），如「Q2营收报表」")] String title,
-        [Description(@"工作表数组（JSON）。每表字段：name（表名）、headers（列头数组）、rows（数据行，每行字符串数组）、style（{headerBgColor,headerFontColor,stripeColor}）、charts（图表数组，每项{type=bar/line/pie,title?,categories,series}）、freezeRows（冻结行数，默认1）、autoFilter（筛选范围如""A1:E1""）、dropdowns（下拉验证数组，每项{range,items}）。示例：[{""name"":""Q2数据"",""headers"":[""月份"",""营收"",""环比""],""rows"":[[""4月"",""1482万"",""+12%""]],""style"":{""headerBgColor"":""2563EB"",""headerFontColor"":""FFFFFF"",""stripeColor"":""EFF6FF""},""freezeRows"":1,""autoFilter"":""A1:C1""}]")] String sheets,
+        [Description(@"工作表数组（JSON）。每表字段：name（表名）、headers（列头数组）、rows（平铺的单元格值，自动按 headers 长度分组）、style（{headerBgColor,headerFontColor,stripeColor}）、charts（图表数组，每项{type=bar/line/pie,title?,categories,series}）、freezeRows（冻结行数，默认1）、autoFilter（筛选范围如""A1:E1""）、dropdowns（下拉验证数组，每项{range,items}）。示例：[{""name"":""Q2数据"",""headers"":[""月份"",""营收"",""环比""],""rows"":[""4月"",""1482万"",""+12%""],""style"":{""headerBgColor"":""2563EB"",""headerFontColor"":""FFFFFF"",""stripeColor"":""EFF6FF""},""freezeRows"":1,""autoFilter"":""A1:C1""}]")] String sheets,
         [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal），决定表头颜色")] String? theme = null,
         ToolCallContext? context = null)
     {
@@ -90,7 +90,8 @@ public class BuildExcelToolService(ILog log)
             {
                 var dataStyle = new CellFormat { Border = BorderStyle.Thin };
                 var stripeStyle = new CellFormat { Border = BorderStyle.Thin, BackgroundColor = stripe };
-                var rows = sheet.Rows.Select(r => r.Cast<Object>().ToArray()).ToList();
+                var cols = sheet.Headers?.Length > 0 ? sheet.Headers!.Length : 2;
+                var rows = sheet.Rows.Chunk(cols).Select(c => c.Cast<Object>().ToArray()).ToList();
                 for (var ri = 0; ri < rows.Count; ri++)
                 {
                     // 斑马纹：奇数行用 stripe（0-based，第0行是首数据行=偶数视觉行）

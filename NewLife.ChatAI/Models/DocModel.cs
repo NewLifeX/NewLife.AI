@@ -33,8 +33,8 @@ public class DocElement
     [Description("表格列标题（type=table 时必填）")]
     public String[]? Headers { get; set; }
 
-    [Description("表格数据行（type=table 时必填），每行是字符串数组")]
-    public String[][]? Rows { get; set; }
+    [Description("表格数据行（type=table 时必填），按列顺序平铺的单元格值，自动按表头数量分组")]
+    public String[]? Rows { get; set; }
 
     [Description("图片 URL（type=image 时必填），支持 https:// 外链或 /cube/image?id=xxx 内部附件")]
     public String? Src { get; set; }
