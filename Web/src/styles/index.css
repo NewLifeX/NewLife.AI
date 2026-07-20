@@ -785,3 +785,51 @@ html.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
   }
 }
+
+/* =============================================================================
+ * Flex Gap 兼容（Safari < 14.1 / iOS < 14.5 / 华为浏览器 / 旧 MIUI 浏览器）
+ *
+ * 背景：gap 在 flex 容器中需要 Chrome 84+ / Safari 14.1+ / Firefox 63+。
+ * 华为 EMUI 10-11 自带浏览器、Redmi Note 等旧 MIUI WebView 可能不满足此要求，
+ * 表现为 flex 子元素间距归零（按钮、图标、头像挤在一起）。
+ *
+ * 本规则通过 @supports not (gap: 1px) 精确检测不支持 flex gap 的浏览器，
+ * 用 margin 模拟常用 gap 值。grid 布局不受影响（grid gap 支持更早）。
+ * ============================================================================= */
+@supports not (gap: 1px) {
+  /* 水平 flex 容器：给非首个子元素加左边距 */
+  .flex.gap-0\.5 > :not(:first-child) { margin-left: 0.125rem; }
+  .flex.gap-1 > :not(:first-child) { margin-left: 0.25rem; }
+  .flex.gap-1\.5 > :not(:first-child) { margin-left: 0.375rem; }
+  .flex.gap-2 > :not(:first-child) { margin-left: 0.5rem; }
+  .flex.gap-2\.5 > :not(:first-child) { margin-left: 0.625rem; }
+  .flex.gap-3 > :not(:first-child) { margin-left: 0.75rem; }
+  .flex.gap-3\.5 > :not(:first-child) { margin-left: 0.875rem; }
+  .flex.gap-4 > :not(:first-child) { margin-left: 1rem; }
+  .flex.gap-5 > :not(:first-child) { margin-left: 1.25rem; }
+  .flex.gap-6 > :not(:first-child) { margin-left: 1.5rem; }
+  .flex.gap-8 > :not(:first-child) { margin-left: 2rem; }
+  .flex.gap-10 > :not(:first-child) { margin-left: 2.5rem; }
+  .flex.gap-12 > :not(:first-child) { margin-left: 3rem; }
+
+  /* 垂直 flex 容器（flex-col）：给非首个子元素加上边距，清除水平 margin */
+  .flex.flex-col.gap-0\.5 > :not(:first-child) { margin-left: 0; margin-top: 0.125rem; }
+  .flex.flex-col.gap-1 > :not(:first-child) { margin-left: 0; margin-top: 0.25rem; }
+  .flex.flex-col.gap-1\.5 > :not(:first-child) { margin-left: 0; margin-top: 0.375rem; }
+  .flex.flex-col.gap-2 > :not(:first-child) { margin-left: 0; margin-top: 0.5rem; }
+  .flex.flex-col.gap-2\.5 > :not(:first-child) { margin-left: 0; margin-top: 0.625rem; }
+  .flex.flex-col.gap-3 > :not(:first-child) { margin-left: 0; margin-top: 0.75rem; }
+  .flex.flex-col.gap-3\.5 > :not(:first-child) { margin-left: 0; margin-top: 0.875rem; }
+  .flex.flex-col.gap-4 > :not(:first-child) { margin-left: 0; margin-top: 1rem; }
+  .flex.flex-col.gap-5 > :not(:first-child) { margin-left: 0; margin-top: 1.25rem; }
+  .flex.flex-col.gap-6 > :not(:first-child) { margin-left: 0; margin-top: 1.5rem; }
+  .flex.flex-col.gap-8 > :not(:first-child) { margin-left: 0; margin-top: 2rem; }
+  .flex.flex-col.gap-10 > :not(:first-child) { margin-left: 0; margin-top: 2.5rem; }
+  .flex.flex-col.gap-12 > :not(:first-child) { margin-left: 0; margin-top: 3rem; }
+
+  /* 行内 flex 容器（inline-flex）—— 最常见的 4 个值 */
+  .inline-flex.gap-1 > :not(:first-child) { margin-left: 0.25rem; }
+  .inline-flex.gap-2 > :not(:first-child) { margin-left: 0.5rem; }
+  .inline-flex.gap-3 > :not(:first-child) { margin-left: 0.75rem; }
+  .inline-flex.gap-4 > :not(:first-child) { margin-left: 1rem; }
+}
