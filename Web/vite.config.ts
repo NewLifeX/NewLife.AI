@@ -116,7 +116,7 @@ function unwrapCssLayers(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), ...(process.env.LEGACY ? [legacy({ targets: ['iOS >= 11', 'Android >= 5'] })] : []), renameHtml('index.html', 'chat.html'), unwrapCssLayers(), removeKatexLegacyFonts()],
+  plugins: [react(), tailwindcss(), ...(process.env.LEGACY ? [legacy({ targets: ['iOS >= 14', 'Android >= 8'], renderLegacyChunks: false, modernPolyfills: true })] : []), renameHtml('index.html', 'chat.html'), unwrapCssLayers(), removeKatexLegacyFonts()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
