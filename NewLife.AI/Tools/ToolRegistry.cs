@@ -587,7 +587,8 @@ public class ToolRegistry : IToolProvider
         {
             try
             {
-                var reparsed = JsonParser.Decode(jsonStr);
+                // new JsonParser().Decode() 支持解析顶层 JSON 数组，而静态 JsonParser.Decode 只支持对象
+                var reparsed = new JsonParser(jsonStr).Decode();
                 if (reparsed is IDictionary<String, Object?> || reparsed is IList<Object?>)
                     return JsonHelper.Default.Convert(reparsed, underlyingType);
             }

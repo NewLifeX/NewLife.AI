@@ -69,9 +69,9 @@ public class ChatMessage
 
             try
             {
-                // 包装为对象以便 JsonParser.Decode 解析
-                var wrapper = JsonParser.Decode("{\"items\":" + json + "}");
-                items = wrapper?["items"] as IList<Object>;
+                // new JsonParser().Decode() 支持解析顶层 JSON 数组，而静态 JsonParser.Decode 只支持对象
+                var parsed = new JsonParser(json).Decode();
+                items = parsed as IList<Object>;
             }
             catch { return null; }
         }
