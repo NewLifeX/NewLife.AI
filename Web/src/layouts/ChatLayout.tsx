@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useState, useRef } from 'react'
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
@@ -78,7 +78,7 @@ export function ChatLayout({
   }, [])
 
   // 移动端初始化时自动收起侧边栏
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isMobile) {
       useUIStore.getState().setSidebarCollapsed(true)
     }
