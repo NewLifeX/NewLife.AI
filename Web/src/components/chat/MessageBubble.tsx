@@ -361,7 +361,7 @@ export function MessageBubble({
       <div className="w-full">
         <div
           className={cn(
-            'leading-7',
+            'leading-7 px-4',
             isError
               ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-4 py-3 text-red-700 dark:text-red-400'
               : 'text-gray-900 dark:text-gray-100',
