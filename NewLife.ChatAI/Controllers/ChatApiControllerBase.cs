@@ -140,7 +140,15 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
         }
         finally
         {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await enumerator.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                DefaultSpan.Current?.SetError(ex);
+                // DisposeAsync 内部异常（如 NotSupportedException）不影响响应，仅记录
+            }
         }
     }
 
