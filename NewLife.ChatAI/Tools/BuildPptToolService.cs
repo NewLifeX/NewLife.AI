@@ -507,7 +507,7 @@ public class BuildPptToolService(ILog log)
     private async Task<ArchiveResult> ArchivePptxAsync(Byte[] pptxBytes, String title, Int32 slideCount, String? theme)
     {
         var safeTitle = CleanFileName(title);
-        var fileName = $"ai-pptx-{safeTitle}-{DateTime.Now:yyyyMMddHHmmssfff}.pptx";
+        var fileName = $"{safeTitle}-{DateTime.Now:yyyyMMddHHmmssfff}.pptx";
 
         var attachment = new Attachment
         {

@@ -336,7 +336,7 @@ public class BuildDocToolService(ILog log)
         String contentType, String extension, String kind)
     {
         var safeTitle = CleanFileName(title);
-        var fileName = $"ai-{kind.ToLower()}-{safeTitle}-{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
+        var fileName = $"{safeTitle}-{DateTime.Now:yyyyMMddHHmmssfff}{extension}";
         var att = new Attachment { Category = "StarChat", ContentType = contentType, Size = fileBytes.Length, Enable = true, UploadTime = DateTime.Now };
         try { att["Remark"] = $"AI生成{kind}｜标题:{title}"; } catch { }
         await using var ms = new MemoryStream(fileBytes);
