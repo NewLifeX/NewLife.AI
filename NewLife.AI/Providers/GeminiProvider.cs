@@ -108,7 +108,17 @@ public class GeminiProvider : AiProviderBase, IAiProvider, IAiChatProtocol
             var data = line.Substring(6).Trim();
             if (data.Length == 0) continue;
 
-            var chunk = ParseGeminiStreamChunk(data, model);
+            ChatResponse? chunk = null;
+            try
+            {
+                chunk = ParseGeminiStreamChunk(data, model);
+            }
+            catch (Exception ex)
+            {
+                // 记录畸形数据块到星尘监控，便于后续排查上游模型输出格式问题
+                using var span = Tracer?.NewSpan("ai:StreamChunkError", data);
+                span?.SetError(ex);
+            }
             if (chunk != null)
                 yield return chunk;
         }

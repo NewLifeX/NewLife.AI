@@ -569,13 +569,20 @@ public class ToolRegistry : IToolProvider
                 return value.ToJson();
             return value.ToString();
         }
-        if (underlyingType == typeof(Boolean)) return Convert.ToBoolean(value);
-        if (underlyingType == typeof(Int32)) return Convert.ToInt32(value);
-        if (underlyingType == typeof(Int64)) return Convert.ToInt64(value);
-        if (underlyingType == typeof(Double)) return Convert.ToDouble(value);
-        if (underlyingType == typeof(Single)) return Convert.ToSingle(value);
-        if (underlyingType == typeof(Decimal)) return Convert.ToDecimal(value);
-        if (underlyingType.IsEnum) return Enum.Parse(underlyingType, value.ToString() ?? String.Empty, ignoreCase: true);
+        // 使用 NewLife 安全扩展方法：ToInt/ToBoolean 等内部基于 TryParse，不抛异常，失败返回默认值
+        if (underlyingType == typeof(Boolean)) return value.ToBoolean();
+        if (underlyingType == typeof(Int32)) return value.ToInt();
+        if (underlyingType == typeof(Int64)) return value.ToLong();
+        if (underlyingType == typeof(Int16)) return (Int16)value.ToInt();
+        if (underlyingType == typeof(Byte)) return (Byte)value.ToInt();
+        if (underlyingType == typeof(Double)) return value.ToDouble();
+        if (underlyingType == typeof(Single)) return (Single)value.ToDouble();
+        if (underlyingType == typeof(Decimal)) return value.ToDecimal();
+        if (underlyingType.IsEnum)
+        {
+            try { return Enum.Parse(underlyingType, value.ToString() ?? String.Empty, ignoreCase: true); }
+            catch { return null; }
+        }
 
         // 复杂类型：序列化回 JSON 再反序列化为目标类型
         if (value is IDictionary<String, Object?> || value is IList<Object?>)
