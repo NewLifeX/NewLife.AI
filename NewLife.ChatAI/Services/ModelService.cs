@@ -389,7 +389,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     /// <returns>嵌入请求</returns>
     private static EmbeddingRequest BuildEmbeddingRequest(ModelConfig model, IList<String> input)
     {
-        var req = new EmbeddingRequest { Input = input };
+        var req = new EmbeddingRequest { Input = input, Model = model.GetEffectiveModelCode() };
 
         // 应用模型定制设置
         if (!model.Settings.IsNullOrEmpty())
