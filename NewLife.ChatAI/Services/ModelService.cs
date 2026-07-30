@@ -452,10 +452,10 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
     /// <param name="conversation">会话上下文，null 时不记录用量</param>
     /// <param name="texts">文本列表</param>
     /// <param name="source">用量来源标记，默认 Embedding</param>
-    /// <param name="batchSize">每批次嵌入文本数，默认 20</param>
+    /// <param name="batchSize">每批次嵌入文本数，默认 10（DashScope 等国产模型上限）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>与 texts 等长的向量数组，API 客户端不可用时返回空数组</returns>
-    public async Task<Single[][]> BulkEmbedAsync(ModelConfig model, IConversation? conversation, IList<String> texts, String source = "Embedding", Int32 batchSize = 20, CancellationToken cancellationToken = default)
+    public async Task<Single[][]> BulkEmbedAsync(ModelConfig model, IConversation? conversation, IList<String> texts, String source = "Embedding", Int32 batchSize = 10, CancellationToken cancellationToken = default)
     {
         if (texts.Count == 0) return [];
 
