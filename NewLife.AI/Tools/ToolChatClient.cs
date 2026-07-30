@@ -467,9 +467,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     }
                 }
 
+                // 对 Arguments 也施加截断，防止 AI 生成超大参数耗尽 SSE 序列化缓冲区
+                var truncatedArgs = TruncateResult(tc.Function.Arguments);
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
+                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, truncatedArgs)]
                 };
 
                 var ctx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
@@ -497,12 +499,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     Content = TruncateResult(llmContent)
                 });
 
-                // SSE 事件：取用户内容（重复工具调用也会发送结构化 JSON 前端）
+                // SSE 事件：取用户内容（重复工具调用也会发送结构化 JSON 前端）。
+                // User 受众内容同样需截断，避免超大结果（如 read_file 不加限制、DB 查询返回大量行）撑爆 SSE 序列化缓冲区
                 var userContent = GetUserContent(toolResult);
+                var truncatedUserContent = TruncateResult(userContent);
                 var eventType = toolResult.IsError ? "error" : "done";
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent, llmContent)]
+                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, truncatedUserContent, llmContent)]
                 };
             }
 
@@ -668,6 +672,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             {
                 callResult = await provider!.CallToolAsync(toolName, argumentsJson, context, cancellationToken).ConfigureAwait(false);
                 breaker.RecordSuccess();
+
+                // 记录工具返回结果的总字符长度，替代原始大对象序列化，避免大结果在埋点中二次膨胀
+                if (callResult != null)
+                {
+                    span?.Value = callResult.Contents.Sum(c => c.Data?.Length ?? 0);
+                }
             }
             catch (Exception)
             {
@@ -675,7 +685,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 throw;
             }
 
-            span?.AppendTag(callResult);
             await FireCallbackAsync(callResult).ConfigureAwait(false);
             return callResult;
         }

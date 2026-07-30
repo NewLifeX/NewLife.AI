@@ -152,14 +152,58 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
         }
     }
 
-    /// <summary>写入 SSE 事件</summary>
+    /// <summary>SSE 事件单字段最大字符数。超过此长度时自动截断以防止 OOM</summary>
+    private const Int32 MaxSseFieldLength = 100_000;
+
+    /// <summary>写入 SSE 事件。序列化前自动截断超大字段，防止 Utf8JsonWriter 分配过量缓冲区导致 OOM</summary>
     /// <param name="ev">事件对象</param>
     /// <param name="cancellationToken">取消令牌</param>
     protected async Task WriteSseEventAsync(ChatStreamEvent ev, CancellationToken cancellationToken)
     {
-        var json = JsonSerializer.Serialize(ev, SseJsonOptions);
-        await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
-        await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+        // 截断超大字符串字段，防御工具结果 / content_delta / knowledge_refs 等来源的巨量数据
+        TruncateLargeFields(ev);
+
+        try
+        {
+            var json = JsonSerializer.Serialize(ev, SseJsonOptions);
+            await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
+            await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OutOfMemoryException)
+        {
+            // 极少数情况下截断后仍可能 OOM，兜底发送错误事件
+            try
+            {
+                var fallback = ChatStreamEvent.ErrorEvent("STREAM_ERROR", "响应内容过长，已截断部分内容");
+                var json = JsonSerializer.Serialize(fallback, SseJsonOptions);
+                await Response.WriteAsync($"data: {json}\n\n", CancellationToken.None).ConfigureAwait(false);
+                await Response.Body.FlushAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch
+            {
+                // 客户端已断连，静默忽略
+            }
+        }
+    }
+
+    /// <summary>截断 ChatStreamEvent 中超过 <see cref="MaxSseFieldLength"/> 的字符串字段</summary>
+    private static void TruncateLargeFields(ChatStreamEvent ev)
+    {
+        ev.Content = TruncateField(ev.Content, MaxSseFieldLength);
+        ev.Arguments = TruncateField(ev.Arguments, MaxSseFieldLength);
+        ev.Result = TruncateField(ev.Result, MaxSseFieldLength);
+        ev.Error = TruncateField(ev.Error, MaxSseFieldLength);
+        ev.Message = TruncateField(ev.Message, MaxSseFieldLength);
+        ev.KnowledgeRefs = TruncateField(ev.KnowledgeRefs, MaxSseFieldLength);
+        ev.Title = TruncateField(ev.Title, MaxSseFieldLength);
+        ev.Url = TruncateField(ev.Url, MaxSseFieldLength);
+    }
+
+    /// <summary>截断字符串到指定长度，追加省略标记</summary>
+    private static String? TruncateField(String? value, Int32 maxLength)
+    {
+        if (value == null || value.Length <= maxLength) return value;
+        return value[..maxLength] + $"\n\n[已截断，原始长度 {value.Length} 字符]";
     }
     #endregion
 }
