@@ -496,11 +496,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     }
                 }
 
-                // 对 Arguments 也施加截断，防止 AI 生成超大参数耗尽 SSE 序列化缓冲区
-                var truncatedArgs = TruncateResult(tc.Function.Arguments);
+                // 发送完整 Arguments 给前端（ToolResultMaxChars 仅控制发给 AI 的内容长度，
+                // 前端 ToolCallBadge 展示、ask_user 解析问题组都需要完整参数，不截断）
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, truncatedArgs)]
+                    ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
                 };
 
                 var ctx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
@@ -528,14 +528,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     Content = TruncateResult(llmContent)
                 });
 
-                // SSE 事件：取用户内容（重复工具调用也会发送结构化 JSON 前端）。
-                // User 受众内容同样需截断，避免超大结果（如 read_file 不加限制、DB 查询返回大量行）撑爆 SSE 序列化缓冲区
+                // SSE 事件：取用户内容（不截断——ToolResultMaxChars 仅控制发给 AI 的内容长度，
+                // 给用户展示的 SVG/HTML/图表 JSON 必须完整，否则前端解析失败）
                 var userContent = GetUserContent(toolResult);
-                var truncatedUserContent = TruncateResult(userContent);
                 var eventType = toolResult.IsError ? "error" : "done";
                 yield return new ChatResponse
                 {
-                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, truncatedUserContent, llmContent)]
+                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent, llmContent)]
                 };
             }
 
