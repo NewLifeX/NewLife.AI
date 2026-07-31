@@ -85,6 +85,21 @@ public class PersistMessageHandlerTests
     }
 
     [Fact]
+    [DisplayName("OnAfter—内容为空但思考非空时写入 [已中断]（不残留空白）")]
+    public async Task OnAfter_EmptyContentWithThinking_WritesInterruptedPlaceholder()
+    {
+        var handler = new PersistMessageHandler(ChatSetting.Current);
+        var flow = BuildFlow(withAssistantMessage: true);
+        flow.ThinkingBuilder.Append("这是思考内容");
+
+        try { await handler.OnAfter(flow, CancellationToken.None); }
+        catch { /* 忽略 DB 异常 */ }
+
+        Assert.Equal("[已中断]", flow.AssistantMessage.Content);
+        Assert.Equal("这是思考内容", flow.AssistantMessage.ThinkingContent);
+    }
+
+    [Fact]
     [DisplayName("OnAfter—HasError=true 且有错误详情时附加到内容末尾")]
     public async Task OnAfter_HasErrorWithDetail_AppendsToContent()
     {

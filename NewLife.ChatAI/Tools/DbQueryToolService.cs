@@ -43,7 +43,8 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         log.Info("[SearchTable] keywords={0}, connName={1}", keywords, connName);
 
         var roleIds = GetRoleIds(context);
-        var groupedTables = schemaService.SearchTables(keywords, connName);
+        var failures = new List<String>();
+        var groupedTables = schemaService.SearchTables(keywords, connName, failures: failures);
 
         // 访问控制过滤：对每个连接下的表列表逐表检查
         var filtered = new Dictionary<String, IList<IDataTable>>(StringComparer.OrdinalIgnoreCase);
@@ -64,7 +65,10 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
 
         log.Info("[SearchTable] 匹配 {0} 个表（过滤后 {1} 个）", totalMatched, filtered.Sum(kv => kv.Value.Count));
 
-        return BuildGroupedResult(filtered, connName, roleIds);
+        // 匹配但全部被权限过滤时，区分提示，避免误报"未找到"
+        var matchedButBlocked = groupedTables.Count > 0 && filtered.Count == 0;
+
+        return BuildGroupedResult(filtered, connName, roleIds, failures, matchedButBlocked);
     }
 
     /// <summary>在指定数据库连接上执行SQL语句，返回结果集</summary>
@@ -356,7 +360,7 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
     /// <param name="connName">限定连接名</param>
     /// <param name="roleIds">角色ID列表</param>
     /// <returns>分组后的搜索结果文本</returns>
-    private static String BuildGroupedResult(IDictionary<String, IList<IDataTable>> groupedTables, String? connName, Int32[] roleIds)
+    private static String BuildGroupedResult(IDictionary<String, IList<IDataTable>> groupedTables, String? connName, Int32[] roleIds, IList<String>? failures = null, Boolean matchedButBlocked = false)
     {
         if (groupedTables.Count == 0)
         {
@@ -364,7 +368,28 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
             var connList = availableConns.Count > 0
                 ? "可用连接: " + String.Join(", ", availableConns)
                 : "无可用连接";
-            return $"未找到匹配表。{connList}";
+
+            var msg = new StringBuilder();
+            if (matchedButBlocked)
+                msg.Append("匹配到表但均被访问控制过滤（白名单/黑名单/角色权限）。");
+            else
+                msg.Append("未找到匹配表。");
+
+            // 连接级失败原因透出，避免 AI 盲目重试
+            if (failures is { Count: > 0 })
+            {
+                msg.AppendLine();
+                msg.AppendLine("部分连接表结构获取失败：");
+                foreach (var f in failures)
+                    msg.AppendLine($"- {f}");
+                msg.Append("建议：检查连接配置；或对可用连接调用 run_sql 查询 INFORMATION_SCHEMA.TABLES 以确认表清单");
+            }
+            else
+            {
+                msg.Append(connList);
+            }
+
+            return msg.ToString();
         }
 
         // 保持 SearchTables 的全局排序（精确匹配的连接在前，模糊匹配在后）

@@ -107,6 +107,35 @@ public class ToolRegistryExtendedTests
             registry.InvokeAsync("nonexistent", null));
     }
 
+    // ── AddToolAlias（工具名别名）──────────────────────────────────────────
+
+    [Fact]
+    [DisplayName("AddToolAlias—别名可路由到目标工具")]
+    public async Task AddToolAlias_RoutesToTarget()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTool("run_sql", static (_, _, _) => Task.FromResult("执行成功"));
+        registry.AddToolAlias("query_sql", "run_sql");
+
+        var result = await registry.InvokeAsync("query_sql", "{}");
+
+        Assert.Equal("执行成功", result);
+    }
+
+    [Fact]
+    [DisplayName("InvokeAsync—未注册工具错误信息含相近工具建议")]
+    public async Task InvokeAsync_UnknownTool_MessageContainsSuggestion()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTool("run_sql", static (_, _, _) => Task.FromResult("ok"));
+
+        var ex = await Assert.ThrowsAsync<System.Collections.Generic.KeyNotFoundException>(() =>
+            registry.InvokeAsync("run_sqll", null));
+
+        Assert.Contains("run_sql", ex.Message);
+        Assert.Contains("可用工具", ex.Message);
+    }
+
     [Fact]
     [DisplayName("InvokeAsync—调用 calculate 工具返回正确结果")]
     public async Task InvokeAsync_Calculate_ReturnsResult()

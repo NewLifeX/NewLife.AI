@@ -204,6 +204,107 @@ public class NativeToolTests
         public void Dispose() { }
     }
 
+    /// <summary>第一轮返回工具调用，第二轮返回空内容，之后返回强制回答（模拟模型放弃/仅输出思考）</summary>
+    private sealed class ToolCallThenEmptyClient : IChatClient
+    {
+        private readonly String _toolName;
+        private readonly String _toolArgs;
+        private readonly String _forcedReply;
+        private Int32 _callCount;
+
+        /// <summary>最近一次请求，供断言强制轮携带提示</summary>
+        public IChatRequest? LastRequest { get; private set; }
+
+        public ToolCallThenEmptyClient(String toolName, String toolArgs, String forcedReply)
+        {
+            _toolName = toolName;
+            _toolArgs = toolArgs;
+            _forcedReply = forcedReply;
+        }
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+        {
+            _callCount++;
+            LastRequest = request;
+
+            ChatResponse resp;
+            if (_callCount == 1)
+            {
+                // 第一次调用：返回工具调用
+                resp = new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = null,
+                                ToolCalls =
+                                [
+                                    new ToolCall
+                                    {
+                                        Id = "call_001",
+                                        Type = "function",
+                                        Function = new FunctionCall
+                                        {
+                                            Name = _toolName,
+                                            Arguments = _toolArgs
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                };
+            }
+            else if (_callCount == 2)
+            {
+                // 第二次调用：模型放弃，返回空内容（无工具调用）
+                resp = new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = ""
+                            }
+                        }
+                    ]
+                };
+            }
+            else
+            {
+                // 第三次调用：框架强制后返回最终回答
+                resp = new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = _forcedReply
+                            }
+                        }
+                    ]
+                };
+            }
+
+            return Task.FromResult<IChatResponse>(resp);
+        }
+
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
     // ── ToolDescriptionAttribute 测试 ─────────────────────────────────────────
 
     [Fact]
@@ -367,6 +468,31 @@ public class NativeToolTests
         var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
 
         Assert.Equal("计算结果是 30", content);
+    }
+
+    [Fact]
+    [DisplayName("ToolChatClient 工具调用后最终轮空内容时强制产出最终回答")]
+    public async Task ToolChatClient_EmptyFinalReply_ForcesFinalAnswer()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 模拟模型先调用 add_numbers，随后返回空内容（模型放弃/只输出思考）
+        var innerClient = new ToolCallThenEmptyClient(
+            toolName: "add_numbers",
+            toolArgs: "{\"a\":10,\"b\":20}",
+            forcedReply: "基于工具结果：计算结果是 30");
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var response = await nativeClient.GetResponseAsync("10 + 20 等于多少？", cancellationToken: default);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("基于工具结果：计算结果是 30", content);
+        // 强制轮应携带"直接给出最终回答"的系统提示
+        Assert.NotNull(innerClient.LastRequest);
+        Assert.Contains(innerClient.LastRequest.Messages, m =>
+            m.Role == "user" && (m.Content as String)?.Contains("最终回答") == true);
     }
 
     [Fact]

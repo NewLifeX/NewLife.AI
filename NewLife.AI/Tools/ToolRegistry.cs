@@ -32,6 +32,7 @@ public class ToolRegistry : IToolProvider
     private readonly List<ChatTool> _tools = [];
     private readonly List<Type> _registeredTypes = [];
     private readonly Dictionary<String, Func<String?, ToolCallContext?, CancellationToken, Task<String>>> _handlers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<String, String> _aliases = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<String> _systemNames = new(StringComparer.OrdinalIgnoreCase);
     #endregion
 
@@ -55,6 +56,17 @@ public class ToolRegistry : IToolProvider
             }
         });
         _handlers[name] = handler;
+    }
+
+    /// <summary>注册工具名别名。LLM 调用别名时路由到目标工具；别名仅服务端 fallback，不进 LLM Schema</summary>
+    /// <param name="alias">别名</param>
+    /// <param name="target">目标工具名</param>
+    public void AddToolAlias(String alias, String target)
+    {
+        if (String.IsNullOrWhiteSpace(alias)) throw new ArgumentNullException(nameof(alias));
+        if (String.IsNullOrWhiteSpace(target)) throw new ArgumentNullException(nameof(target));
+
+        _aliases[alias] = target;
     }
 
     /// <summary>扫描类型 <typeparamref name="T"/> 中所有标注 <see cref="ToolDescriptionAttribute"/> 的公共方法并注册</summary>
@@ -286,8 +298,8 @@ public class ToolRegistry : IToolProvider
     /// <exception cref="KeyNotFoundException">工具名称未注册</exception>
     public Task<String> InvokeAsync(String name, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
-        if (!_handlers.TryGetValue(name, out var handler))
-            throw new KeyNotFoundException($"工具 '{name}' 未注册到 ToolRegistry");
+        if (!TryGetHandler(name, out var handler))
+            throw new KeyNotFoundException(BuildUnknownToolMessage(name));
         return handler(arguments, context, cancellationToken);
     }
 
@@ -299,7 +311,7 @@ public class ToolRegistry : IToolProvider
     /// <returns>执行结果 JSON 字符串，或错误描述字符串</returns>
     public async Task<String> TryInvokeAsync(String name, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
-        if (!_handlers.TryGetValue(name, out var handler))
+        if (!TryGetHandler(name, out var handler))
             return $"{{\"error\":\"tool '{name}' not registered\"}}";
         try
         {
@@ -309,6 +321,52 @@ public class ToolRegistry : IToolProvider
         {
             return $"{{\"error\":{ex.Message.ToJson()}}}";
         }
+    }
+
+    /// <summary>解析工具处理器。优先直接命中，其次工具名别名路由（服务端 fallback，不进 LLM Schema）</summary>
+    /// <param name="name">工具名或别名</param>
+    /// <param name="handler">解析到的处理器</param>
+    /// <returns>命中返回 true</returns>
+    private Boolean TryGetHandler(String name, out Func<String?, ToolCallContext?, CancellationToken, Task<String>> handler)
+    {
+        if (_handlers.TryGetValue(name, out handler!)) return true;
+
+        if (_aliases.TryGetValue(name, out var target) && _handlers.TryGetValue(target, out handler!))
+            return true;
+
+        handler = null!;
+        return false;
+    }
+
+    /// <summary>构建未注册工具的异常消息。附带相近工具名建议与可用工具列表，便于 LLM 自行纠正</summary>
+    /// <param name="name">未注册的工具名</param>
+    /// <returns>错误消息</returns>
+    private String BuildUnknownToolMessage(String name)
+    {
+        var candidate = FindSimilarToolName(name);
+        var msg = $"工具 '{name}' 未注册到 ToolRegistry";
+        if (!candidate.IsNullOrEmpty())
+            msg += $"，是否想调用 '{candidate}'？";
+
+        var all = _handlers.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
+        if (all.Count > 0)
+        {
+            var list = all.Count > 30 ? String.Join(", ", all.Take(30)) + " 等" : String.Join(", ", all);
+            msg += $" 可用工具: {list}";
+        }
+        return msg;
+    }
+
+    /// <summary>查找与指定名称最相近的已注册工具名。优先级：忽略大小写精确 > 前缀 > 反向前缀 > 包含 > 反向包含</summary>
+    /// <param name="name">目标名称</param>
+    /// <returns>相近工具名；不存在返回 null</returns>
+    private String? FindSimilarToolName(String name)
+    {
+        return _handlers.Keys.FirstOrDefault(k => k.Equals(name, StringComparison.OrdinalIgnoreCase))
+            ?? _handlers.Keys.FirstOrDefault(k => k.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+            ?? _handlers.Keys.FirstOrDefault(k => name.StartsWith(k, StringComparison.OrdinalIgnoreCase))
+            ?? _handlers.Keys.FirstOrDefault(k => k.Contains(name, StringComparison.OrdinalIgnoreCase))
+            ?? _handlers.Keys.FirstOrDefault(k => name.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     #endregion

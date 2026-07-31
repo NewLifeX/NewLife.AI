@@ -77,6 +77,8 @@ public static class ChatAIExtensions
             registry.AddTools<MindmapToolService>();
             registry.AddTools<KanbanToolService>();
             registry.AddTools<DbQueryToolService>();
+            // 工具名别名：模型按旧习惯调用 query_sql 时路由到 run_sql（仅服务端 fallback，不进 LLM Schema）
+            registry.AddToolAlias("query_sql", "run_sql");
             registry.AddTools<BuildPptToolService>();
             registry.AddTools<BuildExcelToolService>();
             registry.AddTools<BuildDocToolService>();

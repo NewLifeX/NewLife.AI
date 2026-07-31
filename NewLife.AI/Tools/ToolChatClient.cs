@@ -42,6 +42,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>是否因Token总限额触发中断</summary>
     public Boolean IsTotalTokenLimitExceeded { get; private set; }
 
+    /// <summary>是否因工具调用轮次上限触发中断</summary>
+    public Boolean IsToolLoopLimitExceeded { get; private set; }
+
     /// <summary>API 不返回 Usage 时的回退估算累计值（基于内联字符估算）</summary>
     private Int32 _fallbackEstimatedTokens;
 
@@ -106,6 +109,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         IChatResponse response;
         var iterations = 0;
+        var executedAnyTool = false;
         UsageDetails? accumulatedUsage = null;
 
         _sessionDedupKeys.Clear();
@@ -137,7 +141,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
             var toolCalls = assistantMessage?.ToolCalls;
             if (toolCalls == null || toolCalls.Count == 0) break;
-            if (++iterations >= maxIterations) break;
+
+            executedAnyTool = true;
+
+            if (++iterations >= maxIterations)
+            {
+                IsToolLoopLimitExceeded = true;
+                Log.Warn("工具调用轮次已达上限 {0}，中断工具调用循环", maxIterations);
+                break;
+            }
 
             // 追加 assistant 消息（含工具调用）
             // DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传，否则 API 返回 400
@@ -244,6 +256,23 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
             // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
             if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) break;
+        }
+
+        // 兜底：执行过工具但最终轮未产出正文（模型只输出思考/工具调用即结束，或轮次达上限），
+        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；Token 超限时不追加）
+        if (!IsTotalTokenLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
+        {
+            Log.Info("最终回复内容为空，追加提示后强制产出最终回答");
+            workMessages.Add(new ChatMessage
+            {
+                Role = "user",
+                Content = "[系统提示] 请基于已有的工具调用结果，直接给出最终回答。不要再次调用工具。"
+            });
+            response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
+            if (response.Usage != null)
+                accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
+            else
+                _fallbackEstimatedTokens += EstimateTokens(workMessages);
         }
 
         // 将所有轮次的 Token 用量累加值写回最终 response，供上层（如 InvokeLlmDirectAsync）使用
@@ -775,6 +804,16 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private static Boolean HasLlmAudience(Dictionary<String, IToolResult> results, String toolName)
         => results.TryGetValue(toolName, out var result)
             && result.Contents.Any(c => c.Audience.HasFlag(ToolAudience.Llm));
+
+    /// <summary>判断最终响应是否未产出正文内容（Content 为空，可能仅含思考或工具调用）</summary>
+    /// <param name="response">最终响应</param>
+    /// <returns>无正文内容返回 true</returns>
+    private static Boolean IsFinalContentEmpty(IChatResponse response)
+    {
+        var msg = response.Messages?.FirstOrDefault()?.Message;
+        if (msg == null) return true;
+        return (msg.Content as String).IsNullOrEmpty();
+    }
 
     /// <summary>创建错误工具结果</summary>
     private static ToolResult ToolErrorResult(String code, String message, String? hint = null)

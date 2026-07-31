@@ -33,7 +33,7 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
     /// <param name="connName">限定连接名，为空则搜索所有连接</param>
     /// <param name="maxResults">最大返回条数，默认 10</param>
     /// <returns>匹配的表字典（key=连接名, value=该连接下匹配的表列表）</returns>
-    public IDictionary<String, IList<IDataTable>> SearchTables(String keywords, String? connName = null, Int32 maxResults = 10)
+    public IDictionary<String, IList<IDataTable>> SearchTables(String keywords, String? connName = null, Int32 maxResults = 10, IList<String>? failures = null)
     {
         if (keywords.IsNullOrEmpty()) throw new ArgumentNullException(nameof(keywords));
 
@@ -47,23 +47,17 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
         if (kwList.Count == 0) throw new ArgumentException("关键字不能为空", nameof(keywords));
 
         // 获取所有连接的表（DAL 表 + 实体表合并，实体表优先）
+        // 连接枚举：DAL.ConnStrs ∪ 启用的 DbAccessConfig（支持运行时动态连接，动态连接串先注册再扫描）
         var allTables = new List<IDataTable>();
         if (!connName.IsNullOrEmpty())
         {
-            allTables.AddRange(GetMergedTables(connName));
+            TryLoadTables(connName, allTables, failures);
         }
         else
         {
-            foreach (var cn in DAL.ConnStrs!.Keys)
+            foreach (var cn in GetSearchableConnNames())
             {
-                try
-                {
-                    allTables.AddRange(GetMergedTables(cn));
-                }
-                catch (Exception ex)
-                {
-                    Log.Warn("[SearchTables] 获取连接 [{0}] 表结构失败: {1}", cn, ex.Message);
-                }
+                TryLoadTables(cn, allTables, failures);
             }
         }
 
@@ -93,6 +87,73 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
     #endregion
 
     #region 辅助方法
+
+    /// <summary>收集可搜索连接的名称列表。优先 DAL.ConnStrs，补充启用的 DbAccessConfig（动态连接串先注册再并入）</summary>
+    /// <returns>去重后的连接名列表</returns>
+    private List<String> GetSearchableConnNames()
+    {
+        var names = new List<String>();
+
+        if (DAL.ConnStrs != null)
+        {
+            foreach (var cn in DAL.ConnStrs.Keys)
+            {
+                if (!cn.IsNullOrEmpty() && !names.Contains(cn, StringComparer.OrdinalIgnoreCase))
+                    names.Add(cn);
+            }
+        }
+
+        foreach (var cfg in DbAccessConfig.FindAllEnabled())
+        {
+            var cn = cfg.ConnName;
+            if (cn.IsNullOrEmpty() || names.Contains(cn, StringComparer.OrdinalIgnoreCase)) continue;
+
+            // 仅存在于配置表且带连接串的动态连接，先注册到 DAL 再扫描
+            if (!cfg.ConnString.IsNullOrEmpty() && (DAL.ConnStrs == null || !DAL.ConnStrs.ContainsKey(cn)))
+            {
+                try
+                {
+                    var dbType = !cfg.DbType.IsNullOrEmpty() ? cfg.DbType : "SQLite";
+                    DAL.AddConnStr(cn, cfg.ConnString, null, dbType);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("[SearchTables] 连接 [{0}] 动态注册失败: {1}", cn, ex.Message);
+                    continue;
+                }
+            }
+
+            names.Add(cn);
+        }
+
+        return names;
+    }
+
+    /// <summary>尝试加载指定连接的全部表结构，失败时记录原因并继续</summary>
+    /// <param name="connName">连接名</param>
+    /// <param name="target">表列表收集目标</param>
+    /// <param name="failures">失败原因收集列表（可为 null）</param>
+    private void TryLoadTables(String connName, List<IDataTable> target, IList<String>? failures)
+    {
+        try
+        {
+            var tables = GetMergedTables(connName);
+
+            // DAL 物理表可能未填充所属连接名，补齐后分组与权限判断（IsTableAllowed）才正确
+            foreach (var t in tables)
+            {
+                if (t.ConnName.IsNullOrEmpty())
+                    t.ConnName = connName;
+            }
+
+            target.AddRange(tables);
+        }
+        catch (Exception ex)
+        {
+            failures?.Add($"连接 [{connName}] 表结构获取失败: {ex.Message}");
+            Log.Warn("[SearchTables] 获取连接 [{0}] 表结构失败: {1}", connName, ex.Message);
+        }
+    }
 
     /// <summary>获取指定连接的合并表列表。</summary>
     /// <remarks>

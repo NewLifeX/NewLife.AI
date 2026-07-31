@@ -160,14 +160,12 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
     {
         if (msg.Content.IsNullOrEmpty())
         {
+            // 空内容兜底：无论是否携带思考内容都写入可见提示，避免用户看到空白消息。
+            // 思考内容已在上方从 ThinkingBuilder 写入 ThinkingContent，此处不覆盖；
+            // 历史缺陷：Content 为空 + 无错误 + ThinkingContent 非空时 Content 保持空，导致消息落库为空白
             if (hasError)
-            {
-                // 错误时优先保留已有部分推理内容（ThinkingContent 已在 OnAfter 中从 ThinkingBuilder 写入），
-                // 避免只用 "[生成失败]" 覆盖掉部分数据；Content 为空但 ThinkingContent 有值时保留推理记录
-                var fallback = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
-                msg.Content = msg.ThinkingContent.IsNullOrEmpty() ? fallback : fallback;
-            }
-            else if (msg.ThinkingContent.IsNullOrEmpty())
+                msg.Content = errorDetail.IsNullOrEmpty() ? "[生成失败]" : $"[生成失败] {errorDetail}";
+            else
                 msg.Content = "[已中断]";
         }
         else if (hasError && !errorDetail.IsNullOrEmpty())
