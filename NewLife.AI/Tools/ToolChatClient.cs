@@ -937,7 +937,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             Items = request?.Items ?? new Dictionary<String, Object?>(),
         };
 
-    /// <summary>按 <see cref="ToolSetting"/> 的 ToolResultMaxChars 截断过长结果，防止撑满 LLM Context Window</summary>
+    /// <summary>按 <see cref="ToolSetting"/> 的 ToolResultMaxChars 截断过长结果，防止撑满 LLM Context Window。
+    /// 安全截断：避免在代理对（emoji/生僻汉字）中间切断，导致无效字符。</summary>
     /// <param name="result">工具原始返回文本</param>
     /// <returns>截断后的文本，不超限时原样返回</returns>
     private String? TruncateResult(String? result)
@@ -945,7 +946,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var maxResultChars = ToolSetting?.ToolResultMaxChars ?? 0;
         if (maxResultChars <= 0 || result == null || result.Length <= maxResultChars)
             return result;
-        return result.Substring(0, maxResultChars) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {maxResultChars} 字符]";
+
+        // 安全截断：避免切断代理对（emoji/生僻汉字），退避到完整字符边界
+        var cutPos = maxResultChars;
+        if (Char.IsHighSurrogate(result[cutPos - 1]))
+            cutPos--;
+
+        return result.Substring(0, cutPos) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {maxResultChars} 字符]";
     }
 
     #endregion
