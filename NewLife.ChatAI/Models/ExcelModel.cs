@@ -11,8 +11,8 @@ public class ExcelSheetModel
     [Description("列标题数组，如 [\"日期\",\"营收\",\"环比\"]")]
     public String[]? Headers { get; set; }
 
-    [Description("数据行（平铺的单元格值），按列顺序排列，自动按表头数量分组")]
-    public String[]? Rows { get; set; }
+    [Description("数据行（二维数组），每行为一个单元格值数组，如 [[\"张三\",\"85\"],[\"李四\",\"92\"]]")]
+    public String[][]? Rows { get; set; }
 
     [Description("表头样式（可选）：headerBgColor 表头背景色、headerFontColor 表头字色、stripeColor 斑马纹色")]
     public TableStyle? Style { get; set; }

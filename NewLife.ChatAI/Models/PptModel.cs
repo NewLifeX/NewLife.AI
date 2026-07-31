@@ -78,9 +78,9 @@ public class PptElement
     [Description("表格列标题数组（type=table 时必填），如 [\"指标\",\"Q1\",\"Q2\",\"环比\"]")]
     public String[]? Headers { get; set; }
 
-    /// <summary>表格数据行（type=table 时必填），平铺的单元格值，自动按表头数量分组</summary>
-    [Description("表格数据行（type=table 时必填），按列顺序平铺的单元格值，自动按表头数量分组")]
-    public String[]? Rows { get; set; }
+    /// <summary>表格数据行（type=table 时必填），每行为一个单元格值数组</summary>
+    [Description("表格数据行（type=table 时必填），每行为一个单元格值数组，如 [[\"张三\",\"85\"],[\"李四\",\"92\"]]")]
+    public String[][]? Rows { get; set; }
 
     /// <summary>图表类型（type=chart 时必填）：bar / line / pie</summary>
     [Description("图表类型（type=chart 时必填）：bar（柱状图）/ line（折线图）/ pie（饼图）")]
@@ -118,15 +118,14 @@ public class PptElement
     [Description("表格样式（type=table 时可选）：headerBgColor 表头背景色、headerFontColor 表头字色、stripeColor 斑马纹色")]
     public TableStyle? TableStyle { get; set; }
 
-    /// <summary>将 Headers + Rows 合并为 AddTable 需要的行集合（首行为表头）。Rows 为平铺数组，自动按 Headers 长度分组</summary>
+    /// <summary>将 Headers + Rows 合并为 AddTable 需要的行集合（首行为表头）。Rows 为嵌套数组，每行一个 String[]</summary>
     public IEnumerable<String[]> ToRows()
     {
         if (Headers != null) yield return Headers;
         if (Rows != null)
         {
-            var cols = Headers?.Length > 0 ? Headers!.Length : 2;
-            foreach (var chunk in Rows.Chunk(cols))
-                yield return chunk;
+            foreach (var row in Rows)
+                yield return row;
         }
     }
 }

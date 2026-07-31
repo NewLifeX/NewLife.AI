@@ -33,8 +33,8 @@ public class DocElement
     [Description("表格列标题（type=table 时必填）")]
     public String[]? Headers { get; set; }
 
-    [Description("表格数据行（type=table 时必填），按列顺序平铺的单元格值，自动按表头数量分组")]
-    public String[]? Rows { get; set; }
+    [Description("表格数据行（type=table 时必填），每行为一个单元格值数组，如 [[\"张三\",\"85\"],[\"李四\",\"92\"]]")]
+    public String[][]? Rows { get; set; }
 
     [Description("表格样式（type=table 时可选）：headerBgColor 表头背景色、headerFontColor 表头字色、stripeColor 斑马纹色")]
     public TableStyle? TableStyle { get; set; }
