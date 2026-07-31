@@ -118,6 +118,7 @@ public partial class Skill : Entity<Skill>, ISkill
             Triggers = triggers,
             Enable = true,
             IsSystem = false,
+            UserId = 0, // 开源版仅支持全局技能
         };
 
         // 已存在：只补齐空字段，不覆盖用户的定制

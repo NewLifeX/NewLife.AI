@@ -35,7 +35,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
 
         if (result.Count < maxCount)
         {
-            var normalSkills = GetAllSkills().OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
+            var normalSkills = GetVisibleSkills(userId).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
             foreach (var skill in normalSkills)
             {
                 if (result.Count >= maxCount) break;
@@ -45,6 +45,16 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         }
 
         return result;
+    }
+
+    /// <summary>获取当前用户可见的启用技能列表（全局 + 自己的）。开源版所有技能 UserId=0 即为全局可见</summary>
+    /// <param name="userId">用户编号</param>
+    /// <param name="category">分类筛选（可选）</param>
+    /// <returns></returns>
+    public IList<Skill> GetVisibleSkills(Int32 userId, String? category = null)
+    {
+        var all = GetAllSkills(category);
+        return all.Where(e => e.UserId == 0 || e.UserId == userId).ToList();
     }
 
     /// <summary>获取全部启用的技能列表</summary>
@@ -65,7 +75,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
     /// <returns></returns>
     public IList<Skill> GetMentionSkills(Int32 userId, String? keyword = null, Int32 maxCount = 20)
     {
-        var allSkills = GetAllSkills();
+        var allSkills = GetVisibleSkills(userId);
 
         if (!String.IsNullOrEmpty(keyword))
             allSkills = allSkills.Where(e => (e.Code?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) || (e.Name?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
