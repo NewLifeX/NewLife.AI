@@ -24,7 +24,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
     public ActionResult<IList<SkillDto>> GetUserSkills()
     {
         var userId = GetCurrentUserId();
-        var list = skillService.GetSkillBarList(userId);
+        var list = skillService.GetSkillBarList(userId, projectId: 0);
         return Ok(list.Select(ToDto).ToList());
     }
 
@@ -61,7 +61,7 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
         var result = new List<SkillDto>();
 
         // 技能排在前面
-        var skills = skillService.GetMentionSkills(userId, keyword, limit);
+        var skills = skillService.GetMentionSkills(userId, projectId: 0, keyword, limit);
         foreach (var skill in skills)
         {
             result.Add(ToDto(skill));

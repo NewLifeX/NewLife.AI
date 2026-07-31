@@ -39,6 +39,14 @@ public partial class Skill
     [BindColumn("UserId", "用户。0=全局，>0=个人技能。开源版仅支持全局技能", "", DefaultValue = "0")]
     public Int32 UserId { get => _UserId; set { if (OnPropertyChanging("UserId", value)) { _UserId = value; OnPropertyChanged("UserId"); } } }
 
+    private Int32 _ProjectId;
+    /// <summary>项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能</summary>
+    [DisplayName("项目")]
+    [Description("项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ProjectId", "项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能", "", DefaultValue = "0")]
+    public Int32 ProjectId { get => _ProjectId; set { if (OnPropertyChanging("ProjectId", value)) { _ProjectId = value; OnPropertyChanged("ProjectId"); } } }
+
     private String? _Code;
     /// <summary>编码。英文标识，唯一，如coder、translator</summary>
     [DisplayName("编码")]

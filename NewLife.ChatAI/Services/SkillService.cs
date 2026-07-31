@@ -18,7 +18,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
     /// <param name="userId">用户编号</param>
     /// <param name="maxCount">最大返回数量</param>
     /// <returns></returns>
-    public IList<Skill> GetSkillBarList(Int32 userId, Int32 maxCount = 8)
+    public IList<Skill> GetSkillBarList(Int32 userId, Int32 projectId = 0, Int32 maxCount = 8)
     {
         var result = new List<Skill>();
         var addedIds = new HashSet<Int32>();
@@ -35,7 +35,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
 
         if (result.Count < maxCount)
         {
-            var normalSkills = GetVisibleSkills(userId).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
+            var normalSkills = GetVisibleSkills(userId, projectId).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
             foreach (var skill in normalSkills)
             {
                 if (result.Count >= maxCount) break;
@@ -47,14 +47,15 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         return result;
     }
 
-    /// <summary>获取当前用户可见的启用技能列表（全局 + 自己的）。开源版所有技能 UserId=0 即为全局可见</summary>
+    /// <summary>获取当前用户可见的启用技能列表。规则：全局(UserId=0) + 自己的(UserId=本人) + 项目专属(ProjectId=当前项目)</summary>
     /// <param name="userId">用户编号</param>
+    /// <param name="projectId">项目编号，0=不限制项目</param>
     /// <param name="category">分类筛选（可选）</param>
     /// <returns></returns>
-    public IList<Skill> GetVisibleSkills(Int32 userId, String? category = null)
+    public IList<Skill> GetVisibleSkills(Int32 userId, Int32 projectId = 0, String? category = null)
     {
         var all = GetAllSkills(category);
-        return all.Where(e => e.UserId == 0 || e.UserId == userId).ToList();
+        return all.Where(e => e.UserId == 0 || e.UserId == userId || (projectId > 0 && e.ProjectId == projectId)).ToList();
     }
 
     /// <summary>获取全部启用的技能列表</summary>
@@ -73,9 +74,9 @@ public class SkillService(IChatSetting chatSetting, ILog log)
     /// <param name="keyword">搜索关键词（可选），按Code/Name模糊匹配</param>
     /// <param name="maxCount">最大返回数量，默认20</param>
     /// <returns></returns>
-    public IList<Skill> GetMentionSkills(Int32 userId, String? keyword = null, Int32 maxCount = 20)
+    public IList<Skill> GetMentionSkills(Int32 userId, Int32 projectId = 0, String? keyword = null, Int32 maxCount = 20)
     {
-        var allSkills = GetVisibleSkills(userId);
+        var allSkills = GetVisibleSkills(userId, projectId);
 
         if (!String.IsNullOrEmpty(keyword))
             allSkills = allSkills.Where(e => (e.Code?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false) || (e.Name?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();

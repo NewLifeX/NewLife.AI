@@ -398,6 +398,7 @@
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
         <Column Name="UserId" DataType="Int32" DefaultValue="0" Description="用户。0=全局，>0=个人技能。开源版仅支持全局技能" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能" />
         <Column Name="Code" DataType="String" Description="编码。英文标识，唯一，如coder、translator" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。技能展示名称，同时也是@引用的标识" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如code、translate" />
