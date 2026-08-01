@@ -7,7 +7,7 @@
     <Description>基于 NewLife.AI 基础库的扩展模块，提供中间件、依赖注入、缓存等企业级扩展能力</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
-    <VersionPrefix>1.4</VersionPrefix>
+    <VersionPrefix>1.5</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -33,7 +33,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;X组件;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>新增 AspNetMcpServer 与 McpExtensions 扩展方法，简化 MCP 服务注册；依赖包全面升级；IChatHandler 链解析支持与模型字段断言修正；与 NewLife.AI v1.4 基础库同步更新，支持全局系统指令与网关增强</PackageReleaseNotes>
+    <PackageReleaseNotes>与 NewLife.AI v1.5 基础库同步更新；支持技能项目维度与专属能力；主备模型路由与 Provider 屏蔽机制；新增 5 个 IM 渠道适配；数据库工具接口统一 run_sql；依赖包全面升级</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

@@ -5,7 +5,7 @@
     <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 33 个服务商，提供函数调用、图像生成、MCP 工具调用等能力</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
-    <VersionPrefix>1.4</VersionPrefix>
+    <VersionPrefix>1.5</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -28,7 +28,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>新增编程智能体 CodingAgent，支持分析/只读与代码修改任务分流；全局系统指令配置，统一注入所有对话行为约束；API 网关支持按 AppKey 配置工具执行与透传模式；DashScope/CosyVoice V3.5 端到端流式 TTS，48 音色与多格式支持；四档模型定价体系与推理强度 ReasoningEffort 全链路支持；工具调用去重、结构化结果与 Token 限额机制；可视化卡片与 Office 文档生成；模型锁定保护与 DeepSeek 余额查询</PackageReleaseNotes>
+    <PackageReleaseNotes>新增 5 个 IM 渠道（WeComBot/微信公众平台/微信客服/QQ/Discord）；主备模型路由与 Provider 屏蔽机制；技能接口与服务支持项目维度及专属能力；工具别名、回复兜底与动态表支持；统一数据库工具接口 run_sql 及 SQL 参数别名兼容；表格模型 Rows 升级二维数组，JSON 解析统一；注入守密指令并检测 AI 回复泄密特征；移除 Cronos 依赖，重构 Cron 校验与表达式转换</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
