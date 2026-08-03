@@ -253,7 +253,8 @@ public class GeminiResponse : IChatResponse
     {
         "STOP" => FinishReason.Stop,
         "MAX_TOKENS" => FinishReason.Length,
-        "SAFETY" or "RECITATION" => FinishReason.ContentFilter,
+        // 安全/内容拦截类：SAFETY、RECITATION（版权）、BLOCKLIST、PROHIBITED_CONTENT、SPII（敏感个人信息）
+        "SAFETY" or "RECITATION" or "BLOCKLIST" or "PROHIBITED_CONTENT" or "SPII" => FinishReason.ContentFilter,
         _ => null,
     };
 

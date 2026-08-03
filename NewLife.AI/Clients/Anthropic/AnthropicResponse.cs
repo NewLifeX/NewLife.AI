@@ -505,8 +505,14 @@ public class AnthropicStreamEvent
         switch (Type)
         {
             case "message_start":
+                // message_start 携带 input_tokens 及缓存读写 Token（cache_read_input_tokens / cache_creation_input_tokens），流式路径一并映射避免缓存计费缺失
                 if (Message?.Usage != null)
-                    response.Usage = new UsageDetails { InputTokens = Message.Usage.InputTokens };
+                    response.Usage = new UsageDetails
+                    {
+                        InputTokens = Message.Usage.InputTokens,
+                        CachedInputTokens = Message.Usage.CacheReadInputTokens,
+                        CacheCreationTokens = Message.Usage.CacheCreationInputTokens,
+                    };
                 response.AddDelta(null, null, null);
                 return response;
 
@@ -545,8 +551,14 @@ public class AnthropicStreamEvent
             case "message_delta":
                 if (Delta?.StopReason != null)
                     response.AddDelta(null, null, AnthropicResponse.MapStopReason(Delta.StopReason));
+                // message_delta 携带 output_tokens，部分 API 版本亦在此下发缓存读写 Token，一并映射
                 if (Usage != null)
-                    response.Usage = new UsageDetails { OutputTokens = Usage.OutputTokens };
+                    response.Usage = new UsageDetails
+                    {
+                        OutputTokens = Usage.OutputTokens,
+                        CachedInputTokens = Usage.CacheReadInputTokens,
+                        CacheCreationTokens = Usage.CacheCreationInputTokens,
+                    };
                 return response;
 
             case "message_stop":

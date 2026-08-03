@@ -148,6 +148,46 @@ public class AnthropicChatClientStreamTests
     }
 
     [Fact]
+    [DisplayName("流式_缓存Token_随message_start与message_delta合并")]
+    public async Task Stream_CacheTokens_MergedCompletely()
+    {
+        // Anthropic 缓存读写 Token 在流式 message_start（cache_read）与 message_delta（cache_creation）下发，
+        // 合并后末 chunk 缓存用量完整（Web 对话默认流式，缓存计费不可缺失）
+        var sse = String.Join("\n",
+        [
+            "event: message_start",
+            """data: {"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"claude-sonnet-4-6","content":[],"usage":{"input_tokens":100,"output_tokens":0,"cache_read_input_tokens":40,"cache_creation_input_tokens":0}}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"你好"}}""",
+            "",
+            "event: message_delta",
+            """data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":50,"cache_creation_input_tokens":60}}""",
+            "",
+            "event: message_stop",
+            """data: {"type":"message_stop"}""",
+            "",
+        ]);
+
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        IChatResponse? lastWithUsage = null;
+        await foreach (var chunk in client.GetStreamingResponseAsync(CreateRequest()))
+        {
+            if (chunk.Usage != null) lastWithUsage = chunk;
+        }
+
+        Assert.NotNull(lastWithUsage);
+        Assert.NotNull(lastWithUsage!.Usage);
+        Assert.Equal(100, lastWithUsage.Usage!.InputTokens);
+        Assert.Equal(50, lastWithUsage.Usage.OutputTokens);
+        Assert.Equal(150, lastWithUsage.Usage.TotalTokens);
+        Assert.Equal(40, lastWithUsage.Usage.CachedInputTokens);
+        Assert.Equal(60, lastWithUsage.Usage.CacheCreationTokens);
+    }
+
+    [Fact]
     [DisplayName("流式_event为error_抛HttpRequestException")]
     public async Task Stream_ErrorEvent_Throws()
     {

@@ -64,6 +64,19 @@ public class GeminiResponseTests
     }
 
     [Fact]
+    [DisplayName("finishReason—安全拦截类原因映射为 ContentFilter")]
+    public void MapGeminiFinishReason_BlockedReasons_MapToContentFilter()
+    {
+        foreach (var reason in new[] { "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII" })
+        {
+            Assert.Equal(FinishReason.ContentFilter, GeminiResponse.MapGeminiFinishReason(reason));
+        }
+        Assert.Equal(FinishReason.Stop, GeminiResponse.MapGeminiFinishReason("STOP"));
+        Assert.Equal(FinishReason.Length, GeminiResponse.MapGeminiFinishReason("MAX_TOKENS"));
+        Assert.Null(GeminiResponse.MapGeminiFinishReason("OTHER"));
+    }
+
+    [Fact]
     [DisplayName("JSON 反序列化—含函数调用")]
     public void JsonDeserialize_WithFunctionCall()
     {
