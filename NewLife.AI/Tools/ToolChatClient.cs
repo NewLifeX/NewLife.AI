@@ -330,7 +330,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var choice = chunk.Messages?.FirstOrDefault();
                 if (choice != null)
                 {
-                    finishReason = choice.FinishReason?.ToApiString() ?? finishReason;
+                    // 防御：部分网关/代理在 tool_calls 之后补发 finish_reason=stop，
+                    // 已识别的工具回合标记不得被后续 stop 覆盖（否则工具永不执行）
+                    var fr = choice.FinishReason?.ToApiString();
+                    if (!fr.IsNullOrEmpty())
+                    {
+                        if (!(finishReason.EqualIgnoreCase("tool_calls", "stop")))
+                            finishReason = fr;
+                    }
                     var delta = choice.Delta;
                     if (delta != null)
                     {

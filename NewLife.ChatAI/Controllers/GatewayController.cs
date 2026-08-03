@@ -595,6 +595,8 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 }
 
                 UsageDetails? lastUsage = null;
+                // 记录本轮是否发出过工具调用事件，供 ConvertEventToChunk 决定 message_done 是否输出 finish_reason
+                var hasToolCalls = false;
                 await foreach (var ev in gatewayMessageFlow.StreamGatewayAsync(messages, config, appKey.UserId, convId, request, cancellationToken).ConfigureAwait(false))
                 {
                     if (enableRecording)
@@ -606,7 +608,10 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                     }
                     if (ev.Usage != null) lastUsage = ev.Usage;
 
-                    var chunk = GatewayService.ConvertEventToChunk(ev, request.Model ?? config.Code);
+                    if (ev.Type == "tool_call_start" || ev.Type == "tool_call_done" || ev.Type == "tool_call_error")
+                        hasToolCalls = true;
+
+                    var chunk = GatewayService.ConvertEventToChunk(ev, request.Model ?? config.Code, hasToolCalls);
                     if (chunk != null)
                         await WriteStreamChunkAsync(chunk, protocol, cancellationToken).ConfigureAwait(false);
                 }

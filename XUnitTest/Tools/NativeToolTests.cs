@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife;
@@ -1143,5 +1144,101 @@ public class NativeToolTests
         Assert.NotNull(toolMsg);
         var content = toolMsg!.Content as String ?? "";
         Assert.Contains("INVALID_ARGUMENTS", content);
+    }
+
+    /// <summary>流式返回工具调用后再返回最终文本的假客户端；第 1 轮在 tool_calls 之后补发 finish_reason=stop（模拟部分网关行为）</summary>
+    private sealed class StreamToolCallThenReplyClient : IChatClient
+    {
+        private readonly String _toolName;
+        private readonly String _toolArgs;
+        private readonly String _finalReply;
+        private Int32 _callCount;
+
+        public StreamToolCallThenReplyClient(String toolName, String toolArgs, String finalReply)
+        {
+            _toolName = toolName;
+            _toolArgs = toolArgs;
+            _finalReply = finalReply;
+        }
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            _callCount++;
+            if (_callCount == 1)
+            {
+                // 第 1 轮：先发 tool_calls（finish_reason=tool_calls），随后模拟上游网关补发 stop
+                yield return new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            FinishReason = FinishReason.ToolCalls,
+                            Delta = new ChatMessage
+                            {
+                                Role = "assistant",
+                                ToolCalls =
+                                [
+                                    new ToolCall
+                                    {
+                                        Id = "call_001",
+                                        Type = "function",
+                                        Function = new FunctionCall { Name = _toolName, Arguments = _toolArgs }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                };
+                yield return new ChatResponse
+                {
+                    Messages = [new ChatChoice { FinishReason = FinishReason.Stop, Delta = new ChatMessage() }]
+                };
+            }
+            else
+            {
+                // 第 2 轮（工具已执行）：最终文本
+                yield return new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            FinishReason = FinishReason.Stop,
+                            Delta = new ChatMessage { Role = "assistant", Content = _finalReply }
+                        }
+                    ]
+                };
+            }
+            await Task.CompletedTask;
+        }
+
+        public void Dispose() { }
+    }
+
+    [Fact]
+    [DisplayName("ToolChatClient 防御：tool_calls 后补发 stop 不覆盖工具回合")]
+    public async Task ToolChatClient_ToolCallsThenStop_KeepsToolRound()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 模拟上游网关在 tool_calls 之后补发 finish_reason=stop（本防御修复的场景）
+        var innerClient = new StreamToolCallThenReplyClient("add_numbers", "{\"a\":10,\"b\":20}", "计算结果是 30");
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var request = ChatRequest.Create([new ChatMessage { Role = "user", Content = "10 + 20 等于多少？" }], stream: true);
+        List<String> texts = [];
+        await foreach (var chunk in nativeClient.GetStreamingResponseAsync(request, default))
+        {
+            var content = chunk.Messages?.FirstOrDefault()?.Delta?.Content as String;
+            if (!content.IsNullOrEmpty()) texts.Add(content);
+        }
+
+        // 工具被真实执行（进入第 2 轮产出最终文本），stop 未把工具回合误判为普通文本回合
+        Assert.Contains("计算结果是 30", texts);
     }
 }

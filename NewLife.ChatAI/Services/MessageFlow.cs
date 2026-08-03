@@ -1010,7 +1010,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 {
                     switch (evt.Type)
                     {
-                        case "start": yield return ChatStreamEvent.ToolCallStart(evt.ToolCallId, evt.Name, evt.Value); break;
+                        case "start":
+                            // 透传分支可能已为该工具调用发射过 start（ToolChatClient 的原始 chunk 先于 ToolCallEvents 到达，
+                            // 此时 hasToolChatClient 尚未置位），按 toolCallId 去重避免同一工具调用重复发射 start 事件
+                            if (emittedToolCallIds.Add(evt.ToolCallId))
+                                yield return ChatStreamEvent.ToolCallStart(evt.ToolCallId, evt.Name, evt.Value);
+                            break;
                         case "done":
                             // LlmResult 是给 LLM 历史回放用的，不经过 SSE 前端，暂存到 context
                             if (evt.LlmResult != null)
@@ -1054,8 +1059,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                     var id = tc.Id;
                     if (!name.IsNullOrEmpty() && !id.IsNullOrEmpty() && emittedToolCallIds.Add(id))
                     {
-                        var accumulated = rawToolCalls.FirstOrDefault(t => t.Id == id);
-                        yield return ChatStreamEvent.ToolCallStart(id, name, accumulated?.Function?.Arguments);
+                        // start 仅作事件标记，参数留空：完整参数由 tool_call_done 一次性携带。
+                        // 客户端按流式协议追加拼接所有 tool_calls 增量，若此处携带累积参数，
+                        // 会与 done 的完整参数重复拼接成非法 JSON
+                        yield return ChatStreamEvent.ToolCallStart(id, name, null);
                     }
                 }
             }
@@ -1091,7 +1098,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 仅当 LLM 返回有效 usage 时才发送 MessageDone（含 Token 统计），
         // 避免用全零 UsageDetails 覆盖 context.Usage 中已在流式循环中正确设置的值
-        yield return ChatStreamEvent.MessageDone(lastUsage);
+        // 携带最终轮真实 finish_reason（ToolChatClient 多轮循环下为最后文本轮的 stop），供网关透传
+        yield return ChatStreamEvent.MessageDone(lastUsage, finishReason: lastFinishReason);
     }
 
     /// <summary>非流式 LLM 调用。链路最内层节点（非流式路径专用）：组装过滤器链 + 工具装配 + 单次 GetResponseAsync。
@@ -1134,6 +1142,17 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             var text = msg.Content as String;
             if (!String.IsNullOrEmpty(text))
                 context.ContentBuilder.Append(text);
+
+            // 透传工具调用：非流式响应中的 tool_calls 需保留到 context，
+            // 供网关 CompletionGatewayAsync 原样透传给客户端（否则工具调用被丢弃）
+            if (msg.ToolCalls is { Count: > 0 })
+            {
+                foreach (var tc in msg.ToolCalls)
+                {
+                    var args = tc.Function?.Arguments;
+                    context.ToolCalls.Add(new ToolCallDto(tc.Id, tc.Function?.Name ?? String.Empty, ToolCallStatus.Done, args, args));
+                }
+            }
         }
 
         // 写入用量（仅当 LLM 返回有效 usage 时；否则保持 context.Usage 原值，避免覆盖为全零）

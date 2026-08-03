@@ -51,6 +51,10 @@ public class ChatStreamEvent
     /// <summary>资源 URL。TTS 分支下 message_done 时附带音频归档地址，前端收到后自动播放；扩展用于其他资源的引用</summary>
     public String? Url { get; set; }
 
+    /// <summary>完成原因。message_done 时携带 LLM 最终轮的真实 finish_reason（stop/tool_calls/length 等），
+    /// 供网关直接透传，避免客户端把工具回合误判为普通文本回合</summary>
+    public String? FinishReason { get; set; }
+
     /// <summary>知识引用列表。knowledge_refs 事件专用，JSON 数组 [{"id":1,"title":"xxx"}]</summary>
     public String? KnowledgeRefs { get; set; }
     #endregion
@@ -85,9 +89,10 @@ public class ChatStreamEvent
     /// <param name="usage">用量统计</param>
     /// <param name="title">标题（可选）</param>
     /// <param name="url">资源 URL（TTS 分支专用，前端自动播放）</param>
+    /// <param name="finishReason">完成原因（可选）。LLM 最终轮的真实 finish_reason，供网关透传，避免客户端误判工具回合</param>
     /// <returns></returns>
-    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? url = null) =>
-        new() { Type = "message_done", Usage = usage, Title = title, Url = url };
+    public static ChatStreamEvent MessageDone(UsageDetails? usage = null, String? title = null, String? url = null, String? finishReason = null) =>
+        new() { Type = "message_done", Usage = usage, Title = title, Url = url, FinishReason = finishReason };
 
     /// <summary>错误事件</summary>
     /// <param name="code">错误码</param>

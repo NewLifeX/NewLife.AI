@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -513,6 +514,92 @@ public class GatewayTests
         Assert.Equal(1, groups["Gemini"]);
         // ChatCompletions 至少28个
         Assert.True(groups["OpenAI"] >= 28);
+    }
+    #endregion
+
+    #region ConvertEventToChunk 流式块转换测试
+    [Fact]
+    [DisplayName("ConvertEventToChunk 纯文本回合 message_done 输出 stop")]
+    public void ConvertEventToChunk_PlainTextRound_MessageDoneOutputsStop()
+    {
+        var evt = ChatStreamEvent.MessageDone(new UsageDetails { TotalTokens = 10 });
+        var chunk = GatewayService.ConvertEventToChunk(evt, "gpt-4o");
+
+        Assert.NotNull(chunk);
+        var choice = chunk!.Messages!.FirstOrDefault();
+        Assert.NotNull(choice);
+        Assert.Equal(FinishReason.Stop, choice!.FinishReason);
+    }
+
+    [Fact]
+    [DisplayName("ConvertEventToChunk 透传工具回合 message_done 携带 tool_calls")]
+    public void ConvertEventToChunk_ToolRound_MessageDoneCarriesToolCalls()
+    {
+        var evt = ChatStreamEvent.MessageDone(null, finishReason: "tool_calls");
+        var chunk = GatewayService.ConvertEventToChunk(evt, "gpt-4o", true);
+
+        Assert.NotNull(chunk);
+        var choice = chunk!.Messages!.FirstOrDefault();
+        Assert.NotNull(choice);
+        Assert.Equal(FinishReason.ToolCalls, choice!.FinishReason);
+    }
+
+    [Fact]
+    [DisplayName("ConvertEventToChunk 服务端工具多轮最终文本轮 message_done 输出 stop")]
+    public void ConvertEventToChunk_ServerToolLoop_FinalTextRoundOutputsStop()
+    {
+        // 服务端工具多轮：第 1 轮已发 tool_calls，最终文本轮 MessageFlow 携带真实 stop，不得被 hasToolCalls 吞掉
+        var evt = ChatStreamEvent.MessageDone(null, finishReason: "stop");
+        var chunk = GatewayService.ConvertEventToChunk(evt, "gpt-4o", true);
+
+        Assert.NotNull(chunk);
+        var choice = chunk!.Messages!.FirstOrDefault();
+        Assert.NotNull(choice);
+        Assert.Equal(FinishReason.Stop, choice!.FinishReason);
+    }
+
+    [Fact]
+    [DisplayName("ConvertEventToChunk message_done 无 finish_reason 时工具回合回退 tool_calls")]
+    public void ConvertEventToChunk_NoFinishReason_ToolRoundFallsBackToToolCalls()
+    {
+        var evt = ChatStreamEvent.MessageDone();
+        var chunk = GatewayService.ConvertEventToChunk(evt, "gpt-4o", true);
+
+        Assert.NotNull(chunk);
+        var choice = chunk!.Messages!.FirstOrDefault();
+        Assert.NotNull(choice);
+        Assert.Equal(FinishReason.ToolCalls, choice!.FinishReason);
+    }
+
+    [Fact]
+    [DisplayName("ConvertEventToChunk tool_call_done 输出 tool_calls 及完整参数")]
+    public void ConvertEventToChunk_ToolCallDone_OutputsToolCalls()
+    {
+        var evt = ChatStreamEvent.ToolCallDone("call_001", "{\"temp\":25}");
+        var chunk = GatewayService.ConvertEventToChunk(evt, "gpt-4o");
+
+        Assert.NotNull(chunk);
+        var choice = chunk!.Messages!.FirstOrDefault();
+        Assert.NotNull(choice);
+        Assert.Equal(FinishReason.ToolCalls, choice!.FinishReason);
+        Assert.NotNull(choice!.Delta?.ToolCalls);
+        Assert.Single(choice.Delta.ToolCalls);
+        Assert.Equal("call_001", choice.Delta.ToolCalls[0].Id);
+        Assert.Equal("{\"temp\":25}", choice.Delta.ToolCalls[0].Function?.Arguments);
+    }
+
+    [Fact]
+    [DisplayName("ConvertEventToChunk tool_call_start 参数留空不崩溃且 Delta 含工具调用")]
+    public void ConvertEventToChunk_ToolCallStartNullArgs_NoCrash()
+    {
+        var evt = ChatStreamEvent.ToolCallStart("call_001", "get_weather", null);
+        var chunk = GatewayService.ConvertEventToChunk(evt, "gpt-4o");
+
+        Assert.NotNull(chunk);
+        var choice = chunk!.Messages!.FirstOrDefault();
+        Assert.NotNull(choice);
+        Assert.NotNull(choice!.Delta?.ToolCalls);
+        Assert.Equal("get_weather", choice.Delta.ToolCalls[0].Function?.Name);
     }
     #endregion
 }

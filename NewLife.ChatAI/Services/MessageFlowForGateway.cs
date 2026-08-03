@@ -82,9 +82,25 @@ public class MessageFlowForGateway : MessageFlow
         var content = flow.ContentBuilder.ToString();
         var thinking = flow.ThinkingBuilder.ToString();
         var result = new ChatResponse { Model = modelConfig.Code, Usage = flow.Usage };
-        var choice = result.Add(content, "assistant", FinishReason.Stop);
-        if (!thinking.IsNullOrEmpty() && choice?.Message != null)
-            choice.Message.ReasoningContent = thinking;
+
+        // 工具回合：透传 LLM 返回的 tool_calls，finish_reason 用 tool_calls（不再硬编码 Stop 丢弃工具调用）
+        var isToolRound = flow.ToolCalls.Count > 0;
+        var choice = result.Add(content, "assistant", isToolRound ? FinishReason.ToolCalls : FinishReason.Stop);
+        if (choice?.Message != null)
+        {
+            if (!thinking.IsNullOrEmpty())
+                choice.Message.ReasoningContent = thinking;
+
+            if (isToolRound)
+            {
+                choice.Message.ToolCalls = flow.ToolCalls.Select(tc => new ToolCall
+                {
+                    Id = tc.Id,
+                    Type = "function",
+                    Function = new FunctionCall { Name = tc.Name, Arguments = tc.Arguments },
+                }).ToList();
+            }
+        }
         return result;
     }
 

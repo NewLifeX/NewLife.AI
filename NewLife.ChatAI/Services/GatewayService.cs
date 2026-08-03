@@ -301,8 +301,9 @@ public class GatewayService(UsageService usageService, ModelService modelService
     /// <summary>将 ChatStreamEvent 转换为 OpenAI 兼容的 ChatResponse 流式块</summary>
     /// <param name="evt">管道事件</param>
     /// <param name="model">模型编码</param>
+    /// <param name="hasToolCalls">本轮是否已发出工具调用事件；仅在 evt 未携带 finish_reason 时作为回退依据</param>
     /// <returns>ChatResponse；不需要输出的事件返回 null</returns>
-    public static ChatResponse? ConvertEventToChunk(ChatStreamEvent evt, String? model)
+    public static ChatResponse? ConvertEventToChunk(ChatStreamEvent evt, String? model, Boolean hasToolCalls = false)
     {
         var chunk = new ChatResponse
         {
@@ -329,7 +330,11 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 chunk.AddToolCallDelta(evt.ToolCallId, evt.Name, evt.Error, FinishReason.ToolCalls);
                 return chunk;
             case "message_done":
-                chunk.AddDelta(null, finishReason: FinishReason.Stop);
+                // 优先使用 MessageFlow 携带的真实 finish_reason（LLM 最终轮返回值），
+                // 彻底解决两类问题：①工具回合被后续 stop 覆盖（工具永不执行）；②服务端工具多轮循环后 finish_reason 缺失
+                // 无事件值时（手动构造的 message_done）回退：工具回合输出 tool_calls，否则 stop
+                var fr = evt.FinishReason ?? (hasToolCalls ? FinishReason.ToolCalls.ToApiString() : FinishReason.Stop.ToApiString());
+                chunk.AddDelta(null, finishReason: FinishReasonHelper.Parse(fr));
                 if (evt.Usage != null) chunk.Usage = evt.Usage;
                 return chunk;
             default:
