@@ -277,10 +277,14 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
 
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
-            if (!line.StartsWith("data:")) continue;
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
             var data = line.Substring(5).Trim();
-            if (data.Length == 0 || data == "[DONE]") continue;
+            if (data == "[DONE]") break;
+            if (data.Length == 0) continue;
+
+            // 流式错误识别（OpenAI 兼容格式），避免静默吞掉
+            EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
             // base.ParseChunk 调用 AiClientBase.ParseChunk → ParseResponse（OpenAI 格式），不走 DashScope 原生解析
@@ -311,10 +315,14 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
 
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
-            if (!line.StartsWith("data:")) continue;
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
             var data = line.Substring(5).Trim();
-            if (data.Length == 0 || data == "[DONE]") continue;
+            if (data == "[DONE]") break;
+            if (data.Length == 0) continue;
+
+            // 流式错误识别（OpenAI 兼容格式），避免静默吞掉
+            EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
             try { chunk = base.ParseChunk(data, request, null); } catch { }

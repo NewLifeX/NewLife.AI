@@ -100,7 +100,7 @@ public class GeminiResponse : IChatResponse
         set => _usageDetails = value;
     }
 
-    /// <summary>首条回复文本</summary>
+    /// <summary>首条回复文本。仅含正文，跳过 thought=true 的思考内容（思考应走 <see cref="ChatMessage.ReasoningContent"/>）</summary>
     [IgnoreDataMember]
     public String? Text
     {
@@ -108,7 +108,7 @@ public class GeminiResponse : IChatResponse
         {
             var parts = Candidates?.FirstOrDefault()?.Content?.Parts;
             if (parts == null) return null;
-            return String.Join("", parts.Where(p => p.Text != null).Select(p => p.Text));
+            return String.Join("", parts.Where(p => p.Text != null && p.Thought != true).Select(p => p.Text));
         }
     }
     #endregion

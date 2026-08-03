@@ -85,6 +85,14 @@ public class OllamaChatClient : AiClientBase, IModelListClient
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (String.IsNullOrEmpty(line)) continue;
 
+            // 流式错误：Ollama NDJSON 错误为 {"error":"..."}
+            if (line.Contains("\"error\"", StringComparison.OrdinalIgnoreCase))
+            {
+                var errDic = JsonParser.Decode(line);
+                var message = errDic?["error"] as String ?? line;
+                throw new HttpRequestException($"[{Name}] 流式错误 {message}");
+            }
+
             var chunk = ParseChunk(line, request, null);
             if (chunk is OllamaChatResponse or)
             {

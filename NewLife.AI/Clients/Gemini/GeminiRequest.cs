@@ -216,6 +216,17 @@ public class GeminiRequest : IChatRequest
             };
         }
 
+        // 思考模式：EnableThinking → generationConfig.thinkingConfig.thinkingBudget
+        // Gemini 2.5 系列：thinkingBudget>0 开启思考并设预算，0 关闭思考
+        if (request.EnableThinking != null)
+        {
+            result.GenerationConfig ??= new GeminiGenerationConfig();
+            var budget = request.EnableThinking.Value
+                ? (request["ThinkingBudget"] as Int32? ?? 1024)
+                : 0;
+            result.GenerationConfig.ThinkingConfig = new GeminiThinkingConfig { ThinkingBudget = budget };
+        }
+
         // 工具定义 → functionDeclarations
         if (request.Tools != null && request.Tools.Count > 0)
         {
@@ -307,4 +318,14 @@ public class GeminiGenerationConfig
 
     /// <summary>停止序列</summary>
     public IList<String>? StopSequences { get; set; }
+
+    /// <summary>思考配置。thinkingBudget 大于 0 时开启思考并设预算，0 时关闭</summary>
+    public GeminiThinkingConfig? ThinkingConfig { get; set; }
+}
+
+/// <summary>Gemini 思考配置。对应 generationConfig.thinkingConfig 字段</summary>
+public class GeminiThinkingConfig
+{
+    /// <summary>思考预算（Token 数）。0 表示关闭思考</summary>
+    public Int32? ThinkingBudget { get; set; }
 }

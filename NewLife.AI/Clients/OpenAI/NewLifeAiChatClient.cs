@@ -90,11 +90,14 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
 
-            if (!line.StartsWith("data: ")) continue;
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var data = line.Substring(6).Trim();
+            var data = line.Substring(5).Trim();
             if (data == "[DONE]") break;
             if (data.Length == 0) continue;
+
+            // 流式错误识别，避免静默吞掉
+            EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
             try { chunk = data.ToJsonEntity<AnthropicStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model); } catch { }
@@ -147,11 +150,14 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
 
-            if (!line.StartsWith("data: ")) continue;
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var data = line.Substring(6).Trim();
+            var data = line.Substring(5).Trim();
             if (data == "[DONE]") break;
             if (data.Length == 0) continue;
+
+            // 流式错误识别，避免静默吞掉
+            EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
             try

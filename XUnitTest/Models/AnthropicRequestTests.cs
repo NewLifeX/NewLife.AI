@@ -95,7 +95,7 @@ public class AnthropicRequestTests
     }
 
     [Fact]
-    [DisplayName("FromChatRequest—EnableThinking 不影响 Request 本体")]
+    [DisplayName("FromChatRequest—EnableThinking=true 映射 thinking 配置")]
     public void FromChatRequest_Thinking()
     {
         var request = new ChatRequest
@@ -107,9 +107,64 @@ public class AnthropicRequestTests
 
         var result = AnthropicRequest.FromChatRequest(request);
 
-        // EnableThinking 由 AnthropicChatClient.BuildRequest 处理，不在 FromChatRequest 中体现
         Assert.Equal("claude-sonnet-4-20250514", result.Model);
         Assert.Single(result.Messages);
+        Assert.NotNull(result.Thinking);
+        Assert.Equal("enabled", result.Thinking!.Type);
+        Assert.True(result.Thinking.BudgetTokens > 0, "思考预算应大于 0");
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—EnableThinking=false 映射 thinking 关闭")]
+    public void FromChatRequest_ThinkingDisabled()
+    {
+        var request = new ChatRequest
+        {
+            Model = "claude-sonnet-4-20250514",
+            EnableThinking = false,
+        };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "思考" });
+
+        var result = AnthropicRequest.FromChatRequest(request);
+
+        Assert.NotNull(result.Thinking);
+        Assert.Equal("disabled", result.Thinking!.Type);
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—ThinkingBudget 透传思考预算")]
+    public void FromChatRequest_ThinkingBudget()
+    {
+        var request = new ChatRequest
+        {
+            Model = "claude-sonnet-4-20250514",
+            EnableThinking = true,
+        };
+        request["ThinkingBudget"] = 2048;
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "思考" });
+
+        var result = AnthropicRequest.FromChatRequest(request);
+
+        Assert.Equal(2048, result.Thinking!.BudgetTokens);
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—思考预算超过 max_tokens 时自动提升 max_tokens")]
+    public void FromChatRequest_ThinkingBudget_ExceedsMaxTokens()
+    {
+        var request = new ChatRequest
+        {
+            Model = "claude-sonnet-4-20250514",
+            EnableThinking = true,
+            MaxTokens = 512,
+        };
+        request["ThinkingBudget"] = 1024;
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "思考" });
+
+        var result = AnthropicRequest.FromChatRequest(request);
+
+        Assert.Equal(1024, result.Thinking!.BudgetTokens);
+        Assert.True(result.MaxTokens > 1024, "max_tokens 应大于思考预算");
     }
     #endregion
 

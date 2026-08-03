@@ -334,6 +334,7 @@ public class AuditFilter : IChatFilter
 | [需求文档](Doc/需求文档.md) | 产品愿景、核心目标、功能需求（模块编码体系） | ALL |
 | [功能清单](Doc/功能清单.md) | 完整功能清单，三维状态追踪 | ALL |
 | [架构设计](Doc/架构设计.md) | 四层架构、各模块设计细节 | ALL |
+| [协议客户端分析](Doc/协议客户端分析.md) | 协议客户端 chat/stream/think 健康度分析、缺口修复记录与测试覆盖 | AI |
 | [AI 编排框架需求](Doc/AI编排框架需求.md) | 工具 / 智能体 / 规划器设计 | AI / AGENT |
 | [API 网关需求](Doc/API网关需求.md) | 网关协议适配详解 | GW |
 | [MCP 架构](Doc/MCP架构.md) | MCP 客户端与服务端设计 | TOOL |

@@ -46,6 +46,9 @@ public class AnthropicRequest : IChatRequest
 
     /// <summary>可用工具列表。Anthropic 格式：name/description/input_schema</summary>
     public IList<Object>? Tools { get; set; }
+
+    /// <summary>思考模式配置。EnableThinking=true 时输出 {type:"enabled",budget_tokens:N}，false 时 {type:"disabled"}</summary>
+    public AnthropicThinkingConfig? Thinking { get; set; }
     #endregion
 
     #region IChatRequest 适配
@@ -148,6 +151,21 @@ public class AnthropicRequest : IChatRequest
 
         if (request.Stop != null && request.Stop.Count > 0)
             result.StopSequences = request.Stop;
+
+        // 思考模式：EnableThinking → thinking: {type, budget_tokens}
+        // Anthropic 官方约束：max_tokens 必须大于 budget_tokens，否则 API 返回错误，此处自动兜底提升
+        if (request.EnableThinking != null)
+        {
+            var thinking = new AnthropicThinkingConfig { Type = request.EnableThinking.Value ? "enabled" : "disabled" };
+            if (request.EnableThinking.Value)
+            {
+                var budget = request["ThinkingBudget"] as Int32? ?? 1024;
+                thinking.BudgetTokens = budget;
+                if (result.MaxTokens == null || result.MaxTokens.Value <= budget)
+                    result.MaxTokens = budget + 2048;
+            }
+            result.Thinking = thinking;
+        }
 
         // 分离 system 消息和普通消息
         var messages = new List<AnthropicMessage>();
@@ -252,6 +270,23 @@ public class AnthropicRequest : IChatRequest
         };
     }
     #endregion
+}
+
+/// <summary>Anthropic 思考模式配置。对应请求体 thinking 字段</summary>
+/// <remarks>
+/// <code>
+/// {
+///   "thinking": { "type": "enabled", "budget_tokens": 1024 }
+/// }
+/// </code>
+/// </remarks>
+public class AnthropicThinkingConfig
+{
+    /// <summary>思考模式。enabled / disabled</summary>
+    public String Type { get; set; } = "enabled";
+
+    /// <summary>思考预算（Token 数）。仅 enabled 时有效，需小于 max_tokens</summary>
+    public Int32? BudgetTokens { get; set; }
 }
 
 /// <summary>Anthropic 消息</summary>

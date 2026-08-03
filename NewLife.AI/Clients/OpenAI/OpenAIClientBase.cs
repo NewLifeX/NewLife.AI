@@ -59,11 +59,15 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
 
-            if (!line.StartsWith("data: ")) continue;
+            // 兼容 data: 与 data: （部分服务商省略空格）
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var data = line.Substring(6).Trim();
+            var data = line.Substring(5).Trim();
             if (data == "[DONE]") break;
             if (data.Length == 0) continue;
+
+            // 流式错误：部分服务商在 data 中返回 {"error":{...}} 而非正常 chunk，识别后抛出而非静默吞掉
+            EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
             try { chunk = ParseChunk(data, request, null); } catch { }

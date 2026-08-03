@@ -164,9 +164,9 @@ public class DashScopeOmniIntegrationTests
             Messages = [new ChatMessage { Role = "user", Content = "说 Hello" }],
             MaxTokens = 50,
         };
-        // 请求音频输出
+        // 请求音频输出。音色使用官方文档默认 Tina（Cherry 不被 qwen3.5-omni-flash 支持）
         request["OmniModalities"] = new[] { "text", "audio" };
-        request["OmniVoice"] = "Cherry";
+        request["OmniVoice"] = "Tina";
         request["OmniAudioFormat"] = "wav";
 
         using var client = new DashScopeChatClient(CreateOptions());

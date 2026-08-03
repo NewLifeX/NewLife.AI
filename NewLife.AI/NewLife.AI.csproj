@@ -38,16 +38,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Providers\AnthropicProvider.cs" />
-    <Compile Remove="Providers\DashScopeProvider.cs" />
-    <Compile Remove="Providers\GeminiProvider.cs" />
-    <Compile Remove="Providers\IAiProvider.cs" />
-    <Compile Remove="Providers\NewLifeAiProvider.cs" />
-    <Compile Remove="Providers\OllamaProvider.cs" />
-    <Compile Remove="Providers\OpenAiProvider.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.301">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

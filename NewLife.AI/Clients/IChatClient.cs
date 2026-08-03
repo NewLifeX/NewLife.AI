@@ -220,8 +220,8 @@ public static class ChatClientExtensions
     /// <returns>以 client 为内层的构建器</returns>
     /// <example>
     /// <code>
-    /// var client = new DashScopeProvider()
-    ///     .CreateClient(apiKey, "qwen3.5-flash")
+    /// var client = AiClientRegistry.Default
+    ///     .CreateClient("DashScope", apiKey, "qwen3.5-flash")
     ///     .AsBuilder()
     ///     .UseMcp(mcpProvider)
     ///     .UseFilters(new LogFilter())

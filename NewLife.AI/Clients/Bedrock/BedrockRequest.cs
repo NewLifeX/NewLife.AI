@@ -33,6 +33,9 @@ public class BedrockRequest : IChatRequest
 
     /// <summary>工具配置</summary>
     public BedrockToolConfig? ToolConfig { get; set; }
+
+    /// <summary>模型专属附加请求字段。Converse 不原生支持的参数（如 Claude thinking）经此透传</summary>
+    public IDictionary<String, Object>? AdditionalModelRequestFields { get; set; }
     #endregion
 
     #region IChatRequest 适配
@@ -269,6 +272,21 @@ public class BedrockRequest : IChatRequest
 
         if (!inferenceConfig.IsEmpty())
             result.InferenceConfig = inferenceConfig;
+
+        // 思考模式：Claude on Bedrock 经 additionalModelRequestFields 透传 thinking（Anthropic 格式）
+        // Converse 不原生支持 thinking 参数，该字段由服务端透传给模型；对不支持思考的底座模型无副作用
+        if (request.EnableThinking != null)
+        {
+            var thinking = new Dictionary<String, Object> { ["type"] = request.EnableThinking.Value ? "enabled" : "disabled" };
+            if (request.EnableThinking.Value)
+            {
+                var budget = request["ThinkingBudget"] as Int32? ?? 1024;
+                thinking["budget_tokens"] = budget;
+                if (inferenceConfig.MaxTokens != null && inferenceConfig.MaxTokens.Value <= budget)
+                    inferenceConfig.MaxTokens = budget + 2048;
+            }
+            result.AdditionalModelRequestFields = new Dictionary<String, Object> { ["thinking"] = thinking };
+        }
 
         // 工具配置
         if (request.Tools != null && request.Tools.Count > 0)

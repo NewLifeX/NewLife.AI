@@ -184,8 +184,12 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         {
             if (chunk.Usage != null)
             {
-                lastUsage = chunk.Usage;
+                // 合并同一轮 LLM 调用的 chunk 用量并回写，保证下游取末 chunk 用量时数据完整：
+                // OpenAI 等协议最后一个 chunk 含完整用量（默认策略返回 incoming），
+                // Anthropic 等协议将 input/output 拆到不同 chunk，需按 MergeChunkUsage 局部填充合并
+                lastUsage = MergeChunkUsage(lastUsage, chunk.Usage);
                 lastUsage.ElapsedMs = (Int32)(Runtime.TickCount64 - startMs);
+                chunk.Usage = lastUsage;
             }
             yield return chunk;
         }
@@ -261,6 +265,20 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="path">API 路径，如 /v1/chat/completions</param>
     /// <returns>完整请求 URL</returns>
     protected String BuildApiUrl(String path) => CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), path);
+
+    /// <summary>检测流式 data 中的服务商错误对象。OpenAI 兼容协议错误格式为 {"error":{"message":"...","code":"..."}}，命中时抛 <see cref="HttpRequestException"/> 而非静默吞掉</summary>
+    /// <param name="data">SSE data 行内容</param>
+    /// <param name="name">客户端名称，用于错误信息</param>
+    protected static void EnsureNoStreamError(String data, String name)
+    {
+        if (data.IsNullOrEmpty() || !data.Contains("\"error\"", StringComparison.OrdinalIgnoreCase)) return;
+
+        var errDic = JsonParser.Decode(data);
+        var err = errDic?["error"] as IDictionary<String, Object>;
+        var code = err?["code"] as String;
+        var message = err?["message"] as String ?? data;
+        throw new HttpRequestException($"[{name}] 流式错误 {(code.IsNullOrEmpty() ? "" : code + " ")}{message}");
+    }
     #endregion
 
     #region Http请求

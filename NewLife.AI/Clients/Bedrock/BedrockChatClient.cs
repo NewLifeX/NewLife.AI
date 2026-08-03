@@ -85,6 +85,15 @@ public class BedrockChatClient : AiClientBase
             var data = line.Substring(5).Trim();
             if (data.Length == 0) continue;
 
+            // 流式错误：Bedrock 在 event:error 后返回 {"error":{"message":"..."}}
+            if (lastEvent == "error")
+            {
+                var errDic = JsonParser.Decode(data);
+                var err = errDic?["error"] as IDictionary<String, Object>;
+                var message = err?["message"] as String ?? data;
+                throw new HttpRequestException($"[{Name}] 流式错误 {message}");
+            }
+
             var chunk = ParseChunk(data, request, lastEvent);
             if (chunk != null)
                 yield return chunk;
