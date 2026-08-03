@@ -235,6 +235,28 @@ public class ChatCompletionRequestTests
         Assert.Equal(original.EnableThinking, restored.EnableThinking);
         Assert.Equal(2, restored.Messages.Count);
     }
+
+    [Fact]
+    [DisplayName("ToChatRequest—ReasoningEffort/UserId/ConversationId 不丢失")]
+    public void ToChatRequest_KeepsReasoningEffortAndIds()
+    {
+        var original = new ChatRequest
+        {
+            Model = "o3-mini",
+            ReasoningEffort = "high",
+            UserId = "u1",
+            ConversationId = "c1",
+            EnableThinking = true,
+        };
+        original.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var ccr = ChatCompletionRequest.FromChatRequest(original);
+        var restored = ccr.ToChatRequest();
+
+        Assert.Equal("high", restored.ReasoningEffort);
+        Assert.Equal("u1", restored.UserId);
+        Assert.Equal("c1", restored.ConversationId);
+    }
     #endregion
 
     #region BuildContent

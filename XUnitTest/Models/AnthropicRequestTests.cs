@@ -64,6 +64,33 @@ public class AnthropicRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—ImageContent 转换为 image 内容块")]
+    public void FromChatRequest_ImageContent_BuildsImageBlock()
+    {
+        var request = new ChatRequest { Model = "claude-sonnet-4-6" };
+        var msg = new ChatMessage { Role = "user" };
+        msg.Contents =
+        [
+            new TextContent("描述图片"),
+            new ImageContent { Data = [1, 2, 3], MediaType = "image/png" },
+        ];
+        request.Messages.Add(msg);
+
+        var result = AnthropicRequest.FromChatRequest(request);
+
+        var content = Assert.IsType<List<Object>>(result.Messages![0].Content);
+        Assert.Equal(2, content.Count);
+        var textBlock = Assert.IsType<Dictionary<String, Object>>(content[0]);
+        Assert.Equal("text", textBlock["type"]);
+        var imageBlock = Assert.IsType<Dictionary<String, Object>>(content[1]);
+        Assert.Equal("image", imageBlock["type"]);
+        var source = Assert.IsType<Dictionary<String, Object>>(imageBlock["source"]);
+        Assert.Equal("base64", source["type"]);
+        Assert.Equal("image/png", source["media_type"]);
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), source["data"]);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—tool_result 消息转换")]
     public void FromChatRequest_ToolResult()
     {

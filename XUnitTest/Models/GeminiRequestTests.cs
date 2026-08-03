@@ -68,6 +68,46 @@ public class GeminiRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—ImageContent 转换为 inlineData")]
+    public void FromChatRequest_ImageContent_BuildsInlineData()
+    {
+        var request = new ChatRequest { Model = "gemini-2.5-flash" };
+        var msg = new ChatMessage { Role = "user" };
+        msg.Contents =
+        [
+            new TextContent("描述图片"),
+            new ImageContent { Data = [1, 2, 3], MediaType = "image/png" },
+        ];
+        request.Messages.Add(msg);
+
+        var result = GeminiRequest.FromChatRequest(request);
+
+        var parts = result.Contents![0].Parts!;
+        Assert.Equal(2, parts.Count);
+        Assert.Equal("描述图片", parts[0].Text);
+        Assert.NotNull(parts[1].InlineData);
+        Assert.Equal("image/png", parts[1].InlineData!.MimeType);
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), parts[1].InlineData.Data);
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—data URI 解析为 inlineData")]
+    public void FromChatRequest_DataUri_BuildsInlineData()
+    {
+        var request = new ChatRequest { Model = "gemini-2.5-flash" };
+        var msg = new ChatMessage { Role = "user" };
+        msg.Contents = [new ImageContent { Uri = "data:image/jpeg;base64,AAAA" }];
+        request.Messages.Add(msg);
+
+        var result = GeminiRequest.FromChatRequest(request);
+
+        var part = result.Contents![0].Parts![0];
+        Assert.NotNull(part.InlineData);
+        Assert.Equal("image/jpeg", part.InlineData!.MimeType);
+        Assert.Equal("AAAA", part.InlineData.Data);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—assistant 角色映射为 model")]
     public void FromChatRequest_RoleMapping()
     {

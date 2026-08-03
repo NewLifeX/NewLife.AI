@@ -169,6 +169,32 @@ public class OllamaChatRequest : IChatRequest
                 Thinking = msg.ReasoningContent,
             };
 
+            // 多模态图片输入：Ollama 通过 images 数组接收 base64 图片（含 data URI 解析）
+            if (msg.Contents is { Count: > 0 })
+            {
+                List<String>? images = null;
+                var textParts = new List<String>();
+                foreach (var item in msg.Contents)
+                {
+                    if (item is TextContent text)
+                    {
+                        if (!String.IsNullOrEmpty(text.Text)) textParts.Add(text.Text);
+                    }
+                    else if (item is ImageContent img)
+                    {
+                        var data = img.Data;
+                        var b64 = data is { Length: > 0 } ? Convert.ToBase64String(data) : AIContentHelper.ParseDataUri(img.Uri);
+                        if (b64 != null)
+                        {
+                            images ??= [];
+                            images.Add(b64);
+                        }
+                    }
+                }
+                if (images != null) m.Images = images;
+                if (textParts.Count > 0) m.Content = String.Join("\n", textParts);
+            }
+
             if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
             {
                 var toolCalls = new List<OllamaToolCall>();
@@ -251,6 +277,9 @@ public class OllamaChatMessage
 
     /// <summary>消息内容</summary>
     public Object? Content { get; set; }
+
+    /// <summary>图片列表。base64 编码，Ollama 通过 images 字段接收</summary>
+    public IList<String>? Images { get; set; }
 
     /// <summary>思考内容（仅响应中使用）</summary>
     public String? Thinking { get; set; }

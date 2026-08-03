@@ -86,6 +86,44 @@ public class OllamaChatModelTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—ImageContent 转换为 images 数组")]
+    public void FromChatRequest_ImageContent_BuildsImages()
+    {
+        var request = new ChatRequest { Model = "qwen3:8b" };
+        var msg = new ChatMessage { Role = "user" };
+        msg.Contents =
+        [
+            new TextContent("描述图片"),
+            new ImageContent { Data = [1, 2, 3], MediaType = "image/png" },
+        ];
+        request.Messages.Add(msg);
+
+        var result = OllamaChatRequest.FromChatRequest(request);
+
+        var m = result.Messages[0];
+        Assert.NotNull(m.Images);
+        Assert.Single(m.Images!);
+        Assert.Equal(Convert.ToBase64String([1, 2, 3]), m.Images![0]);
+        // 文本部分合并到 Content
+        Assert.Equal("描述图片", m.Content?.ToString());
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—data URI 图片解析为 base64")]
+    public void FromChatRequest_DataUri_BuildsImages()
+    {
+        var request = new ChatRequest { Model = "qwen3:8b" };
+        var msg = new ChatMessage { Role = "user" };
+        msg.Contents = [new ImageContent { Uri = "data:image/png;base64,BBBB" }];
+        request.Messages.Add(msg);
+
+        var result = OllamaChatRequest.FromChatRequest(request);
+
+        Assert.Single(result.Messages[0].Images!);
+        Assert.Equal("BBBB", result.Messages[0].Images![0]);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—无 Options 参数时不创建 Options")]
     public void FromChatRequest_NoOptions()
     {

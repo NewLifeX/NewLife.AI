@@ -197,8 +197,27 @@ public class GeminiRequest : IChatRequest
 
             var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
             var parts = new List<GeminiPart>();
-            if (msg.Content != null)
+
+            // 类型化多模态内容（Contents）优先：文本→text，图片/音频→inlineData（base64）/ fileData（外部 URL）
+            if (msg.Contents is { Count: > 0 })
+            {
+                foreach (var item in msg.Contents)
+                {
+                    if (item is TextContent text)
+                    {
+                        if (!String.IsNullOrEmpty(text.Text))
+                            parts.Add(new GeminiPart { Text = text.Text });
+                    }
+                    else if (item is ImageContent img)
+                        parts.Add(BuildBinaryPart(img.Data, img.MediaType ?? "image/jpeg", img.Uri));
+                    else if (item is AudioContent audio)
+                        parts.Add(BuildBinaryPart(audio.Data, audio.MediaType ?? "audio/wav", audio.Uri));
+                }
+            }
+            else if (msg.Content != null)
+            {
                 parts.Add(new GeminiPart { Text = msg.Content.ToString() ?? "" });
+            }
 
             contents.Add(new GeminiContent { Role = role, Parts = parts });
         }
@@ -258,6 +277,26 @@ public class GeminiRequest : IChatRequest
         }
 
         return result;
+    }
+
+    /// <summary>构建 Gemini 二进制内容分片。优先 base64 数据；data URI 解析为 inlineData；其余 URL 用 fileData 尽力转换</summary>
+    /// <param name="data">二进制数据</param>
+    /// <param name="mediaType">媒体类型</param>
+    /// <param name="uri">资源地址（data URI 或外部 URL）</param>
+    /// <returns>Gemini 内容分片</returns>
+    private static GeminiPart BuildBinaryPart(Byte[]? data, String? mediaType, String? uri)
+    {
+        // 二进制数据优先
+        if (data is { Length: > 0 })
+            return new GeminiPart { InlineData = new GeminiInlineData { MimeType = mediaType, Data = Convert.ToBase64String(data) } };
+
+        // data URI：data:image/jpeg;base64,xxxx → inlineData
+        var b64 = AIContentHelper.ParseDataUri(uri);
+        if (b64 != null)
+            return new GeminiPart { InlineData = new GeminiInlineData { MimeType = mediaType, Data = b64 } };
+
+        // 外部 URL：fileData 尽力转换（GCS 等可访问地址，不支持时服务商显式报错而非静默丢弃）
+        return new GeminiPart { FileData = new GeminiFileData { FileUri = uri } };
     }
 
     /// <summary>映射响应格式到 Gemini 生成配置。兼容 Dictionary（FastJson）、JsonElement（SystemJson）与 JSON 字符串等表示</summary>
@@ -343,6 +382,29 @@ public class GeminiPart
 {
     /// <summary>文本内容</summary>
     public String? Text { get; set; }
+
+    /// <summary>内联二进制数据（图片/音频）。对应协议 inlineData 字段</summary>
+    public GeminiInlineData? InlineData { get; set; }
+
+    /// <summary>文件引用（外部存储）。对应协议 fileData 字段</summary>
+    public GeminiFileData? FileData { get; set; }
+}
+
+/// <summary>Gemini 内联数据。用于图片/音频等二进制内容，对应协议 inlineData 字段</summary>
+public class GeminiInlineData
+{
+    /// <summary>媒体类型。如 image/jpeg、audio/wav</summary>
+    public String? MimeType { get; set; }
+
+    /// <summary>base64 编码的二进制数据</summary>
+    public String? Data { get; set; }
+}
+
+/// <summary>Gemini 文件引用。用于外部存储资源，对应协议 fileData 字段</summary>
+public class GeminiFileData
+{
+    /// <summary>文件地址。如 gs://bucket/file.png</summary>
+    public String? FileUri { get; set; }
 }
 
 /// <summary>Gemini 生成配置</summary>

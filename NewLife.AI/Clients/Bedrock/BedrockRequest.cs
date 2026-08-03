@@ -243,11 +243,45 @@ public class BedrockRequest : IChatRequest
                 }
                 else
                 {
-                    // 普通文本消息
-                    var textContent = msg.Content?.ToString();
-                    if (!String.IsNullOrEmpty(textContent))
+                    // 多模态图片输入：Converse API 通过 image 内容块接收 base64 图片
+                    if (msg.Contents is { Count: > 0 })
                     {
-                        bmsg.Content = [new BedrockContentBlock { Text = textContent }];
+                        var blocks = new List<BedrockContentBlock>();
+                        foreach (var item in msg.Contents)
+                        {
+                            if (item is TextContent text)
+                            {
+                                if (!String.IsNullOrEmpty(text.Text))
+                                    blocks.Add(new BedrockContentBlock { Text = text.Text });
+                            }
+                            else if (item is ImageContent img)
+                            {
+                                var data = img.Data;
+                                var bytes = data is { Length: > 0 } ? Convert.ToBase64String(data) : AIContentHelper.ParseDataUri(img.Uri);
+                                if (bytes != null)
+                                {
+                                    blocks.Add(new BedrockContentBlock
+                                    {
+                                        Image = new BedrockImage
+                                        {
+                                            Format = AIContentHelper.GetFormat(img.MediaType),
+                                            Source = new BedrockImageSource { Bytes = bytes },
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        if (blocks.Count > 0)
+                            bmsg.Content = blocks;
+                    }
+                    else
+                    {
+                        // 普通文本消息
+                        var textContent = msg.Content?.ToString();
+                        if (!String.IsNullOrEmpty(textContent))
+                        {
+                            bmsg.Content = [new BedrockContentBlock { Text = textContent }];
+                        }
                     }
                 }
 
@@ -370,7 +404,7 @@ public class BedrockMessage
     public IList<BedrockContentBlock>? Content { get; set; }
 }
 
-/// <summary>Bedrock 内容块。通用容器，包含 text / toolUse / toolResult</summary>
+/// <summary>Bedrock 内容块。通用容器，包含 text / toolUse / toolResult / image</summary>
 public class BedrockContentBlock
 {
     /// <summary>文本内容</summary>
@@ -381,6 +415,26 @@ public class BedrockContentBlock
 
     /// <summary>工具结果内容</summary>
     public BedrockToolResult? ToolResult { get; set; }
+
+    /// <summary>图片内容</summary>
+    public BedrockImage? Image { get; set; }
+}
+
+/// <summary>Bedrock 图片内容块。对应 Converse API 的 {"image":{...}} 结构</summary>
+public class BedrockImage
+{
+    /// <summary>图片格式。png/jpeg/gif/webp</summary>
+    public String? Format { get; set; }
+
+    /// <summary>图片源</summary>
+    public BedrockImageSource? Source { get; set; }
+}
+
+/// <summary>Bedrock 图片源</summary>
+public class BedrockImageSource
+{
+    /// <summary>base64 编码的图片字节</summary>
+    public String? Bytes { get; set; }
 }
 
 /// <summary>Bedrock 工具调用</summary>

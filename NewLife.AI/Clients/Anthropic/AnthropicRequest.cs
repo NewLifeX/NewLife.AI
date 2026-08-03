@@ -293,7 +293,12 @@ public class AnthropicRequest : IChatRequest
                 }
                 else
                 {
-                    am.Content = msg.Content;
+                    // 多模态图片输入：Anthropic 通过 image 内容块接收 base64 / URL 图片
+                    var imageBlocks = BuildImageBlocks(msg);
+                    if (imageBlocks != null)
+                        am.Content = imageBlocks;
+                    else
+                        am.Content = msg.Content;
                 }
             }
 
@@ -319,6 +324,57 @@ public class AnthropicRequest : IChatRequest
         }
 
         return result;
+    }
+
+    /// <summary>构建 Anthropic 图片内容块。Contents 中含图片时返回 [text? + image] 块列表，否则返回 null</summary>
+    /// <param name="msg">待转换消息</param>
+    /// <returns>内容块列表，无图片时返回 null</returns>
+    private static List<Object>? BuildImageBlocks(ChatMessage msg)
+    {
+        if (msg.Contents is not { Count: > 0 }) return null;
+
+        var blocks = new List<Object>();
+        var hasImage = false;
+        foreach (var item in msg.Contents)
+        {
+            if (item is TextContent text)
+            {
+                if (!String.IsNullOrEmpty(text.Text))
+                    blocks.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = text.Text });
+            }
+            else if (item is ImageContent img)
+            {
+                hasImage = true;
+                var data = img.Data;
+                var b64 = data is { Length: > 0 } ? Convert.ToBase64String(data) : AIContentHelper.ParseDataUri(img.Uri);
+                if (b64 != null)
+                {
+                    blocks.Add(new Dictionary<String, Object>
+                    {
+                        ["type"] = "image",
+                        ["source"] = new Dictionary<String, Object>
+                        {
+                            ["type"] = "base64",
+                            ["media_type"] = img.MediaType ?? "image/jpeg",
+                            ["data"] = b64,
+                        }
+                    });
+                }
+                else if (!String.IsNullOrEmpty(img.Uri))
+                {
+                    blocks.Add(new Dictionary<String, Object>
+                    {
+                        ["type"] = "image",
+                        ["source"] = new Dictionary<String, Object>
+                        {
+                            ["type"] = "url",
+                            ["url"] = img.Uri,
+                        }
+                    });
+                }
+            }
+        }
+        return hasImage ? blocks : null;
     }
 
     /// <summary>转换为内部统一的 ChatRequest</summary>
