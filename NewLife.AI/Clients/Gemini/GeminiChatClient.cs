@@ -66,9 +66,10 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
 
-            if (!line.StartsWith("data: ")) continue;
+            // 兼容 data: 与 data: （部分服务商省略空格）
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var data = line.Substring(6).Trim();
+            var data = line.Substring(5).Trim();
             if (data.Length == 0) continue;
 
             var chunk = ParseChunk(data, request, null);

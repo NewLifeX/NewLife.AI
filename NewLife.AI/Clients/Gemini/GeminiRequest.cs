@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.AI.Models;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Gemini;
 
@@ -203,7 +204,8 @@ public class GeminiRequest : IChatRequest
 
         // 生成配置
         var hasConfig = request.Temperature != null || request.TopP != null || request.TopK != null
-            || request.MaxTokens != null || (request.Stop != null && request.Stop.Count > 0);
+            || request.MaxTokens != null || request.PresencePenalty != null || request.FrequencyPenalty != null
+            || (request.Stop != null && request.Stop.Count > 0);
         if (hasConfig)
         {
             result.GenerationConfig = new GeminiGenerationConfig
@@ -213,6 +215,8 @@ public class GeminiRequest : IChatRequest
                 TopK = request.TopK,
                 MaxOutputTokens = request.MaxTokens,
                 StopSequences = request.Stop,
+                PresencePenalty = request.PresencePenalty,
+                FrequencyPenalty = request.FrequencyPenalty,
             };
         }
 
@@ -225,6 +229,13 @@ public class GeminiRequest : IChatRequest
                 ? (request["ThinkingBudget"] as Int32? ?? 1024)
                 : 0;
             result.GenerationConfig.ThinkingConfig = new GeminiThinkingConfig { ThinkingBudget = budget };
+        }
+
+        // 响应格式：OpenAI 风格 {type:"json_object"/"json_schema", json_schema:{...}} → Gemini responseMimeType/responseSchema
+        if (request.ResponseFormat != null)
+        {
+            result.GenerationConfig ??= new GeminiGenerationConfig();
+            ApplyResponseFormat(result.GenerationConfig, request.ResponseFormat);
         }
 
         // 工具定义 → functionDeclarations
@@ -243,6 +254,35 @@ public class GeminiRequest : IChatRequest
         }
 
         return result;
+    }
+
+    /// <summary>映射响应格式到 Gemini 生成配置。兼容 Dictionary（FastJson）、JsonElement（SystemJson）与 JSON 字符串等表示</summary>
+    /// <param name="config">Gemini 生成配置</param>
+    /// <param name="responseFormat">统一响应格式对象，OpenAI 风格 {type:"json_object"/"json_schema", json_schema:{...}}</param>
+    private static void ApplyResponseFormat(GeminiGenerationConfig config, Object? responseFormat)
+    {
+        if (responseFormat == null) return;
+
+        // 统一转为字典：优先直接类型，否则序列化后重新解析（兼容 JsonElement 等表示）
+        IDictionary<String, Object>? dic = responseFormat as IDictionary<String, Object>;
+        if (dic == null)
+        {
+            var json = responseFormat as String ?? responseFormat.ToJson();
+            dic = JsonParser.Decode(json);
+        }
+        if (dic == null) return;
+
+        var type = dic["type"] as String;
+        if (type.IsNullOrEmpty()) return;
+
+        if (type.EqualIgnoreCase("json_object") || type.EqualIgnoreCase("json_schema"))
+        {
+            config.ResponseMimeType = "application/json";
+
+            // OpenAI 风格 json_schema：{name, schema, strict}，Gemini responseSchema 承接 schema 本体
+            if (type.EqualIgnoreCase("json_schema") && dic.TryGetValue("json_schema", out var js) && js is IDictionary<String, Object> jsd)
+                config.ResponseSchema = jsd.TryGetValue("schema", out var s) ? s : js;
+        }
     }
 
     /// <summary>转换为内部统一的 ChatRequest</summary>
@@ -316,8 +356,20 @@ public class GeminiGenerationConfig
     /// <summary>Top-K 采样</summary>
     public Int32? TopK { get; set; }
 
+    /// <summary>存在惩罚。正值惩罚已使用的令牌，-2~2</summary>
+    public Double? PresencePenalty { get; set; }
+
+    /// <summary>频率惩罚。正值抑制重复使用令牌，-2~2</summary>
+    public Double? FrequencyPenalty { get; set; }
+
     /// <summary>停止序列</summary>
     public IList<String>? StopSequences { get; set; }
+
+    /// <summary>响应 MIME 类型。如 "application/json" 启用 JSON 结构化输出</summary>
+    public String? ResponseMimeType { get; set; }
+
+    /// <summary>响应 Schema。配合 <see cref="ResponseMimeType"/> 使用，定义 JSON 输出结构</summary>
+    public Object? ResponseSchema { get; set; }
 
     /// <summary>思考配置。thinkingBudget 大于 0 时开启思考并设预算，0 时关闭</summary>
     public GeminiThinkingConfig? ThinkingConfig { get; set; }

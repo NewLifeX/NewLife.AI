@@ -70,7 +70,8 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
-            try { chunk = ParseChunk(data, request, null); } catch { }
+            try { chunk = ParseChunk(data, request, null); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
             if (chunk != null)
                 yield return chunk;
         }

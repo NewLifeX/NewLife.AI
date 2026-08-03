@@ -67,8 +67,14 @@ public class AiClientOptions
     /// <summary>协议覆盖。DashScope 等双协议服务商可通过此字段切换"DashScope"原生协议或"ChatCompletions"兼容协议</summary>
     public String? Protocol { get; set; }
 
-    /// <summary>HTTP 请求超时时间。为空时使用 AiClientBase 默认值（120秒）</summary>
+    /// <summary>HTTP 请求超时时间。为空时使用 AiClientBase 默认值（300秒）</summary>
     public TimeSpan? Timeout { get; set; }
+
+    /// <summary>失败重试次数。0 表示不重试；对 429 限流、5xx 服务端错误、网络异常（含超时）自动指数退避重试，4xx 客户端错误不重试</summary>
+    public Int32 RetryCount { get; set; }
+
+    /// <summary>重试基础间隔（毫秒）。实际等待 = 基础间隔 × 2^重试序号，上限 30 秒。默认 1000</summary>
+    public Int32 RetryIntervalMs { get; set; } = 1000;
 
     /// <summary>获取实际使用的 API 地址</summary>
     /// <param name="defaultEndpoint">默认地址</param>

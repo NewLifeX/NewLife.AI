@@ -100,7 +100,8 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
-            try { chunk = data.ToJsonEntity<AnthropicStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model); } catch { }
+            try { chunk = data.ToJsonEntity<AnthropicStreamEvent>(JsonOptions)?.ToChunkResponse(request.Model); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
             if (chunk != null) yield return chunk;
         }
     }
@@ -166,7 +167,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
                 var resp = data.ToJsonEntity<GeminiResponse>(GeminiChatClient.DefaultJsonOptions);
                 if (resp != null) { resp.Model = request.Model; chunk = resp; }
             }
-            catch { }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
             if (chunk != null) yield return chunk;
         }
     }
@@ -355,14 +356,16 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line == null) break;
 
-            if (!line.StartsWith("data: ")) continue;
+            // 兼容 data: 与 data: （部分服务商省略空格）
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var data = line.Substring(6).Trim();
+            var data = line.Substring(5).Trim();
             if (data == "[DONE]") break;
             if (data.Length == 0) continue;
 
             IChatResponse? chunk = null;
-            try { chunk = ParseResponse(data, request); } catch { }
+            try { chunk = ParseResponse(data, request); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
             if (chunk != null) yield return chunk;
         }
     }

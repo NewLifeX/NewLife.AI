@@ -288,7 +288,8 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
 
             IChatResponse? chunk = null;
             // base.ParseChunk 调用 AiClientBase.ParseChunk → ParseResponse（OpenAI 格式），不走 DashScope 原生解析
-            try { chunk = base.ParseChunk(data, request, null); } catch { }
+            try { chunk = base.ParseChunk(data, request, null); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
 
             if (chunk != null)
             {
@@ -325,7 +326,8 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
             EnsureNoStreamError(data, Name);
 
             IChatResponse? chunk = null;
-            try { chunk = base.ParseChunk(data, request, null); } catch { }
+            try { chunk = base.ParseChunk(data, request, null); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
 
             if (chunk != null)
             {
@@ -475,7 +477,8 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
             }
 
             IChatResponse? chunk = null;
-            try { chunk = ParseChunk(data, request, null); } catch { }
+            try { chunk = ParseChunk(data, request, null); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
 
             if (chunk != null)
             {

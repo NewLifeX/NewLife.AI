@@ -279,6 +279,19 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         var message = err?["message"] as String ?? data;
         throw new HttpRequestException($"[{name}] 流式错误 {(code.IsNullOrEmpty() ? "" : code + " ")}{message}");
     }
+
+    /// <summary>记录流式数据块解析失败。畸形数据块跳过不中断整个流，但记录日志与埋点便于排查协议漂移与服务商格式变化</summary>
+    /// <param name="data">原始数据块</param>
+    /// <param name="ex">解析异常</param>
+    protected void LogParseChunkError(String data, Exception ex)
+    {
+        var txt = data.Length > 200 ? data[..200] + "..." : data;
+        Log.Warn("[{0}] 解析流式块失败，已跳过: {1}\r\n块内容: {2}", Name, ex.Message, txt);
+
+        // 埋点标记异常，供星尘监控统计流式块解析失败（协议漂移 / 服务商格式变化）
+        using var span = Tracer?.NewSpan($"ai:ParseChunkError:{Name}", txt);
+        span?.SetError(ex, null);
+    }
     #endregion
 
     #region Http请求
