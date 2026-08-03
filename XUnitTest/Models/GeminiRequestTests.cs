@@ -108,6 +108,20 @@ public class GeminiRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—Seed 映射到 generationConfig")]
+    public void FromChatRequest_Seed_MapsToGenerationConfig()
+    {
+        var request = new ChatRequest { Model = "gemini-2.5-flash" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+        request["Seed"] = 42;
+
+        var result = GeminiRequest.FromChatRequest(request);
+
+        Assert.NotNull(result.GenerationConfig);
+        Assert.Equal(42, result.GenerationConfig!.Seed);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—assistant 角色映射为 model")]
     public void FromChatRequest_RoleMapping()
     {

@@ -64,6 +64,15 @@ public class ChatCompletionRequest : IChatRequest
     /// <summary>是否允许并行工具调用。null=不设置，true=允许，false=禁止</summary>
     public Boolean? ParallelToolCalls { get; set; }
 
+    /// <summary>随机种子。可复现的确定性生成（OpenAI 原生支持，经 Items["Seed"] 透传）</summary>
+    public Int32? Seed { get; set; }
+
+    /// <summary>是否返回对数概率（OpenAI 原生支持，经 Items["Logprobs"] 透传）</summary>
+    public Boolean? Logprobs { get; set; }
+
+    /// <summary>Top 对数概率数量。配合 <see cref="Logprobs"/> 使用（经 Items["TopLogprobs"] 透传）</summary>
+    public Int32? TopLogprobs { get; set; }
+
     /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
     [IgnoreDataMember]
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
@@ -122,6 +131,14 @@ public class ChatCompletionRequest : IChatRequest
             foreach (var kv in co.Items)
                 result[kv.Key] = kv.Value;
         }
+
+        // OpenAI 原生生成参数：seed / logprobs / top_logprobs（Items 键名与 DashScope 约定一致）
+        var seed = request["Seed"] as Int32?;
+        if (seed != null) result.Seed = seed.Value;
+        var logprobs = request["Logprobs"] as Boolean?;
+        if (logprobs != null) result.Logprobs = logprobs.Value;
+        var topLogprobs = request["TopLogprobs"] as Int32?;
+        if (topLogprobs != null) result.TopLogprobs = topLogprobs.Value;
 
         if (request.Stream)
             result.StreamOptions = new Dictionary<String, Object> { ["include_usage"] = true };
@@ -250,6 +267,13 @@ public class ChatCompletionRequest : IChatRequest
         if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
         if (request.ResponseFormat != null) dic["response_format"] = request.ResponseFormat;
         if (request.ParallelToolCalls != null) dic["parallel_tool_calls"] = request.ParallelToolCalls.Value;
+        // OpenAI 原生生成参数：seed / logprobs / top_logprobs（Items 键名与 DashScope 约定一致）
+        var seed = request["Seed"] as Int32?;
+        if (seed != null) dic["seed"] = seed.Value;
+        var logprobs = request["Logprobs"] as Boolean?;
+        if (logprobs != null) dic["logprobs"] = logprobs.Value;
+        var topLogprobs = request["TopLogprobs"] as Int32?;
+        if (topLogprobs != null) dic["top_logprobs"] = topLogprobs.Value;
         dic["messages"] = messages;
 
         return dic;

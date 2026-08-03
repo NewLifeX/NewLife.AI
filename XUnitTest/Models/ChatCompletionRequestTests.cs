@@ -257,6 +257,29 @@ public class ChatCompletionRequestTests
         Assert.Equal("u1", restored.UserId);
         Assert.Equal("c1", restored.ConversationId);
     }
+
+    [Fact]
+    [DisplayName("FromChatRequest—Seed/Logprobs 从 Items 映射")]
+    public void FromChatRequest_SeedLogprobs_FromItems()
+    {
+        var request = new ChatRequest { Model = "gpt-4o" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+        request["Seed"] = 42;
+        request["Logprobs"] = true;
+        request["TopLogprobs"] = 5;
+
+        var result = ChatCompletionRequest.FromChatRequest(request);
+
+        Assert.Equal(42, result.Seed);
+        Assert.True(result.Logprobs);
+        Assert.Equal(5, result.TopLogprobs);
+
+        // BuildBody 字典路径同样输出
+        var body = ChatCompletionRequest.BuildBody(request);
+        Assert.Equal(42, body["seed"]);
+        Assert.True((Boolean)body["logprobs"]);
+        Assert.Equal(5, body["top_logprobs"]);
+    }
     #endregion
 
     #region BuildContent

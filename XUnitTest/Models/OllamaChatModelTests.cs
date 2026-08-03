@@ -124,6 +124,39 @@ public class OllamaChatModelTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—ResponseFormat 映射为 format 字段")]
+    public void FromChatRequest_ResponseFormat_MapsToFormat()
+    {
+        var request = new ChatRequest { Model = "qwen3:8b" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "Hi" });
+        request.ResponseFormat = new Dictionary<String, Object> { ["type"] = "json_object" };
+
+        var result = OllamaChatRequest.FromChatRequest(request);
+
+        Assert.Equal("json", result.Format);
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—Seed/惩罚参数映射到 options")]
+    public void FromChatRequest_SeedAndPenalty_MapsToOptions()
+    {
+        var request = new ChatRequest { Model = "qwen3:8b" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "Hi" });
+        request.PresencePenalty = 0.5;
+        request.FrequencyPenalty = 0.3;
+        request["Seed"] = 42;
+        request["RepetitionPenalty"] = 1.1;
+
+        var result = OllamaChatRequest.FromChatRequest(request);
+
+        Assert.NotNull(result.Options);
+        Assert.Equal(0.5, result.Options!.PresencePenalty);
+        Assert.Equal(0.3, result.Options.FrequencyPenalty);
+        Assert.Equal(42, result.Options.Seed);
+        Assert.Equal(1.1, result.Options.RepeatPenalty);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—无 Options 参数时不创建 Options")]
     public void FromChatRequest_NoOptions()
     {

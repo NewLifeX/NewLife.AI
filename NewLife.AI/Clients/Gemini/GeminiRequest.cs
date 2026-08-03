@@ -261,6 +261,14 @@ public class GeminiRequest : IChatRequest
             ApplyResponseFormat(result.GenerationConfig, request.ResponseFormat);
         }
 
+        // 随机种子（可复现的确定性生成，Items 键名与 DashScope 约定一致）
+        var seed = request["Seed"] as Int32?;
+        if (seed != null)
+        {
+            result.GenerationConfig ??= new GeminiGenerationConfig();
+            result.GenerationConfig.Seed = seed.Value;
+        }
+
         // 工具定义 → functionDeclarations
         if (request.Tools != null && request.Tools.Count > 0)
         {
@@ -439,6 +447,9 @@ public class GeminiGenerationConfig
 
     /// <summary>思考配置。thinkingBudget 大于 0 时开启思考并设预算，0 时关闭</summary>
     public GeminiThinkingConfig? ThinkingConfig { get; set; }
+
+    /// <summary>随机种子。可复现的确定性生成</summary>
+    public Int32? Seed { get; set; }
 }
 
 /// <summary>Gemini 思考配置。对应 generationConfig.thinkingConfig 字段</summary>

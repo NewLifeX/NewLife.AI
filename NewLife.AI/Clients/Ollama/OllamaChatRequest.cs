@@ -35,6 +35,9 @@ public class OllamaChatRequest : IChatRequest
     /// <summary>工具定义列表</summary>
     public IList<Object>? Tools { get; set; }
 
+    /// <summary>结构化输出格式。Ollama 通过 format 字段控制 JSON 模式（"json" 或 JSON Schema 对象）</summary>
+    public Object? Format { get; set; }
+
     #region IChatRequest 适配
     /// <summary>消息列表适配。将 OllamaChatMessage 转换为 ChatMessage</summary>
     [IgnoreDataMember]
@@ -157,6 +160,10 @@ public class OllamaChatRequest : IChatRequest
         if (request.EnableThinking.HasValue)
             result.Think = request.EnableThinking.Value;
 
+        // 结构化输出：ResponseFormat → format 字段（json_object → "json"，json_schema → schema 对象）
+        if (request.ResponseFormat != null)
+            result.Format = MapResponseFormat(request.ResponseFormat);
+
         // 转换消息
         var messages = new List<OllamaChatMessage>();
         foreach (var msg in request.Messages)
@@ -228,7 +235,9 @@ public class OllamaChatRequest : IChatRequest
 
         // Ollama 的生成参数放在 options 子对象里
         var hasOptions = request.MaxTokens != null || request.Temperature != null
-            || request.TopP != null || request.TopK != null || (request.Stop != null && request.Stop.Count > 0);
+            || request.TopP != null || request.TopK != null || (request.Stop != null && request.Stop.Count > 0)
+            || request.PresencePenalty != null || request.FrequencyPenalty != null
+            || request["Seed"] != null || request["RepetitionPenalty"] != null;
         // 携带工具时限制思考 token 上限，防止 thinking 内容耗尽 context 导致工具调用 JSON 被截断
         var forceNumPredict = request.Tools != null && request.Tools.Count > 0 && request.MaxTokens == null;
         if (hasOptions || forceNumPredict)
@@ -243,6 +252,13 @@ public class OllamaChatRequest : IChatRequest
             if (request.TopK != null) opts.TopK = request.TopK.Value;
             if (request.Stop != null && request.Stop.Count > 0)
                 opts.Stop = request.Stop is List<String> list ? list : [.. request.Stop];
+            // 惩罚与确定性参数（Items 键名与 DashScope 约定一致：Seed / RepetitionPenalty）
+            if (request.PresencePenalty != null) opts.PresencePenalty = request.PresencePenalty.Value;
+            if (request.FrequencyPenalty != null) opts.FrequencyPenalty = request.FrequencyPenalty.Value;
+            var seed = request["Seed"] as Int32?;
+            if (seed != null) opts.Seed = seed.Value;
+            var repeatPenalty = request["RepetitionPenalty"] as Double?;
+            if (repeatPenalty != null) opts.RepeatPenalty = repeatPenalty.Value;
             result.Options = opts;
         }
 
@@ -266,6 +282,30 @@ public class OllamaChatRequest : IChatRequest
         }
 
         return result;
+    }
+
+    /// <summary>映射统一响应格式到 Ollama format 字段。json_object → "json"；json_schema → 协议 schema 对象或 "json"</summary>
+    /// <param name="responseFormat">统一响应格式对象，OpenAI 风格 {type:"json_object"/"json_schema", json_schema:{...}}</param>
+    /// <returns>Ollama format 值，无法识别时返回 null</returns>
+    private static Object? MapResponseFormat(Object? responseFormat)
+    {
+        if (responseFormat is String str) return str;
+
+        IDictionary<String, Object>? dic = responseFormat as IDictionary<String, Object>;
+        if (dic == null)
+        {
+            var json = responseFormat as String ?? responseFormat.ToJson();
+            dic = JsonParser.Decode(json);
+        }
+        if (dic == null) return null;
+
+        var type = dic["type"] as String;
+        if (type.IsNullOrEmpty()) return null;
+
+        if (type.EqualIgnoreCase("json_object")) return "json";
+        if (type.EqualIgnoreCase("json_schema") && dic.TryGetValue("json_schema", out var js) && js is IDictionary<String, Object> jsd)
+            return jsd.TryGetValue("schema", out var s) ? s : js;
+        return "json";
     }
 }
 
