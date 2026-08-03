@@ -178,7 +178,7 @@ public class AnthropicRequestTests
             Content = "答案是 42",
             ReasoningContent = "让我分析一下",
         };
-        assistant.Items["Signature"] = "sig_abc123";
+        assistant["Signature"] = "sig_abc123";
         request.Messages.Add(assistant);
         request.Messages.Add(new ChatMessage { Role = "user", Content = "继续" });
 
@@ -203,7 +203,7 @@ public class AnthropicRequestTests
     {
         var request = new ChatRequest { Model = "claude-sonnet-4-6" };
         var assistant = new ChatMessage { Role = "assistant", Content = "继续分析" };
-        assistant.Items["RedactedThinking"] = new List<String> { "redacted_data_1" };
+        assistant["RedactedThinking"] = new List<String> { "redacted_data_1" };
         request.Messages.Add(assistant);
 
         var result = AnthropicRequest.FromChatRequest(request);
@@ -237,7 +237,7 @@ public class AnthropicRequestTests
                 }
             ],
         };
-        assistant.Items["Signature"] = "sig_tool";
+        assistant["Signature"] = "sig_tool";
         request.Messages.Add(assistant);
 
         var result = AnthropicRequest.FromChatRequest(request);

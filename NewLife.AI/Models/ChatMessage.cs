@@ -1,10 +1,11 @@
 ﻿using System.Runtime.Serialization;
+using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Models;
 
 /// <summary>对话消息</summary>
-public class ChatMessage
+public class ChatMessage : IExtend
 {
     #region 属性
     /// <summary>角色。system/user/assistant/tool</summary>
@@ -29,9 +30,13 @@ public class ChatMessage
     [IgnoreDataMember]
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
 
-    /// <summary>索引器，方便访问扩展数据</summary>
+    /// <summary>索引器，方便访问扩展数据。读取时 Items 为 null 返回 null；写入时自动创建，防止空异常</summary>
     [IgnoreDataMember]
-    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+    public Object? this[String key]
+    {
+        get => Items != null && Items.TryGetValue(key, out var value) ? value : null;
+        set => (Items ??= new Dictionary<String, Object?>())[key] = value;
+    }
 
     /// <summary>类型化内容片段列表（MEAI 兼容）。非空时优先于 <see cref="Content"/> 使用，支持多模态消息</summary>
     /// <remarks>

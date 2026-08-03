@@ -69,7 +69,7 @@ public class ToolChatClientThinkRoundTripTests
                 new ToolCall { Id = "call_1", Type = "function", Function = new FunctionCall { Name = "get_weather", Arguments = "{\"city\":\"Beijing\"}" } }
             ],
         };
-        assistantMsg.Items["Signature"] = "sig_round1";
+        assistantMsg["Signature"] = "sig_round1";
         var c1 = round1.Add(null, null, FinishReason.ToolCalls);
         c1.Message = assistantMsg;
 
@@ -112,7 +112,7 @@ public class ToolChatClientThinkRoundTripTests
         var signatureDelta = new ChatResponse { Object = "chat.completion.chunk" };
         var sc = signatureDelta.AddDelta(null, null, null);
         sc.Delta = new ChatMessage { Role = "assistant" };
-        sc.Delta.Items["Signature"] = "sig_stream";
+        sc.Delta["Signature"] = "sig_stream";
 
         var toolCallDelta = new ChatResponse { Object = "chat.completion.chunk" };
         toolCallDelta.AddToolCallDelta("call_1", "get_weather", "{\"city\":\"Beijing\"}", FinishReason.ToolCalls);

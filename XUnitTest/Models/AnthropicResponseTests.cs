@@ -242,7 +242,7 @@ public class AnthropicResponseTests
         var result = resp.ToChatResponse();
         var msg = result.Messages![0].Message;
         Assert.NotNull(msg);
-        Assert.Equal("sig_x", msg!.Items["Signature"]);
+        Assert.Equal("sig_x", msg!["Signature"]);
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class AnthropicResponseTests
         var result = resp.ToChatResponse();
         var msg = result.Messages![0].Message;
         Assert.NotNull(msg);
-        var redacted = msg!.Items["RedactedThinking"] as IList<String>;
+        var redacted = msg!["RedactedThinking"] as IList<String>;
         Assert.NotNull(redacted);
         Assert.Single(redacted!);
         Assert.Equal("encrypted_data", redacted![0]);
@@ -293,7 +293,7 @@ public class AnthropicResponseTests
         Assert.Single(messages!);
         var msg = messages![0].Message;
         Assert.NotNull(msg);
-        Assert.Equal("sig_y", msg!.Items["Signature"]);
+        Assert.Equal("sig_y", msg!["Signature"]);
     }
     #endregion
 

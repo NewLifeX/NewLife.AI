@@ -111,8 +111,8 @@ public class AnthropicResponse : IChatResponse
                 ExtractThinkingMeta(out var signature, out var redactedData);
                 if (choice.Message != null && (signature != null || redactedData != null))
                 {
-                    if (signature != null) choice.Message.Items["Signature"] = signature;
-                    if (redactedData != null) choice.Message.Items["RedactedThinking"] = redactedData;
+                    if (signature != null) choice.Message["Signature"] = signature;
+                    if (redactedData != null) choice.Message["RedactedThinking"] = redactedData;
                 }
 
                 _messages = [choice];
@@ -220,8 +220,8 @@ public class AnthropicResponse : IChatResponse
         ExtractThinkingMeta(out var signature, out var redactedData);
         if (choice.Message != null && (signature != null || redactedData != null))
         {
-            if (signature != null) choice.Message.Items["Signature"] = signature;
-            if (redactedData != null) choice.Message.Items["RedactedThinking"] = redactedData;
+            if (signature != null) choice.Message["Signature"] = signature;
+            if (redactedData != null) choice.Message["RedactedThinking"] = redactedData;
         }
 
         if (toolCalls != null && toolCalls.Count > 0)
@@ -504,7 +504,7 @@ public class AnthropicStreamEvent
                 {
                     var rb = response.AddDelta(null, null, null);
                     rb.Delta ??= new ChatMessage { Role = "assistant" };
-                    rb.Delta.Items["RedactedThinking"] = new List<String> { ContentBlock.Data };
+                    rb.Delta["RedactedThinking"] = new List<String> { ContentBlock.Data };
                     return response;
                 }
                 return null;
@@ -525,7 +525,7 @@ public class AnthropicStreamEvent
                 {
                     var sc = response.AddDelta(null, null, null);
                     sc.Delta ??= new ChatMessage { Role = "assistant" };
-                    sc.Delta.Items["Signature"] = Delta.Signature;
+                    sc.Delta["Signature"] = Delta.Signature;
                     return response;
                 }
                 return null;

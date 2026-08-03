@@ -408,7 +408,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                         foreach (var kv in settings.Items)
                         {
                             if (kv.Value != null)
-                                req.Items[kv.Key] = kv.Value;
+                                req[kv.Key] = kv.Value;
                         }
                     }
                 }

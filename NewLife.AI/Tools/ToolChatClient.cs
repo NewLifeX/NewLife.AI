@@ -160,7 +160,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 ReasoningContent = assistantMessage?.ReasoningContent,
                 ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
                 // 透传协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需
-                Items = assistantMessage?.Items.Count > 0 ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
+                Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
             });
 
             // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
@@ -340,7 +340,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     var fr = choice.FinishReason?.ToApiString();
                     if (!fr.IsNullOrEmpty())
                     {
-                        if (!(finishReason.EqualIgnoreCase("tool_calls", "stop")))
+                        if (!finishReason.EqualIgnoreCase("tool_calls", "stop"))
                             finishReason = fr;
                     }
                     var delta = choice.Delta;
