@@ -157,6 +157,22 @@ public class OllamaChatModelTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—NumCtx/KeepAlive 透传")]
+    public void FromChatRequest_NumCtxAndKeepAlive_Passthrough()
+    {
+        var request = new ChatRequest { Model = "qwen3:8b" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "Hi" });
+        request["NumCtx"] = 16384;
+        request["KeepAlive"] = 3600L;
+
+        var result = OllamaChatRequest.FromChatRequest(request);
+
+        Assert.NotNull(result.Options);
+        Assert.Equal(16384, result.Options!.NumCtx);
+        Assert.Equal(3600L, result.KeepAlive);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—无 Options 参数时不创建 Options")]
     public void FromChatRequest_NoOptions()
     {

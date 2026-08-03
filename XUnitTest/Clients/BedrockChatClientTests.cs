@@ -241,6 +241,31 @@ public class BedrockChatClientTests
     }
 
     [Fact]
+    [DisplayName("BuildRequest_TopK/惩罚参数_映射到inferenceConfig")]
+    public void BuildRequest_TopKAndPenalties_MapsToInferenceConfig()
+    {
+        var client = new BedrockChatClient("AKID", "SECRET", "test-model", "us-east-1");
+        var request = new ChatRequest
+        {
+            Messages = [new ChatMessage { Role = "user", Content = "hello" }],
+            Model = "test-model",
+            TopK = 40,
+            PresencePenalty = 0.5,
+            FrequencyPenalty = 0.3,
+        };
+
+        var method = typeof(BedrockChatClient).GetMethod("BuildRequest",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var body = method!.Invoke(client, [request]) as BedrockRequest;
+
+        Assert.NotNull(body);
+        Assert.NotNull(body.InferenceConfig);
+        Assert.Equal(40, body.InferenceConfig!.TopK);
+        Assert.Equal(0.5, body.InferenceConfig.PresencePenalty);
+        Assert.Equal(0.3, body.InferenceConfig.FrequencyPenalty);
+    }
+
+    [Fact]
     [DisplayName("BuildRequest_推理配置_正确设置inferenceConfig")]
     public void BuildRequest_InferenceConfig_CorrectlySet()
     {

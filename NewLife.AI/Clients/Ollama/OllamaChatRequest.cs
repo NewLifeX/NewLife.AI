@@ -38,6 +38,9 @@ public class OllamaChatRequest : IChatRequest
     /// <summary>结构化输出格式。Ollama 通过 format 字段控制 JSON 模式（"json" 或 JSON Schema 对象）</summary>
     public Object? Format { get; set; }
 
+    /// <summary>模型保持加载时长（秒）。0=立即卸载，-1=永久驻留，经 Items["KeepAlive"] 透传</summary>
+    public Int64? KeepAlive { get; set; }
+
     #region IChatRequest 适配
     /// <summary>消息列表适配。将 OllamaChatMessage 转换为 ChatMessage</summary>
     [IgnoreDataMember]
@@ -237,7 +240,8 @@ public class OllamaChatRequest : IChatRequest
         var hasOptions = request.MaxTokens != null || request.Temperature != null
             || request.TopP != null || request.TopK != null || (request.Stop != null && request.Stop.Count > 0)
             || request.PresencePenalty != null || request.FrequencyPenalty != null
-            || request["Seed"] != null || request["RepetitionPenalty"] != null;
+            || request["Seed"] != null || request["RepetitionPenalty"] != null
+            || request["NumCtx"] != null;
         // 携带工具时限制思考 token 上限，防止 thinking 内容耗尽 context 导致工具调用 JSON 被截断
         var forceNumPredict = request.Tools != null && request.Tools.Count > 0 && request.MaxTokens == null;
         if (hasOptions || forceNumPredict)
@@ -259,8 +263,15 @@ public class OllamaChatRequest : IChatRequest
             if (seed != null) opts.Seed = seed.Value;
             var repeatPenalty = request["RepetitionPenalty"] as Double?;
             if (repeatPenalty != null) opts.RepeatPenalty = repeatPenalty.Value;
+            // 上下文窗口大小（长对话防截断）
+            var numCtx = request["NumCtx"] as Int32?;
+            if (numCtx != null) opts.NumCtx = numCtx.Value;
             result.Options = opts;
         }
+
+        // 模型保持加载时长（keep_alive 为顶层字段）
+        var keepAlive = request["KeepAlive"] as Int64?;
+        if (keepAlive != null) result.KeepAlive = keepAlive.Value;
 
         // 工具定义
         if (request.Tools != null && request.Tools.Count > 0)

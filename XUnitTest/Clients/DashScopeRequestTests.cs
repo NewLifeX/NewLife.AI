@@ -30,6 +30,21 @@ public class DashScopeRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest_高分辨率图像参数_映射到Parameters")]
+    public void FromChatRequest_VlHighResolutionImages_MapsToParameters()
+    {
+        var request = new ChatRequest { Model = "qwen-vl-max" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+        request["VlHighResolutionImages"] = true;
+        request["MaxPixels"] = 268435456;
+
+        var result = DashScopeRequest.FromChatRequest(request);
+
+        Assert.True(result.Parameters.VlHighResolutionImages);
+        Assert.Equal(268435456, result.Parameters.MaxPixels);
+    }
+
+    [Fact]
     [DisplayName("BuildMessages_工具调用助手消息自动补齐空Content")]
     public void BuildMessages_AssistantToolCall_FillsEmptyContent()
     {

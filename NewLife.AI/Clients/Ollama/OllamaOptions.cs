@@ -31,4 +31,7 @@ public class OllamaOptions
 
     /// <summary>频率惩罚</summary>
     public Double? FrequencyPenalty { get; set; }
+
+    /// <summary>上下文窗口大小（Token 数）。本地模型默认较小，长对话需调大，经 Items["NumCtx"] 透传</summary>
+    public Int32? NumCtx { get; set; }
 }

@@ -122,6 +122,23 @@ public class GeminiRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—SafetySettings 透传")]
+    public void FromChatRequest_SafetySettings_Passthrough()
+    {
+        var request = new ChatRequest { Model = "gemini-2.5-flash" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+        request["SafetySettings"] = new List<Object>
+        {
+            new Dictionary<String, Object> { ["category"] = "HARM_CATEGORY_HARASSMENT", ["threshold"] = "BLOCK_ONLY_HIGH" },
+        };
+
+        var result = GeminiRequest.FromChatRequest(request);
+
+        Assert.NotNull(result.SafetySettings);
+        Assert.Single(result.SafetySettings!);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—assistant 角色映射为 model")]
     public void FromChatRequest_RoleMapping()
     {

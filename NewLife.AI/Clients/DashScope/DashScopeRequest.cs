@@ -236,6 +236,13 @@ public class DashScopeRequest : IChatRequest
         if (logprobs != null) p.Logprobs = logprobs;
         var topLogprobs = request["TopLogprobs"] as Int32?;
         if (topLogprobs != null) p.TopLogprobs = topLogprobs;
+
+        // 高分辨率视觉输入参数（VlHighResolutionImages / MaxPixels，Items 键名与前端约定一致）
+        var vlHigh = request["VlHighResolutionImages"] as Boolean?;
+        if (vlHigh != null) p.VlHighResolutionImages = vlHigh;
+        var maxPixels = request["MaxPixels"] as Int32?;
+        if (maxPixels != null) p.MaxPixels = maxPixels;
+
         var enableSearch = request["EnableSearch"] as Boolean?;
         if (enableSearch != null) p.EnableSearch = enableSearch;
 
@@ -508,6 +515,12 @@ public class DashScopeParameters
 
     /// <summary>返回对数概率的 top-K Token 数。需同时设置 Logprobs=true</summary>
     public Int32? TopLogprobs { get; set; }
+
+    /// <summary>高分辨率图像处理。true 时对视觉输入启用高分辨率模式（OCR/细节识别增强）</summary>
+    public Boolean? VlHighResolutionImages { get; set; }
+
+    /// <summary>图像输入最大像素数。限制上传图片的分辨率上限</summary>
+    public Int32? MaxPixels { get; set; }
 
     /// <summary>是否启用联网搜索</summary>
     public Boolean? EnableSearch { get; set; }

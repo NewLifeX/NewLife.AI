@@ -52,6 +52,9 @@ public class AnthropicRequest : IChatRequest
 
     /// <summary>输出配置。adaptive 思考模式下控制推理深度（如 {"effort":"high"}），对应请求体 output_config</summary>
     public AnthropicOutputConfig? OutputConfig { get; set; }
+
+    /// <summary>元数据。Anthropic 支持 metadata.user_id 用于滥用追踪与用量归属</summary>
+    public IDictionary<String, Object>? Metadata { get; set; }
     #endregion
 
     #region IChatRequest 适配
@@ -154,6 +157,10 @@ public class AnthropicRequest : IChatRequest
 
         if (request.Stop != null && request.Stop.Count > 0)
             result.StopSequences = request.Stop;
+
+        // 用户标识 → metadata.user_id（Anthropic 用于滥用追踪与用量归属）
+        if (!request.User.IsNullOrEmpty())
+            result.Metadata = new Dictionary<String, Object> { ["user_id"] = request.User! };
 
         // 思考模式：EnableThinking → thinking: {type, budget_tokens}，或 adaptive（新模型前向兼容）
         // Anthropic 官方约束：

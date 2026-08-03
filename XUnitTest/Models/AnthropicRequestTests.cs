@@ -91,6 +91,19 @@ public class AnthropicRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—User 映射为 metadata.user_id")]
+    public void FromChatRequest_User_MapsToMetadata()
+    {
+        var request = new ChatRequest { Model = "claude-sonnet-4-6", User = "u123" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var result = AnthropicRequest.FromChatRequest(request);
+
+        Assert.NotNull(result.Metadata);
+        Assert.Equal("u123", result.Metadata!["user_id"]);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—tool_result 消息转换")]
     public void FromChatRequest_ToolResult()
     {

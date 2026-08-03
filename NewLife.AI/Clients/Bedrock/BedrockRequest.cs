@@ -301,6 +301,12 @@ public class BedrockRequest : IChatRequest
             inferenceConfig.Temperature = request.Temperature.Value;
         if (request.TopP != null)
             inferenceConfig.TopP = request.TopP.Value;
+        if (request.TopK != null)
+            inferenceConfig.TopK = request.TopK.Value;
+        if (request.PresencePenalty != null)
+            inferenceConfig.PresencePenalty = request.PresencePenalty.Value;
+        if (request.FrequencyPenalty != null)
+            inferenceConfig.FrequencyPenalty = request.FrequencyPenalty.Value;
         if (request.Stop != null && request.Stop.Count > 0)
             inferenceConfig.StopSequences = request.Stop;
 
@@ -472,6 +478,15 @@ public class BedrockInferenceConfig
     /// <summary>核采样。0~1</summary>
     public Double? TopP { get; set; }
 
+    /// <summary>Top-K 采样</summary>
+    public Int32? TopK { get; set; }
+
+    /// <summary>存在惩罚。正值鼓励话题多样性</summary>
+    public Double? PresencePenalty { get; set; }
+
+    /// <summary>频率惩罚。正值抑制重复内容</summary>
+    public Double? FrequencyPenalty { get; set; }
+
     /// <summary>停止序列</summary>
     public IList<String>? StopSequences { get; set; }
 
@@ -480,6 +495,9 @@ public class BedrockInferenceConfig
         MaxTokens == null &&
         Temperature == null &&
         TopP == null &&
+        TopK == null &&
+        PresencePenalty == null &&
+        FrequencyPenalty == null &&
         (StopSequences == null || StopSequences.Count == 0);
 }
 

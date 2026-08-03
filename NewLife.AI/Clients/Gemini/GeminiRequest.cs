@@ -39,6 +39,9 @@ public class GeminiRequest : IChatRequest
     /// <summary>工具声明列表。仅用于 FromChatRequest 构建时临时存储，序列化时由 Tools 输出</summary>
     [IgnoreDataMember]
     internal IList<Object>? ToolDeclarations { get => Tools; set => Tools = value; }
+
+    /// <summary>安全设置列表。Gemini 原生安全设置（[{category, threshold}]），按类别阻断有害内容</summary>
+    public IList<Object>? SafetySettings { get; set; }
     #endregion
 
     #region IChatRequest 适配
@@ -283,6 +286,11 @@ public class GeminiRequest : IChatRequest
             }
             result.ToolDeclarations = [new Dictionary<String, Object> { ["functionDeclarations"] = declarations }];
         }
+
+        // 安全设置：Gemini 原生 safetySettings（经 Items["SafetySettings"] 透传，[{category, threshold}]）
+        var safety = request["SafetySettings"] as IList<Object>;
+        if (safety is { Count: > 0 })
+            result.SafetySettings = safety;
 
         return result;
     }
