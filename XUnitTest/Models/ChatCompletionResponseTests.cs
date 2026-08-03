@@ -60,6 +60,34 @@ public class ChatCompletionResponseTests
     }
 
     [Fact]
+    [DisplayName("JSON 反序列化—completion_tokens_details.reasoning_tokens 映射")]
+    public void JsonDeserialize_Usage_ReasoningTokensMapped()
+    {
+        var json = """
+        {
+            "choices": [{ "message": { "role": "assistant", "content": "ok" } }],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 20,
+                "total_tokens": 30,
+                "completion_tokens_details": { "reasoning_tokens": 8 }
+            }
+        }
+        """;
+
+        var result = json.ToJsonEntity<ChatCompletionResponse>(OpenAIChatClient.DefaultJsonOptions)!;
+
+        // Wire DTO 解析
+        Assert.Equal(8, result.Usage!.CompletionTokensDetails!.ReasoningTokens);
+
+        // 统一 UsageDetails 映射（UsageService 计费消费路径）
+        var unified = result.ToChatResponse().Usage!;
+        Assert.Equal(8, unified.ReasoningTokens);
+        Assert.Equal(10, unified.InputTokens);
+        Assert.Equal(20, unified.OutputTokens);
+    }
+
+    [Fact]
     [DisplayName("JSON 反序列化—含工具调用")]
     public void JsonDeserialize_WithToolCalls()
     {

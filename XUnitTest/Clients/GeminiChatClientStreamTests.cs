@@ -56,6 +56,20 @@ public class GeminiChatClientStreamTests
         Assert.Contains(":generateContent", handler.LastRequestUrl!);
     }
 
+    [Fact]
+    [DisplayName("非流式_error对象_抛出异常而非空响应")]
+    public async Task NonStream_ErrorObject_Throws()
+    {
+        var json = """{"error":{"code":400,"message":"blocked","status":"INVALID_ARGUMENT"}}""";
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Json(json));
+        using var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        {
+            await client.GetResponseAsync(CreateRequest());
+        });
+    }
+
     #endregion
 
     #region 流式

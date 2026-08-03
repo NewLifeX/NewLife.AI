@@ -351,6 +351,9 @@ public class DashScopeUsageData
     /// <summary>创建显式缓存消耗的 Token 数（首次命中缓存标记时）</summary>
     public Int32 CacheCreationTokens { get; set; }
 
+    /// <summary>推理 Token 数。Qwen 思考模型（QwQ / qwen3 等）返回的思考过程 Token 消耗</summary>
+    public Int32 ThinkingTokens { get; set; }
+
     /// <summary>转换为内部统一 UsageDetails</summary>
     /// <returns>等效的 UsageDetails 实例</returns>
     public UsageDetails ToUsageDetails() => new DashScopeUsage
@@ -363,5 +366,6 @@ public class DashScopeUsageData
         AudioTokens = AudioTokens,
         CachedInputTokens = CachedTokens,
         CacheCreationTokens = CacheCreationTokens,
+        ReasoningTokens = ThinkingTokens,
     };
 }

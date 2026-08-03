@@ -186,6 +186,9 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     /// <summary>解析 Gemini 非流式响应</summary>
     protected override IChatResponse ParseResponse(String data, IChatRequest request)
     {
+        // 流式/非流式错误对象统一识别（Gemini 部分拦截场景以 HTTP 200 + {"error":{...}} 返回），避免静默吞掉
+        EnsureNoStreamError(data, Name);
+
         var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions) ?? new GeminiResponse();
         resp.Model = request.Model;
         if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";

@@ -51,6 +51,24 @@ public class AnthropicResponseTests
     }
 
     [Fact]
+    [DisplayName("JSON 反序列化—cache_read/cache_creation input tokens 映射")]
+    public void JsonDeserialize_Usage_CacheTokensMapped()
+    {
+        var json = @"{""id"":""msg_1"",""type"":""message"",""role"":""assistant"",""content"":[{""type"":""text"",""text"":""ok""}],""usage"":{""input_tokens"":100,""output_tokens"":30,""cache_creation_input_tokens"":50,""cache_read_input_tokens"":40}}";
+
+        var result = json.ToJsonEntity<AnthropicResponse>(AnthropicChatClient.DefaultJsonOptions)!;
+
+        // Wire DTO 解析
+        Assert.Equal(50, result.Usage!.CacheCreationInputTokens);
+        Assert.Equal(40, result.Usage.CacheReadInputTokens);
+
+        // 统一 UsageDetails 映射（UsageService 计费消费路径）
+        var unified = result.ToChatResponse("claude-sonnet-4-6").Usage!;
+        Assert.Equal(40, unified.CachedInputTokens);
+        Assert.Equal(50, unified.CacheCreationTokens);
+    }
+
+    [Fact]
     [DisplayName("JSON 反序列化—含 thinking 内容块")]
     public void JsonDeserialize_WithThinking()
     {

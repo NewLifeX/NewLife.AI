@@ -139,6 +139,8 @@ public class AnthropicResponse : IChatResponse
                     InputTokens = Usage.InputTokens,
                     OutputTokens = Usage.OutputTokens,
                     TotalTokens = Usage.InputTokens + Usage.OutputTokens,
+                    CachedInputTokens = Usage.CacheReadInputTokens,
+                    CacheCreationTokens = Usage.CacheCreationInputTokens,
                 };
             }
             return _usageDetails;
@@ -237,6 +239,8 @@ public class AnthropicResponse : IChatResponse
                 InputTokens = Usage.InputTokens,
                 OutputTokens = Usage.OutputTokens,
                 TotalTokens = Usage.InputTokens + Usage.OutputTokens,
+                CachedInputTokens = Usage.CacheReadInputTokens,
+                CacheCreationTokens = Usage.CacheCreationInputTokens,
             };
         }
 
@@ -444,6 +448,12 @@ public class AnthropicUsage
     /// <summary>输出令牌数</summary>
     public Int32 OutputTokens { get; set; }
 
+    /// <summary>缓存创建消耗的输入 Token 数。首次写入显式缓存时产生</summary>
+    public Int32 CacheCreationInputTokens { get; set; }
+
+    /// <summary>缓存命中读取的输入 Token 数。属于 input_tokens 的子集，按缓存价计费</summary>
+    public Int32 CacheReadInputTokens { get; set; }
+
     /// <summary>从内部用量统计转换</summary>
     /// <param name="usage">内部用量统计</param>
     /// <returns>Anthropic 格式用量</returns>
@@ -451,6 +461,8 @@ public class AnthropicUsage
     {
         InputTokens = usage.InputTokens,
         OutputTokens = usage.OutputTokens,
+        CacheCreationInputTokens = usage.CacheCreationTokens,
+        CacheReadInputTokens = usage.CachedInputTokens,
     };
 }
 

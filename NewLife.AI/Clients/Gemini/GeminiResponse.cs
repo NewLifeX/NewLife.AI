@@ -93,6 +93,8 @@ public class GeminiResponse : IChatResponse
                     InputTokens = UsageMetadata.PromptTokenCount,
                     OutputTokens = UsageMetadata.CandidatesTokenCount,
                     TotalTokens = UsageMetadata.TotalTokenCount,
+                    ReasoningTokens = UsageMetadata.ThoughtsTokenCount,
+                    CachedInputTokens = UsageMetadata.CachedContentTokenCount,
                 };
             }
             return _usageDetails;
@@ -154,6 +156,8 @@ public class GeminiResponse : IChatResponse
                 InputTokens = UsageMetadata.PromptTokenCount,
                 OutputTokens = UsageMetadata.CandidatesTokenCount,
                 TotalTokens = UsageMetadata.TotalTokenCount,
+                ReasoningTokens = UsageMetadata.ThoughtsTokenCount,
+                CachedInputTokens = UsageMetadata.CachedContentTokenCount,
             };
         }
 
@@ -324,6 +328,12 @@ public class GeminiUsageMetadata
     /// <summary>总令牌数</summary>
     public Int32 TotalTokenCount { get; set; }
 
+    /// <summary>推理令牌数。Gemini 2.5 思考模型返回的 thinking 部分 Token 消耗</summary>
+    public Int32 ThoughtsTokenCount { get; set; }
+
+    /// <summary>命中缓存的输入令牌数</summary>
+    public Int32 CachedContentTokenCount { get; set; }
+
     /// <summary>从内部用量统计转换</summary>
     /// <param name="usage">内部用量统计</param>
     /// <returns>Gemini 格式用量</returns>
@@ -332,5 +342,7 @@ public class GeminiUsageMetadata
         PromptTokenCount = usage.InputTokens,
         CandidatesTokenCount = usage.OutputTokens,
         TotalTokenCount = usage.TotalTokens,
+        ThoughtsTokenCount = usage.ReasoningTokens,
+        CachedContentTokenCount = usage.CachedInputTokens,
     };
 }

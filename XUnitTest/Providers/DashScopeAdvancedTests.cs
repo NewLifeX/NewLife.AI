@@ -40,6 +40,29 @@ public class DashScopeAdvancedTests
         Assert.Equal(50, usage.AudioTokens);
     }
 
+    [Fact]
+    [DisplayName("DashScopeUsageData—thinking_tokens 映射为 ReasoningTokens")]
+    public void DashScopeUsageData_ThinkingTokens_MapsToReasoningTokens()
+    {
+        var data = new DashScopeUsageData
+        {
+            InputTokens = 100,
+            OutputTokens = 30,
+            TotalTokens = 130,
+            CachedTokens = 20,
+            CacheCreationTokens = 10,
+            ThinkingTokens = 15,
+        };
+
+        var usage = data.ToUsageDetails();
+
+        // 统一 UsageDetails 映射（UsageService 计费消费路径）
+        Assert.Equal(15, usage.ReasoningTokens);
+        Assert.Equal(20, usage.CachedInputTokens);
+        Assert.Equal(10, usage.CacheCreationTokens);
+        Assert.IsAssignableFrom<DashScopeUsage>(usage);
+    }
+
     // ── DashScopeChoice ────────────────────────────────────────────────────
 
     [Fact]

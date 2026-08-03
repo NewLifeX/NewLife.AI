@@ -46,6 +46,24 @@ public class GeminiResponseTests
     }
 
     [Fact]
+    [DisplayName("JSON 反序列化—thoughtsTokenCount/cachedContentTokenCount 映射")]
+    public void JsonDeserialize_Usage_ReasoningAndCacheTokensMapped()
+    {
+        var json = @"{""candidates"":[{""content"":{""role"":""model"",""parts"":[{""text"":""ok""}]},""finishReason"":""STOP""}],""usageMetadata"":{""promptTokenCount"":100,""candidatesTokenCount"":30,""totalTokenCount"":130,""thoughtsTokenCount"":12,""cachedContentTokenCount"":40}}";
+
+        var result = json.ToJsonEntity<GeminiResponse>()!;
+
+        // Wire DTO 解析
+        Assert.Equal(12, result.UsageMetadata!.ThoughtsTokenCount);
+        Assert.Equal(40, result.UsageMetadata.CachedContentTokenCount);
+
+        // 统一 UsageDetails 映射（UsageService 计费消费路径）
+        var unified = result.ToChatResponse("gemini-2.5-flash").Usage!;
+        Assert.Equal(12, unified.ReasoningTokens);
+        Assert.Equal(40, unified.CachedInputTokens);
+    }
+
+    [Fact]
     [DisplayName("JSON 反序列化—含函数调用")]
     public void JsonDeserialize_WithFunctionCall()
     {
