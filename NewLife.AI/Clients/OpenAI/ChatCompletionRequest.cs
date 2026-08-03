@@ -25,6 +25,9 @@ public class ChatCompletionRequest : IChatRequest
     /// <summary>最大生成令牌数</summary>
     public Int32? MaxTokens { get; set; }
 
+    /// <summary>最大生成令牌数（推理模型专用字段）。OpenAI o 系列 / gpt-5 系列要求使用 max_completion_tokens 而非 max_tokens，FromChatRequest/BuildBody 按模型自动选择</summary>
+    public Int32? MaxCompletionTokens { get; set; }
+
     /// <summary>是否流式输出</summary>
     public Boolean Stream { get; set; }
 
@@ -91,7 +94,6 @@ public class ChatCompletionRequest : IChatRequest
             Temperature = request.Temperature,
             TopP = request.TopP,
             TopK = request.TopK,
-            MaxTokens = request.MaxTokens,
             Stop = request.Stop,
             PresencePenalty = request.PresencePenalty,
             FrequencyPenalty = request.FrequencyPenalty,
@@ -104,6 +106,22 @@ public class ChatCompletionRequest : IChatRequest
             UserId = request.UserId,
             ConversationId = request.ConversationId,
         };
+
+        // 最大生成令牌数：OpenAI 推理模型（o 系列 / gpt-5）要求 max_completion_tokens，其余模型使用 max_tokens
+        if (request.MaxTokens != null)
+        {
+            if (IsMaxCompletionTokensModel(request.Model))
+                result.MaxCompletionTokens = request.MaxTokens;
+            else
+                result.MaxTokens = request.MaxTokens;
+        }
+
+        // 透传扩展数据，避免管道中协议专属元数据丢失（与 ToChatRequest 对称）
+        if (request is ChatOptions co && co.Items is { Count: > 0 })
+        {
+            foreach (var kv in co.Items)
+                result[kv.Key] = kv.Value;
+        }
 
         if (request.Stream)
             result.StreamOptions = new Dictionary<String, Object> { ["include_usage"] = true };
@@ -197,7 +215,14 @@ public class ChatCompletionRequest : IChatRequest
         if (request.Temperature != null) dic["temperature"] = request.Temperature.Value;
         if (request.TopP != null) dic["top_p"] = request.TopP.Value;
         if (request.TopK != null) dic["top_k"] = request.TopK.Value;
-        if (request.MaxTokens != null) dic["max_tokens"] = request.MaxTokens.Value;
+        if (request.MaxTokens != null)
+        {
+            // OpenAI 推理模型要求 max_completion_tokens（o 系列 / gpt-5），其余模型用 max_tokens
+            if (IsMaxCompletionTokensModel(request.Model))
+                dic["max_completion_tokens"] = request.MaxTokens.Value;
+            else
+                dic["max_tokens"] = request.MaxTokens.Value;
+        }
         if (request.Stop != null && request.Stop.Count > 0) dic["stop"] = request.Stop;
         if (request.PresencePenalty != null) dic["presence_penalty"] = request.PresencePenalty.Value;
         if (request.FrequencyPenalty != null) dic["frequency_penalty"] = request.FrequencyPenalty.Value;
@@ -228,6 +253,18 @@ public class ChatCompletionRequest : IChatRequest
         dic["messages"] = messages;
 
         return dic;
+    }
+
+    /// <summary>判断模型是否要求使用 max_completion_tokens 字段（OpenAI o 系列 / gpt-5 系列推理模型）。其余模型使用标准 max_tokens</summary>
+    /// <param name="model">模型编码</param>
+    /// <returns>要求 max_completion_tokens 返回 true</returns>
+    internal static Boolean IsMaxCompletionTokensModel(String? model)
+    {
+        if (model.IsNullOrEmpty()) return false;
+        return model.StartsWith("o1", StringComparison.OrdinalIgnoreCase)
+            || model.StartsWith("o3", StringComparison.OrdinalIgnoreCase)
+            || model.StartsWith("o4", StringComparison.OrdinalIgnoreCase)
+            || model.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>判断是否应跳过非法 assistant 消息。某些服务商（如 DeepSeek）要求 assistant 至少提供 content 或 tool_calls</summary>
@@ -338,7 +375,7 @@ public class ChatCompletionRequest : IChatRequest
             Temperature = Temperature,
             TopP = TopP,
             TopK = TopK,
-            MaxTokens = MaxTokens,
+            MaxTokens = MaxTokens ?? MaxCompletionTokens,
             Stop = Stop,
             PresencePenalty = PresencePenalty,
             FrequencyPenalty = FrequencyPenalty,

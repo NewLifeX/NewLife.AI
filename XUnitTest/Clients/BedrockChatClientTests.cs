@@ -138,6 +138,47 @@ public class BedrockChatClientTests
         Assert.Contains("eu-west-1", url);
     }
 
+    [Fact]
+    [DisplayName("Region_自定义端点未设Protocol_从端点推导区域")]
+    public void Region_CustomEndpoint_WithoutProtocol_DerivedFromEndpoint()
+    {
+        var client = new BedrockChatClient(new AiClientOptions
+        {
+            ApiKey = "AKID",
+            Organization = "SECRET",
+            Endpoint = "https://bedrock-runtime.eu-west-1.amazonaws.com",
+        });
+
+        Assert.Equal("eu-west-1", client.Region);
+    }
+
+    [Fact]
+    [DisplayName("BuildUrl_自定义端点_直接使用且签名区域一致")]
+    public void BuildUrl_CustomEndpoint_UsesIt_AndRegionMatches()
+    {
+        var client = new BedrockChatClient(new AiClientOptions
+        {
+            ApiKey = "AKID",
+            Organization = "SECRET",
+            Endpoint = "https://bedrock-runtime.ap-northeast-1.amazonaws.com",
+            Model = "test-model",
+        });
+        var request = new ChatRequest
+        {
+            Messages = [new ChatMessage { Role = "user", Content = "hello" }],
+            Model = "test-model",
+        };
+
+        var method = typeof(BedrockChatClient).GetMethod("BuildUrl",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var url = method!.Invoke(client, [request]) as String;
+
+        Assert.NotNull(url);
+        Assert.StartsWith("https://bedrock-runtime.ap-northeast-1.amazonaws.com/model/test-model/converse", url);
+        // 签名区域与端点区域一致，避免 SigV4 签名不匹配 403
+        Assert.Equal("ap-northeast-1", client.Region);
+    }
+
     #endregion
 
     #region BuildRequest 单元测试

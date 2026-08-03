@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.Bedrock;
@@ -29,10 +30,30 @@ public class BedrockChatClient : AiClientBase
     /// <inheritdoc/>
     public override String Name { get; set; } = "Bedrock";
 
-    /// <summary>AWS 区域。默认从 options.Protocol 读取，未设置时使用 us-east-1</summary>
-    public String Region => _options.Protocol.IsNullOrEmpty() ? "us-east-1" : _options.Protocol;
+    /// <summary>AWS 区域。优先从 options.Protocol 读取；未设置时从 Endpoint host 推导（bedrock-runtime.{region}.amazonaws.com），仍无法推导时使用 us-east-1</summary>
+    public String Region
+    {
+        get
+        {
+            if (!_options.Protocol.IsNullOrEmpty()) return _options.Protocol;
+            return ResolveRegionFromEndpoint() ?? "us-east-1";
+        }
+    }
 
     private const String ServiceName = "bedrock";
+
+    /// <summary>区域端点匹配正则：https://bedrock-runtime.{region}.amazonaws.com</summary>
+    private static readonly Regex _regionRx = new(@"bedrock-runtime\.([a-z0-9-]+)\.amazonaws\.com", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>从配置的 Endpoint 推导区域。仅匹配标准 bedrock-runtime 域名形态，代理/自定义形态返回 null</summary>
+    /// <returns>区域编码，无法推导时返回 null</returns>
+    private String? ResolveRegionFromEndpoint()
+    {
+        var endpoint = _options.Endpoint;
+        if (endpoint.IsNullOrEmpty()) return null;
+        var m = _regionRx.Match(endpoint);
+        return m.Success ? m.Groups[1].Value : null;
+    }
 
     /// <summary>默认Json序列化选项</summary>
     public static JsonOptions DefaultJsonOptions = new()
@@ -113,11 +134,11 @@ public class BedrockChatClient : AiClientBase
             return $"{endpoint}/model/{Uri.EscapeDataString(model!)}/converse";
     }
 
-    /// <summary>获取区域化的 Bedrock 端点</summary>
+    /// <summary>获取区域化的 Bedrock 端点。优先使用显式配置的 Endpoint；否则按 Region 构造标准端点</summary>
     private String GetRegionEndpoint()
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint);
-        if (!String.IsNullOrEmpty(endpoint) && !endpoint.Contains("us-east-1"))
+        var endpoint = _options.Endpoint;
+        if (!endpoint.IsNullOrWhiteSpace())
             return endpoint.TrimEnd('/');
 
         return $"https://bedrock-runtime.{Region}.amazonaws.com";

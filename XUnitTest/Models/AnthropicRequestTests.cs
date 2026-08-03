@@ -47,6 +47,23 @@ public class AnthropicRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—多条system消息合并")]
+    public void FromChatRequest_MultipleSystemMessages_Merged()
+    {
+        var request = new ChatRequest { Model = "claude-sonnet-4-20250514" };
+        request.Messages.Add(new ChatMessage { Role = "system", Content = "规则一" });
+        request.Messages.Add(new ChatMessage { Role = "system", Content = "规则二" });
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "你好" });
+
+        var result = AnthropicRequest.FromChatRequest(request);
+
+        // 多条 system 消息按顺序合并，不覆盖
+        Assert.Equal("规则一\n\n规则二", result.System);
+        Assert.Single(result.Messages!);
+        Assert.Equal("user", result.Messages![0].Role);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—tool_result 消息转换")]
     public void FromChatRequest_ToolResult()
     {

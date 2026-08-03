@@ -72,7 +72,12 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
             var data = line.Substring(5).Trim();
             if (data.Length == 0) continue;
 
-            var chunk = ParseChunk(data, request, null);
+            // 流式错误识别（Gemini error 对象格式 {"error":{...}}），避免静默吞掉
+            EnsureNoStreamError(data, Name);
+
+            IChatResponse? chunk = null;
+            try { chunk = ParseChunk(data, request, null); }
+            catch (Exception ex) { LogParseChunkError(data, ex); }
             if (chunk != null)
                 yield return chunk;
         }

@@ -91,6 +91,42 @@ public class GeminiChatClientStreamTests
         Assert.Equal(15, usage.TotalTokens);
     }
 
+    [Fact]
+    [DisplayName("流式_error对象_抛出异常而非静默吞掉")]
+    public async Task Stream_ErrorObject_Throws()
+    {
+        var sse = """data: {"error":{"code":400,"message":"content blocked","status":"INVALID_ARGUMENT"}}""" + "\n\n";
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        {
+            await foreach (var _ in client.GetStreamingResponseAsync(CreateRequest())) { }
+        });
+    }
+
+    [Fact]
+    [DisplayName("流式_畸形块_跳过不中断")]
+    public async Task Stream_MalformedChunk_SkipsWithoutBreaking()
+    {
+        var sse = String.Join("\n\n",
+        [
+            """data: {"candidates":[{"content":{"role":"model","parts":[{"text":"你好"}]}}]}""",
+            "data: {not-valid-json",
+            """data: {"candidates":[{"content":{"role":"model","parts":[{"text":"世界"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}""",
+        ]) + "\n\n";
+
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        var chunks = new List<IChatResponse>();
+        await foreach (var chunk in client.GetStreamingResponseAsync(CreateRequest()))
+            chunks.Add(chunk);
+
+        Assert.Equal(2, chunks.Count);
+        Assert.Equal("你好世界", String.Concat(chunks.Select(c => c.Text)));
+    }
+
     #endregion
 
     #region 思考请求序列化

@@ -206,7 +206,10 @@ public class AnthropicRequest : IChatRequest
         {
             if (msg.Role.Equals("system", StringComparison.OrdinalIgnoreCase))
             {
-                result.System = msg.Content?.ToString();
+                // 多条 system 消息合并（调用方可能分段注入），避免静默覆盖
+                var text = msg.Content?.ToString();
+                if (!String.IsNullOrEmpty(text))
+                    result.System = String.IsNullOrEmpty(result.System) ? text : result.System + "\n\n" + text;
                 continue;
             }
 

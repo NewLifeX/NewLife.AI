@@ -51,6 +51,23 @@ public class GeminiRequestTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—多条system消息合并")]
+    public void FromChatRequest_MultipleSystemMessages_Merged()
+    {
+        var request = new ChatRequest { Model = "gemini-2.5-flash" };
+        request.Messages.Add(new ChatMessage { Role = "system", Content = "规则一" });
+        request.Messages.Add(new ChatMessage { Role = "system", Content = "规则二" });
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "你好" });
+
+        var result = GeminiRequest.FromChatRequest(request);
+
+        // 多条 system 消息按顺序合并到 SystemInstruction，不覆盖
+        Assert.NotNull(result.SystemInstruction);
+        Assert.Equal("规则一\n\n规则二", result.SystemInstruction!.Parts[0].Text);
+        Assert.Single(result.Contents!);
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—assistant 角色映射为 model")]
     public void FromChatRequest_RoleMapping()
     {

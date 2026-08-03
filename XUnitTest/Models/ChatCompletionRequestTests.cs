@@ -140,6 +140,70 @@ public class ChatCompletionRequestTests
 
         Assert.True(result.EnableThinking);
     }
+
+    [Fact]
+    [DisplayName("FromChatRequest—o3推理模型MaxTokens映射为max_completion_tokens")]
+    public void FromChatRequest_O3Model_MapsToMaxCompletionTokens()
+    {
+        var request = new ChatRequest { Model = "o3-mini", MaxTokens = 1000 };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var result = ChatCompletionRequest.FromChatRequest(request);
+
+        Assert.Null(result.MaxTokens);
+        Assert.Equal(1000, result.MaxCompletionTokens);
+
+        // OpenAI 协议 SnakeCase 序列化：o 系列输出 max_completion_tokens，不输出 max_tokens
+        using var client = new OpenAIClientBase("test-key");
+        var json = client.JsonHost.Write(result, client.JsonOptions!)!;
+        Assert.Contains("max_completion_tokens", json);
+        Assert.DoesNotContain("\"max_tokens\"", json);
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—gpt4o模型仍使用max_tokens")]
+    public void FromChatRequest_Gpt4oModel_KeepsMaxTokens()
+    {
+        var request = new ChatRequest { Model = "gpt-4o", MaxTokens = 1000 };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var result = ChatCompletionRequest.FromChatRequest(request);
+
+        Assert.Equal(1000, result.MaxTokens);
+        Assert.Null(result.MaxCompletionTokens);
+
+        // gpt-4o 等非推理模型仍输出标准 max_tokens
+        using var client = new OpenAIClientBase("test-key");
+        var json = client.JsonHost.Write(result, client.JsonOptions!)!;
+        Assert.Contains("\"max_tokens\":1000", json);
+        Assert.DoesNotContain("max_completion_tokens", json);
+    }
+
+    [Fact]
+    [DisplayName("BuildBody—o3推理模型输出max_completion_tokens")]
+    public void BuildBody_O3Model_WritesMaxCompletionTokens()
+    {
+        var request = new ChatRequest { Model = "o3-mini", MaxTokens = 1000 };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+
+        var body = ChatCompletionRequest.BuildBody(request);
+
+        Assert.False(body.ContainsKey("max_tokens"));
+        Assert.Equal(1000, body["max_completion_tokens"]);
+    }
+
+    [Fact]
+    [DisplayName("FromChatRequest—扩展Items透传")]
+    public void FromChatRequest_Items_PassedThrough()
+    {
+        var request = new ChatRequest { Model = "gpt-4o" };
+        request.Messages.Add(new ChatMessage { Role = "user", Content = "hi" });
+        request["Foo"] = "bar";
+
+        var result = ChatCompletionRequest.FromChatRequest(request);
+
+        Assert.Equal("bar", result["Foo"]);
+    }
     #endregion
 
     #region ToChatRequest

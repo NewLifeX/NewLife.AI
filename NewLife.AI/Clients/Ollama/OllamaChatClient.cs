@@ -261,10 +261,6 @@ public class OllamaChatClient : AiClientBase, IModelListClient
     {
         var resp = json.ToJsonEntity<OllamaChatResponse>(JsonOptions);
         if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion.chunk";
-        if (resp?.Message?.ToolCalls is { Count: > 0 })
-        {
-            var tc = resp.Message.ToolCalls[0];
-        }
         return resp;
     }
 

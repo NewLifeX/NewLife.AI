@@ -183,13 +183,15 @@ public class GeminiRequest : IChatRequest
 
         // 分离 system 消息和普通消息
         var contents = new List<GeminiContent>();
+        String? systemText = null;
         foreach (var msg in request.Messages)
         {
             if (msg.Role.Equals("system", StringComparison.OrdinalIgnoreCase))
             {
+                // 多条 system 消息合并（调用方可能分段注入），避免静默覆盖
                 var text = msg.Content?.ToString();
                 if (!String.IsNullOrEmpty(text))
-                    result.SystemInstruction = new GeminiContent { Parts = [new GeminiPart { Text = text }] };
+                    systemText = String.IsNullOrEmpty(systemText) ? text : systemText + "\n\n" + text;
                 continue;
             }
 
@@ -200,6 +202,8 @@ public class GeminiRequest : IChatRequest
 
             contents.Add(new GeminiContent { Role = role, Parts = parts });
         }
+        if (!String.IsNullOrEmpty(systemText))
+            result.SystemInstruction = new GeminiContent { Parts = [new GeminiPart { Text = systemText }] };
         result.Contents = contents;
 
         // 生成配置
