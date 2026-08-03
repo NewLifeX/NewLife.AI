@@ -100,7 +100,7 @@ public class ChatCompletionResponse : IChatResponse
         set => _usageDetails = value;
     }
 
-    /// <summary>获取回复文本</summary>
+    /// <summary>获取回复文本。多模态数组内容时提取 text 类型片段，避免返回数组 ToString 垃圾值</summary>
     [IgnoreDataMember]
     public String? Text
     {
@@ -109,7 +109,20 @@ public class ChatCompletionResponse : IChatResponse
             var choice = Choices?.FirstOrDefault();
             if (choice == null) return null;
             var msg = choice.Message ?? choice.Delta;
-            return msg?.Content is String s ? s : msg?.Content?.ToString();
+            var value = msg?.Content;
+            if (value is String s) return s;
+            if (value is IList<Object> list)
+            {
+                // 多模态内容数组：仅提取 text 类型片段
+                var texts = new List<String>();
+                foreach (var item in list)
+                {
+                    if (item is IDictionary<String, Object> d && d.TryGetValue("text", out var t) && t is String ts && !String.IsNullOrEmpty(ts))
+                        texts.Add(ts);
+                }
+                return texts.Count > 0 ? String.Join("", texts) : null;
+            }
+            return value?.ToString();
         }
     }
     #endregion

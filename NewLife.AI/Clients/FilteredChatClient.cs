@@ -117,15 +117,21 @@ public class FilteredChatClient : DelegatingChatClient
         // 流式输出，同时收集最后一个有效用量、模型名和完整回复内容（用于传给 OnStreamCompletedAsync）
         UsageDetails? lastUsage = null;
         String? model = null;
+        FinishReason? finishReason = null;
         var contentBuilder = new StringBuilder();
+        var reasoningBuilder = new StringBuilder();
         await foreach (var chunk in InnerClient.GetStreamingResponseAsync(context.Request, cancellationToken).ConfigureAwait(false))
         {
             if (chunk.Usage != null) lastUsage = chunk.Usage;
             if (chunk.Model != null) model = chunk.Model;
-            // 聚合正文内容，以便 OnStreamCompletedAsync 中各过滤器（如 AgentTriggerFilter）可读取完整回复
-            var delta = chunk.Messages?.FirstOrDefault()?.Delta;
+            // 聚合正文与思考内容，以便 OnStreamCompletedAsync 中各过滤器（如 AgentTriggerFilter / LearningFilter）可读取完整回复
+            var choice = chunk.Messages?.FirstOrDefault();
+            var delta = choice?.Delta ?? choice?.Message;
             if (delta?.Content is String text && !String.IsNullOrEmpty(text))
                 contentBuilder.Append(text);
+            if (delta?.ReasoningContent is String reasoning && !String.IsNullOrEmpty(reasoning))
+                reasoningBuilder.Append(reasoning);
+            if (choice?.FinishReason != null) finishReason = choice.FinishReason;
             yield return chunk;
         }
 
@@ -134,9 +140,9 @@ public class FilteredChatClient : DelegatingChatClient
         {
             Model = model,
             Usage = lastUsage,
-            //Messages = [new ChatChoice { Message = new ChatMessage { Role = "assistant", Content = contentBuilder.ToString() } }],
         };
-        resp.Add(contentBuilder.ToString());
+        var reasoningText = reasoningBuilder.Length > 0 ? reasoningBuilder.ToString() : null;
+        resp.Add(contentBuilder.ToString(), reasoningText, finishReason);
         context.Response = resp;
 
         var capturedContext = context;

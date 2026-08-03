@@ -88,6 +88,33 @@ public class ChatCompletionResponseTests
     }
 
     [Fact]
+    [DisplayName("Text—多模态数组内容提取 text 片段")]
+    public void Text_MultimodalArray_ExtractsText()
+    {
+        var resp = new ChatCompletionResponse
+        {
+            Choices =
+            [
+                new CompletionChoice
+                {
+                    Message = new ChatMessage
+                    {
+                        Role = "assistant",
+                        Content = new List<Object>
+                        {
+                            new Dictionary<String, Object> { ["type"] = "text", ["text"] = "你好，" },
+                            new Dictionary<String, Object> { ["type"] = "image_url", ["image_url"] = new Dictionary<String, Object> { ["url"] = "https://x/1.png" } },
+                            new Dictionary<String, Object> { ["type"] = "text", ["text"] = "世界" },
+                        },
+                    }
+                }
+            ]
+        };
+
+        Assert.Equal("你好，世界", resp.Text);
+    }
+
+    [Fact]
     [DisplayName("JSON 反序列化—含工具调用")]
     public void JsonDeserialize_WithToolCalls()
     {

@@ -80,6 +80,44 @@ public class FilterTests
         Task IChatFilter.OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
+    /// <summary>流式返回思考+正文+结束原因的假客户端</summary>
+    private sealed class StreamingFakeClient : IChatClient
+    {
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult<IChatResponse>(new ChatResponse());
+
+        public async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(
+            IChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield return new ChatResponse
+            {
+                Messages = [new ChatChoice { Delta = new ChatMessage { Role = "assistant", ReasoningContent = "先分析" } }]
+            };
+            yield return new ChatResponse
+            {
+                Messages = [new ChatChoice { Delta = new ChatMessage { Role = "assistant", Content = "答案是 42" }, FinishReason = FinishReason.Stop }]
+            };
+        }
+
+        public void Dispose() { }
+    }
+
+    /// <summary>捕获 OnStreamCompletedAsync 响应的过滤器</summary>
+    private sealed class CaptureResponseFilter : IChatFilter
+    {
+        public IChatResponse? Response;
+
+        public async Task OnChatAsync(ChatFilterContext context, Func<ChatFilterContext, CancellationToken, Task> next, CancellationToken ct)
+            => await next(context, ct).ConfigureAwait(false);
+
+        Task IChatFilter.OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken)
+        {
+            Response = context.Response;
+            return Task.CompletedTask;
+        }
+    }
+
     // ── 测试 ──────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -135,6 +173,28 @@ public class FilterTests
 
         // RequestModifyingFilter 在 before 阶段修改了 Request.User
         Assert.Equal("modified-by-filter", filter.CapturedUser);
+    }
+
+    [Fact]
+    [DisplayName("流式聚合—OnStreamCompleted 响应含思考与结束原因")]
+    public async Task FilteredClient_Stream_CompletedResponseHasReasoning()
+    {
+        var filter = new CaptureResponseFilter();
+        var client = new FilteredChatClient(new StreamingFakeClient(), [filter]);
+
+        await foreach (var _ in client.GetStreamingResponseAsync((IList<ChatMessage>)[], cancellationToken: CancellationToken.None))
+        {
+        }
+
+        // OnStreamCompletedAsync 以"火焰即忘"方式异步触发，轮询等待
+        var deadline = DateTime.UtcNow.AddSeconds(2);
+        while (filter.Response == null && DateTime.UtcNow < deadline)
+            await Task.Delay(10);
+
+        Assert.NotNull(filter.Response);
+        Assert.Equal("答案是 42", filter.Response!.Text);
+        Assert.Equal("先分析", filter.Response.Messages![0].Message!.ReasoningContent);
+        Assert.Equal(FinishReason.Stop, filter.Response.Messages[0].FinishReason);
     }
 
     [Fact]
