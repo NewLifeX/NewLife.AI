@@ -200,7 +200,7 @@ public class OllamaChatRequest : IChatRequest
 
         // Ollama 的生成参数放在 options 子对象里
         var hasOptions = request.MaxTokens != null || request.Temperature != null
-            || request.TopP != null || (request.Stop != null && request.Stop.Count > 0);
+            || request.TopP != null || request.TopK != null || (request.Stop != null && request.Stop.Count > 0);
         // 携带工具时限制思考 token 上限，防止 thinking 内容耗尽 context 导致工具调用 JSON 被截断
         var forceNumPredict = request.Tools != null && request.Tools.Count > 0 && request.MaxTokens == null;
         if (hasOptions || forceNumPredict)
@@ -212,6 +212,7 @@ public class OllamaChatRequest : IChatRequest
                 opts.NumPredict = 4096;
             if (request.Temperature != null) opts.Temperature = request.Temperature.Value;
             if (request.TopP != null) opts.TopP = request.TopP.Value;
+            if (request.TopK != null) opts.TopK = request.TopK.Value;
             if (request.Stop != null && request.Stop.Count > 0)
                 opts.Stop = request.Stop is List<String> list ? list : [.. request.Stop];
             result.Options = opts;

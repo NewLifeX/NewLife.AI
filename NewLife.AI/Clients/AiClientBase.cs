@@ -295,6 +295,35 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     #endregion
 
     #region Http请求
+    /// <summary>是否应对本次失败重试。仅 429 限流、5xx 服务端错误、网络异常（含超时，非用户取消）可重试；4xx 客户端错误不重试</summary>
+    /// <param name="ex">捕获的异常</param>
+    /// <param name="index">当前已重试次数</param>
+    /// <param name="retry">允许的最大重试次数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>应重试返回 true</returns>
+    private static Boolean ShouldRetry(Exception ex, Int32 index, Int32 retry, CancellationToken cancellationToken)
+    {
+        if (index >= retry || cancellationToken.IsCancellationRequested) return false;
+
+        if (ex is ApiException api) return api.Code == 429 || (api.Code >= 500 && api.Code <= 599);
+
+        // 网络异常或超时：HttpRequestException、OperationCanceledException（HttpClient 超时抛出，非用户取消）
+        if (ex is HttpRequestException) return true;
+        if (ex is OperationCanceledException) return true;
+
+        return false;
+    }
+
+    /// <summary>计算重试等待时间（毫秒）。指数退避：基础间隔 × 2^序号，上限 30 秒</summary>
+    /// <param name="options">连接选项</param>
+    /// <param name="index">当前已重试次数</param>
+    /// <returns>等待毫秒数</returns>
+    private static Int32 GetRetryDelay(AiClientOptions options, Int32 index)
+    {
+        var ms = Math.Min(options.RetryIntervalMs * (1 << index), 30_000);
+        return ms > 0 ? ms : 1000;
+    }
+
     /// <summary>发送 GET 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
     /// <param name="url">请求地址</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
@@ -327,14 +356,33 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
 
-    /// <summary>发送 POST 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
+    /// <summary>发送 POST 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException；RetryCount&gt;0 时对 429/5xx/网络异常自动指数退避重试</summary>
     /// <param name="url">请求地址</param>
     /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
-    /// <param name="options">连接选项</param>
+    /// <param name="options">连接选项。RetryCount 控制重试次数，RetryIntervalMs 控制退避基础间隔</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>响应字符串</returns>
     protected async Task<String> PostAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
+    {
+        var retry = options.RetryCount;
+        for (var i = 0; ; i++)
+        {
+            try
+            {
+                return await PostOnceAsync(url, body, chatRequest, options, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ShouldRetry(ex, i, retry, cancellationToken))
+            {
+                var delay = GetRetryDelay(options, i);
+                Log.Warn("[{0}] 请求失败，第 {1} 次重试（共 {2} 次），等待 {3}ms: {4}", Name, i + 1, retry, delay, ex.Message);
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>发送单次 POST 请求并返回响应字符串</summary>
+    private async Task<String> PostOnceAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken)
     {
         var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
@@ -369,14 +417,33 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
 
-    /// <summary>发送 POST 流式请求，返回已通过状态检查的 HttpResponseMessage。非 2xx 时抛出 HttpRequestException</summary>
+    /// <summary>发送 POST 流式请求，返回已通过状态检查的 HttpResponseMessage。非 2xx 时抛出 HttpRequestException；RetryCount&gt;0 时对 429/5xx/网络异常自动指数退避重试（仅首字节前，数据未消费可安全重试）</summary>
     /// <param name="url">请求地址</param>
     /// <param name="body">请求体，字符串直接使用，其它对象序列化为 JSON</param>
-    /// <param name="options">连接选项</param>
+    /// <param name="options">连接选项。RetryCount 控制重试次数，RetryIntervalMs 控制退避基础间隔</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders / SetStreamingHeaders 以支持运行时参数覆盖</param>
     /// <returns>HttpResponseMessage，调用方负责 Dispose</returns>
     protected async Task<HttpResponseMessage> PostStreamAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
+    {
+        var retry = options.RetryCount;
+        for (var i = 0; ; i++)
+        {
+            try
+            {
+                return await PostOnceStreamAsync(url, body, chatRequest, options, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ShouldRetry(ex, i, retry, cancellationToken))
+            {
+                var delay = GetRetryDelay(options, i);
+                Log.Warn("[{0}] 流式请求失败，第 {1} 次重试（共 {2} 次），等待 {3}ms: {4}", Name, i + 1, retry, delay, ex.Message);
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>发送单次 POST 流式请求</summary>
+    private async Task<HttpResponseMessage> PostOnceStreamAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken)
     {
         var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
