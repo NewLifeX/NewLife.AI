@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Models;
 using NewLife.Serialization;
@@ -106,6 +107,21 @@ public class AnthropicResponseTests
         Assert.Equal("get_weather", result.Content[0].Name);
         Assert.NotNull(result.Content[0].Input);
     }
+
+    [Fact]
+    [DisplayName("JSON 反序列化—含签名与redacted_thinking块")]
+    public void JsonDeserialize_WithSignatureAndRedacted()
+    {
+        var json = """{"id":"msg_1","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"分析","signature":"sig_1"},{"type":"redacted_thinking","data":"red_1"},{"type":"text","text":"结论"}],"stop_reason":"end_turn"}""";
+
+        var result = json.ToJsonEntity<AnthropicResponse>();
+
+        Assert.NotNull(result);
+        Assert.Equal(3, result!.Content!.Count);
+        Assert.Equal("sig_1", result.Content[0].Signature);
+        Assert.Equal("redacted_thinking", result.Content[1].Type);
+        Assert.Equal("red_1", result.Content[1].Data);
+    }
     #endregion
 
     #region ToChatResponse
@@ -204,6 +220,80 @@ public class AnthropicResponseTests
         Assert.Equal(FinishReason.Length, AnthropicResponse.MapStopReason("max_tokens"));
         Assert.Equal(FinishReason.ToolCalls, AnthropicResponse.MapStopReason("tool_use"));
         Assert.Null(AnthropicResponse.MapStopReason(null));
+    }
+
+    [Fact]
+    [DisplayName("ToChatResponse—thinking块签名透传到Items")]
+    public void ToChatResponse_ThinkingSignature_ExtractedToItems()
+    {
+        var resp = new AnthropicResponse
+        {
+            Id = "msg_1",
+            Type = "message",
+            Role = "assistant",
+            Content =
+            [
+                new AnthropicContentBlock { Type = "thinking", Thinking = "分析中", Signature = "sig_x" },
+                new AnthropicContentBlock { Type = "text", Text = "结论" },
+            ],
+            StopReason = "end_turn",
+        };
+
+        var result = resp.ToChatResponse();
+        var msg = result.Messages![0].Message;
+        Assert.NotNull(msg);
+        Assert.Equal("sig_x", msg!.Items["Signature"]);
+    }
+
+    [Fact]
+    [DisplayName("ToChatResponse—redacted_thinking数据透传到Items")]
+    public void ToChatResponse_RedactedThinking_ExtractedToItems()
+    {
+        var resp = new AnthropicResponse
+        {
+            Id = "msg_1",
+            Type = "message",
+            Role = "assistant",
+            Content =
+            [
+                new AnthropicContentBlock { Type = "redacted_thinking", Data = "encrypted_data" },
+                new AnthropicContentBlock { Type = "text", Text = "结论" },
+            ],
+            StopReason = "end_turn",
+        };
+
+        var result = resp.ToChatResponse();
+        var msg = result.Messages![0].Message;
+        Assert.NotNull(msg);
+        var redacted = msg!.Items["RedactedThinking"] as IList<String>;
+        Assert.NotNull(redacted);
+        Assert.Single(redacted!);
+        Assert.Equal("encrypted_data", redacted![0]);
+    }
+
+    [Fact]
+    [DisplayName("IChatResponse.Messages适配—签名与redacted数据透传")]
+    public void Messages_Adapter_ExtractsThinkingMeta()
+    {
+        var resp = new AnthropicResponse
+        {
+            Id = "msg_1",
+            Type = "message",
+            Role = "assistant",
+            Content =
+            [
+                new AnthropicContentBlock { Type = "thinking", Thinking = "分析", Signature = "sig_y" },
+                new AnthropicContentBlock { Type = "text", Text = "结论" },
+            ],
+            StopReason = "end_turn",
+        };
+
+        var messages = ((IChatResponse)resp).Messages;
+        Assert.NotNull(messages);
+        Assert.Single(messages!);
+        var msg = messages![0].Message;
+        Assert.NotNull(msg);
+        Assert.Equal("sig_y", msg!.Items["Signature"]);
     }
     #endregion
 

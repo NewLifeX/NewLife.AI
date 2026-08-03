@@ -98,4 +98,25 @@ public class DashScopeRequestTests
         Assert.Equal(String.Empty, Assert.IsType<String>(result.Input.Messages[1].Content));
         Assert.Equal("{\"temperature\":25}", Assert.IsType<String>(result.Input.Messages[2].Content));
     }
+
+    [Fact]
+    [DisplayName("BuildMessages_多轮思考回传reasoning_content")]
+    public void BuildMessages_ThinkingReplay_ReasoningContent()
+    {
+        var messages = new List<ChatMessage>
+        {
+            new()
+            {
+                Role = "assistant",
+                Content = "答案是 42",
+                ReasoningContent = "推理过程",
+            }
+        };
+
+        var result = DashScopeRequest.BuildMessages(messages, false);
+
+        Assert.Single(result);
+        Assert.Equal("assistant", result[0].Role);
+        Assert.Equal("推理过程", result[0].ReasoningContent);
+    }
 }

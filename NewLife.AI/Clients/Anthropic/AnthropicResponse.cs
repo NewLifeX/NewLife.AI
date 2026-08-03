@@ -106,6 +106,15 @@ public class AnthropicResponse : IChatResponse
                         ToolCalls = toolCalls,
                     },
                 };
+
+                // 思考块签名与 redacted_thinking 数据：多轮/工具轮次需原样回传，随消息 Items 透传
+                ExtractThinkingMeta(out var signature, out var redactedData);
+                if (choice.Message != null && (signature != null || redactedData != null))
+                {
+                    if (signature != null) choice.Message.Items["Signature"] = signature;
+                    if (redactedData != null) choice.Message.Items["RedactedThinking"] = redactedData;
+                }
+
                 _messages = [choice];
             }
             return _messages;
@@ -207,6 +216,14 @@ public class AnthropicResponse : IChatResponse
         var finishReason = MapStopReason(StopReason);
         var choice = response.Add(contentText, reasoningText, finishReason);
 
+        // 思考块签名与 redacted_thinking 数据：多轮/工具轮次需原样回传，随消息 Items 透传
+        ExtractThinkingMeta(out var signature, out var redactedData);
+        if (choice.Message != null && (signature != null || redactedData != null))
+        {
+            if (signature != null) choice.Message.Items["Signature"] = signature;
+            if (redactedData != null) choice.Message.Items["RedactedThinking"] = redactedData;
+        }
+
         if (toolCalls != null && toolCalls.Count > 0)
         {
             choice.Message ??= new ChatMessage { Role = "assistant" };
@@ -234,6 +251,27 @@ public class AnthropicResponse : IChatResponse
         "tool_use" => FinishReason.ToolCalls,
         _ => null,
     };
+
+    /// <summary>提取思考块签名与 redacted_thinking 加密数据。Anthropic 多轮/工具轮次需将 thinking 块（含签名）原样回传，否则 API 返回 400</summary>
+    /// <param name="signature">最后一个 thinking 块的签名</param>
+    /// <param name="redactedData">redacted_thinking 块的加密数据列表（保持顺序）</param>
+    private void ExtractThinkingMeta(out String? signature, out List<String>? redactedData)
+    {
+        signature = null;
+        redactedData = null;
+        if (Content == null) return;
+
+        foreach (var block in Content)
+        {
+            if (block.Type == "thinking" && !block.Signature.IsNullOrEmpty())
+                signature = block.Signature;
+            else if (block.Type == "redacted_thinking" && !block.Data.IsNullOrEmpty())
+            {
+                redactedData ??= [];
+                redactedData.Add(block.Data);
+            }
+        }
+    }
 
     /// <summary>从内部统一响应转换为 Anthropic 非流式响应</summary>
     /// <param name="response">内部统一响应</param>
@@ -372,7 +410,7 @@ public class AnthropicResponse : IChatResponse
 /// <summary>Anthropic 内容块</summary>
 public class AnthropicContentBlock
 {
-    /// <summary>类型。text/image/tool_use/tool_result/thinking</summary>
+    /// <summary>类型。text/image/tool_use/tool_result/thinking/redacted_thinking</summary>
     public String? Type { get; set; }
 
     /// <summary>文本内容（text 类型使用）</summary>
@@ -380,6 +418,12 @@ public class AnthropicContentBlock
 
     /// <summary>思考内容（thinking 类型使用）</summary>
     public String? Thinking { get; set; }
+
+    /// <summary>思考签名（thinking 类型使用）。多轮/工具轮次需原样回传，API 校验签名完整性，缺失或改动返回 400</summary>
+    public String? Signature { get; set; }
+
+    /// <summary>加密数据（redacted_thinking 类型使用）。多轮/工具轮次需原样回传</summary>
+    public String? Data { get; set; }
 
     /// <summary>工具调用编号（tool_use 类型使用）</summary>
     public String? Id { get; set; }
@@ -454,6 +498,17 @@ public class AnthropicStreamEvent
                 response.AddDelta(null, null, null);
                 return response;
 
+            case "content_block_start":
+                // redacted_thinking 块：加密数据需随消息 Items 透传，供多轮/工具轮次原样回传
+                if (ContentBlock?.Type == "redacted_thinking" && !ContentBlock.Data.IsNullOrEmpty())
+                {
+                    var rb = response.AddDelta(null, null, null);
+                    rb.Delta ??= new ChatMessage { Role = "assistant" };
+                    rb.Delta.Items["RedactedThinking"] = new List<String> { ContentBlock.Data };
+                    return response;
+                }
+                return null;
+
             case "content_block_delta":
                 if (Delta?.Type == "text_delta")
                 {
@@ -463,6 +518,14 @@ public class AnthropicStreamEvent
                 if (Delta?.Type == "thinking_delta")
                 {
                     response.AddDelta(null, Delta.Thinking, null);
+                    return response;
+                }
+                // thinking 块签名（signature_delta）：多轮/工具轮次原样回传必需，随消息 Items 透传
+                if (Delta?.Type == "signature_delta" && !Delta.Signature.IsNullOrEmpty())
+                {
+                    var sc = response.AddDelta(null, null, null);
+                    sc.Delta ??= new ChatMessage { Role = "assistant" };
+                    sc.Delta.Items["Signature"] = Delta.Signature;
                     return response;
                 }
                 return null;
@@ -486,7 +549,7 @@ public class AnthropicStreamEvent
 /// <summary>Anthropic 增量数据</summary>
 public class AnthropicDelta
 {
-    /// <summary>类型。text_delta（内容增量时使用）</summary>
+    /// <summary>类型。text_delta / thinking_delta / signature_delta（内容增量时使用）</summary>
     public String? Type { get; set; }
 
     /// <summary>文本内容（text_delta 时使用）</summary>
@@ -494,6 +557,9 @@ public class AnthropicDelta
 
     /// <summary>思考内容（thinking_delta 时使用）</summary>
     public String? Thinking { get; set; }
+
+    /// <summary>思考签名（signature_delta 时使用）。thinking 块收尾前单独下发，多轮回传必需</summary>
+    public String? Signature { get; set; }
 
     /// <summary>停止原因（message_delta 时使用）</summary>
     public String? StopReason { get; set; }

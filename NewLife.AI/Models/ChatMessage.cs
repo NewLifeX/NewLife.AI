@@ -25,6 +25,14 @@ public class ChatMessage
     /// <summary>思考内容。部分模型返回的推理链路（reasoning_content）</summary>
     public String? ReasoningContent { get; set; }
 
+    /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文（如 Anthropic 思考签名、redacted_thinking 数据等协议专属元数据，供多轮对话原样回传）</summary>
+    [IgnoreDataMember]
+    public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
+
+    /// <summary>索引器，方便访问扩展数据</summary>
+    [IgnoreDataMember]
+    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+
     /// <summary>类型化内容片段列表（MEAI 兼容）。非空时优先于 <see cref="Content"/> 使用，支持多模态消息</summary>
     /// <remarks>
     /// 与 <see cref="Content"/>（Object?）的关系：两者并存以保持向后兼容。

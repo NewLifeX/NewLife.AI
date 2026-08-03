@@ -66,6 +66,26 @@ public class OllamaChatModelTests
     }
 
     [Fact]
+    [DisplayName("FromChatRequest—多轮思考回放thinking字段")]
+    public void FromChatRequest_ThinkingReplay()
+    {
+        var request = new ChatRequest { Model = "qwen3:8b" };
+        var assistant = new ChatMessage
+        {
+            Role = "assistant",
+            Content = "答案是 42",
+            ReasoningContent = "推理过程",
+        };
+        request.Messages.Add(assistant);
+
+        var result = OllamaChatRequest.FromChatRequest(request);
+
+        Assert.Single(result.Messages);
+        Assert.Equal("推理过程", result.Messages[0].Thinking);
+        Assert.Equal("答案是 42", result.Messages[0].Content?.ToString());
+    }
+
+    [Fact]
     [DisplayName("FromChatRequest—无 Options 参数时不创建 Options")]
     public void FromChatRequest_NoOptions()
     {

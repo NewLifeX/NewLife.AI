@@ -165,6 +165,8 @@ public class OllamaChatRequest : IChatRequest
             {
                 Role = msg.Role,
                 Content = msg.Content ?? "",
+                // 多轮思考回放：Ollama 原生思考字段为 thinking（区别于兼容模式的 reasoning），回传上一轮推理内容保持上下文连贯
+                Thinking = msg.ReasoningContent,
             };
 
             if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)

@@ -159,6 +159,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 Content = assistantMessage?.Content,
                 ReasoningContent = assistantMessage?.ReasoningContent,
                 ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
+                // 透传协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需
+                Items = assistantMessage?.Items.Count > 0 ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
             });
 
             // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
@@ -318,6 +320,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var contentSb = Pool.StringBuilder.Get();
             var reasoningSb = Pool.StringBuilder.Get();
             UsageDetails? iterUsage = null;
+            // Anthropic 多轮思考回传：流式累积 thinking 签名与 redacted_thinking 数据
+            String? thinkingSignature = null;
+            List<String>? redactedThinking = null;
             // 记录已在流式传输阶段提前发出 start 事件的工具调用 ID，避免 Step 1 重复发送
             var earlyStartedToolIds = new HashSet<String>();
 
@@ -348,6 +353,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                         // 累积思维链内容（DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传）
                         if (!delta.ReasoningContent.IsNullOrEmpty())
                             reasoningSb.Append(delta.ReasoningContent);
+
+                        // 累积 Anthropic 思考签名与 redacted_thinking 数据（多轮/工具轮次原样回传必需）
+                        if (delta["Signature"] is String sig && !sig.IsNullOrEmpty())
+                            thinkingSignature = sig;
+                        if (delta["RedactedThinking"] is IList<String> reds)
+                        {
+                            redactedThinking ??= [];
+                            redactedThinking.AddRange(reds);
+                        }
 
                         // 合并流式 tool_calls 增量
                         if (delta.ToolCalls != null)
@@ -442,12 +456,17 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     tc.Function.Arguments = "{}";
             }
 
+            var assistantItems = new Dictionary<String, Object?>();
+            if (thinkingSignature != null) assistantItems["Signature"] = thinkingSignature;
+            if (redactedThinking != null) assistantItems["RedactedThinking"] = redactedThinking;
+
             workMessages.Add(new ChatMessage
             {
                 Role = "assistant",
                 Content = contentSb.Return(true),
                 ReasoningContent = reasoningSb.Return(true),
                 ToolCalls = toolCalls.ToList(),
+                Items = assistantItems,
             });
 
             // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）

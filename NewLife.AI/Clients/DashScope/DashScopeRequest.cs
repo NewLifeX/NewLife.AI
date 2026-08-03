@@ -283,7 +283,7 @@ public class DashScopeRequest : IChatRequest
             if (!hasContents && !hasToolCalls && !HasRequiredContent(msg.Content))
                 continue;
 
-            var m = new DashScopeMessage { Role = msg.Role };
+            var m = new DashScopeMessage { Role = msg.Role, ReasoningContent = msg.ReasoningContent };
 
             if (hasContents)
                 m.Content = BuildContent(contents!, isMultimodal);
@@ -530,6 +530,9 @@ public class DashScopeMessage
 
     /// <summary>工具调用 ID。角色为 tool 时使用，标识响应哪个工具调用</summary>
     public String? ToolCallId { get; set; }
+
+    /// <summary>思考内容（推理链路）。多轮对话时回传上一轮 reasoning_content 保持上下文连贯</summary>
+    public String? ReasoningContent { get; set; }
 
     /// <summary>工具调用列表。角色为 assistant 且有工具调用时填充</summary>
     public IList<DashScopeToolCall>? ToolCalls { get; set; }

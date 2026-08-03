@@ -47,8 +47,11 @@ public class AnthropicRequest : IChatRequest
     /// <summary>可用工具列表。Anthropic 格式：name/description/input_schema</summary>
     public IList<Object>? Tools { get; set; }
 
-    /// <summary>思考模式配置。EnableThinking=true 时输出 {type:"enabled",budget_tokens:N}，false 时 {type:"disabled"}</summary>
+    /// <summary>思考模式配置。EnableThinking=true 时输出 {type:"enabled",budget_tokens:N}，false 时 {type:"disabled"}；adaptive 模式经 Items["ThinkingMode"]="adaptive" 启用</summary>
     public AnthropicThinkingConfig? Thinking { get; set; }
+
+    /// <summary>输出配置。adaptive 思考模式下控制推理深度（如 {"effort":"high"}），对应请求体 output_config</summary>
+    public AnthropicOutputConfig? OutputConfig { get; set; }
     #endregion
 
     #region IChatRequest 适配
@@ -152,19 +155,49 @@ public class AnthropicRequest : IChatRequest
         if (request.Stop != null && request.Stop.Count > 0)
             result.StopSequences = request.Stop;
 
-        // 思考模式：EnableThinking → thinking: {type, budget_tokens}
-        // Anthropic 官方约束：max_tokens 必须大于 budget_tokens，否则 API 返回错误，此处自动兜底提升
+        // 思考模式：EnableThinking → thinking: {type, budget_tokens}，或 adaptive（新模型前向兼容）
+        // Anthropic 官方约束：
+        // 1) enabled 模式 budget_tokens 最小 1024 且必须小于 max_tokens，此处自动 clamp + 兜底提升
+        // 2) 思考开启时 temperature/top_k 与思考不兼容（老模型 400），top_p 仅允许 0.95~1，此处自动剥离/收敛
+        // 3) 4.6+ 模型 enabled 已弃用、4.7+ 直接 400，经 Items["ThinkingMode"]="adaptive" 切换 adaptive + output_config.effort
         if (request.EnableThinking != null)
         {
-            var thinking = new AnthropicThinkingConfig { Type = request.EnableThinking.Value ? "enabled" : "disabled" };
-            if (request.EnableThinking.Value)
+            var thinkingMode = request["ThinkingMode"] as String;
+            var isAdaptive = request.EnableThinking.Value && !thinkingMode.IsNullOrEmpty() && thinkingMode.EqualIgnoreCase("adaptive");
+            if (isAdaptive)
             {
-                var budget = request["ThinkingBudget"] as Int32? ?? 1024;
-                thinking.BudgetTokens = budget;
-                if (result.MaxTokens == null || result.MaxTokens.Value <= budget)
-                    result.MaxTokens = budget + 2048;
+                var thinking = new AnthropicThinkingConfig { Type = "adaptive" };
+                // display：summarized=返回思考摘要，omitted=仅返回签名（新模型默认，缩短流式 TTFT）
+                var display = request["ThinkingDisplay"] as String;
+                if (!display.IsNullOrEmpty()) thinking.Display = display;
+                result.Thinking = thinking;
+                // ReasoningEffort → output_config.effort（adaptive 模式控制整体推理深度）
+                if (!request.ReasoningEffort.IsNullOrEmpty())
+                    result.OutputConfig = new AnthropicOutputConfig { Effort = request.ReasoningEffort };
             }
-            result.Thinking = thinking;
+            else
+            {
+                var thinking = new AnthropicThinkingConfig { Type = request.EnableThinking.Value ? "enabled" : "disabled" };
+                if (request.EnableThinking.Value)
+                {
+                    var budget = request["ThinkingBudget"] as Int32? ?? 1024;
+                    // 官方约束：budget_tokens 最小 1024，小于该值 API 拒绝
+                    if (budget < 1024) budget = 1024;
+                    thinking.BudgetTokens = budget;
+                    if (result.MaxTokens == null || result.MaxTokens.Value <= budget)
+                        result.MaxTokens = budget + 2048;
+
+                    // 思考开启时剥离冲突采样参数：temperature/top_k 与思考不兼容（老模型 400），top_p 收敛到 0.95~1
+                    result.Temperature = null;
+                    result.TopK = null;
+                    if (result.TopP != null)
+                    {
+                        if (result.TopP.Value < 0.95) result.TopP = 0.95;
+                        if (result.TopP.Value > 1.0) result.TopP = 1.0;
+                    }
+                }
+                result.Thinking = thinking;
+            }
         }
 
         // 分离 system 消息和普通消息
@@ -179,6 +212,37 @@ public class AnthropicRequest : IChatRequest
 
             var role = msg.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase) ? "assistant" : "user";
             var am = new AnthropicMessage { Role = role };
+
+            // assistant 消息：回传思考块（含签名）与 redacted_thinking 块。
+            // Anthropic 官方约束：工具轮次必须将 thinking 块（含签名）原样回传，否则 API 返回 400；
+            // 普通多轮建议回传（新模型自动裁剪不需要的旧思考块，无需自行清理）。
+            List<Object>? contentBlocks = null;
+            if (role == "assistant")
+            {
+                var thinkingText = msg.ReasoningContent;
+                var signature = msg["Signature"] as String;
+                var redacted = (msg["RedactedThinking"] as IList<String>)
+                    ?? (msg["RedactedThinking"] as IList<Object>)?.Select(x => x + "").ToList();
+                var hasThinking = !thinkingText.IsNullOrEmpty();
+                var hasRedacted = redacted is { Count: > 0 };
+                if (hasThinking || hasRedacted)
+                {
+                    contentBlocks = [];
+                    // redacted_thinking 块：加密数据原样回传，顺序保持
+                    if (hasRedacted)
+                    {
+                        foreach (var data in redacted!)
+                            contentBlocks.Add(new Dictionary<String, Object> { ["type"] = "redacted_thinking", ["data"] = data });
+                    }
+                    // thinking 块需携带签名（API 校验完整性）；无签名时降级为纯文本块（普通多轮可接受）
+                    if (hasThinking)
+                    {
+                        var thinkingBlock = new Dictionary<String, Object?> { ["type"] = "thinking", ["thinking"] = thinkingText };
+                        if (!signature.IsNullOrEmpty()) thinkingBlock["signature"] = signature;
+                        contentBlocks.Add(thinkingBlock);
+                    }
+                }
+            }
 
             if (msg.ToolCallId != null)
             {
@@ -196,8 +260,8 @@ public class AnthropicRequest : IChatRequest
             }
             else if (msg.ToolCalls != null && msg.ToolCalls.Count > 0)
             {
-                // assistant 工具调用 → tool_use 内容块
-                var contentBlocks = new List<Object>();
+                // assistant 工具调用 → tool_use 内容块（思考块位于 text 之前，保持官方块顺序）
+                contentBlocks ??= [];
                 if (msg.Content != null)
                     contentBlocks.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = msg.Content.ToString()! });
                 foreach (var tc in msg.ToolCalls)
@@ -217,7 +281,17 @@ public class AnthropicRequest : IChatRequest
             }
             else
             {
-                am.Content = msg.Content;
+                // 普通文本消息；含思考块时使用内容块数组（thinking + text）
+                if (contentBlocks != null)
+                {
+                    if (msg.Content != null)
+                        contentBlocks.Add(new Dictionary<String, Object> { ["type"] = "text", ["text"] = msg.Content.ToString()! });
+                    am.Content = contentBlocks;
+                }
+                else
+                {
+                    am.Content = msg.Content;
+                }
             }
 
             messages.Add(am);
@@ -282,11 +356,21 @@ public class AnthropicRequest : IChatRequest
 /// </remarks>
 public class AnthropicThinkingConfig
 {
-    /// <summary>思考模式。enabled / disabled</summary>
+    /// <summary>思考模式。enabled / disabled / adaptive（新模型前向兼容）</summary>
     public String Type { get; set; } = "enabled";
 
-    /// <summary>思考预算（Token 数）。仅 enabled 时有效，需小于 max_tokens</summary>
+    /// <summary>思考预算（Token 数）。仅 enabled 时有效，需小于 max_tokens 且最小 1024</summary>
     public Int32? BudgetTokens { get; set; }
+
+    /// <summary>思考展示方式。summarized=返回思考摘要，omitted=仅返回签名（新模型默认，缩短流式 TTFT）；仅 adaptive 模式有效</summary>
+    public String? Display { get; set; }
+}
+
+/// <summary>Anthropic 输出配置。对应请求体 output_config 字段，adaptive 思考模式用 effort 控制推理深度</summary>
+public class AnthropicOutputConfig
+{
+    /// <summary>推理强度。low/medium/high/max（模型相关，见官方 effort 文档）</summary>
+    public String? Effort { get; set; }
 }
 
 /// <summary>Anthropic 消息</summary>

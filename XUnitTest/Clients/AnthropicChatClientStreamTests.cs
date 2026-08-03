@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Models;
@@ -166,6 +167,98 @@ public class AnthropicChatClientStreamTests
         });
 
         Assert.Contains("服务过载", ex.Message);
+    }
+
+    [Fact]
+    [DisplayName("流式_signature_delta_签名透传到chunk")]
+    public async Task Stream_SignatureDelta_ExtractsSignature()
+    {
+        var sse = String.Join("\n",
+        [
+            "event: message_start",
+            """data: {"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"claude-sonnet-4-6","content":[],"usage":{"input_tokens":100,"output_tokens":0}}}""",
+            "",
+            "event: content_block_start",
+            """data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"推理中"}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig_stream_1"}}""",
+            "",
+            "event: content_block_stop",
+            """data: {"type":"content_block_stop","index":0}""",
+            "",
+            "event: content_block_start",
+            """data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"结论"}}""",
+            "",
+            "event: message_stop",
+            """data: {"type":"message_stop"}""",
+            "",
+        ]);
+
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        String? signature = null;
+        var reasoning = "";
+        await foreach (var chunk in client.GetStreamingResponseAsync(CreateRequest()))
+        {
+            var delta = chunk.Messages?.FirstOrDefault()?.Delta;
+            if (delta != null)
+            {
+                if (delta["Signature"] is String s && !s.IsNullOrEmpty()) signature = s;
+                if (!delta.ReasoningContent.IsNullOrEmpty()) reasoning += delta.ReasoningContent;
+            }
+        }
+
+        Assert.Equal("sig_stream_1", signature);
+        Assert.Equal("推理中", reasoning);
+    }
+
+    [Fact]
+    [DisplayName("流式_redacted_thinking块_数据透传到chunk")]
+    public async Task Stream_RedactedThinkingBlock_ExtractsData()
+    {
+        var sse = String.Join("\n",
+        [
+            "event: content_block_start",
+            """data: {"type":"content_block_start","index":0,"content_block":{"type":"redacted_thinking","data":"red_encrypted"}}""",
+            "",
+            "event: content_block_stop",
+            """data: {"type":"content_block_stop","index":0}""",
+            "",
+            "event: content_block_start",
+            """data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"结论"}}""",
+            "",
+            "event: message_stop",
+            """data: {"type":"message_stop"}""",
+            "",
+        ]);
+
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        List<String>? redacted = null;
+        await foreach (var chunk in client.GetStreamingResponseAsync(CreateRequest()))
+        {
+            var delta = chunk.Messages?.FirstOrDefault()?.Delta;
+            if (delta?["RedactedThinking"] is IList<String> reds)
+            {
+                redacted ??= [];
+                redacted.AddRange(reds);
+            }
+        }
+
+        Assert.NotNull(redacted);
+        Assert.Equal("red_encrypted", redacted![0]);
     }
 
     #endregion
