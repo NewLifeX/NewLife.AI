@@ -21,10 +21,17 @@ public class CodingPlan
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     /// <summary>从 JSON 反序列化</summary>
-    public static CodingPlan FromJson(String json) => json.ToJsonEntity<CodingPlan>() ?? new CodingPlan();
+    /// <param name="json">JSON 字符串，为 null 或空时返回空规划</param>
+    /// <returns>反序列化的规划实例</returns>
+    public static CodingPlan FromJson(String? json)
+    {
+        if (json.IsNullOrWhiteSpace()) return new CodingPlan();
+        return json.ToJsonEntity<CodingPlan>() ?? new CodingPlan();
+    }
 
-    /// <summary>序列化为 JSON</summary>
-    public String ToJson() => this.ToJson();
+    /// <summary>序列化为 JSON。显式调用静态扩展方法，避免与实例方法同名导致的无限递归</summary>
+    /// <returns>JSON 字符串</returns>
+    public String ToJson() => NewLife.Serialization.JsonHelper.ToJson(this);
 
     /// <summary>字符串表示，显示任务数量和摘要</summary>
     public override String ToString() => $"[{Tasks?.Count}] {Summary}";

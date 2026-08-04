@@ -360,6 +360,7 @@ public class CodingAgent
     /// <param name="code">原代码变更摘要</param>
     /// <param name="issues">审查问题列表</param>
     /// <param name="task">对应的编码任务（用于判断任务类型，防御性拒绝分析任务的修复）</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns>修复后的代码</returns>
     public async Task<String> FixAsync(String code, IList<ReviewIssue> issues, CodingTask? task = null, CancellationToken cancellationToken = default)
     {
@@ -693,7 +694,7 @@ public class CodingAgent
         try
         {
             // 提取 JSON 块
-            var json = ExtractJson(response);
+            var json = ExtractJson(response!);
             if (json == null) return new CodingPlan { Summary = response };
 
             return json.ToJsonEntity<CodingPlan>() ?? new CodingPlan();
@@ -711,7 +712,7 @@ public class CodingAgent
 
         try
         {
-            var json = ExtractJson(response);
+            var json = ExtractJson(response!);
             if (json == null) return null;
 
             return json.ToJsonEntity<ReviewResult>();

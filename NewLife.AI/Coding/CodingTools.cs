@@ -15,6 +15,9 @@ namespace NewLife.AI.Coding;
 /// <param name="workspacePath">工作区根路径</param>
 public class CodingTools(String? workspacePath = null)
 {
+    /// <summary>命令执行超时上限（毫秒）。10 分钟，RunCommandAsync 与 GetErrorsAsync 共用（A-20）</summary>
+    private const Int32 MaxCommandTimeoutMs = 600_000;
+
     #region 属性
     /// <summary>工作区根路径。设置后所有文件操作限制在此范围内；为 null 时不限制</summary>
     public String? WorkspacePath { get; set; } = workspacePath;
@@ -49,28 +52,37 @@ public class CodingTools(String? workspacePath = null)
 
         try
         {
-            var lines = File.ReadAllLines(fullPath);
-            var totalLines = lines.Length;
-
+            // A-22：改用惰性 ReadLines 按需读取，仅请求小范围时避免全量读入大文件
             var from = startLine ?? 1;
-            var to = endLine ?? totalLines;
+            var to = endLine ?? Int32.MaxValue;
 
             // 边界保护
             if (from < 1) from = 1;
-            if (to > totalLines) to = totalLines;
-            if (from > to) return Task.FromResult($"Error: 起始行 {from} 大于结束行 {to}");
+            if (to < from) return Task.FromResult($"Error: 起始行 {from} 大于结束行 {to}");
 
             var sb = Pool.StringBuilder.Get();
-            sb.AppendLine($"// {path} (lines {from}-{to} of {totalLines})");
-            for (var i = from - 1; i < to; i++)
+            var totalLines = 0;
+            var appended = 0;
+            foreach (var line in File.ReadLines(fullPath))
             {
-                sb.AppendLine($"{i + 1,6}: {lines[i]}");
+                totalLines++;
+                if (totalLines < from) continue;
+                if (totalLines > to) break;
+
+                sb.AppendLine($"{totalLines,6}: {line}");
+                appended++;
             }
 
-            if (to < totalLines)
-                sb.AppendLine($"// ... ({totalLines - to} more lines omitted)");
+            if (appended == 0)
+                return Task.FromResult($"Error: 起始行 {from} 超出文件总行数 {totalLines}");
 
-            return Task.FromResult(sb.Return(true));
+            // 修正 header（先插入行数信息再输出，避免大文件前缀信息缺失）
+            var header = $"// {path} (lines {from}-{Math.Min(to, totalLines)} of {totalLines})\n";
+            var body = sb.Return(true);
+            if (to < totalLines)
+                body += $"// ... ({totalLines - to} more lines omitted)";
+
+            return Task.FromResult(header + body);
         }
         catch (Exception ex)
         {
@@ -301,7 +313,8 @@ public class CodingTools(String? workspacePath = null)
             var results = new List<String>();
             var cancelled = false;
 
-            var files = Directory.GetFiles(searchRoot, filePattern, SearchOption.AllDirectories);
+            // A-21：AllDirectories 遇无权限子目录整体抛异常，改为递归遍历跳过无权限目录
+            var files = EnumerateFilesSafe(searchRoot, filePattern);
 
             // 跳过常见非文本目录
             var skipDirs = new[] { "\\obj\\", "\\bin\\", "\\node_modules\\", "\\.git\\", "\\dist\\", "\\out\\", "\\TestResults\\" };
@@ -380,7 +393,7 @@ public class CodingTools(String? workspacePath = null)
 
         var timeoutMs = (timeout ?? 120) * 1000;
         if (timeoutMs < 1000) timeoutMs = 1000;
-        if (timeoutMs > 600_000) timeoutMs = 600_000; // 最大 10 分钟
+        if (timeoutMs > MaxCommandTimeoutMs) timeoutMs = MaxCommandTimeoutMs; // 最大 10 分钟
 
         try
         {
@@ -388,8 +401,9 @@ public class CodingTools(String? workspacePath = null)
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c {command}",
+                    // A-19：按平台选择 shell（原硬编码 cmd.exe 在 Unix/macOS 失效）
+                    FileName = Environment.OSVersion.Platform == PlatformID.Win32NT ? "cmd.exe" : "/bin/sh",
+                    Arguments = Environment.OSVersion.Platform == PlatformID.Win32NT ? $"/c {command}" : $"-c \"{command}\"",
                     WorkingDirectory = workingDir,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -417,7 +431,11 @@ public class CodingTools(String? workspacePath = null)
             if (!process.WaitForExit(timeoutMs))
             {
                 try { process.Kill(); } catch { }
-                return $"Error: 命令执行超时（{timeoutMs / 1000}秒）\n已捕获输出:\n{output}";
+
+                // A-18：超时路径归还池化 StringBuilder
+                var timedOut = $"Error: 命令执行超时（{timeoutMs / 1000}秒）\n已捕获输出:\n{output.Return(true)}";
+                error.Return(true);
+                return timedOut;
             }
 
             process.WaitForExit();
@@ -426,11 +444,8 @@ public class CodingTools(String? workspacePath = null)
             sb.AppendLine($"[exit code: {process.ExitCode}]");
             sb.AppendLine("[stdout]:");
             sb.Append(output.Return(true));
-            if (error.Length > 0)
-            {
-                sb.AppendLine("[stderr]:");
-                sb.Append(error.Return(true));
-            }
+            sb.AppendLine("[stderr]:");
+            sb.Append(error.Return(true));
 
             return sb.Return(true);
         }
@@ -483,9 +498,11 @@ public class CodingTools(String? workspacePath = null)
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            if (!process.WaitForExit(120_000))
+            if (!process.WaitForExit(MaxCommandTimeoutMs))
             {
                 try { process.Kill(); } catch { }
+                // A-18：超时路径归还池化 StringBuilder
+                output.Return(true);
                 return "Error: dotnet build 执行超时";
             }
 
@@ -559,8 +576,47 @@ public class CodingTools(String? workspacePath = null)
 
     #region 辅助
 
+    /// <summary>递归枚举文件，跳过无权限访问的目录（A-21）。Directory.GetFiles(AllDirectories) 遇无权限目录整体抛异常</summary>
+    /// <param name="root">搜索根目录</param>
+    /// <param name="filePattern">文件 glob 模式，如 *.cs</param>
+    /// <returns>匹配文件的完整路径流</returns>
+    private static IEnumerable<String> EnumerateFilesSafe(String root, String filePattern)
+    {
+        var stack = new Stack<String>();
+        stack.Push(root);
+
+        while (stack.Count > 0)
+        {
+            var dir = stack.Pop();
+            String[] files;
+            String[] dirs;
+            try
+            {
+                files = Directory.GetFiles(dir, filePattern, SearchOption.TopDirectoryOnly);
+                dirs = Directory.GetDirectories(dir);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // 无权限目录：跳过该目录继续
+                continue;
+            }
+            catch (IOException)
+            {
+                // IO 异常（如目录被占用）：跳过继续
+                continue;
+            }
+
+            foreach (var f in files) yield return f;
+
+            // 按字典序压栈，保证遍历顺序可预期
+            foreach (var d in dirs.OrderByDescending(x => x, StringComparer.OrdinalIgnoreCase))
+                stack.Push(d);
+        }
+    }
+
     /// <summary>解析并验证路径。在工作区内返回全路径，超出范围返回 null</summary>
-    private String? ResolvePath(String path)
+    /// <param name="path">待解析路径，可为 null（null/空白时返回工作区根）</param>
+    private String? ResolvePath(String? path)
     {
         if (String.IsNullOrWhiteSpace(path)) return WorkspacePath;
 
@@ -578,7 +634,10 @@ public class CodingTools(String? workspacePath = null)
             var normalizedWorkspace = Path.GetFullPath(WorkspacePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var normalizedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-            return normalizedPath.StartsWith(normalizedWorkspace, StringComparison.OrdinalIgnoreCase)
+            // 前缀匹配必须校验目录分隔符边界，防止 C:\X\StarChat2 等前缀相同的兄弟目录绕过沙箱
+            return normalizedPath.Equals(normalizedWorkspace, StringComparison.OrdinalIgnoreCase)
+                || normalizedPath.StartsWith(normalizedWorkspace + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || normalizedPath.StartsWith(normalizedWorkspace + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
                 ? fullPath
                 : null;
         }

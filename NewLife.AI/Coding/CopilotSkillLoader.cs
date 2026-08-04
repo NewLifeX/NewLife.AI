@@ -134,8 +134,8 @@ public class CopilotSkillLoader
         // 3. 加载用户全局 VS Code prompts
         if (!String.IsNullOrEmpty(VSCodePromptsPath))
         {
-            LoadInstructionsFrom(VSCodePromptsPath);
-            LoadAgentsFrom(VSCodePromptsPath);
+            LoadInstructionsFrom(VSCodePromptsPath!);
+            LoadAgentsFrom(VSCodePromptsPath!);
             LoadSkillsFrom(Path.Combine(VSCodePromptsPath, "skills"));
         }
 
@@ -203,7 +203,7 @@ public class CopilotSkillLoader
             if (!String.IsNullOrWhiteSpace(toolsStr))
             {
                 var ts = new[] { ',', ' ' };
-                tools = toolsStr.Split(ts, StringSplitOptions.RemoveEmptyEntries);
+                tools = toolsStr!.Split(ts, StringSplitOptions.RemoveEmptyEntries);
             }
 
             _agents.Add(new CopilotAgent
@@ -264,7 +264,7 @@ public class CopilotSkillLoader
             }
 
             // 具体 glob 模式匹配
-            if (!String.IsNullOrEmpty(instruction.ApplyTo) && MatchGlob(filePath, instruction.ApplyTo))
+            if (!String.IsNullOrEmpty(instruction.ApplyTo) && MatchGlob(filePath, instruction.ApplyTo!))
                 result.Add(instruction);
         }
 
@@ -296,15 +296,20 @@ public class CopilotSkillLoader
         // 简单 glob 匹配：* 匹配任意字符，** 匹配任意路径段
         if (globPattern == "*" || globPattern == "**") return true;
 
-        // 将 glob 转换为正则
-        var regexPattern = "^" + Regex.Escape(globPattern)
+        // 将 glob 转换为正则。A-25：对绝对路径，若模式无 **/ 前缀则自动放宽，使 "Doc/**" 能匹配 "C:\x\Doc\y"
+        var normalizedGlob = globPattern.Replace('\\', '/');
+        var normalizedPath = filePath.Replace('\\', '/');
+        if (!normalizedGlob.StartsWith("**/", StringComparison.Ordinal))
+            normalizedGlob = "**/" + normalizedGlob;
+
+        var regexPattern = "^" + Regex.Escape(normalizedGlob)
             .Replace(@"\*\*", ".*")
-            .Replace(@"\*", "[^/\\\\]*")
-            .Replace(@"\?", "[^/\\\\]") + "$";
+            .Replace(@"\*", "[^/]*")
+            .Replace(@"\?", "[^/]") + "$";
 
         try
         {
-            return Regex.IsMatch(filePath, regexPattern, RegexOptions.IgnoreCase);
+            return Regex.IsMatch(normalizedPath, regexPattern, RegexOptions.IgnoreCase);
         }
         catch
         {
