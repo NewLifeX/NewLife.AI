@@ -105,9 +105,7 @@ public class WidgetToolService(ILog log)
         log.Info("[Widget] 渲染 {0}：{1}，{2} 字节", kind, title, byteCount);
 
         var resultJson = new { widgetId, kind, title, code = content, loadingMessage, initialHeight, background, slideMode }.ToJson();
-        return new ToolResult(
-            ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已渲染Widget到客户端：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已渲染Widget到客户端：{title}]");
     }
 
     #endregion

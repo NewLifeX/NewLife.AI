@@ -124,9 +124,7 @@ public class MindmapToolService(ILog log)
 
         var writeOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var resultJson = result.ToJsonString(writeOptions);
-        return new ToolResult(
-            ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已渲染思维导图到客户端：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已渲染思维导图到客户端：{title}]");
     }
 
     #endregion

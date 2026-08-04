@@ -294,4 +294,73 @@ public class ToolRegistryExtendedTests
 
         Assert.Equal("AI,Chat,Tool", result);
     }
+
+    // ── 工具特性继承（ToolDescriptionAttribute Inherited=true）────────────
+
+    /// <summary>抽象工具基类：标注 ToolDescription，验证子类继承注册</summary>
+    private abstract class BaseTool
+    {
+        [ToolDescription("base_tool")]
+        [Description("基类工具")]
+        public String BaseToolMethod(String input) => $"base:{input}";
+    }
+
+    /// <summary>继承基类的具体工具（非 override，直接复用基类方法）</summary>
+    private sealed class DerivedTool : BaseTool
+    {
+        [ToolDescription("derived_tool")]
+        [Description("子类工具")]
+        public String DerivedToolMethod(Int32 count) => $"derived:{count}";
+    }
+
+    /// <summary>基类工具方法为 virtual，子类 override 自定义实现（不重复标注特性，依赖 inherit 解析）</summary>
+    private abstract class OverrideBaseTool
+    {
+        [ToolDescription("shared_tool")]
+        [Description("共享工具")]
+        public virtual String CustomSharedTool(String input) => $"base:{input}";
+    }
+
+    /// <summary>override 基类工具方法</summary>
+    private sealed class OverrideDerivedTool : OverrideBaseTool
+    {
+        public override String CustomSharedTool(String input) => $"derived:{input}";
+    }
+
+    [Fact]
+    [DisplayName("继承—子类实例注册包含继承的基类工具方法")]
+    public void AddTools_DerivedClass_InheritsBaseToolMethod()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new DerivedTool());
+
+        var names = new System.Collections.Generic.HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in registry.Tools)
+            names.Add(t.Function!.Name);
+
+        Assert.Contains("base_tool", names);
+        Assert.Contains("derived_tool", names);
+    }
+
+    [Fact]
+    [DisplayName("继承—override 方法通过 inherit:true 解析基类工具名")]
+    public void BuildFromMethod_OverrideMethod_ResolvesBaseAttribute()
+    {
+        var method = typeof(OverrideDerivedTool).GetMethod("CustomSharedTool")!;
+        var tool = ToolSchemaBuilder.BuildFromMethod(method);
+
+        // 特性名 shared_tool 优先；若无 inherit:true 则回退为方法名 custom_shared_tool
+        Assert.Equal("shared_tool", tool.Function!.Name);
+    }
+
+    [Fact]
+    [DisplayName("继承—注册的继承工具调用子类 override 实现")]
+    public async Task AddTools_OverrideDerived_InvokesDerivedImplementation()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new OverrideDerivedTool());
+
+        var result = await registry.InvokeAsync("shared_tool", "{\"input\":\"hi\"}");
+        Assert.Equal("derived:hi", result);
+    }
 }

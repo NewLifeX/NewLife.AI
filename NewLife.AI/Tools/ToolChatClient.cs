@@ -567,10 +567,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private static ToolResult BuildDedupResult(String toolName, String llmText)
     {
         var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-        return new ToolResult(
-            ToolContent.ForUser(dupInfo),
-            ToolContent.ForLlm($"[已去重：{toolName}] {llmText}")
-        );
+        return ToolResult.ForAudiences(dupInfo, $"[已去重：{toolName}] {llmText}");
     }
 
     /// <summary>连续失败检测与升级。整轮所有工具均失败时递增计数，任一成功则归零；达到升级阈值时向消息列表注入换思路提示</summary>

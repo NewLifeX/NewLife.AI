@@ -165,9 +165,7 @@ public class MapAnnotationToolService(ILog log)
             Encoding.UTF8.GetByteCount(annotatedSvg));
 
         var resultJson = new { widgetId, kind = "svg", title, code = annotatedSvg }.ToJson();
-        return new ToolResult(
-            ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已渲染中国地图到客户端：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已渲染中国地图到客户端：{title}]");
     }
 
     #endregion

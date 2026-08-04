@@ -54,8 +54,7 @@ public class BuildDocToolService(ILog log)
             archiveResult.Url, archiveResult.AttachmentId, docxBytes.Length, theme);
 
         var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        return new ToolResult(ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已生成{sectionList.Length}节文档：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已生成{sectionList.Length}节文档：{title}]");
     }
 
     #endregion

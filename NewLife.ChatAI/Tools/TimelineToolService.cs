@@ -92,9 +92,7 @@ public class TimelineToolService(ILog log)
 
         var writeOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var resultJson = result.ToJsonString(writeOptions);
-        return new ToolResult(
-            ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已渲染时间轴到客户端：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已渲染时间轴到客户端：{title}]");
     }
 
     #endregion

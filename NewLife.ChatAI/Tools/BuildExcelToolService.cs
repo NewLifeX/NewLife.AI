@@ -54,8 +54,7 @@ public class BuildExcelToolService(ILog log)
             archiveResult.Url, archiveResult.AttachmentId, xlsxBytes.Length, theme);
 
         var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        return new ToolResult(ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已生成{sheetList.Length}张工作表：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已生成{sheetList.Length}张工作表：{title}]");
     }
 
     #endregion

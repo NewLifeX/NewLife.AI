@@ -124,9 +124,7 @@ public class BuildPptToolService(ILog log)
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
-        return new ToolResult(
-            ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[已生成{slideList.Length}页PPT：{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已生成{slideList.Length}页PPT：{title}]");
     }
 
     /// <summary>从 show_widget 卡片列表构建 PPT。取已生成的 Widget 内容，嵌入为全幅幻灯片图片</summary>
@@ -192,9 +190,7 @@ public class BuildPptToolService(ILog log)
         log.Info("[Slide] Widget \u5bfc\u5165\u5b8c\u6210\uff1a{0}\uff0c{1} \u9875\uff0cURL\uff1a{2}",
             title, pages.Count, archiveResult.Url);
 
-        return new ToolResult(
-            ToolContent.ForUser(resultJson),
-            ToolContent.ForLlm($"[{widgetIds.Length}\u4e2aWidget\u5361\u7247\u5df2\u5bfc\u51fa\u4e3a{pages.Count}\u9875PPT\uff1a{title}]"));
+        return ToolResult.ForAudiences(resultJson, $"[已生成{widgetIds.Length}个Widget卡片已导出为{pages.Count}页PPT：{title}]");
     }
 
     /// <summary>根据 toolCallId 从 ChatMessage 表中查找 Widget 内容（SVG/HTML）</summary>
