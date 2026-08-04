@@ -143,7 +143,8 @@ public class GeminiResponse : IChatResponse
 
                 if (toolCalls?.Count > 0)
                 {
-                    var msg = streaming ? (choice.Delta ??= new ChatMessage { Role = "model" }) : (choice.Message ??= new ChatMessage { Role = "model" });
+                    // A-73：与 IChatResponse.Messages 适配器统一用 assistant 角色（下游 FromChatRequest 负责转 model）
+                    var msg = streaming ? (choice.Delta ??= new ChatMessage { Role = "assistant" }) : (choice.Message ??= new ChatMessage { Role = "assistant" });
                     msg.ToolCalls = toolCalls;
                 }
             }

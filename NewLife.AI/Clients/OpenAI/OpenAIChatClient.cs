@@ -46,8 +46,8 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     /// <returns>图像生成响应，失败时返回 null</returns>
     public virtual async Task<ImageGenerationResponse?> TextToImageAsync(ImageGenerationRequest request, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/v1/images/generations";
+        // A-73：CombineApiUrl 自动去重 endpoint 末尾版本段，避免 .../v1/v1/images/generations
+        var url = CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), "/v1/images/generations");
 
         var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseImageGenerationResponse(json);
@@ -93,11 +93,8 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     /// <returns>音频字节流（格式由 request.ResponseFormat 决定，默认 mp3）</returns>
     public virtual async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        // 防止数据库中存储的端点已含 /v1 导致双路径（如 .../compatible-mode/v1/v1/audio/speech）
-        var url = endpoint.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)
-            ? endpoint + "/audio/speech"
-            : endpoint + "/v1/audio/speech";
+        // A-73：CombineApiUrl 自动去重 endpoint 末尾版本段（原手动判 /v1 逻辑收敛于此）
+        var url = CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), "/v1/audio/speech");
 
         return await PostBinaryAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
     }
@@ -141,8 +138,7 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     /// <returns>任务提交响应，含 TaskId</returns>
     public virtual async Task<VideoTaskSubmitResponse> SubmitVideoGenerationAsync(VideoGenerationRequest request, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + "/v1/video/generations";
+        var url = CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), "/v1/video/generations");
 
         var json = await PostAsync(url, request, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseVideoTaskSubmitResponse(json);
@@ -154,8 +150,7 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     /// <returns>任务状态响应</returns>
     public virtual async Task<VideoTaskStatusResponse> GetVideoTaskAsync(String taskId, CancellationToken cancellationToken = default)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = endpoint + $"/v1/video/generations/{taskId}";
+        var url = CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), $"/v1/video/generations/{taskId}");
 
         var json = await GetAsync(url, null, _options, cancellationToken).ConfigureAwait(false);
         return ParseVideoTaskStatusResponse(json);

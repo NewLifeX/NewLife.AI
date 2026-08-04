@@ -308,7 +308,8 @@ public class CodingTools(String? workspacePath = null)
 
         try
         {
-            var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            // A-73：LLM 提供的 pattern 不可信，加 2 秒匹配超时防 ReDoS；超时由外层 catch 捕获返回错误
+            var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
             var filePattern = includePattern ?? "*";
             var results = new List<String>();
             var cancelled = false;

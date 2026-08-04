@@ -102,9 +102,11 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
             modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
             modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
         {
+            // deepseek-reasoner 不支持工具调用与采样参数（BuildRequest 会移除 tools），能力位如实标注（A-73）
+            var isReasoner = modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase);
             return new AiProviderCapabilities(
                 SupportThinking: !modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase),
-                SupportFunction: true,
+                SupportFunction: !isReasoner,
                 ContextLength: 1_048_576,
                 ReasoningEfforts: "high,max",
                 Pricing: new AiModelPricing(1m, 2m, 0.02m, 1m));

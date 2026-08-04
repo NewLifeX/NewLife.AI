@@ -66,5 +66,13 @@ public class AiClientBaseTests
         Assert.Equal("https://dashscope.aliyuncs.com/compatible-mode/v1/models", result);
     }
 
+    [Fact]
+    [DisplayName("CombineApiUrl_端点含v1beta后缀且路径以v1beta开头_去重版本段（Gemini）")]
+    public void CombineApiUrl_EndpointHasV1BetaAndPathHasV1Beta_DeduplicatesVersion()
+    {
+        var result = AiClientBase.CombineApiUrl("https://generativelanguage.googleapis.com/v1beta", "/v1beta/models/gemini-2.5-flash:generateContent");
+        Assert.Equal("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", result);
+    }
+
     #endregion
 }

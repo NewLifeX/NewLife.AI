@@ -312,7 +312,11 @@ public class ToolRegistry : IToolProvider
     public async Task<String> TryInvokeAsync(String name, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
         if (!TryGetHandler(name, out var handler))
-            return $"{{\"error\":\"tool '{name}' not registered\"}}";
+        {
+            // 工具名可能含引号/反斜杠，整体 JSON 转义避免产出非法 JSON（A-73）
+            var msg = $"tool '{name}' not registered";
+            return $"{{\"error\":{msg.ToJson()}}}";
+        }
         try
         {
             return await handler(arguments, context, cancellationToken).ConfigureAwait(false);
@@ -439,12 +443,22 @@ public class ToolRegistry : IToolProvider
             return "null";
         if (result is Task<String> taskStr)
             return await taskStr.ConfigureAwait(false);
+        if (result is ValueTask<String> valueTaskStr)
+            return await valueTaskStr.AsTask().ConfigureAwait(false);
         if (result is Task task)
         {
             await task.ConfigureAwait(false);
-            // ValueTask<T> or Task<T>：通过反射获取 Result 属性
+            // Task<T>：通过反射获取 Result 属性
             var resultProp = result.GetType().GetProperty("Result");
             result = resultProp?.GetValue(result);
+        }
+        else if (result.GetType().IsGenericType && result.GetType().GetGenericTypeDefinition() == typeof(ValueTask<>))
+        {
+            // 泛型 ValueTask<T>：AsTask() 转 Task<T> 后 await，再读 Result（A-73）
+            var asTask = (Task)result.GetType().GetMethod("AsTask")!.Invoke(result, null)!;
+            await asTask.ConfigureAwait(false);
+            var resultProp = asTask.GetType().GetProperty("Result");
+            result = resultProp?.GetValue(asTask);
         }
         if (result == null) return "null";
 

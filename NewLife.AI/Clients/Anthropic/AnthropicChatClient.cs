@@ -98,10 +98,8 @@ public class AnthropicChatClient : AiClientBase
     #region 辅助
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
     protected override String BuildUrl(IChatRequest request)
-    {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        return $"{endpoint}/v1/messages";
-    }
+        // A-73：CombineApiUrl 自动去重 endpoint 末尾版本段，避免 .../v1/v1/messages
+        => CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), "/v1/messages");
 
     /// <summary>构建 Anthropic 请求体</summary>
     /// <param name="request">请求</param>

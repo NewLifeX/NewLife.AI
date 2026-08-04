@@ -207,6 +207,9 @@ public class AiClientRegistry
             Models = models,
             Factory = opts =>
             {
+                // 直接引用调用方 opts（故意设计）：内部回填默认端点等修改同步反映到调用方，
+                // 复用同一 AiClientOptions 创建多服务商时，各服务商默认端点对调用方可见可查。
+                // 勿改为克隆（A-84 曾误改，已恢复）
                 if (String.IsNullOrEmpty(opts.Endpoint)) opts.Endpoint = defaultEndpoint;
                 Object? instance;
                 if (ctor != null)

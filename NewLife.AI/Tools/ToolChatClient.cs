@@ -378,6 +378,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // Token 总限额检查（优先使用 API 返回值，回退字符估算）
             if (CheckTotalTokenLimit(maxTotalTokens, accumulatedUsage))
             {
+                // 归还池化 StringBuilder，避免超限中断路径泄漏池对象（A-73）
+                Pool.StringBuilder.Return(contentSb);
+                Pool.StringBuilder.Return(reasoningSb);
                 // 兜底补发累计总量后退出
                 if (accumulatedUsage != null)
                     yield return new ChatResponse { Usage = accumulatedUsage };
@@ -961,12 +964,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         else if (collector.Count > 0)
             existing = collector[^1];  // 兜底取最后一个（单工具调用时常见）
 
-        if (existing == null && !String.IsNullOrEmpty(delta.Id))
+        if (existing == null)
         {
+            // 首块可能无 Id（部分网关只发 index 或两者都不带），无 Id 也需创建条目，
+            // 否则该工具调用的所有后续增量块都会因收集器为空而丢失（A-73）
             collector.Add(new ToolCall
             {
                 Index = delta.Index,
-                Id = delta.Id,
+                Id = delta.Id ?? String.Empty,
                 Type = delta.Type,
                 Function = new FunctionCall
                 {
@@ -1005,8 +1010,27 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
         if (options?.Tools != null)
         {
+            // options.Tools 中的工具尝试按名字路由到已有 Provider；
+            // 路由不到则注入但记录警告——模型调用必然失败，避免静默误导（A-73）
+            var providerNames = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
+            foreach (var provider in Providers)
+            {
+                foreach (var t in provider.GetTools(null))
+                {
+                    var n = t.Function?.Name;
+                    if (!n.IsNullOrEmpty() && !providerNames.ContainsKey(n))
+                        providerNames[n] = provider;
+                }
+            }
             foreach (var t in options.Tools)
+            {
+                var name = t.Function?.Name;
+                if (!name.IsNullOrEmpty() && !toolMap.ContainsKey(name) && providerNames.TryGetValue(name, out var owner))
+                    toolMap[name] = owner;
+                else if (!name.IsNullOrEmpty() && !providerNames.ContainsKey(name))
+                    Log?.Warn("options.Tools 中工具 {0} 无对应 Provider 路由，模型调用将失败", name);
                 tools.Add(t);
+            }
         }
 
         // 埋点：记录注入给 LLM 的工具名单和 schema 总字符长度，便于评估 token 消耗

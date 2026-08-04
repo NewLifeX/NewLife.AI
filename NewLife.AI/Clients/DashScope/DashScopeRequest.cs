@@ -348,7 +348,7 @@ public class DashScopeRequest : IChatRequest
             return !text.IsNullOrWhiteSpace() ? text : (allowEmptyContent ? String.Empty : text);
 
         if (content == null)
-            return allowEmptyContent ? String.Empty : String.Empty;
+            return String.Empty;
 
         return content + String.Empty;
     }

@@ -58,11 +58,15 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <summary>获取兼容模式完整基础地址</summary>
     private String GetCompatibleBaseUrl() => GetHost() + CompatiblePath;
 
+    /// <summary>外部显式设置的端点覆盖值。为空时按协议模式动态计算（A-73）</summary>
+    private String? _defaultEndpointOverride;
+
     /// <inheritdoc/>
     public override String DefaultEndpoint
     {
-        get => IsNativeProtocol ? GetNativeBaseUrl() : GetCompatibleBaseUrl();
-        set => base.DefaultEndpoint = value;
+        // 外部 setter 显式设置的值优先；否则按协议模式动态计算（原生 /api/v1，兼容 /compatible-mode）
+        get => _defaultEndpointOverride ?? (IsNativeProtocol ? GetNativeBaseUrl() : GetCompatibleBaseUrl());
+        set => _defaultEndpointOverride = value;
     }
 
     /// <summary>是否使用 DashScope 原生协议。Protocol 为空或 "DashScope" 时为原生模式</summary>

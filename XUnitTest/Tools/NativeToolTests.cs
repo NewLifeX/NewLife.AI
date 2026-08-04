@@ -1538,6 +1538,45 @@ public class NativeToolTests
         Assert.Contains("计算结果是 30", texts);
     }
 
+    // ── ValueTask 返回值支持（A-73）─────────────────────────────────────
+
+    /// <summary>返回 ValueTask 的测试工具服务</summary>
+    private sealed class ValueTaskToolService
+    {
+        /// <summary>同步返回 ValueTask&lt;String&gt;</summary>
+        /// <param name="name">名称</param>
+        [ToolDescription("vt_hello")]
+        public ValueTask<String> Hello(String name) => new($"Hello, {name}!");
+
+        /// <summary>异步返回 ValueTask&lt;Int32&gt;</summary>
+        /// <param name="a">加数</param>
+        /// <param name="b">加数</param>
+        [ToolDescription("vt_add")]
+        public async ValueTask<Int32> AddAsync(Int32 a, Int32 b) => a + b;
+    }
+
+    [Fact]
+    [DisplayName("InvokeAsync 支持同步 ValueTask<String> 返回值")]
+    public async Task InvokeAsync_ValueTaskString_ReturnsResult()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new ValueTaskToolService());
+
+        var result = await registry.InvokeAsync("vt_hello", "{\"name\":\"World\"}");
+        Assert.Equal("Hello, World!", result);
+    }
+
+    [Fact]
+    [DisplayName("InvokeAsync 支持异步 ValueTask<Int32> 返回值")]
+    public async Task InvokeAsync_ValueTaskInt_ReturnsResult()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new ValueTaskToolService());
+
+        var result = await registry.InvokeAsync("vt_add", "{\"a\":3,\"b\":5}");
+        Assert.Equal("8", result);
+    }
+
     // ── GetTools 过滤契约 + 请求级状态重置（A-73）────────────────────────
 
     /// <summary>混合系统/普通工具的服务类</summary>

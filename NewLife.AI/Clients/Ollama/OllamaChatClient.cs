@@ -70,10 +70,6 @@ public class OllamaChatClient : AiClientBase, IModelListClient
         var url = BuildUrl(request);
         var body = BuildRequest(request);
 
-        // 追踪流中是否出现过 tool_calls：Ollama 流式 tool_calls 出现在 done=false 中间帧，
-        // 而 done=true 终结帧消息为空，需跨帧传递"本轮有工具调用"的语义至终结帧
-        var streamToolCallSeen = false;
-
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -94,20 +90,6 @@ public class OllamaChatClient : AiClientBase, IModelListClient
             }
 
             var chunk = ParseChunk(line, request, null);
-            if (chunk is OllamaChatResponse or)
-            {
-                if (or.Message?.ToolCalls is { Count: > 0 })
-                    streamToolCallSeen = true;
-
-                // 终结帧：若本轮出现过 tool_calls，直接在 ChatChoice 上覆写 FinishReason，
-                // 确保 ToolChatClient 流式路径能正确进入工具执行循环
-                if (or.Done && streamToolCallSeen)
-                {
-                    var messages = ((IChatResponse)or).Messages;
-                    if (messages is [ChatChoice choice, ..])
-                        choice.FinishReason = FinishReason.ToolCalls;
-                }
-            }
             if (chunk != null)
                 yield return chunk;
         }
@@ -221,11 +203,21 @@ public class OllamaChatClient : AiClientBase, IModelListClient
 
         var url = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/') + "/api/pull";
 
-        // 拉取模型可能耗时数分钟，使用 30 分钟超时
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromMinutes(30));
-        var json = await PostAsync(url, new { model, stream = false }, null, _options, cts.Token).ConfigureAwait(false);
-        return json.ToJsonEntity<OllamaPullStatus>(JsonOptions);
+        // 拉取模型可能耗时数分钟，共享 HttpClient.Timeout（默认 300s）会先触发导致中断，
+        // 这里临时放大超时（30 分钟）执行，finally 恢复（A-73）。拉取为低频操作，并发窗口可忽略
+        var oldTimeout = HttpClient.Timeout;
+        HttpClient.Timeout = TimeSpan.FromMinutes(30);
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromMinutes(30));
+            var json = await PostAsync(url, new { model, stream = false }, null, _options, cts.Token).ConfigureAwait(false);
+            return json.ToJsonEntity<OllamaPullStatus>(JsonOptions);
+        }
+        finally
+        {
+            HttpClient.Timeout = oldTimeout;
+        }
     }
     #endregion
 

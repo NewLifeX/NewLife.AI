@@ -15,6 +15,10 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
     // 城市名 → 站点代码全量缓存（进程内持久，首次查询时并发扫描所有省份后填充）
     private static readonly ConcurrentDictionary<String, String> _stationCache = new(StringComparer.OrdinalIgnoreCase);
 
+    // A-73：全量扫描只执行一次。静态信号量 + 双检，避免并发首个请求各自扫描（跨实例也共享）
+    private static readonly SemaphoreSlim _loadLock = new(1, 1);
+    private static Boolean _stationsLoaded;
+
     private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
     /// <summary>获取指定城市的实时天气信息</summary>
@@ -75,11 +79,36 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
         if (_stationCache.TryGetValue(normalized, out var cached)) return cached;
         if (_stationCache.TryGetValue(city, out cached)) return cached;
 
-        // 首次或未命中：拉取全量省份→城市映射
+        // 首次或未命中：信号量双检保证全量扫描只执行一次（A-73）
+        if (!_stationsLoaded)
+        {
+            await _loadLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                if (!_stationsLoaded)
+                {
+                    await LoadAllStationsAsync(ct).ConfigureAwait(false);
+                    _stationsLoaded = true;
+                }
+            }
+            finally
+            {
+                _loadLock.Release();
+            }
+        }
+
+        if (_stationCache.TryGetValue(normalized, out var found)) return found;
+        if (_stationCache.TryGetValue(city, out found)) return found;
+        return null;
+    }
+
+    /// <summary>拉取全量省份→城市映射并填充缓存</summary>
+    private async Task LoadAllStationsAsync(CancellationToken ct)
+    {
         var pvResp = await _http.GetAsync("https://www.nmc.cn/rest/province", ct).ConfigureAwait(false);
         var pvJson = await pvResp.Content.ReadAsStringAsync().ConfigureAwait(false);
         var provinces = pvJson.ToJsonEntity<List<NmcProvince>>();
-        if (provinces == null || provinces.Count == 0) return null;
+        if (provinces == null || provinces.Count == 0) return;
 
         var tasks = provinces
             .Where(p => !String.IsNullOrEmpty(p.Code))
@@ -97,10 +126,6 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
                 if (key2 != c.City) _stationCache.TryAdd(key2, c.Code);
             }
         }
-
-        if (_stationCache.TryGetValue(normalized, out var found)) return found;
-        if (_stationCache.TryGetValue(city, out found)) return found;
-        return null;
     }
 
     private async Task<List<NmcCity>> FetchCitiesAsync(String provinceCode, CancellationToken ct)

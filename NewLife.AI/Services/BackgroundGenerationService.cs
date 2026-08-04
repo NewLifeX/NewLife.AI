@@ -49,7 +49,7 @@ public class BackgroundGenerationService(ILog log)
         _cancellations[messageId] = cts;
 
         // 启动后台消费任务
-        _ = ConsumeAsync(task, eventStream, onComplete, cts.Token);
+        _ = ConsumeAsync(task, eventStream, onComplete, cts);
     }
 
     /// <summary>订阅事件流。从头回放全部已有事件，任务运行中则继续等待实时事件</summary>
@@ -119,8 +119,9 @@ public class BackgroundGenerationService(ILog log)
 
     #region 辅助
     /// <summary>后台消费事件流。将事件写入 BackgroundTask 供订阅者读取，同时收集完整内容供回调持久化</summary>
-    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete, CancellationToken cancellationToken)
+    private async Task ConsumeAsync(BackgroundTask task, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete, CancellationTokenSource cts)
     {
+        var cancellationToken = cts.Token;
         try
         {
             await foreach (var ev in eventStream.WithCancellation(cancellationToken).ConfigureAwait(false))
@@ -173,8 +174,11 @@ public class BackgroundGenerationService(ILog log)
             task.EndTime = DateTime.Now;
             // 通知订阅者任务已结束（Subscribe 检查 Status 后退出）
             task.Notify();
-            if (_cancellations.TryRemove(task.MessageId, out var removedCts))
-                removedCts.Dispose();
+            // A-73：仅移除并释放自己持有的 CTS。若同 messageId 已重注册新任务，
+            // 当前条目属于新任务，不得误删（否则新任务永久失去取消能力）
+            if (_cancellations.TryGetValue(task.MessageId, out var current) && ReferenceEquals(current, cts)
+                && _cancellations.TryRemove(task.MessageId, out var removed) && ReferenceEquals(removed, cts))
+                removed.Dispose();
 
             // 任务完成后延迟清理，给最后的订阅者回放机会（5分钟后移除，释放 StringBuilder 和事件列表）
             // A-46：校验移除的是当前任务实例，防止同 messageId 新任务被旧清理回调误清空

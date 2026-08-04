@@ -99,7 +99,8 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
         var apiKey = _options.ApiKey;
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
         var model = request.Model ?? _options.Model ?? "imagen-4.0-generate-001";
-        var url = $"{endpoint}/v1beta/models/{model}:predict?key={apiKey}";
+        // A-73：CombineApiUrl 自动去重 endpoint 末尾版本段（v1beta），避免双路径
+        var url = CombineApiUrl(endpoint, $"/v1beta/models/{model}:predict") + $"?key={apiKey}";
 
         var count = (request.N ?? 0) > 0 ? request.N!.Value : 1;
         var body = new
@@ -134,7 +135,8 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     {
         var apiKey = _options.ApiKey;
         var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
-        var url = $"{endpoint}/v1beta/models?key={apiKey}";
+        // A-73：CombineApiUrl 自动去重 endpoint 末尾版本段（v1beta）
+        var url = CombineApiUrl(endpoint, "/v1beta/models") + $"?key={apiKey}";
 
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
         if (json == null) return null;
@@ -173,11 +175,11 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     /// <summary>构建请求地址。子类可重写此方法根据请求参数动态调整路径（如不同模型使用不同端点）</summary>
     protected override String BuildUrl(IChatRequest request)
     {
-        var endpoint = _options.GetEndpoint(DefaultEndpoint).TrimEnd('/');
+        // A-73：CombineApiUrl 自动去重 endpoint 末尾版本段（v1/v1beta）
         if (request.Stream)
-            return $"{endpoint}/v1/models/{request.Model}:streamGenerateContent?alt=sse&key={_options.ApiKey}";
+            return CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), $"/v1/models/{request.Model}:streamGenerateContent") + $"?alt=sse&key={_options.ApiKey}";
         else
-            return $"{endpoint}/v1/models/{request.Model}:generateContent?key={_options.ApiKey}";
+            return CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), $"/v1/models/{request.Model}:generateContent") + $"?key={_options.ApiKey}";
     }
 
     /// <summary>构建 Gemini 请求体</summary>

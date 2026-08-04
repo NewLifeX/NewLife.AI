@@ -274,8 +274,9 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <param name="options">连接选项</param>
     protected virtual void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options) { }
 
-    private static readonly Regex _endpointVersionRx = new Regex(@"/v\d+$", RegexOptions.Compiled);
-    private static readonly Regex _pathVersionRx = new Regex(@"^/v\d+", RegexOptions.Compiled);
+    // 支持 /v1、/v2、/v1beta 等版本段（Gemini 使用 v1beta）（A-73）
+    private static readonly Regex _endpointVersionRx = new Regex(@"/v\d+(?:beta)?$", RegexOptions.Compiled);
+    private static readonly Regex _pathVersionRx = new Regex(@"^/v\d+(?:beta)?", RegexOptions.Compiled);
 
     /// <summary>智能拼接 API 地址与路径。若 endpoint 末尾已含版本段（如 /v1、/v2），则自动去掉 path 开头的版本前缀，避免产生 /v1/v1 或 /v2/v1 的错误路径。</summary>
     /// <param name="endpoint">服务端点，如 https://api.openai.com 或 https://example.com/v1</param>
@@ -365,7 +366,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         SetHeaders(req, chatRequest, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
             throw new ApiException((Int32)resp.StatusCode, json);
@@ -382,7 +383,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         SetHeaders(req, null, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
@@ -421,7 +422,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
         SetHeaders(req, chatRequest, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
             throw new ApiException((Int32)resp.StatusCode, json);
@@ -443,7 +444,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
         SetHeaders(req, null, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
@@ -509,7 +510,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
         };
         SetHeaders(req, chatRequest, options);
-        var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
