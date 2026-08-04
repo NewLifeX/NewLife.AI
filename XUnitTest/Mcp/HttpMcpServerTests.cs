@@ -460,8 +460,8 @@ public class HttpMcpServerTests : IDisposable
         // Act
         server.WriteLog("测试消息: {0}", "参数");
 
-        // Assert
-        Assert.Equal("测试消息: 参数", mockLog.LastMessage);
+        // Assert：ApiHost.WriteLog 带 [Name] 前缀（Name="Mcp"）
+        Assert.Equal("[Mcp]测试消息: 参数", mockLog.LastMessage);
     }
     #endregion
 

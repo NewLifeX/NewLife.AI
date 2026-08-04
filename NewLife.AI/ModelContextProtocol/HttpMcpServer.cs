@@ -2,6 +2,7 @@
 using NewLife;
 using NewLife.Data;
 using NewLife.Http;
+using NewLife.Log;
 using NewLife.Serialization;
 
 namespace NewLife.AI.ModelContextProtocol;
@@ -46,6 +47,15 @@ public class HttpMcpServer : McpServer
     /// <summary>处理MCP请求</summary>
     public void ProcessRequest(IHttpContext context)
     {
+        // A-36：限制请求体大小，防止超大 body 打爆内存（DoS）。MCP 请求 JSON 通常 < 1MB
+        const Int32 maxBodyBytes = 1024 * 1024;
+        var body = context.Request.Body;
+        if (body != null && body.Length > maxBodyBytes)
+        {
+            context.Response.StatusCode = HttpStatusCode.RequestEntityTooLarge;
+            return;
+        }
+
         var request = context.Request.Body?.ToStr().ToJsonEntity<JsonRpcRequest>();
         if (request == null)
         {
@@ -83,8 +93,15 @@ public class HttpMcpServer : McpServer
         var json = data.ToJson();
         var message = $"event: message\ndata: {json}\n\n";
 
+        // A-35：Connection 在不同传输上下文可能为 null，判空避免 NRE
+        if (context.Connection == null)
+        {
+            XTrace.WriteLine("[HttpMcpServer] 连接为空，无法发送 MCP 响应");
+            return;
+        }
+
         using var rs = response.Build();
-        context.Connection!.Send(rs);
+        context.Connection.Send(rs);
     }
     #endregion
 }

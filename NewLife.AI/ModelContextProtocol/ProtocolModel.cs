@@ -38,9 +38,3 @@ public record ToolListResult(IList<ToolDefinition> Tools);
 
 /// <summary>工具定义</summary>
 public record ToolDefinition(String Name, String? Description, Object InputSchema);
-
-/// <summary>进度通知</summary>
-public record ProgressNotification(String JsonRpc, String Method, ProgressParams Params);
-
-/// <summary>进度参数</summary>
-public record ProgressParams(String ProgressToken, Int32 Progress, Int32 Total, String Message);

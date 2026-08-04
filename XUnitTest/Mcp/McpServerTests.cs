@@ -78,7 +78,8 @@ public class McpServerTests
         // Assert
         Assert.NotNull(server.Manager);
         Assert.Equal(Logger.Null, server.Log);
-        Assert.Null(server.Tracer);
+        // A-27：Host 绑定后应从本服务器解析出 IApiManager（tools/call 可用）
+        Assert.Same(server.Manager, ((IServiceProvider)server).GetService(typeof(NewLife.Remoting.IApiManager)));
     }
     #endregion
 
@@ -146,9 +147,9 @@ public class McpServerTests
     }
 
     [Fact]
-    public void Process_WithInitializedNotification_ShouldReturnInitializeResult()
+    public void Process_WithInitializedNotification_ShouldReturnNull()
     {
-        // Arrange
+        // JSON-RPC notification（无 Id）不得响应。A-29 修复前错误地返回了 InitializeResult
         var server = new McpServer();
         var context = CreateTestContext();
         var request = new JsonRpcRequest("2.0", "notifications/initialized", null, null);
@@ -157,10 +158,7 @@ public class McpServerTests
         var response = server.Process(request, context);
 
         // Assert
-        Assert.Equal("2.0", response.JsonRpc);
-        Assert.NotNull(response.Result);
-        Assert.Null(response.Error);
-        Assert.Null(response.Id);
+        Assert.Null(response);
     }
     #endregion
 
@@ -388,8 +386,8 @@ public class McpServerTests
         // Act
         server.WriteLog("测试日志 {0}", "参数");
 
-        // Assert
-        Assert.Equal("测试日志 参数", mockLog.LastMessage);
+        // Assert：ApiHost.WriteLog 带 [Name] 前缀（Name="Mcp"）
+        Assert.Equal("[Mcp]测试日志 参数", mockLog.LastMessage);
     }
 
     /// <summary>Mock日志实现</summary>
