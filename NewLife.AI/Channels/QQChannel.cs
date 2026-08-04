@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
 using NewLife.Log;
-using NewLife.Remoting;
 
 namespace NewLife.AI.Channels;
 
@@ -33,9 +32,15 @@ public class QQChannel : IMessageChannel, ILogFeature
     private const String _baseUrl = "https://api.sgroup.qq.com";
     private const String _sandboxUrl = "https://sandbox.api.sgroup.qq.com";
 
-    // token 缓存：key=BotAppId, value=Token
-    private static readonly ConcurrentDictionary<String, String> _tokenCache = new();
+    // 每个 BotToken 对应一个 HttpClient，避免重复创建连接（A-01：原实现每次请求 new HttpClient 连接泄漏）
+    private readonly ConcurrentDictionary<String, HttpClient> _clients = new();
     #endregion
+
+    private HttpClient GetClient(String botToken)
+    {
+        var client = _clients.GetOrAdd(botToken, token => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
+        return client;
+    }
 
     /// <summary>发送消息到 QQ 群或用户</summary>
     /// <param name="target">目标。格式：{BotAppId}:{BotToken}:{TargetType}:{TargetId}</param>
@@ -54,9 +59,6 @@ public class QQChannel : IMessageChannel, ILogFeature
         var botToken = parts[1];
         var targetType = parts[2]; // "group" 或 "c2c"
         var targetId = parts[3];
-
-        // 缓存 token 避免重复解析
-        _tokenCache[botAppId] = botToken;
 
         // QQ Bot API 使用 HTTPS header 鉴权，直接使用 HttpClient 发送
         var isSandbox = false;
@@ -108,7 +110,7 @@ public class QQChannel : IMessageChannel, ILogFeature
 
         try
         {
-            using var httpClient = new HttpClient();
+            var httpClient = GetClient(botToken);
             var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {

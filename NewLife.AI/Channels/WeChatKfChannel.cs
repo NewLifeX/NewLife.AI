@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using NewLife.Log;
 using NewLife.Remoting;
+using NewLife.Serialization;
 
 namespace NewLife.AI.Channels;
 
@@ -24,6 +25,9 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
 
     /// <summary>日志</summary>
     public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>客服 Secret。由外部配置注入（如渠道管理配置），发送前必须设置，否则无法获取 access_token</summary>
+    public String? AppSecret { get; set; }
 
     private readonly ConcurrentDictionary<String, ApiHttpClient> _clients = new();
 
@@ -62,52 +66,39 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
             var result = await client.InvokeAsync<String>(url, null, cancellationToken).ConfigureAwait(false);
             if (result.IsNullOrWhiteSpace()) return null;
 
-            // 解析 JSON 响应获取 access_token
-            var tokenKey = "\"access_token\":\"";
-            var tokenStart = result.IndexOf(tokenKey, StringComparison.Ordinal);
-            if (tokenStart >= 0)
+            // 结构化解析 JSON 响应（A-09：原实现用字符串搜索 IndexOf 脆弱易错）
+            var token = result.ToJsonEntity<WxTokenResponse>();
+            if (token == null || token.AccessToken.IsNullOrWhiteSpace())
             {
-                tokenStart += tokenKey.Length;
-                var tokenEnd = result.IndexOf('"', tokenStart);
-                if (tokenEnd > tokenStart)
-                {
-                    var token = result.Substring(tokenStart, tokenEnd - tokenStart);
-                    if (!token.IsNullOrWhiteSpace())
-                    {
-                        var expiresIn = 7000;
-                        var expKey = "\"expires_in\":";
-                        var expStart = result.IndexOf(expKey, StringComparison.Ordinal);
-                        if (expStart >= 0)
-                        {
-                            expStart += expKey.Length;
-                            var expEnd = result.IndexOfAny(new[] { ',', '}' }, expStart);
-                            if (expEnd > expStart)
-                            {
-                                var expStr = result.Substring(expStart, expEnd - expStart);
-                                if (Int32.TryParse(expStr, out var exp) && exp > 0)
-                                    expiresIn = exp - 200;
-                            }
-                        }
-
-                        _tokenCache[appId] = new TokenCache
-                        {
-                            Token = token,
-                            ExpireTime = DateTime.UtcNow.AddSeconds(expiresIn > 0 ? expiresIn : 7000),
-                        };
-
-                        return token;
-                    }
-                }
+                Log.Error("微信客服 access_token 获取失败：{0}", result);
+                return null;
             }
 
-            Log.Error("微信客服 access_token 获取失败：{0}", result);
-            return null;
+            // 微信 token 有效期为 7200 秒，缓存提前 200 秒刷新
+            var expiresIn = token.ExpiresIn > 0 ? token.ExpiresIn - 200 : 7000;
+            _tokenCache[appId] = new TokenCache
+            {
+                Token = token.AccessToken,
+                ExpireTime = DateTime.UtcNow.AddSeconds(expiresIn > 0 ? expiresIn : 7000),
+            };
+
+            return token.AccessToken;
         }
         catch (Exception ex)
         {
             Log.Error("微信客服 access_token 获取异常：{0}", ex.Message);
             return null;
         }
+    }
+
+    /// <summary>微信 access_token 接口响应</summary>
+    private class WxTokenResponse
+    {
+        /// <summary>访问令牌</summary>
+        public String? AccessToken { get; set; }
+
+        /// <summary>有效期（秒）</summary>
+        public Int32 ExpiresIn { get; set; }
     }
 
     /// <summary>发送消息到微信客服用户</summary>
@@ -124,9 +115,14 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
         var appId = parts[0];
         var openId = parts.Length > 1 ? parts[1] : target;
 
-        var secret = "";
+        // AppSecret 由外部通过 AppSecret 属性注入（渠道管理配置），不允许硬编码空串导致必然失败
+        if (AppSecret.IsNullOrWhiteSpace())
+        {
+            Log.Error("微信客服发送失败：未配置 AppSecret，无法获取 access_token。请通过 {0}.AppSecret 注入", nameof(WeChatKfChannel));
+            return false;
+        }
 
-        var token = await GetAccessTokenAsync(appId, secret, cancellationToken).ConfigureAwait(false);
+        var token = await GetAccessTokenAsync(appId, AppSecret!, cancellationToken).ConfigureAwait(false);
         if (token == null) return false;
 
         // 微信客服消息（JSON 格式）

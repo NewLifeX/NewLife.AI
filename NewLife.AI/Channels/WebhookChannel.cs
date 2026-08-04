@@ -55,8 +55,15 @@ public class WebhookChannel : IMessageChannel, ILogFeature
         }
     }
 
-    /// <summary>验证配置是否有效</summary>
-    /// <param name="config">JSON格式配置</param>
+    /// <summary>验证配置是否有效（必须是合法的 http/https URL）</summary>
+    /// <param name="config">Webhook URL</param>
     /// <returns>是否有效</returns>
-    public Task<Boolean> ValidateConfigAsync(String config) => Task.FromResult(true);
+    public Task<Boolean> ValidateConfigAsync(String config)
+    {
+        if (String.IsNullOrWhiteSpace(config)) return Task.FromResult(false);
+
+        // A-08：原实现恒返回 true 形同虚设。校验为合法的 http/https 绝对 URL
+        if (!Uri.TryCreate(config, UriKind.Absolute, out var uri)) return Task.FromResult(false);
+        return Task.FromResult(uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }
 }

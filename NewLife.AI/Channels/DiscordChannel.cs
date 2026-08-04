@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text;
 using NewLife.Log;
@@ -24,8 +25,15 @@ public class DiscordChannel : IMessageChannel, ILogFeature
     /// <summary>日志</summary>
     public ILog Log { get; set; } = Logger.Null;
 
-    private static readonly HttpClient _http = new();
+    // 每个 BotToken 对应一个 HttpClient，避免重复创建连接；实例级而非静态，便于测试隔离
+    private readonly ConcurrentDictionary<String, HttpClient> _clients = new();
     #endregion
+
+    private HttpClient GetClient(String botToken)
+    {
+        var client = _clients.GetOrAdd(botToken, token => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
+        return client;
+    }
 
     /// <summary>发送消息到 Discord 频道</summary>
     /// <param name="target">目标。频道 ID（格式：{BotToken}:{ChannelId}）</param>
@@ -58,7 +66,8 @@ public class DiscordChannel : IMessageChannel, ILogFeature
 
         try
         {
-            var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var httpClient = GetClient(botToken);
+            var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 Log.Debug("Discord 发送成功");

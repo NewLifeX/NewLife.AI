@@ -84,7 +84,7 @@ public class SlackChannel : IMessageChannel, ILogFeature
     /// <summary>将 Markdown 转换为 Slack mrkdwn 格式</summary>
     /// <param name="markdown">标准 Markdown 文本</param>
     /// <returns>Slack mrkdwn 格式文本</returns>
-    private static String ConvertToSlackMarkdown(String markdown)
+    internal static String ConvertToSlackMarkdown(String markdown)
     {
         if (markdown.IsNullOrEmpty()) return markdown;
 

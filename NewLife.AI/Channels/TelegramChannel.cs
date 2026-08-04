@@ -112,7 +112,7 @@ public class TelegramChannel : IMessageChannel, ILogFeature
     /// <summary>将 Markdown 转换为 Telegram HTML 格式</summary>
     /// <param name="markdown">标准 Markdown 文本</param>
     /// <returns>Telegram HTML 格式文本</returns>
-    private static String ConvertToHtml(String markdown)
+    internal static String ConvertToHtml(String markdown)
     {
         if (markdown.IsNullOrEmpty()) return markdown;
 
@@ -164,7 +164,7 @@ public class TelegramChannel : IMessageChannel, ILogFeature
         return sb.ToString().TrimEnd();
     }
 
-    private static String EscapeHtml(String text)
+    internal static String EscapeHtml(String text)
     {
         return text
             .Replace("&", "&amp;")
