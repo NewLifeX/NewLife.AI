@@ -36,9 +36,10 @@ public class ToolResult : IToolResult, IExtend
     /// <summary>创建双受众工具结果：User 内容发前端渲染，Llm 内容作模型摘要。可视化/文档类工具统一入口，避免重复构造</summary>
     /// <param name="userContent">前端用户受众内容（完整渲染数据）</param>
     /// <param name="llmContent">LLM 受众摘要（简短确认，避免大结果污染模型上下文）</param>
+    /// <param name="isError">是否失败标记，失败时 ToolChatClient 以 error 事件发出</param>
     /// <returns>双受众工具结果</returns>
-    public static ToolResult ForAudiences(String userContent, String llmContent)
-        => new(ToolContent.ForUser(userContent), ToolContent.ForLlm(llmContent));
+    public static ToolResult ForAudiences(String userContent, String llmContent, Boolean isError = false)
+        => new(ToolContent.ForUser(userContent), ToolContent.ForLlm(llmContent)) { IsError = isError };
 
     /// <summary>从内容块列表构造</summary>
     public ToolResult(params ToolContent[] contents)

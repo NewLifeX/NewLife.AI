@@ -785,10 +785,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (!llmContent.StartsWith(toolPrefix))
                 llmContent = $"{toolPrefix}{llmContent}";
 
-            var result = new ToolResult(
-                ToolContent.ForUser(toolEx.ForUser),
-                ToolContent.ForLlm(llmContent))
-            { IsError = true };
+            var result = ToolResult.ForAudiences(toolEx.ForUser, llmContent, true);
             await FireCallbackAsync(result).ConfigureAwait(false);
             return result;
         }

@@ -870,6 +870,37 @@ public class NativeToolTests
         Assert.Contains("\\\\", json);
     }
 
+    // ── ToolResult.ForAudiences 双受众工厂测试 ────────────────────────────────
+
+    [Fact]
+    [DisplayName("ForAudiences 创建 User+Llm 双受众内容块")]
+    public void ForAudiences_CreatesTwoAudiences()
+    {
+        var result = ToolResult.ForAudiences("用户数据", "模型摘要");
+
+        Assert.Equal(2, result.Contents.Count);
+        Assert.True(result.Contents[0].Audience.HasFlag(ToolAudience.User));
+        Assert.Equal("用户数据", result.Contents[0].Data);
+        Assert.True(result.Contents[1].Audience.HasFlag(ToolAudience.Llm));
+        Assert.Equal("模型摘要", result.Contents[1].Data);
+    }
+
+    [Fact]
+    [DisplayName("ForAudiences 默认 IsError=false")]
+    public void ForAudiences_DefaultNotError()
+    {
+        var result = ToolResult.ForAudiences("用户数据", "模型摘要");
+        Assert.False(result.IsError);
+    }
+
+    [Fact]
+    [DisplayName("ForAudiences 支持 isError 参数标记失败")]
+    public void ForAudiences_IsError_True()
+    {
+        var result = ToolResult.ForAudiences("错误", "请重试", true);
+        Assert.True(result.IsError);
+    }
+
     // ── ToolApprovalTier 三档权限测试 ─────────────────────────────────────────
 
     [Fact]
