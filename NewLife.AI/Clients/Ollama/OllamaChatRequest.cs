@@ -301,11 +301,13 @@ public class OllamaChatRequest : IChatRequest
     private static Object? MapResponseFormat(Object? responseFormat)
     {
         if (responseFormat is String str) return str;
+        if (responseFormat == null) return null;
 
-        IDictionary<String, Object>? dic = responseFormat as IDictionary<String, Object>;
+        var dic = responseFormat as IDictionary<String, Object?>;
         if (dic == null)
         {
             var json = responseFormat as String ?? responseFormat.ToJson();
+            if (json.IsNullOrEmpty()) return null;
             dic = JsonParser.Decode(json);
         }
         if (dic == null) return null;

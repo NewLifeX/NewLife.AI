@@ -42,12 +42,31 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     public virtual String ChatPath { get; set; } = "";
 
     private HttpClient? _httpClient;
+    // A-59：标记 HttpClient 是否为内部创建。内部创建的由本类 Dispose 释放；外部注入的由注入方负责
+    private Boolean _ownsHttpClient;
 
     /// <summary>HTTP 客户端。首次访问时自动创建；可替换为代理、自定义管道或测试用 Mock</summary>
     public HttpClient HttpClient
     {
-        get => _httpClient ??= CreateHttpClient();
-        set => _httpClient = value;
+        get
+        {
+            if (_httpClient == null)
+            {
+                _httpClient = CreateHttpClient();
+                _ownsHttpClient = true;
+            }
+            return _httpClient;
+        }
+        set
+        {
+            // 替换外部客户端时，若此前持有内部创建实例则先释放
+            if (_ownsHttpClient)
+            {
+                _httpClient?.Dispose();
+                _ownsHttpClient = false;
+            }
+            _httpClient = value;
+        }
     }
 
     /// <summary>JSON 处理器。默认使用 SystemJson，映射到 System.Text.Json </summary>
@@ -59,7 +78,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <summary>连接选项</summary>
     protected readonly AiClientOptions _options;
 
-    private static IJsonHost _host;
+    private static readonly IJsonHost _host;
     #endregion
 
     #region 构造
@@ -113,8 +132,17 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         return client;
     }
 
-    /// <summary>释放资源</summary>
-    public virtual void Dispose() { }
+    /// <summary>释放资源。只释放内部创建的 HttpClient（外部注入的由注入方负责）</summary>
+    public virtual void Dispose()
+    {
+        // A-59：原空实现导致内部创建的 HttpClient 及其连接池从不释放
+        if (_ownsHttpClient)
+        {
+            _httpClient?.Dispose();
+            _ownsHttpClient = false;
+        }
+        _httpClient = null;
+    }
     #endregion
 
     #region 核心方法
@@ -251,11 +279,14 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
 
     /// <summary>智能拼接 API 地址与路径。若 endpoint 末尾已含版本段（如 /v1、/v2），则自动去掉 path 开头的版本前缀，避免产生 /v1/v1 或 /v2/v1 的错误路径。</summary>
     /// <param name="endpoint">服务端点，如 https://api.openai.com 或 https://example.com/v1</param>
-    /// <param name="path">API 路径，如 /v1/chat/completions</param>
+    /// <param name="path">API 路径，如 /v1/chat/completions 或 v1/chat/completions</param>
     /// <returns>完整请求 URL</returns>
     public static String CombineApiUrl(String endpoint, String path)
     {
         var base_ = endpoint.TrimEnd('/');
+        // A-68：path 无前导斜杠时规范化（如 "v1/chat/completions"），避免拼出畸形 URL
+        if (!path.StartsWith("/", StringComparison.Ordinal))
+            path = "/" + path;
         if (_endpointVersionRx.IsMatch(base_))
             path = _pathVersionRx.Replace(path, String.Empty);
         return base_ + path;

@@ -156,12 +156,8 @@ public partial class OpenAIChatClient
     private EmbeddingClientMetadata? _embeddingMetadata;
 
     /// <summary>嵌入客户端元数据。实现 <see cref="IEmbeddingClient"/></summary>
-    public EmbeddingClientMetadata Metadata => _embeddingMetadata ??= new EmbeddingClientMetadata
-    {
-        ProviderName = Name,
-        Endpoint = _options.GetEndpoint(DefaultEndpoint),
-        DefaultModel = _options.Model,
-    };
+    public EmbeddingClientMetadata Metadata => _embeddingMetadata ??=
+        new EmbeddingClientMetadata(Name, _options.GetEndpoint(DefaultEndpoint), _options.Model);
 
     /// <summary>嵌入路径。默认 /v1/embeddings，子类可重写以适配服务商差异</summary>
     protected virtual String EmbeddingPath => "/v1/embeddings";

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace NewLife.AI.Clients;
 
@@ -12,11 +13,12 @@ namespace NewLife.AI.Clients;
 public class AiClientRegistry
 {
     #region 属性
-    private readonly Dictionary<String, AiClientDescriptor> _descriptors = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<String, AiClientDescriptor> _displayNames = new(StringComparer.OrdinalIgnoreCase);
+    // A-60：使用 ConcurrentDictionary 支持运行时并发 Register + 查询（Default 是公共可变单例）
+    private readonly ConcurrentDictionary<String, AiClientDescriptor> _descriptors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<String, AiClientDescriptor> _displayNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>已注册的描述符字典（Code → 描述符，大小写不敏感）</summary>
-    public IReadOnlyDictionary<String, AiClientDescriptor> Descriptors => _descriptors;
+    public ConcurrentDictionary<String, AiClientDescriptor> Descriptors => _descriptors;
 
     /// <summary>全局默认实例。包含所有内置服务商描述符</summary>
     public static AiClientRegistry Default { get; } = CreateDefault();
@@ -29,6 +31,13 @@ public class AiClientRegistry
     public AiClientRegistry Register(AiClientDescriptor descriptor)
     {
         if (descriptor == null) throw new ArgumentNullException(nameof(descriptor));
+
+        // A-65：同 Code 重注册时清理旧 DisplayName 条目，避免 _displayNames 残留过期描述符
+        if (_descriptors.TryGetValue(descriptor.Code, out var old))
+        {
+            if (!old.DisplayName.IsNullOrEmpty() && !old.DisplayName.Equals(descriptor.DisplayName, StringComparison.OrdinalIgnoreCase))
+                _displayNames.TryRemove(old.DisplayName, out _);
+        }
 
         _descriptors[descriptor.Code] = descriptor;
         if (!descriptor.DisplayName.IsNullOrEmpty())
@@ -50,7 +59,17 @@ public class AiClientRegistry
 
         // 收集所有标注了 [AiClient] 的 IChatClient 具体类型
         var entries = new List<(Int32 order, AiClientAttribute attr, Type type)>();
-        foreach (var type in assembly.GetTypes())
+        // A-66：GetTypes 遇类型加载失败（插件程序集常见）抛 ReflectionTypeLoadException，用 GetTypes 的异常子集降级
+        Type[] types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            types = ex.Types.Where(t => t != null).Cast<Type>().ToArray();
+        }
+        foreach (var type in types)
         {
             if (type.IsAbstract || type.IsInterface) continue;
             if (!typeof(IChatClient).IsAssignableFrom(type)) continue;

@@ -375,7 +375,7 @@ public class AnthropicRequest : IChatRequest
                         ["source"] = new Dictionary<String, Object>
                         {
                             ["type"] = "url",
-                            ["url"] = img.Uri,
+                            ["url"] = img.Uri!,
                         }
                     });
                 }

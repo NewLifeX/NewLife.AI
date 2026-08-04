@@ -62,7 +62,13 @@ public sealed class ChatClientBuilder
     /// <returns>当前构建器（支持链式调用）</returns>
     internal ChatClientBuilder SetInnerClient(IChatClient client)
     {
-        _innermost = client ?? throw new ArgumentNullException(nameof(client));
+        if (client == null) throw new ArgumentNullException(nameof(client));
+
+        // A-63：重复设置时释放被替换的旧客户端，避免泄漏（仅当非同一实例）
+        if (!ReferenceEquals(_innermost, client))
+            (_innermost as IDisposable)?.Dispose();
+
+        _innermost = client;
         return this;
     }
 

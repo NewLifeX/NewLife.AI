@@ -323,10 +323,11 @@ public class GeminiRequest : IChatRequest
         if (responseFormat == null) return;
 
         // 统一转为字典：优先直接类型，否则序列化后重新解析（兼容 JsonElement 等表示）
-        IDictionary<String, Object>? dic = responseFormat as IDictionary<String, Object>;
+        var dic = responseFormat as IDictionary<String, Object?>;
         if (dic == null)
         {
             var json = responseFormat as String ?? responseFormat.ToJson();
+            if (json.IsNullOrEmpty()) return;
             dic = JsonParser.Decode(json);
         }
         if (dic == null) return;

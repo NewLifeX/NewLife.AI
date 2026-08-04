@@ -1,4 +1,4 @@
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife.Serialization;
@@ -57,13 +57,22 @@ public sealed class DashScopeRealtimeClient : IDisposable
         _cts = new CancellationTokenSource();
 
         var ws = new ClientWebSocket();
-        ws.Options.SetRequestHeader("Authorization", "Bearer " + _apiKey);
+        try
+        {
+            ws.Options.SetRequestHeader("Authorization", "Bearer " + _apiKey);
 
-        var uri = new Uri($"{RealtimeEndpoint}?model={Uri.EscapeDataString(model)}");
-        await ws.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
+            var uri = new Uri($"{RealtimeEndpoint}?model={Uri.EscapeDataString(model)}");
+            await ws.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
 
-        _ws = ws;
-        Model = model;
+            _ws = ws;
+            Model = model;
+        }
+        catch
+        {
+            // A-62：连接失败时释放 ws，避免泄漏
+            ws.Dispose();
+            throw;
+        }
     }
 
     /// <summary>断开 WebSocket 连接</summary>
@@ -147,17 +156,20 @@ public sealed class DashScopeRealtimeClient : IDisposable
     {
         EnsureConnected();
 
+        // A-61：链接内部 _cts.Token，使 Dispose 的取消能中断接收循环（原 _cts 是死状态）
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts?.Token ?? CancellationToken.None, cancellationToken);
+
         var buffer = new Byte[16 * 1024];
         var sb = new StringBuilder();
 
         while (_ws!.State == WebSocketState.Open)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            linkedCts.Token.ThrowIfCancellationRequested();
 
             WebSocketReceiveResult result;
             try
             {
-                result = await _ws.ReceiveAsync(new ArraySegment<Byte>(buffer), cancellationToken).ConfigureAwait(false);
+                result = await _ws.ReceiveAsync(new ArraySegment<Byte>(buffer), linkedCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -275,19 +287,23 @@ public class RealtimeEvent
     /// <returns>解析后的事件对象；解析失败时返回 null</returns>
     public static RealtimeEvent? Parse(String json)
     {
+        // JsonParser.Decode 直接返回 IDictionary<String, Object?>，无需 as 二次转换
         IDictionary<String, Object?>? dic;
-        try { dic = JsonParser.Decode(json) as IDictionary<String, Object?>; }
+        try { dic = JsonParser.Decode(json); }
         catch { return null; }
 
         if (dic == null) return null;
 
         var evt = new RealtimeEvent
         {
+            // type / event_id 为每个事件必选键，直接索引访问
             Type = dic["type"] as String ?? "",
             EventId = dic["event_id"] as String,
             Raw = dic,
         };
 
+        // session / response / delta / item_index 为可选键，不同事件类型可能缺失，
+        // 用 TryGetValue 避免 KeyNotFoundException 中断接收循环
         if (dic["session"] is IDictionary<String, Object?> session)
             evt.SessionId = session["id"] as String;
 

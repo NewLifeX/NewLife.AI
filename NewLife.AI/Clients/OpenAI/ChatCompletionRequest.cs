@@ -367,6 +367,11 @@ public class ChatCompletionRequest : IChatRequest
                 var cm = new ChatMessage
                 {
                     Role = msg.Role,
+                    // A-64：与 FromChatRequest 对称复制 Name/ToolCallId/ReasoningContent，
+                    // 否则 tool 消息回送丢 tool_call_id 触发 400、DeepSeek 思考轮丢 reasoning_content 触发 400
+                    Name = msg.Name,
+                    ToolCallId = msg.ToolCallId,
+                    ReasoningContent = msg.ReasoningContent,
                     ToolCalls = msg.ToolCalls,
                     Contents = msg.Contents,
                 };
