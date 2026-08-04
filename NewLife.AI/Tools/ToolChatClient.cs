@@ -92,6 +92,13 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
 
+        // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），否则上一请求的
+        // 限额/超限标志/失败轮数会污染下一请求的判定
+        IsTotalTokenLimitExceeded = false;
+        IsToolLoopLimitExceeded = false;
+        _fallbackEstimatedTokens = 0;
+        _consecutiveFailureRounds = 0;
+
         var (mergedTools, toolMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)
             return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
@@ -194,7 +201,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 {
                     Role = "tool",
                     ToolCallId = tc.Id,
-                    Content = llmContent
+                    Content = TruncateResult(llmContent)
                 });
             }
 
@@ -239,6 +246,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
+
+        // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），与 GetResponseAsync 保持一致
+        IsTotalTokenLimitExceeded = false;
+        IsToolLoopLimitExceeded = false;
+        _fallbackEstimatedTokens = 0;
+        _consecutiveFailureRounds = 0;
 
         var (mergedTools, toolMap) = GetMergedTools(request);
         if (mergedTools.Count == 0)

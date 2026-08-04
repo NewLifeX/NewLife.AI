@@ -19,7 +19,7 @@ public static class ToolHelper
         {
             // A-11：非字面 IP 的主机名可能解析到内网地址（DNS rebinding / 域名指向内网），解析后检查
             ip = ResolveHost(host);
-            if (ip == null) return false;   // 解析失败放行，由 HTTP 层自行报错
+            if (ip == null) return true;   // 解析失败无法确认目标非内网，保守视为风险（A-73）
         }
 
         return IsPrivateIp(ip);
@@ -42,8 +42,9 @@ public static class ToolHelper
         }
         catch { }
 
-        // 缓存结果（含 null，避免反复解析失败）
-        _dnsCache[host] = result;
+        // 仅缓存非空解析结果：解析失败不缓存，避免域名后解析到内网（DNS rebinding）时被旧缓存放行
+        if (result != null)
+            _dnsCache[host] = result;
         return result;
     }
 
@@ -87,12 +88,13 @@ public static class ToolHelper
     }
 
     /// <summary>创建带默认配置的 HttpClient（自动解压、重定向、30秒超时）</summary>
-    public static HttpClient CreateDefaultHttpClient()
+    /// <param name="allowRedirect">是否允许自动重定向。抓取用户可控 URL 时应传 false，防止重定向绕过 SSRF 校验（A-73）</param>
+    public static HttpClient CreateDefaultHttpClient(Boolean allowRedirect = true)
     {
         var client = new HttpClient(new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            AllowAutoRedirect = true,
+            AllowAutoRedirect = allowRedirect,
             MaxAutomaticRedirections = 5,
         });
         client.Timeout = TimeSpan.FromSeconds(30);

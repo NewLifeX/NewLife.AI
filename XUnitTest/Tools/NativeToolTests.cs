@@ -1537,4 +1537,93 @@ public class NativeToolTests
         // 工具被真实执行（进入第 2 轮产出最终文本），stop 未把工具回合误判为普通文本回合
         Assert.Contains("计算结果是 30", texts);
     }
+
+    // ── GetTools 过滤契约 + 请求级状态重置（A-73）────────────────────────
+
+    /// <summary>混合系统/普通工具的服务类</summary>
+    private sealed class MixedToolService
+    {
+        /// <summary>系统工具</summary>
+        [ToolDescription("sys_check", IsSystem = true)]
+        public String SysCheck() => "ok";
+
+        /// <summary>普通工具</summary>
+        [ToolDescription("user_tool")]
+        public String UserTool() => "user";
+    }
+
+    /// <summary>按序返回预设 Usage 的假客户端（用于验证跨请求状态重置）</summary>
+    private sealed class UsageSequenceClient : IChatClient
+    {
+        private readonly UsageDetails[] _usages;
+        private Int32 _index;
+
+        public UsageSequenceClient(params UsageDetails[] usages) => _usages = usages;
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+        {
+            var usage = _index < _usages.Length ? _usages[_index++] : null;
+            return Task.FromResult<IChatResponse>(new ChatResponse { Usage = usage });
+        }
+
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
+    [Fact]
+    [DisplayName("GetTools 过滤契约：空集合仅返回系统工具，非空集合返回系统工具+指定")]
+    public void GetTools_FilterContract_MatchesInterface()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MixedToolService());
+
+        var provider = (IToolProvider)registry;
+
+        // null → 全量
+        Assert.Equal(2, provider.GetTools(null).Count);
+
+        // 空集合 → 仅系统工具
+        var empty = provider.GetTools(new HashSet<String>());
+        Assert.Single(empty);
+        Assert.Equal("sys_check", empty[0].Function!.Name);
+
+        // 非空集合 → 系统工具 + 指定工具
+        var named = provider.GetTools(new HashSet<String>(["user_tool"]));
+        Assert.Equal(2, named.Count);
+        Assert.Contains(named, t => t.Function!.Name == "sys_check");
+        Assert.Contains(named, t => t.Function!.Name == "user_tool");
+
+        // includeSystem=false → 排除系统工具
+        var noSystem = provider.GetTools(new HashSet<String>(["user_tool"]), includeSystem: false);
+        Assert.Single(noSystem);
+        Assert.Equal("user_tool", noSystem[0].Function!.Name);
+    }
+
+    [Fact]
+    [DisplayName("ToolChatClient 请求级状态跨请求重置（A-73）")]
+    public async Task ToolChatClient_State_ResetsPerRequest()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools(new MathToolService());
+
+        // 第一次请求 usage 超限触发中断，第二次请求 usage 正常
+        var innerClient = new UsageSequenceClient(
+            new UsageDetails { InputTokens = 100000, OutputTokens = 1000, TotalTokens = 101000 },
+            new UsageDetails { InputTokens = 5, OutputTokens = 5, TotalTokens = 10 });
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry)
+        {
+            ToolSetting = new ToolSetting { ToolMaxTotalTokens = 100 }
+        };
+
+        // 第一次请求：超限中断
+        await nativeClient.GetResponseAsync("测试1", cancellationToken: default);
+        Assert.True(nativeClient.IsTotalTokenLimitExceeded);
+
+        // 第二次请求：状态已重置，不再残留上一请求的超限标志
+        await nativeClient.GetResponseAsync("测试2", cancellationToken: default);
+        Assert.False(nativeClient.IsTotalTokenLimitExceeded);
+    }
 }

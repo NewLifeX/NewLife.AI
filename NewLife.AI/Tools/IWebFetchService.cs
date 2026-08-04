@@ -29,7 +29,8 @@ public class WebFetchModel
 /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
 public class WebFetchDirectService(HttpClient? httpClient = null) : IWebFetchService
 {
-    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+    // 禁用自动重定向：重定向目标可能指向内网地址，绕过下方 SSRF 校验（A-73）
+    private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient(false);
 
     /// <summary>最大响应体大小（5MB），超出则跳过避免 OOM</summary>
     private const Int64 MaxResponseSize = 5 * 1024 * 1024;

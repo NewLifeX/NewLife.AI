@@ -738,13 +738,19 @@ public class ToolRegistry : IToolProvider
 
     IList<ChatTool> IToolProvider.GetTools(ISet<String>? filterNames, Boolean includeSystem)
     {
-        // 过滤语义：filterNames=null 返回全量；空集合仅返回系统工具；非空集合返回系统工具 + 指定名称工具
-        // includeSystem=false 时始终排除系统工具
+        // 过滤语义（与 IToolProvider 契约一致）：
+        // filterNames=null 返回全量；空集合仅返回系统工具；非空集合返回系统工具 + 指定名称工具
+        // includeSystem=false 时始终排除系统工具（覆盖以上过滤结果）
         var query = _tools.AsEnumerable();
+        if (filterNames != null)
+        {
+            if (filterNames.Count == 0)
+                query = query.Where(t => t.Function?.Name != null && _systemNames.Contains(t.Function.Name));
+            else
+                query = query.Where(t => t.Function?.Name != null && (_systemNames.Contains(t.Function.Name) || filterNames.Contains(t.Function.Name)));
+        }
         if (!includeSystem)
             query = query.Where(t => t.Function?.Name is not null && !_systemNames.Contains(t.Function.Name));
-        if (filterNames != null && filterNames.Count > 0)
-            query = query.Where(t => t.Function?.Name != null && filterNames.Contains(t.Function.Name));
         return [.. query];
     }
 
