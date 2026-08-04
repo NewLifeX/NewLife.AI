@@ -91,7 +91,10 @@ public static class ToolSchemaBuilder
     }
 
     /// <summary>将 .NET 类型映射到 JSON Schema 类型定义</summary>
-    private static Object BuildTypeSchema(Type type, String? description)
+    /// <param name="type">目标类型</param>
+    /// <param name="description">类型描述</param>
+    /// <param name="depth">当前递归深度，用于限制复杂类型展开防止栈溢出</param>
+    private static Object BuildTypeSchema(Type type, String? description, Int32 depth = 0)
     {
         var schema = new Dictionary<String, Object?>();
 
@@ -122,14 +125,14 @@ public static class ToolSchemaBuilder
             var elementType = underlyingType.IsArray
                 ? underlyingType.GetElementType()!
                 : underlyingType.GetGenericArguments().FirstOrDefault() ?? typeof(Object);
-            schema["items"] = BuildTypeSchema(elementType, null);
+            schema["items"] = BuildTypeSchema(elementType, null, depth + 1);
         }
-        else if (underlyingType.IsClass && underlyingType != typeof(Object))
+        else if (underlyingType.IsClass && underlyingType != typeof(Object) && depth < MaxDepth)
         {
             schema["type"] = "object";
             var subProps = new Dictionary<String, Object>();
             foreach (var prop in underlyingType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-                subProps[ToCamelCase(prop.Name)] = BuildTypeSchema(prop.PropertyType, null);
+                subProps[ToCamelCase(prop.Name)] = BuildTypeSchema(prop.PropertyType, null, depth + 1);
             if (subProps.Count > 0)
                 schema["properties"] = subProps;
         }
@@ -138,6 +141,9 @@ public static class ToolSchemaBuilder
 
         return schema;
     }
+
+    /// <summary>最大递归深度。防止极端嵌套类型导致栈溢出（A-10）</summary>
+    private const Int32 MaxDepth = 8;
 
     /// <summary>将 PascalCase 方法名转换为 snake_case 工具名</summary>
     private static String ToSnakeCase(String name)

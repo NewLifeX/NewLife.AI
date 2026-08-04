@@ -60,12 +60,11 @@ public class ChatRequest : ChatOptions, IChatRequest
                 request.Tools.Add(t);
         }
 
-        // 逐项复制 Items，避免整字典别名共享导致调用方原始 request/options 被后续写入污染
+        // 直接引用共享 options.Items（故意设计）：request 与调用方 options 共享同一字典，
+        // 协议层写入 request["xxx"]（如 DashScope 的 EnableWebExtractor）同步反映到调用方，
+        // 多轮循环持续保留协议专属键值。勿改为逐项拷贝（A-53 曾误改，已恢复）
         if (options.Items != null && options.Items.Count > 0)
-        {
-            foreach (var kv in options.Items)
-                request[kv.Key] = kv.Value;
-        }
+            request.Items = options.Items;
 
         return request;
     }

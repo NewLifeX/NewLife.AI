@@ -52,7 +52,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     public IToolApprovalProvider? ApprovalProvider { get; set; }
 
     /// <summary>本次请求的工具可见性过滤集合。null 表示全量；空集合仅保留系统工具；非空集合保留系统工具 + 指定工具。
-    /// 由 <see cref="GetMergedTools"/> 传入各 <see cref="IToolProvider.GetTools(ISet{String}?)"/>，实现会话级工具范围控制</summary>
+    /// 由 <see cref="GetMergedTools"/> 传入各 <see cref="IToolProvider.GetTools"/>，实现会话级工具范围控制</summary>
     public ISet<String>? SelectedTools { get; set; }
 
     private Int32 _failureThreshold = 5;
@@ -175,6 +175,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             {
                 if (tasks[i] == null) continue;
                 var tc = toolCalls[i];
+                if (tc.Function == null) continue;
                 var toolResult = await tasks[i].ConfigureAwait(false);
 
                 // 去重复用：占位结果且缓存已有首次结果 → 替换为复用结果（用户端完整展示，LLM 端简短说明不重复消耗 Token）；
@@ -458,6 +459,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             {
                 var tc = toolCalls[i];
                 if (tasks[i] == null) continue;
+                if (tc.Function == null) continue;
 
                 var toolResult = await tasks[i].ConfigureAwait(false);
 
@@ -804,6 +806,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 throw;
             }
 
+            // 工具返回 null 视为执行失败，转为错误结果避免下游 NRE
+            callResult ??= ToolErrorResult("NULL_RESULT", $"工具 {toolName} 返回了空结果");
+
             await FireCallbackAsync(callResult).ConfigureAwait(false);
             return callResult;
         }
@@ -816,7 +821,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 1. 拼接 ForUser 错误描述（若 ForLlm 未以 ForUser 开头，避免重复）
             // 2. 拼接工具名前缀 [xxx 调用失败]（若工具未自带）
             var toolPrefix = $"[{toolName} 调用失败] ";
-            var llmContent = toolEx.ForLlm;
+            var llmContent = toolEx.ForLlm ?? String.Empty;
             if (!llmContent.IsNullOrEmpty() &&
                 !llmContent.StartsWith(toolEx.ForUser ?? String.Empty, StringComparison.Ordinal))
             {
@@ -825,7 +830,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (!llmContent.StartsWith(toolPrefix))
                 llmContent = $"{toolPrefix}{llmContent}";
 
-            var result = ToolResult.ForAudiences(toolEx.ForUser, llmContent, true);
+            var result = ToolResult.ForAudiences(toolEx.ForUser ?? String.Empty, llmContent, true);
             await FireCallbackAsync(result).ConfigureAwait(false);
             return result;
         }
@@ -883,7 +888,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private static String? TruncateSummary(String? content, Int32 maxLength = 200)
     {
         if (String.IsNullOrWhiteSpace(content)) return content;
-        if (content.Length <= maxLength) return content;
+        if (content!.Length <= maxLength) return content;
         return content[..maxLength] + "...";
     }
 
@@ -1022,6 +1027,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             ParallelToolCalls = request?.ParallelToolCalls,
             UserId = request?.UserId,
             ConversationId = request?.ConversationId,
+            // 直接引用共享 request.Items（故意设计）：与 ChatRequest.Create 保持一致，
+            // 工具循环内协议层写入的扩展键值同步反映到原始 request，多轮持续保留。
+            // 勿改为拷贝（A-53 曾误改，已恢复）
             Items = request?.Items ?? new Dictionary<String, Object?>(),
         };
 

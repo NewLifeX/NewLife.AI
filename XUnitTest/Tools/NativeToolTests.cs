@@ -978,6 +978,14 @@ public class NativeToolTests
     public void IsSsrfRisk_Ipv6Loopback_ReturnsTrue()
         => Assert.True(ToolHelper.IsSsrfRisk("::1"));
 
+    [Fact]
+    [DisplayName("主机名解析为内网 IP 时判定为 SSRF 风险（A-11）")]
+    public void IsSsrfRisk_HostResolvingToPrivateIp_ReturnsTrue()
+    {
+        // 部分环境下 localhost 解析到 ::1 或 127.0.0.1，均为内网
+        Assert.True(ToolHelper.IsSsrfRisk("localhost"));
+    }
+
     // ── ToolHelper.ExtractTextFromHtml ────────────────────────────────────────
 
     [Fact]
