@@ -59,7 +59,7 @@ public class CriticAgent : ConversableAgent
     {
         if (String.IsNullOrWhiteSpace(content)) return false;
         // 检查是否包含独立的 APPROVED 标记（整词匹配，防止误判如 "NOT APPROVED"）
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var lines = content!.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (var line in lines)
         {
             var trimmed = line.Trim(' ', '.', '!', '。', '！');

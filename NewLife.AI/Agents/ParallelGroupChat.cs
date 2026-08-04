@@ -1,4 +1,5 @@
 ﻿using NewLife.Collections;
+using NewLife.Log;
 
 namespace NewLife.AI.Agents;
 
@@ -98,11 +99,12 @@ public sealed class ParallelGroupChat
     {
         var results = new List<(IAgent Agent, IList<AgentMessage> Messages)>();
         var semaphore = new SemaphoreSlim(MaxParallelism, MaxParallelism);
-        var history = new List<AgentMessage> { initial };
 
         var tasks = new List<Task<(IAgent Agent, IList<AgentMessage> Messages)>>();
         foreach (var worker in Workers)
         {
+            // A-16：每个 worker 持独立历史副本，防止 DelegatingAgent 等改写 ctx.History 时并发竞态
+            var history = new List<AgentMessage> { initial };
             tasks.Add(ExecuteWorkerAsync(worker, history, semaphore, cancellationToken));
         }
 
@@ -138,11 +140,14 @@ public sealed class ParallelGroupChat
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // 工作代理超时，降级跳过
+            XTrace.WriteLine("[ParallelGroupChat] 工作代理 {0} 超时（{1}s），降级跳过", worker.GetType().Name, WorkerTimeoutSeconds);
             return (worker, new List<AgentMessage>());
         }
-        catch
+        catch (Exception ex)
         {
-            // 工作代理执行失败，降级跳过
+            // 工作代理执行失败，降级跳过但记录原因（A-17：原裸 catch 吞异常，排障无据）
+            XTrace.WriteException(ex);
+            XTrace.WriteLine("[ParallelGroupChat] 工作代理 {0} 执行失败，降级跳过：{1}", worker.GetType().Name, ex.Message);
             return (worker, new List<AgentMessage>());
         }
         finally

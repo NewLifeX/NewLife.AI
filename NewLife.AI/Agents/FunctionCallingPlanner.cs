@@ -201,27 +201,51 @@ public class FunctionCallingPlanner
         }
 
         // 第二次遍历新追加的步骤（重规划后追加的步骤在原 foreach 中已退出）
+        // A-14：第二次遍历中步骤失败同样接入重规划循环（原实现直接 break 浪费重规划预算）
         var needSecondPass = result.Steps.Any(s => s.Status == PlanStepStatus.Pending);
-        if (needSecondPass)
+        while (needSecondPass)
         {
-            foreach (var step in result.Steps.Where(s => s.Status == PlanStepStatus.Pending))
+            var pendingStep = result.Steps.FirstOrDefault(s => s.Status == PlanStepStatus.Pending);
+            if (pendingStep == null) break;
+            if (cancellationToken.IsCancellationRequested) break;
+
+            pendingStep.Status = PlanStepStatus.Running;
+            try
             {
-                if (cancellationToken.IsCancellationRequested) break;
-                step.Status = PlanStepStatus.Running;
-                try
+                var toolResult = await toolExecutor(pendingStep.FunctionName ?? String.Empty, pendingStep.Arguments ?? "{}").ConfigureAwait(false);
+                pendingStep.Status = PlanStepStatus.Completed;
+                pendingStep.Result = toolResult;
+                completedSummary.AppendLine($"步骤{pendingStep.Index}(重规划): {pendingStep.Description} → {toolResult}");
+            }
+            catch (Exception ex)
+            {
+                pendingStep.Status = PlanStepStatus.Failed;
+                pendingStep.FailureReason = ex.Message;
+
+                if (result.ReplanCount >= MaxReplanning)
                 {
-                    var toolResult = await toolExecutor(step.FunctionName ?? String.Empty, step.Arguments ?? "{}").ConfigureAwait(false);
-                    step.Status = PlanStepStatus.Completed;
-                    step.Result = toolResult;
-                    completedSummary.AppendLine($"步骤{step.Index}(重规划): {step.Description} → {toolResult}");
-                }
-                catch (Exception ex)
-                {
-                    step.Status = PlanStepStatus.Failed;
-                    step.FailureReason = ex.Message;
+                    // 超出重规划次数，终止
+                    result.Summary = $"步骤{pendingStep.Index}失败且已达最大重规划次数({MaxReplanning})，中止执行。失败原因：{ex.Message}";
                     break;
                 }
+
+                // 触发重规划：追加新步骤替换失败步骤后续
+                result.ReplanCount++;
+                var replanContext = BuildReplanContext(completedSummary.ToString(), pendingStep);
+                var remainingSteps = await PlanAsync(goal, replanContext, pendingStep.Index, cancellationToken).ConfigureAwait(false);
+
+                if (remainingSteps.Count == 0) break;
+
+                // 标记后续原步骤为 Skipped，追加新步骤
+                var currentIndex = result.Steps.IndexOf(pendingStep);
+                for (var i = currentIndex + 1; i < result.Steps.Count; i++)
+                    result.Steps[i].Status = PlanStepStatus.Skipped;
+
+                foreach (var newStep in remainingSteps)
+                    result.Steps.Add(newStep);
             }
+
+            needSecondPass = result.Steps.Any(s => s.Status == PlanStepStatus.Pending);
         }
 
         result.IsSuccess = result.Steps.All(s => s.Status is PlanStepStatus.Completed or PlanStepStatus.Skipped);
@@ -261,15 +285,14 @@ public class FunctionCallingPlanner
         var json = response?.Text?.Trim();
         if (String.IsNullOrEmpty(json)) return [];
 
-        return ParseSteps(json, startIndex ?? 0);
+        return ParseSteps(json!, startIndex ?? 0);
     }
 
     private static List<PlanStep> ParseSteps(String json, Int32 baseIndex)
     {
         try
         {
-            var raw = json.TrimStart('[').TrimEnd(']');
-            // 使用 NewLife.Serialization 的 JSON 解析
+            // 使用 NewLife.Serialization 的 JSON 解析（A-26：原 raw 局部变量死代码，已删除）
             var list = json.ToJsonEntity<List<PlanStepRaw>>();
             if (list == null) return [];
 

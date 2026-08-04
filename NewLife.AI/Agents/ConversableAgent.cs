@@ -6,11 +6,11 @@ namespace NewLife.AI.Agents;
 
 /// <summary>可对话代理。持有 IChatClient，将消息历史转换为 ChatRequest 并获取 LLM 响应</summary>
 /// <remarks>
-/// 支持工具调用自动循环（Auto-tool-loop）：
+/// 单轮处理逻辑：
 /// <list type="number">
 /// <item>将历史消息转换为 ChatMessage 列表（含 SystemPrompt）</item>
-/// <item>调用 chatClient.CompleteAsync 获取响应</item>
-/// <item>若响应含 tool_calls，则产出 ToolCallMessage（由调用方决定是否执行）</item>
+/// <item>调用 chatClient.GetResponseAsync 获取响应</item>
+/// <item>若响应含 tool_calls，则产出 ToolCallMessage（工具执行与多轮循环由 GroupChat / 调用方驱动）</item>
 /// <item>否则，将文本内容作为 TextMessage 产出</item>
 /// </list>
 /// </remarks>
@@ -32,9 +32,6 @@ public class ConversableAgent : IAgent
 
     /// <summary>可用工具列表。为 null 时不启用函数调用</summary>
     public IList<ChatTool>? Tools { get; set; }
-
-    /// <summary>最大自动回复次数（单轮 HandleAsync 内）。防止工具调用死循环</summary>
-    public Int32 MaxAutoReply { get; set; } = 5;
 
     /// <summary>请求参数模板（Model、Temperature 等）</summary>
     public ChatOptions? RequestOptions { get; set; }
