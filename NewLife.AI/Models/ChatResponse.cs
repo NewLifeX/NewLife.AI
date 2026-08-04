@@ -39,6 +39,8 @@ public class ChatResponse : IChatResponse
             var value = Messages?.FirstOrDefault()?.Message?.Content ?? Messages?.FirstOrDefault()?.Delta?.Content;
             if (value == null) return null;
             if (value is IList<Object> list) value = list.FirstOrDefault();
+            // 空 content 数组（tool_calls/content_filter 结束、思考-only 回合）返回空字符串，避免 ToString 空引用
+            if (value == null) return String.Empty;
             if (value is String str) return str;
             if (value is IDictionary<String, Object?> dic)
             {
@@ -118,9 +120,10 @@ public class ChatResponse : IChatResponse
     {
         var msgs = Messages ??= [];
 
+        // Index 使用 msgs.Count 与 Add/AddDelta 一致（A-57：原硬编码 0，多工具流式块产生多个 Index=0 的 choice）
         var choice = new ChatChoice
         {
-            Index = 0,
+            Index = msgs.Count,
             FinishReason = finishReason
         };
         choice.Delta = new ChatMessage

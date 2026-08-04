@@ -60,15 +60,11 @@ public class ChatRequest : ChatOptions, IChatRequest
                 request.Tools.Add(t);
         }
 
+        // 逐项复制 Items，避免整字典别名共享导致调用方原始 request/options 被后续写入污染
         if (options.Items != null && options.Items.Count > 0)
         {
-            if (request.Items == null || request.Items.Count == 0)
-                request.Items = options.Items;
-            else
-            {
-                foreach (var kv in options.Items)
-                    request[kv.Key] = kv.Value;
-            }
+            foreach (var kv in options.Items)
+                request[kv.Key] = kv.Value;
         }
 
         return request;

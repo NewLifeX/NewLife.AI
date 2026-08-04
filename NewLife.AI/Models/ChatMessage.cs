@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using NewLife.Data;
+using NewLife.Log;
 using NewLife.Serialization;
 
 namespace NewLife.AI.Models;
@@ -86,7 +87,12 @@ public class ChatMessage : IExtend
                 var parsed = new JsonParser(json).Decode();
                 items = parsed as IList<Object>;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                // A-56：记录解析失败原因，便于排障（返回 null 由调用方回退处理）
+                XTrace.WriteLine("[ChatMessage] 多模态内容 JSON 解析失败：{0}，前200字符：{1}", ex.Message, json.Length > 200 ? json[..200] : json);
+                return null;
+            }
         }
 
         if (items == null || items.Count == 0) return null;

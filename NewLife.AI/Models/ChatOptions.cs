@@ -224,6 +224,10 @@ public class ChatOptions : IExtend
     /// <summary>扩展数据。用于在中间件管道中传递非结构化的自定义上下文</summary>
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
 
-    /// <summary>索引器，方便访问扩展数据</summary>
-    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+    /// <summary>索引器，方便访问扩展数据。Items 被置 null 时 get 返回 null、set 自动创建，防空异常</summary>
+    public Object? this[String key]
+    {
+        get => Items != null && Items.TryGetValue(key, out var value) ? value : null;
+        set => (Items ??= new Dictionary<String, Object?>())[key] = value;
+    }
 }

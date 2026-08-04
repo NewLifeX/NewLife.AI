@@ -23,6 +23,10 @@ public class EmbeddingModelSetting : IExtend
     /// <summary>扩展参数。无法识别的额外设置项，用于兼容未来模型的新参数</summary>
     public IDictionary<String, Object?> Items { get; set; } = new Dictionary<String, Object?>();
 
-    /// <summary>索引器，方便访问扩展数据</summary>
-    public Object? this[String key] { get => Items.TryGetValue(key, out var value) ? value : null; set => Items[key] = value; }
+    /// <summary>索引器，方便访问扩展数据。Items 被置 null 时 get 返回 null、set 自动创建，防空异常</summary>
+    public Object? this[String key]
+    {
+        get => Items != null && Items.TryGetValue(key, out var value) ? value : null;
+        set => (Items ??= new Dictionary<String, Object?>())[key] = value;
+    }
 }
