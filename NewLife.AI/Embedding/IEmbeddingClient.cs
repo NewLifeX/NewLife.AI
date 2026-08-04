@@ -23,13 +23,25 @@ public interface IEmbeddingClient : IDisposable
 public class EmbeddingClientMetadata
 {
     /// <summary>服务商名称</summary>
-    public String ProviderName { get; init; } = null!;
+    public String ProviderName { get; }
 
     /// <summary>API 地址</summary>
-    public String? Endpoint { get; init; }
+    public String? Endpoint { get; }
 
     /// <summary>默认模型编码</summary>
-    public String? DefaultModel { get; init; }
+    public String? DefaultModel { get; }
+
+    /// <summary>实例化。构造器强约束 ProviderName 非空（A-50：原 init+null! 可被外部构造后不赋值，使用即 NRE）</summary>
+    /// <param name="providerName">服务商名称</param>
+    /// <param name="endpoint">API 地址</param>
+    /// <param name="defaultModel">默认模型编码</param>
+    public EmbeddingClientMetadata(String providerName, String? endpoint = null, String? defaultModel = null)
+    {
+        if (String.IsNullOrWhiteSpace(providerName)) throw new ArgumentNullException(nameof(providerName));
+        ProviderName = providerName;
+        Endpoint = endpoint;
+        DefaultModel = defaultModel;
+    }
 }
 
 /// <summary>嵌入请求。兼容 OpenAI Embeddings API。实现 <see cref="IExtend"/> 以支持模型定制化设置的扩展参数传递</summary>

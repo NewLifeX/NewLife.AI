@@ -13,7 +13,7 @@ namespace NewLife.AI.Embedding;
 /// <item><description>多个词项可映射到同一桶（累加 TF 权重）</description></item>
 /// <item><description>对结果向量进行 L2 归一化</description></item>
 /// </list>
-/// 模型名称固定为 <c>local-hash-v1</c>，不含维度信息。维度由 <see cref="Dimensions"/> 属性单独表达。
+/// 模型名称固定为 <c>local-hash-v2</c>，不含维度信息。维度由 <see cref="Dimensions"/> 属性单独表达。
 /// 陈旧检测通过 <see cref="VectorData.IsStale(String, Int32)"/> 同时比较模型名和维度数实现。
 /// </remarks>
 public class HashTextEmbedder : ILocalTextEmbedder

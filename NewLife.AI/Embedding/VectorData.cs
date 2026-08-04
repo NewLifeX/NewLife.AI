@@ -70,15 +70,24 @@ public class VectorData
     #region 方法
 
     /// <summary>解码为原始 Single[] 向量</summary>
-    /// <returns>向量数组，Data 为空时返回空数组</returns>
+    /// <returns>向量数组，Data 为空或数据非法时返回空数组</returns>
     public Single[] ToVector()
     {
         if (Data.IsNullOrEmpty()) return [];
 
-        var bytes = Convert.FromBase64String(Data);
-        var result = new Single[bytes.Length / sizeof(Single)];
-        Buffer.BlockCopy(bytes, 0, result, 0, bytes.Length);
-        return result;
+        try
+        {
+            var bytes = Convert.FromBase64String(Data);
+            var result = new Single[bytes.Length / sizeof(Single)];
+            // 拷贝实际可容纳的字节数（截断尾部不足 4 字节的脏数据），避免 BlockCopy 越界
+            Buffer.BlockCopy(bytes, 0, result, 0, result.Length * sizeof(Single));
+            return result;
+        }
+        catch (FormatException)
+        {
+            // 脏数据（非法 base64）时与 Parse 的宽容策略保持一致，返回空数组而非崩溃
+            return [];
+        }
     }
 
     /// <summary>判断此向量是否与当前活跃模型或维度不匹配（即需要重新计算）</summary>
