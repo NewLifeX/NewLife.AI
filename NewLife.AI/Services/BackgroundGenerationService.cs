@@ -29,6 +29,14 @@ public class BackgroundGenerationService(ILog log)
     /// <param name="onComplete">任务完成回调（成功/失败/取消均触发）</param>
     public void Register(Int64 messageId, IAsyncEnumerable<ChatStreamEvent> eventStream, Func<BackgroundTask, Task>? onComplete = null)
     {
+        // A-47：重复注册同 messageId 时，先取消并释放旧 CTS，避免资源泄漏与旧回调干扰
+        if (_cancellations.TryRemove(messageId, out var oldCts))
+        {
+            oldCts.Cancel();
+            oldCts.Dispose();
+        }
+        _tasks.TryRemove(messageId, out _);
+
         var cts = new CancellationTokenSource();
         var task = new BackgroundTask
         {
@@ -169,9 +177,11 @@ public class BackgroundGenerationService(ILog log)
                 removedCts.Dispose();
 
             // 任务完成后延迟清理，给最后的订阅者回放机会（5分钟后移除，释放 StringBuilder 和事件列表）
+            // A-46：校验移除的是当前任务实例，防止同 messageId 新任务被旧清理回调误清空
             _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
             {
-                if (_tasks.TryRemove(task.MessageId, out var removed))
+                if (_tasks.TryGetValue(task.MessageId, out var current) && ReferenceEquals(current, task)
+                    && _tasks.TryRemove(task.MessageId, out var removed) && ReferenceEquals(removed, task))
                 {
                     removed.ContentBuilder.Clear();
                     removed.ThinkingBuilder.Clear();

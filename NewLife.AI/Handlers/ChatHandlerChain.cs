@@ -31,14 +31,14 @@ public class ChatHandlerChain
     #region 属性
 
     /// <summary>已按 BeforeOrder 排序的 OnBefore 处理器列表（仅含 <see cref="ChatHandlerCapabilities.Before"/> 能力）。首次访问时构建并缓存</summary>
-    public IReadOnlyList<IChatHandler> BeforeHandlers => _beforeHandlers ??= BuildSorted(ChatHandlerCapabilities.Before, isBefore: true);
+    public IReadOnlyList<IChatHandler> BeforeHandlers => GetHandlers(ref _beforeHandlers, ChatHandlerCapabilities.Before, isBefore: true);
 
     /// <summary>已按 AfterOrder 排序的 OnAfter 处理器列表（仅含 <see cref="ChatHandlerCapabilities.After"/> 能力）。首次访问时构建并缓存</summary>
-    public IReadOnlyList<IChatHandler> AfterHandlers => _afterHandlers ??= BuildSorted(ChatHandlerCapabilities.After, isBefore: false);
+    public IReadOnlyList<IChatHandler> AfterHandlers => GetHandlers(ref _afterHandlers, ChatHandlerCapabilities.After, isBefore: false);
 
     /// <summary>已按注册序排列的 Interceptor 处理器列表（仅含 <see cref="ChatHandlerCapabilities.Interceptor"/> 能力）。首次访问时构建并缓存。
     /// 洋葱链按此列表 <b>倒序</b> 包裹，第 0 个处于最外层</summary>
-    public IReadOnlyList<IChatHandler> Interceptors => _interceptors ??= BuildInterceptors();
+    public IReadOnlyList<IChatHandler> Interceptors => GetHandlers(ref _interceptors, ChatHandlerCapabilities.Interceptor, isBefore: false);
 
     /// <summary>已注册的处理器总数</summary>
     public Int32 Count
@@ -182,6 +182,29 @@ public class ChatHandlerChain
         var attr = handler.GetType().GetCustomAttribute<ChatHandlerOrderAttribute>(inherit: true);
         if (attr == null) return 0;
         return isBefore ? attr.Before : attr.After;
+    }
+
+    /// <summary>获取处理器视图缓存，锁内双检（A-32：原 ??= 写入无锁，读线程构建期间 Invalidate 置 null 会导致旧列表写回后永久过期）</summary>
+    /// <param name="cache">缓存字段引用</param>
+    /// <param name="capability">目标能力标志</param>
+    /// <param name="isBefore">true = Before 视图；false = After/Interceptor 视图</param>
+    /// <returns>缓存或新构建的只读列表</returns>
+    private IReadOnlyList<IChatHandler> GetHandlers(ref IReadOnlyList<IChatHandler>? cache, ChatHandlerCapabilities capability, Boolean isBefore)
+    {
+        var value = cache;
+        if (value != null) return value;
+
+        lock (_lock)
+        {
+            // 双检：等待锁期间可能已被其他线程构建
+            if (cache == null)
+            {
+                cache = capability == ChatHandlerCapabilities.Interceptor
+                    ? BuildInterceptors()
+                    : BuildSorted(capability, isBefore);
+            }
+            return cache;
+        }
     }
 
     #endregion

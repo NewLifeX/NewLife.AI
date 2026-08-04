@@ -5,7 +5,8 @@ namespace NewLife.AI.Services;
 /// <summary>聊天消息速率限制器。按用户维度限流，防止恶意或高频调用</summary>
 /// <remarks>
 /// 使用固定分钟桶（1-minute bucket）策略：对每个用户每分钟内的消息计数独立累加，
-/// 超出上限则拒绝。后台定期清理过期桶，避免内存无限增长。
+/// 超出上限则拒绝。过期桶按计数触发惰性清理（每 200 次计数全表扫描一次），
+/// 请求停止后过期桶会残留至下次清理触发；活跃用户量不大时影响可忽略。
 /// </remarks>
 public class MessageRateLimiter
 {

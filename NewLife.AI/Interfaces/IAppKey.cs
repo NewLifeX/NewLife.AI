@@ -29,7 +29,7 @@ public partial interface IAppKey
     /// <summary>启用</summary>
     Boolean Enable { get; set; }
 
-    /// <summary>过期时间。null表示永不过期</summary>
+    /// <summary>过期时间。DateTime.MinValue 表示永不过期（XCode 实体 DateTime 值类型，无法为 null）</summary>
     DateTime ExpireTime { get; set; }
 
     /// <summary>备注</summary>

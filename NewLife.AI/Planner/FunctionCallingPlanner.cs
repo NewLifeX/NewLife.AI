@@ -6,8 +6,6 @@ namespace NewLife.AI.Planner;
 /// <summary>基于函数调用的执行计划实现</summary>
 internal sealed class FunctionCallingPlan : IPlan
 {
-    private readonly Object _lock = new();
-
     /// <summary>规划目标</summary>
     public String Goal { get; }
 
@@ -45,6 +43,13 @@ internal sealed class FunctionCallingPlan : IPlan
                     step.Result = await toolInvoker(step.ToolName, step.Arguments, cancellationToken).ConfigureAwait(false);
                     step.Status = PlanStepStatus.Completed;
                 }
+                catch (OperationCanceledException)
+                {
+                    // 取消必须向上传播，不能当作普通步骤失败处理
+                    step.Status = PlanStepStatus.Failed;
+                    Status = PlanStatus.Failed;
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     step.Status = PlanStepStatus.Failed;
@@ -54,6 +59,10 @@ internal sealed class FunctionCallingPlan : IPlan
                 }
             }
             Status = PlanStatus.Completed;
+            // A-45：所有步骤完成后填充 FinalAnswer（最后一个成功步骤的结果），兑现接口承诺
+            var lastCompleted = Steps.LastOrDefault(s => s.Status == PlanStepStatus.Completed);
+            if (lastCompleted != null)
+                FinalAnswer = lastCompleted.Result;
         }
         catch (OperationCanceledException)
         {
