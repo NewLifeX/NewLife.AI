@@ -767,19 +767,26 @@ public class OllamaIntegrationTests
     [DisplayName("稳定性_多请求并发发送")]
     public async Task ChatAsync_Concurrent_AllSucceed()
     {
-        var tasks = Enumerable.Range(1, 3).Select(i =>
+        // 注意：不能在 lambda 内 using 释放 client（A-59 后 Dispose 会真正释放 HttpClient），
+        // 否则 GetResponseAsync 返回的异步任务仍在执行时连接已被关闭
+        var clients = Enumerable.Range(1, 3).Select(_ => CreateClient()).ToArray();
+        try
         {
-            using var client = CreateClient();
-            return client.GetResponseAsync(SimpleRequest($"{i}+{i}=? reply with only the number", 50));
-        }).ToArray();
+            var tasks = clients.Select((client, i) =>
+                client.GetResponseAsync(SimpleRequest($"{i + 1}+{i + 1}=? reply with only the number", 50))).ToArray();
 
-        var responses = await Task.WhenAll(tasks);
+            var responses = await Task.WhenAll(tasks);
 
-        foreach (var response in responses)
+            foreach (var response in responses)
+            {
+                Assert.NotNull(response);
+                Assert.NotNull(response.Messages);
+                Assert.NotEmpty(response.Messages);
+            }
+        }
+        finally
         {
-            Assert.NotNull(response);
-            Assert.NotNull(response.Messages);
-            Assert.NotEmpty(response.Messages);
+            foreach (var client in clients) client.Dispose();
         }
     }
 

@@ -111,6 +111,29 @@ public class TestClass
         Assert.Contains("超出工作区", result);
     }
 
+    [Fact]
+    [DisplayName("read_file—前缀相同的兄弟目录被拒绝（沙箱边界校验）")]
+    public async Task ReadFile_PrefixSiblingDir_Denied()
+    {
+        // 构造一个与工作区前缀相同但实际是兄弟目录的路径（A-13：此前 StartsWith 前缀匹配会误放行）
+        var sibling = _tempDir + "2";
+        Directory.CreateDirectory(sibling);
+        try
+        {
+            File.WriteAllText(Path.Combine(sibling, "secret.cs"), "// secret");
+
+            // 绝对路径指向兄弟目录
+            var result = await _tools.ReadFileAsync(Path.Combine(sibling, "secret.cs"));
+
+            Assert.Contains("Error", result);
+            Assert.Contains("超出工作区", result);
+        }
+        finally
+        {
+            try { Directory.Delete(sibling, true); } catch { }
+        }
+    }
+
     #endregion
 
     #region write_file

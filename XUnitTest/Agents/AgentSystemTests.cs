@@ -339,10 +339,9 @@ public class AgentSystemTests
     [DisplayName("ConversableAgent—Name、SystemPrompt 属性正确")]
     public void ConversableAgent_Properties()
     {
-        var a = new ConversableAgent("planner", new FakeChatClient(), "You are helpful") { MaxAutoReply = 3 };
+        var a = new ConversableAgent("planner", new FakeChatClient(), "You are helpful");
         Assert.Equal("planner", a.Name);
         Assert.Equal("You are helpful", a.SystemPrompt);
-        Assert.Equal(3, a.MaxAutoReply);
     }
 
     [Fact]

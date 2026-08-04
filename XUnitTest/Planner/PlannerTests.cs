@@ -156,4 +156,28 @@ public class PlannerTests
         Assert.Equal(1, plan2.Steps[1].Index);
         Assert.Equal(2, plan2.Steps[2].Index);
     }
+
+    [Fact]
+    [DisplayName("取消令牌触发时抛出 OperationCanceledException（A-42）")]
+    public async Task Execute_Canceled_ThrowsOperationCanceled()
+    {
+        // A-42：此前内层 catch (Exception) 吞掉 OperationCanceledException，
+        // 取消被当作普通步骤失败处理，调用方无法中断
+        var steps = new List<PlanStep>
+        {
+            new() { Index = 0, ToolName = "step1", Arguments = null },
+        };
+        var plan = new FunctionCallingPlan("goal", steps);
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            plan.ExecuteAsync(async (_, _, ct) =>
+            {
+                await Task.Yield();
+                ct.ThrowIfCancellationRequested();
+                return "ok";
+            }, cts.Token));
+    }
 }

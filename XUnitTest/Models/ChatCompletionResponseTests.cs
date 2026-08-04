@@ -115,6 +115,18 @@ public class ChatCompletionResponseTests
     }
 
     [Fact]
+    [DisplayName("Text—空内容数组返回空字符串而非 NRE（A-52）")]
+    public void Text_EmptyContentArray_ReturnsEmptyString()
+    {
+        // A-52：部分服务商在 tool_calls/content_filter 结束或思考-only 回合返回空 content 数组，
+        // ChatResponse.Text 此前 list.FirstOrDefault() 返回 null 后落到 value.ToString() 抛 NRE
+        var resp = new ChatResponse();
+        resp.Add(new List<Object>());
+
+        Assert.Equal(String.Empty, resp.Text);
+    }
+
+    [Fact]
     [DisplayName("JSON 反序列化—含工具调用")]
     public void JsonDeserialize_WithToolCalls()
     {

@@ -169,6 +169,28 @@ public class VectorDataTests
         Assert.Equal(3.0f, result[2], precision: 6);
     }
 
+    [Fact]
+    [DisplayName("ToVector—非法 Base64 返回空数组而非崩溃（A-43）")]
+    public void ToVector_InvalidBase64_ReturnsEmpty()
+    {
+        // A-43：脏数据（非法 base64）此前抛 FormatException
+        var vd = new VectorData { Model = "m", Dims = 0, Data = "!!!not-base64!!!" };
+        Assert.Empty(vd.ToVector());
+    }
+
+    [Fact]
+    [DisplayName("ToVector—长度非 4 倍数截断而非 BlockCopy 越界（A-43）")]
+    public void ToVector_NonMultipleOf4_TruncatesGracefully()
+    {
+        // A-43：base64 解码后字节数非 4 的倍数（脏数据/手工编辑），
+        // 此前 Buffer.BlockCopy 拷贝 bytes.Length 越界抛 ArgumentException
+        var vd = new VectorData { Model = "m", Dims = 0, Data = "AAAAAQID" };  // 6 字节，非 4 倍数
+        var result = vd.ToVector();
+
+        // 6 字节 → 可容纳 1 个 Single，截断尾部 2 字节，不抛异常
+        Assert.Single(result);
+    }
+
     #endregion
 
     // ── IsStale ──────────────────────────────────────────────────────────────
