@@ -10,6 +10,7 @@ using NewLife.AI.Clients;
 using NewLife.AI.Models;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
+using NewLife.Serialization;
 using Xunit;
 
 namespace XUnitTest.Tools;
@@ -543,6 +544,262 @@ public class NativeToolTests
         Assert.False(captured.ParallelToolCalls);
         Assert.Equal(99, captured.UserId.ToInt());
         Assert.Equal(888L, captured.ConversationId.ToLong());
+    }
+
+    // ── ToolChatClient 去重复用测试 ────────────────────────────────────────
+
+    /// <summary>带调用计数的工具服务。验证去重后重复调用不重复执行工具</summary>
+    private sealed class CountingToolService
+    {
+        /// <summary>add_numbers 实际执行次数</summary>
+        public Int32 AddCalls;
+
+        /// <summary>show_widget 实际执行次数</summary>
+        public Int32 ShowWidgetCalls;
+
+        /// <summary>两数相加（计数）</summary>
+        /// <param name="a">第一个操作数</param>
+        /// <param name="b">第二个操作数</param>
+        [ToolDescription("add_numbers")]
+        public Int32 Add(Int32 a, Int32 b)
+        {
+            AddCalls++;
+            return a + b;
+        }
+
+        /// <summary>渲染 Widget（计数 + 双受众结果，模拟可视化工具）</summary>
+        /// <param name="title">标题</param>
+        /// <param name="content">内容</param>
+        [ToolDescription("show_widget")]
+        public ToolResult ShowWidget(String title, String content)
+        {
+            ShowWidgetCalls++;
+            var json = new { widgetId = $"w{ShowWidgetCalls}", kind = "html", title, code = content }.ToJson();
+            return ToolResult.ForAudiences(json, $"[已渲染Widget到客户端：{title}]");
+        }
+    }
+
+    /// <summary>多轮工具调用假客户端：按序返回每轮 tool_calls，最后一轮返回最终文本</summary>
+    private sealed class MultiRoundToolCallClient : IChatClient
+    {
+        private readonly IList<IList<ToolCall>> _rounds;
+        private readonly String _finalReply;
+        private Int32 _callCount;
+
+        /// <summary>每次请求消息列表快照，供断言 role=tool 消息内容</summary>
+        public List<IList<ChatMessage>> Requests { get; } = [];
+
+        public MultiRoundToolCallClient(String finalReply, params IList<ToolCall>[] rounds)
+        {
+            _finalReply = finalReply;
+            _rounds = rounds;
+        }
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+        {
+            _callCount++;
+            Requests.Add(request.Messages.ToList());
+
+            ChatResponse resp;
+            if (_callCount <= _rounds.Count)
+            {
+                resp = new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage
+                            {
+                                Role = "assistant",
+                                Content = null,
+                                ToolCalls = _rounds[_callCount - 1].ToList()
+                            }
+                        }
+                    ]
+                };
+            }
+            else
+            {
+                resp = new ChatResponse
+                {
+                    Messages =
+                    [
+                        new ChatChoice
+                        {
+                            Message = new ChatMessage { Role = "assistant", Content = _finalReply }
+                        }
+                    ]
+                };
+            }
+
+            return Task.FromResult<IChatResponse>(resp);
+        }
+
+        public IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
+    /// <summary>流式多轮工具调用假客户端：按序返回每轮 tool_calls 分块，最后一轮返回最终文本 chunk</summary>
+    private sealed class StreamingMultiRoundToolCallClient : IChatClient
+    {
+        private readonly IList<IList<ToolCall>> _rounds;
+        private readonly String _finalReply;
+        private Int32 _callCount;
+
+        public StreamingMultiRoundToolCallClient(String finalReply, params IList<ToolCall>[] rounds)
+        {
+            _finalReply = finalReply;
+            _rounds = rounds;
+        }
+
+        public async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            _callCount++;
+            if (_callCount <= _rounds.Count)
+            {
+                // 工具轮：逐条分块返回 tool_calls（流式增量），末块携带 finish_reason=tool_calls
+                var round = _rounds[_callCount - 1];
+                for (var i = 0; i < round.Count; i++)
+                {
+                    var tc = round[i];
+                    var chunk = new ChatResponse { Object = "chat.completion.chunk" };
+                    chunk.AddToolCallDelta(tc.Id, tc.Function?.Name ?? "", tc.Function?.Arguments, FinishReasonHelper.Parse(i == round.Count - 1 ? "tool_calls" : null));
+                    yield return chunk;
+                }
+            }
+            else
+            {
+                var chunk = new ChatResponse { Object = "chat.completion.chunk" };
+                chunk.AddDelta(_finalReply, null, FinishReasonHelper.Parse("stop"));
+                yield return chunk;
+            }
+        }
+
+        public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public void Dispose() { }
+    }
+
+    [Fact]
+    [DisplayName("同轮同名同参去重：复用首次结果，工具只执行一次")]
+    public async Task ToolChatClient_SameRoundDuplicate_ReusesFirstResult()
+    {
+        var toolService = new CountingToolService();
+        var registry = new ToolRegistry();
+        registry.AddTools(toolService);
+
+        // 第一轮：同轮两个完全相同的 add_numbers 调用；第二轮：最终文本
+        var innerClient = new MultiRoundToolCallClient(
+            "计算结果是 30",
+            [
+                new ToolCall
+                {
+                    Id = "call_001",
+                    Type = "function",
+                    Function = new FunctionCall { Name = "add_numbers", Arguments = "{\"a\":10,\"b\":20}" }
+                },
+                new ToolCall
+                {
+                    Id = "call_002",
+                    Type = "function",
+                    Function = new FunctionCall { Name = "add_numbers", Arguments = "{\"a\":10,\"b\":20}" }
+                }
+            ]);
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var response = await nativeClient.GetResponseAsync("10 + 20 等于多少？", cancellationToken: default);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("计算结果是 30", content);
+        // 同轮同名同参去重：工具只执行一次
+        Assert.Equal(1, toolService.AddCalls);
+
+        // 第二轮请求中 role=tool 消息：首次执行完整结果 + 复用简短说明（非占位"已去重"）
+        var toolMessages = innerClient.Requests[1].Where(m => m.Role == "tool").ToList();
+        Assert.Equal(2, toolMessages.Count);
+        var firstLlm = toolMessages[0].Content as String;
+        var secondLlm = toolMessages[1].Content as String;
+        Assert.DoesNotContain("已复用", firstLlm);
+        Assert.DoesNotContain("已去重", firstLlm);
+        Assert.Contains("已复用", secondLlm);
+        Assert.DoesNotContain("已去重", secondLlm);
+    }
+
+    [Fact]
+    [DisplayName("跨轮 show_* 去重：复用首次渲染结果，工具只执行一次")]
+    public async Task ToolChatClient_CrossRoundShowDuplicate_ReusesFirstResult()
+    {
+        var toolService = new CountingToolService();
+        var registry = new ToolRegistry();
+        registry.AddTools(toolService);
+
+        var widgetArgs = "{\"title\":\"测试图表\",\"content\":\"<div>hi</div>\"}";
+
+        // 第一轮：show_widget；第二轮：相同参数再次调用（跨轮去重）；第三轮：最终文本
+        var innerClient = new MultiRoundToolCallClient(
+            "已生成图表",
+            [new ToolCall { Id = "call_001", Type = "function", Function = new FunctionCall { Name = "show_widget", Arguments = widgetArgs } }],
+            [new ToolCall { Id = "call_002", Type = "function", Function = new FunctionCall { Name = "show_widget", Arguments = widgetArgs } }]);
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var response = await nativeClient.GetResponseAsync("请生成图表", cancellationToken: default);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("已生成图表", content);
+        // 跨轮去重：show_widget 只执行一次
+        Assert.Equal(1, toolService.ShowWidgetCalls);
+
+        // 第三轮请求中 role=tool 消息：首次完整结果 + 复用简短说明（非占位"已去重"）
+        var toolMessages = innerClient.Requests[2].Where(m => m.Role == "tool").ToList();
+        Assert.Equal(2, toolMessages.Count);
+        var firstLlm = toolMessages[0].Content as String;
+        var secondLlm = toolMessages[1].Content as String;
+        Assert.Contains("已渲染", firstLlm);
+        Assert.DoesNotContain("已复用", firstLlm);
+        Assert.Contains("已复用", secondLlm);
+        Assert.DoesNotContain("已去重", secondLlm);
+    }
+
+    [Fact]
+    [DisplayName("流式跨轮 show_* 去重：done 事件携带复用后的完整用户内容")]
+    public async Task ToolChatClient_StreamingCrossRoundDuplicate_ReusesUserContent()
+    {
+        var toolService = new CountingToolService();
+        var registry = new ToolRegistry();
+        registry.AddTools(toolService);
+
+        var widgetArgs = "{\"title\":\"测试图表\",\"content\":\"<div>hi</div>\"}";
+
+        var innerClient = new StreamingMultiRoundToolCallClient(
+            "已生成图表",
+            [new ToolCall { Id = "call_001", Type = "function", Function = new FunctionCall { Name = "show_widget", Arguments = widgetArgs } }],
+            [new ToolCall { Id = "call_002", Type = "function", Function = new FunctionCall { Name = "show_widget", Arguments = widgetArgs } }]);
+
+        var nativeClient = new ToolChatClient(innerClient, (IToolProvider)registry);
+
+        var doneEvents = new List<ToolCallEventInfo>();
+        var request = ChatRequest.Create([new ChatMessage { Role = "user", Content = "请生成图表" }], new ChatOptions { Model = "test" }, stream: true);
+        await foreach (var chunk in nativeClient.GetStreamingResponseAsync(request))
+        {
+            if (chunk is ChatResponse cr && cr.ToolCallEvents is { Count: > 0 } events)
+                doneEvents.AddRange(events.Where(e => e.Type == "done"));
+        }
+
+        // 两个 done 事件：首次执行（完整 Widget JSON）+ 复用（同样完整 Widget JSON，非 duplicate 占位）
+        Assert.Equal(2, doneEvents.Count);
+        Assert.Equal(1, toolService.ShowWidgetCalls);
+        foreach (var evt in doneEvents)
+        {
+            Assert.NotNull(evt.Value);
+            Assert.DoesNotContain("duplicate", evt.Value!);
+            Assert.Contains("widgetId", evt.Value!);
+        }
     }
 
     // ── ToolChatClient MaxTotalTokens 测试 ─────────────────────────────────

@@ -112,6 +112,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         // 请求级跨轮去重集合（局部变量，天然隔离并发请求的共享状态）
         var sessionDedupKeys = new HashSet<String>(StringComparer.Ordinal);
 
+        // 请求级去重复用缓存：同名同参工具首次执行结果，去重命中时复用给用户完整展示（局部变量，天然隔离并发请求）
+        var dedupCache = new Dictionary<String, IToolResult>(StringComparer.Ordinal);
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -173,6 +176,16 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (tasks[i] == null) continue;
                 var tc = toolCalls[i];
                 var toolResult = await tasks[i].ConfigureAwait(false);
+
+                // 去重复用：占位结果且缓存已有首次结果 → 替换为复用结果（用户端完整展示，LLM 端简短说明不重复消耗 Token）；
+                // 首次成功执行 → 写入缓存供后续去重复用
+                var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
+                if (toolResult is ToolResult { IsError: false } tr && tr["DedupPlaceholder"] is true
+                    && dedupCache.TryGetValue(key, out var cached) && cached != null)
+                    toolResult = BuildReuseResult(tc.Function.Name, cached);
+                else if (!toolResult.IsError && GetUserContent(toolResult) != null)
+                    dedupCache[key] = toolResult;
+
                 toolResults[tc.Function!.Name] = toolResult;
                 roundSummaries.Add(new ToolCallSummary(tc.Function.Name, toolResult.IsError, 0));
                 var llmContent = GetLlmContent(toolResult, tc.Function.Name);
@@ -245,6 +258,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         // 请求级跨轮去重集合（局部变量，天然隔离并发请求的共享状态）
         var sessionDedupKeys = new HashSet<String>(StringComparer.Ordinal);
+
+        // 请求级去重复用缓存：同名同参工具首次执行结果，去重命中时复用给用户完整展示（局部变量，天然隔离并发请求）
+        var dedupCache = new Dictionary<String, IToolResult>(StringComparer.Ordinal);
 
         for (var iteration = 0; iteration < maxIterations; iteration++)
         {
@@ -444,6 +460,16 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (tasks[i] == null) continue;
 
                 var toolResult = await tasks[i].ConfigureAwait(false);
+
+                // 去重复用：占位结果且缓存已有首次结果 → 替换为复用结果（用户端完整展示，LLM 端简短说明不重复消耗 Token）；
+                // 首次成功执行 → 写入缓存供后续去重复用
+                var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
+                if (toolResult is ToolResult { IsError: false } tr && tr["DedupPlaceholder"] is true
+                    && dedupCache.TryGetValue(key, out var cached) && cached != null)
+                    toolResult = BuildReuseResult(tc.Function.Name, cached);
+                else if (!toolResult.IsError && GetUserContent(toolResult) != null)
+                    dedupCache[key] = toolResult;
+
                 toolResults[tc.Function!.Name] = toolResult;
                 roundSummaries.Add(new ToolCallSummary(tc.Function.Name, toolResult.IsError, 0));
 
@@ -561,13 +587,27 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         return null;
     }
 
-    /// <summary>构建去重占位结果。用户受众为 duplicate 标记，LLM 受众为去重说明</summary>
+    /// <summary>构建去重占位结果。用户受众为 duplicate 标记，LLM 受众为去重说明。
+    /// 占位结果带 <c>DedupPlaceholder</c> 标记，供 Phase 2 顺序 await 时替换为复用结果（覆盖同轮并行竞态）</summary>
     /// <param name="toolName">工具名称</param>
     /// <param name="llmText">LLM 受众去重说明</param>
     private static ToolResult BuildDedupResult(String toolName, String llmText)
     {
         var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-        return ToolResult.ForAudiences(dupInfo, $"[已去重：{toolName}] {llmText}");
+        var result = ToolResult.ForAudiences(dupInfo, $"[已去重：{toolName}] {llmText}");
+        result["DedupPlaceholder"] = true;
+        return result;
+    }
+
+    /// <summary>构建去重复用结果。用户受众复用首次执行结果的完整内容（前端正常渲染图表/文本），
+    /// LLM 受众为简短说明（不重复发送大结果，节省 Token）</summary>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="cached">首次执行结果（请求级去重复用缓存）</param>
+    /// <returns>复用结果</returns>
+    private static ToolResult BuildReuseResult(String toolName, IToolResult cached)
+    {
+        var userContent = GetUserContent(cached) ?? "";
+        return ToolResult.ForAudiences(userContent, $"[已复用：{toolName}] 参数与前序调用相同，已复用此前生成的结果");
     }
 
     /// <summary>连续失败检测与升级。整轮所有工具均失败时递增计数，任一成功则归零；达到升级阈值时向消息列表注入换思路提示</summary>
