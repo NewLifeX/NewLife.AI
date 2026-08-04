@@ -738,6 +738,8 @@ public class ToolRegistry : IToolProvider
 
     IList<ChatTool> IToolProvider.GetTools(ISet<String>? filterNames, Boolean includeSystem)
     {
+        // 过滤语义：filterNames=null 返回全量；空集合仅返回系统工具；非空集合返回系统工具 + 指定名称工具
+        // includeSystem=false 时始终排除系统工具
         var query = _tools.AsEnumerable();
         if (!includeSystem)
             query = query.Where(t => t.Function?.Name is not null && !_systemNames.Contains(t.Function.Name));

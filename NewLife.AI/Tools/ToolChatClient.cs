@@ -66,11 +66,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>工具执行回调。每次工具调用完成后触发，供外部监听工具调用情况。回调异常不中断工具执行</summary>
     public Func<ToolCallEventArgs, Task>? OnToolExecuted { get; set; }
 
-    /// <summary>各 Provider 的熔断器实例（按引用相等性索引）</summary>
-    private readonly ConcurrentDictionary<IToolProvider, CircuitBreakerPolicy> _breakers = new();
-
-    /// <summary>跨轮次去重集合。记录本轮对话已执行过的 show_* 工具名+参数，避免同一工具在同一用户请求的多轮工具循环中重复执行。</summary>
-    private readonly HashSet<String> _sessionDedupKeys = new(StringComparer.Ordinal);
+    /// <summary>各 Provider 的熔断器实例（按 Provider+工具名 组合键索引，见 ExecuteToolAsync）</summary>
+    private readonly ConcurrentDictionary<(IToolProvider, String), CircuitBreakerPolicy> _breakers = new();
 
     /// <summary>连续失败轮数计数器。整轮所有工具均失败（IsError=true）时 +1，任一个成功则归零。
     /// 达到 <see cref="EscalationThreshold"/> 时向 LLM 注入升级警告，避免死循环消耗 Token。</summary>
@@ -112,7 +109,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var executedAnyTool = false;
         UsageDetails? accumulatedUsage = null;
 
-        _sessionDedupKeys.Clear();
+        // 请求级跨轮去重集合（局部变量，天然隔离并发请求的共享状态）
+        var sessionDedupKeys = new HashSet<String>(StringComparer.Ordinal);
 
         while (true)
         {
@@ -126,16 +124,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 _fallbackEstimatedTokens += EstimateTokens(workMessages);
 
             // Token 总限额检查（优先使用 API 返回值，回退字符估算）
-            if (maxTotalTokens > 0)
-            {
-                var totalTokens = accumulatedUsage != null ? accumulatedUsage.TotalTokens : _fallbackEstimatedTokens;
-                if (totalTokens >= maxTotalTokens)
-                {
-                    IsTotalTokenLimitExceeded = true;
-                    Log.Warn("Token总限额已达到 {0:N0}（当前累计 {1:N0}），中断工具调用循环", maxTotalTokens, totalTokens);
-                    break;
-                }
-            }
+            if (CheckTotalTokenLimit(maxTotalTokens, accumulatedUsage)) break;
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
@@ -153,18 +142,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
             // 追加 assistant 消息（含工具调用）
             // DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传，否则 API 返回 400
-            workMessages.Add(new ChatMessage
-            {
-                Role = "assistant",
-                Content = assistantMessage?.Content,
-                ReasoningContent = assistantMessage?.ReasoningContent,
-                ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
-                // 透传协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需
-                Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
-            });
+            workMessages.Add(BuildAssistantMessage(assistantMessage, toolCalls));
 
             // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
-            // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）
+            // 同轮/跨轮去重：同名同参或 show_* 跨轮重复调用只执行第一次（ask_user 豁免）
             var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
             var tasks = new Task<IToolResult>[toolCalls.Count];
             for (var i = 0; i < tasks.Length; i++)
@@ -172,40 +153,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                // 去重：重复调用不执行，直接返回占位结果（ask_user 豁免，它每次调用问题不同）
-                if (!tc.Function.Name.EqualIgnoreCase("ask_user"))
+                // 去重命中：直接返回占位结果，不执行工具
+                var dup = TryBuildDedupResult(tc.Function.Name, tc.Function.Arguments, dedupKeys, sessionDedupKeys);
+                if (dup != null)
                 {
-                    var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
-
-                    // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次
-                    if (tc.Function.Name.StartsWith("show_", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!_sessionDedupKeys.Add(key))
-                        {
-                            Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", tc.Function.Name);
-                            var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-                            tasks[i] = Task.FromResult<IToolResult>(
-                                new ToolResult(
-                                    ToolContent.ForUser(dupInfo),
-                                    ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行")
-                                )
-                            );
-                            continue;
-                        }
-                    }
-
-                    if (!dedupKeys.Add(key))
-                    {
-                        Log.Info("跳过同轮重复工具调用 {0}（同名同参）", tc.Function.Name);
-                        var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-                        tasks[i] = Task.FromResult<IToolResult>(
-                            new ToolResult(
-                                ToolContent.ForUser(dupInfo),
-                                ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行")
-                            )
-                        );
-                        continue;
-                    }
+                    tasks[i] = Task.FromResult<IToolResult>(dup);
+                    continue;
                 }
 
                 var ctx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
@@ -232,29 +185,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
-            var allFailed = roundSummaries.Count > 0 && roundSummaries.All(s => s.IsError);
-            if (allFailed)
-                _consecutiveFailureRounds++;
-            else
-                _consecutiveFailureRounds = 0;
-
-            if (EscalationThreshold > 0 && _consecutiveFailureRounds >= EscalationThreshold)
-            {
-                workMessages.Add(new ChatMessage
-                {
-                    Role = "user",
-                    Content = $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
-                });
-                _consecutiveFailureRounds = 0;
-            }
+            EvaluateFailureAndEscalate(roundSummaries, workMessages);
 
             // 触发循环迭代回调（检查点持久化等），回调异常不中断循环
-            if (OnLoopIteration != null)
-            {
-                var totalTokens = accumulatedUsage?.TotalTokens ?? _fallbackEstimatedTokens;
-                var state = new ToolLoopState(iterations - 1, maxIterations, totalTokens, roundSummaries, _consecutiveFailureRounds);
-                _ = OnLoopIteration.Invoke(state, cancellationToken);
-            }
+            FireLoopIteration(iterations - 1, maxIterations, accumulatedUsage, roundSummaries, cancellationToken);
 
             // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
             if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) break;
@@ -309,7 +243,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         UsageDetails? accumulatedUsage = null;
 
-        _sessionDedupKeys.Clear();
+        // 请求级跨轮去重集合（局部变量，天然隔离并发请求的共享状态）
+        var sessionDedupKeys = new HashSet<String>(StringComparer.Ordinal);
 
         for (var iteration = 0; iteration < maxIterations; iteration++)
         {
@@ -411,18 +346,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // Token 总限额检查（优先使用 API 返回值，回退字符估算）
-            if (maxTotalTokens > 0)
+            if (CheckTotalTokenLimit(maxTotalTokens, accumulatedUsage))
             {
-                var totalTokens = accumulatedUsage != null ? accumulatedUsage.TotalTokens : _fallbackEstimatedTokens;
-                if (totalTokens >= maxTotalTokens)
-                {
-                    IsTotalTokenLimitExceeded = true;
-                    Log.Warn("Token总限额已达到 {0:N0}（当前累计 {1:N0}），中断工具调用循环", maxTotalTokens, totalTokens);
-                    // 兜底补发累计总量后退出
-                    if (accumulatedUsage != null)
-                        yield return new ChatResponse { Usage = accumulatedUsage };
-                    yield break;
-                }
+                // 兜底补发累计总量后退出
+                if (accumulatedUsage != null)
+                    yield return new ChatResponse { Usage = accumulatedUsage };
+                yield break;
             }
 
             var isToolRound = finishReason.EqualIgnoreCase("tool_calls") || (toolCalls.Count > 0 && finishReason.IsNullOrEmpty());
@@ -456,6 +385,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     tc.Function.Arguments = "{}";
             }
 
+            var assistantContent = contentSb.Return(true);
+            var assistantReasoning = reasoningSb.Return(true);
+
+            // 构建本轮聚合响应，供工具上下文访问（流式下每轮由多个 chunk 拼合，工具通过 ToolCallContext.Response 读取本轮模型输出）
+            var roundResponse = BuildRoundResponse(assistantContent, assistantReasoning, toolCalls, finishReason);
+
             var assistantItems = new Dictionary<String, Object?>();
             if (thinkingSignature != null) assistantItems["Signature"] = thinkingSignature;
             if (redactedThinking != null) assistantItems["RedactedThinking"] = redactedThinking;
@@ -463,15 +398,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             workMessages.Add(new ChatMessage
             {
                 Role = "assistant",
-                Content = contentSb.Return(true),
-                ReasoningContent = reasoningSb.Return(true),
+                Content = assistantContent,
+                ReasoningContent = assistantReasoning,
                 ToolCalls = toolCalls.ToList(),
                 Items = assistantItems,
             });
 
             // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）
             var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
-            var isDedup = new Boolean[toolCalls.Count];
 
             // Step 1: yield start 事件并并行启动工具任务。
             // 始终发送含完整 arguments 的 start 事件（流式阶段的 earlyStart 仅作 UX 预览，此处补充完整参数）。
@@ -482,44 +416,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                // 去重检查（ask_user 豁免，它每次调用问题不同）
-                if (!tc.Function.Name.EqualIgnoreCase("ask_user"))
+                // 去重命中：直接返回占位结果，不执行工具，也不 yield start 事件（前端不渲染重复卡片）
+                var dup = TryBuildDedupResult(tc.Function.Name, tc.Function.Arguments, dedupKeys, sessionDedupKeys);
+                if (dup != null)
                 {
-                    var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
-
-                    // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次
-                    if (tc.Function.Name.StartsWith("show_", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!_sessionDedupKeys.Add(key))
-                        {
-                            Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", tc.Function.Name);
-                            isDedup[i] = true;
-                            var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-                            tasks[i] = Task.FromResult<IToolResult>(
-                                new ToolResult(
-                                    ToolContent.ForUser(dupInfo),
-                                    ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 跨轮次重复调用，已跳过执行")
-                                )
-                            );
-                            // 不 yield start 事件，前端不渲染重复卡片
-                            continue;
-                        }
-                    }
-
-                    if (!dedupKeys.Add(key))
-                    {
-                        Log.Info("跳过同轮重复工具调用 {0}（同名同参已执行）", tc.Function.Name);
-                        isDedup[i] = true;
-                        var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-                        tasks[i] = Task.FromResult<IToolResult>(
-                            new ToolResult(
-                                ToolContent.ForUser(dupInfo),
-                                ToolContent.ForLlm($"[已去重：{tc.Function.Name}] 调用与前序重复，已跳过执行")
-                            )
-                        );
-                        // 不 yield start 事件，前端不渲染重复卡片
-                        continue;
-                    }
+                    tasks[i] = Task.FromResult<IToolResult>(dup);
+                    continue;
                 }
 
                 // 发送完整 Arguments 给前端（ToolResultMaxChars 仅控制发给 AI 的内容长度，
@@ -529,7 +431,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, tc.Function.Arguments)]
                 };
 
-                var ctx = new ToolCallContext { Request = request, ToolCallId = tc.Id };
+                var ctx = new ToolCallContext { Request = request, Response = roundResponse, ToolCallId = tc.Id };
                 tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
             }
 
@@ -565,29 +467,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
-            var allFailed = roundSummaries.Count > 0 && roundSummaries.All(s => s.IsError);
-            if (allFailed)
-                _consecutiveFailureRounds++;
-            else
-                _consecutiveFailureRounds = 0;
-
-            if (EscalationThreshold > 0 && _consecutiveFailureRounds >= EscalationThreshold)
-            {
-                workMessages.Add(new ChatMessage
-                {
-                    Role = "user",
-                    Content = $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
-                });
-                _consecutiveFailureRounds = 0;
-            }
+            EvaluateFailureAndEscalate(roundSummaries, workMessages);
 
             // 触发循环迭代回调（检查点持久化等），回调异常不中断循环
-            if (OnLoopIteration != null)
-            {
-                var totalTokens = accumulatedUsage?.TotalTokens ?? _fallbackEstimatedTokens;
-                var state = new ToolLoopState(iteration, maxIterations, totalTokens, roundSummaries, _consecutiveFailureRounds);
-                _ = OnLoopIteration.Invoke(state, cancellationToken);
-            }
+            FireLoopIteration(iteration, maxIterations, accumulatedUsage, roundSummaries, cancellationToken);
 
             // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
             if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) yield break;
@@ -599,6 +482,150 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     #endregion
 
     #region 辅助
+
+    /// <summary>构建流式单轮聚合响应。流式下每轮由多个 chunk 拼合，供工具方法通过 <see cref="ToolCallContext.Response"/> 访问本轮模型输出</summary>
+    /// <param name="content">本轮正文内容</param>
+    /// <param name="reasoning">本轮思考内容</param>
+    /// <param name="toolCalls">本轮工具调用列表</param>
+    /// <param name="finishReason">本轮结束原因（API 字符串）</param>
+    /// <returns>聚合后的单轮响应</returns>
+    private static ChatResponse BuildRoundResponse(String? content, String? reasoning, List<ToolCall> toolCalls, String? finishReason)
+    {
+        var response = new ChatResponse { Object = "chat.completion.chunk" };
+        var choice = response.Add(content, reasoning, FinishReasonHelper.Parse(finishReason));
+        if (toolCalls.Count > 0)
+        {
+            choice.Message ??= new ChatMessage { Role = "assistant" };
+            choice.Message.ToolCalls = toolCalls.ToList();
+        }
+        return response;
+    }
+
+    /// <summary>触发工具循环迭代回调（检查点持久化等）。同步异常与异步异常均记录日志，不中断工具循环</summary>
+    /// <param name="iteration">当前迭代轮次（0-based）</param>
+    /// <param name="maxIterations">最大迭代轮次</param>
+    /// <param name="accumulatedUsage">累计 Token 用量</param>
+    /// <param name="roundSummaries">本轮工具调用摘要</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private void FireLoopIteration(Int32 iteration, Int32 maxIterations, UsageDetails? accumulatedUsage, List<ToolCallSummary> roundSummaries, CancellationToken cancellationToken)
+    {
+        if (OnLoopIteration == null) return;
+
+        var totalTokens = accumulatedUsage?.TotalTokens ?? _fallbackEstimatedTokens;
+        var state = new ToolLoopState(iteration, maxIterations, totalTokens, roundSummaries, _consecutiveFailureRounds);
+        try
+        {
+            var task = OnLoopIteration.Invoke(state, cancellationToken);
+            if (task != null)
+                _ = task.ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        Log.Warn("工具循环迭代回调异常：{0}", t.Exception?.GetBaseException().Message);
+                }, TaskScheduler.Default);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("工具循环迭代回调异常：{0}", ex.Message);
+        }
+    }
+
+    /// <summary>同轮/跨轮去重检查。命中去重时返回占位结果（ask_user 豁免），未命中返回 null 表示正常执行</summary>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="arguments">参数 JSON 字符串（模型原文）</param>
+    /// <param name="dedupKeys">同轮去重集合（同名同参只执行第一次）</param>
+    /// <param name="sessionDedupKeys">请求级跨轮去重集合（show_* 工具整请求只执行一次）</param>
+    /// <returns>去重占位结果，未命中返回 null</returns>
+    private IToolResult? TryBuildDedupResult(String toolName, String? arguments, HashSet<String> dedupKeys, HashSet<String> sessionDedupKeys)
+    {
+        // ask_user 豁免：它每次调用问题不同
+        if (toolName.EqualIgnoreCase("ask_user")) return null;
+
+        var key = toolName + "|" + (arguments ?? "");
+
+        // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次
+        if (toolName.StartsWith("show_", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!sessionDedupKeys.Add(key))
+            {
+                Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", toolName);
+                return BuildDedupResult(toolName, "跨轮次重复调用，已跳过执行");
+            }
+        }
+
+        if (!dedupKeys.Add(key))
+        {
+            Log.Info("跳过同轮重复工具调用 {0}（同名同参）", toolName);
+            return BuildDedupResult(toolName, "调用与前序重复，已跳过执行");
+        }
+
+        return null;
+    }
+
+    /// <summary>构建去重占位结果。用户受众为 duplicate 标记，LLM 受众为去重说明</summary>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="llmText">LLM 受众去重说明</param>
+    private static ToolResult BuildDedupResult(String toolName, String llmText)
+    {
+        var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
+        return new ToolResult(
+            ToolContent.ForUser(dupInfo),
+            ToolContent.ForLlm($"[已去重：{toolName}] {llmText}")
+        );
+    }
+
+    /// <summary>连续失败检测与升级。整轮所有工具均失败时递增计数，任一成功则归零；达到升级阈值时向消息列表注入换思路提示</summary>
+    /// <param name="roundSummaries">本轮工具调用摘要</param>
+    /// <param name="workMessages">工作消息列表（升级提示注入于此）</param>
+    private void EvaluateFailureAndEscalate(List<ToolCallSummary> roundSummaries, List<ChatMessage> workMessages)
+    {
+        var allFailed = roundSummaries.Count > 0 && roundSummaries.All(s => s.IsError);
+        if (allFailed)
+            _consecutiveFailureRounds++;
+        else
+            _consecutiveFailureRounds = 0;
+
+        if (EscalationThreshold > 0 && _consecutiveFailureRounds >= EscalationThreshold)
+        {
+            workMessages.Add(new ChatMessage
+            {
+                Role = "user",
+                Content = $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
+            });
+            _consecutiveFailureRounds = 0;
+        }
+    }
+
+    /// <summary>Token 总限额检查（优先使用 API 返回值，回退字符估算）。超限时置中断标记并记录日志</summary>
+    /// <param name="maxTotalTokens">限额值，0 表示不限制</param>
+    /// <param name="accumulatedUsage">累计 Token 用量</param>
+    /// <returns>超限返回 true，调用方应中断循环</returns>
+    private Boolean CheckTotalTokenLimit(Int32 maxTotalTokens, UsageDetails? accumulatedUsage)
+    {
+        if (maxTotalTokens <= 0) return false;
+
+        var totalTokens = accumulatedUsage != null ? accumulatedUsage.TotalTokens : _fallbackEstimatedTokens;
+        if (totalTokens >= maxTotalTokens)
+        {
+            IsTotalTokenLimitExceeded = true;
+            Log.Warn("Token总限额已达到 {0:N0}（当前累计 {1:N0}），中断工具调用循环", maxTotalTokens, totalTokens);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>构建 assistant 消息（含工具调用）。透传思考内容与协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需</summary>
+    /// <param name="assistantMessage">本轮 LLM 返回的 assistant 消息</param>
+    /// <param name="toolCalls">工具调用列表</param>
+    /// <returns>追加到消息列表的 assistant 消息</returns>
+    private static ChatMessage BuildAssistantMessage(ChatMessage? assistantMessage, IList<ToolCall> toolCalls)
+        => new()
+        {
+            Role = "assistant",
+            Content = assistantMessage?.Content,
+            ReasoningContent = assistantMessage?.ReasoningContent,
+            ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
+            Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
+        };
 
     /// <summary>估算消息列表的 Token 数（粗略：中文按1.5字/token，英文按4字符/token）。API 不返回 Usage 时作为回退判定依据</summary>
     /// <param name="messages">消息列表</param>
@@ -711,8 +738,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
             // tier == Allow：低风险工具直接放行，无需审批
 
-            // 熔断检查：Open 状态直接降级，避免雪崩效应
-            var breaker = _breakers.GetOrAdd(provider!, _ => new CircuitBreakerPolicy(FailureThreshold, CooldownSeconds));
+            // 熔断检查：Open 状态直接降级，避免雪崩效应。按 Provider+工具名 粒度熔断，避免单工具连续失败连坐同 Provider 全部工具
+            var breakerKey = (provider!, toolName);
+            var breaker = _breakers.GetOrAdd(breakerKey, _ => new CircuitBreakerPolicy(FailureThreshold, CooldownSeconds));
             if (!breaker.TryAcquire())
             {
                 var remaining = breaker.RemainingCooldownSeconds;

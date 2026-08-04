@@ -549,6 +549,8 @@ public class OllamaChatModelTests
         // Ollama 响应中无 id/type，应使用默认值
         Assert.Equal("", msg.ToolCalls[0].Id);
         Assert.Equal("function", msg.ToolCalls[0].Type);
+        // done_reason=stop 但含 tool_calls → FinishReason 应为 ToolCalls（与 IChatResponse.Messages getter 一致）
+        Assert.Equal(FinishReason.ToolCalls, result.Messages![0].FinishReason);
     }
 
     [Fact]
@@ -614,6 +616,36 @@ public class OllamaChatModelTests
         Assert.NotNull(result.Usage);
         Assert.Equal(20, result.Usage!.InputTokens);
         Assert.Equal(100, result.Usage.OutputTokens);
+    }
+
+    [Fact]
+    [DisplayName("ToStreamChunk—done=true 含 tool_calls 时 FinishReason 为 ToolCalls")]
+    public void ToStreamChunk_ToolCalls_FinishReasonToolCalls()
+    {
+        var resp = new OllamaChatResponse
+        {
+            Model = "qwen3:8b",
+            Message = new OllamaChatMessage
+            {
+                Role = "assistant",
+                Content = "",
+                ToolCalls =
+                [
+                    new OllamaToolCall
+                    {
+                        Function = new OllamaFunctionCall { Name = "get_weather", Arguments = new Dictionary<String, Object> { ["city"] = "Beijing" } },
+                    }
+                ],
+            },
+            Done = true,
+            DoneReason = "stop",
+        };
+
+        var result = resp.ToStreamChunk();
+
+        Assert.NotNull(result);
+        // done_reason=stop 但含 tool_calls → ToolCalls（与 IChatResponse.Messages getter 一致）
+        Assert.Equal(FinishReason.ToolCalls, result!.Messages![0].FinishReason);
     }
 
     [Fact]

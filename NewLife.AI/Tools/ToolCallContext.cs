@@ -15,7 +15,7 @@ public class ToolCallContext : IExtend
     /// <summary>触发工具调用的原始请求（整个请求生命周期内不变）</summary>
     public IChatRequest? Request { get; init; }
 
-    /// <summary>当前轮次的 LLM 响应，每次 LLM 返回后由 ToolChatClient 更新。流式模式下始终为 null</summary>
+    /// <summary>当前轮次的 LLM 响应。非流式模式为最近一次 LLM 返回；流式模式为本轮多个 chunk 的聚合响应（含正文/思考/工具调用/结束原因）</summary>
     public IChatResponse? Response { get; init; }
 
     /// <summary>当前工具调用的唯一编号（由 LLM 分配，构造时固定）。工具方法内读取此值可将调用 ID 透传给 HITL 等回调机制</summary>

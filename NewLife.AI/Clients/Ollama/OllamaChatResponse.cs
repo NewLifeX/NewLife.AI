@@ -139,7 +139,11 @@ public class OllamaChatResponse : IChatResponse
         if (Message != null)
         {
             var msg = Message.ToChatMessage();
-            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = FinishReasonHelper.Parse(DoneReason) }];
+            // 与 IChatResponse.Messages getter 保持一致：done 缺省 Stop，tool_calls 映射为 ToolCalls
+            var fr = FinishReasonHelper.Parse(DoneReason);
+            if (fr == null && Done) fr = FinishReason.Stop;
+            if (fr == FinishReason.Stop && Message.ToolCalls is { Count: > 0 }) fr = FinishReason.ToolCalls;
+            response.Messages = [new ChatChoice { Index = 0, Message = msg, FinishReason = fr }];
         }
 
         if (PromptEvalCount > 0 || EvalCount > 0)
@@ -168,6 +172,9 @@ public class OllamaChatResponse : IChatResponse
 
         FinishReason? finishReason = null;
         if (Done) finishReason = FinishReasonHelper.Parse(DoneReason) ?? FinishReason.Stop;
+        // 与 IChatResponse.Messages getter 保持一致：tool_calls 映射为 ToolCalls（Ollama done_reason 始终为 stop）
+        if (finishReason == FinishReason.Stop && Message?.ToolCalls is { Count: > 0 })
+            finishReason = FinishReason.ToolCalls;
 
         if (Message != null)
         {
