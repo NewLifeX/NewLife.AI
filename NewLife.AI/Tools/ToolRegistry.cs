@@ -95,7 +95,7 @@ public class ToolRegistry : IToolProvider
         {
             if (!type.IsClass || type.IsAbstract) continue;
             var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null)
+                    .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>(true) != null)
                 .ToList();
             if (methods.Count == 0) continue;
 
@@ -128,7 +128,7 @@ public class ToolRegistry : IToolProvider
         if (type == null) throw new ArgumentNullException(nameof(type));
 
         return type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null)
+            .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>(true) != null)
             .ToList();
     }
 
@@ -150,7 +150,7 @@ public class ToolRegistry : IToolProvider
         if (function == null) throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 未生成函数定义");
 
         var description = function.Description;
-        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>()
+        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>(true)
             ?? throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 缺少 ToolDescriptionAttribute");
 
         model.Name = toolName;
@@ -379,7 +379,7 @@ public class ToolRegistry : IToolProvider
             _registeredTypes.Add(type);
 
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>() != null);
+            .Where(m => m.GetCustomAttribute<ToolDescriptionAttribute>(true) != null);
         foreach (var method in methods)
             RegisterMethod(method, instance);
     }
@@ -391,7 +391,7 @@ public class ToolRegistry : IToolProvider
 
         if (_handlers.ContainsKey(toolName)) return;  // 已注册则跳过，不覆盖
 
-        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>();
+        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>(true);
         if (attr is { IsSystem: true })
             _systemNames.Add(toolName);
 

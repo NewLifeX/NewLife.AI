@@ -11,7 +11,7 @@
 /// }
 /// </code>
 /// </remarks>
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class ToolDescriptionAttribute : Attribute
 {
     /// <summary>工具名称。覆盖默认的方法名（自动转为 snake_case）</summary>

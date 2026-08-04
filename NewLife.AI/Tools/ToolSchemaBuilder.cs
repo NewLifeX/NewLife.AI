@@ -25,7 +25,7 @@ public static class ToolSchemaBuilder
     {
         if (method == null) throw new ArgumentNullException(nameof(method));
 
-        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>();
+        var attr = method.GetCustomAttribute<ToolDescriptionAttribute>(true);
         var toolName = (attr != null && attr.HasExplicitName)
             ? attr.Name
             : ToSnakeCase(method.Name.TrimSuffix("Async"));
