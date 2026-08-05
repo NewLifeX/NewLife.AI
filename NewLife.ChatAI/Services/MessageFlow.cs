@@ -1011,9 +1011,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                     switch (evt.Type)
                     {
                         case "start":
-                            // 透传分支可能已为该工具调用发射过 start（ToolChatClient 的原始 chunk 先于 ToolCallEvents 到达，
-                            // 此时 hasToolChatClient 尚未置位），按 toolCallId 去重避免同一工具调用重复发射 start 事件
-                            if (emittedToolCallIds.Add(evt.ToolCallId))
+                            // 去重规则：同一工具调用的多个 start 事件，仅当携带完整参数时才透传。
+                            // 流式阶段的 earlyStart（无参预览，打破 SSE 静默）先发射，轮结束后的 Step1 start 携带完整 arguments，
+                            // 此时必须透传（前端/外层按 toolCallId 更新 arguments），否则前端入参永远为空。
+                            // 仅当参数为空（重复的早期预览）时跳过，避免同一工具调用重复发射无参 start
+                            if (emittedToolCallIds.Add(evt.ToolCallId) || !String.IsNullOrEmpty(evt.Value))
                                 yield return ChatStreamEvent.ToolCallStart(evt.ToolCallId, evt.Name, evt.Value);
                             break;
                         case "done":

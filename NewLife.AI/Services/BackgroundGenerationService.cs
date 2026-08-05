@@ -139,7 +139,14 @@ public class BackgroundGenerationService(ILog log)
                         task.ThinkingBuilder.Append(ev.Content);
                         break;
                     case "tool_call_start":
-                        task.ToolCalls.Add(new BackgroundToolCall(ev.ToolCallId + "", ev.Name + "", ev.Arguments));
+                        // 去重：流式 earlyStart（无参预览）与 Step1 完整参数 start 按 toolCallId 合并，
+                        // 已存在则仅更新 Arguments，避免持久化重复条目（与 MessageFlow.CoreStreamAsync 保持一致）
+                        var tcId = ev.ToolCallId + "";
+                        var existingTc = task.ToolCalls.FirstOrDefault(t => t.Id == tcId);
+                        if (existingTc != null)
+                            existingTc.Arguments = ev.Arguments;
+                        else
+                            task.ToolCalls.Add(new BackgroundToolCall(tcId, ev.Name + "", ev.Arguments));
                         break;
                     case "tool_call_done":
                         UpdateToolCall(task.ToolCalls, ev.ToolCallId, true, ev.Result);
