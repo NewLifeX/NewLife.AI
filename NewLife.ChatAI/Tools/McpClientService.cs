@@ -1,5 +1,5 @@
 ﻿using System.Net.Http.Headers;
-using NewLife;
+using NewLife.AI.Clients;
 using NewLife.AI.ModelContextProtocol;
 using NewLife.AI.Tools;
 using NewLife.Log;
@@ -270,7 +270,8 @@ public class McpClientService(ILog log) : IToolProvider
     private async Task<JsonRpcResponse> SendRequestAsync(McpServerConfig config, JsonRpcRequest request, CancellationToken cancellationToken)
     {
         //var client = httpClientFactory.CreateClient("McpClient");
-        var client = new HttpClient();
+        // 池化 handler 复用连接，避免每次调用新建 HttpClient 不释放导致连接泄漏；disposeHandler:false 释放客户端时不关闭共享连接
+        using var client = new HttpClient(HttpClientPool.GetHandler(config.Endpoint), disposeHandler: false);
         client.Timeout = TimeSpan.FromSeconds(30);
 
         // 设置认证

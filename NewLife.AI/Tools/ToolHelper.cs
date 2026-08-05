@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace NewLife.AI.Tools;
@@ -6,6 +7,9 @@ namespace NewLife.AI.Tools;
 /// <summary>工具服务内部辅助方法。提供 SSRF 防护、HTML 文本提取等共用功能</summary>
 public static class ToolHelper
 {
+    /// <summary>共享处理器缓存。按 allowRedirect 分组（该配置作用于 handler 层），连接复用避免重复创建连接池</summary>
+    private static readonly ConcurrentDictionary<String, HttpMessageHandler> _handlers = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>校验是否为 SSRF 风险地址（私有/回环/链路本地）。对非 IP 的主机名解析 DNS 后检查（A-11），结果缓存避免重复查询</summary>
     /// <param name="host">主机名或 IP</param>
     public static Boolean IsSsrfRisk(String host)
@@ -87,16 +91,18 @@ public static class ToolHelper
         return text.Trim();
     }
 
-    /// <summary>创建带默认配置的 HttpClient（自动解压、重定向、30秒超时）</summary>
+    /// <summary>创建带默认配置的 HttpClient（自动解压、重定向、30秒超时）。内部按 allowRedirect 池化 handler，调用方释放 HttpClient 不关闭共享连接</summary>
     /// <param name="allowRedirect">是否允许自动重定向。抓取用户可控 URL 时应传 false，防止重定向绕过 SSRF 校验（A-73）</param>
     public static HttpClient CreateDefaultHttpClient(Boolean allowRedirect = true)
     {
-        var client = new HttpClient(new HttpClientHandler
+        var key = allowRedirect ? "Redirect" : "NoRedirect";
+        var handler = _handlers.GetOrAdd(key, _ => new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
             AllowAutoRedirect = allowRedirect,
             MaxAutomaticRedirections = 5,
         });
+        var client = new HttpClient(handler, disposeHandler: false);
         client.Timeout = TimeSpan.FromSeconds(30);
         client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; NewLife.AI/1.0)");
         return client;
