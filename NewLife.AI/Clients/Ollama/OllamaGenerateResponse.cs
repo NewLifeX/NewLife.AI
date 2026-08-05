@@ -1,4 +1,6 @@
-﻿namespace NewLife.AI.Clients.Ollama;
+﻿using NewLife.AI.Models;
+
+namespace NewLife.AI.Clients.Ollama;
 
 /// <summary>Ollama 生成响应</summary>
 public class OllamaGenerateResponse
@@ -38,4 +40,37 @@ public class OllamaGenerateResponse
 
     /// <summary>输出评估耗时（纳秒）</summary>
     public Int64 EvalDuration { get; set; }
+
+    /// <summary>从内部统一 ChatResponse 构建 Ollama 生成响应（非流式）。供网关等对外伪装 Ollama 协议的场景使用</summary>
+    /// <param name="response">内部统一响应</param>
+    /// <returns>Ollama 生成响应对象</returns>
+    public static OllamaGenerateResponse From(ChatResponse response)
+    {
+        var result = new OllamaGenerateResponse
+        {
+            Model = response.Model,
+            CreatedAt = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'"),
+            Done = true,
+            Response = response.Text,
+        };
+
+        // 完成原因映射：工具调用输出 tool_calls，其余为 stop
+        var fr = response.Messages?.FirstOrDefault()?.FinishReason;
+        if (fr == FinishReason.ToolCalls)
+            result.DoneReason = "tool_calls";
+        else
+            result.DoneReason = "stop";
+
+        var msg = response.Messages?.FirstOrDefault()?.Message;
+        if (msg != null && !msg.ReasoningContent.IsNullOrEmpty())
+            result.Thinking = msg.ReasoningContent;
+
+        if (response.Usage != null)
+        {
+            result.PromptEvalCount = response.Usage.InputTokens;
+            result.EvalCount = response.Usage.OutputTokens;
+        }
+
+        return result;
+    }
 }

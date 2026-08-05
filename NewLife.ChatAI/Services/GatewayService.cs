@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Filters;
 using NewLife.Collections;
@@ -26,6 +27,12 @@ public enum GatewayProtocol
 
     /// <summary>Google Gemini API 协议</summary>
     Gemini,
+
+    /// <summary>Ollama /api/chat 原生协议（NDJSON 流式，message 字段风格）</summary>
+    Ollama,
+
+    /// <summary>Ollama /api/generate 原生协议（NDJSON 流式，response 字段风格）</summary>
+    OllamaGenerate,
 }
 
 /// <summary>API 网关服务。按 model 字段路由到对应的模型提供商，支持认证校验和限流重试</summary>
@@ -364,6 +371,14 @@ public class GatewayService(UsageService usageService, ModelService modelService
                     events.Add($"data: {JsonSerializer.Serialize(geminiChunk, CamelCaseOptions)}\n\n");
                     break;
                 }
+            case GatewayProtocol.Ollama:
+            case GatewayProtocol.OllamaGenerate:
+                {
+                    // Ollama 流式采用 NDJSON 格式：每帧一行 JSON，无 data: 前缀、无 [DONE]
+                    var frame = BuildOllamaStreamFrame(chunk, protocol == GatewayProtocol.OllamaGenerate);
+                    if (frame != null) events.Add(frame + "\n");
+                    break;
+                }
             default:
                 {
                     var openaiChunk = ChatCompletionResponse.FromChunk(chunk);
@@ -404,6 +419,10 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 return $"event: {stopEvt.EventName}\ndata: {stopJson}\n\n";
             case GatewayProtocol.Gemini:
                 return null;
+            case GatewayProtocol.Ollama:
+            case GatewayProtocol.OllamaGenerate:
+                // Ollama 的 done=true 末帧由 message_done 事件对应的流式块输出，此处无需额外结束标记
+                return null;
             default:
                 return "data: [DONE]\n\n";
         }
@@ -419,12 +438,126 @@ public class GatewayService(UsageService usageService, ModelService modelService
         {
             GatewayProtocol.Anthropic => JsonSerializer.Serialize(AnthropicResponse.From(result), SnakeCaseOptions),
             GatewayProtocol.Gemini => JsonSerializer.Serialize(GeminiResponse.From(result), CamelCaseOptions),
+            GatewayProtocol.Ollama => JsonSerializer.Serialize(OllamaChatResponse.From(result), SnakeCaseOptions),
+            GatewayProtocol.OllamaGenerate => JsonSerializer.Serialize(OllamaGenerateResponse.From(result), SnakeCaseOptions),
             _ => JsonSerializer.Serialize(ChatCompletionResponse.From(result), SnakeCaseOptions),
         };
     }
     #endregion
 
     #region 辅助
+    /// <summary>构建 Ollama NDJSON 流式帧（chat 或 generate 风格）</summary>
+    /// <param name="chunk">内部统一流式块</param>
+    /// <param name="generate">是否为 generate 协议（response 顶级字段风格，区别于 chat 的 message 嵌套）</param>
+    /// <returns>NDJSON 帧 JSON 字符串，无需输出时返回 null</returns>
+    /// <remarks>
+    /// Ollama 流式协议要点：
+    /// <list type="bullet">
+    /// <item>内容帧：<c>{"model","created_at","message":{"role":"assistant","content"},"done":false}</c></item>
+    /// <item>思考帧：message 携带 thinking 字段（Ollama 原生思考字段）</item>
+    /// <item>工具帧：message 携带 tool_calls，arguments 为对象而非字符串</item>
+    /// <item>结束帧：由 message_done 事件输出 <c>{"done":true,"done_reason","prompt_eval_count","eval_count"}</c></item>
+    /// </list>
+    /// </remarks>
+    private static String? BuildOllamaStreamFrame(ChatResponse chunk, Boolean generate)
+    {
+        var msg = chunk.Messages?.FirstOrDefault();
+        if (msg == null) return null;
+
+        var created = FormatOllamaTime(chunk.Created > DateTimeOffset.MinValue ? chunk.Created : DateTimeOffset.UtcNow);
+
+        // 结束帧：message_done 事件携带 finish_reason
+        if (msg.FinishReason != null)
+        {
+            var frame = new Dictionary<String, Object?>
+            {
+                ["model"] = chunk.Model,
+                ["created_at"] = created,
+                ["done"] = true,
+                ["done_reason"] = msg.FinishReason == FinishReason.ToolCalls ? "tool_calls" : "stop",
+            };
+            if (chunk.Usage != null)
+            {
+                frame["prompt_eval_count"] = chunk.Usage.InputTokens;
+                frame["eval_count"] = chunk.Usage.OutputTokens;
+            }
+            return JsonSerializer.Serialize(frame, SnakeCaseOptions);
+        }
+
+        var delta = msg.Delta;
+        if (delta == null) return null;
+
+        // 内容帧：generate 风格 response / thinking 为顶级字段
+        if (generate)
+        {
+            var gframe = new Dictionary<String, Object?>
+            {
+                ["model"] = chunk.Model,
+                ["created_at"] = created,
+                ["done"] = false,
+            };
+            if (delta.Content != null) gframe["response"] = delta.Content + "";
+            if (!delta.ReasoningContent.IsNullOrEmpty()) gframe["thinking"] = delta.ReasoningContent;
+            if (!gframe.ContainsKey("response") && !gframe.ContainsKey("thinking")) return null;
+            return JsonSerializer.Serialize(gframe, SnakeCaseOptions);
+        }
+
+        // chat 风格：内容/思考/工具调用统一放入 message 嵌套对象
+        var message = new Dictionary<String, Object?>
+        {
+            ["role"] = "assistant",
+        };
+        if (delta.Content != null)
+            message["content"] = delta.Content + "";
+        else if (!delta.ReasoningContent.IsNullOrEmpty())
+            message["thinking"] = delta.ReasoningContent;
+        else if (delta.ToolCalls is { Count: > 0 })
+            message["tool_calls"] = BuildOllamaToolCalls(delta.ToolCalls);
+        else
+            return null;
+
+        var frame2 = new Dictionary<String, Object?>
+        {
+            ["model"] = chunk.Model,
+            ["created_at"] = created,
+            ["message"] = message,
+            ["done"] = false,
+        };
+        return JsonSerializer.Serialize(frame2, SnakeCaseOptions);
+    }
+
+    /// <summary>构建 Ollama 工具调用数组。arguments JSON 字符串解析为对象，Ollama 协议要求 arguments 为对象</summary>
+    /// <param name="toolCalls">内部工具调用列表</param>
+    /// <returns>Ollama 格式工具调用数组</returns>
+    private static Object BuildOllamaToolCalls(IList<ToolCall> toolCalls)
+    {
+        var list = new List<Object>(toolCalls.Count);
+        foreach (var tc in toolCalls)
+        {
+            Object? args;
+            var argsStr = tc.Function?.Arguments;
+            if (!argsStr.IsNullOrEmpty())
+                args = JsonParser.Decode(argsStr) ?? (Object)argsStr;
+            else
+                args = new Dictionary<String, Object?>();
+
+            list.Add(new Dictionary<String, Object?>
+            {
+                ["function"] = new Dictionary<String, Object?>
+                {
+                    ["name"] = tc.Function?.Name,
+                    ["arguments"] = args,
+                },
+            });
+        }
+        return list;
+    }
+
+    /// <summary>格式化 Ollama 时间戳。RFC3339 UTC 格式（如 2026-08-05T10:00:00.123Z），与 Ollama 官方响应一致</summary>
+    /// <param name="time">时间</param>
+    /// <returns>Ollama 格式时间字符串</returns>
+    private static String FormatOllamaTime(DateTimeOffset time) => time.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
+
     /// <summary>从 ChatMessage.Content（Object?）中提取纯文本字符串。
     /// Content 在反序列化后可能是 String、JsonElement 或 IList 等类型，统一处理</summary>
     /// <param name="content">消息 Content 值</param>

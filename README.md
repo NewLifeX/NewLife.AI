@@ -41,7 +41,7 @@
 - **MCP 双向支持**：客户端对接外部 MCP Server（stdio / HTTP SSE），服务端将本系统工具暴露为标准 MCP 服务
 - **完整对话内核**：`IChatHandler` 三段式处理链（OnBefore → Execute → OnAfter），内置 Handler（技能激活 / 记忆注入 / 持久化 / 用量统计 / 标题生成），可插拔 `IChatFilter`
 - **用户记忆进化**：自动从对话中提取 10 类结构化记忆，越用越懂用户
-- **统一 AI 网关**：兼容 OpenAI / Anthropic / Gemini 协议，snake_case/camelCase 自动适配，AppKey 多租户，上游 429 指数退避重试
+- **统一 AI 网关**：兼容 OpenAI / Anthropic / Gemini / Ollama 协议，snake_case/camelCase 自动适配，AppKey 多租户，上游 429 指数退避重试
 - **技能系统**：Markdown 提示词复用，`@` 递归引用，触发词自动激活
 - **多智能体与规划器**：`ConversableAgent` / `GroupChat` / `ParallelGroupChat` / `FunctionCallingPlanner` / 反思修正
 - **React 19 Web 前端**：SSE 流式 + 对话预设 + 工具调用可视化 + 推理展示 + 多模态输入（图片/文档）
@@ -231,6 +231,7 @@ NewLife.ChatAI 内置多协议 AI 网关，第三方系统无需改造即可接�
 | OpenAI Responses | `POST /v1/responses` | o3 / gpt-5 推理模型 |
 | Anthropic Messages | `POST /v1/messages` | Claude 系列 |
 | Google Gemini | `POST /v1/gemini/...` | Gemini 系列 |
+| Ollama | `POST /api/chat` `/api/tags` 等 | 伪装 Ollama 服务，兼容 Ollama 客户端 |
 | 图像生成 | `POST /v1/images/generations` | Text-to-Image |
 | 图像编辑 | `POST /v1/images/edits` | Inpainting（multipart/form-data）|
 | 模型发现 | `GET /v1/models` | 可用模型列表 |

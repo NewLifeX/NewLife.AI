@@ -29,6 +29,7 @@ API 网关对外兼容以下标准协议（实现在 NewLife.AI 基础库中）�
 | 4 | Google Gemini API | `/v1/gemini` | Google AI Gemini 模型原生协议，支持多模态输入、代码执行、搜索增强 |
 | 5 | 图像生成 API | `/v1/images/generations` | OpenAI 图像生成协议，支持文本到图像生成 |
 | 6 | 图像编辑 API | `/v1/images/edits` | OpenAI 图像编辑协议，支持提示编辑和修复 |
+| 7 | Ollama 原生 API | `/api/chat` `/api/tags` 等 | 伪装 Ollama 服务，Ollama 兼容客户端可直接调用网关模型 |
 
 > **协议适配策略**：任何符合 OpenAI Chat Completion API 协议的模型提供商均可直接接入。Anthropic、Gemini 等使用各自原生协议的提供商，由 NewLife.AI 内部做协议转换。
 

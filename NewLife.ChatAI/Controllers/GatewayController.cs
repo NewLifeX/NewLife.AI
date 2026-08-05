@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
 using NewLife.ChatAI.Filters;
@@ -180,6 +181,228 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [CamelCaseBody]
     public async Task GeminiAsync([FromBody] GeminiRequest request, CancellationToken cancellationToken)
         => await ProcessChatAsync(request, GatewayProtocol.Gemini, cancellationToken).ConfigureAwait(false);
+    #endregion
+
+    #region Ollama 原生协议（入站伪装）
+    /// <summary>Ollama /api/chat 对话接口。接受 Ollama 原生格式请求（snake_case），流式输出 NDJSON</summary>
+    /// <param name="request">Ollama 原生对话请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <remarks>
+    /// 与 OpenAI 的差异：流式响应为 NDJSON（每行一个 JSON 对象），无 data: 前缀与 [DONE]；
+    /// 消息字段为 message（非 choices[0].delta），末帧携带 done/done_reason/prompt_eval_count/eval_count。
+    /// 工具透传：请求 tools 数组解析为 ChatTool 注入统一管道，由消息流执行服务端工具。
+    /// </remarks>
+    [HttpPost("api/chat")]
+    [SnakeCaseBody]
+    public async Task OllamaChatAsync([FromBody] OllamaChatRequest request, CancellationToken cancellationToken)
+        => await ProcessChatAsync(request, GatewayProtocol.Ollama, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Ollama /api/generate 生成接口。接受补全风格请求（prompt），流式输出 NDJSON response 帧</summary>
+    /// <param name="request">Ollama 原生生成请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <remarks>内部将 prompt/system 包装为对话消息复用统一流程，响应按 generate 协议格式输出（response 顶级字段）</remarks>
+    [HttpPost("api/generate")]
+    [SnakeCaseBody]
+    public async Task OllamaGenerateAsync([FromBody] OllamaGenerateRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null)
+        {
+            await WriteErrorAsync(400, "INVALID_REQUEST", "请求体不能为空").ConfigureAwait(false);
+            return;
+        }
+
+        // 包装为对话请求：system → system 消息，prompt → user 消息，复用统一对话流程
+        var messages = new List<OllamaChatMessage>();
+        if (!request.System.IsNullOrEmpty())
+            messages.Add(new OllamaChatMessage { Role = "system", Content = request.System });
+        var userMsg = new OllamaChatMessage { Role = "user", Content = request.Prompt };
+        if (request.Images is { Length: > 0 })
+            userMsg.Images = request.Images;
+        messages.Add(userMsg);
+
+        var chatReq = new OllamaChatRequest
+        {
+            Model = request.Model,
+            Stream = request.Stream ?? true,
+            Messages = messages,
+            Options = request.Options,
+            Format = request.Format,
+            Think = request.Think,
+            KeepAlive = request.KeepAlive?.ToLong(),
+        };
+        await ProcessChatAsync(chatReq, GatewayProtocol.OllamaGenerate, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Ollama /api/tags 模型列表。兼容 Ollama GET /api/tags 协议，按 AppKey 权限返回可用模型清单</summary>
+    [HttpGet("api/tags")]
+    public IActionResult OllamaTagsAsync()
+    {
+        if (!chatSetting.EnableGateway)
+            return StatusCode(503, new { code = "GATEWAY_DISABLED", message = "API 网关已关闭" });
+
+        var appKey = gatewayService.ValidateAppKey(GetAuthKey());
+        if (appKey == null)
+            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+
+        var models = modelService.GetModelsForAppKey(appKey);
+        var data = models.Select(m => new Dictionary<String, Object?>
+        {
+            ["name"] = m.Code,
+            ["model"] = m.Code,
+            ["modified_at"] = m.UpdateTime > DateTime.MinValue ? m.UpdateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'") : "1970-01-01T00:00:00Z",
+            ["size"] = 0L,
+            ["digest"] = "",
+            ["details"] = new Dictionary<String, Object?>
+            {
+                ["format"] = "gguf",
+                ["family"] = m.ProviderInfo?.Code,
+                ["families"] = m.ProviderInfo != null ? new[] { m.ProviderInfo.Code } : Array.Empty<String>(),
+                ["parameter_size"] = "unknown",
+                ["quantization_level"] = "unknown",
+            },
+        }).ToList();
+
+        return Content(JsonSerializer.Serialize(new Dictionary<String, Object> { ["models"] = data }, GatewayService.SnakeCaseOptions), "application/json");
+    }
+
+    /// <summary>Ollama /api/version 版本探测。与 Ollama 官方行为一致不做认证，供客户端启动探测</summary>
+    [HttpGet("api/version")]
+    public IActionResult OllamaVersionAsync() => Ok(new { version = "0.1.0" });
+
+    /// <summary>Ollama /api/show 模型信息。返回模型元数据（details/capabilities 等）</summary>
+    /// <param name="request">模型信息请求</param>
+    [HttpPost("api/show")]
+    [SnakeCaseBody]
+    public IActionResult OllamaShowAsync([FromBody] OllamaShowRequest request)
+    {
+        if (!chatSetting.EnableGateway)
+            return StatusCode(503, new { code = "GATEWAY_DISABLED", message = "API 网关已关闭" });
+
+        var appKey = gatewayService.ValidateAppKey(GetAuthKey());
+        if (appKey == null)
+            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+
+        if (request == null || request.Model.IsNullOrEmpty())
+            return BadRequest(new { code = "INVALID_REQUEST", message = "model 不能为空" });
+
+        var config = modelService.ResolveAvailableModelByCode(request.Model);
+        if (config == null)
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{request.Model}'" });
+        if (!modelService.IsModelAllowed(appKey, config))
+            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{request.Model}'" });
+
+        var capabilities = new List<String> { "completion", "chat" };
+        if (config.SupportFunction) capabilities.Add("tools");
+        if (config.SupportVision) capabilities.Add("vision");
+        if (config.SupportThinking) capabilities.Add("reasoning");
+        if (config.SupportEmbedding) capabilities.Add("embedding");
+
+        var result = new Dictionary<String, Object?>
+        {
+            ["license"] = "",
+            ["modelfile"] = "",
+            ["parameters"] = "",
+            ["template"] = "",
+            ["details"] = new Dictionary<String, Object?>
+            {
+                ["format"] = "gguf",
+                ["family"] = config.ProviderInfo?.Code,
+                ["families"] = config.ProviderInfo != null ? new[] { config.ProviderInfo.Code } : Array.Empty<String>(),
+                ["parameter_size"] = "unknown",
+                ["quantization_level"] = "unknown",
+            },
+            ["model_info"] = new Dictionary<String, Object?>(),
+            ["capabilities"] = capabilities,
+        };
+        return Content(JsonSerializer.Serialize(result, GatewayService.SnakeCaseOptions), "application/json");
+    }
+
+    /// <summary>Ollama /api/embed 嵌入接口（新版）。input 可为字符串或字符串数组，返回 embeddings 数组</summary>
+    /// <param name="request">Ollama 嵌入请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("api/embed")]
+    [SnakeCaseBody]
+    public async Task<IActionResult> OllamaEmbedAsync([FromBody] OllamaEmbedRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(request.Model);
+        if (forbid != null) return forbid;
+
+        // input 支持字符串或字符串数组两种形式（反序列化后为 String 或 JsonElement）
+        IList<String> inputs;
+        if (request.Input is String s)
+            inputs = [s];
+        else if (request.Input is JsonElement je && je.ValueKind == JsonValueKind.Array)
+            inputs = je.EnumerateArray().Select(e => e.GetString() ?? "").ToList();
+        else
+            return BadRequest(new { code = "INVALID_REQUEST", message = "input 不能为空" });
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not IEmbeddingClient ec)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
+
+            var resp = await ec.GenerateAsync(new EmbeddingRequest
+            {
+                Model = request.Model,
+                Input = inputs,
+                Dimensions = request.Dimensions,
+            }, cancellationToken).ConfigureAwait(false);
+
+            var embeddings = resp.Data.OrderBy(e => e.Index).Select(e => e.Embedding).ToList();
+            return Ok(new Dictionary<String, Object?>
+            {
+                ["model"] = request.Model,
+                ["embeddings"] = embeddings,
+                ["total_duration"] = 0L,
+                ["load_duration"] = 0L,
+                ["prompt_eval_count"] = resp.Usage?.PromptTokens ?? 0,
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "EMBEDDING_FAILED", message = ex.Message });
+        }
+    }
+
+    /// <summary>Ollama /api/embeddings 嵌入接口（旧版兼容）。输入单个 prompt，返回单条 embedding</summary>
+    /// <param name="request">Ollama 旧版嵌入请求</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    [HttpPost("api/embeddings")]
+    [SnakeCaseBody]
+    public async Task<IActionResult> OllamaEmbeddingsAsync([FromBody] OllamaEmbeddingsRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null || request.Prompt.IsNullOrEmpty())
+            return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+
+        var (forbid, config) = ValidateAndResolve(request.Model);
+        if (forbid != null) return forbid;
+
+        try
+        {
+            using var client = modelService.CreateClient(config!);
+            if (client is not IEmbeddingClient ec)
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
+
+            var resp = await ec.GenerateAsync(new EmbeddingRequest
+            {
+                Model = request.Model,
+                Input = [request.Prompt],
+            }, cancellationToken).ConfigureAwait(false);
+
+            var embedding = resp.Data.OrderBy(e => e.Index).FirstOrDefault()?.Embedding;
+            return Ok(new Dictionary<String, Object?>
+            {
+                ["embedding"] = embedding,
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { code = "EMBEDDING_FAILED", message = ex.Message });
+        }
+    }
     #endregion
 
     #region 图像生成
@@ -582,7 +805,9 @@ public class GatewayController(GatewayService gatewayService, ModelService model
 
             if (request.Stream)
             {
-                Response.Headers.Append("Content-Type", "text/event-stream");
+                // Ollama 协议使用 NDJSON 流式（每行一个 JSON 对象），其余协议使用 SSE
+                var isOllama = protocol is GatewayProtocol.Ollama or GatewayProtocol.OllamaGenerate;
+                Response.Headers.Append("Content-Type", isOllama ? "application/x-ndjson" : "text/event-stream");
                 Response.Headers.Append("Cache-Control", "no-cache");
                 Response.Headers.Append("Connection", "keep-alive");
                 Response.Headers.Append("X-Accel-Buffering", "no");  // 告知 Nginx 等反向代理禁用响应缓冲，保证 SSE 实时推送

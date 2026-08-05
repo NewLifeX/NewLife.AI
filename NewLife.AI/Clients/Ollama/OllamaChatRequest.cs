@@ -98,9 +98,42 @@ public class OllamaChatRequest : IChatRequest
         set => Think = value;
     }
 
+    /// <summary>可用工具列表适配。入站时从原生 tools 数组解析为 ChatTool 列表，供管道工具链读取</summary>
+    [IgnoreDataMember]
+    private IList<ChatTool>? _chatTools;
+
     /// <summary>可用工具列表适配</summary>
     [IgnoreDataMember]
-    IList<ChatTool>? IChatRequest.Tools { get; set; }
+    IList<ChatTool>? IChatRequest.Tools
+    {
+        get
+        {
+            if (_chatTools == null && Tools != null && Tools.Count > 0)
+            {
+                var list = new List<ChatTool>(Tools.Count);
+                foreach (var tool in Tools)
+                {
+                    // 反序列化后元素可能是 JsonElement（System.Text.Json，ASP.NET Core 入站）或 Dictionary（NewLife SystemJson）。
+                    // JsonElement 不能直接用 ToJson()（会序列化为 {"ValueKind":1}），需用其 ToString() 获取 JSON 文本
+                    String json;
+                    if (tool is String str)
+                        json = str;
+                    else if (tool.GetType().FullName == "System.Text.Json.JsonElement")
+                        json = tool.ToString() ?? "";
+                    else
+                        json = tool.ToJson();
+                    if (json.IsNullOrWhiteSpace()) continue;
+
+                    // 使用 Ollama 协议选项（snake_case 属性命名），确保 function 字段正确映射到 Function 属性
+                    var ct = json.ToJsonEntity<ChatTool>(OllamaChatClient.DefaultJsonOptions);
+                    if (ct != null) list.Add(ct);
+                }
+                _chatTools = list;
+            }
+            return _chatTools;
+        }
+        set => _chatTools = value;
+    }
 
     /// <summary>Top-K 采样</summary>
     [IgnoreDataMember]
