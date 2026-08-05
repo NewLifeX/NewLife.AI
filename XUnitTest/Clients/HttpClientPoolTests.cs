@@ -20,8 +20,12 @@ public class HttpClientPoolTests : IDisposable
     /// <summary>测试专用主机。避免与其他测试的真实 Endpoint 共用池键</summary>
     private const String TestHost = "https://pool.test.local";
 
-    /// <summary>每个测试后清理共享池，隔离测试间影响（集合已串行化，不影响其他测试类）</summary>
-    public void Dispose() => HttpClientPool.Clear();
+    /// <summary>每个测试后恢复默认生命周期并清理共享池，隔离测试间影响（集合已串行化，不影响其他测试类）</summary>
+    public void Dispose()
+    {
+        HttpClientPool.HandlerLifetime = TimeSpan.FromMinutes(2);
+        HttpClientPool.Clear();
+    }
 
     /// <summary>同一主机多次获取返回同一 handler 实例（连接池共享）</summary>
     [Fact]
@@ -92,6 +96,30 @@ public class HttpClientPoolTests : IDisposable
         // 释放客户端后，再次获取仍返回同一 handler 实例
         var again = HttpClientPool.GetHandler(TestHost);
         Assert.Same(handler, again);
+    }
+
+    /// <summary>超过 HandlerLifetime 后再次获取自动轮换为新 handler（避免 DNS 变更 / 连接陈旧）</summary>
+    [Fact]
+    [DisplayName("超过生命周期自动轮换 handler")]
+    public void HandlerLifetimeRotatesHandler()
+    {
+        HttpClientPool.HandlerLifetime = TimeSpan.FromMilliseconds(50);
+        var h1 = HttpClientPool.GetHandler(TestHost);
+        Thread.Sleep(150);
+        var h2 = HttpClientPool.GetHandler(TestHost);
+
+        Assert.NotSame(h1, h2);
+    }
+
+    /// <summary>生命周期内多次获取复用同一 handler</summary>
+    [Fact]
+    [DisplayName("生命周期内复用同一 handler")]
+    public void HandlerLifetimeWithinReusesHandler()
+    {
+        var h1 = HttpClientPool.GetHandler(TestHost);
+        var h2 = HttpClientPool.GetHandler(TestHost);
+
+        Assert.Same(h1, h2);
     }
 
     /// <summary>池化 handler 的 HttpClient 能正常发起请求（连接复用有效）</summary>

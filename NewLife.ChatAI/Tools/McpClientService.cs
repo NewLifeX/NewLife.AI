@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Headers;
-using NewLife.AI.Clients;
 using NewLife.AI.ModelContextProtocol;
 using NewLife.AI.Tools;
 using NewLife.Log;
@@ -10,7 +9,8 @@ namespace NewLife.ChatAI.Tools;
 /// <summary>MCP 客户端服务。连接远程 MCP Server，发现工具并执行工具调用。实现 <see cref="IToolProvider"/> 以供 <c>ToolChatClient</c> 直接集成</summary>
 /// <remarks>实例化 MCP 客户端服务</remarks>
 /// <param name="log">日志</param>
-public class McpClientService(ILog log) : IToolProvider
+/// <param name="httpClientFactory">HTTP 客户端工厂。提供命名客户端，handler 生命周期由工厂管理</param>
+public class McpClientService(ILog log, IHttpClientFactory httpClientFactory) : IToolProvider
 {
     #region 缓存
     private IList<McpToolInfo>? _allToolsCache;
@@ -270,8 +270,9 @@ public class McpClientService(ILog log) : IToolProvider
     private async Task<JsonRpcResponse> SendRequestAsync(McpServerConfig config, JsonRpcRequest request, CancellationToken cancellationToken)
     {
         //var client = httpClientFactory.CreateClient("McpClient");
-        // 池化 handler 复用连接，避免每次调用新建 HttpClient 不释放导致连接泄漏；disposeHandler:false 释放客户端时不关闭共享连接
-        using var client = new HttpClient(HttpClientPool.GetHandler(config.Endpoint), disposeHandler: false);
+        // 使用 IHttpClientFactory 命名客户端：handler 由工厂管理（默认 2 分钟轮换），连接复用且自动刷新，避免 DNS 变更 / 连接陈旧；
+        // 工厂创建的 HttpClient 是轻量包装，其共享 handler 生命周期由工厂管理，无需释放
+        var client = httpClientFactory.CreateClient("McpClient");
         client.Timeout = TimeSpan.FromSeconds(30);
 
         // 设置认证
