@@ -5,6 +5,7 @@ using System.Text.Json;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Models;
 using Xunit;
 
@@ -25,6 +26,14 @@ public class GatewayToolsRoundTripTests
     /// <summary>模拟 ASP.NET Core 网关入站（camelCase + System.Text.Json），元素为 JsonElement</summary>
     private static GeminiRequest DeserializeGemini(String json)
         => JsonSerializer.Deserialize<GeminiRequest>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+    /// <summary>模拟 ASP.NET Core 网关入站（snake_case + System.Text.Json），元素为 JsonElement</summary>
+    private static OllamaChatRequest DeserializeOllama(String json)
+        => JsonSerializer.Deserialize<OllamaChatRequest>(json, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        })!;
 
     [Fact]
     [DisplayName("AnthropicRequest—入站tools数组转换为IChatRequest.Tools")]
@@ -120,5 +129,43 @@ public class GatewayToolsRoundTripTests
         var req = DeserializeGemini(json);
 
         Assert.Null(((IChatRequest)req).Tools);
+    }
+
+    [Fact]
+    [DisplayName("OllamaChatRequest—入站tools数组转换为IChatRequest.Tools")]
+    public void Ollama_IChatRequestTools_ParsesNativeTools()
+    {
+        var json = """
+            {"model":"qwen3.6-flash","messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"查询天气","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}}],"stream":false}
+            """;
+        var req = DeserializeOllama(json);
+
+        // A-106 同类：IChatRequest.Tools 惰性转换（复用 ToDictionary），嵌套 function 正确映射
+        var tools = ((IChatRequest)req).Tools;
+        Assert.NotNull(tools);
+        var tool = Assert.Single(tools!);
+        Assert.Equal("function", tool.Type);
+        Assert.Equal("get_weather", tool.Function?.Name);
+        Assert.Equal("查询天气", tool.Function?.Description);
+        Assert.NotNull(tool.Function?.Parameters);
+    }
+
+    [Fact]
+    [DisplayName("OllamaChatRequest—ToChatRequest保留工具定义")]
+    public void Ollama_ToChatRequest_PreservesTools()
+    {
+        var json = """
+            {"model":"qwen3.6-flash","messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"查询天气","parameters":{"type":"object"}}}],"stream":false}
+            """;
+        var req = DeserializeOllama(json);
+
+        var result = req.ToChatRequest();
+
+        // 网关统一化后工具定义不得丢失
+        Assert.NotNull(result.Tools);
+        var tool = Assert.Single(result.Tools!);
+        Assert.Equal("get_weather", tool.Function?.Name);
+        Assert.Equal("查询天气", tool.Function?.Description);
+        Assert.NotNull(tool.Function?.Parameters);
     }
 }

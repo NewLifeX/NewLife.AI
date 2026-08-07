@@ -113,20 +113,26 @@ public class OllamaChatRequest : IChatRequest
                 var list = new List<ChatTool>(Tools.Count);
                 foreach (var tool in Tools)
                 {
-                    // 反序列化后元素可能是 JsonElement（System.Text.Json，ASP.NET Core 入站）或 Dictionary（NewLife SystemJson）。
-                    // JsonElement 不能直接用 ToJson()（会序列化为 {"ValueKind":1}），需用其 ToString() 获取 JSON 文本
-                    String json;
-                    if (tool is String str)
-                        json = str;
-                    else if (tool.GetType().FullName == "System.Text.Json.JsonElement")
-                        json = tool.ToString() ?? "";
-                    else
-                        json = tool.ToJson();
-                    if (json.IsNullOrWhiteSpace()) continue;
+                    // 复用 CollectionHelper.ToDictionary：统一处理 JsonElement（System.Text.Json，ASP.NET Core 入站）/
+                    // Dictionary（NewLife SystemJson）/ POCO，JsonElement 递归转换且返回大小写不敏感字典。
+                    // 工具元素必须是对象，String/数组等非对象形态跳过（ToDictionary 对基础类型抛 InvalidDataException）。
+                    if (tool == null || tool is String || tool is System.Collections.IList) continue;
+                    var dic = tool.ToDictionary();
 
-                    // 使用 Ollama 协议选项（snake_case 属性命名），确保 function 字段正确映射到 Function 属性
-                    var ct = json.ToJsonEntity<ChatTool>(OllamaChatClient.DefaultJsonOptions);
-                    if (ct != null) list.Add(ct);
+                    var ct = new ChatTool { Type = dic.TryGetValue("type", out var type) ? type as String ?? "function" : "function" };
+                    // function 为嵌套对象（IDictionary / JsonElement / POCO），统一经 ToDictionary 转换
+                    if (dic.TryGetValue("function", out var fnObj) && fnObj != null && fnObj is not String && fnObj is not System.Collections.IList)
+                    {
+                        var fn = fnObj.ToDictionary();
+                        ct.Function = new FunctionDefinition
+                        {
+                            Name = fn["name"] as String ?? "",
+                            Description = fn.TryGetValue("description", out var desc) ? desc as String : null,
+                            // Ollama 的 parameters 直接对应 OpenAI 的 parameters
+                            Parameters = fn.TryGetValue("parameters", out var ps) ? ps : null,
+                        };
+                    }
+                    list.Add(ct);
                 }
                 _chatTools = list;
             }
@@ -368,21 +374,23 @@ public class OllamaChatRequest : IChatRequest
         if (responseFormat is String str) return str;
         if (responseFormat == null) return null;
 
-        var dic = responseFormat as IDictionary<String, Object?>;
-        if (dic == null)
-        {
-            var json = responseFormat as String ?? responseFormat.ToJson();
-            if (json.IsNullOrEmpty()) return null;
-            dic = JsonParser.Decode(json);
-        }
+        // 统一转为字典：复用 CollectionHelper.ToDictionary 兼容 Dictionary / JsonElement（递归转换）；
+        // 其余（如 JsonElement）经 ToDictionary 转换，避免 ToJson() 对 JsonElement 序列化为 {"ValueKind":1}
+        var dic = responseFormat is IDictionary<String, Object?> rawDic ? rawDic : responseFormat.ToDictionary();
         if (dic == null) return null;
 
         var type = dic["type"] as String;
         if (type.IsNullOrEmpty()) return null;
 
         if (type.EqualIgnoreCase("json_object")) return "json";
-        if (type.EqualIgnoreCase("json_schema") && dic.TryGetValue("json_schema", out var js) && js is IDictionary<String, Object> jsd)
-            return jsd.TryGetValue("schema", out var s) ? s : js;
+        // ToDictionary 递归转换的嵌套对象为 IDictionary<String, Object?>（JsonElement 路径），兼容两种字典表示
+        if (type.EqualIgnoreCase("json_schema") && dic.TryGetValue("json_schema", out var js))
+        {
+            if (js is IDictionary<String, Object?> jsd)
+                return jsd.TryGetValue("schema", out var s) ? s : js;
+            if (js is IDictionary<String, Object> jsd2)
+                return jsd2.TryGetValue("schema", out var s2) ? s2 : js;
+        }
         return "json";
     }
 }

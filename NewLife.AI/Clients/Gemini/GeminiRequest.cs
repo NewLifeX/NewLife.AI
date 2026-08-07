@@ -373,14 +373,18 @@ public class GeminiRequest : IChatRequest
     {
         if (responseFormat == null) return;
 
-        // 统一转为字典：优先直接类型，否则序列化后重新解析（兼容 JsonElement 等表示）
-        var dic = responseFormat as IDictionary<String, Object?>;
-        if (dic == null)
+        // 统一转为字典：复用 CollectionHelper.ToDictionary 兼容 Dictionary / JsonElement（递归转换，返回大小写不敏感字典）；
+        // JSON 字符串需单独解析（ToDictionary 对 String 等基础类型抛 InvalidDataException）
+        IDictionary<String, Object?>? dic;
+        if (responseFormat is String str)
         {
-            var json = responseFormat as String ?? responseFormat.ToJson();
-            if (json.IsNullOrEmpty()) return;
-            dic = JsonParser.Decode(json);
+            if (str.IsNullOrEmpty()) return;
+            dic = JsonParser.Decode(str);
         }
+        else if (responseFormat is IDictionary<String, Object?> rawDic)
+            dic = rawDic;
+        else
+            dic = responseFormat.ToDictionary();
         if (dic == null) return;
 
         var type = dic["type"] as String;
@@ -391,8 +395,14 @@ public class GeminiRequest : IChatRequest
             config.ResponseMimeType = "application/json";
 
             // OpenAI 风格 json_schema：{name, schema, strict}，Gemini responseSchema 承接 schema 本体
-            if (type.EqualIgnoreCase("json_schema") && dic.TryGetValue("json_schema", out var js) && js is IDictionary<String, Object> jsd)
-                config.ResponseSchema = jsd.TryGetValue("schema", out var s) ? s : js;
+            // ToDictionary 递归转换的嵌套对象为 IDictionary<String, Object?>（JsonElement 路径）
+            if (type.EqualIgnoreCase("json_schema") && dic.TryGetValue("json_schema", out var js))
+            {
+                if (js is IDictionary<String, Object?> jsd)
+                    config.ResponseSchema = jsd.TryGetValue("schema", out var s) ? s : js;
+                else if (js is IDictionary<String, Object> jsd2)
+                    config.ResponseSchema = jsd2.TryGetValue("schema", out var s2) ? s2 : js;
+            }
         }
     }
 
