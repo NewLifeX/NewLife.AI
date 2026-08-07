@@ -215,7 +215,7 @@ public class NativeToolTests
         private Int32 _callCount;
 
         /// <summary>最近一次请求，供断言强制轮携带提示</summary>
-        public IChatRequest? LastRequest { get; private set; }
+        public IChatRequest LastRequest { get; private set; }
 
         public ToolCallThenEmptyClient(String toolName, String toolArgs, String forcedReply)
         {
@@ -882,10 +882,10 @@ public class NativeToolTests
     // 测试专用：捕获调用选项的假客户端，不触发工具循环
     private sealed class CapturingChatClient : IChatClient
     {
-        private readonly Action<IChatRequest?> _capture;
+        private readonly Action<IChatRequest> _capture;
         private readonly String _finalReply;
 
-        public CapturingChatClient(Action<IChatRequest?> capture, String finalReply)
+        public CapturingChatClient(Action<IChatRequest> capture, String finalReply)
         {
             _capture = capture;
             _finalReply = finalReply;
@@ -1261,7 +1261,7 @@ public class NativeToolTests
 
         public ToolApprovalTier GetToolTier(String toolName) => _tier;
 
-        public Task<ToolApprovalResult> RequestApprovalAsync(String toolName, String? argumentsJson, CancellationToken ct = default)
+        public Task<ToolApprovalResult> RequestApprovalAsync(String toolName, String argumentsJson, CancellationToken ct = default)
             => Task.FromResult(_onRequest());
     }
 
@@ -1285,7 +1285,7 @@ public class NativeToolTests
         private Int32 _callCount;
 
         /// <summary>第二次调用时收到的消息列表</summary>
-        public IList<ChatMessage>? SecondCallMessages { get; private set; }
+        public IList<ChatMessage> SecondCallMessages { get; private set; }
 
         public MessageCapturingClient(String toolName, String toolArgs, String finalReply)
         {
@@ -1395,7 +1395,7 @@ public class NativeToolTests
     [DisplayName("ToolCallId 在工具调用时与 LLM 返回的 tc.Id 一致")]
     public async Task ToolChatClient_ToolCallId_MatchesTcId()
     {
-        String? capturedToolCallId = null;
+        String capturedToolCallId = null;
         var registry = new ToolRegistry();
         registry.AddTool("id_capture", async (args, ctx, ct) =>
         {

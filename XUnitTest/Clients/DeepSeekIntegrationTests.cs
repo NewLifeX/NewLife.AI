@@ -32,7 +32,7 @@ public class DeepSeekIntegrationTests
     }
 
     /// <summary>从 config 目录或环境变量加载 ApiKey</summary>
-    public static String? LoadApiKey()
+    public static String LoadApiKey()
     {
         var configPath = "config/DeepSeek.key".GetFullPath();
         if (File.Exists(configPath))
@@ -83,7 +83,7 @@ public class DeepSeekIntegrationTests
     };
 
     /// <summary>创建客户端并执行非流式请求。遇到瞬发网络错误时最多重试 2 次</summary>
-    private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions? opts = null)
+    private async Task<IChatResponse> ChatAsync(IChatRequest request, AiClientOptions opts = null)
     {
         var retries = 2;
         while (true)
@@ -105,7 +105,7 @@ public class DeepSeekIntegrationTests
         ex.InnerException is System.Net.Sockets.SocketException or IOException;
 
     /// <summary>创建客户端并执行流式请求</summary>
-    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions? opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    private async IAsyncEnumerable<IChatResponse> ChatStreamAsync(IChatRequest request, AiClientOptions opts = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         using var client = new DeepSeekChatClient(opts ?? CreateOptions());
         await foreach (var chunk in client.GetStreamingResponseAsync(request, ct))
@@ -558,7 +558,7 @@ public class DeepSeekIntegrationTests
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
-        String? objectField = null;
+        String objectField = null;
         await foreach (var chunk in ChatStreamAsync(request))
         {
             if (chunk.Object != null)
@@ -604,7 +604,7 @@ public class DeepSeekIntegrationTests
         var request = CreateSimpleRequest("deepseek-chat", "hi", 200);
         request.Stream = true;
 
-        String? model = null;
+        String model = null;
         await foreach (var chunk in ChatStreamAsync(request))
         {
             if (chunk.Model != null)

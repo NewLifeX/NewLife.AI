@@ -383,6 +383,17 @@ public class GeminiRequest : IChatRequest
             TopK = GenerationConfig?.TopK,
             Stream = Stream,
             Stop = GenerationConfig?.StopSequences,
+            PresencePenalty = PresencePenalty,
+            FrequencyPenalty = FrequencyPenalty,
+            EnableThinking = EnableThinking,
+            ResponseFormat = ResponseFormat,
+            ToolChoice = ToolChoice,
+            ParallelToolCalls = ParallelToolCalls,
+            Tools = ((IChatRequest)this).Tools,
+            User = User,
+            UserId = UserId,
+            ConversationId = ConversationId,
+            Items = Items,
         };
     }
     #endregion

@@ -328,6 +328,38 @@ public class OllamaChatRequest : IChatRequest
         return result;
     }
 
+    /// <summary>转换为内部统一的 ChatRequest。从 Ollama 消息与 options 恢复统一字段（网关统一化方案支撑）</summary>
+    /// <returns>等效的 ChatRequest 实例</returns>
+    public ChatRequest ToChatRequest()
+    {
+        var messages = new List<ChatMessage>();
+        foreach (var msg in Messages)
+            messages.Add(msg.ToChatMessage());
+
+        return new ChatRequest
+        {
+            Model = Model,
+            Messages = messages,
+            Stream = Stream,
+            MaxTokens = Options?.NumPredict,
+            Temperature = Options?.Temperature,
+            TopP = Options?.TopP,
+            TopK = Options?.TopK,
+            Stop = Options?.Stop,
+            PresencePenalty = Options?.PresencePenalty ?? PresencePenalty,
+            FrequencyPenalty = Options?.FrequencyPenalty ?? FrequencyPenalty,
+            EnableThinking = Think,
+            ResponseFormat = Format ?? ResponseFormat,
+            ToolChoice = ToolChoice,
+            ParallelToolCalls = ParallelToolCalls,
+            Tools = ((IChatRequest)this).Tools,
+            User = User,
+            UserId = UserId,
+            ConversationId = ConversationId,
+            Items = Items,
+        };
+    }
+
     /// <summary>映射统一响应格式到 Ollama format 字段。json_object → "json"；json_schema → 协议 schema 对象或 "json"</summary>
     /// <param name="responseFormat">统一响应格式对象，OpenAI 风格 {type:"json_object"/"json_schema", json_schema:{...}}</param>
     /// <returns>Ollama format 值，无法识别时返回 null</returns>

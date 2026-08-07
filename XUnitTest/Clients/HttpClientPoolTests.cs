@@ -129,9 +129,9 @@ public class HttpClientPoolTests : IDisposable
     {
         var handler = new StubHandler();
         var client = new HttpClient(handler, disposeHandler: false);
-        var resp = await client.GetAsync($"{TestHost}/test").ConfigureAwait(false);
+        var resp = await client.GetAsync($"{TestHost}/test");
 
-        Assert.Equal("OK", await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
+        Assert.Equal("OK", await resp.Content.ReadAsStringAsync());
     }
 
     /// <summary>桩 Handler。返回固定响应，验证池化 handler 的 HttpClient 可用性</summary>

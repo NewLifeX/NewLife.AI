@@ -7,6 +7,7 @@ using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
+using NewLife.AI.Models;
 using NewLife.ChatAI.Filters;
 
 namespace NewLife.ChatAI.Controllers;
@@ -754,6 +755,19 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     #endregion
 
     #region 辅助
+    /// <summary>网关统一化：将协议专用请求转换为内部统一 ChatRequest。统一请求原样返回；各协议请求经 ToChatRequest 转换</summary>
+    /// <param name="request">入站请求（可为各协议原生请求）</param>
+    /// <returns>统一 ChatRequest，无法识别的类型原样返回</returns>
+    private static IChatRequest NormalizeGatewayRequest(IChatRequest request)
+    {
+        if (request is ChatRequest) return request;
+        if (request is ChatCompletionRequest cc) return cc.ToChatRequest();
+        if (request is AnthropicRequest ar) return ar.ToChatRequest();
+        if (request is GeminiRequest gr) return gr.ToChatRequest();
+        if (request is OllamaChatRequest oc) return oc.ToChatRequest();
+        return request;
+    }
+
     /// <summary>核心对话处理逻辑。认证、模型路由、根据协议格式化流式/非流式响应，由各协议端点共用</summary>
     /// <param name="request">对话请求（可以是各协议原生请求，均实现 IChatRequest）</param>
     /// <param name="protocol">目标响应协议（OpenAI / Anthropic / Gemini）</param>
@@ -767,6 +781,10 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             await WriteErrorAsync(401, "INVALID_API_KEY", "AppKey 无效或已禁用").ConfigureAwait(false);
             return;
         }
+
+        // 网关统一化：协议专用请求（Anthropic/Gemini/Ollama 等）先转为内部统一 ChatRequest，
+        // 使过滤器链与消息流工作于统一对象——协议请求的 Messages 适配器修改不再被静默丢弃（A-94 方案）
+        request = NormalizeGatewayRequest(request);
 
         // 模型路由
         var config = modelService.ResolveAvailableModelByCode(request.Model);

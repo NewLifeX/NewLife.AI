@@ -99,7 +99,7 @@ public class AzureAIChatClientTests
     {
         var client = new AzureAIChatClient("test-key", "gpt-4o", "https://myresource.openai.azure.com");
 
-        Assert.IsNotType<IVideoClient>(client);
+        Assert.IsNotAssignableFrom<IVideoClient>(client);
         return Task.CompletedTask;
     }
 

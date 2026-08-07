@@ -108,7 +108,7 @@ public class InMemoryVectorStoreTests
     public async Task UpsertBatchAsync_MixedRecords_OnlyValidStored()
     {
         var store = new InMemoryVectorStore();
-        var records = new VectorRecord?[]
+        var records = new VectorRecord[]
         {
             new VectorRecord { Id = "good1", Vector = [1f, 0f] },
             null,

@@ -16,6 +16,8 @@ namespace NewLife.AI.Tools;
 /// <item>注册整个服务类中所有 <see cref="ToolDescriptionAttribute"/> 标注方法（通过 <see cref="AddTools{T}"/>）</item>
 /// <item>扫描程序集批量注册（通过 <see cref="AddToolsFromAssembly"/>）</item>
 /// </list>
+/// <b>线程契约</b>：注册应在服务启动阶段（并发请求到达前）完成——内部集合（工具列表/处理器/别名/系统名）在注册后为只读并发读安全；
+/// 运行时动态注册（AddTool/AddTools）与并发请求同时发生存在竞态，非受支持场景。同名工具重复注册时保留首次注册并记录警告日志。
 /// </remarks>
 public class ToolRegistry : IToolProvider
 {
@@ -389,7 +391,12 @@ public class ToolRegistry : IToolProvider
         var tool = ToolSchemaBuilder.BuildFromMethod(method);
         var toolName = tool.Function!.Name;
 
-        if (_handlers.ContainsKey(toolName)) return;  // 已注册则跳过，不覆盖
+        // 已注册则跳过不覆盖（保护首次注册）。静默丢弃会掩盖名称冲突，记录警告便于排查
+        if (_handlers.ContainsKey(toolName))
+        {
+            XTrace.WriteLine("[ToolRegistry] 工具 {0} 已注册，跳过重复注册（来源：{1}.{2}）", toolName, method.DeclaringType?.FullName, method.Name);
+            return;
+        }
 
         var attr = method.GetCustomAttribute<ToolDescriptionAttribute>(true);
         if (attr is { IsSystem: true })

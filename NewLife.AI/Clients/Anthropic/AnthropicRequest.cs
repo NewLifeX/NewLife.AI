@@ -477,6 +477,17 @@ public class AnthropicRequest : IChatRequest
             TopK = TopK,
             Stream = Stream,
             Stop = StopSequences,
+            PresencePenalty = PresencePenalty,
+            FrequencyPenalty = FrequencyPenalty,
+            EnableThinking = EnableThinking,
+            ResponseFormat = ResponseFormat,
+            ToolChoice = ToolChoice,
+            ParallelToolCalls = ParallelToolCalls,
+            Tools = ((IChatRequest)this).Tools,
+            User = User,
+            UserId = UserId,
+            ConversationId = ConversationId,
+            Items = Items,
         };
     }
     #endregion
