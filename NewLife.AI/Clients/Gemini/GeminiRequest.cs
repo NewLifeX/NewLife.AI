@@ -136,36 +136,20 @@ public class GeminiRequest : IChatRequest
                 var list = new List<ChatTool>();
                 foreach (var tool in Tools)
                 {
-                    // 反序列化后元素可能是 JsonElement（System.Text.Json，ASP.NET Core 入站）或 Dictionary（NewLife SystemJson）
-                    var dic = tool as IDictionary<String, Object?>;
-                    if (dic == null)
-                    {
-                        // JsonElement 等表示统一转为 JSON 文本再解析
-                        String? json;
-                        if (tool is String str) json = str;
-                        else if (tool.GetType().FullName == "System.Text.Json.JsonElement") json = tool.ToString();
-                        else json = tool.ToJson();
-                        if (json.IsNullOrWhiteSpace()) continue;
-                        dic = JsonParser.Decode(json);
-                    }
-                    if (dic == null) continue;
+                    // 复用 CollectionHelper.ToDictionary：统一处理 JsonElement（System.Text.Json，ASP.NET Core 入站）/
+                    // Dictionary（NewLife SystemJson）/ POCO，JsonElement 递归转换且返回大小写不敏感字典。
+                    // 工具元素必须是对象，String/数组等非对象形态跳过（ToDictionary 对基础类型抛 InvalidDataException）。
+                    if (tool == null || tool is String || tool is System.Collections.IList) continue;
+                    var dic = tool.ToDictionary();
 
                     // Gemini 格式：[{functionDeclarations:[{name, description, parameters}]}]
-                    if (dic["functionDeclarations"] is not IList<Object> declarations) continue;
+                    // ToDictionary 将 JSON 数组转为 IList<Object?>，元素为字典
+                    if (dic["functionDeclarations"] is not IList<Object?> declarations) continue;
                     foreach (var decl in declarations)
                     {
-                        var ddic = decl as IDictionary<String, Object?>;
-                        if (ddic == null)
-                        {
-                            // functionDeclarations 元素同样可能是 JsonElement 等表示
-                            String? djson;
-                            if (decl is String ds) djson = ds;
-                            else if (decl.GetType().FullName == "System.Text.Json.JsonElement") djson = decl.ToString();
-                            else djson = decl.ToJson();
-                            if (djson.IsNullOrWhiteSpace()) continue;
-                            ddic = JsonParser.Decode(djson);
-                        }
-                        if (ddic == null) continue;
+                        // 声明元素必须是对象，跳过 String/数组等非对象形态
+                        if (decl == null || decl is String || decl is System.Collections.IList) continue;
+                        var ddic = decl.ToDictionary();
 
                         var name = ddic["name"] as String;
                         if (name.IsNullOrEmpty()) continue;

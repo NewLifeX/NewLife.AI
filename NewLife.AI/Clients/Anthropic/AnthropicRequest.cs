@@ -103,19 +103,11 @@ public class AnthropicRequest : IChatRequest
                 var list = new List<ChatTool>(Tools.Count);
                 foreach (var tool in Tools)
                 {
-                    // 反序列化后元素可能是 JsonElement（System.Text.Json，ASP.NET Core 入站）或 Dictionary（NewLife SystemJson）
-                    var dic = tool as IDictionary<String, Object?>;
-                    if (dic == null)
-                    {
-                        // JsonElement 等表示统一转为 JSON 文本再解析
-                        String? json;
-                        if (tool is String str) json = str;
-                        else if (tool.GetType().FullName == "System.Text.Json.JsonElement") json = tool.ToString();
-                        else json = tool.ToJson();
-                        if (json.IsNullOrWhiteSpace()) continue;
-                        dic = JsonParser.Decode(json);
-                    }
-                    if (dic == null) continue;
+                    // 复用 CollectionHelper.ToDictionary：统一处理 JsonElement（System.Text.Json，ASP.NET Core 入站）/
+                    // Dictionary（NewLife SystemJson）/ POCO，JsonElement 递归转换且返回大小写不敏感字典。
+                    // 工具元素必须是对象，String/数组等非对象形态跳过（ToDictionary 对基础类型抛 InvalidDataException）。
+                    if (tool == null || tool is String || tool is System.Collections.IList) continue;
+                    var dic = tool.ToDictionary();
 
                     var name = dic["name"] as String;
                     if (name.IsNullOrEmpty()) continue;
