@@ -131,7 +131,9 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
             onError?.Invoke(ex);
             try
             {
-                await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(errorCode, ex.Message), CancellationToken.None).ConfigureAwait(false);
+                // 上下文超限等已知错误映射为友好文案，其余保持原始信息
+                var info = ChatErrorHelper.Classify(ex.Message, errorCode);
+                await WriteSseEventAsync(ChatStreamEvent.ErrorEvent(info.Code, info.Message), CancellationToken.None).ConfigureAwait(false);
             }
             catch
             {

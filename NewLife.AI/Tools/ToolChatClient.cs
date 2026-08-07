@@ -45,6 +45,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>是否因工具调用轮次上限触发中断</summary>
     public Boolean IsToolLoopLimitExceeded { get; private set; }
 
+    /// <summary>是否因上下文窗口预算触发中断。工具结果逐轮累积超限时置位，供上层转为友好提示</summary>
+    public Boolean IsContextLimitExceeded { get; private set; }
+
     /// <summary>API 不返回 Usage 时的回退估算累计值（基于内联字符估算）</summary>
     private Int32 _fallbackEstimatedTokens;
 
@@ -96,6 +99,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         // 限额/超限标志/失败轮数会污染下一请求的判定
         IsTotalTokenLimitExceeded = false;
         IsToolLoopLimitExceeded = false;
+        IsContextLimitExceeded = false;
         _fallbackEstimatedTokens = 0;
         _consecutiveFailureRounds = 0;
 
@@ -111,7 +115,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (maxIterations <= 0) maxIterations = 10;
         var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
 
-        IChatResponse response;
+        IChatResponse response = null!;
         var iterations = 0;
         var executedAnyTool = false;
         UsageDetails? accumulatedUsage = null;
@@ -125,6 +129,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // 上下文窗口预算检查：工具结果逐轮累积进消息列表，超限时中断循环，防止撑爆模型上下文窗口
+            if (CheckContextLimit(workMessages, mergedTools, request)) break;
+
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
 
             // 累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）
@@ -216,8 +224,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
 
         // 兜底：执行过工具但最终轮未产出正文（模型只输出思考/工具调用即结束，或轮次达上限），
-        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；Token 超限时不追加）
-        if (!IsTotalTokenLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
+        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；Token 超限或上下文超限时不追加）
+        if (!IsTotalTokenLimitExceeded && !IsContextLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
         {
             Log.Info("最终回复内容为空，追加提示后强制产出最终回答");
             workMessages.Add(new ChatMessage
@@ -250,6 +258,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），与 GetResponseAsync 保持一致
         IsTotalTokenLimitExceeded = false;
         IsToolLoopLimitExceeded = false;
+        IsContextLimitExceeded = false;
         _fallbackEstimatedTokens = 0;
         _consecutiveFailureRounds = 0;
 
@@ -279,6 +288,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         for (var iteration = 0; iteration < maxIterations; iteration++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // 上下文窗口预算检查：工具结果逐轮累积进消息列表，超限时中断循环，防止撑爆模型上下文窗口
+            if (CheckContextLimit(workMessages, mergedTools, request)) break;
 
             var toolCalls = new List<ToolCall>();
             String? finishReason = null;
@@ -668,6 +680,30 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         return false;
     }
 
+    /// <summary>上下文窗口预算检查。工具结果逐轮累积进消息列表，超限时置中断标记并记录日志</summary>
+    /// <remarks>
+    /// 预算由请求级 <c>MaxInputTokens</c> 传入（MessageFlow 按模型 ContextLength×0.85 注入）；
+    /// 未设置预算（库直接使用者）时自动禁用，不影响既有行为。估算含工具 schema（同样占用上下文窗口）。
+    /// </remarks>
+    /// <param name="workMessages">当前待发送的消息列表（含已累积的工具结果）</param>
+    /// <param name="mergedTools">合并后的工具定义（schema 同样占用上下文）</param>
+    /// <param name="request">原始请求，读取请求级预算</param>
+    /// <returns>超限返回 true，调用方应中断循环</returns>
+    private Boolean CheckContextLimit(List<ChatMessage> workMessages, List<ChatTool> mergedTools, IChatRequest? request)
+    {
+        var maxInput = request?["MaxInputTokens"]?.ToInt() ?? 0;
+        if (maxInput <= 0) return false;
+
+        var estimated = EstimateTokens(workMessages) + EstimateTokens(mergedTools);
+        if (estimated >= maxInput)
+        {
+            IsContextLimitExceeded = true;
+            Log.Warn("上下文窗口预算已达到 {0:N0}（当前估算 {1:N0}），中断工具调用循环", maxInput, estimated);
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>构建 assistant 消息（含工具调用）。透传思考内容与协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需</summary>
     /// <param name="assistantMessage">本轮 LLM 返回的 assistant 消息</param>
     /// <param name="toolCalls">工具调用列表</param>
@@ -682,7 +718,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
         };
 
-    /// <summary>估算消息列表的 Token 数（粗略：中文按1.5字/token，英文按4字符/token）。API 不返回 Usage 时作为回退判定依据</summary>
+    /// <summary>估算消息列表的 Token 数（粗略：中文按1字/token，英文按4字符/token）。API 不返回 Usage 时作为回退判定依据</summary>
     /// <param name="messages">消息列表</param>
     /// <returns>Token 估算值</returns>
     private static Int32 EstimateTokens(IList<ChatMessage> messages)
@@ -709,6 +745,24 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         return total;
     }
 
+    /// <summary>估算工具定义（schema）的 Token 数。工具参数 JSON、名称与描述均占用上下文窗口</summary>
+    /// <param name="tools">工具定义列表</param>
+    /// <returns>Token 估算值</returns>
+    private static Int32 EstimateTokens(List<ChatTool> tools)
+    {
+        if (tools == null || tools.Count == 0) return 0;
+
+        var total = 0;
+        foreach (var t in tools)
+        {
+            total += 10; // 固定开销（type/name/description 等字段）
+            total += EstimateTokens(t.Function?.Name);
+            total += EstimateTokens(t.Function?.Description);
+            total += EstimateTokens(t.Function?.Parameters?.ToJson());
+        }
+        return total;
+    }
+
     /// <summary>估算单段文本的 Token 数</summary>
     /// <param name="text">文本内容</param>
     /// <returns>Token 估算值</returns>
@@ -726,7 +780,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 otherCount++;
         }
 
-        return (Int32)(chineseCount / 1.5 + otherCount / 4.0);
+        // 保守估算：中文按 1 字/token（qwen/gpt 等主流分词器约 1 字/token），宁可多估不冒险
+        return (Int32)(chineseCount / 1.0 + otherCount / 4.0);
     }
 
     /// <summary>按工具名路由到对应 Provider 执行工具调用。未找到则抛 <see cref="InvalidOperationException"/></summary>

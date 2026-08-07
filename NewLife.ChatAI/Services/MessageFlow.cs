@@ -169,7 +169,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 if (bgTask is { Status: BackgroundTaskStatus.Failed, Error: not null })
                 {
                     hasError = true;
-                    yield return ChatStreamEvent.ErrorEvent("STREAM_ERROR", bgTask.Error);
+                    var bgInfo = ChatErrorHelper.Classify(bgTask.Error);
+                    yield return ChatStreamEvent.ErrorEvent(bgInfo.Code, bgInfo.Message);
                 }
             }
 
@@ -274,7 +275,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 if (bgTask is { Status: BackgroundTaskStatus.Failed, Error: not null })
                 {
                     hasError = true;
-                    yield return ChatStreamEvent.ErrorEvent("STREAM_ERROR", bgTask.Error);
+                    var bgInfo = ChatErrorHelper.Classify(bgTask.Error);
+                    yield return ChatStreamEvent.ErrorEvent(bgInfo.Code, bgInfo.Message);
                 }
             }
 
@@ -409,7 +411,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 if (bgTask is { Status: BackgroundTaskStatus.Failed, Error: not null })
                 {
                     hasError = true;
-                    yield return ChatStreamEvent.ErrorEvent("STREAM_ERROR", bgTask.Error);
+                    var bgInfo = ChatErrorHelper.Classify(bgTask.Error);
+                    yield return ChatStreamEvent.ErrorEvent(bgInfo.Code, bgInfo.Message);
                 }
             }
 
@@ -883,7 +886,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 {
                     log?.Error("流式生成失败: {0}", ex.Message);
                     context.HasError = true;
-                    errorEvent = ChatStreamEvent.ErrorEvent("STREAM_ERROR", ex.Message);
+                    // 上下文超限等已知错误映射为友好文案，其余保持原始信息
+                    var info = ChatErrorHelper.Classify(ex.Message);
+                    errorEvent = ChatStreamEvent.ErrorEvent(info.Code, info.Message);
                     moved = false;
                 }
                 if (errorEvent != null) { yield return errorEvent; break; }
@@ -991,6 +996,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         var request = ChatRequest.Create(contextMessages, context.Options, stream: true);
         request["IChatContext"] = context;
+        // 上下文窗口预算注入：供 ToolChatClient 逐轮守卫使用，工具结果累积超限时中断循环
+        if (model.ContextLength > 0)
+            request["MaxInputTokens"] = (Int32)(model.ContextLength * 0.85);
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
         {
             // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
@@ -1096,6 +1104,14 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             var limitMsg = $"本消息工具调用累计Token已超过限额（{tcc.ToolSetting?.ToolMaxTotalTokens ?? 0:N0}），已停止继续调用。请精简问题或开启新会话。";
             log?.Warn("Token总限额触发: MaxTotalTokens={0:N0}", tcc.ToolSetting?.ToolMaxTotalTokens ?? 0);
             yield return ChatStreamEvent.ErrorEvent("total_tokens_exceeded", limitMsg);
+        }
+
+        // 上下文窗口预算触发：工具结果逐轮累积超限，中断循环并推送友好错误给前端
+        if (streamClient is ToolChatClient tcc2 && tcc2.IsContextLimitExceeded)
+        {
+            log?.Warn("上下文窗口预算触发，中断工具调用循环");
+            var limit = model.ContextLength > 0 ? (Int64?)model.ContextLength : null;
+            yield return ChatStreamEvent.ErrorEvent(ChatErrorHelper.ContextTooLongCode, ChatErrorHelper.BuildContextLimitMessage(limit));
         }
 
         // 仅当 LLM 返回有效 usage 时才发送 MessageDone（含 Token 统计），

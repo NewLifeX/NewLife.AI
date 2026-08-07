@@ -297,6 +297,15 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>完整请求 URL</returns>
     protected String BuildApiUrl(String path) => CombineApiUrl(_options.GetEndpoint(DefaultEndpoint), path);
 
+    /// <summary>创建 API 异常。上下文超限错误升级为 <see cref="ContextLengthExceededException"/>，便于调用方识别并转为友好提示</summary>
+    /// <param name="code">HTTP 状态码</param>
+    /// <param name="body">服务商错误响应体</param>
+    /// <returns>API 异常实例</returns>
+    private static ApiException CreateApiException(Int32 code, String body)
+        => ChatErrorHelper.IsContextLengthError(body)
+            ? new ContextLengthExceededException(code, body)
+            : new ApiException(code, body);
+
     /// <summary>检测流式 data 中的服务商错误对象。OpenAI 兼容协议错误格式为 {"error":{"message":"...","code":"..."}}，命中时抛 <see cref="HttpRequestException"/> 而非静默吞掉</summary>
     /// <param name="data">SSE data 行内容</param>
     /// <param name="name">客户端名称，用于错误信息</param>
@@ -308,7 +317,13 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         var err = errDic?["error"] as IDictionary<String, Object>;
         var code = err?["code"] as String;
         var message = err?["message"] as String ?? data;
-        throw new HttpRequestException($"[{name}] 流式错误 {(code.IsNullOrEmpty() ? "" : code + " ")}{message}");
+        var text = $"[{name}] 流式错误 {(code.IsNullOrEmpty() ? "" : code + " ")}{message}";
+
+        // 上下文超限：升级为类型化异常，便于上层识别并转为友好提示
+        if (ChatErrorHelper.IsContextLengthError(text))
+            throw new ContextLengthExceededException(400, text);
+
+        throw new HttpRequestException(text);
     }
 
     /// <summary>记录流式数据块解析失败。畸形数据块跳过不中断整个流，但记录日志与埋点便于排查协议漂移与服务商格式变化</summary>
@@ -368,7 +383,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new ApiException((Int32)resp.StatusCode, json);
+            throw CreateApiException((Int32)resp.StatusCode, json);
         //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
@@ -424,7 +439,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         using var resp = await HttpClient.SendAsync(req, cancellationToken).ConfigureAwait(false);
         var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
-            throw new ApiException((Int32)resp.StatusCode, json);
+            throw CreateApiException((Int32)resp.StatusCode, json);
         //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {json}");
         return json;
     }
@@ -488,7 +503,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (errBody.IsNullOrEmpty()) errBody = resp.ReasonPhrase;
             resp.Dispose();
-            throw new ApiException((Int32)resp.StatusCode, errBody);
+            throw CreateApiException((Int32)resp.StatusCode, errBody);
             //throw new HttpRequestException($"AI 服务商[{Name}]返回错误 {(Int32)resp.StatusCode}: {errBody}");
         }
         return resp;
@@ -514,7 +529,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         {
             var errBody = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (errBody.IsNullOrEmpty()) errBody = resp.ReasonPhrase;
-            throw new ApiException((Int32)resp.StatusCode, errBody);
+            throw CreateApiException((Int32)resp.StatusCode, errBody);
         }
         return await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
     }
