@@ -119,9 +119,76 @@ public class GeminiRequest : IChatRequest
         set { GenerationConfig ??= new GeminiGenerationConfig(); GenerationConfig.StopSequences = value; }
     }
 
-    /// <summary>可用工具列表适配</summary>
+    /// <summary>可用工具列表缓存。入站时从原生 Tools 数组惰性转换</summary>
     [IgnoreDataMember]
-    IList<ChatTool>? IChatRequest.Tools { get; set; }
+    private IList<ChatTool>? _chatTools;
+
+    /// <summary>可用工具列表适配。入站时从原生 Tools（[{functionDeclarations:[...]}]）惰性转换为 ChatTool，与 Ollama 的 _chatTools 模式一致</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools
+    {
+        get
+        {
+            // A-106：自动属性在入站时保持 null（IgnoreDataMember），工具定义在网关统一化 ToChatRequest 转换中丢失。
+            // 与 Ollama 一致改为惰性转换：原生 Tools 数组 → ChatTool 列表，仅在无缓存且存在工具时构建。
+            if (_chatTools == null && Tools != null && Tools.Count > 0)
+            {
+                var list = new List<ChatTool>();
+                foreach (var tool in Tools)
+                {
+                    // 反序列化后元素可能是 JsonElement（System.Text.Json，ASP.NET Core 入站）或 Dictionary（NewLife SystemJson）
+                    var dic = tool as IDictionary<String, Object?>;
+                    if (dic == null)
+                    {
+                        // JsonElement 等表示统一转为 JSON 文本再解析
+                        String? json;
+                        if (tool is String str) json = str;
+                        else if (tool.GetType().FullName == "System.Text.Json.JsonElement") json = tool.ToString();
+                        else json = tool.ToJson();
+                        if (json.IsNullOrWhiteSpace()) continue;
+                        dic = JsonParser.Decode(json);
+                    }
+                    if (dic == null) continue;
+
+                    // Gemini 格式：[{functionDeclarations:[{name, description, parameters}]}]
+                    if (dic["functionDeclarations"] is not IList<Object> declarations) continue;
+                    foreach (var decl in declarations)
+                    {
+                        var ddic = decl as IDictionary<String, Object?>;
+                        if (ddic == null)
+                        {
+                            // functionDeclarations 元素同样可能是 JsonElement 等表示
+                            String? djson;
+                            if (decl is String ds) djson = ds;
+                            else if (decl.GetType().FullName == "System.Text.Json.JsonElement") djson = decl.ToString();
+                            else djson = decl.ToJson();
+                            if (djson.IsNullOrWhiteSpace()) continue;
+                            ddic = JsonParser.Decode(djson);
+                        }
+                        if (ddic == null) continue;
+
+                        var name = ddic["name"] as String;
+                        if (name.IsNullOrEmpty()) continue;
+
+                        list.Add(new ChatTool
+                        {
+                            Type = "function",
+                            Function = new FunctionDefinition
+                            {
+                                Name = name,
+                                Description = ddic.TryGetValue("description", out var desc) ? desc as String : null,
+                                // Gemini 的 parameters 直接对应 OpenAI 的 parameters
+                                Parameters = ddic.TryGetValue("parameters", out var ps) ? ps : null,
+                            },
+                        });
+                    }
+                }
+                _chatTools = list;
+            }
+            return _chatTools;
+        }
+        set => _chatTools = value;
+    }
 
     /// <summary>存在惩罚</summary>
     [IgnoreDataMember]

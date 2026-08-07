@@ -86,9 +86,58 @@ public class AnthropicRequest : IChatRequest
     [IgnoreDataMember]
     IList<String>? IChatRequest.Stop { get => StopSequences; set => StopSequences = value; }
 
-    /// <summary>可用工具列表适配。将 Anthropic 格式工具转换为 ChatTool</summary>
+    /// <summary>可用工具列表缓存。入站时从原生 Tools 数组惰性转换</summary>
     [IgnoreDataMember]
-    IList<ChatTool>? IChatRequest.Tools { get; set; }
+    private IList<ChatTool>? _chatTools;
+
+    /// <summary>可用工具列表适配。入站时从原生 Tools（name/description/input_schema）惰性转换为 ChatTool（type/function），与 Ollama 的 _chatTools 模式一致</summary>
+    [IgnoreDataMember]
+    IList<ChatTool>? IChatRequest.Tools
+    {
+        get
+        {
+            // A-106：自动属性在入站时保持 null（IgnoreDataMember），工具定义在网关统一化 ToChatRequest 转换中丢失。
+            // 与 Ollama 一致改为惰性转换：原生 Tools 数组 → ChatTool 列表，仅在无缓存且存在工具时构建。
+            if (_chatTools == null && Tools != null && Tools.Count > 0)
+            {
+                var list = new List<ChatTool>(Tools.Count);
+                foreach (var tool in Tools)
+                {
+                    // 反序列化后元素可能是 JsonElement（System.Text.Json，ASP.NET Core 入站）或 Dictionary（NewLife SystemJson）
+                    var dic = tool as IDictionary<String, Object?>;
+                    if (dic == null)
+                    {
+                        // JsonElement 等表示统一转为 JSON 文本再解析
+                        String? json;
+                        if (tool is String str) json = str;
+                        else if (tool.GetType().FullName == "System.Text.Json.JsonElement") json = tool.ToString();
+                        else json = tool.ToJson();
+                        if (json.IsNullOrWhiteSpace()) continue;
+                        dic = JsonParser.Decode(json);
+                    }
+                    if (dic == null) continue;
+
+                    var name = dic["name"] as String;
+                    if (name.IsNullOrEmpty()) continue;
+
+                    list.Add(new ChatTool
+                    {
+                        Type = "function",
+                        Function = new FunctionDefinition
+                        {
+                            Name = name,
+                            Description = dic.TryGetValue("description", out var desc) ? desc as String : null,
+                            // Anthropic 的 input_schema 对应 OpenAI 的 parameters
+                            Parameters = dic.TryGetValue("input_schema", out var schema) ? schema : null,
+                        },
+                    });
+                }
+                _chatTools = list;
+            }
+            return _chatTools;
+        }
+        set => _chatTools = value;
+    }
 
     /// <summary>存在惩罚</summary>
     [IgnoreDataMember]
