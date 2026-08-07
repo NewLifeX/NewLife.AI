@@ -192,13 +192,62 @@ public sealed class DashScopeRealtimeClient : IDisposable
 
             if (String.IsNullOrWhiteSpace(json)) continue;
 
-            var evt = RealtimeEvent.Parse(json);
-            if (evt != null) yield return evt;
+            // A-71：单条 WS 消息可能包含多个 JSON 事件（服务端批量推送时拼接，如 session.created + response.created）。
+            // 直接整条 Parse 会因多顶层对象而失败并静默丢弃，按大括号配对切分后逐个解析，避免丢事件。
+            foreach (var part in SplitJsonObjects(json))
+            {
+                var evt = RealtimeEvent.Parse(part);
+                if (evt != null) yield return evt;
+            }
         }
     }
     #endregion
 
     #region 辅助
+    /// <summary>将可能包含多个 JSON 对象的文本按顶层大括号配对切分。忽略字符串值内的大括号与转义</summary>
+    /// <param name="json">原始文本</param>
+    /// <returns>切分后的 JSON 对象片段序列；无法配对的部分（尾部残缺）被丢弃</returns>
+    public static IEnumerable<String> SplitJsonObjects(String json)
+    {
+        var depth = 0;
+        var start = -1;
+        var inString = false;
+        var escaped = false;
+        for (var i = 0; i < json.Length; i++)
+        {
+            var ch = json[i];
+            if (inString)
+            {
+                if (escaped)
+                    escaped = false;
+                else if (ch == '\\')
+                    escaped = true;
+                else if (ch == '"')
+                    inString = false;
+                continue;
+            }
+            if (ch == '"')
+            {
+                inString = true;
+                continue;
+            }
+            if (ch == '{')
+            {
+                if (depth == 0) start = i;
+                depth++;
+            }
+            else if (ch == '}')
+            {
+                depth--;
+                if (depth == 0 && start >= 0)
+                {
+                    yield return json.Substring(start, i - start + 1);
+                    start = -1;
+                }
+            }
+        }
+    }
+
     private void EnsureConnected()
     {
         if (_ws == null || _ws.State != WebSocketState.Open)

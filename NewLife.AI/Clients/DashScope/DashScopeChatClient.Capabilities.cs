@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Collections.Concurrent;
+using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -1001,6 +1002,8 @@ public partial class DashScopeChatClient
         }
         finally
         {
+            // A-108：连接结束清理待消费事件队列，防止按 ws 隔离的字典条目泄漏
+            _pendingEvents.TryRemove(ws, out _);
             if (ws.State == WebSocketState.Open)
             {
                 try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false); } catch { }
@@ -1163,6 +1166,8 @@ public partial class DashScopeChatClient
         }
         finally
         {
+            // A-108：连接结束清理待消费事件队列，防止按 ws 隔离的字典条目泄漏
+            _pendingEvents.TryRemove(ws, out _);
             if (ws.State == WebSocketState.Open)
             {
                 try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "task-finished", CancellationToken.None).ConfigureAwait(false); } catch { }
@@ -1179,8 +1184,17 @@ public partial class DashScopeChatClient
     }
 
     /// <summary>接收一条 JSON 文本帧并解析为字典。非文本帧返回 null（Close 帧通过 out 参数传出原因）</summary>
+    /// <remarks>
+    /// A-108：单条 WS 消息可能含多个 JSON 事件（服务端批量推送拼接，如 response.audio.delta + response.done）。
+    /// JsonParser.Decode 对多顶层对象静默返回第一个，后续事件丢失——用 SplitJsonObjects 切分后全部缓存，
+    /// 逐次消费，与 A-71 的 Omni 路径处理一致。
+    /// </remarks>
     private async Task<IDictionary<String, Object?>?> ReceiveWebSocketJsonAsync(ClientWebSocket ws, CancellationToken cancellationToken)
     {
+        // 优先消费已切分缓存的事件（单条消息含多事件时，后续事件在此排队）
+        if (_pendingEvents.TryGetValue(ws, out var queue) && queue.Count > 0)
+            return queue.Dequeue();
+
         var buffer = new ArraySegment<Byte>(new Byte[65536]);
         using var ms = new MemoryStream();
         WebSocketReceiveResult result;
@@ -1198,11 +1212,40 @@ public partial class DashScopeChatClient
         } while (!result.EndOfMessage);
 
         var json = Encoding.UTF8.GetString(ms.ToArray());
-        return JsonParser.Decode(json);
+        if (json.IsNullOrWhiteSpace()) return null;
+
+        // A-108：切分多事件。仅一个时直接返回；多个时入队后返回首个，后续由下次调用消费
+        var parts = ParseJsonEvents(json);
+        if (parts.Count == 0) return null;
+        if (parts.Count == 1) return parts[0];
+
+        var q = new Queue<IDictionary<String, Object?>>();
+        foreach (var part in parts)
+            q.Enqueue(part);
+        _pendingEvents[ws] = q;
+        return q.Dequeue();
+    }
+
+    /// <summary>将一条可能含多个 JSON 事件的文本切分并逐个解析。空片段 / 解析失败片段跳过</summary>
+    /// <param name="json">原始文本</param>
+    /// <returns>解析后的事件字典列表</returns>
+    internal static IList<IDictionary<String, Object?>> ParseJsonEvents(String json)
+    {
+        var list = new List<IDictionary<String, Object?>>();
+        foreach (var part in DashScopeRealtimeClient.SplitJsonObjects(json))
+        {
+            if (part.IsNullOrWhiteSpace()) continue;
+            var dic = JsonParser.Decode(part);
+            if (dic != null) list.Add(dic);
+        }
+        return list;
     }
 
     /// <summary>最近一次 WebSocket Close 帧的原因描述。由 ReceiveWebSocketJsonAsync 在收到 Close 时设置</summary>
     private String _lastCloseReason = "";
+
+    /// <summary>按连接隔离的待消费事件队列。单条 WS 消息可能含多个 JSON 事件（服务端批量推送），切分后入队逐次消费，避免静默丢弃（A-108）</summary>
+    private readonly ConcurrentDictionary<ClientWebSocket, Queue<IDictionary<String, Object?>>> _pendingEvents = [];
 
     /// <summary>接收一条二进制帧。非二进制帧返回 null</summary>
     private async Task<Byte[]?> ReceiveWebSocketBinaryAsync(ClientWebSocket ws, CancellationToken cancellationToken)
