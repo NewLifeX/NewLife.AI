@@ -312,11 +312,7 @@ public class ToolRegistry : IToolProvider
     public async Task<String> TryInvokeAsync(String name, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)
     {
         if (!TryGetHandler(name, out var handler))
-        {
-            // 工具名可能含引号/反斜杠，整体 JSON 转义避免产出非法 JSON（A-73）
-            var msg = $"tool '{name}' not registered";
-            return $"{{\"error\":{msg.ToJson()}}}";
-        }
+            return $"{{\"error\":\"tool '{name}' not registered\"}}";
         try
         {
             return await handler(arguments, context, cancellationToken).ConfigureAwait(false);
@@ -405,7 +401,9 @@ public class ToolRegistry : IToolProvider
 
     private static async Task<String> InvokeMethodAsync(MethodInfo method, Object instance, String? arguments, ToolCallContext? context, CancellationToken cancellationToken)
     {
-        var parameters = method.GetParameters()
+        // 一次获取全部参数并过滤出业务参数（GetParameters 是反射开销，避免对同一 method 重复调用）
+        var allParams = method.GetParameters();
+        var parameters = allParams
             .Where(p => p.ParameterType != typeof(CancellationToken) && p.ParameterType != typeof(ToolCallContext))
             .ToArray();
 
@@ -416,7 +414,6 @@ public class ToolRegistry : IToolProvider
             args = DeserializeArguments(parameters, arguments);
 
         // 将所有 CancellationToken / ToolCallContext 参数替换为传入实例
-        var allParams = method.GetParameters();
         var finalArgs = new Object?[allParams.Length];
         var argIdx = 0;
         for (var i = 0; i < allParams.Length; i++)
