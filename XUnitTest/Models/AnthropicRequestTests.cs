@@ -410,5 +410,57 @@ public class AnthropicRequestTests
         Assert.Equal("user", restored.Messages[0].Role);
         Assert.Equal("测试", restored.Messages[0].Content?.ToString());
     }
+
+    [Fact]
+    [DisplayName("ToChatRequest—工具调用往返恢复ToolCalls")]
+    public void ToChatRequest_RoundTripToolCall_RestoresToolCalls()
+    {
+        var original = new ChatRequest { Model = "claude-sonnet-4-20250514" };
+        original.Messages.Add(new ChatMessage { Role = "user", Content = "查天气" });
+        original.Messages.Add(new ChatMessage
+        {
+            Role = "assistant",
+            Content = "",
+            ToolCalls =
+            [
+                new ToolCall
+                {
+                    Id = "toolu_1",
+                    Type = "function",
+                    Function = new FunctionCall { Name = "get_weather", Arguments = """{"city":"北京"}""" }
+                }
+            ],
+        });
+
+        var wire = AnthropicRequest.FromChatRequest(original);
+        var restored = wire.ToChatRequest();
+
+        // 第 2 条为 assistant 工具调用消息，应恢复 ToolCalls
+        var msg = restored.Messages[1];
+        Assert.NotNull(msg.ToolCalls);
+        Assert.Single(msg.ToolCalls!);
+        Assert.Equal("toolu_1", msg.ToolCalls![0].Id);
+        Assert.Equal("get_weather", msg.ToolCalls![0].Function!.Name);
+        Assert.Contains("北京", msg.ToolCalls![0].Function!.Arguments!);
+    }
+
+    [Fact]
+    [DisplayName("ToChatRequest—思考+签名往返恢复ReasoningContent与Signature")]
+    public void ToChatRequest_RoundTripThinking_RestoresReasoningAndSignature()
+    {
+        var original = new ChatRequest { Model = "claude-sonnet-4-20250514" };
+        original.Messages.Add(new ChatMessage { Role = "user", Content = "问题" });
+        var thinking = new ChatMessage { Role = "assistant", Content = "回答", ReasoningContent = "思考过程" };
+        thinking["Signature"] = "sig-abc";
+        original.Messages.Add(thinking);
+
+        var wire = AnthropicRequest.FromChatRequest(original);
+        var restored = wire.ToChatRequest();
+
+        var msg = restored.Messages[1];
+        Assert.Equal("思考过程", msg.ReasoningContent);
+        Assert.Equal("sig-abc", msg["Signature"]);
+        Assert.Equal("回答", msg.Content);
+    }
     #endregion
 }

@@ -124,7 +124,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
         var responseText = await PostAsync(url, bodyJson, request, _options, cancellationToken).ConfigureAwait(false);
         // 同理，Gemini 响应字段（candidates/finishReason/usageMetadata）也是 camelCase，需用 Gemini JsonOptions 反序列化
         var resp = responseText.ToJsonEntity<GeminiResponse>(GeminiChatClient.DefaultJsonOptions)!;
-        resp.Model = request.Model;
+        resp.Model ??= request.Model;
         return resp;
     }
 
@@ -165,7 +165,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
             {
                 // Gemini 流式块字段（candidates/finishReason）为 camelCase，用 Gemini JsonOptions 反序列化
                 var resp = data.ToJsonEntity<GeminiResponse>(GeminiChatClient.DefaultJsonOptions);
-                if (resp != null) { resp.Model = request.Model; chunk = resp; }
+                if (resp != null) { resp.Model ??= request.Model; chunk = resp; }
             }
             catch (Exception ex) { LogParseChunkError(data, ex); }
             if (chunk != null) yield return chunk;

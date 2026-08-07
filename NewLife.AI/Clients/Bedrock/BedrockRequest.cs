@@ -355,7 +355,7 @@ public class BedrockRequest : IChatRequest
         return result;
     }
 
-    /// <summary>转换为内部统一的 ChatRequest</summary>
+    /// <summary>转换为内部统一的 ChatRequest。从类型化内容块恢复 text/toolUse/toolResult（与 FromChatRequest 对称）</summary>
     /// <returns>等效的 ChatRequest 实例</returns>
     public ChatRequest ToChatRequest()
     {
@@ -371,13 +371,48 @@ public class BedrockRequest : IChatRequest
 
         foreach (var msg in Messages)
         {
-            messages.Add(new ChatMessage
+            var cm = new ChatMessage { Role = msg.Role };
+
+            // 类型化内容块：text → Content，toolUse → ToolCalls，toolResult → ToolCallId + Content
+            if (msg.Content is { Count: > 0 })
             {
-                Role = msg.Role,
-                Content = msg.Content != null
-                    ? String.Join("", msg.Content.Select(c => c.Text ?? "").Where(t => !String.IsNullOrEmpty(t)))
-                    : null,
-            });
+                var textParts = new List<String>();
+                var toolCalls = new List<ToolCall>();
+                String? toolResultId = null;
+
+                foreach (var block in msg.Content)
+                {
+                    if (block?.Text != null) textParts.Add(block.Text);
+                    if (block?.ToolUse != null && !block.ToolUse.Name.IsNullOrEmpty())
+                    {
+                        toolCalls.Add(new ToolCall
+                        {
+                            Id = block.ToolUse.ToolUseId ?? "",
+                            Type = "function",
+                            Function = new FunctionCall
+                            {
+                                Name = block.ToolUse.Name,
+                                Arguments = block.ToolUse.Input != null ? block.ToolUse.Input.ToJson() : null,
+                            },
+                        });
+                    }
+                    if (block?.ToolResult != null)
+                    {
+                        toolResultId = block.ToolResult.ToolUseId;
+                        foreach (var sub in block.ToolResult.Content ?? [])
+                        {
+                            if (sub?.Text != null) textParts.Add(sub.Text);
+                        }
+                    }
+                }
+
+                if (toolResultId != null) cm.ToolCallId = toolResultId;
+                if (toolCalls.Count > 0) cm.ToolCalls = toolCalls;
+                var text = String.Join("", textParts);
+                if (!text.IsNullOrEmpty()) cm.Content = text;
+            }
+
+            messages.Add(cm);
         }
 
         return new ChatRequest

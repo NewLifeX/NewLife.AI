@@ -73,7 +73,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     protected Boolean IsNativeProtocol => _options.Protocol.IsNullOrEmpty() || _options.Protocol == "DashScope";
 
     /// <summary>默认Json序列化选项</summary>
-    public static JsonOptions DashScopeDefaultJsonOptions = new()
+    public static readonly JsonOptions DashScopeDefaultJsonOptions = new()
     {
         PropertyNaming = PropertyNaming.SnakeCaseLower,
         IgnoreNullValues = true,
@@ -114,19 +114,21 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <returns>可直接序列化的请求字典</returns>
     protected override Object BuildRequest(IChatRequest request)
     {
-        AutoDetectSearchIntent(request);
+        var intent = DetectSearchIntent(request);
         var dic = ChatCompletionRequest.BuildBody(request);
-        AppendDashScopeFields(dic, request);
+        AppendDashScopeFields(dic, request, intent);
         return dic;
     }
 
     /// <summary>注入 DashScope 兼容模式专属字段：联网搜索、图文混合输出、web_extractor / code_interpreter 内置工具</summary>
     /// <param name="dic">已构建的请求字典</param>
     /// <param name="request">统一请求</param>
-    private static void AppendDashScopeFields(IDictionary<String, Object> dic, IChatRequest request)
+    /// <param name="intent">联网意图检测结果（本次请求局部，显式设置优先）</param>
+    private static void AppendDashScopeFields(IDictionary<String, Object> dic, IChatRequest request, DashScopeSearchIntent intent)
     {
         // ===== 联网搜索 =====
         var enableSearch = request["EnableSearch"];
+        if (enableSearch == null && intent.EnableSearch) enableSearch = true;
         if (enableSearch != null && enableSearch.ToBoolean())
         {
             dic["enable_search"] = true;
@@ -134,6 +136,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
             var strategy = request["SearchStrategy"] as String;
             var forcedSearch = request["ForcedSearch"];
             var enableSource = request["EnableSource"];
+            if (enableSource == null && intent.EnableSource) enableSource = true;
             var enableSearchExt = request["EnableSearchExtension"];
             if (!strategy.IsNullOrEmpty()) searchOpts["search_strategy"] = strategy!;
             if (forcedSearch != null && forcedSearch.ToBoolean()) searchOpts["forced_search"] = true;
@@ -150,6 +153,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         // ===== 内置工具：web_search / web_extractor / code_interpreter =====
         // 与 Function Calling 不同：内置工具只有 {"type":"xxx"}，不含 "function" 子对象，插入至 tools 数组头部
         var enableWebExtractor = request["EnableWebExtractor"];
+        if (enableWebExtractor == null && intent.EnableWebExtractor) enableWebExtractor = true;
         var enableCodeInterp = request["EnableCodeInterpreter"];
         if ((enableWebExtractor != null && enableWebExtractor.ToBoolean()) ||
             (enableCodeInterp != null && enableCodeInterp.ToBoolean()))
@@ -189,47 +193,66 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         "fetch", "crawl", "scrape",
     ];
 
+    /// <summary>联网搜索意图检测结果。仅本次请求有效（返回值传递），不写入共享 Items，避免跨请求污染</summary>
+    /// <param name="EnableSearch">启用联网搜索</param>
+    /// <param name="EnableWebExtractor">启用网页爬取（隐含联网搜索）</param>
+    /// <param name="EnableSource">附带搜索来源</param>
+    private readonly record struct DashScopeSearchIntent(Boolean EnableSearch, Boolean EnableWebExtractor, Boolean EnableSource);
+
     /// <summary>自动推断联网意图。仅当外部未显式设置 EnableSearch / EnableWebExtractor 时，
-    /// 从最后一条用户消息中检测 URL 或关键词，自动激活对应的 DashScope 能力。</summary>
-    /// <param name="request">统一请求，结果写回 request["EnableSearch"] / request["EnableWebExtractor"]</param>
-    private static void AutoDetectSearchIntent(IChatRequest request)
+    /// 从最后一条用户消息中检测 URL 或关键词，返回本次请求的 DashScope 能力开关。</summary>
+    /// <remarks>
+    /// 检测结果以返回值传递，仅作用于本次请求构建，不写入 request.Items——
+    /// Items 与调用方 options 按引用共享（A-53 设计），写入会造成跨请求永久污染，
+    /// 后续请求将静默强制联网搜索（行为 + 费用影响）。
+    /// </remarks>
+    /// <param name="request">统一请求</param>
+    /// <returns>本次请求的联网搜索/爬取开关，未触发检测时全 false</returns>
+    private static DashScopeSearchIntent DetectSearchIntent(IChatRequest request)
     {
         // 已显式设置则尊重调用方决定，不覆盖
-        if (request["EnableSearch"] != null || request["EnableWebExtractor"] != null) return;
+        if (request["EnableSearch"] != null || request["EnableWebExtractor"] != null) return default;
 
         // 取最后一条 user 消息文本
         var lastMsg = request.Messages?.LastOrDefault(m =>
             String.Equals(m.Role, "user", StringComparison.OrdinalIgnoreCase))?.Content as String;
-        if (lastMsg.IsNullOrEmpty()) return;
+        if (lastMsg.IsNullOrEmpty()) return default;
 
         // 检测 URL（以 http:// 或 https:// 开头的片段）→ 触发 web_extractor
         if (lastMsg.Contains("http://", StringComparison.OrdinalIgnoreCase) ||
             lastMsg.Contains("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            request["EnableWebExtractor"] = true;
-            return;
-        }
+            return new DashScopeSearchIntent(false, true, false);
 
         // 检测爬取类关键词 → 触发 web_extractor
         foreach (var kw in _extractKeywords)
         {
             if (lastMsg.Contains(kw, StringComparison.OrdinalIgnoreCase))
-            {
-                request["EnableWebExtractor"] = true;
-                return;
-            }
+                return new DashScopeSearchIntent(false, true, false);
         }
 
         // 检测搜索类关键词 → 触发 enable_search + enable_source
         foreach (var kw in _searchKeywords)
         {
             if (lastMsg.Contains(kw, StringComparison.OrdinalIgnoreCase))
-            {
-                request["EnableSearch"] = true;
-                request["EnableSource"] = true;
-                return;
-            }
+                return new DashScopeSearchIntent(true, false, true);
         }
+
+        return default;
+    }
+
+    /// <summary>将检测到的联网意图应用到 DashScope 原生协议请求。仅回填检测开关，不覆盖调用方显式设置</summary>
+    /// <param name="body">已构建的 DashScope 原生协议请求</param>
+    /// <param name="intent">联网意图检测结果（本次请求局部）</param>
+    private static void ApplyDetectedIntent(DashScopeRequest body, DashScopeSearchIntent intent)
+    {
+        if (intent.EnableSearch)
+            body.Parameters.EnableSearch = true;
+        if (intent.EnableSource)
+        {
+            body.Parameters.SearchOptions ??= new Dictionary<String, Object>();
+            body.Parameters.SearchOptions["enable_source"] = true;
+        }
+        // EnableWebExtractor 仅兼容模式使用（AppendDashScopeFields 注入内置工具），原生协议由内置工具参数承载
     }
 
     /// <summary>构建 Omni 兼容模式请求体。在标准 OpenAI 请求体基础上注入 modalities、audio 等 Omni 专属字段</summary>
@@ -237,9 +260,9 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     /// <returns>可直接序列化的请求字典</returns>
     private IDictionary<String, Object> BuildOmniBody(IChatRequest request)
     {
-        AutoDetectSearchIntent(request);
+        var intent = DetectSearchIntent(request);
         var dic = ChatCompletionRequest.BuildBody(request);
-        AppendDashScopeFields(dic, request);
+        AppendDashScopeFields(dic, request, intent);
 
         // Omni 模型 API 强制要求 stream=true
         dic["stream"] = true;
@@ -403,15 +426,16 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
 
         var model = request.Model ?? _options.Model;
         var url = BuildUrl(request);
-        AutoDetectSearchIntent(request);
+        var intent = DetectSearchIntent(request);
         var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
+        ApplyDetectedIntent(body, intent);
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         var dashResp = json.ToJsonEntity<DashScopeResponse>(JsonOptions)!;
         if (!dashResp.Code.IsNullOrEmpty())
             throw new HttpRequestException($"[DashScope] 错误 {dashResp.Code}: {dashResp.Message}");
 
-        // 原生响应无顶层 model 字段，从请求回填
-        dashResp.Model = model;
+        // 原生响应无顶层 model 字段，从请求回填（服务端若返回则保留，避免计费归属失真）
+        dashResp.Model ??= model;
         if (dashResp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
 
         return dashResp;
@@ -444,8 +468,9 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         }
 
         var url = BuildUrl(request);
-        AutoDetectSearchIntent(request);
+        var intent = DetectSearchIntent(request);
         var body = DashScopeRequest.FromChatRequest(request, IsMultimodalModel(request.Model));
+        ApplyDetectedIntent(body, intent);
 
         using var httpResponse = await PostStreamAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         using var stream = await httpResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -565,7 +590,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
     {
         var chunk = data.ToJsonEntity<DashScopeResponse>(JsonOptions);
-        chunk?.Model = request.Model;
+        if (chunk != null) chunk.Model ??= request.Model;
         if (chunk is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion.chunk";
         return chunk;
     }

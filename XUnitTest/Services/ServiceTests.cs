@@ -111,6 +111,49 @@ public class ServiceTests
         Assert.True(limiter2.IsAllowed(1, 1));
     }
 
+    [Fact]
+    [DisplayName("MessageRateLimiter—首条消息不触发清理（回归：count%200==1 缺陷）")]
+    public void MessageRateLimiter_FirstCall_NoCleanup()
+    {
+        var limiter = new MessageRateLimiter();
+        var counters = GetRateLimiterCounters(limiter);
+
+        // 注入一个 10 分钟前的过期桶（应被清理的候选）
+        var staleBucket = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMinute - 10;
+        counters[(9999, staleBucket)] = 5;
+
+        // 仅 1 次调用（count=1）。修复前 count%200==1 会触发全表扫描清理，误删过期桶；
+        // 修复后 count>=200 才进入清理节奏，首条消息不清理
+        limiter.IsAllowed(8888, 1000);
+
+        Assert.True(counters.ContainsKey((9999, staleBucket)), "count=1 不应触发清理，过期桶应保留");
+    }
+
+    [Fact]
+    [DisplayName("MessageRateLimiter—第200次计数触发清理过期桶")]
+    public void MessageRateLimiter_CleanupAt200_RemovesStaleBuckets()
+    {
+        var limiter = new MessageRateLimiter();
+        var counters = GetRateLimiterCounters(limiter);
+
+        // 注入一个 10 分钟前的过期桶
+        var staleBucket = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMinute - 10;
+        counters[(9999, staleBucket)] = 5;
+
+        // 同一用户新桶连调 200 次，第 200 次计数（count>=200 && %200==0）触发清理
+        for (var i = 0; i < 200; i++)
+            limiter.IsAllowed(8888, 1000);
+
+        Assert.False(counters.ContainsKey((9999, staleBucket)), "第 200 次计数应触发清理，过期桶被移除");
+    }
+
+    /// <summary>通过反射读取 MessageRateLimiter 内部计数器字典（测试专用）</summary>
+    private static System.Collections.Concurrent.ConcurrentDictionary<(Int32, Int64), Int32> GetRateLimiterCounters(MessageRateLimiter limiter)
+    {
+        var field = typeof(MessageRateLimiter).GetField("_counters", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        return (System.Collections.Concurrent.ConcurrentDictionary<(Int32, Int64), Int32>)field.GetValue(limiter)!;
+    }
+
     #endregion
 
     // ── BackgroundGenerationService ──────────────────────────────────────────

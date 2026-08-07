@@ -626,7 +626,9 @@ public partial class DashScopeChatClient
                 request.CharactersUsed = chars;
             }
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            // 池化 HttpMessageHandler：TTS 音频下载按主机复用连接，避免每次新建连接池（A-01/A-02 同类反模式）
+            var handler = HttpClientPool.GetHandler(audioUrl);
+            using var httpClient = new HttpClient(handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(30) };
 #if NET5_0_OR_GREATER
             var audioBytes = await httpClient.GetByteArrayAsync(audioUrl, cancellationToken).ConfigureAwait(false);
 #else

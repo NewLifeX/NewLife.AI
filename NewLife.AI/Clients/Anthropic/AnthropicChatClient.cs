@@ -30,7 +30,7 @@ public class AnthropicChatClient : AiClientBase
     protected virtual String ApiVersion => "2023-06-01";
 
     /// <summary>默认Json序列化选项</summary>
-    public static JsonOptions DefaultJsonOptions = new()
+    public static readonly JsonOptions DefaultJsonOptions = new()
     {
         PropertyNaming = PropertyNaming.SnakeCaseLower,
         IgnoreNullValues = true,

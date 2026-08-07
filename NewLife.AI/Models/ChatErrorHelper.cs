@@ -63,9 +63,10 @@ public static class ChatErrorHelper
     {
         if (String.IsNullOrEmpty(message)) return false;
 
+        // net45/netstandard2.0 上 IsNullOrEmpty 无 [NotNullWhen] 注解，需 ! 显式声明守卫后的非空（跨 TFM 编译警告清零）
         foreach (var p in _patterns)
         {
-            if (message.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (message!.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0) return true;
         }
         return false;
     }

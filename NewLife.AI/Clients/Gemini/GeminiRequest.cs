@@ -346,6 +346,10 @@ public class GeminiRequest : IChatRequest
     }
 
     /// <summary>转换为内部统一的 ChatRequest</summary>
+    /// <remarks>
+    /// GeminiPart 仅建模 Text/InlineData/FileData（R7-1 补充），functionCall 与 thought 分片未建模，
+    /// 因此工具调用与思考内容无法从此请求对象恢复（与 FromChatRequest 的对称性限制）。
+    /// </remarks>
     /// <returns>等效的 ChatRequest 实例</returns>
     public ChatRequest ToChatRequest()
     {

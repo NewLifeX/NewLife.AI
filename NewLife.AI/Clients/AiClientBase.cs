@@ -44,28 +44,40 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     private HttpClient? _httpClient;
     // A-59：标记 HttpClient 是否为内部创建。内部创建的由本类 Dispose 释放；外部注入的由注入方负责
     private Boolean _ownsHttpClient;
+    // 惰性初始化锁：并发首访双创建会泄漏一个连接池，getter/setter/Dispose 统一加锁
+    private readonly Object _httpLock = new();
 
     /// <summary>HTTP 客户端。首次访问时自动创建；可替换为代理、自定义管道或测试用 Mock</summary>
     public HttpClient HttpClient
     {
         get
         {
+            // 双检锁：首次访问加锁创建，避免并发首访各自 new 一个 handler/连接池
             if (_httpClient == null)
             {
-                _httpClient = CreateHttpClient();
-                _ownsHttpClient = true;
+                lock (_httpLock)
+                {
+                    if (_httpClient == null)
+                    {
+                        _httpClient = CreateHttpClient();
+                        _ownsHttpClient = true;
+                    }
+                }
             }
             return _httpClient;
         }
         set
         {
-            // 替换外部客户端时，若此前持有内部创建实例则先释放
-            if (_ownsHttpClient)
+            lock (_httpLock)
             {
-                _httpClient?.Dispose();
-                _ownsHttpClient = false;
+                // 替换外部客户端时，若此前持有内部创建实例则先释放
+                if (_ownsHttpClient)
+                {
+                    _httpClient?.Dispose();
+                    _ownsHttpClient = false;
+                }
+                _httpClient = value;
             }
-            _httpClient = value;
         }
     }
 
@@ -135,12 +147,15 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     public virtual void Dispose()
     {
         // A-59：原空实现导致内部创建的 HttpClient 及其连接池从不释放
-        if (_ownsHttpClient)
+        lock (_httpLock)
         {
-            _httpClient?.Dispose();
-            _ownsHttpClient = false;
+            if (_ownsHttpClient)
+            {
+                _httpClient?.Dispose();
+                _ownsHttpClient = false;
+            }
+            _httpClient = null;
         }
-        _httpClient = null;
     }
     #endregion
 

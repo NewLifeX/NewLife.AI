@@ -114,6 +114,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
         if (maxIterations <= 0) maxIterations = 10;
         var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
+        // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
+        var toolsTokens = EstimateTokens(mergedTools);
 
         IChatResponse response = null!;
         var iterations = 0;
@@ -131,7 +133,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             cancellationToken.ThrowIfCancellationRequested();
 
             // 上下文窗口预算检查：工具结果逐轮累积进消息列表，超限时中断循环，防止撑爆模型上下文窗口
-            if (CheckContextLimit(workMessages, mergedTools, request)) break;
+            if (CheckContextLimit(workMessages, toolsTokens, request)) break;
 
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
 
@@ -276,6 +278,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
         if (maxIterations <= 0) maxIterations = 10;
         var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
+        // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
+        var toolsTokens = EstimateTokens(mergedTools);
 
         UsageDetails? accumulatedUsage = null;
 
@@ -290,7 +294,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             cancellationToken.ThrowIfCancellationRequested();
 
             // 上下文窗口预算检查：工具结果逐轮累积进消息列表，超限时中断循环，防止撑爆模型上下文窗口
-            if (CheckContextLimit(workMessages, mergedTools, request)) break;
+            if (CheckContextLimit(workMessages, toolsTokens, request)) break;
 
             var toolCalls = new List<ToolCall>();
             String? finishReason = null;
@@ -686,15 +690,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// 未设置预算（库直接使用者）时自动禁用，不影响既有行为。估算含工具 schema（同样占用上下文窗口）。
     /// </remarks>
     /// <param name="workMessages">当前待发送的消息列表（含已累积的工具结果）</param>
-    /// <param name="mergedTools">合并后的工具定义（schema 同样占用上下文）</param>
+    /// <param name="toolsTokens">工具 schema 的 Token 估算（循环外一次计算，工具列表不变）</param>
     /// <param name="request">原始请求，读取请求级预算</param>
     /// <returns>超限返回 true，调用方应中断循环</returns>
-    private Boolean CheckContextLimit(List<ChatMessage> workMessages, List<ChatTool> mergedTools, IChatRequest? request)
+    private Boolean CheckContextLimit(List<ChatMessage> workMessages, Int32 toolsTokens, IChatRequest? request)
     {
         var maxInput = request?["MaxInputTokens"]?.ToInt() ?? 0;
         if (maxInput <= 0) return false;
 
-        var estimated = EstimateTokens(workMessages) + EstimateTokens(mergedTools);
+        var estimated = EstimateTokens(workMessages) + toolsTokens;
         if (estimated >= maxInput)
         {
             IsContextLimitExceeded = true;

@@ -1,6 +1,9 @@
 using System;
 using System.ComponentModel;
+using System.Net.Http;
+using System.Threading.Tasks;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.OpenAI;
 using Xunit;
 
 namespace XUnitTest.Clients;
@@ -74,5 +77,31 @@ public class AiClientBaseTests
         Assert.Equal("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", result);
     }
 
+    #endregion
+
+    #region HttpClient 并发
+    [Fact]
+    [DisplayName("HttpClient_并发首访_返回同一实例（双检锁防双创建）")]
+    public async Task HttpClient_ConcurrentFirstAccess_SameInstance()
+    {
+        using var client = new OpenAIChatClient(new AiClientOptions
+        {
+            Endpoint = "https://stub.local",
+            ApiKey = "test-key",
+            Model = "gpt-4o",
+        });
+
+        // 并发首次访问：修复前无锁会双创建泄漏一个连接池，修复后双检锁保证单实例
+        const Int32 n = 16;
+        var tasks = new Task<HttpClient>[n];
+        for (var i = 0; i < n; i++)
+            tasks[i] = Task.Run(() => client.HttpClient);
+
+        var instances = await Task.WhenAll(tasks);
+
+        var first = instances[0];
+        for (var i = 1; i < instances.Length; i++)
+            Assert.Same(first, instances[i]);
+    }
     #endregion
 }

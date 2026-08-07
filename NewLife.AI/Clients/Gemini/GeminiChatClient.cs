@@ -29,7 +29,7 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     public override String Name { get; set; } = "谷歌Gemini";
 
     /// <summary>默认Json序列化选项</summary>
-    public static JsonOptions DefaultJsonOptions = new()
+    public static readonly JsonOptions DefaultJsonOptions = new()
     {
         PropertyNaming = PropertyNaming.CamelCase,
         IgnoreNullValues = true,
@@ -192,7 +192,7 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
         EnsureNoStreamError(data, Name);
 
         var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions) ?? new GeminiResponse();
-        resp.Model = request.Model;
+        resp.Model ??= request.Model;
         if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
         return resp;
     }
@@ -201,7 +201,7 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     protected override IChatResponse? ParseChunk(String data, IChatRequest request, String? lastEvent)
     {
         var resp = data.ToJsonEntity<GeminiResponse>(JsonOptions);
-        resp?.Model = request.Model;
+        if (resp != null) resp.Model ??= request.Model;
         if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion.chunk";
         return resp;
     }

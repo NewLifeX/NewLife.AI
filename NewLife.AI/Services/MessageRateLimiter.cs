@@ -26,8 +26,9 @@ public class MessageRateLimiter
         var key = (userId, bucket);
         var count = _counters.AddOrUpdate(key, 1, (_, c) => c + 1);
 
-        // 每 200 次计数触发一次老桶清理，防止内存泄漏
-        if (count % 200 == 1)
+        // 每 200 次计数触发一次老桶清理，防止内存泄漏。
+        // 原 count%200==1 在 count=1 时恒触发（每用户每分钟首条消息即全表扫描），改 count>=200 才进入清理节奏
+        if (count >= 200 && count % 200 == 0)
             CleanupOldBuckets(bucket);
 
         return count <= maxPerMinute;

@@ -384,7 +384,7 @@ public class AnthropicRequest : IChatRequest
         return hasImage ? blocks : null;
     }
 
-    /// <summary>转换为内部统一的 ChatRequest</summary>
+    /// <summary>转换为内部统一的 ChatRequest。从内容块数组恢复 tool_use/thinking/tool_result/redacted_thinking（与 FromChatRequest 对称）</summary>
     /// <returns>等效的 ChatRequest 实例</returns>
     public ChatRequest ToChatRequest()
     {
@@ -395,7 +395,77 @@ public class AnthropicRequest : IChatRequest
             messages.Add(new ChatMessage { Role = "system", Content = System });
 
         foreach (var msg in Messages)
-            messages.Add(new ChatMessage { Role = msg.Role, Content = msg.Content });
+        {
+            var cm = new ChatMessage { Role = msg.Role };
+
+            // 内容块数组（text/thinking/redacted_thinking/tool_use/tool_result）逐块恢复；纯字符串内容直接透传
+            if (msg.Content is IList<Object> blocks)
+            {
+                var textParts = new List<String>();
+                var reasoningParts = new List<String>();
+                String? signature = null;
+                var toolCalls = new List<ToolCall>();
+                String? toolResultId = null;
+
+                foreach (var block in blocks)
+                {
+                    // 内容块为反序列化后的字典（Dictionary<String,Object> 或 Dictionary<String,Object?>，
+                    // 可空标注编译期擦除运行时同类型，统一按 IDictionary<String,Object?> 匹配）
+                    if (block is not IDictionary<String, Object?> dic) continue;
+                    var type = dic["type"] as String;
+                    switch (type)
+                    {
+                        case "text":
+                            if (dic.TryGetValue("text", out var t) && t != null) textParts.Add(t + "");
+                            break;
+                        case "thinking":
+                            if (dic.TryGetValue("thinking", out var th) && th != null) reasoningParts.Add(th + "");
+                            if (dic.TryGetValue("signature", out var sig) && sig != null) signature = sig + "";
+                            break;
+                        case "redacted_thinking":
+                            // 加密数据无法还原原文，提取 data 存回 Items 供原样回传
+                            if (dic.TryGetValue("data", out var data) && data != null)
+                            {
+                                cm["RedactedThinking"] ??= new List<String>();
+                                (cm["RedactedThinking"] as List<String>)!.Add(data + "");
+                            }
+                            break;
+                        case "tool_use":
+                            toolCalls.Add(new ToolCall
+                            {
+                                Id = dic.TryGetValue("id", out var id) ? id + "" : "",
+                                Type = "function",
+                                Function = new FunctionCall
+                                {
+                                    Name = dic.TryGetValue("name", out var n) ? n + "" : "",
+                                    Arguments = dic.TryGetValue("input", out var input) && input != null ? input.ToJson() : null,
+                                },
+                            });
+                            break;
+                        case "tool_result":
+                            toolResultId = dic.TryGetValue("tool_use_id", out var tid) ? tid + "" : null;
+                            if (dic.TryGetValue("content", out var content) && content != null)
+                                textParts.Add(content + "");
+                            break;
+                    }
+                }
+
+                // 回填恢复的字段（仅非空时写入，保持与原始消息等效）
+                if (signature != null) cm["Signature"] = signature;
+                if (toolResultId != null) cm.ToolCallId = toolResultId;
+                if (toolCalls.Count > 0) cm.ToolCalls = toolCalls;
+                var reasoning = String.Join("", reasoningParts);
+                if (!reasoning.IsNullOrEmpty()) cm.ReasoningContent = reasoning;
+                var text = String.Join("", textParts);
+                if (!text.IsNullOrEmpty()) cm.Content = text;
+            }
+            else
+            {
+                cm.Content = msg.Content;
+            }
+
+            messages.Add(cm);
+        }
 
         return new ChatRequest
         {

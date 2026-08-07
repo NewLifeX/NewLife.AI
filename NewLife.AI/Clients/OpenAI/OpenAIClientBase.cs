@@ -19,7 +19,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     public override String ChatPath { get; set; } = "/v1/chat/completions";
 
     /// <summary>默认 Json 序列化选项（蛇形命名 + 忽略 null）</summary>
-    public static JsonOptions DefaultJsonOptions = new()
+    public static readonly JsonOptions DefaultJsonOptions = new()
     {
         PropertyNaming = PropertyNaming.SnakeCaseLower,
         IgnoreNullValues = true,
@@ -154,7 +154,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     protected override IChatResponse ParseResponse(String json, IChatRequest request)
     {
         var resp = json.ToJsonEntity<ChatCompletionResponse>(JsonOptions) ?? new ChatCompletionResponse();
-        resp.Model = request.Model;
+        resp.Model ??= request.Model;
         if (resp is IChatResponse rs && rs.Object.IsNullOrEmpty()) rs.Object = "chat.completion";
         return resp;
     }
