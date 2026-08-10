@@ -20,13 +20,21 @@ public class CodingPlan
     /// <summary>规划时间戳</summary>
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    /// <summary>从 JSON 反序列化</summary>
-    /// <param name="json">JSON 字符串，为 null 或空时返回空规划</param>
+    /// <summary>从 JSON 反序列化。非法 JSON 或空输入时返回空规划，不抛异常（LLM 输出不可控，调用方无需额外 try-catch）</summary>
+    /// <param name="json">JSON 字符串，为 null、空或非法时返回空规划</param>
     /// <returns>反序列化的规划实例</returns>
     public static CodingPlan FromJson(String? json)
     {
         if (json.IsNullOrWhiteSpace()) return new CodingPlan();
-        return json.ToJsonEntity<CodingPlan>() ?? new CodingPlan();
+        try
+        {
+            return json.ToJsonEntity<CodingPlan>() ?? new CodingPlan();
+        }
+        catch
+        {
+            // LLM 可能输出非法 JSON，解析失败时返回空规划而非抛异常（与 ToJson 的容错对称）
+            return new CodingPlan();
+        }
     }
 
     /// <summary>序列化为 JSON。显式调用静态扩展方法，避免与实例方法同名导致的无限递归</summary>
