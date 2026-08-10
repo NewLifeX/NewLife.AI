@@ -12,8 +12,9 @@ var config = DefaultConfig.Instance
     .AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Instance));
 
 BenchmarkRunner.Run<HashEmbeddingBenchmark>(config);
-// BenchmarkRunner.Run<VectorDataBenchmark>(config);
-// BenchmarkRunner.Run<MessageParseBenchmark>(config);
-// BenchmarkRunner.Run<SchemaBuildBenchmark>(config);
-// BenchmarkRunner.Run<BuildBodyBenchmark>(config);
-// BenchmarkRunner.Run<ToolLoopBenchmark>(config);
+BenchmarkRunner.Run<VectorDataBenchmark>(config);
+BenchmarkRunner.Run<MessageParseBenchmark>(config);
+BenchmarkRunner.Run<SchemaBuildBenchmark>(config);
+BenchmarkRunner.Run<BuildBodyBenchmark>(config);
+BenchmarkRunner.Run<ToolLoopBenchmark>(config);
+BenchmarkRunner.Run<StreamChunkParseBenchmark>(config);
