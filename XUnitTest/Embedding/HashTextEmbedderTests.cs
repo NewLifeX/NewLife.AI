@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using NewLife;
@@ -256,6 +257,55 @@ public class HashTextEmbedderTests
         var vec = embedder.Embed("测试 测试 测试 测试 测试");
         var norm = MathF.Sqrt(vec.Sum(v => v * v));
         Assert.True(MathF.Abs(norm - 1.0f) < 1e-5f);
+    }
+
+    [Fact]
+    [DisplayName("Embed—黄金值：中英混合文本非零桶逐位一致（防语义回归）")]
+    public void Embed_GoldenValues_MixedText()
+    {
+        var embedder = new HashTextEmbedder(512);
+        var vec = embedder.Embed("确定性测试 deterministic test");
+
+        // 黄金值（2026-08-10 优化 Murmur128 复用前捕获）：11 个非零桶，其余必须为 0
+        var expected = new Dictionary<Int32, Single>
+        {
+            [147] = 0.30151132f, [182] = 0.30151132f, [206] = 0.30151132f,
+            [225] = 0.30151132f, [256] = 0.30151132f, [264] = 0.30151132f,
+            [378] = 0.30151132f, [379] = 0.30151132f, [413] = 0.30151132f,
+            [477] = 0.30151132f, [495] = 0.30151132f,
+        };
+
+        foreach (var kv in expected)
+            Assert.True(MathF.Abs(vec[kv.Key] - kv.Value) < 1e-6f, $"桶 {kv.Key} 值 {vec[kv.Key]} ≠ {kv.Value}");
+
+        for (var i = 0; i < vec.Length; i++)
+            if (!expected.ContainsKey(i))
+                Assert.Equal(0f, vec[i]);
+    }
+
+    [Fact]
+    [DisplayName("Embed—黄金值：中文重复词文本非零桶与 TF 加权逐位一致")]
+    public void Embed_GoldenValues_ChineseWithTf()
+    {
+        var embedder = new HashTextEmbedder(512);
+        var vec = embedder.Embed("苹果是水果，汽车是交通工具");
+
+        // 黄金值（2026-08-10 捕获）：312/442 桶为 2 倍权（词频 >1），其余非零桶为 0.19611612
+        var expected = new Dictionary<Int32, Single>
+        {
+            [0] = 0.19611612f, [15] = 0.19611612f, [51] = 0.19611612f, [57] = 0.19611612f,
+            [71] = 0.19611612f, [143] = 0.19611612f, [149] = 0.19611612f, [152] = 0.19611612f,
+            [232] = 0.19611612f, [308] = 0.19611612f, [312] = 0.39223224f, [324] = 0.19611612f,
+            [342] = 0.19611612f, [368] = 0.19611612f, [375] = 0.19611612f, [442] = 0.39223224f,
+            [444] = 0.19611612f, [484] = 0.19611612f, [487] = 0.19611612f, [503] = 0.19611612f,
+        };
+
+        foreach (var kv in expected)
+            Assert.True(MathF.Abs(vec[kv.Key] - kv.Value) < 1e-6f, $"桶 {kv.Key} 值 {vec[kv.Key]} ≠ {kv.Value}");
+
+        for (var i = 0; i < vec.Length; i++)
+            if (!expected.ContainsKey(i))
+                Assert.Equal(0f, vec[i]);
     }
 
     #endregion

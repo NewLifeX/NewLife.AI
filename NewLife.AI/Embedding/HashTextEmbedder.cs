@@ -51,28 +51,109 @@ public class HashTextEmbedder : ILocalTextEmbedder
         var vector = new Single[Dimensions];
         if (text.IsNullOrWhiteSpace()) return vector;
 
-        var tokens = Tokenize(text);
-        if (tokens.Count == 0) return vector;
+        // 混合去重哈希：
+        // 1. CJK unigram/bigram 用 Int64 打包键去重（单字 key=char，双字 key=(char<<16)|char），
+        //    避免物化 token 字符串（实测 200 句中文文本原实现分配 896KB，字符串物化占 ~500KB）
+        // 2. 英文单词保留 String 键（需 string.ToLowerInvariant() 语义，可能多字符展开如 İ → i̇）
+        // 3. 仅对唯一 token 调用 Murmur128——实测每次 ComputeHash 分配 ~144B（HashAlgorithm 内部开销），
+        //    按出现次数逐次哈希会放大调用数（12600 次 vs 去重后 ~2000 次）
+        // 数学等价：按唯一 token 累加 count/total，L2 归一化前向量逐位一致（黄金值测试锁定）。
+        using var murmur = new Murmur128(0u);
+        var cjkCounts = new Dictionary<Int64, Int32>();
+        var wordCounts = new Dictionary<String, Int32>();
+        var total = 0;
 
-        // TF：词项 → 出现次数
-        var tf = new Dictionary<String, Int32>(tokens.Count);
-        foreach (var token in tokens)
+        var cjkBuf = new StringBuilder(16);
+        var wordBuf = new StringBuilder(32);
+
+        void FlushCjk()
         {
-            if (tf.TryGetValue(token, out var cnt))
-                tf[token] = cnt + 1;
-            else
-                tf[token] = 1;
+            if (cjkBuf.Length == 0) return;
+            // Unigram（单字）：捕获字符级重叠
+            for (var i = 0; i < cjkBuf.Length; i++)
+            {
+                var key = cjkBuf[i];
+                if (cjkCounts.TryGetValue(key, out var cnt)) cjkCounts[key] = cnt + 1;
+                else cjkCounts[key] = 1;
+                total++;
+            }
+            // Bigram（相邻双字）：捕获词组级特征
+            for (var i = 0; i < cjkBuf.Length - 1; i++)
+            {
+                var key = ((Int64)cjkBuf[i] << 16) | cjkBuf[i + 1];
+                if (cjkCounts.TryGetValue(key, out var cnt)) cjkCounts[key] = cnt + 1;
+                else cjkCounts[key] = 1;
+                total++;
+            }
+            cjkBuf.Clear();
         }
 
-        // 哈希映射并累加 TF 权重
-        var total = (Single)tokens.Count;
-        foreach (var item in tf)
+        void FlushWord()
         {
-            var tokenBytes = Encoding.UTF8.GetBytes(item.Key);
-            using var murmur = new Murmur128(0u);
-            var hash = murmur.ComputeHash(tokenBytes);
+            if (wordBuf.Length < 2) { wordBuf.Clear(); return; }
+            // 保持原语义：string.ToLowerInvariant()（可能产生多字符展开，如 İ → i̇），故不逐字符转小写
+            var word = wordBuf.ToString().ToLowerInvariant();
+            wordBuf.Clear();
+            if (wordCounts.TryGetValue(word, out var cnt)) wordCounts[word] = cnt + 1;
+            else wordCounts[word] = 1;
+            total++;
+        }
+
+        foreach (var ch in text)
+        {
+            if (IsCjk(ch))
+            {
+                FlushWord();
+                cjkBuf.Append(ch);
+            }
+            else if (Char.IsLetter(ch) || Char.IsDigit(ch))
+            {
+                FlushCjk();
+                wordBuf.Append(ch);
+            }
+            else
+            {
+                FlushCjk();
+                FlushWord();
+            }
+        }
+        FlushCjk();
+        FlushWord();
+
+        if (total == 0) return vector;
+
+        var t = (Single)total;
+        var charPair = new Char[2];
+        var byteBuffer = new Byte[8];
+
+        // 哈希唯一 CJK token 并累加 TF 权重（单字 key ≤ 0xFFFF；双字 key ≥ 0x10000）
+        foreach (var kv in cjkCounts)
+        {
+            Int32 charCount;
+            if (kv.Key <= 0xFFFF)
+            {
+                charPair[0] = (Char)kv.Key;
+                charCount = 1;
+            }
+            else
+            {
+                charPair[0] = (Char)(kv.Key >> 16);
+                charPair[1] = (Char)(kv.Key & 0xFFFF);
+                charCount = 2;
+            }
+            var byteCount = Encoding.UTF8.GetBytes(charPair, 0, charCount, byteBuffer, 0);
+            var hash = murmur.ComputeHash(byteBuffer, 0, byteCount);
             var bucket = (Int32)(BitConverter.ToUInt32(hash, 0) % (UInt32)Dimensions);
-            vector[bucket] += item.Value / total;
+            vector[bucket] += kv.Value / t;
+        }
+
+        // 哈希唯一英文单词 token
+        foreach (var kv in wordCounts)
+        {
+            var bytes = Encoding.UTF8.GetBytes(kv.Key);
+            var hash = murmur.ComputeHash(bytes);
+            var bucket = (Int32)(BitConverter.ToUInt32(hash, 0) % (UInt32)Dimensions);
+            vector[bucket] += kv.Value / t;
         }
 
         // L2 归一化
@@ -95,67 +176,6 @@ public class HashTextEmbedder : ILocalTextEmbedder
     #endregion
 
     #region 辅助
-
-    /// <summary>对文本进行分词：CJK 字符段提取 Bigram，非 CJK 按空白/标点切词</summary>
-    /// <param name="text">原始文本</param>
-    /// <returns>词项列表</returns>
-    private static List<String> Tokenize(String text)
-    {
-        var tokens = new List<String>(text.Length);
-        var cjkBuf = new StringBuilder(16);
-        var wordBuf = new StringBuilder(32);
-
-        void FlushCjk()
-        {
-            if (cjkBuf.Length == 0) return;
-            var seg = cjkBuf.ToString();
-            if (seg.Length == 1)
-            {
-                tokens.Add(seg);
-            }
-            else
-            {
-                // 提取 Unigram（单字）：捕获字符级重叠，提升相关文本相似度
-                for (var i = 0; i < seg.Length; i++)
-                    tokens.Add(seg[i].ToString());
-                // 提取所有相邻 Bigram：捕获词组级特征
-                for (var i = 0; i < seg.Length - 1; i++)
-                    tokens.Add(seg.Substring(i, 2));
-            }
-            cjkBuf.Clear();
-        }
-
-        void FlushWord()
-        {
-            if (wordBuf.Length < 2) { wordBuf.Clear(); return; }
-            tokens.Add(wordBuf.ToString().ToLowerInvariant());
-            wordBuf.Clear();
-        }
-
-        foreach (var ch in text)
-        {
-            if (IsCjk(ch))
-            {
-                FlushWord();
-                cjkBuf.Append(ch);
-            }
-            else if (Char.IsLetter(ch) || Char.IsDigit(ch))
-            {
-                FlushCjk();
-                wordBuf.Append(ch);
-            }
-            else
-            {
-                FlushCjk();
-                FlushWord();
-            }
-        }
-
-        FlushCjk();
-        FlushWord();
-
-        return tokens;
-    }
 
     /// <summary>判断字符是否属于 CJK 统一汉字区</summary>
     /// <param name="c">字符</param>

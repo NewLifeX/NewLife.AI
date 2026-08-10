@@ -75,7 +75,7 @@ applyTo: "**"
         var loader = new CopilotSkillLoader(_tempDir, _tempDir);
         loader.LoadAll();
 
-        var skill = Assert.Single(loader.Skills.Where(s => s.Name == "unit-testing-skill"));
+        var skill = Assert.Single(loader.Skills, s => s.Name == "unit-testing-skill");
         Assert.Contains("必须写测试", skill.Content);
         Assert.DoesNotContain("description", skill.Content);
     }

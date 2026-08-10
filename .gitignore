@@ -33,3 +33,7 @@ Web/dist/
 /NewLife.ChatData/Entity/Config
 /NewLife.ChatAI/wwwroot
 TestResults
+
+# BenchmarkDotNet 产物
+/Benchmark/BenchmarkDotNet.Artifacts/
+/Benchmark/bench_output*.txt

@@ -116,14 +116,14 @@ public class ChatHandlerChainTests
         var chain = new ChatHandlerChain();
         var h1 = new TestHandler("h1", ChatHandlerCapabilities.Before);
         chain.Add(h1);
-        Assert.Equal(1, chain.BeforeHandlers.Count);
+        Assert.Single(chain.BeforeHandlers);
 
         chain.Remove<TestHandler>();
-        Assert.Equal(0, chain.BeforeHandlers.Count);
+        Assert.Empty(chain.BeforeHandlers);
 
         chain.Add(h1);
         chain.Replace<TestHandler>(new TestHandler("h2", ChatHandlerCapabilities.Before));
-        Assert.Equal(1, chain.BeforeHandlers.Count);
+        Assert.Single(chain.BeforeHandlers);
         Assert.Equal("h2", ((TestHandler)chain.BeforeHandlers[0]).Name);
     }
 
@@ -148,8 +148,8 @@ public class ChatHandlerChainTests
         var full = ChatHandlerChain.BuildFor(handlers, ChatFlowSource.Web, fullChain: true);
         var slim = ChatHandlerChain.BuildFor(handlers, ChatFlowSource.Web, fullChain: false);
 
-        Assert.Equal(1, full.Count);
-        Assert.Equal(0, slim.Count);
+        Assert.Single(full.BeforeHandlers);
+        Assert.Empty(slim.BeforeHandlers);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class ChatHandlerChainTests
         var slim = ChatHandlerChain.BuildFor(handlers, ChatFlowSource.Web, fullChain: false);
 
         Assert.Equal(2, full.Count);
-        Assert.Equal(1, slim.Count);
+        Assert.Single(slim.BeforeHandlers);
         Assert.Equal("core", ((TestHandler)slim.BeforeHandlers[0]).Name);
     }
 
