@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>NewLife.AI.Benchmark</AssemblyName>
+    <RootNamespace>NewLife.AI.Benchmark</RootNamespace>
+    <Optimize>true</Optimize>
+    <!-- 基准项目不参与打包与发布流程 -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
+  </ItemGroup>
+</Project>
