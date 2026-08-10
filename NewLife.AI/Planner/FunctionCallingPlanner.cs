@@ -76,7 +76,13 @@ internal sealed class FunctionCallingPlan : IPlan
 
 /// <summary>基于函数调用的规划器。向 LLM 提交目标与工具描述，解析 tool_calls 作为计划步骤</summary>
 /// <remarks>
-/// 工作流：
+/// <para>使用示例：</para>
+/// <code>
+/// var planner = new FunctionCallingPlanner();
+/// var plan = await planner.CreatePlanAsync("查询北京天气并汇总", tools, chatClient);
+/// await plan.ExecuteAsync(async (name, args, ct) => await InvokeToolAsync(name, args), cancellationToken);
+/// </code>
+/// <para>工作流：</para>
 /// <list type="number">
 /// <item>将 goal 封装为 user 消息，将 tools 追加到请求</item>
 /// <item>调用 chatClient.CompleteAsync 获取 LLM 响应</item>

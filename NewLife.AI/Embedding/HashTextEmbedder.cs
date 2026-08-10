@@ -5,7 +5,13 @@ namespace NewLife.AI.Embedding;
 
 /// <summary>基于 CJK Unigram+Bigram + Murmur128 哈希的本地文本向量化实现</summary>
 /// <remarks>
-/// 实现原理：
+/// <para>使用示例（本地嵌入，无外部服务依赖）：</para>
+/// <code>
+/// var embedder = new HashTextEmbedder(512);
+/// Single[] vector = embedder.Embed("需要向量化的中文文本");
+/// var data = VectorData.FromVector(embedder.ModelName, vector);   // 持久化
+/// </code>
+/// <para>实现原理：</para>
 /// <list type="number">
 /// <item><description>CJK 字符段落生成 Unigram（单字）和 Bigram（相邻双字）；非 CJK 字符按空白/标点切词</description></item>
 /// <item><description>统计词频（TF = count / total）</description></item>

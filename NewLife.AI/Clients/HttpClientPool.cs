@@ -5,6 +5,13 @@ namespace NewLife.AI.Clients;
 
 /// <summary>HTTP 消息处理器池。按 Endpoint 主机分组复用 HttpMessageHandler，避免每次创建客户端实例都新建连接池导致 socket 与内存膨胀</summary>
 /// <remarks>
+/// <para>使用示例：</para>
+/// <code>
+/// var handler = HttpClientPool.GetHandler(endpoint);
+/// using var client = new HttpClient(handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(30) };
+/// var data = await client.GetByteArrayAsync(endpoint);
+/// // client.Dispose() 只释放 HttpClient，不关闭共享 handler 的连接池
+/// </code>
 /// 池化 HttpMessageHandler 而非 HttpClient：连接复用由 handler 内部连接池承担，HttpClient 仍按实例创建以保留各自 Timeout 等实例级配置。
 /// 客户端以 disposeHandler:false 构造，Dispose 时只释放 HttpClient 对象本身，不关闭共享 handler 的连接池，调用方零改动即获得连接复用。
 /// handler 超过 <see cref="HandlerLifetime"/> 后自动轮换（惰性替换），旧 handler 延迟释放，避免 DNS 变更 / 连接陈旧（借鉴 IHttpClientFactory 的 HandlerLifetime 思想）。
