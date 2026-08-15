@@ -1,6 +1,6 @@
 namespace NewLife.AI.Tools;
 
-/// <summary>搜索引擎服务接口。支持多实现链式降级（Bing → Serper → DuckDuckGo → 远程兜底）</summary>
+/// <summary>搜索引擎服务接口。支持多实现链式降级（Bing RSS → Bing API → Serper → DuckDuckGo → 搜狗 → 远程兜底）</summary>
 public interface ISearchService
 {
     /// <summary>使用搜索引擎检索互联网信息</summary>

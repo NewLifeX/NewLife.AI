@@ -1,17 +1,17 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace NewLife.AI.Tools;
 
-/// <summary>DuckDuckGo HTML 搜索实现。无需密钥，功能完全免费，适合海外环境兜底</summary>
-/// <remarks>通过 html.duckduckgo.com 搜索页解析真实网页搜索结果，替代仅返回摘要卡片的即时问答 API</remarks>
-/// <remarks>初始化 DuckDuckGo 搜索服务</remarks>
+/// <summary>搜狗搜索实现。无需密钥，国内可用，作为国内搜索兜底</summary>
+/// <remarks>解析 www.sogou.com/web 搜索页 HTML。搜狗反爬风控较强，仅建议作为兜底提供者，通过后台配置启用</remarks>
+/// <remarks>初始化搜狗搜索服务</remarks>
 /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-public class SearchDuckDuckGoService(HttpClient? httpClient = null) : ISearchService
+public class SearchSogouService(HttpClient? httpClient = null) : ISearchService
 {
     private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
 
-    /// <summary>使用 DuckDuckGo 搜索页检索互联网信息</summary>
+    /// <summary>使用搜狗搜索引擎检索互联网信息</summary>
     /// <param name="query">搜索关键词</param>
     /// <param name="count">返回结果数量</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -26,7 +26,7 @@ public class SearchDuckDuckGoService(HttpClient? httpClient = null) : ISearchSer
 
             var encoded = Uri.EscapeDataString(query);
             var resp = await _http.GetAsync(
-                $"https://html.duckduckgo.com/html/?q={encoded}",
+                $"https://www.sogou.com/web?query={encoded}",
                 cts.Token).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return null;
 
@@ -39,23 +39,23 @@ public class SearchDuckDuckGoService(HttpClient? httpClient = null) : ISearchSer
         }
     }
 
-    /// <summary>解析 DuckDuckGo 搜索结果页 HTML</summary>
+    /// <summary>解析搜狗搜索结果页 HTML</summary>
     /// <param name="html">搜索页 HTML 内容</param>
     /// <param name="count">最大返回条数</param>
     /// <returns>搜索结果；无结果返回 null</returns>
     private static SearchModel? ParseHtml(String html, Int32 count)
     {
         var model = new SearchModel();
-        var titles = Regex.Matches(html, @"<a[^>]*class=""result__a""[^>]*href=""(?<url>[^""]*)""[^>]*>(?<title>[\s\S]*?)</a>", RegexOptions.IgnoreCase);
-        var snippets = Regex.Matches(html, @"<a[^>]*class=""result__snippet""[^>]*>(?<snippet>[\s\S]*?)</a>", RegexOptions.IgnoreCase);
+        var titles = Regex.Matches(html, @"<h3[^>]*>\s*<a[^>]*href=""(?<url>[^""]*)""[^>]*>(?<title>[\s\S]*?)</a>", RegexOptions.IgnoreCase);
+        var snippets = Regex.Matches(html, @"<div class=""text-layout""[^>]*>(?<snippet>[\s\S]*?)</div>", RegexOptions.IgnoreCase);
 
         for (var i = 0; i < titles.Count; i++)
         {
             var m = titles[i];
             var title = Clean(m.Groups["title"].Value);
-            var snippet = i < snippets.Count ? Clean(snippets[i].Groups["snippet"].Value) : null;
-            if (String.IsNullOrEmpty(title) && String.IsNullOrEmpty(snippet)) continue;
+            if (String.IsNullOrEmpty(title)) continue;
 
+            var snippet = i < snippets.Count ? Clean(snippets[i].Groups["snippet"].Value) : null;
             model.Items.Add(new SearchItem { Title = title, Url = ResolveUrl(m.Groups["url"].Value), Snippet = snippet });
             if (model.Items.Count >= count) break;
         }
@@ -68,25 +68,16 @@ public class SearchDuckDuckGoService(HttpClient? httpClient = null) : ISearchSer
     /// <returns>纯文本</returns>
     private static String Clean(String html) => WebUtility.HtmlDecode(Regex.Replace(html, @"<[^>]+>", "")).Trim();
 
-    /// <summary>解析结果链接，提取 DuckDuckGo 跳转地址中的真实 URL</summary>
-    /// <param name="url">原始链接，可能是 //duckduckgo.com/l/?uddg=xxx 跳转</param>
-    /// <returns>真实 URL</returns>
+    /// <summary>补全搜狗相对链接，保留跳转地址</summary>
+    /// <param name="url">原始链接，可能是 /link?url=xxx 跳转</param>
+    /// <returns>完整 URL</returns>
     private static String? ResolveUrl(String? url)
     {
         if (String.IsNullOrEmpty(url)) return null;
 
         var u = url!.Trim();
-        if (u.StartsWith("//")) u = "https:" + u;
-
-        var idx = u.IndexOf("uddg=", StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0)
-        {
-            var val = u.Substring(idx + 5);
-            var end = val.IndexOf('&');
-            if (end >= 0) val = val.Substring(0, end);
-            u = Uri.UnescapeDataString(val);
-        }
-
+        if (u.StartsWith("//")) return "https:" + u;
+        if (u.StartsWith("/")) return "https://www.sogou.com" + u;
         return u;
     }
 }

@@ -199,7 +199,7 @@ public static class ChatAIExtensions
         var translateProviders = translateTool?.Providers ?? "mymemory";
 
         var searchTool = toolMap.GetValueOrDefault("web_search");
-        var searchProviders = searchTool?.Providers ?? "bing,duckduckgo";
+        var searchProviders = searchTool?.Providers ?? "bing_rss,duckduckgo";
         var searchKey = searchTool?.ApiKey ?? "";
 
         var fetchTool = toolMap.GetValueOrDefault("web_fetch");
@@ -239,8 +239,10 @@ public static class ChatAIExtensions
             switch (name)
             {
                 case "bing": services.AddSingleton<ISearchService>(sp => new SearchBingService(searchKey)); break;
+                case "bing_rss": services.AddSingleton<ISearchService, SearchBingRssService>(); break;
                 case "serper": services.AddSingleton<ISearchService>(sp => new SearchSerperService(searchKey)); break;
                 case "duckduckgo": services.AddSingleton<ISearchService, SearchDuckDuckGoService>(); break;
+                case "sogou": services.AddSingleton<ISearchService, SearchSogouService>(); break;
             }
         }
 

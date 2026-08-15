@@ -104,7 +104,8 @@ public static class ToolHelper
         });
         var client = new HttpClient(handler, disposeHandler: false);
         client.Timeout = TimeSpan.FromSeconds(30);
-        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; NewLife.AI/1.0)");
+        // 使用拟真浏览器 UA，降低百度/知乎/CSDN 等站点对机器人标识的拦截概率
+        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
         return client;
     }
 }
