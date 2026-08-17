@@ -14,8 +14,8 @@ namespace NewLife.AI.Services;
 /// 无数据库依赖，会话历史默认内存（可注入 <see cref="IChatSessionStore"/>），适合页面内嵌 AI 助手等场景。
 /// </para>
 /// <para>
-/// 事件协议为规范 <see cref="ChatStreamEvent"/> 序列（message_start / thinking_delta / content_delta / tool_call_* / message_done / error），
-/// 宿主可经 <see cref="ChatStreamEventProjector"/> 投影为轻量前端协议，无需改动前端。
+/// 事件协议为规范 <see cref="ChatStreamEvent"/> 序列（message_start / thinking_delta / content_delta / tool_call_start|done|error / message_done / error），
+/// 宿主直接序列化该事件流输出（如 SSE），前端按规范协议解析，无需协议投影。
 /// </para>
 /// <para>
 /// 使用示例：
@@ -234,6 +234,10 @@ public class AiChatService(IChatClient client, ChatSessionService? sessions = nu
     {
         var response = await toolClient.GetResponseAsync(ChatRequest.Create(messages, options, false), cancellationToken).ConfigureAwait(false);
         state.Usage = response?.Usage;
+
+        // 完成原因：与流式路径对称，从首个 Choice 读取，供 message_done 透传
+        var choice = response?.Messages?.FirstOrDefault();
+        if (choice?.FinishReason != null) state.FinishReason = choice.FinishReason.Value.ToApiString();
 
         if (response is ChatResponse cr && cr.ToolCallEvents != null)
         {

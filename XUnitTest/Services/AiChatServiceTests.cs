@@ -129,12 +129,12 @@ public class AiChatServiceTests
     }
 
     [Fact]
-    [DisplayName("非流式对话—单块返回完整文本")]
+    [DisplayName("非流式对话—单块返回完整文本与完成原因")]
     public async Task ChatAsync_NonStream_EmitsFullText()
     {
         var client = new CapturingChatClient
         {
-            NonStreamResponse = _ => { var r = new ChatResponse(); r.Add("完整回复"); return r; },
+            NonStreamResponse = _ => { var r = new ChatResponse(); r.Add("完整回复", finishReason: FinishReason.Stop); return r; },
         };
 
         var ai = new AiChatService(client);
@@ -147,6 +147,8 @@ public class AiChatServiceTests
 
         Assert.Contains(events, e => e.Type == "content_delta" && e.Content == "完整回复");
         Assert.Equal("message_done", events[^1].Type);
+        // 非流式路径与流式一致，message_done 携带真实 finish_reason
+        Assert.Equal("stop", events[^1].FinishReason);
     }
 
     // ── 工具事件 ──────────────────────────────────────────────────────────
