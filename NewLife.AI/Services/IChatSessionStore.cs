@@ -1,4 +1,5 @@
 using NewLife.AI.Models;
+using NewLife.Caching;
 
 namespace NewLife.AI.Services;
 
