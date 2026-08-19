@@ -166,6 +166,13 @@ public class ChartToolService(ILog log)
 
         if (dataNode is not JsonObject obj) return dataNode;
 
+        // 【适配0】LLM 偶发把 series 输出为单个对象而非数组（如 {"series":{"name":"A","data":[...]}}）
+        // 包装为单元素数组，避免前端对非数组调用 .map 渲染崩溃
+        if (obj["series"] is JsonObject singleSeries)
+        {
+            obj["series"] = new JsonArray { singleSeries.DeepClone() };
+        }
+
         // 【适配1】LLM 输出 data.radar.indicator 格式（将雷达维度嵌在 radar 对象内）
         // 转换为标准格式：indicators 直接在 data 下
         if (type == "radar" && obj["radar"] is JsonObject radarObj && obj["indicators"] == null)
