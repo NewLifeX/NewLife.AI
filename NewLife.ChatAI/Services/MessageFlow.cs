@@ -1439,9 +1439,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:BuildSystemMessage", new { userId, model?.Name, userHistoryCount });
         var parts = new List<String>();
 
-        // 0. 当前日期时间（置首，确保 AI 在处理"今天"/"2号那天"等模糊表达时有明确锚点）
+        // 0. 当前日期（置首，确保 AI 在处理"今天"/"2号那天"等模糊表达时有明确锚点）
+        // 降精度到日期级：毫秒级时间戳每次请求都会变化，破坏 Prompt Cache 前缀命中与重生成上下文一致性；
+        // 精确时刻由"当前时间"系统工具（BuiltinToolService.GetCurrentTime）按需调用
         {
-            parts.Add($"当前时间：{DateTimeOffset.Now:O}");
+            parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
         }
 
         // 1. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
@@ -1514,8 +1516,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:BuildSystemMessageForProject", new { projectId, model?.Name, userHistoryCount });
         var parts = new List<String>();
 
-        // 0. 当前日期时间
-        parts.Add($"当前时间：{DateTimeOffset.Now:O}");
+        // 0. 当前日期（降精度到日期级，理由同 BuildSystemMessage：保证 system prompt 前缀稳定以命中 Prompt Cache）
+        parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
 
         // 1. 项目级系统提示词（StarChat 独有；AgentProject 不在 ChatAI 实体，故用条件编译）
         // 项目级指令定义 AI 整体行为与角色，优先级仅次于 AppKey.SystemPrompt（业务层）
