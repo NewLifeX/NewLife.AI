@@ -23,6 +23,11 @@ public class SchemaSizeBenchmark
     {
         _typedMethod = typeof(SchemaSizeBenchmark).GetMethod(nameof(ShowTimelineTyped))!;
         _stringMethod = typeof(SchemaSizeBenchmark).GetMethod(nameof(ShowTimelineString))!;
+
+        // 输出两个版本的 schema 实际体积（字节数），回答"类型化后发给模型的声明变大多少"
+        Console.WriteLine($"[SchemaSize] StringVersion bytes = {SchemaBytes(_stringMethod)}");
+        Console.WriteLine($"[SchemaSize] TypedVersion bytes   = {SchemaBytes(_typedMethod)}");
+        Console.WriteLine($"[SchemaSize] Typed/String ratio   = {(Double)SchemaBytes(_typedMethod) / SchemaBytes(_stringMethod):F2}");
     }
 
     /// <summary>类型化版本（当前改造后）：items/palette 为强类型数组</summary>
