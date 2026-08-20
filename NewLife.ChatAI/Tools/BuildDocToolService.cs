@@ -26,20 +26,16 @@ public class BuildDocToolService(ILog log)
     [Description("生成 Word 文档（.docx）并返回下载链接。支持标题/段落/列表/表格/图片/分页/分隔线/高亮框/KPI/引用/代码块。sections JSON 数组描述每个节，每节包含 heading（节标题）、content（正文）、elements（结构化元素）")]
     public async Task<ToolResult> BuildDoc(
         [Description("文档标题（≤ 30 字），如「Q2季度总结报告」")] String title,
-        [Description(@"文档节数组（JSON）。每节字段：heading（节标题文字）、headingLevel（级别1~3，默认1）、content（正文段落，可选）、elements（元素数组，可选）。elements 元素类型：paragraph（{type,text,可选bold/italic/underline/fontSize/color/alignment/backgroundColor}）、bullet_list（{type,items}）、ordered_list（{type,items}）、table（{type,headers,rows,可选tableStyle}，rows为二维数组每行一个单元格值数组如 [[""张三"",""85""],[""李四"",""92""]]）、image（{type,src,widthCm?,heightCm?}）、page_break（{type}）、divider（{type}分隔线）、callout（{type,text,variant?=info/success/warning/danger}高亮提示框）、kpi（{type,kpiValue,kpiLabel?,kpiTrend?=up/down/flat}大数字指标）、quote（{type,text,quoteSource?}引用块）、code（{type,text,codeLanguage?}代码块）")] String sections,
+        [Description(@"文档节数组（JSON）。每节字段：heading（节标题文字）、headingLevel（级别1~3，默认1）、content（正文段落，可选）、elements（元素数组，可选）。elements 元素类型：paragraph（{type,text,可选bold/italic/underline/fontSize/color/alignment/backgroundColor}）、bullet_list（{type,items}）、ordered_list（{type,items}）、table（{type,headers,rows,可选tableStyle}，rows为二维数组每行一个单元格值数组如 [[""张三"",""85""],[""李四"",""92""]]）、image（{type,src,widthCm?,heightCm?}）、page_break（{type}）、divider（{type}分隔线）、callout（{type,text,variant?=info/success/warning/danger}高亮提示框）、kpi（{type,kpiValue,kpiLabel?,kpiTrend?=up/down/flat}大数字指标）、quote（{type,text,quoteSource?}引用块）、code（{type,text,codeLanguage?}代码块）")] DocSectionModel[]? sections,
         [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal）")] String? theme = null,
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
             throw new ToolException("参数错误：title 不能为空", "请提供文档标题后重试。");
 
-        if (sections.IsNullOrEmpty())
-            throw new ToolException("参数错误：sections 不能为空", "请提供文档节 JSON 数组后重试，或直接回复用户说明无法生成文档。");
-        var sectionList = sections.ToJsonEntity<DocSectionModel[]>();
-        if (sectionList == null)
-            throw new ToolException("sections JSON 格式错误", "请检查 JSON 语法后重试，或直接回复用户说明无法生成文档。");
-        if (sectionList.Length == 0)
-            throw new ToolException("sections 不能为空数组", "请提供至少一个节后重试，或直接回复用户说明无法生成文档。");
+        if (sections == null || sections.Length == 0)
+            throw new ToolException("参数错误：sections 不能为空", "请提供文档节数组后重试，或直接回复用户说明无法生成文档。");
+        var sectionList = sections;
 
         log.Info("[BuildDoc] 开始生成：{0}，{1} 节，主题：{2}", title, sectionList.Length, theme ?? "none");
 

@@ -53,6 +53,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="wwwroot\**\*" />
+    <EmbeddedResource Include="Resources\china-map.svg" />
   </ItemGroup>
 
   <!-- wwwroot 已嵌入 DLL，移除 NuGet 包中的 staticwebassets/ 目录

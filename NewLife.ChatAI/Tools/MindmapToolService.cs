@@ -42,8 +42,8 @@ public class MindmapToolService(ILog log)
         [Description("思维导图标题（≤ 30 字），如「人工智能技术体系」")] String title,
         [Description("Markdown 大纲，用 # / ## / ### 表示 1~3 级层级。示例：\n# 人工智能\n## 机器学习\n### 监督学习\n### 无监督学习\n## 深度学习\n### CNN\n### RNN")] String outline,
         [Description("布局模式：tree（默认缩进树，通用）/ radial（左右放射，知识梳理/概念图首选）/ lr（中心向右，流程图/决策树）/ rl（中心向左，反向追溯）/ tb（中心向下，组织架构）/ bt（中心向上，自底向上层级）")] String? layout = null,
-        [Description("分支配色 JSON 数组，如 [\"#3b82f6\",\"#10b981\",\"#f59e0b\"]。3~8 个十六进制颜色，按顺序分配给各一级分支。不传则使用蓝紫/绿/黄/红/天蓝/深绿/橙/紫默认色板")] String? branchColors = null,
-        [Description("初始折叠的节点 ID 列表 JSON 数组，如 [\"n2\",\"n5\"]。空则全部展开。用于聚焦重点分支")] String? collapsed = null,
+        [Description("分支配色 JSON 数组，如 [\"#3b82f6\",\"#10b981\",\"#f59e0b\"]。3~8 个十六进制颜色，按顺序分配给各一级分支。不传则使用蓝紫/绿/黄/红/天蓝/深绿/橙/紫默认色板")] IList<String>? branchColors = null,
+        [Description("初始折叠的节点 ID 列表 JSON 数组，如 [\"n2\",\"n5\"]。空则全部展开。用于聚焦重点分支")] IList<String>? collapsed = null,
         [Description("最大可见深度，1=仅一级分支，2=一二级，默认无限制。节点密集时建议设为 2 保持可读性")] Int32? maxDepth = null,
         ToolCallContext? context = null)
     {
@@ -87,29 +87,25 @@ public class MindmapToolService(ILog log)
         };
 
         // 将 branchColors 写入返回 JSON（前端 MindmapBlock 已解析该字段）
-        if (!branchColors.IsNullOrEmpty())
+        if (branchColors is { Count: > 0 })
         {
-            try
+            var node = new JsonArray();
+            foreach (var c in branchColors)
             {
-                result["branchColors"] = JsonNode.Parse(branchColors);
+                if (!c.IsNullOrEmpty()) node.Add(c);
             }
-            catch (Exception ex)
-            {
-                log.Warn("[Mindmap] branchColors 解析失败，已忽略：{0}", ex.Message);
-            }
+            if (node.Count > 0) result["branchColors"] = node;
         }
 
         // 将 collapsed 写入返回 JSON
-        if (!collapsed.IsNullOrEmpty())
+        if (collapsed is { Count: > 0 })
         {
-            try
+            var node = new JsonArray();
+            foreach (var c in collapsed)
             {
-                result["collapsed"] = JsonNode.Parse(collapsed);
+                if (!c.IsNullOrEmpty()) node.Add(c);
             }
-            catch (Exception ex)
-            {
-                log.Warn("[Mindmap] collapsed 解析失败，已忽略：{0}", ex.Message);
-            }
+            if (node.Count > 0) result["collapsed"] = node;
         }
 
         // 将 layout 写入返回 JSON

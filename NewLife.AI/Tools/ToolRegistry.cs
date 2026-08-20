@@ -668,17 +668,40 @@ public class ToolRegistry : IToolProvider
         // 约 15% 概率出现，直接返回字符串会导致类型不符、工具参数错误
         if (value is String jsonStr)
         {
-            try
-            {
-                // new JsonParser().Decode() 支持解析顶层 JSON 数组，而静态 JsonParser.Decode 只支持对象
-                var reparsed = new JsonParser(jsonStr).Decode();
-                if (reparsed is IDictionary<String, Object?> || reparsed is IList<Object?>)
-                    return JsonHelper.Default.Convert(reparsed, underlyingType);
-            }
-            catch { }
+            // new JsonParser().Decode() 支持解析顶层 JSON 数组，而静态 JsonParser.Decode 只支持对象
+            if (TryDecodeJsonString(jsonStr, underlyingType, out var converted)) return converted;
+
+            // LLM 常见 JSON-in-JSON 转义错误（元素间多余引号/二次转义/包裹引号）：修复后二次解析
+            // 典型失败：items=[{"date":"2017"...},"{"date":"2018"...}] 导致 'd' is invalid after a value
+            if (ToolHelper.TryRepairJson(jsonStr, out var repaired) && TryDecodeJsonString(repaired, underlyingType, out converted))
+                return converted;
         }
 
         return value;
+    }
+
+    /// <summary>将 JSON 字符串二次解析并转换为目标复杂类型（Qwen 兼容分支）。成功返回 true</summary>
+    /// <param name="json">待解析的 JSON 字符串</param>
+    /// <param name="targetType">目标类型</param>
+    /// <param name="value">转换后的值</param>
+    /// <returns>解析并转换成功返回 true</returns>
+    private static Boolean TryDecodeJsonString(String json, Type targetType, out Object? value)
+    {
+        value = null;
+        // 先做严格结构校验，避免宽松解析器放行畸形 JSON 导致部分数据静默丢失（如 },"{ 多引号）
+        if (!ToolHelper.IsStrictJson(json)) return false;
+        try
+        {
+            // new JsonParser().Decode() 支持解析顶层 JSON 数组，而静态 JsonParser.Decode 只支持对象
+            var reparsed = new JsonParser(json).Decode();
+            if (reparsed is IDictionary<String, Object?> || reparsed is IList<Object?>)
+            {
+                value = JsonHelper.Default.Convert(reparsed, targetType);
+                return true;
+            }
+        }
+        catch { }
+        return false;
     }
 
     /// <summary>从可能格式损坏的 JSON 字符串中按字段名提取字段值的原始 JSON 表示</summary>

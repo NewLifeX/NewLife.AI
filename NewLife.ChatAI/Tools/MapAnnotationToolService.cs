@@ -127,8 +127,8 @@ public class MapAnnotationToolService(ILog log)
     [Description("在中国地图上标注坐标点（城市/POI）或高亮省份区域，生成带标注的 SVG 地图并渲染到对话气泡。支持：①自定义颜色的省份填充高亮；②WGS84 经纬度坐标标注点（含标签文字）；③右下角自动图例。典型用途：各省数据分布、城市位置展示、区域销售热力图。")]
     public ToolResult AnnotateChinaMap(
         [Description("地图标题（≤ 30 字），如「2024年各省GDP分布」")] String title,
-        [Description(@"坐标点标注 JSON 数组（可为空数组 []）。格式：[{""name"":""北京"",""lat"":39.9,""lng"":116.4,""label"":""北京\n43760亿"",""color"":""#E74C3C"",""size"":8}]。lat/lng 为 WGS84 十进制度，color/size 可省略")] String markers,
-        [Description(@"省份高亮 JSON 数组（可为空数组 []）。格式：[{""name"":""广东省"",""color"":""#FFB347"",""label"":""GDP第一""}]。name 支持中文省份全称或简称，label 可省略")] String? highlightProvinces = null,
+        [Description(@"坐标点标注 JSON 数组（可为空数组 []）。格式：[{""name"":""北京"",""lat"":39.9,""lng"":116.4,""label"":""北京\n43760亿"",""color"":""#E74C3C"",""size"":8}]。lat/lng 为 WGS84 十进制度，color/size 可省略")] IList<MapMarker>? markers,
+        [Description(@"省份高亮 JSON 数组（可为空数组 []）。格式：[{""name"":""广东省"",""color"":""#FFB347"",""label"":""GDP第一""}]。name 支持中文省份全称或简称，label 可省略")] IList<MapHighlight>? highlightProvinces = null,
         [Description("图例标题（可选），如「GDP规模」")] String? legendTitle = null,
         [Description("配色方案（可选），支持 blue/orange/green/purple/red，默认 blue")] String? colorScheme = null,
         [Description("标注点样式（可选），如 circle/pin/square，默认 circle")] String? markerStyle = null,
@@ -140,19 +140,10 @@ public class MapAnnotationToolService(ILog log)
         // 解析地理校准参数（mapsvg:geoViewBox="minLng maxLat maxLng minLat"）
         var calibration = ParseGeoViewBox(baseSvg);
 
-        // 解析入参
+        // 解析入参（类型化参数：标记点/省份高亮，color 为空时按配色方案轮转）
         var schemeColors = ResolveColorScheme(colorScheme);
-        List<MarkerItem> markerList;
-        List<HighlightItem> highlightList;
-        try
-        {
-            markerList = ParseMarkers(markers, schemeColors.Markers);
-            highlightList = ParseHighlights(highlightProvinces, schemeColors.Highlight);
-        }
-        catch (ArgumentException ex)
-        {
-            throw new ToolException($"参数错误：{ex.Message}", "请检查 JSON 格式后重试，或直接回复用户说明无法生成地图标注。", ex);
-        }
+        var markerList = ParseMarkers(markers, schemeColors.Markers);
+        var highlightList = ParseHighlights(highlightProvinces, schemeColors.Highlight);
 
         // 组装带标注的 SVG
         var annotatedSvg = BuildAnnotatedSvg(baseSvg, calibration, markerList, highlightList, legendTitle, schemeColors, markerStyle);
@@ -214,90 +205,50 @@ public class MapAnnotationToolService(ILog log)
         return new GeoCalibration(minLng, maxLng, minLat, maxLat, svgW, svgH);
     }
 
-    private static List<MarkerItem> ParseMarkers(String json, String[]? schemeMarkerColors = null)
+    private static List<MarkerItem> ParseMarkers(IList<MapMarker>? markers, String[]? schemeMarkerColors = null)
     {
-        if (json.IsNullOrWhiteSpace() || json.Trim() == "[]") return [];
-
         var list = new List<MarkerItem>();
+        if (markers == null || markers.Count == 0) return list;
+
         var fallbackColors = schemeMarkerColors ?? DefaultMarkerColors;
-        try
+        var colorIdx = 0;
+        foreach (var m in markers)
         {
-            var arr = json.ToJsonEntity<List<Dictionary<String, Object>>>();
-            if (arr == null) return list;
+            if (m.Lat == 0 && m.Lng == 0) continue;   // 无效坐标跳过
 
-            var colorIdx = 0;
-            foreach (var item in arr)
-            {
-                var lat = GetDouble(item, "lat");
-                var lng = GetDouble(item, "lng");
-                if (lat == 0 && lng == 0) continue;   // 无效坐标跳过
-
-                list.Add(new MarkerItem(
-                    Name:   GetStr(item, "name"),
-                    Lat:    lat,
-                    Lng:    lng,
-                    Label:  GetStr(item, "label"),
-                    Color:  (String.IsNullOrEmpty(GetStr(item, "color")) ? fallbackColors[colorIdx % fallbackColors.Length] : GetStr(item, "color")),
-                    Size:   (Int32)GetDouble(item, "size", 7)
-                ));
-                colorIdx++;
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"markers 参数 JSON 解析失败：{ex.Message}", nameof(json));
+            list.Add(new MarkerItem(
+                Name:   m.Name,
+                Lat:    m.Lat,
+                Lng:    m.Lng,
+                Label:  m.Label ?? "",
+                Color:  String.IsNullOrEmpty(m.Color) ? fallbackColors[colorIdx % fallbackColors.Length] : m.Color,
+                Size:   m.Size is > 0 ? m.Size.Value : 7
+            ));
+            colorIdx++;
         }
         return list;
     }
 
-    private static List<HighlightItem> ParseHighlights(String? json, String defaultColor = "#87CEEB")
+    private static List<HighlightItem> ParseHighlights(IList<MapHighlight>? highlights, String defaultColor = "#87CEEB")
     {
-        if (json.IsNullOrWhiteSpace() || json!.Trim() == "[]") return [];
-
         var list = new List<HighlightItem>();
-        try
+        if (highlights == null || highlights.Count == 0) return list;
+
+        foreach (var h in highlights)
         {
-            var arr = json.ToJsonEntity<List<Dictionary<String, Object>>>();
-            if (arr == null) return list;
+            if (h.Name.IsNullOrEmpty()) continue;
 
-            foreach (var item in arr)
-            {
-                var name = GetStr(item, "name");
-                if (name.IsNullOrEmpty()) continue;
+            // 查找省份 SVG path id
+            if (!ProvinceIdMap.TryGetValue(h.Name, out var pathId)) continue;
 
-                // 查找省份 SVG path id
-                if (!ProvinceIdMap.TryGetValue(name, out var pathId)) continue;
-
-                list.Add(new HighlightItem(
-                    ProvinceName: name,
-                    PathId:       pathId,
-                    Color:        (String.IsNullOrEmpty(GetStr(item, "color")) ? defaultColor : GetStr(item, "color")),
-                    Label:        GetStr(item, "label")
-                ));
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"highlightProvinces 参数 JSON 解析失败：{ex.Message}", nameof(json));
+            list.Add(new HighlightItem(
+                ProvinceName: h.Name,
+                PathId:       pathId,
+                Color:        String.IsNullOrEmpty(h.Color) ? defaultColor : h.Color,
+                Label:        h.Label ?? ""
+            ));
         }
         return list;
-    }
-
-    private static String GetStr(Dictionary<String, Object> d, String key)
-        => d.TryGetValue(key, out var v) ? v?.ToString() ?? "" : "";
-
-    private static Double GetDouble(Dictionary<String, Object> d, String key, Double def = 0)
-    {
-        if (!d.TryGetValue(key, out var v)) return def;
-        return v switch
-        {
-            Double dbl  => dbl,
-            Int64  lng  => (Double)lng,
-            String s    => Double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var r) ? r : def,
-            System.Text.Json.JsonElement je => je.ValueKind == System.Text.Json.JsonValueKind.Number
-                ? je.GetDouble() : def,
-            _ => def,
-        };
     }
 
     #endregion

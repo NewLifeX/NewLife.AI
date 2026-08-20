@@ -108,4 +108,156 @@ public static class ToolHelper
         client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
         return client;
     }
+
+    /// <summary>尝试修复 LLM 生成的可疑 JSON 文本（JSON-in-JSON 转义错误）。仅应在原样解析失败后调用</summary>
+    /// <remarks>
+    /// 覆盖三类常见错误：
+    /// <list type="number">
+    /// <item>数组/对象元素间多余引号（<c>},"{</c> → <c>},{</c>、<c>],"["</c> → <c>],[</c>）</item>
+    /// <item>二次转义引号（<c>\"</c> → <c>"</c>）</item>
+    /// <item>整段被包裹引号（<c>"[...]"</c> → <c>[...]</c>）</item>
+    /// </list>
+    /// 依次生成修复候选并做严格结构校验，返回首个合法且与输入不同的结果；全部无效时返回 false，由调用方保持原行为。
+    /// </remarks>
+    /// <param name="json">待修复的 JSON 文本</param>
+    /// <param name="repaired">修复后的文本；未应用有效修复时为原值</param>
+    /// <returns>是否应用了有效修复</returns>
+    public static Boolean TryRepairJson(String? json, out String repaired)
+    {
+        repaired = json ?? String.Empty;
+        if (String.IsNullOrWhiteSpace(json)) return false;
+
+        var current = json.Trim();
+
+        // 基础形态：原样；整段被包裹引号时剥掉外层
+        var forms = new List<String> { current };
+        if (current.Length >= 2 && current[0] == '"' && current[current.Length - 1] == '"')
+            forms.Add(current.Substring(1, current.Length - 2));
+
+        // 各基础形态分别派生：反转义、去多余引号、反转义+去多余引号
+        var candidates = new List<String>();
+        foreach (var form in forms)
+        {
+            candidates.Add(form);
+
+            var unescaped = form.Contains("\\\"") ? form.Replace("\\\"", "\"") : form;
+            if (unescaped != form) candidates.Add(unescaped);
+
+            var noStray = Regex.Replace(form, @"(?<=[,:])\s*""\s*(?=[\[{])", "");
+            if (noStray != form) candidates.Add(noStray);
+
+            if (unescaped != form && noStray != form)
+            {
+                var combo = Regex.Replace(unescaped, @"(?<=[,:])\s*""\s*(?=[\[{])", "");
+                if (combo != unescaped) candidates.Add(combo);
+            }
+        }
+
+        foreach (var candidate in candidates)
+        {
+            if (candidate == current) continue;
+            if (!IsStrictJson(candidate)) continue;
+
+            repaired = candidate;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>严格 JSON 结构校验：要求整段文本为单个合法 JSON 值且无尾随内容</summary>
+    /// <param name="json">待校验文本</param>
+    /// <returns>合法返回 true</returns>
+    internal static Boolean IsStrictJson(String json)
+    {
+        var i = 0;
+        return SkipValue(json, ref i) && SkipWs(json, ref i) && i >= json.Length;
+    }
+
+    private static Boolean SkipWs(String s, ref Int32 i)
+    {
+        while (i < s.Length && (s[i] is ' ' or '\t' or '\n' or '\r')) i++;
+        return true;
+    }
+
+    private static Boolean SkipValue(String s, ref Int32 i)
+    {
+        if (i >= s.Length) return false;
+        var c = s[i];
+        if (c == '{') return SkipObject(s, ref i);
+        if (c == '[') return SkipArray(s, ref i);
+        if (c == '"') return SkipString(s, ref i);
+        return SkipLiteral(s, ref i);
+    }
+
+    private static Boolean SkipObject(String s, ref Int32 i)
+    {
+        i++; // {
+        SkipWs(s, ref i);
+        if (i < s.Length && s[i] == '}') { i++; return true; }
+
+        while (i < s.Length)
+        {
+            SkipWs(s, ref i);
+            if (i >= s.Length || s[i] != '"') return false;   // 属性名必须是字符串
+            if (!SkipString(s, ref i)) return false;
+            SkipWs(s, ref i);
+            if (i >= s.Length || s[i] != ':') return false;
+            i++; // :
+            SkipWs(s, ref i);
+            if (!SkipValue(s, ref i)) return false;
+            SkipWs(s, ref i);
+            if (i >= s.Length) return false;
+            if (s[i] == ',') { i++; continue; }
+            if (s[i] == '}') { i++; return true; }
+            return false;
+        }
+        return false;
+    }
+
+    private static Boolean SkipArray(String s, ref Int32 i)
+    {
+        i++; // [
+        SkipWs(s, ref i);
+        if (i < s.Length && s[i] == ']') { i++; return true; }
+
+        while (i < s.Length)
+        {
+            SkipWs(s, ref i);
+            if (!SkipValue(s, ref i)) return false;
+            SkipWs(s, ref i);
+            if (i >= s.Length) return false;
+            if (s[i] == ',') { i++; continue; }
+            if (s[i] == ']') { i++; return true; }
+            return false;
+        }
+        return false;
+    }
+
+    private static Boolean SkipString(String s, ref Int32 i)
+    {
+        i++; // 开引号
+        while (i < s.Length)
+        {
+            var c = s[i];
+            if (c == '\\') { i += 2; continue; }   // 跳过转义字符对
+            if (c == '"') { i++; return true; }
+            i++;
+        }
+        return false;   // 未闭合
+    }
+
+    private static Boolean SkipLiteral(String s, ref Int32 i)
+    {
+        var start = i;
+        while (i < s.Length && s[i] is not (',' or '}' or ']' or ' ' or '\t' or '\n' or '\r')) i++;
+        var token = s.Substring(start, i - start);
+        return token is "true" or "false" or "null" || IsNumberLiteral(token);
+    }
+
+    private static Boolean IsNumberLiteral(String token)
+    {
+        if (String.IsNullOrEmpty(token)) return false;
+        return Double.TryParse(token, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out _);
+    }
 }

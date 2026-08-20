@@ -2,6 +2,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using NewLife.AI.Tools;
 using NewLife.Log;
 
@@ -11,6 +12,12 @@ namespace NewLife.ChatAI.Tools;
 /// <param name="log">日志</param>
 public class KanbanToolService(ILog log)
 {
+    /// <summary>类型化参数序列化选项：camelCase 字段名 + 忽略 null（与前端字段对齐，保持输出结构稳定）</summary>
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
     #region 工具方法
 
     /// <summary>将任务清单渲染为多列看板（如：待办 → 进行中 → 已完成）</summary>
@@ -49,25 +56,13 @@ public class KanbanToolService(ILog log)
     [Description("将任务清单渲染为多列看板（如：待办 → 进行中 → 已完成）。适用场景：项目拆解、Sprint 规划、工作流展示、任务状态分类。每列可有颜色标记和 WIP 上限，每张卡片可含标题、描述、优先级、标签、截止日期、负责人、子任务清单、进度和链接。📐 2 种布局：board（默认多列看板）/ swimlane（泳道视图，按团队/模块分组列）。")]
     public ToolResult ShowKanban(
         [Description("看板标题（≤ 30 字），如「Sprint 1 任务看板」")] String title,
-        [Description(@"列定义 JSON 数组。示例：[{""id"":""todo"",""title"":""待办"",""color"":""#94a3b8"",""wipLimit"":5,""cards"":[{""id"":""1"",""title"":""需求分析"",""description"":""整理用户需求"",""priority"":""high"",""tags"":[""设计""],""dueDate"":""2026-07-15"",""assignee"":""张三"",""checklist"":[{""title"":""访谈用户"",""done"":true}],""progress"":60,""link"":""https://example.com""}]}]。color/wipLimit/description/priority/tags/dueDate/assignee/checklist/progress/link 均可省略")] String columns,
+        [Description(@"列定义 JSON 数组。示例：[{""id"":""todo"",""title"":""待办"",""color"":""#94a3b8"",""wipLimit"":5,""cards"":[{""id"":""1"",""title"":""需求分析"",""description"":""整理用户需求"",""priority"":""high"",""tags"":[""设计""],""dueDate"":""2026-07-15"",""assignee"":""张三"",""checklist"":[{""title"":""访谈用户"",""done"":true}],""progress"":60,""link"":""https://example.com""}]}]。color/wipLimit/description/priority/tags/dueDate/assignee/checklist/progress/link 均可省略")] IList<KanbanColumn>? columns,
         [Description("布局模式：board（默认多列看板）/ swimlane（泳道视图，按团队/模块分组列，需同时提供 swimlanes 参数）")] String? layout = null,
-        [Description(@"泳道定义 JSON 数组（layout=swimlane 时使用）。示例：[{""id"":""sl1"",""title"":""前端团队"",""columnIds"":[""todo"",""doing""]},{""id"":""sl2"",""title"":""后端团队"",""columnIds"":[""todo"",""doing""]}]")] String? swimlanes = null,
+        [Description(@"泳道定义 JSON 数组（layout=swimlane 时使用）。示例：[{""id"":""sl1"",""title"":""前端团队"",""columnIds"":[""todo"",""doing""]},{""id"":""sl2"",""title"":""后端团队"",""columnIds"":[""todo"",""doing""]}]")] IList<KanbanSwimlane>? swimlanes = null,
         ToolCallContext? context = null)
     {
-        if (columns.IsNullOrEmpty())
-            throw new ToolException("参数错误：columns 不能为空", "请提供列定义 JSON 数组后重试，或直接回复用户说明无法生成看板。示例：[{\"id\":\"todo\",\"title\":\"待办\",\"cards\":[...]}]");
-
-        JsonNode columnsNode;
-        try
-        {
-            columnsNode = JsonNode.Parse(columns);
-            if (columnsNode == null)
-                throw new ToolException("columns 解析后为 null", "请检查 JSON 格式后重试，或直接回复用户说明无法生成看板。");
-        }
-        catch (JsonException ex)
-        {
-            throw new ToolException($"columns JSON 格式错误：{ex.Message}", $"请检查 JSON 语法后重试，或直接回复用户说明情况。");
-        }
+        if (columns == null || columns.Count == 0)
+            throw new ToolException("参数错误：columns 不能为空", "请提供列定义数组后重试，或直接回复用户说明无法生成看板。示例：[{\"id\":\"todo\",\"title\":\"待办\",\"cards\":[...]}]");
 
         var kanbanId = context?.ToolCallId;
         if (kanbanId.IsNullOrEmpty()) kanbanId = $"kb_{Guid.NewGuid():N}";
@@ -76,7 +71,7 @@ public class KanbanToolService(ILog log)
         {
             ["kanbanId"] = kanbanId,
             ["title"] = title,
-            ["columns"] = columnsNode,
+            ["columns"] = JsonSerializer.SerializeToNode(columns, _jsonOptions),
         };
 
         // 将 layout 写入返回 JSON
@@ -84,17 +79,8 @@ public class KanbanToolService(ILog log)
             result["layout"] = layout;
 
         // 将 swimlanes 写入返回 JSON
-        if (!swimlanes.IsNullOrEmpty())
-        {
-            try
-            {
-                result["swimlanes"] = JsonNode.Parse(swimlanes);
-            }
-            catch (Exception ex)
-            {
-                log.Warn("[Kanban] swimlanes 解析失败，已忽略：{0}", ex.Message);
-            }
-        }
+        if (swimlanes is { Count: > 0 })
+            result["swimlanes"] = JsonSerializer.SerializeToNode(swimlanes, _jsonOptions);
 
         log.Info("[Kanban] 渲染看板「{0}」，id={1}，layout={2}", title, kanbanId, layout ?? "board");
 

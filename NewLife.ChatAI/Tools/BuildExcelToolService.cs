@@ -25,20 +25,16 @@ public class BuildExcelToolService(ILog log)
     [Description("生成 Excel 电子表格（.xlsx）并返回下载链接。支持多工作表、表头样式、列宽、数字格式、条件格式、冻结窗格、自动筛选、下拉验证。theme 参数使用卡片风格 Key 或内置名（blue/dark/corporate/warm/green）")]
     public async Task<ToolResult> BuildExcel(
         [Description("工作簿标题（≤ 30 字），如「Q2营收报表」")] String title,
-        [Description(@"工作表数组（JSON）。每表字段：name（表名）、headers（列头数组）、rows（二维数组，每行为一个单元格值数组，如 [[""张三"",""85""],[""李四"",""92""]]）、style（{headerBgColor,headerFontColor,stripeColor}）、columnWidths（列宽数组，如[12,20,15]）、numberFormat（数字格式，如""#,##0.00""或""yyyy-MM-dd""）、conditionalFormats（条件格式数组，每项{range,type,color,value?}，type支持dataBar/colorScale/greaterThan等）、charts（图表数组）、freezeRows（冻结行数）、autoFilter（筛选范围）、dropdowns（下拉验证）")] String sheets,
+        [Description(@"工作表数组（JSON）。每表字段：name（表名）、headers（列头数组）、rows（二维数组，每行为一个单元格值数组，如 [[""张三"",""85""],[""李四"",""92""]]）、style（{headerBgColor,headerFontColor,stripeColor}）、columnWidths（列宽数组，如[12,20,15]）、numberFormat（数字格式，如""#,##0.00""或""yyyy-MM-dd""）、conditionalFormats（条件格式数组，每项{range,type,color,value?}，type支持dataBar/colorScale/greaterThan等）、charts（图表数组）、freezeRows（冻结行数）、autoFilter（筛选范围）、dropdowns（下拉验证）")] ExcelSheetModel[]? sheets,
         [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal），决定表头颜色")] String? theme = null,
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
             throw new ToolException("参数错误：title 不能为空", "请提供工作簿标题后重试。");
 
-        if (sheets.IsNullOrEmpty())
-            throw new ToolException("参数错误：sheets 不能为空", "请提供工作表 JSON 数组后重试，或直接回复用户说明无法生成 Excel。");
-        var sheetList = sheets.ToJsonEntity<ExcelSheetModel[]>();
-        if (sheetList == null)
-            throw new ToolException("sheets JSON 格式错误", "请检查 JSON 语法后重试，或直接回复用户说明无法生成 Excel。");
-        if (sheetList.Length == 0)
-            throw new ToolException("sheets 不能为空数组", "请提供至少一个工作表后重试，或直接回复用户说明无法生成 Excel。");
+        if (sheets == null || sheets.Length == 0)
+            throw new ToolException("参数错误：sheets 不能为空", "请提供工作表数组后重试，或直接回复用户说明无法生成 Excel。");
+        var sheetList = sheets;
 
         log.Info("[BuildExcel] 开始生成：{0}，{1} 个工作表，主题：{2}", title, sheetList.Length, theme ?? "blue");
 

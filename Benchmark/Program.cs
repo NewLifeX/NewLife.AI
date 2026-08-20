@@ -18,3 +18,5 @@ BenchmarkRunner.Run<SchemaBuildBenchmark>(config);
 BenchmarkRunner.Run<BuildBodyBenchmark>(config);
 BenchmarkRunner.Run<ToolLoopBenchmark>(config);
 BenchmarkRunner.Run<StreamChunkParseBenchmark>(config);
+BenchmarkRunner.Run<ToolArgParsingBenchmark>(config);
+BenchmarkRunner.Run<SchemaSizeBenchmark>(config);
