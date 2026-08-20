@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import { resolveRenderableMermaidCode, extractMermaidCode } from '@/components/chat/mermaidHelper'
 import { savePngBlob, copyImageOrFallback } from '@/utils/imageCapture'
+import { captureWidgetFromHtml } from '@/utils/htmlWidgetCapture'
 import { MobileImageFallback } from '@/components/atoms/MobileImageFallback'
 
 // mermaid 已改为按需懒加载（getMermaid），此处不再执行顶层初始化
@@ -210,7 +211,7 @@ function buildHtmlSrcDoc(code: string, widgetId: string, forFullscreen = false):
   //      注意：Object.defineProperty(location, 'origin', ...) 在 Chrome 中会失败（non-configurable），
   //            因此不能通过修改 location.origin 属性来修复，只能拦截 postMessage 调用
   // 截图能力由父页面临时截图 iframe 承担（htmlIframeToPngBlob），此处无需注入
-  const patchScript = `<script>(function(){try{var _o=window.postMessage;window.postMessage=function(m,t,r){if(!t||t==='null'||t===location.origin)t='*';return _o.call(this,m,t,r);};var _p=window.parent;if(_p&&_p!==window){var _x=new Proxy(_p,{get:function(t,p){if(p==='postMessage'){return function(m,t,r){if(!t||t==='null'||t===location.origin)t='*';return t.postMessage.call(t,m,t,r);};}try{return t[p];}catch(e){return undefined;}}});Object.defineProperty(window,'parent',{get:function(){return _x;},configurable:true});}}catch(e){}window.addEventListener('error',function(e){if(e.message&&e.message.indexOf('target origin')>=0)e.preventDefault();},true);window.addEventListener('unhandledrejection',function(e){if(e.reason&&e.reason.message&&e.reason.message.indexOf('target origin')>=0)e.preventDefault();});})();<\/script>`
+  const patchScript = `<script>(function(){try{var _o=window.postMessage;window.postMessage=function(m,t,r){if(!t||t==='null'||t===location.origin)t='*';return _o.call(this,m,t,r);};var _p=window.parent;if(_p&&_p!==window){var _x=new Proxy(_p,{get:function(t,p){if(p==='postMessage'){return function(m,t,r){if(!t||t==='null'||t===location.origin)t='*';return _o.call(window,m,t,r);};}try{return t[p];}catch(e){return undefined;}}});Object.defineProperty(window,'parent',{get:function(){return _x;},configurable:true});}}catch(e){}window.addEventListener('error',function(e){if(e.message&&e.message.indexOf('target origin')>=0)e.preventDefault();},true);window.addEventListener('unhandledrejection',function(e){if(e.reason&&e.reason.message&&e.reason.message.indexOf('target origin')>=0)e.preventDefault();});})();<\/script>`
 
   const resizeScript = forFullscreen
     ? ''
@@ -267,72 +268,6 @@ function buildHtmlSrcDoc(code: string, widgetId: string, forFullscreen = false):
   return `<!doctype html>
 <html><head><meta charset="utf-8">${patchScript}<style>*,*::before,*::after{box-sizing:border-box}html,body{margin:0;padding:0;height:auto;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1f2937;background:transparent;}body{padding:8px;}</style></head>
 <body>${code}${resizeScript}</body></html>`
-}
-
-type H2CFunc = (el: HTMLElement, opts?: object) => Promise<HTMLCanvasElement>
-let _h2cLoader: Promise<H2CFunc> | null = null
-
-/** 懒加载 html2canvas 模块，首次点击时才拉取代码分片，后续复用缓存。 */
-function lazyHtml2Canvas(): Promise<H2CFunc> {
-  _h2cLoader ??= import('html2canvas').then(m => m.default as H2CFunc)
-  return _h2cLoader
-}
-
-/**
- * 用 blob URL 临时 iframe + 父页面直接调用 html2canvas 的方式截取 HTML 内容，返回 PNG Blob。
- * - 无 CDN 依赖、无 eval、无 postMessage 协议，稳定可靠
- * - blob URL 与父页面同源，allow-same-origin 让父页面直接访问 iframe DOM
- * - 临时 iframe 仅在截图期间存在，完成后立即销毁
- */
-function captureWidgetFromHtml(htmlSrc: string, transparent = false): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const htmlBlob = new Blob([htmlSrc], { type: 'text/html; charset=utf-8' })
-    const blobUrl = URL.createObjectURL(htmlBlob)
-
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin')
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:900px;height:600px;visibility:hidden;pointer-events:none;border:none;'
-    iframe.src = blobUrl
-
-    const cleanup = () => {
-      try { document.body.removeChild(iframe) } catch { /* already removed */ }
-      URL.revokeObjectURL(blobUrl)
-    }
-    const timer = setTimeout(() => { cleanup(); reject(new Error('capture timeout')) }, 15000)
-
-    iframe.addEventListener('load', () => {
-      // 等待 ECharts 等异步渲染脚本完成（通常 < 500ms，预留 1.5s）
-      setTimeout(() => {
-        lazyHtml2Canvas()
-          .then(h2c => {
-            const body = iframe.contentDocument?.body
-            if (!body) throw new Error('no body')
-            // 读取实际渲染高度，避免固定 iframe 高度引起底部大量空白
-            // getBoundingClientRect().height 不受视口高度影响（同 resizeScript 里的取值策略）
-            const contentH = Math.ceil(body.getBoundingClientRect().height) || 600
-            iframe.style.height = `${contentH}px`
-            return h2c(body, {
-              scale: 2, useCORS: true, logging: false,
-              backgroundColor: transparent ? null : '#ffffff',
-              width: 900, height: contentH,
-              windowWidth: 900, windowHeight: contentH,
-            })
-          })
-          .then(canvas => {
-            clearTimeout(timer)
-            cleanup()
-            canvas.toBlob(b => {
-              if (b) resolve(b)
-              else reject(new Error('toBlob failed'))
-            }, 'image/png')
-          })
-          .catch((err: unknown) => { clearTimeout(timer); cleanup(); reject(err) })
-      }, 1500)
-    })
-
-    iframe.addEventListener('error', () => { clearTimeout(timer); cleanup(); reject(new Error('iframe load error')) })
-    document.body.appendChild(iframe)
-  })
 }
 
 interface MermaidWidgetPaneProps {
@@ -439,6 +374,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
   const [previewCode, setPreviewCode] = useState(data.code)
   const [zoom, setZoom] = useState(1)
   const svgScrollRef = useRef<HTMLDivElement>(null)
+  const fsIframeRef = useRef<HTMLIFrameElement>(null)
   const [fsMermaidSvg, setFsMermaidSvg] = useState<string | null>(null)
   const [fsImageCopied, setFsImageCopied] = useState(false)
   const [fsImageCopyErr, setFsImageCopyErr] = useState(false)
@@ -498,7 +434,9 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
       return svgStringToPngBlob(fsMermaidSvg)
     }
     if (data.kind === 'svg') return svgStringToPngBlob(previewCode)
-    return captureWidgetFromHtml(buildHtmlSrcDoc(previewCode, data.widgetId, true), transparent)
+    // 复制宽度 = 全屏预览 iframe 当前宽度，保证所见即所得
+    const fsWidth = Math.round(fsIframeRef.current?.getBoundingClientRect().width ?? 900)
+    return captureWidgetFromHtml(buildHtmlSrcDoc(previewCode, data.widgetId, true), { width: fsWidth, transparent })
   }
 
   async function copyFsImage() {
@@ -684,6 +622,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
           {/* HTML 预览：全屏 iframe */}
           {tab === 'preview' && data.kind === 'html' && !isMermaid && (
             <iframe
+              ref={fsIframeRef}
               sandbox="allow-scripts"
               srcDoc={srcDoc}
               title={data.title || 'HTML 全屏预览'}
@@ -722,6 +661,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
  */
 export function WidgetBlock({ data, className }: WidgetBlockProps) {
   const [iframeHeight, setIframeHeight] = useState<number>(data.initialHeight ?? 480)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [copied, setCopied] = useState(false)
   const [imageCopied, setImageCopied] = useState(false)
   const [imageCopyErr, setImageCopyErr] = useState(false)
@@ -775,7 +715,9 @@ export function WidgetBlock({ data, className }: WidgetBlockProps) {
       return svgStringToPngBlob(mermaidSvg)
     }
     if (data.kind === 'svg') return svgStringToPngBlob(data.code)
-    return captureWidgetFromHtml(buildHtmlSrcDoc(data.code, data.widgetId, true), transparent)
+    // 复制宽度 = 聊天内展示 iframe 当前宽度，保证所见即所得
+    const width = Math.round(iframeRef.current?.getBoundingClientRect().width ?? 900)
+    return captureWidgetFromHtml(buildHtmlSrcDoc(data.code, data.widgetId, true), { width, transparent })
   }
 
   async function copyImage() {
@@ -895,6 +837,7 @@ export function WidgetBlock({ data, className }: WidgetBlockProps) {
           />
         ) : (
           <iframe
+            ref={iframeRef}
             title={data.title || 'widget'}
             sandbox="allow-scripts"
             srcDoc={srcDoc}
