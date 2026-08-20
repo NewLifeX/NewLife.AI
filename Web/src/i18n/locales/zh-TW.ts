@@ -224,8 +224,6 @@ export default {
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',
       maxAttachmentSizeDesc: '單個檔案的上傳大小限制',
-      maxAttachmentCount: '最大附件數量',
-      maxAttachmentCountDesc: '單條訊息允許的最多附件數',
       allowedExtensions: '允許的副檔名',
       allowedExtensionsDesc: '逗號分隔的檔案副檔名白名單，留空為全部允許',
       defaultImageSize: '預設圖片尺寸',
@@ -248,8 +246,6 @@ export default {
     tools: {
       enableFunctionCalling: '啟用函數呼叫',
       enableFunctionCallingDesc: '允許 AI 呼叫工具函數',
-      enableMcp: '啟用 MCP 工具集',
-      enableMcpDesc: '允許使用 MCP 協定工具',
       enableSuggestedQuestionCache: '啟用推薦問題快取',
       enableSuggestedQuestionCacheDesc: '快取 AI 生成的推薦追問',
       streamingSpeed: '串流輸出速度',

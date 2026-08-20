@@ -50,9 +50,6 @@ public class SystemSettingsDto
     /// <summary>最大附件大小（MB）</summary>
     public Int32 MaxAttachmentSize { get; set; }
 
-    /// <summary>单次最多上传附件数</summary>
-    public Int32 MaxAttachmentCount { get; set; }
-
     /// <summary>允许的文件扩展名</summary>
     public String AllowedExtensions { get; set; } = "";
 
@@ -80,9 +77,6 @@ public class SystemSettingsDto
     #region 工具与能力
     /// <summary>启用函数调用</summary>
     public Boolean EnableFunctionCalling { get; set; }
-
-    /// <summary>启用 MCP 工具调用</summary>
-    public Boolean EnableMcp { get; set; }
 
     /// <summary>推荐问题缓存</summary>
     public Boolean EnableSuggestedQuestionCache { get; set; }
@@ -185,9 +179,6 @@ public class SystemSettingsUpdateDto
     /// <summary>最大附件大小（MB）</summary>
     public Int32? MaxAttachmentSize { get; set; }
 
-    /// <summary>单次最多上传附件数</summary>
-    public Int32? MaxAttachmentCount { get; set; }
-
     /// <summary>允许的文件扩展名</summary>
     public String? AllowedExtensions { get; set; }
 
@@ -215,9 +206,6 @@ public class SystemSettingsUpdateDto
     #region 工具与能力
     /// <summary>启用函数调用</summary>
     public Boolean? EnableFunctionCalling { get; set; }
-
-    /// <summary>启用 MCP 工具调用</summary>
-    public Boolean? EnableMcp { get; set; }
 
     /// <summary>推荐问题缓存</summary>
     public Boolean? EnableSuggestedQuestionCache { get; set; }

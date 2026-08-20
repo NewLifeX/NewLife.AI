@@ -282,8 +282,6 @@ export default {
     upload: {
       maxAttachmentSize: 'Max Attachment Size (MB)',
       maxAttachmentSizeDesc: 'Upload size limit per file',
-      maxAttachmentCount: 'Max Attachment Count',
-      maxAttachmentCountDesc: 'Maximum number of attachments per message',
       allowedExtensions: 'Allowed Extensions',
       allowedExtensionsDesc: 'Comma-separated file extension whitelist, leave empty to allow all',
       defaultImageSize: 'Default Image Size',
@@ -305,8 +303,6 @@ export default {
     tools: {
       enableFunctionCalling: 'Enable Function Calling',
       enableFunctionCallingDesc: 'Allow AI to invoke tool functions',
-      enableMcp: 'Enable MCP Tools',
-      enableMcpDesc: 'Allow use of MCP protocol tools',
       enableSuggestedQuestionCache: 'Enable Suggested Question Cache',
       enableSuggestedQuestionCacheDesc: 'Cache AI-generated follow-up suggestions',
       streamingSpeed: 'Streaming Speed',

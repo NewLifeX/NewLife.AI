@@ -841,7 +841,6 @@ export interface SystemSettings {
   defaultContextRounds: number
   // 上传与分享
   maxAttachmentSize: number
-  maxAttachmentCount: number
   allowedExtensions: string
   defaultImageSize: string
   shareExpireMinutes: number
@@ -852,7 +851,6 @@ export interface SystemSettings {
   enableGatewayRecording: boolean
   // 工具能力
   enableFunctionCalling: boolean
-  enableMcp: boolean
   enableSuggestedQuestionCache: boolean
   streamingSpeed: number
   toolSlotLimit: number

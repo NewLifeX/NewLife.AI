@@ -284,8 +284,6 @@ export default {
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',
       maxAttachmentSizeDesc: '单个文件的上传大小限制',
-      maxAttachmentCount: '最大附件数量',
-      maxAttachmentCountDesc: '单条消息允许的最多附件数',
       allowedExtensions: '允许的扩展名',
       allowedExtensionsDesc: '逗号分隔的文件扩展名白名单，留空为全部允许',
       defaultImageSize: '默认图片尺寸',
@@ -307,8 +305,6 @@ export default {
     tools: {
       enableFunctionCalling: '启用函数调用',
       enableFunctionCallingDesc: '允许 AI 调用工具函数',
-      enableMcp: '启用 MCP 工具集',
-      enableMcpDesc: '允许使用 MCP 协议工具',
       enableSuggestedQuestionCache: '启用推荐问题缓存',
       enableSuggestedQuestionCacheDesc: '缓存 AI 生成的推荐追问',
       streamingSpeed: '流式输出速度',

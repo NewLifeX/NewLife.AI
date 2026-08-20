@@ -27,19 +27,6 @@ export function UploadShareSettings({ settings, onChange }: Props) {
       </div>
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-          {t('systemSettings.upload.maxAttachmentCount')}
-        </label>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.upload.maxAttachmentCountDesc')}</p>
-        <input
-          type="number"
-          min={1}
-          value={settings.maxAttachmentCount}
-          onChange={(e) => onChange({ maxAttachmentCount: Number(e.target.value) })}
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-        />
-      </div>
-      <div className="py-3">
-        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
           {t('systemSettings.upload.allowedExtensions')}
         </label>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.upload.allowedExtensionsDesc')}</p>

@@ -49,12 +49,6 @@ export function ToolsCapabilitySettings({ settings, onChange }: Props) {
         description={t('systemSettings.tools.enableFunctionCallingDesc')}
       />
       <Toggle
-        checked={settings.enableMcp}
-        onChange={(v) => onChange({ enableMcp: v })}
-        label={t('systemSettings.tools.enableMcp')}
-        description={t('systemSettings.tools.enableMcpDesc')}
-      />
-      <Toggle
         checked={settings.enableSuggestedQuestionCache}
         onChange={(v) => onChange({ enableSuggestedQuestionCache: v })}
         label={t('systemSettings.tools.enableSuggestedQuestionCache')}

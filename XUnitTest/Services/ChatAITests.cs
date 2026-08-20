@@ -23,14 +23,12 @@ public class ChatAITests
         Assert.Equal(ThinkingMode.Auto, setting.DefaultThinkingMode);
         Assert.Equal(10, setting.DefaultContextRounds);
         Assert.Equal(20, setting.MaxAttachmentSize);
-        Assert.Equal(5, setting.MaxAttachmentCount);
         Assert.True(setting.AutoGenerateTitle);
         //Assert.Contains("10个字", setting.TitlePrompt);
         Assert.Contains(".jpg", setting.AllowedExtensions);
         Assert.True(setting.EnableGateway);
         Assert.Equal(60, setting.GatewayRateLimit);
         Assert.True(setting.EnableFunctionCalling);
-        Assert.True(setting.EnableMcp);
         Assert.Equal("1024*1024", setting.DefaultImageSize);
         Assert.True(setting.EnableUsageStats);
         Assert.True(setting.BackgroundGeneration);
@@ -46,12 +44,10 @@ public class ChatAITests
         setting.ShareExpireMinutes = 0;
         setting.DefaultModel = 3;
         setting.GatewayRateLimit = 100;
-        setting.EnableMcp = false;
 
         Assert.Equal(0, setting.ShareExpireMinutes);
         Assert.Equal(3, setting.DefaultModel);
         Assert.Equal(100, setting.GatewayRateLimit);
-        Assert.False(setting.EnableMcp);
     }
 
     [Fact]

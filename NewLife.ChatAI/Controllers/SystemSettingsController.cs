@@ -39,7 +39,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             DefaultContextRounds = chatSetting.DefaultContextRounds,
             // 上传与分享
             MaxAttachmentSize = chatSetting.MaxAttachmentSize,
-            MaxAttachmentCount = chatSetting.MaxAttachmentCount,
             AllowedExtensions = chatSetting.AllowedExtensions,
             DefaultImageSize = chatSetting.DefaultImageSize,
             ShareExpireMinutes = chatSetting.ShareExpireMinutes,
@@ -50,7 +49,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             EnableGatewayRecording = chatSetting.EnableGatewayRecording,
             // 工具与能力
             EnableFunctionCalling = chatSetting.EnableFunctionCalling,
-            EnableMcp = chatSetting.EnableMcp,
             EnableSuggestedQuestionCache = chatSetting.EnableSuggestedQuestionCache,
             StreamingSpeed = chatSetting.StreamingSpeed,
             ToolSlotLimit = chatSetting.ToolSlotLimit,
@@ -98,7 +96,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.DefaultContextRounds.HasValue) chatSetting.DefaultContextRounds = dto.DefaultContextRounds.Value;
         // 上传与分享
         if (dto.MaxAttachmentSize.HasValue) chatSetting.MaxAttachmentSize = dto.MaxAttachmentSize.Value;
-        if (dto.MaxAttachmentCount.HasValue) chatSetting.MaxAttachmentCount = dto.MaxAttachmentCount.Value;
         if (dto.AllowedExtensions != null) chatSetting.AllowedExtensions = dto.AllowedExtensions;
         if (dto.DefaultImageSize != null) chatSetting.DefaultImageSize = dto.DefaultImageSize;
         if (dto.ShareExpireMinutes.HasValue) chatSetting.ShareExpireMinutes = dto.ShareExpireMinutes.Value;
@@ -109,7 +106,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.EnableGatewayRecording.HasValue) chatSetting.EnableGatewayRecording = dto.EnableGatewayRecording.Value;
         // 工具与能力
         if (dto.EnableFunctionCalling.HasValue) chatSetting.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
-        if (dto.EnableMcp.HasValue) chatSetting.EnableMcp = dto.EnableMcp.Value;
         if (dto.EnableSuggestedQuestionCache.HasValue) chatSetting.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;
         if (dto.StreamingSpeed.HasValue) chatSetting.StreamingSpeed = dto.StreamingSpeed.Value;
         if (dto.ToolSlotLimit.HasValue) chatSetting.ToolSlotLimit = dto.ToolSlotLimit.Value;
