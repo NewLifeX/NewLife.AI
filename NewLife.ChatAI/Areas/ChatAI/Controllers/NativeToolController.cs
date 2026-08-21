@@ -16,7 +16,7 @@ public class NativeToolController(ToolRegistry registry) : EntityController<Nati
     {
         LogOnChange = true;
 
-        ListFields.RemoveField("ClassName", "RoleIds", "DepartmentIds", "Providers", "Endpoint", "ApiKey");
+        ListFields.RemoveField("ClassName", "RoleIds", "DepartmentIds", "Providers", "Endpoint", "ApiKey", "AssistantTriggers");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
         //{
