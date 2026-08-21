@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { Icon } from '@/components/common/Icon'
+import { isChunkLoadError } from '@/utils/lazyLoad'
 import i18n from '@/i18n'
 
 interface ErrorBoundaryProps {
@@ -43,21 +44,33 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback
 
+      // 动态导入失败（构建后旧 chunk 被删除）：重试无意义，引导刷新页面获取最新版本
+      const isChunkError = isChunkLoadError(this.state.error)
+
       return (
         <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
           <Icon name="error_outline" size="xl" className="text-[var(--color-text-tertiary)]" />
           <div>
             <p className="text-sm font-medium text-[var(--color-text-secondary)]">{i18n.t('chat.pageLoadFailed')}</p>
             <p className="text-xs text-[var(--color-text-tertiary)] mt-1">
-              {this.state.error?.message ?? i18n.t('chat.unknownError')}
+              {isChunkError ? i18n.t('chat.appUpdated') : (this.state.error?.message ?? i18n.t('chat.unknownError'))}
             </p>
           </div>
-          <button
-            onClick={this.handleRetry}
-            className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-brand-500)] text-white hover:bg-[color:var(--color-brand-600)] transition-colors"
-          >
-            {i18n.t('common.retry')}
-          </button>
+          {isChunkError ? (
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-brand-500)] text-white hover:bg-[color:var(--color-brand-600)] transition-colors"
+            >
+              {i18n.t('common.refresh')}
+            </button>
+          ) : (
+            <button
+              onClick={this.handleRetry}
+              className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-brand-500)] text-white hover:bg-[color:var(--color-brand-600)] transition-colors"
+            >
+              {i18n.t('common.retry')}
+            </button>
+          )}
         </div>
       )
     }

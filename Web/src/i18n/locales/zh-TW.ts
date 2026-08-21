@@ -19,6 +19,8 @@ export default {
     version: 'NewLife v2.4.0',
     checkUpdate: '檢查更新',
     user: '使用者',
+    retry: '重試',
+    refresh: '重新整理',
   },
   menu: {
     settings: '用戶設定',
@@ -83,6 +85,9 @@ export default {
     stopGen: '停止生成',
     charLimit: '已輸入 {{current}}/{{max}} 字，超出限制',
     dropToUpload: '釋放以上傳檔案',
+    pageLoadFailed: '頁面載入失敗',
+    unknownError: '未知錯誤',
+    appUpdated: '應用已更新，請重新整理頁面',
   },
   mermaid: {
     title: 'Mermaid 圖表',

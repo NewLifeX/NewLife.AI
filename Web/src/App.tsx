@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useState, useRef, lazy, Suspense } from 'react'
+import { useEffect, useCallback, useState, useRef, Suspense } from 'react'
+import { lazyLoad } from '@/utils/lazyLoad'
 import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatLayout } from '@/layouts/ChatLayout'
 import { WelcomePage } from '@/pages/WelcomePage'
@@ -7,9 +8,9 @@ import { ModelSelector } from '@/components/chat/ModelSelector'
 import { PresetSelector } from '@/components/chat/PresetSelector'
 import { useChatStore, useSettingsStore, useUIStore } from '@/stores'
 
-const SharePage = lazy(() => import('@/pages/SharePage').then(m => ({ default: m.SharePage })))
-const SettingsModal = lazy(() => import('@/components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
-const SystemSettingsModal = lazy(() => import('@/components/settings/SystemSettingsModal').then(m => ({ default: m.SystemSettingsModal })))
+const SharePage = lazyLoad(() => import('@/pages/SharePage').then(m => ({ default: m.SharePage })))
+const SettingsModal = lazyLoad(() => import('@/components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
+const SystemSettingsModal = lazyLoad(() => import('@/components/settings/SystemSettingsModal').then(m => ({ default: m.SystemSettingsModal })))
 import { fetchUserProfile, fetchSystemConfig, type SuggestedQuestion } from '@/lib/api'
 import { AppSkeleton } from '@/components/common/AppSkeleton'
 import { ToastContainer } from '@/components/common/Toast'

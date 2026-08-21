@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using NewLife.AI.Tools;
@@ -31,6 +32,22 @@ public static class ChatAIExtensions
     /// <returns></returns>
     public static IServiceCollection AddChatAI(this IServiceCollection services)
     {
+        // SPA 静态资源缓存策略（同时作用于 UseStaticFiles 与 MapFallbackToFile）：
+        // - chat.html（无 hash 入口）no-cache：可缓存但每次条件验证（配合 ETag 返回 304），发布后立即生效
+        // - /assets/**（带 hash）immutable 一年强缓存：内容变更时文件名 hash 变化自然失效，零重复下载
+        services.Configure<StaticFileOptions>(options =>
+        {
+            options.OnPrepareResponse = ctx =>
+            {
+                var path = ctx.Context.Request.Path.Value;
+                if (path.IsNullOrEmpty()) return;
+                if (path.EndsWith("chat.html", StringComparison.OrdinalIgnoreCase))
+                    ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
+                else if (path.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase))
+                    ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+            };
+        });
+
         services.AddScoped<ChatApplicationService>();
         services.AddScoped<IMessageFlow, MessageFlowForWeb>();
         services.AddSingleton<IChatSetting>(_ => ChatSetting.Current);
