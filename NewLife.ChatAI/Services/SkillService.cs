@@ -61,7 +61,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
     /// <summary>获取全部启用的技能列表</summary>
     /// <param name="category">分类筛选（可选）</param>
     /// <returns></returns>
-    public IList<Skill> GetAllSkills(String? category = null)
+    public virtual IList<Skill> GetAllSkills(String? category = null)
     {
         if (!String.IsNullOrEmpty(category))
             return Skill.FindAllByCategory(category).Where(e => e.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();

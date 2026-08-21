@@ -186,7 +186,8 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
     /// <returns>技能目录文本；无可列技能时返回空字符串</returns>
     protected virtual String BuildSkillCatalog(SkillService svc)
     {
-        var allSkills = svc.GetAllSkills().ToList();
+        // 系统技能（IsSystem=true）已由 BuildSkillPrompt 无条件注入全文，目录只列可激活技能，避免重复广告
+        var allSkills = svc.GetAllSkills().Where(e => !e.IsSystem).ToList();
         if (allSkills.Count == 0) return String.Empty;
 
         var sb = Pool.StringBuilder.Get();

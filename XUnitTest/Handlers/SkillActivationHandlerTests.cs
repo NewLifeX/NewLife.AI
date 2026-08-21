@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Handlers;
 using NewLife.AI.Tools;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Handlers;
+using NewLife.ChatAI.Services;
+using NewLife.Log;
 using Xunit;
 
 namespace XUnitTest.Handlers;
@@ -164,5 +167,40 @@ public class SkillActivationHandlerTests
     {
         public void ExposedResolveSkillByContent(IChatContext context, String? content)
             => ResolveSkillByContent(context, content);
+
+        public String ExposedBuildSkillCatalog(SkillService svc)
+            => BuildSkillCatalog(svc);
     }
+
+    /// <summary>覆盖 GetAllSkills 的可测试 SkillService，使用内存数据</summary>
+    private sealed class TestableSkillService(IList<Skill> skills)
+        : SkillService(NewLife.ChatAI.ChatSetting.Current, Logger.Null)
+    {
+        public override IList<Skill> GetAllSkills(String? category = null) =>
+            skills.Where(e => e.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
+    }
+
+    #region BuildSkillCatalog — 系统技能不入目录
+
+    [Fact]
+    [DisplayName("BuildSkillCatalog—系统技能不列入目录，普通技能正常列出")]
+    public void BuildSkillCatalog_SystemSkillsExcluded()
+    {
+        var handler = new ExposedSkillActivationHandler(null);
+        var svc = new TestableSkillService(new List<Skill>
+        {
+            new() { Id = 1, Code = "star-vision", Name = "愿景理念", IsSystem = true, Enable = true, Sort = 100 },
+            new() { Id = 2, Code = "translator", Name = "翻译助手", IsSystem = false, Enable = true, Sort = 80 },
+            new() { Id = 3, Code = "ppt-slide", Name = "PPT单页", IsSystem = false, Enable = true, Sort = 10 },
+        });
+
+        var catalog = handler.ExposedBuildSkillCatalog(svc);
+
+        Assert.Contains("translator/翻译助手", catalog);
+        Assert.Contains("ppt-slide/PPT单页", catalog);
+        Assert.DoesNotContain("star-vision", catalog);
+        Assert.DoesNotContain("愿景理念", catalog);
+    }
+
+    #endregion
 }
