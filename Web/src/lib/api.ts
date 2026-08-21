@@ -514,7 +514,7 @@ interface UserSettingsDto {
   showToolCalls: boolean
   streamingSpeed: number
   contentWidth: number
-  thinkingCollapsed?: boolean
+  thinkingLayout?: number
   enableLearning: boolean
 }
 
@@ -535,7 +535,7 @@ function toUserSettings(dto: UserSettingsDto): UserSettings {
     showToolCalls: dto.showToolCalls ?? false,
     allowTraining: dto.allowTraining,
     contentWidth: dto.contentWidth || 960,
-    thinkingCollapsed: dto.thinkingCollapsed ?? true,
+    thinkingLayout: dto.thinkingLayout ?? 0,
     enableLearning: dto.enableLearning ?? true,
   }
 }
@@ -564,7 +564,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       mcpEnabled: settings.mcpEnabled,
       showToolCalls: settings.showToolCalls ?? false,
       contentWidth: settings.contentWidth ?? 960,
-      thinkingCollapsed: settings.thinkingCollapsed ?? true,
+      thinkingLayout: settings.thinkingLayout ?? 0,
       enableLearning: settings.enableLearning ?? true,
     }),
   })

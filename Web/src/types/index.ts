@@ -100,7 +100,8 @@ export interface UserSettings {
   enableLearning: boolean
   defaultSkill?: string
   contentWidth?: number
-  thinkingCollapsed?: boolean
+  /** 推理过程布局。0=默认(上方折叠) 1=上方折叠 2=上方展开 3=右侧分栏 */
+  thinkingLayout?: number
 }
 
 

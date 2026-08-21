@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using NewLife.AI.Tools;
@@ -135,5 +137,47 @@ public class TimelineToolServiceTests
         Assert.Contains("date", itemProps!.Keys);
         Assert.Contains("title", itemProps.Keys);
         Assert.Contains("description", itemProps.Keys);
+    }
+
+    // ── JsonSerializerOptions TypeInfoResolver 回归（生产事故：show_timeline 可选字段触发） ──
+
+    [Fact]
+    [DisplayName("工具序列化选项—含 JsonValueCustomized 节点时 ToJsonString 不抛 TypeInfoResolver 错")]
+    public void ToolJsonOptions_HasTypeInfoResolver_NoThrowOnCustomJsonValue()
+    {
+        // 复现 2026-08-21 生产事故：JsonValue.Create(非原始类型) 产生 JsonValueCustomized，
+        // 若 ToJsonString 使用无 TypeInfoResolver 的 JsonSerializerOptions，会抛
+        // "JsonSerializerOptions instance must specify a TypeInfoResolver setting before being marked as read-only."
+        var custom = JsonValue.Create(new Dictionary<String, Object> { ["k"] = "v" })!;
+        var result = new JsonObject
+        {
+            ["timelineId"] = "tl_test",
+            ["title"] = "测试",
+            ["extra"] = custom,
+        };
+
+        // 工具服务同款写法：从 JsonSerializerOptions.Default 派生（自带 TypeInfoResolver）
+        var writeOptions = new JsonSerializerOptions(JsonSerializerOptions.Default)
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        };
+
+        var json = result.ToJsonString(writeOptions);
+        Assert.Contains("tl_test", json);
+        Assert.Contains("k", json);
+    }
+
+    [Fact]
+    [DisplayName("InvokeAsync—完整生产参数（category+color+palette）渲染成功")]
+    public async Task InvokeAsync_FullProductionArgs_Succeeds()
+    {
+        // 还原 2026-08-21 事故请求：items 携带 category/color，另带 palette 数组
+        var registry = new ToolRegistry();
+        registry.AddTools(NewService());
+
+        var args = """{"title":"AI大模型与产业演进里程碑","items":[{"date":"2017-06","title":"Transformer架构诞生","description":"自注意力机制","category":"技术奠基","color":"#2563eb"},{"date":"2022-11","title":"ChatGPT 横空出世","description":"AI走向大众","category":"应用爆发","color":"#059669"}],"layout":"alternating-bottom","density":"relaxed","palette":["#2563eb","#0891b2","#059669"]}""";
+        var llm = await registry.InvokeAsync("show_timeline", args);
+
+        Assert.Contains("已渲染时间轴", llm);
     }
 }

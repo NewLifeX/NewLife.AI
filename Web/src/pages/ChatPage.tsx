@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '@/stores'
 import { Icon } from '@/components/common/Icon'
@@ -42,6 +42,56 @@ function isNearBottom(el: HTMLElement, threshold = 80): boolean {
   return el.scrollHeight - el.scrollTop - el.clientHeight < threshold
 }
 
+/** 构建消息的推理块（单段或交错多段），供消息内联与页面级右侧推理栏复用 */
+function buildThinkingBlock(
+  msg: Message,
+  defaultCollapsed: boolean,
+  onLayoutToggle?: () => void,
+  sideLayout = false,
+): React.ReactNode {
+  const hasSegments = msg.thinkingSegments && msg.thinkingSegments.length > 1
+  if (hasSegments && msg.thinkingSegments) {
+    // 交错模式：思考段与工具调用按时间线交织，整体作为 thinkingBlock
+    const isLastSegmentStreaming = msg.status === 'streaming' && !msg.content
+    return (
+      <>
+        {msg.thinkingSegments.map((seg, i) => (
+          <div key={`seg-${i}`}>
+            <ThinkingBlock
+              content={seg.content}
+              isStreaming={isLastSegmentStreaming && i === msg.thinkingSegments!.length - 1}
+              thinkingTime={seg.thinkingTime}
+              defaultCollapsed={defaultCollapsed}
+              onLayoutToggle={i === 0 ? onLayoutToggle : undefined}
+              sideLayout={sideLayout}
+            />
+            {i === 0 && msg.toolCalls && msg.toolCalls.length > 0 && (
+              <div className="flex items-center flex-wrap gap-2 mb-4">
+                {msg.toolCalls.map((tc) => (
+                  <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </>
+    )
+  }
+  if (msg.thinkingContent) {
+    return (
+      <ThinkingBlock
+        content={msg.thinkingContent}
+        isStreaming={msg.status === 'streaming' && !msg.content}
+        thinkingTime={msg.thinkingTime}
+        defaultCollapsed={defaultCollapsed}
+        onLayoutToggle={onLayoutToggle}
+        sideLayout={sideLayout}
+      />
+    )
+  }
+  return undefined
+}
+
 export function ChatPage({
   messages,
   isGenerating,
@@ -70,10 +120,62 @@ export function ChatPage({
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const thinkingScrollRef = useRef<HTMLDivElement>(null)
   const userScrolledRef = useRef(false)
   const contentWidth = useSettingsStore((s) => s.contentWidth) ?? 960
-  const thinkingCollapsed = useSettingsStore((s) => s.thinkingCollapsed) ?? false
   const updateSettings = useSettingsStore((s) => s.update)
+  // 推理过程布局（ThinkingLayout 枚举）：0=默认(上方折叠) 1=上方折叠 2=上方展开 3=右侧分栏
+  const thinkingLayoutNum = useSettingsStore((s) => s.thinkingLayout) ?? 0
+  const thinkingLayout = thinkingLayoutNum === 3 ? 'side' : 'above'
+  // 消息内联折叠条的默认折叠状态：0/1/3=折叠，2=上方展开
+  const thinkingCollapsed = thinkingLayoutNum !== 2
+  // 右侧推理栏宽度（拖动记忆，localStorage，不进后端设置避免高频写库）
+  const [panelWidth, setPanelWidth] = useState(() => {
+    const w = Number(localStorage.getItem('thinkingPanelWidth'))
+    return w >= 320 && w <= 600 ? w : 400
+  })
+  const handleToggleThinkingLayout = useCallback(() => {
+    // 右侧分栏(3) ↔ 上方折叠(1)
+    updateSettings({ thinkingLayout: thinkingLayoutNum === 3 ? 1 : 3 })
+  }, [thinkingLayoutNum, updateSettings])
+  // 拖动分隔线调整推理栏宽度（320~600px）
+  const handleResizeStart = useCallback(() => {
+    const onMove = (ev: MouseEvent) => {
+      const w = window.innerWidth - ev.clientX
+      const clamped = Math.min(600, Math.max(320, w))
+      setPanelWidth(clamped)
+      localStorage.setItem('thinkingPanelWidth', String(clamped))
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+    }
+    document.body.style.cursor = 'col-resize'
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
+  // 右侧分栏：取最后一条带推理的助手消息，渲染到页面级侧栏（跟随最新，流式实时更新）
+  const latestThinkingMsg = useMemo(() => {
+    if (thinkingLayout !== 'side') return undefined
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i]
+      if (m.role === 'assistant' && (m.thinkingContent || (m.thinkingSegments && m.thinkingSegments.length > 0))) return m
+    }
+    return undefined
+  }, [messages, thinkingLayout])
+  const latestThinkingBlock = latestThinkingMsg
+    ? buildThinkingBlock(latestThinkingMsg, false, handleToggleThinkingLayout, true)
+    : null
+  // 推理内容长度指纹：流式增长时驱动右侧推理栏自动滚动到底部
+  const thinkingFingerprint = latestThinkingMsg
+    ? (latestThinkingMsg.thinkingContent?.length ?? 0) + (latestThinkingMsg.thinkingSegments?.reduce((n, s) => n + s.content.length, 0) ?? 0)
+    : 0
+  useEffect(() => {
+    if (thinkingLayout !== 'side' || !isGenerating) return
+    const el = thinkingScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [thinkingFingerprint, thinkingLayout, isGenerating])
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [dislikeTargetId, setDislikeTargetId] = useState<string | null>(null)
@@ -168,47 +270,17 @@ export function ChatPage({
             </div>
           )}
           {messages.map((msg) => {
-            // 构建交错思考+工具调用块
+            // 构建推理块（单段或交错多段），消息内联展示
             const hasSegments = msg.thinkingSegments && msg.thinkingSegments.length > 1
             let thinkingBlock: React.ReactNode = undefined
             let toolCallsForBubble: ToolCall[] | undefined = msg.toolCalls
 
             if (hasSegments && msg.thinkingSegments) {
-              // 交错模式：思考段 → 工具调用 → 思考段 → ...
-              const isLastSegmentStreaming = msg.status === 'streaming' && !msg.content
-              thinkingBlock = (
-                <>
-                  {msg.thinkingSegments.map((seg, i) => (
-                    <div key={`seg-${i}`}>
-                      <ThinkingBlock
-                        content={seg.content}
-                        isStreaming={isLastSegmentStreaming && i === msg.thinkingSegments!.length - 1}
-                        thinkingTime={seg.thinkingTime}
-                        defaultCollapsed={thinkingCollapsed}
-                        onCollapsedChange={(v) => updateSettings({ thinkingCollapsed: v })}
-                      />
-                      {i === 0 && msg.toolCalls && msg.toolCalls.length > 0 && (
-                        <div className="flex items-center flex-wrap gap-2 mb-4">
-                          {msg.toolCalls.map((tc) => (
-                            <ToolCallBadge key={tc.id} name={tc.name} status={tc.status} arguments={tc.arguments} result={tc.result} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </>
-              )
+              // 交错模式：思考段与工具调用按时间线交织，整体作为 thinkingBlock
+              thinkingBlock = buildThinkingBlock(msg, thinkingCollapsed, handleToggleThinkingLayout, thinkingLayout === 'side')
               toolCallsForBubble = undefined
             } else if (msg.thinkingContent) {
-              thinkingBlock = (
-                <ThinkingBlock
-                  content={msg.thinkingContent}
-                  isStreaming={msg.status === 'streaming' && !msg.content}
-                  thinkingTime={msg.thinkingTime}
-                  defaultCollapsed={thinkingCollapsed}
-                  onCollapsedChange={(v) => updateSettings({ thinkingCollapsed: v })}
-                />
-              )
+              thinkingBlock = buildThinkingBlock(msg, thinkingCollapsed, handleToggleThinkingLayout, thinkingLayout === 'side')
             }
 
             return (
@@ -327,6 +399,37 @@ export function ChatPage({
         />
       )}
       </div>
+      {thinkingLayout === 'side' && latestThinkingBlock && (
+        <aside
+          className="relative hidden lg:flex flex-col min-h-0 shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-1)]"
+          data-testid="thinking-panel"
+          style={{ width: panelWidth }}
+        >
+          {/* 拖动分隔线：调整推理栏宽度 320~600px */}
+          <div
+            onMouseDown={handleResizeStart}
+            className="absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-primary/20 active:bg-primary/40 transition-colors"
+            title={t('chat.thinkingResizeTip')}
+          />
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border-subtle)]">
+            <Icon name="psychology" variant="outlined" size="sm" className="text-blue-600 dark:text-blue-400" />
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('chat.thinkingProcess')}</span>
+            <span className="ml-auto" />
+            <button
+              type="button"
+              onClick={handleToggleThinkingLayout}
+              title={t('chat.thinkingLayoutRestoreTip')}
+              className="flex items-center justify-center w-7 h-7 text-xs text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-2)] rounded-lg transition-colors"
+              data-testid="thinking-layout-toggle"
+            >
+              <Icon name="view_agenda" variant="outlined" size="sm" />
+            </button>
+          </div>
+          <div ref={thinkingScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3 custom-scrollbar">
+            {latestThinkingBlock}
+          </div>
+        </aside>
+      )}
     </div>
   )
 }

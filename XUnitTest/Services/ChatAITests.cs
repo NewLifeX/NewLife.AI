@@ -369,11 +369,16 @@ public class ChatAITests
         Assert.Equal(0, settings.DefaultModel);
 
         var updated = await service.UpdateUserSettingsAsync(
-            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "Stone", "Backend developer", ResponseStyle.Vivid, "You are helpful", false),
+            new UserSettingsDto("en", "dark", 18, "Ctrl+Enter", 3, ThinkingMode.Think, 20, "Stone", "Backend developer", ResponseStyle.Vivid, "You are helpful", false)
+            {
+                ThinkingLayout = 1,
+            },
             CancellationToken.None);
         Assert.Equal("en", updated.Language);
         Assert.Equal("dark", updated.Theme);
         Assert.Equal(3, updated.DefaultModel);
+        // 推理过程布局（1=右侧分栏）往返保留
+        Assert.Equal(1, updated.ThinkingLayout);
     }
 
     [Fact]

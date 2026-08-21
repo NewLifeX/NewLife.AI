@@ -159,8 +159,8 @@ export function SettingsModal({
               onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
               contextRounds={settings.contextRounds}
               onContextRoundsChange={(v) => update({ contextRounds: v })}
-              thinkingCollapsed={settings.thinkingCollapsed ?? false}
-              onThinkingCollapsedChange={(v) => update({ thinkingCollapsed: v })}
+              thinkingLayout={settings.thinkingLayout ?? 0}
+              onThinkingLayoutChange={(v) => update({ thinkingLayout: v })}
               models={models}
             />
           )}
@@ -247,8 +247,8 @@ export function SettingsModal({
             onDefaultThinkingModeChange={(v) => update({ defaultThinkingMode: v })}
             contextRounds={settings.contextRounds}
             onContextRoundsChange={(v) => update({ contextRounds: v })}
-            thinkingCollapsed={settings.thinkingCollapsed ?? false}
-            onThinkingCollapsedChange={(v) => update({ thinkingCollapsed: v })}
+            thinkingLayout={settings.thinkingLayout ?? 0}
+            onThinkingLayoutChange={(v) => update({ thinkingLayout: v })}
             models={models}
           />
         )}

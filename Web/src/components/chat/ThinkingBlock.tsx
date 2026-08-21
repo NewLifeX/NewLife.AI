@@ -10,6 +10,10 @@ interface ThinkingBlockProps {
   className?: string
   defaultCollapsed?: boolean
   onCollapsedChange?: (collapsed: boolean) => void
+  /** 切换推理布局（内容上方/右侧分栏）回调 */
+  onLayoutToggle?: () => void
+  /** 当前是否为右侧分栏布局，用于切换图标与提示文案 */
+  sideLayout?: boolean
 }
 
 /** 从思考内容中提取关键步骤名（最后一个加粗标题或最后段落首句） */
@@ -49,6 +53,8 @@ export function ThinkingBlock({
   className,
   defaultCollapsed = false,
   onCollapsedChange,
+  onLayoutToggle,
+  sideLayout = false,
 }: ThinkingBlockProps) {
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
@@ -66,6 +72,7 @@ export function ThinkingBlock({
 
   return (
     <div className={cn('mb-4', className)} data-testid="thinking-block">
+      <div className="flex items-center gap-1.5">
       <button
         onClick={handleToggle}
         title={t('chat.thinkingToggleTip')}
@@ -95,6 +102,18 @@ export function ThinkingBlock({
           </>
         )}
       </button>
+      {onLayoutToggle && (
+        <button
+          type="button"
+          onClick={onLayoutToggle}
+          title={t(sideLayout ? 'chat.thinkingLayoutRestoreTip' : 'chat.thinkingLayoutTip')}
+          className="flex items-center justify-center w-8 h-8 shrink-0 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+          data-testid="thinking-layout-toggle"
+        >
+          <Icon name={sideLayout ? 'view_agenda' : 'splitscreen'} variant="outlined" size="sm" />
+        </button>
+      )}
+      </div>
 
       {!collapsed && (
         <div className="mt-2 pl-3 border-l-2 border-blue-200 dark:border-blue-800">

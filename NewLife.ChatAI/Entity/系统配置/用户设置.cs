@@ -150,14 +150,6 @@ public partial class UserSetting
     [BindColumn("ShowToolCalls", "显示工具调用。是否在对话中显示工具调用的入参和出参详情", "")]
     public Boolean ShowToolCalls { get => _ShowToolCalls; set { if (OnPropertyChanging("ShowToolCalls", value)) { _ShowToolCalls = value; OnPropertyChanged("ShowToolCalls"); } } }
 
-    private Boolean _ThinkingCollapsed;
-    /// <summary>思考过程收缩。默认是否收缩展示思考过程，默认展开</summary>
-    [DisplayName("思考过程收缩")]
-    [Description("思考过程收缩。默认是否收缩展示思考过程，默认展开")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("ThinkingCollapsed", "思考过程收缩。默认是否收缩展示思考过程，默认展开", "")]
-    public Boolean ThinkingCollapsed { get => _ThinkingCollapsed; set { if (OnPropertyChanging("ThinkingCollapsed", value)) { _ThinkingCollapsed = value; OnPropertyChanged("ThinkingCollapsed"); } } }
-
     private String? _DefaultSkill;
     /// <summary>默认技能。新会话的默认技能编码</summary>
     [DisplayName("默认技能")]
@@ -181,6 +173,14 @@ public partial class UserSetting
     [DataObjectField(false, false, false, 0)]
     [BindColumn("ContentWidth", "内容区宽度。标准960/宽屏1200/自适应0", "")]
     public Int32 ContentWidth { get => _ContentWidth; set { if (OnPropertyChanging("ContentWidth", value)) { _ContentWidth = value; OnPropertyChanged("ContentWidth"); } } }
+
+    private Int32 _ThinkingLayout;
+    /// <summary>推理过程布局。0=默认(上方折叠) 1=上方折叠 2=上方展开 3=右侧分栏，默认0</summary>
+    [DisplayName("推理过程布局")]
+    [Description("推理过程布局。0=默认(上方折叠) 1=上方折叠 2=上方展开 3=右侧分栏，默认0")]
+    [DataObjectField(false, false, false, 0)]
+    [BindColumn("ThinkingLayout", "推理过程布局。0=默认(上方折叠) 1=上方折叠 2=上方展开 3=右侧分栏，默认0", "")]
+    public Int32 ThinkingLayout { get => _ThinkingLayout; set { if (OnPropertyChanging("ThinkingLayout", value)) { _ThinkingLayout = value; OnPropertyChanged("ThinkingLayout"); } } }
 
     private Int32 _CreateUserID;
     /// <summary>创建用户</summary>
@@ -261,10 +261,10 @@ public partial class UserSetting
             "AllowTraining" => _AllowTraining,
             "McpEnabled" => _McpEnabled,
             "ShowToolCalls" => _ShowToolCalls,
-            "ThinkingCollapsed" => _ThinkingCollapsed,
             "DefaultSkill" => _DefaultSkill,
             "EnableLearning" => _EnableLearning,
             "ContentWidth" => _ContentWidth,
+            "ThinkingLayout" => _ThinkingLayout,
             "CreateUserID" => _CreateUserID,
             "CreateIP" => _CreateIP,
             "CreateTime" => _CreateTime,
@@ -293,10 +293,10 @@ public partial class UserSetting
                 case "AllowTraining": _AllowTraining = value.ToBoolean(); break;
                 case "McpEnabled": _McpEnabled = value.ToBoolean(); break;
                 case "ShowToolCalls": _ShowToolCalls = value.ToBoolean(); break;
-                case "ThinkingCollapsed": _ThinkingCollapsed = value.ToBoolean(); break;
                 case "DefaultSkill": _DefaultSkill = Convert.ToString(value); break;
                 case "EnableLearning": _EnableLearning = value.ToBoolean(); break;
                 case "ContentWidth": _ContentWidth = value.ToInt(); break;
+                case "ThinkingLayout": _ThinkingLayout = value.ToInt(); break;
                 case "CreateUserID": _CreateUserID = value.ToInt(); break;
                 case "CreateIP": _CreateIP = Convert.ToString(value); break;
                 case "CreateTime": _CreateTime = value.ToDateTime(); break;
@@ -359,14 +359,13 @@ public partial class UserSetting
     /// <param name="allowTraining">允许训练。是否允许反馈数据用于模型改进</param>
     /// <param name="mcpEnabled">启用MCP。是否启用MCP工具调用</param>
     /// <param name="showToolCalls">显示工具调用。是否在对话中显示工具调用的入参和出参详情</param>
-    /// <param name="thinkingCollapsed">思考过程收缩。默认是否收缩展示思考过程，默认展开</param>
     /// <param name="enableLearning">启用个人学习。用户级自学习开关，全局开关开启后此项生效</param>
     /// <param name="start">更新时间开始</param>
     /// <param name="end">更新时间结束</param>
     /// <param name="key">关键字</param>
     /// <param name="page">分页参数信息。可携带统计和数据权限扩展查询等信息</param>
     /// <returns>实体列表</returns>
-    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, NewLife.AI.Models.ResponseStyle responseStyle, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? thinkingCollapsed, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
+    public static IList<UserSetting> Search(Int32 userId, NewLife.AI.Models.ThinkingMode defaultThinkingMode, NewLife.AI.Models.ResponseStyle responseStyle, Boolean? allowTraining, Boolean? mcpEnabled, Boolean? showToolCalls, Boolean? enableLearning, DateTime start, DateTime end, String key, PageParameter page)
     {
         var exp = new WhereExpression();
 
@@ -376,7 +375,6 @@ public partial class UserSetting
         if (allowTraining != null) exp &= _.AllowTraining == allowTraining;
         if (mcpEnabled != null) exp &= _.McpEnabled == mcpEnabled;
         if (showToolCalls != null) exp &= _.ShowToolCalls == showToolCalls;
-        if (thinkingCollapsed != null) exp &= _.ThinkingCollapsed == thinkingCollapsed;
         if (enableLearning != null) exp &= _.EnableLearning == enableLearning;
         exp &= _.UpdateTime.Between(start, end);
         if (!key.IsNullOrEmpty()) exp &= SearchWhereByKeys(key);
@@ -437,9 +435,6 @@ public partial class UserSetting
         /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
         public static readonly Field ShowToolCalls = FindByName("ShowToolCalls");
 
-        /// <summary>思考过程收缩。默认是否收缩展示思考过程，默认展开</summary>
-        public static readonly Field ThinkingCollapsed = FindByName("ThinkingCollapsed");
-
         /// <summary>默认技能。新会话的默认技能编码</summary>
         public static readonly Field DefaultSkill = FindByName("DefaultSkill");
 
@@ -448,6 +443,9 @@ public partial class UserSetting
 
         /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
         public static readonly Field ContentWidth = FindByName("ContentWidth");
+
+        /// <summary>推理过程布局。0=内容上方 1=右侧分栏对照，默认0</summary>
+        public static readonly Field ThinkingLayout = FindByName("ThinkingLayout");
 
         /// <summary>创建用户</summary>
         public static readonly Field CreateUserID = FindByName("CreateUserID");
@@ -521,9 +519,6 @@ public partial class UserSetting
         /// <summary>显示工具调用。是否在对话中显示工具调用的入参和出参详情</summary>
         public const String ShowToolCalls = "ShowToolCalls";
 
-        /// <summary>思考过程收缩。默认是否收缩展示思考过程，默认展开</summary>
-        public const String ThinkingCollapsed = "ThinkingCollapsed";
-
         /// <summary>默认技能。新会话的默认技能编码</summary>
         public const String DefaultSkill = "DefaultSkill";
 
@@ -532,6 +527,9 @@ public partial class UserSetting
 
         /// <summary>内容区宽度。标准960/宽屏1200/自适应0</summary>
         public const String ContentWidth = "ContentWidth";
+
+        /// <summary>推理过程布局。0=内容上方 1=右侧分栏对照，默认0</summary>
+        public const String ThinkingLayout = "ThinkingLayout";
 
         /// <summary>创建用户</summary>
         public const String CreateUserID = "CreateUserID";

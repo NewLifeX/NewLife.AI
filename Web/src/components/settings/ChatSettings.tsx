@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Select } from '@/components/atoms/Select'
 import { Slider } from '@/components/atoms/Slider'
-import { Toggle } from '@/components/atoms/Toggle'
 import { Icon } from '@/components/common/Icon'
 import type { ModelInfo } from '@/types'
 
@@ -14,8 +13,8 @@ interface ChatSettingsProps {
   onDefaultThinkingModeChange: (v: number) => void
   contextRounds: number
   onContextRoundsChange: (v: number) => void
-  thinkingCollapsed: boolean
-  onThinkingCollapsedChange: (v: boolean) => void
+  thinkingLayout: number
+  onThinkingLayoutChange: (v: number) => void
   models: ModelInfo[]
 }
 
@@ -39,8 +38,8 @@ export function ChatSettings({
   onDefaultThinkingModeChange,
   contextRounds,
   onContextRoundsChange,
-  thinkingCollapsed,
-  onThinkingCollapsedChange,
+  thinkingLayout,
+  onThinkingLayoutChange,
   models,
 }: ChatSettingsProps) {
   const { t } = useTranslation()
@@ -102,13 +101,25 @@ export function ChatSettings({
 
         <div className="border-b border-gray-100 dark:border-gray-800" />
 
-        {/* 思考过程收缩 */}
+        {/* 推理过程展示（ThinkingLayout 枚举：0=默认/1=上方折叠/2=上方展开/3=右侧分栏） */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.thinkingCollapsed')}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.thinkingCollapsedDesc')}</div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.thinkingLayout')}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('settings.thinkingLayoutDesc')}</div>
           </div>
-          <Toggle checked={thinkingCollapsed} onChange={onThinkingCollapsedChange} size="sm" />
+          <div data-testid="thinking-layout-select">
+            <Select
+              options={[
+                { value: '0', label: t('settings.thinkingLayoutDefault') },
+                { value: '1', label: t('settings.thinkingLayoutCollapsed') },
+                { value: '2', label: t('settings.thinkingLayoutExpanded') },
+                { value: '3', label: t('settings.thinkingLayoutSide') },
+              ]}
+              value={String(thinkingLayout)}
+              onChange={(v) => onThinkingLayoutChange(Number(v))}
+              className="w-40"
+            />
+          </div>
         </div>
 
         <div className="border-b border-gray-100 dark:border-gray-800" />

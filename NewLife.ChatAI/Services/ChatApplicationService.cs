@@ -427,7 +427,6 @@ public class ChatApplicationService
                 ContextRounds = 10,
                 DefaultSkill = "general",
                 EnableLearning = true,
-                ThinkingCollapsed = true,
             };
             if (userId > 0) entity.Insert(); // 新登录用户首次访问，持久化默认设置
         }
@@ -462,10 +461,10 @@ public class ChatApplicationService
         entity.AllowTraining = settings.AllowTraining;
         entity.McpEnabled = settings.McpEnabled;
         entity.ShowToolCalls = settings.ShowToolCalls;
-        entity.ThinkingCollapsed = settings.ThinkingCollapsed;
         entity.DefaultSkill = settings.DefaultSkill;
         entity.EnableLearning = settings.EnableLearning;
         entity.ContentWidth = settings.ContentWidth;
+        entity.ThinkingLayout = settings.ThinkingLayout;
         entity.Save();
 
         return Task.FromResult(ToUserSettingsDto(entity));
@@ -680,10 +679,10 @@ public class ChatApplicationService
         {
             McpEnabled = entity.McpEnabled,
             ShowToolCalls = entity.ShowToolCalls,
-            ThinkingCollapsed = entity.ThinkingCollapsed,
             DefaultSkill = entity.DefaultSkill ?? "general",
             EnableLearning = entity.EnableLearning,
             ContentWidth = entity.ContentWidth,
+            ThinkingLayout = entity.ThinkingLayout,
         };
     #endregion
 }
