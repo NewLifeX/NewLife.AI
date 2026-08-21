@@ -13,8 +13,8 @@ namespace NewLife.ChatAI.Controllers;
 public abstract class ChatSseControllerBase : ChatApiControllerBase
 {
     #region SSE 辅助
-    /// <summary>SSE 事件的 JSON 序列化选项</summary>
-    protected static readonly JsonSerializerOptions SseJsonOptions = new()
+    /// <summary>SSE 事件的 JSON 序列化选项。从 Default 派生以携带 TypeInfoResolver，避免节点序列化触发 MakeReadOnly 抛错</summary>
+    protected static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerOptions.Default)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

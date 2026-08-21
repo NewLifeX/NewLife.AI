@@ -118,7 +118,9 @@ public class MindmapToolService(ILog log)
 
         log.Info("[Mindmap] 渲染思维导图「{0}」，id={1}，layout={2}", title, mindmapId, layout ?? "tree");
 
-        var writeOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免 ToJsonString 内部
+        // 对 JsonValueCustomized 节点调用 MakeReadOnly() 时抛 "must specify a TypeInfoResolver"
+        var writeOptions = new JsonSerializerOptions(JsonSerializerOptions.Default) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var resultJson = result.ToJsonString(writeOptions);
         return ToolResult.ForAudiences(resultJson, $"[已渲染思维导图到客户端：{title}]");
     }

@@ -13,7 +13,8 @@ namespace NewLife.ChatAI.Tools;
 public class KanbanToolService(ILog log)
 {
     /// <summary>类型化参数序列化选项：camelCase 字段名 + 忽略 null（与前端字段对齐，保持输出结构稳定）</summary>
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    /// <remarks>从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免结果树序列化时触发 MakeReadOnly 抛错</remarks>
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerOptions.Default)
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -84,7 +85,9 @@ public class KanbanToolService(ILog log)
 
         log.Info("[Kanban] 渲染看板「{0}」，id={1}，layout={2}", title, kanbanId, layout ?? "board");
 
-        var writeOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免 ToJsonString 内部
+        // 对 JsonValueCustomized 节点调用 MakeReadOnly() 时抛 "must specify a TypeInfoResolver"
+        var writeOptions = new JsonSerializerOptions(JsonSerializerOptions.Default) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var resultJson = result.ToJsonString(writeOptions);
         return ToolResult.ForAudiences(resultJson, $"[已渲染看板到客户端：{title}]");
     }

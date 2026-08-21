@@ -104,8 +104,9 @@ public class BuildPptToolService(ILog log)
             SlideTitles: slideTitles,
             Theme: theme ?? "blue");
 
-        // System.Text.Json camelCase 命名策略，与前端 parseSlideData 字段对齐
-        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions
+        // System.Text.Json camelCase 命名策略，与前端 parseSlideData 字段对齐。
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
+        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerOptions.Default)
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
@@ -168,7 +169,8 @@ public class BuildPptToolService(ILog log)
             SlideTitles: slideTitles,
             Theme: theme ?? "blue");
 
-        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
+        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerOptions.Default)
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });

@@ -84,7 +84,10 @@ public class TimelineToolService(ILog log)
 
         log.Info("[Timeline] 渲染时间轴「{0}」，id={1}，layout={2}", title, timelineId, layout ?? "vertical");
 
-        var writeOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver：
+        // 若用裸 new JsonSerializerOptions，当节点树含 JsonValueCustomized 时 ToJsonString 内部
+        // 会调用 options.MakeReadOnly() 并抛 "must specify a TypeInfoResolver" 异常（生产事故）
+        var writeOptions = new JsonSerializerOptions(JsonSerializerOptions.Default) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var resultJson = result.ToJsonString(writeOptions);
         return ToolResult.ForAudiences(resultJson, $"[已渲染时间轴到客户端：{title}]");
     }

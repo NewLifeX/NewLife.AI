@@ -49,7 +49,8 @@ public class BuildExcelToolService(ILog log)
         var result = new ExcelResult(buildId, title, sheetList.Length, sheetNames,
             archiveResult.Url, archiveResult.AttachmentId, xlsxBytes.Length, theme);
 
-        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
+        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerOptions.Default) { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         return ToolResult.ForAudiences(resultJson, $"[已生成{sheetList.Length}张工作表：{title}]");
     }
 

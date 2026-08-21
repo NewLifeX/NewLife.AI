@@ -8,7 +8,8 @@ namespace NewLife.AI.Extensions;
 /// <summary>AspNet托管MCP上下文</summary>
 public class AspNetMcpServer : McpServer
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    /// <summary>MCP 请求/响应序列化选项。从 Default 派生以携带 TypeInfoResolver</summary>
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerOptions.Default)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

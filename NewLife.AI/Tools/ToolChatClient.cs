@@ -912,6 +912,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         catch (Exception ex)
         {
             span?.SetError(ex, null);
+            // 记录完整异常（含堆栈），否则 EXECUTION_ERROR 仅回传 ex.Message，生产事故无法定位根因
+            Log.Error("工具 {0} 执行异常：{1}", toolName, ex);
             if (ex is OperationCanceledException) throw;
 
             // 目录调用（AI 未拿到 schema 就猜参数）：返回 INVALID_ARGUMENTS + schema hint，引导模型修正

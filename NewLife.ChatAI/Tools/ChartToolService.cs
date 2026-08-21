@@ -111,7 +111,9 @@ public class ChartToolService(ILog log)
 
         log.Info("[Chart] {0} '{1}'，id={2}", type, title, chartId);
 
-        var writeOptions = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免 ToJsonString 内部
+        // 对 JsonValueCustomized 节点调用 MakeReadOnly() 时抛 "must specify a TypeInfoResolver"
+        var writeOptions = new JsonSerializerOptions(JsonSerializerOptions.Default) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var resultJson = result.ToJsonString(writeOptions);
         return ToolResult.ForAudiences(resultJson, $"[已渲染图表到客户端：{title}]");
     }

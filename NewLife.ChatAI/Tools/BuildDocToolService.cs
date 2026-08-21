@@ -49,7 +49,8 @@ public class BuildDocToolService(ILog log)
         var result = new DocResult(buildId, title, sectionList.Length,
             archiveResult.Url, archiveResult.AttachmentId, docxBytes.Length, theme);
 
-        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
+        var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerOptions.Default) { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         return ToolResult.ForAudiences(resultJson, $"[已生成{sectionList.Length}节文档：{title}]");
     }
 
