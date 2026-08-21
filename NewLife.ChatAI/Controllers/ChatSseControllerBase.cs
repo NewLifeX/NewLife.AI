@@ -29,6 +29,10 @@ public abstract class ChatSseControllerBase : ChatApiControllerBase
     /// <summary>SSE 事件单字段最大字符数。超过此长度时自动截断以防止 OOM</summary>
     private const Int32 _maxFieldLength = 100_000;
 
+    /// <summary>工具结果（tool_call_done 的 Result）最大字符数。承载前端渲染所需的完整 SVG/HTML/图表 JSON，
+    /// 通用字段截断会导致 JSON 非法、可视化卡片不渲染（如中国地图 SVG 可达 15 万字符），故单独使用更高上限</summary>
+    private const Int32 _maxResultLength = 512_000;
+
     /// <summary>SSE 心跳事件（单例复用，避免每次分配）</summary>
     private static readonly ChatStreamEvent _heartbeatEvent = ChatStreamEvent.Heartbeat();
 
@@ -180,13 +184,15 @@ public abstract class ChatSseControllerBase : ChatApiControllerBase
     }
 
     /// <summary>截断 <see cref="ChatStreamEvent"/> 中超过 <see cref="_maxFieldLength"/> 的字符串字段（原地修改）。
-    /// 防御工具结果 / content_delta / knowledge_refs 等来源的巨量数据</summary>
+    /// 防御工具结果 / content_delta / knowledge_refs 等来源的巨量数据。
+    /// <c>tool_call_done</c> 的 <see cref="ChatStreamEvent.Result"/> 供前端渲染完整可视化卡片，使用更高的 <see cref="_maxResultLength"/> 上限</summary>
     /// <param name="ev">事件对象</param>
     private static void TruncateLargeFields(ChatStreamEvent ev)
     {
         ev.Content = TruncateField(ev.Content, _maxFieldLength);
         ev.Arguments = TruncateField(ev.Arguments, _maxFieldLength);
-        ev.Result = TruncateField(ev.Result, _maxFieldLength);
+        // 工具执行结果（tool_call_done）承载完整 SVG/HTML/图表 JSON，截断会使前端 JSON.parse 失败导致卡片不渲染
+        ev.Result = TruncateField(ev.Result, ev.Type == "tool_call_done" ? _maxResultLength : _maxFieldLength);
         ev.Error = TruncateField(ev.Error, _maxFieldLength);
         ev.Message = TruncateField(ev.Message, _maxFieldLength);
         ev.KnowledgeRefs = TruncateField(ev.KnowledgeRefs, _maxFieldLength);
