@@ -155,21 +155,28 @@ export function ChatPage({
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
   }, [])
-  // 右侧分栏：取最后一条带推理的助手消息，渲染到页面级侧栏（跟随最新，流式实时更新）
-  const latestThinkingMsg = useMemo(() => {
-    if (thinkingLayout !== 'side') return undefined
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const m = messages[i]
-      if (m.role === 'assistant' && (m.thinkingContent || (m.thinkingSegments && m.thinkingSegments.length > 0))) return m
-    }
-    return undefined
+  // 右侧分栏：收集所有带推理的助手消息（按 Id 升序 = 时间正序），默认显示最新，可切换回看历史轮次推理
+  const thinkingMsgs = useMemo(() => {
+    if (thinkingLayout !== 'side') return []
+    return messages
+      .filter((m) => m.role === 'assistant' && (m.thinkingContent || (m.thinkingSegments && m.thinkingSegments.length > 0)))
+      .sort((a, b) => String(a.id ?? '').localeCompare(String(b.id ?? '')))
   }, [messages, thinkingLayout])
-  const latestThinkingBlock = latestThinkingMsg
-    ? buildThinkingBlock(latestThinkingMsg, false, handleToggleThinkingLayout, true)
+  // 当前查看的推理索引：流式时始终跟随最新；非流式时可手动切换回看历史
+  const [thinkingIndex, setThinkingIndex] = useState<number | null>(null)
+  const latestThinkingIdx = thinkingMsgs.length - 1
+  const activeThinkingIdx = isGenerating ? latestThinkingIdx : Math.min(thinkingIndex ?? latestThinkingIdx, Math.max(latestThinkingIdx, 0))
+  const activeThinkingMsg = thinkingMsgs[activeThinkingIdx]
+  const latestThinkingBlock = activeThinkingMsg
+    ? buildThinkingBlock(activeThinkingMsg, false, handleToggleThinkingLayout, true)
     : null
+  // 切换对话后若索引越界则回落到最新
+  useEffect(() => {
+    if (thinkingIndex != null && thinkingIndex >= thinkingMsgs.length) setThinkingIndex(null)
+  }, [thinkingIndex, thinkingMsgs.length])
   // 推理内容长度指纹：流式增长时驱动右侧推理栏自动滚动到底部
-  const thinkingFingerprint = latestThinkingMsg
-    ? (latestThinkingMsg.thinkingContent?.length ?? 0) + (latestThinkingMsg.thinkingSegments?.reduce((n, s) => n + s.content.length, 0) ?? 0)
+  const thinkingFingerprint = activeThinkingMsg
+    ? (activeThinkingMsg.thinkingContent?.length ?? 0) + (activeThinkingMsg.thinkingSegments?.reduce((n, s) => n + s.content.length, 0) ?? 0)
     : 0
   useEffect(() => {
     if (thinkingLayout !== 'side' || !isGenerating) return
@@ -414,6 +421,34 @@ export function ChatPage({
           <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border-subtle)]">
             <Icon name="psychology" variant="outlined" size="sm" className="text-blue-600 dark:text-blue-400" />
             <span className="text-sm font-medium text-[var(--color-text-primary)]">{t('chat.thinkingProcess')}</span>
+            {/* 多轮推理导航：切换回看每一条消息的推理，流式时自动跟随最新 */}
+            {thinkingMsgs.length > 1 && (
+              <span className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={activeThinkingIdx <= 0}
+                  onClick={() => setThinkingIndex(activeThinkingIdx - 1)}
+                  className="flex items-center justify-center w-6 h-6 text-xs text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-2)] rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title={t('chat.thinkingPrev')}
+                  data-testid="thinking-prev"
+                >
+                  <Icon name="chevron_left" variant="outlined" size="sm" />
+                </button>
+                <span className="text-xs tabular-nums text-[var(--color-text-secondary)]">
+                  {activeThinkingIdx + 1}/{thinkingMsgs.length}
+                </span>
+                <button
+                  type="button"
+                  disabled={activeThinkingIdx >= thinkingMsgs.length - 1}
+                  onClick={() => setThinkingIndex(activeThinkingIdx + 1)}
+                  className="flex items-center justify-center w-6 h-6 text-xs text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-2)] rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title={t('chat.thinkingNext')}
+                  data-testid="thinking-next"
+                >
+                  <Icon name="chevron_right" variant="outlined" size="sm" />
+                </button>
+              </span>
+            )}
             <span className="ml-auto" />
             <button
               type="button"

@@ -68,6 +68,8 @@ export default {
     thinkingLayoutTip: '切換到右側分欄對照',
     thinkingLayoutRestoreTip: '恢復為內容上方',
     thinkingResizeTip: '拖動調整推理欄寬度',
+    thinkingPrev: '上一條推理',
+    thinkingNext: '下一條推理',
     prevUserMessage: '上一則使用者訊息',
     nextAssistantMessage: '下一則助手訊息',
     codeExpandAll: '展開全部（{{lines}} 行）',

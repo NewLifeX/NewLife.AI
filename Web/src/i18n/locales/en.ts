@@ -71,6 +71,8 @@ export default {
     thinkingLayoutTip: 'Switch to side-by-side view',
     thinkingLayoutRestoreTip: 'Restore to above content',
     thinkingResizeTip: 'Drag to resize the reasoning panel',
+    thinkingPrev: 'Previous reasoning',
+    thinkingNext: 'Next reasoning',
     prevUserMessage: 'Previous user message',
     nextAssistantMessage: 'Next assistant message',
     codeExpandAll: 'Expand all ({{lines}} lines)',
