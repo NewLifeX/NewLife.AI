@@ -8,7 +8,7 @@ using XCode.Membership;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>内置工具。系统内置的.NET工具函数，启动时自动扫描注册，管理员可在后台管理</summary>
-[Menu(100, true, Icon = "fa-table")]
+[Menu(9892, true, Icon = "fa-table", LastUpdate = "20260822")]
 [ChatAIArea]
 public class NativeToolController(ToolRegistry registry) : EntityController<NativeTool>
 {

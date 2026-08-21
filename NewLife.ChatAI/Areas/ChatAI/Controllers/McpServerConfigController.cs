@@ -13,7 +13,7 @@ using NewLife.AI.Models;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>MCP服务配置。MCP Server列表及工具发现信息</summary>
-[Menu(70, true, Icon = "fa-table")]
+[Menu(9893, true, Icon = "fa-table", LastUpdate = "20260822")]
 [ChatAIArea]
 public class McpServerConfigController : EntityController<McpServerConfig>
 {

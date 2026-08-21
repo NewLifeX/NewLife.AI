@@ -10,7 +10,7 @@ namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 /// <summary>对话设置控制器</summary>
 [DisplayName("对话设置")]
 [ChatAIArea]
-[Menu(30, true, Icon = "fa-wrench")]
+[Menu(5, true, Icon = "fa-wrench", LastUpdate = "20260821")]
 public class ChatSettingController : ConfigController<ChatSetting>
 {
     private Boolean _initialized;

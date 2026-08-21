@@ -12,7 +12,7 @@ using static NewLife.ChatAI.Entity.DbAccessConfig;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>数据库访问配置。控制AI工具可访问的数据库表，支持白名单/黑名单和按角色授权</summary>
-[Menu(10, true, Icon = "fa-table")]
+[Menu(9891, true, Icon = "fa-table", LastUpdate = "20260822")]
 [ChatAIArea]
 public class DbAccessConfigController : EntityController<DbAccessConfig>
 {

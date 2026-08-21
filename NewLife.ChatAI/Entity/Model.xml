@@ -394,6 +394,30 @@
         <Index Columns="Enable" />
       </Indexes>
     </Table>
+    <Table Name="DbAccessConfig" Description="数据库访问配置。控制AI工具可访问的数据库表，支持白名单/黑名单和按角色授权" Output="系统配置">
+      <Columns>
+        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
+        <Column Name="ConnName" DataType="String" Master="True" Description="连接名。对应appsettings.json中ConnectionStrings的Key" />
+        <Column Name="DbType" DataType="String" Description="数据库类型。SQLite/MySql/SqlServer/PostgreSQL/Oracle等" />
+        <Column Name="ConnString" DataType="String" Length="500" Description="连接字符串。DAL已注册的连接可为空；未注册的连接在此填写完整连接串" />
+        <Column Name="WhiteTables" DataType="String" Length="2000" Description="白名单。逗号分隔的表名列表，配置后仅允许访问这些表；为空则不限制" />
+        <Column Name="BlackTables" DataType="String" Length="2000" Description="黑名单。逗号分隔的表名列表，禁止访问这些表；白名单为空时生效" />
+        <Column Name="RoleIds" DataType="String" Length="500" Description="角色组。逗号分隔角色ID列表，命中即放行；为空时不限制" Category="安全" />
+        <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用" />
+        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
+        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
+        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
+        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
+        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
+        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
+        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
+        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
+      </Columns>
+      <Indexes>
+        <Index Columns="ConnName" Unique="True" />
+        <Index Columns="Enable" />
+      </Indexes>
+    </Table>
     <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
@@ -452,30 +476,6 @@
         <Index Columns="UserId,Category,Key" />
         <Index Columns="UserId,Key" />
         <Index Columns="ConversationId" />
-      </Indexes>
-    </Table>
-    <Table Name="DbAccessConfig" Description="数据库访问配置。控制AI工具可访问的数据库表，支持白名单/黑名单和按角色授权" Output="系统配置">
-      <Columns>
-        <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="ConnName" DataType="String" Master="True" Description="连接名。对应appsettings.json中ConnectionStrings的Key" />
-        <Column Name="DbType" DataType="String" Description="数据库类型。SQLite/MySql/SqlServer/PostgreSQL/Oracle等" />
-        <Column Name="ConnString" DataType="String" Length="500" Description="连接字符串。DAL已注册的连接可为空；未注册的连接在此填写完整连接串" />
-        <Column Name="WhiteTables" DataType="String" Length="2000" Description="白名单。逗号分隔的表名列表，配置后仅允许访问这些表；为空则不限制" />
-        <Column Name="BlackTables" DataType="String" Length="2000" Description="黑名单。逗号分隔的表名列表，禁止访问这些表；白名单为空时生效" />
-        <Column Name="RoleIds" DataType="String" Length="500" Description="角色组。逗号分隔角色ID列表，命中即放行；为空时不限制" Category="安全" />
-        <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用" />
-        <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
-        <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
-        <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
-        <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
-        <Column Name="UpdateUserID" DataType="Int32" Description="更新用户" Category="扩展" Model="False" />
-        <Column Name="UpdateIP" DataType="String" Description="更新地址" Category="扩展" Model="False" />
-        <Column Name="UpdateTime" DataType="DateTime" Description="更新时间" Category="扩展" Model="False" />
-        <Column Name="Remark" DataType="String" Length="500" Description="备注" Category="扩展" />
-      </Columns>
-      <Indexes>
-        <Index Columns="ConnName" Unique="True" />
-        <Index Columns="Enable" />
       </Indexes>
     </Table>
   </Tables>

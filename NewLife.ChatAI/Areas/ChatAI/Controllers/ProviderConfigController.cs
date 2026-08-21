@@ -10,7 +10,7 @@ namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 /// <summary>提供商配置。AI服务商的连接信息，一个协议类型可以有多个实例</summary>
 /// <remarks>实例化提供商配置控制器</remarks>
 /// <param name="modelService">模型服务</param>
-[Menu(120, true, Icon = "fa-table")]
+[Menu(9899, true, Icon = "fa-table", LastUpdate = "20260822")]
 [ChatAIArea]
 public class ProviderConfigController(ModelService modelService) : EntityController<ProviderConfig>
 {

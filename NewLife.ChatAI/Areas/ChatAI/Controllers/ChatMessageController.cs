@@ -8,7 +8,7 @@ using ChatMessage = NewLife.ChatAI.Entity.ChatMessage;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>对话消息。会话中的单条发言，包括用户消息和AI回复</summary>
-[Menu(150, false, Icon = "fa-table")]
+[Menu(9998, false, Icon = "fa-table", LastUpdate = "20260822")]
 [ChatAIArea]
 public class ChatMessageController : ChatEntityController<ChatMessage>
 {

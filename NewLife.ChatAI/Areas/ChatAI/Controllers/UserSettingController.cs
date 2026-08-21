@@ -8,7 +8,7 @@ using XCode.Membership;
 namespace NewLife.ChatAI.Areas.ChatAI.Controllers;
 
 /// <summary>用户设置。用户的个性化配置</summary>
-[Menu(100, true, Icon = "fa-table")]
+[Menu(9896, true, Icon = "fa-table", LastUpdate = "20260822")]
 [ChatAIArea]
 public class UserSettingController : ChatEntityController<UserSetting>
 {
