@@ -9,6 +9,7 @@ using NewLife.AI.Clients;
 using NewLife.AI.Clients.DashScope;
 using NewLife.AI.Embedding;
 using NewLife.AI.Memory;
+using NewLife.Data;
 using NewLife.Serialization;
 using Xunit;
 using Xunit.Sdk;

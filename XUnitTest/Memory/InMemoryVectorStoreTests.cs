@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Memory;
+using NewLife.Data;
 using Xunit;
 
 namespace XUnitTest.Memory;

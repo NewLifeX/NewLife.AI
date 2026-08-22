@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using NewLife.Data;
 
 namespace NewLife.AI.Memory;
 
