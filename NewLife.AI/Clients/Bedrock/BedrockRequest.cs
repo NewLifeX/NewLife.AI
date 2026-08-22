@@ -127,6 +127,10 @@ public class BedrockRequest : IChatRequest
     [IgnoreDataMember]
     public Double? FrequencyPenalty { get; set; }
 
+    /// <summary>随机种子。固定后模型对相同输入产生确定性输出，便于复现与测试</summary>
+    [IgnoreDataMember]
+    public Int32? Seed { get; set; }
+
     /// <summary>工具选择策略</summary>
     [IgnoreDataMember]
     public Object? ToolChoice { get; set; }

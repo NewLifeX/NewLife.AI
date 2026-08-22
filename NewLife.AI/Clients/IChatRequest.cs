@@ -41,6 +41,9 @@ public interface IChatRequest : IExtend
     /// <summary>频率惩罚。-2~2</summary>
     Double? FrequencyPenalty { get; set; }
 
+    /// <summary>随机种子。固定后模型对相同输入产生确定性输出，便于复现与测试</summary>
+    Int32? Seed { get; set; }
+
     /// <summary>可用工具列表</summary>
     IList<ChatTool>? Tools { get; set; }
 

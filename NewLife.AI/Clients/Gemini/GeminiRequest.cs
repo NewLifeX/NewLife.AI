@@ -182,6 +182,10 @@ public class GeminiRequest : IChatRequest
     [IgnoreDataMember]
     public Double? FrequencyPenalty { get; set; }
 
+    /// <summary>随机种子。固定后模型对相同输入产生确定性输出，便于复现与测试</summary>
+    [IgnoreDataMember]
+    public Int32? Seed { get; set; }
+
     /// <summary>工具选择策略</summary>
     [IgnoreDataMember]
     public Object? ToolChoice { get; set; }
@@ -315,8 +319,8 @@ public class GeminiRequest : IChatRequest
             ApplyResponseFormat(result.GenerationConfig, request.ResponseFormat);
         }
 
-        // 随机种子（可复现的确定性生成，Items 键名与 DashScope 约定一致）
-        var seed = request["Seed"] as Int32?;
+        // 随机种子（可复现的确定性生成，Seed 走一等公民属性，Items 键名兼容旧调用方）
+        var seed = request.Seed ?? (request["Seed"] as Int32?);
         if (seed != null)
         {
             result.GenerationConfig ??= new GeminiGenerationConfig();

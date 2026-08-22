@@ -132,8 +132,8 @@ public class ChatCompletionRequest : IChatRequest
                 result[kv.Key] = kv.Value;
         }
 
-        // OpenAI 原生生成参数：seed / logprobs / top_logprobs（Items 键名与 DashScope 约定一致）
-        var seed = request["Seed"] as Int32?;
+        // OpenAI 原生生成参数：seed / logprobs / top_logprobs（Seed 走一等公民属性，Items 键名兼容旧调用方）
+        var seed = request.Seed ?? (request["Seed"] as Int32?);
         if (seed != null) result.Seed = seed.Value;
         var logprobs = request["Logprobs"] as Boolean?;
         if (logprobs != null) result.Logprobs = logprobs.Value;
@@ -267,8 +267,8 @@ public class ChatCompletionRequest : IChatRequest
         if (request.EnableThinking != null) dic["enable_thinking"] = request.EnableThinking.Value;
         if (request.ResponseFormat != null) dic["response_format"] = request.ResponseFormat;
         if (request.ParallelToolCalls != null) dic["parallel_tool_calls"] = request.ParallelToolCalls.Value;
-        // OpenAI 原生生成参数：seed / logprobs / top_logprobs（Items 键名与 DashScope 约定一致）
-        var seed = request["Seed"] as Int32?;
+        // OpenAI 原生生成参数：seed / logprobs / top_logprobs（Seed 走一等公民属性，Items 键名兼容旧调用方）
+        var seed = request.Seed ?? (request["Seed"] as Int32?);
         if (seed != null) dic["seed"] = seed.Value;
         var logprobs = request["Logprobs"] as Boolean?;
         if (logprobs != null) dic["logprobs"] = logprobs.Value;

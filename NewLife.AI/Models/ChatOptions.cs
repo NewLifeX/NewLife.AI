@@ -110,6 +110,18 @@ public class ChatOptions : IExtend
     /// </remarks>
     public Double? FrequencyPenalty { get; set; }
 
+    /// <summary>随机种子。固定后模型对相同输入产生确定性输出，便于复现与测试</summary>
+    /// <remarks>
+    /// 设置后服务商在同一模型/参数下对相同提示词输出结果可复现：
+    /// <list type="bullet">
+    ///   <item><description>适合单元测试、回归验证、AB 对比等需要确定性输出的场景</description></item>
+    ///   <item><description>null：不发送此参数，模型使用随机采样</description></item>
+    ///   <item><description>并非所有服务商都支持 Seed（OpenAI/DashScope/Gemini/Ollama 支持），不支持的会忽略此参数</description></item>
+    /// </list>
+    /// 注意：即使设置了 Seed，采样仍有理论上的随机性，服务商不保证绝对可复现。
+    /// </remarks>
+    public Int32? Seed { get; set; }
+
     /// <summary>可用工具列表。用于函数调用</summary>
     /// <remarks>
     /// 定义模型可以调用的外部工具（即 Function Calling）：

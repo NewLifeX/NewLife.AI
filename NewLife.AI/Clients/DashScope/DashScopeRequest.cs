@@ -130,6 +130,14 @@ public class DashScopeRequest : IChatRequest
         set => Parameters.FrequencyPenalty = value;
     }
 
+    /// <summary>随机种子适配</summary>
+    [IgnoreDataMember]
+    Int32? IChatRequest.Seed
+    {
+        get => Parameters.Seed;
+        set => Parameters.Seed = value;
+    }
+
     /// <summary>可用工具列表适配</summary>
     [IgnoreDataMember]
     IList<ChatTool>? IChatRequest.Tools { get; set; }
@@ -222,7 +230,7 @@ public class DashScopeRequest : IChatRequest
         if (request.ParallelToolCalls != null) p.ParallelToolCalls = request.ParallelToolCalls;
 
         // DashScope 专属扩展参数
-        var seed = request["Seed"] as Int32?;
+        var seed = request.Seed ?? (request["Seed"] as Int32?);
         if (seed != null) p.Seed = seed;
         var repetitionPenalty = request["RepetitionPenalty"] as Double?;
         if (repetitionPenalty != null) p.RepetitionPenalty = repetitionPenalty;

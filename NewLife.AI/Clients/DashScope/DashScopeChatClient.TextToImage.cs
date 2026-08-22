@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 using NewLife.Remoting;
 using NewLife.Serialization;
 

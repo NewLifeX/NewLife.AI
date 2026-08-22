@@ -44,6 +44,7 @@ public class ChatRequest : ChatOptions, IChatRequest
         request.Stop = options.Stop;
         request.PresencePenalty = options.PresencePenalty;
         request.FrequencyPenalty = options.FrequencyPenalty;
+        request.Seed = options.Seed;
         request.User = options.User;
         request.ReasoningEffort = options.ReasoningEffort;
         request.EnableThinking = options.EnableThinking;

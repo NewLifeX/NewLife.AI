@@ -153,6 +153,10 @@ public class OllamaChatRequest : IChatRequest
     [IgnoreDataMember]
     public Double? FrequencyPenalty { get; set; }
 
+    /// <summary>随机种子。固定后模型对相同输入产生确定性输出，便于复现与测试</summary>
+    [IgnoreDataMember]
+    public Int32? Seed { get; set; }
+
     /// <summary>工具选择策略</summary>
     [IgnoreDataMember]
     public Object? ToolChoice { get; set; }
@@ -279,7 +283,7 @@ public class OllamaChatRequest : IChatRequest
         var hasOptions = request.MaxTokens != null || request.Temperature != null
             || request.TopP != null || request.TopK != null || (request.Stop != null && request.Stop.Count > 0)
             || request.PresencePenalty != null || request.FrequencyPenalty != null
-            || request["Seed"] != null || request["RepetitionPenalty"] != null
+            || request.Seed != null || request["Seed"] != null || request["RepetitionPenalty"] != null
             || request["NumCtx"] != null;
         // 携带工具时限制思考 token 上限，防止 thinking 内容耗尽 context 导致工具调用 JSON 被截断
         var forceNumPredict = request.Tools != null && request.Tools.Count > 0 && request.MaxTokens == null;
@@ -295,10 +299,10 @@ public class OllamaChatRequest : IChatRequest
             if (request.TopK != null) opts.TopK = request.TopK.Value;
             if (request.Stop != null && request.Stop.Count > 0)
                 opts.Stop = request.Stop is List<String> list ? list : [.. request.Stop];
-            // 惩罚与确定性参数（Items 键名与 DashScope 约定一致：Seed / RepetitionPenalty）
+            // 惩罚与确定性参数（Seed 走一等公民属性，Items 键名兼容旧调用方）
             if (request.PresencePenalty != null) opts.PresencePenalty = request.PresencePenalty.Value;
             if (request.FrequencyPenalty != null) opts.FrequencyPenalty = request.FrequencyPenalty.Value;
-            var seed = request["Seed"] as Int32?;
+            var seed = request.Seed ?? (request["Seed"] as Int32?);
             if (seed != null) opts.Seed = seed.Value;
             var repeatPenalty = request["RepetitionPenalty"] as Double?;
             if (repeatPenalty != null) opts.RepeatPenalty = repeatPenalty.Value;
