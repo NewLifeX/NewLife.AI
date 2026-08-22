@@ -33,7 +33,7 @@ public class EmbeddingIntegrationTests
     public async Task Local_EncodeCorpus_NewQueryReturnsSemanticallySimilar()
     {
         var embedder = new HashTextEmbedder(512);
-        IVectorStore store = new InMemoryVectorStore();
+        var col = new InMemoryVectorStore().GetCollection("embed");
 
         // 准备主题差异明显的语料并批量写入
         var corpus = new[]
@@ -51,17 +51,17 @@ public class EmbeddingIntegrationTests
             Vector = embedder.Embed(c.Item2),
         }).ToArray();
 
-        await store.UpsertBatchAsync(records);
-        Assert.Equal(corpus.Length, (Int32)await store.CountAsync());
+        await col.UpsertAsync(records);
+        Assert.Equal(corpus.Length, (Int32)await col.CountAsync());
 
         // 用新文本（未出现在语料中）查询，验证语义匹配正确
         var aiQuery    = embedder.Embed("神经网络算法与大模型训练");
         var foodQuery  = embedder.Embed("厨师烹饪技艺与料理食谱");
         var sportQuery = embedder.Embed("体育竞技比赛训练场地");
 
-        var aiResults    = await store.SearchAsync(aiQuery,    topK: 1);
-        var foodResults  = await store.SearchAsync(foodQuery,  topK: 1);
-        var sportResults = await store.SearchAsync(sportQuery, topK: 1);
+        var aiResults    = await col.SearchAsync(aiQuery,    top: 1);
+        var foodResults  = await col.SearchAsync(foodQuery,  top: 1);
+        var sportResults = await col.SearchAsync(sportQuery, top: 1);
 
         Assert.Equal("ai",     aiResults[0].Record.Id);
         Assert.Equal("food",   foodResults[0].Record.Id);
@@ -73,7 +73,7 @@ public class EmbeddingIntegrationTests
     public async Task Local_VectorDataRoundTrip_SearchScoreUnchanged()
     {
         var embedder = new HashTextEmbedder(256);
-        IVectorStore store = new InMemoryVectorStore();
+        var col = new InMemoryVectorStore().GetCollection("embed");
 
         // 生成并通过 VectorData JSON 序列化再反序列化（模拟持久化）
         var texts = new[]
@@ -84,17 +84,17 @@ public class EmbeddingIntegrationTests
         };
 
         // 第一遍：直接存入原始向量，记录基准得分
-        IVectorStore storeRaw = new InMemoryVectorStore();
+        var colRaw = new InMemoryVectorStore().GetCollection("raw");
         var rawVecs = new Dictionary<String, Single[]>();
         foreach (var (id, text) in texts)
         {
             var raw = embedder.Embed(text);
             rawVecs[id] = raw;
-            await storeRaw.UpsertAsync(new VectorRecord { Id = id, Vector = raw });
+            await colRaw.UpsertAsync(new VectorRecord { Id = id, Vector = raw });
         }
 
         var query      = embedder.Embed("云原生容器化部署微服务");
-        var baseResult = await storeRaw.SearchAsync(query, topK: 2);
+        var baseResult = await colRaw.SearchAsync(query, top: 2);
         Assert.Equal("doc2", baseResult[0].Record.Id);
 
         // 第二遍：通过 VectorData JSON 序列化再反序列化后存入，验证得分完全一致
@@ -103,10 +103,10 @@ public class EmbeddingIntegrationTests
             var json = VectorData.FromVector(embedder.ModelName, rawVecs[id]).ToJson();
             var vec  = VectorData.Parse(json)!.ToVector();     // 模拟从 DB 读取后反序列化
             Assert.Equal(rawVecs[id], vec);                    // 字节级一致是 round-trip 核心保证
-            await store.UpsertAsync(new VectorRecord { Id = id, Vector = vec });
+            await col.UpsertAsync(new VectorRecord { Id = id, Vector = vec });
         }
 
-        var results = await store.SearchAsync(query, topK: 2);
+        var results = await col.SearchAsync(query, top: 2);
         Assert.Equal("doc2", results[0].Record.Id);
         // 序列化往返后向量完全相同，得分应与基准完全一致
         Assert.Equal(baseResult[0].Score, results[0].Score);
@@ -117,22 +117,22 @@ public class EmbeddingIntegrationTests
     public async Task Local_IncrementalUpsert_SearchResultUpdates()
     {
         var embedder = new HashTextEmbedder(512);
-        IVectorStore store = new InMemoryVectorStore();
+        var col = new InMemoryVectorStore().GetCollection("embed");
 
         // 初始语料只有两个主题
-        await store.UpsertAsync(new VectorRecord { Id = "finance", Vector = embedder.Embed("股票基金投资理财") });
-        await store.UpsertAsync(new VectorRecord { Id = "travel",  Vector = embedder.Embed("旅游景点酒店机票") });
+        await col.UpsertAsync(new VectorRecord { Id = "finance", Vector = embedder.Embed("股票基金投资理财") });
+        await col.UpsertAsync(new VectorRecord { Id = "travel",  Vector = embedder.Embed("旅游景点酒店机票") });
 
         // 查询医学相关文本——此时只能返回最相近的已有条目
         var medQuery = embedder.Embed("中医药方剂针灸治疗");
-        var before   = await store.SearchAsync(medQuery, topK: 1);
+        var before   = await col.SearchAsync(medQuery, top: 1);
         var beforeId = before[0].Record.Id;
 
         // 增量写入医学文档
-        await store.UpsertAsync(new VectorRecord { Id = "medical", Vector = embedder.Embed("医学中医药方剂中药针灸治疗") });
+        await col.UpsertAsync(new VectorRecord { Id = "medical", Vector = embedder.Embed("医学中医药方剂中药针灸治疗") });
 
         // 再次搜索，新增文档应成为更近邻
-        var after = await store.SearchAsync(medQuery, topK: 1);
+        var after = await col.SearchAsync(medQuery, top: 1);
         Assert.Equal("medical", after[0].Record.Id);
         Assert.True(after[0].Score > before[0].Score, "新增语义最近邻后得分应提升");
     }
@@ -171,7 +171,7 @@ public class EmbeddingIntegrationTests
     {
         var apiKey = EnsureApiKey();
         using var client = CreateEmbeddingClient(apiKey);
-        IVectorStore store = new InMemoryVectorStore();
+        var col = new InMemoryVectorStore().GetCollection("embed");
 
         var corpus = new[]
         {
@@ -197,24 +197,24 @@ public class EmbeddingIntegrationTests
             return r;
         }).ToArray();
 
-        await store.UpsertBatchAsync(records);
-        Assert.Equal(corpus.Length, (Int32)await store.CountAsync());
+        await col.UpsertAsync(records);
+        Assert.Equal(corpus.Length, (Int32)await col.CountAsync());
 
         // 用不同主题的新文本检索，验证语义最近邻正确
         var techQuery   = await client.GenerateAsync(new EmbeddingRequest { Input = ["神经网络与大语言模型在人工智能中的应用"],  Model = "text-embedding-v3" });
         var foodQuery   = await client.GenerateAsync(new EmbeddingRequest { Input = ["四川火锅麻辣鲜香是中国饮食文化的代表"],    Model = "text-embedding-v3" });
         var sportsQuery = await client.GenerateAsync(new EmbeddingRequest { Input = ["欧洲冠军联赛精彩进球与顶级球星表现"],      Model = "text-embedding-v3" });
 
-        var techResults   = await store.SearchAsync(techQuery.Data[0].Embedding!,   topK: 1);
-        var foodResults   = await store.SearchAsync(foodQuery.Data[0].Embedding!,   topK: 1);
-        var sportsResults = await store.SearchAsync(sportsQuery.Data[0].Embedding!, topK: 1);
+        var techResults   = await col.SearchAsync(techQuery.Data[0].Embedding!,   top: 1);
+        var foodResults   = await col.SearchAsync(foodQuery.Data[0].Embedding!,   top: 1);
+        var sportsResults = await col.SearchAsync(sportsQuery.Data[0].Embedding!, top: 1);
 
         Assert.Equal("tech",   techResults[0].Record.Id);
         Assert.Equal("food",   foodResults[0].Record.Id);
         Assert.Equal("sports", sportsResults[0].Record.Id);
 
         // 结果按相似度降序
-        var allResults = await store.SearchAsync(techQuery.Data[0].Embedding!, topK: 4);
+        var allResults = await col.SearchAsync(techQuery.Data[0].Embedding!, top: 4);
         Assert.Equal(4, allResults.Count);
         for (var i = 0; i < allResults.Count - 1; i++)
             Assert.True(allResults[i].Score >= allResults[i + 1].Score);
@@ -226,7 +226,7 @@ public class EmbeddingIntegrationTests
     {
         var apiKey = EnsureApiKey();
         using var client = CreateEmbeddingClient(apiKey);
-        IVectorStore store = new InMemoryVectorStore();
+        var col = new InMemoryVectorStore().GetCollection("embed");
 
         var texts = new[]
         {
@@ -241,7 +241,7 @@ public class EmbeddingIntegrationTests
             Model = "text-embedding-v3",
         });
 
-        await store.UpsertBatchAsync(texts.Select((t, i) =>
+        await col.UpsertAsync(texts.Select((t, i) =>
             new VectorRecord { Id = t.Item1, Vector = batchResp.Data[i].Embedding! }).ToArray());
 
         // 覆盖写入 cat 的向量（模拟重新生成向量）
@@ -250,8 +250,8 @@ public class EmbeddingIntegrationTests
             Input = ["猫咪慵懒可爱，喜欢晒太阳和玩毛线球"],
             Model = "text-embedding-v3",
         });
-        await store.UpsertAsync(new VectorRecord { Id = "cat", Vector = newCatResp.Data[0].Embedding! });
-        Assert.Equal(3L, await store.CountAsync());   // 覆盖不增加数量
+        await col.UpsertAsync(new VectorRecord { Id = "cat", Vector = newCatResp.Data[0].Embedding! });
+        Assert.Equal(3L, await col.CountAsync());   // 覆盖不增加数量
 
         // 语义检索——猫相关查询应命中 cat
         var queryResp = await client.GenerateAsync(new EmbeddingRequest
@@ -259,15 +259,15 @@ public class EmbeddingIntegrationTests
             Input = ["我养了一只可爱的猫咪"],
             Model = "text-embedding-v3",
         });
-        var results = await store.SearchAsync(queryResp.Data[0].Embedding!, topK: 3);
+        var results = await col.SearchAsync(queryResp.Data[0].Embedding!, top: 3);
         Assert.Equal("cat", results[0].Record.Id);
 
         // 删除 fish 后再搜索不含 fish
-        await store.DeleteAsync("fish");
-        Assert.Null(await store.GetAsync("fish"));
-        Assert.Equal(2L, await store.CountAsync());
+        await col.DeleteAsync("fish");
+        Assert.Null(await col.GetAsync("fish"));
+        Assert.Equal(2L, await col.CountAsync());
 
-        var afterDelete = await store.SearchAsync(queryResp.Data[0].Embedding!, topK: 3);
+        var afterDelete = await col.SearchAsync(queryResp.Data[0].Embedding!, top: 3);
         Assert.DoesNotContain(afterDelete, r => r.Record.Id == "fish");
     }
 

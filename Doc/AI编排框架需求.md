@@ -15,22 +15,23 @@
 ### 1.1 语义记忆（Semantic Memory）
 
 - **描述**：对文本片段生成浮点向量嵌入，并支持相似度检索，为 RAG 场景提供统一记忆接口
-- **用户故事**：作为开发者，我希望调用 `ISemanticMemory.SaveAsync` 存储文本、调用 `SearchAsync` 检索相似内容，以便构建知识库问答 Agent
+- **用户故事**：作为开发者，我希望通过 `IVectorStoreCollection` 的 `UpsertAsync` 存储向量、调用 `SearchAsync` 检索相似内容，以便构建知识库问答 Agent
 - **验收条件**：
-  - [x] `ISemanticMemory` 接口定义 `SaveAsync / GetAsync / SearchAsync / RemoveAsync`
-  - [x] `MemoryEntry` 数据类型（Id、Text、Vector、Metadata）
-  - [x] `InMemorySemanticMemory` 内存实现，使用余弦相似度
+  - [x] 与 1.2 向量存储合并为 `IVectorStore` / `IVectorStoreCollection` 两级接口（对齐 Microsoft.Extensions.VectorData）
+  - [x] `VectorRecord` 数据类型（Id、Vector、Payload）
+  - [x] `InMemoryVectorStore` / `InMemoryVectorStoreCollection` 内存实现，使用余弦相似度
   - [x] 单元测试：存入 3 条，检索返回正确 Top-N
 - **优先级**：Must
 
 ### 1.2 向量存储（Vector Store）
 
-- **描述**：独立的向量存储抽象，与 Memory 分离，可承载更大规模数据，将来可替换为 Redis/Qdrant 等后端
+- **描述**：独立的向量存储抽象，可承载更大规模数据，将来可替换为 Redis/Qdrant 等后端
 - **用户故事**：作为开发者，我希望用 `IVectorStore` 存取高维向量记录，以便独立于业务逻辑管理向量索引
 - **验收条件**：
-  - [x] `IVectorStore` 接口定义 `UpsertAsync / GetAsync / SearchAsync / DeleteAsync`
+  - [x] `IVectorStore`（存储级）定义 `GetCollection / ListCollectionNamesAsync / RemoveCollectionAsync`
+  - [x] `IVectorStoreCollection`（集合级）定义 `UpsertAsync / GetAsync / SearchAsync / DeleteAsync / CountAsync`
   - [x] `VectorRecord`（Id、Vector、Payload）
-  - [x] `InMemoryVectorStore` 实现，余弦距离 Top-K
+  - [x] `InMemoryVectorStore` / `InMemoryVectorStoreCollection` 实现，余弦距离 Top-K
   - [x] 单元测试
 - **优先级**：Must
 
