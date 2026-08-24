@@ -57,10 +57,11 @@ public class UserSettingController : ChatEntityController<UserSetting>
         var mcpEnabled = p["mcpEnabled"]?.ToBoolean();
         var showToolCalls = p["showToolCalls"]?.ToBoolean();
         var enableLearning = p["enableLearning"]?.ToBoolean();
+        var thinkingLayout = (ThinkingLayout)p["thinkingLayout"].ToInt(-1);
 
         var start = p["dtStart"].ToDateTime();
         var end = p["dtEnd"].ToDateTime();
 
-        return UserSetting.Search(userId, defaultThinkingMode, responseStyle, allowTraining, mcpEnabled, showToolCalls, enableLearning, start, end, p["Q"], p);
+        return UserSetting.Search(userId, defaultThinkingMode, responseStyle, allowTraining, mcpEnabled, showToolCalls, enableLearning, thinkingLayout, start, end, p["Q"], p);
     }
 }

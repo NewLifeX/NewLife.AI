@@ -116,6 +116,26 @@ public enum SupportPosition
     FloatingButton = 3,
 }
 
+/// <summary>推理过程布局。控制 AI 推理过程的展示位置与展开方式</summary>
+public enum ThinkingLayout
+{
+    /// <summary>默认。跟随系统默认（上方折叠）</summary>
+    [Description("默认")]
+    Default = 0,
+
+    /// <summary>上方折叠。推理过程折叠在内容上方</summary>
+    [Description("上方折叠")]
+    AboveCollapsed = 1,
+
+    /// <summary>上方展开。推理过程展开在内容上方</summary>
+    [Description("上方展开")]
+    AboveExpanded = 2,
+
+    /// <summary>右侧分栏。推理过程显示在右侧分栏对照</summary>
+    [Description("右侧分栏")]
+    Side = 3,
+}
+
 /// <summary>计费模式。控制 ModelConfig 上价格字段的解释方式</summary>
 public enum PricingMode
 {

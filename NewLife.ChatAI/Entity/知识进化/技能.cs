@@ -234,6 +234,8 @@ public partial class Skill
         get => name switch
         {
             "Id" => _Id,
+            "UserId" => _UserId,
+            "ProjectId" => _ProjectId,
             "Code" => _Code,
             "Name" => _Name,
             "Icon" => _Icon,
@@ -262,6 +264,8 @@ public partial class Skill
             switch (name)
             {
                 case "Id": _Id = value.ToInt(); break;
+                case "UserId": _UserId = value.ToInt(); break;
+                case "ProjectId": _ProjectId = value.ToInt(); break;
                 case "Code": _Code = Convert.ToString(value); break;
                 case "Name": _Name = Convert.ToString(value); break;
                 case "Icon": _Icon = Convert.ToString(value); break;
@@ -358,6 +362,12 @@ public partial class Skill
         /// <summary>编号</summary>
         public static readonly Field Id = FindByName("Id");
 
+        /// <summary>用户。0=全局，>0=个人技能。开源版仅支持全局技能</summary>
+        public static readonly Field UserId = FindByName("UserId");
+
+        /// <summary>项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能</summary>
+        public static readonly Field ProjectId = FindByName("ProjectId");
+
         /// <summary>编码。英文标识，唯一，如coder、translator</summary>
         public static readonly Field Code = FindByName("Code");
 
@@ -429,6 +439,12 @@ public partial class Skill
     {
         /// <summary>编号</summary>
         public const String Id = "Id";
+
+        /// <summary>用户。0=全局，>0=个人技能。开源版仅支持全局技能</summary>
+        public const String UserId = "UserId";
+
+        /// <summary>项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能</summary>
+        public const String ProjectId = "ProjectId";
 
         /// <summary>编码。英文标识，唯一，如coder、translator</summary>
         public const String Code = "Code";

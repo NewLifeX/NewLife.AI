@@ -276,7 +276,7 @@
         <Column Name="DefaultSkill" DataType="String" Description="默认技能。新会话的默认技能编码" />
         <Column Name="EnableLearning" DataType="Boolean" DefaultValue="true" Description="启用个人学习。用户级自学习开关，全局开关开启后此项生效" />
         <Column Name="ContentWidth" DataType="Int32" Description="内容区宽度。标准960/宽屏1200/自适应0" />
-        <Column Name="ThinkingLayout" DataType="Int32" Description="推理过程布局。0=默认(上方折叠) 1=上方折叠 2=上方展开 3=右侧分栏，默认0" />
+        <Column Name="ThinkingLayout" DataType="Int32" Description="推理过程布局。Default=0默认, AboveCollapsed=1上方折叠, AboveExpanded=2上方展开, Side=3右侧分栏" Type="NewLife.AI.Models.ThinkingLayout" />
         <Column Name="CreateUserID" DataType="Int32" Description="创建用户" Category="扩展" Model="False" />
         <Column Name="CreateIP" DataType="String" Description="创建地址" Category="扩展" Model="False" />
         <Column Name="CreateTime" DataType="DateTime" Description="创建时间" Category="扩展" Model="False" />
@@ -421,8 +421,8 @@
     <Table Name="Skill" Description="技能。可复用的AI行为指令，Markdown格式的结构化提示文本" Output="知识进化">
       <Columns>
         <Column Name="Id" DataType="Int32" Identity="True" PrimaryKey="True" Description="编号" />
-        <Column Name="UserId" DataType="Int32" DefaultValue="0" Description="用户。0=全局，>0=个人技能。开源版仅支持全局技能" />
-        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=个人/系统，>0=该项目专属技能。开源版仅支持全局技能" />
+        <Column Name="UserId" DataType="Int32" DefaultValue="0" Description="用户。0=全局，&gt;0=个人技能。开源版仅支持全局技能" />
+        <Column Name="ProjectId" DataType="Int32" DefaultValue="0" Description="项目。0=个人/系统，&gt;0=该项目专属技能。开源版仅支持全局技能" />
         <Column Name="Code" DataType="String" Description="编码。英文标识，唯一，如coder、translator" />
         <Column Name="Name" DataType="String" Master="True" Description="名称。技能展示名称，同时也是@引用的标识" />
         <Column Name="Icon" DataType="String" Description="图标。Material Icon名称，如code、translate" />
