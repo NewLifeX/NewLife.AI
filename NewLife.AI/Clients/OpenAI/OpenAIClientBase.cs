@@ -229,11 +229,20 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     protected static Object BuildContent(IList<AIContent> contents) => ChatCompletionRequest.BuildContent(contents);
 
     /// <summary>根据模型 ID 命名规律推断模型能力。子类可重写以实现服务商特定的推断逻辑</summary>
+    /// <remarks>
+    /// 基类实现先匹配全局模型家族规则（qwen/deepseek/qwq/qvq 等，跨服务商共享），
+    /// 未命中时再走下方通用兜底（OpenAI 系列启发式）。任何 OpenAI 兼容服务商
+    /// （腾讯/火山/硅基流动等）托管家族模型时自动获得正确能力推断，无需各自实现。
+    /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
     public virtual AiProviderCapabilities? InferModelCapabilities(String? modelId)
     {
         if (modelId.IsNullOrEmpty()) return null;
+
+        // 先匹配全局模型家族规则（qwen/deepseek 等），新版本与跨平台模型零改动自动覆盖
+        var caps = ModelFamilyRegistry.Match(modelId);
+        if (caps != null) return caps;
 
         // 非对话模型：嵌入、语音合成、语音识别等
         if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))

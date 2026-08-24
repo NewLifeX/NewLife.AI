@@ -11,6 +11,8 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <item>deepseek-reasoner 始终输出 <c>reasoning_content</c> 思维链，不支持 temperature/top_p/presence_penalty/frequency_penalty 及部分采样参数</item>
 /// <item>reasoning_content 字段由基类 <see cref="OpenAIClientBase.ParseChatMessage"/> 负责解析，无需额外处理</item>
 /// <item>V4 系列（deepseek-v4-flash/v4-pro）统一上下文 1M，支持工具调用；旧 deepseek-chat/reasoner 作为兼容别名保留</item>
+/// <item>模型能力推断（思考/工具/上下文/价格）由 deepseek 模型家族统一接管（见 <see cref="ModelFamilies"/>），
+/// 跨平台（DashScope/腾讯/火山等）托管 deepseek 模型时能力一致，服务商价格可精确注册覆盖</item>
 /// </list>
 /// </remarks>
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
@@ -75,56 +77,6 @@ public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
         }
 
         return dic;
-    }
-    #endregion
-
-    #region 模型能力推断
-    /// <summary>推断 DeepSeek 模型能力。覆盖基类推断，精确描述 deepseek 系列各模型特性</summary>
-    /// <remarks>
-    /// DeepSeek 各系列模型能力差异：
-    /// <list type="bullet">
-    ///   <item><description>deepseek-chat：支持思考模式（高/最大两档）、工具调用、上下文65K</description></item>
-    ///   <item><description>deepseek-v4-pro：DeepSeek V4 标准版，思考+工具调用、上下文1M</description></item>
-    ///   <item><description>deepseek-v4-flash：DeepSeek V4 快速版，思考+工具调用、上下文1M，价格更低</description></item>
-    ///   <item><description>deepseek-reasoner：始终推理、不支持工具调用与采样参数、上下文65K</description></item>
-    /// </list>
-    /// </remarks>
-    /// <param name="modelId">模型标识</param>
-    /// <returns>推断的能力信息</returns>
-    public override AiProviderCapabilities? InferModelCapabilities(String? modelId)
-    {
-        if (modelId.IsNullOrEmpty()) return null;
-
-        // deepseek-v4-flash：DeepSeek V4 快速版（含 chat/reasoner 兼容别名），上下文1M
-        if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
-        {
-            // deepseek-reasoner 不支持工具调用与采样参数（BuildRequest 会移除 tools），能力位如实标注（A-73）
-            var isReasoner = modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase);
-            // V4 官方价（高峰），缓存创建档已取消（CacheCreation=0 回退 InputPrice）
-            var pricing = isReasoner ? new AiModelPricing(9m, 27m, 0.3m, 0m) : new AiModelPricing(3m, 9m, 0.1m, 0m);
-            return new AiProviderCapabilities(
-                SupportThinking: !modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase),
-                SupportFunction: !isReasoner,
-                ContextLength: 1_048_576,
-                ReasoningEfforts: "high,max",
-                Pricing: pricing);
-        }
-
-        // deepseek-v4-pro：DeepSeek V4 标准版，上下文1M
-        if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
-        {
-            return new AiProviderCapabilities(
-                SupportThinking: true,
-                SupportFunction: true,
-                ContextLength: 1_048_576,
-                ReasoningEfforts: "high,max",
-                Pricing: new AiModelPricing(9m, 27m, 0.3m, 0m));
-        }
-
-        // 其他 DeepSeek 模型（如 deepseek-r1、deepseek-prover 等）回退基类推断
-        return base.InferModelCapabilities(modelId);
     }
     #endregion
 

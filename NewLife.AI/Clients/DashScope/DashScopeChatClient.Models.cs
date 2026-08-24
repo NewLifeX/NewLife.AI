@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+﻿using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Serialization;
 
@@ -80,24 +80,18 @@ public partial class DashScopeChatClient
     #endregion
 
     #region 模型能力推断
-    /// <summary>根据千问模型 ID 命名规律推断模型能力</summary>
+    /// <summary>根据千问模型 ID 命名规律推断模型能力。qwen/deepseek 家族规则由基类家族匹配统一接管，此处仅保留百炼专属模型预检</summary>
     /// <remarks>
-    /// 阿里百炼模型命名规律（基于 2026-Q2 官方文档）：
+    /// <para>qwen/qwq/qvq/deepseek 家族命名规律已抽为 <see cref="ModelFamily"/> 家族档案（版本通配，新版本自动覆盖），
+    /// 由 <see cref="OpenAIClientBase.InferModelCapabilities"/> 基类匹配。此处仅保留百炼平台专属模型：</para>
     /// <list type="bullet">
-    /// <item>qwen -plus/-flash/-turbo：支持文本 + 视觉（Vision = true），通过 OpenAI 兼容模式传入图片</item>
-    /// <item>qwen -max：纯文本旗舰，不支持视觉</item>
-    /// <item>qwen*-vl* / qvq-*：视觉语言系列，走 multimodal-generation 专属端点</item>
-    /// <item>qwq-* / qvq-*：专用推理模型，始终具备思考能力</item>
-    /// <item>qwen3*（除 coder 和 -instruct 后缀）：qwen3 时代全系列支持思考模式</item>
-    /// <item>qwen-max/plus/flash/turbo（稳定版别名）：当前均指向 qwen3 时代，支持思考</item>
-    /// <item>qwen-long / qwen2* / qwen1*：不支持思考模式</item>
-    /// <item>qwen*-omni*：全模态模型，视觉+语音识别输入+语音合成输出</item>
-    /// <item>wanx* / wan2* / flux* / qwen-image* / z-image*：文生图/视频生成</item>
-    /// <item>embed* / rerank* / paraformer* / cosyvoice* / sambert* 等：非对话模型</item>
-    /// <item>farui* / qwen-mt*：专用模型，不支持函数调用</item>
-    /// <item>deepseek-v4* / kimi-k2* / glm-5* / MiniMax-M2*：百炼托管第三方推理模型，支持思考</item>
+    /// <item>embed / rerank：嵌入与重排序模型</item>
+    /// <item>paraformer / sensevoice / fun-asr / sambert：语音识别（ASR）</item>
+    /// <item>cosyvoice：语音合成（TTS）</item>
+    /// <item>wanx / wan2 / flux / stable-diffusion / z-image：文生图/视频生成</item>
+    /// <item>farui：专用模型，不支持函数调用</item>
+    /// <item>kimi-k2 / glm-5 / MiniMax-M2：百炼托管第三方推理模型</item>
     /// </list>
-    /// 注意：-max/-plus 本身不是思考能力的可靠信号，早期 qwen-max（qwen2 时代）不支持思考
     /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
@@ -116,39 +110,18 @@ public partial class DashScopeChatClient
             return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 1m));
 
-        // 语音识别（ASR）模型：paraformer / sensevoice / fun-asr / sambert / qwen-audio / qwen3-asr / qwen-voice
-        if (modelId.StartsWith("paraformer", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("sambert", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("fun-asr", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("sensevoice", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qwen-audio", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWithIgnoreCase("qwen3-asr", "qwen-voice"))
+        // 语音识别（ASR）模型：paraformer / sensevoice / fun-asr / sambert（qwen 系 ASR 由 qwen-media 家族接管）
+        if (modelId.StartsWithIgnoreCase("paraformer", "sambert", "fun-asr", "sensevoice"))
             return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 0.2m));
 
-        // TTS 语音合成模型：qwen-tts* / qwen3-tts*（含 vc/vd 声音复刻/声音设计，需预建自定义音色）
-        if (modelId.StartsWithIgnoreCase("qwen-tts", "qwen3-tts"))
-            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 0.2m));
+        // TTS 语音合成模型：cosyvoice（qwen-tts 由 qwen-media 家族接管）
         if (modelId.StartsWith("cosyvoice", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 0.2m));
 
-        var thinking = false;
-        var vision = false;
-        var audio = false;
-        var speech = false;
-        var imageGen = false;
-        var funcCall = true;
-        var videoGen = false;
-        var contextLength = 32_768;
-
-        // 文生图：wanx / flux / stable-diffusion / qwen-image / z-image
-        if (modelId.StartsWith("wanx", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("flux", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("stable-diffusion", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qwen-image", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("z-image", StringComparison.OrdinalIgnoreCase))
+        // 文生图 / 文生视频：wanx / flux / stable-diffusion / z-image / wan2
+        if (modelId.StartsWithIgnoreCase("wanx", "flux", "stable-diffusion", "z-image"))
             return new AiProviderCapabilities(SupportImage: true, SupportFunction: false);
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase) &&
             (modelId.Contains("-t2v", StringComparison.OrdinalIgnoreCase) ||
@@ -159,140 +132,23 @@ public partial class DashScopeChatClient
         if (modelId.StartsWith("wan2", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(SupportImage: true, SupportFunction: false);
 
-        // === 全模态 Omni 模型：视觉输入 + 语音识别输入 + 语音合成输出 ===
-        if (modelId.StartsWith("qwen3.5-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportVision: true, SupportAudio: true, SupportSpeech: true, SupportFunction: false, ContextLength: 131_072);
-        if (modelId.StartsWith("qwen3-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportThinking: true, SupportVision: true, SupportAudio: true, SupportSpeech: true, SupportFunction: false, ContextLength: 131_072);
-        // 旧版 Omni 模型（如 qwen-omni-turbo）
-        if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportVision: true, SupportAudio: true, SupportSpeech: true, SupportFunction: false, ContextLength: 32_768);
+        // 专用模型不支持函数调用：farui
+        if (modelId.StartsWith("farui", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportFunction: false);
 
-        // === 视觉能力 ===
-        if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("-ocr", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
-            vision = true;
+        // 百炼托管第三方推理模型：kimi / glm / MiniMax（v1 未抽家族，暂保留服务商预检）
+        if (modelId.StartsWithIgnoreCase("kimi-k2.", "glm-5.", "MiniMax-M2."))
+        {
+            var contextLength = modelId.StartsWithIgnoreCase("kimi-k2.") ? 262_144 :
+                modelId.StartsWithIgnoreCase("glm-5.") ? 200_704 : 196_608;
+            var pricing = modelId.StartsWithIgnoreCase("kimi-k2.") ? new AiModelPricing(1m, 4m, 0.1m) :
+                modelId.StartsWithIgnoreCase("glm-5.") ? new AiModelPricing(1.5m, 6m, 0.15m) :
+                new AiModelPricing(2m, 8m, 0.2m);
+            return new AiProviderCapabilities(SupportThinking: true, SupportFunction: true, ContextLength: contextLength, Pricing: pricing);
+        }
 
-        // qwen -plus/-flash/-turbo 支持文本+视觉；-max 为纯文本旗舰无视觉
-        if (Regex.IsMatch(modelId, @"^qwen\d+\.\d+-", RegexOptions.IgnoreCase) &&
-            (modelId.Contains("-plus", StringComparison.OrdinalIgnoreCase) ||
-             modelId.Contains("-flash", StringComparison.OrdinalIgnoreCase) ||
-             modelId.Contains("-turbo", StringComparison.OrdinalIgnoreCase)))
-            vision = true;
-
-        // === 思考/推理能力 ===
-        if (modelId.StartsWith("qwq-", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qvq-", StringComparison.OrdinalIgnoreCase))
-            thinking = true;
-
-        // qwen3 全系列支持思考模式，排除 coder / -instruct
-        if (modelId.StartsWith("qwen3", StringComparison.OrdinalIgnoreCase) &&
-            !modelId.Contains("-coder", StringComparison.OrdinalIgnoreCase) &&
-            !modelId.Contains("-instruct", StringComparison.OrdinalIgnoreCase))
-            thinking = true;
-
-        // 稳定版别名均指向 qwen3 时代
-        if (modelId.StartsWithIgnoreCase("qwen-max", "qwen-plus", "qwen-flash", "qwen-turbo"))
-            thinking = true;
-
-        // 明确不支持思考的模型
-        if (modelId.StartsWithIgnoreCase("qwen-long", "qwen2", "qwen1"))
-            thinking = false;
-
-        // 百炼托管第三方推理模型
-        if (modelId.StartsWithIgnoreCase("deepseek-v4-", "kimi-k2.", "glm-5.", "MiniMax-M2."))
-            thinking = true;
-
-        // === 函数调用 ===
-        if (modelId.StartsWith("farui", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("qwen-mt", StringComparison.OrdinalIgnoreCase))
-            funcCall = false;
-
-        // === 上下文长度 ===
-        if (modelId.StartsWithIgnoreCase("qwen-long"))
-            contextLength = 1_000_000;
-        else if (modelId.StartsWithIgnoreCase("qwen3.7-"))
-            contextLength = 1_048_576;
-        else if (modelId.StartsWithIgnoreCase("qwen3.6-max-preview"))
-            contextLength = 262_144;
-        else if (modelId.StartsWithIgnoreCase("qwen3.6-"))
-            contextLength = 1_048_576;
-        else if (modelId.StartsWithIgnoreCase("qwen3", "qwen-max", "qwen-plus", "qwen-flash", "qwen-turbo",
-            "qwq-", "qvq-", "qwen2.5"))
-            contextLength = 131_072;
-        else if (modelId.StartsWithIgnoreCase("deepseek-v4-"))
-            contextLength = 1_048_576;
-        else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
-            contextLength = 65_536;
-        else if (modelId.StartsWithIgnoreCase("kimi-k2."))
-            contextLength = 262_144;
-        else if (modelId.StartsWithIgnoreCase("glm-5."))
-            contextLength = 200_704;
-        else if (modelId.StartsWithIgnoreCase("MiniMax-M2."))
-            contextLength = 196_608;
-
-        // === 价格推断（阿里百炼 2026-Q2 官网定价，元/百万Token）===
-        AiModelPricing? pricing = null;
-
-        // Qwen3.7 系列（百炼原价，含显式缓存创建）
-        if (modelId.StartsWithIgnoreCase("qwen3.7-max"))
-            pricing = new AiModelPricing(12m, 36m, 2.4m, 15m);
-        else if (modelId.StartsWithIgnoreCase("qwen3.7-plus"))
-            pricing = new AiModelPricing(2m, 8m, 0.4m, 2.5m);
-        // Qwen3.6 系列
-        else if (modelId.StartsWithIgnoreCase("qwen3.6-max"))
-            pricing = new AiModelPricing(2m, 12m, 0.2m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen3.6-plus"))
-            pricing = new AiModelPricing(1.4m, 5.6m, 0.14m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen3.6-flash"))
-            pricing = new AiModelPricing(0.7m, 2.8m, 0.07m, 0);
-        // Qwen3 系列
-        else if (modelId.StartsWithIgnoreCase("qwen3-max"))
-            pricing = new AiModelPricing(2.4m, 14.4m, 0.24m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen3-plus"))
-            pricing = new AiModelPricing(0.8m, 3.2m, 0.08m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen3-turbo"))
-            pricing = new AiModelPricing(0.3m, 1.2m, 0.03m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen3-235b"))
-            pricing = new AiModelPricing(2m, 8m, 0.2m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwq-"))
-            pricing = new AiModelPricing(2m, 12m, 0.2m, 0);
-        else if (modelId.StartsWithIgnoreCase("qvq-"))
-            pricing = new AiModelPricing(2.4m, 14.4m, 0.24m, 0);
-        // 稳定版别名（指向 qwen3 时代）
-        else if (modelId.StartsWithIgnoreCase("qwen-max"))
-            pricing = new AiModelPricing(2.4m, 14.4m, 0.24m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen-plus"))
-            pricing = new AiModelPricing(0.8m, 3.2m, 0.08m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen-turbo"))
-            pricing = new AiModelPricing(0.3m, 1.2m, 0.03m, 0);
-        // VL 视觉系列
-        else if (modelId.StartsWithIgnoreCase("qwen-vl-max"))
-            pricing = new AiModelPricing(3m, 18m, 0.3m, 0);
-        else if (modelId.StartsWithIgnoreCase("qwen-vl-plus"))
-            pricing = new AiModelPricing(1.5m, 9m, 0.15m, 0);
-        // 百炼托管第三方推理模型
-        else if (modelId.StartsWithIgnoreCase("deepseek-v4-pro"))
-            pricing = new AiModelPricing(2m, 8m, 0.2m, 2m);
-        else if (modelId.StartsWithIgnoreCase("deepseek-v4-flash"))
-            pricing = new AiModelPricing(0.5m, 2m, 0.05m, 0.5m);
-        else if (modelId.StartsWithIgnoreCase("kimi-k2."))
-            pricing = new AiModelPricing(1m, 4m, 0.1m, 0);
-        else if (modelId.StartsWithIgnoreCase("glm-5."))
-            pricing = new AiModelPricing(1.5m, 6m, 0.15m, 0);
-        else if (modelId.StartsWithIgnoreCase("MiniMax-M2."))
-            pricing = new AiModelPricing(2m, 8m, 0.2m, 0);
-        // Omni 全模态
-        else if (modelId.StartsWithIgnoreCase("qwen3.5-omni", "qwen3-omni"))
-            pricing = new AiModelPricing(3.5m, 14m, 0.35m, 0);
-        else if (modelId.Contains("-omni", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(2m, 8m, 0.2m, 0);
-        // 其他 qwen 系列兜底
-        else if (modelId.StartsWith("qwen", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(0.7m, 2.8m, 0.07m, 0);
-
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, null, pricing);
+        // 其余模型（qwen/qwq/qvq/deepseek 家族及未知模型）交给基类：先按家族规则匹配，未命中走通用兜底
+        return base.InferModelCapabilities(modelId);
     }
     #endregion
 }
