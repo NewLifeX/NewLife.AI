@@ -21,7 +21,7 @@ public class ChatAITests
         Assert.Equal(30, setting.ShareExpireMinutes);
         Assert.Equal(0, setting.DefaultModel);
         Assert.Equal(ThinkingMode.Auto, setting.DefaultThinkingMode);
-        Assert.Equal(10, setting.DefaultContextRounds);
+        Assert.Equal(20, setting.DefaultContextRounds);
         Assert.Equal(20, setting.MaxAttachmentSize);
         Assert.True(setting.AutoGenerateTitle);
         //Assert.Contains("10个字", setting.TitlePrompt);

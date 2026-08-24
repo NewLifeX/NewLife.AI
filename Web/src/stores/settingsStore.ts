@@ -40,7 +40,7 @@ const defaults: UserSettings = {
   sendShortcut: 'Enter',
   defaultModel: 0,
   defaultThinkingMode: 0,
-  contextRounds: 10,
+  contextRounds: 20,
   nickname: '',
   userBackground: '',
   responseStyle: 0,

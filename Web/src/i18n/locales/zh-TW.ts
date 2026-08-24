@@ -233,7 +233,7 @@ export default {
       thinkingThink: '深度思考',
       thinkingFast: '快速',
       defaultContextRounds: '預設上下文輪數',
-      defaultContextRoundsDesc: '攜帶的歷史訊息輪數（0 = 全部）',
+      defaultContextRoundsDesc: '每次請求攜帶的歷史輪數（滑動窗口，不限制對話總輪數；0 = 使用預設值 20）',
     },
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',

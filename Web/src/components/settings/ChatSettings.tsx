@@ -130,7 +130,7 @@ export function ChatSettings({
             <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('settings.contextRounds')}</div>
             <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{contextRounds}</span>
           </div>
-          <Slider value={contextRounds} onChange={onContextRoundsChange} min={1} max={30} labelLeft="1" labelRight="30" />
+          <Slider value={contextRounds} onChange={onContextRoundsChange} min={1} max={100} labelLeft="1" labelRight="100" />
         </div>
 
       </div>

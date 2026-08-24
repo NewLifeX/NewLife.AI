@@ -555,7 +555,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<UserSett
       sendShortcut: settings.sendShortcut ?? 'Enter',
       defaultModel: settings.defaultModel ?? 0,
       defaultThinkingMode: settings.defaultThinkingMode ?? 0,
-      contextRounds: settings.contextRounds ?? 10,
+      contextRounds: settings.contextRounds ?? 20,
       nickname: settings.nickname ?? '',
       userBackground: settings.userBackground ?? '',
       responseStyle: settings.responseStyle ?? 0,

@@ -286,7 +286,7 @@ export default {
       thinkingThink: 'Deep Think',
       thinkingFast: 'Fast',
       defaultContextRounds: 'Default Context Rounds',
-      defaultContextRoundsDesc: 'Number of history message rounds to carry (0 = all)',
+      defaultContextRoundsDesc: 'History rounds to carry per request (sliding window, conversation length is not limited; 0 = use default 20)',
       systemInstruction: 'Global System Instruction',
       systemInstructionDesc: 'Injected into every conversation for every user, placed after model instructions as a fallback behavior rule. No effect when empty.',
       systemInstructionPlaceholder: 'Enter global system instruction (Markdown)...',

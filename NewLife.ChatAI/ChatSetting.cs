@@ -105,10 +105,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("图像生成默认尺寸")]
     public String DefaultImageSize { get; set; } = "1024*1024";
 
-    /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
+    /// <summary>上下文轮数。每次请求携带的历史对话轮数（滑动窗口），默认20。不限制对话总轮数</summary>
     [Category("对话行为")]
-    [Description("上下文轮数。每次请求携带的历史对话轮数，默认10")]
-    public Int32 DefaultContextRounds { get; set; } = 10;
+    [Description("上下文轮数。每次请求携带的历史对话轮数（滑动窗口），默认20。不限制对话总轮数，早期历史由滑动窗口自然淡出，成本由 TokenBudgetFilter 兜底")]
+    public Int32 DefaultContextRounds { get; set; } = 20;
 
     /// <summary>后台继续生成。浏览器关闭后模型继续生成</summary>
     [Category("对话行为")]

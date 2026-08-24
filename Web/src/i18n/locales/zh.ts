@@ -288,7 +288,7 @@ export default {
       thinkingThink: '深度思考',
       thinkingFast: '快速',
       defaultContextRounds: '默认上下文轮数',
-      defaultContextRoundsDesc: '携带的历史消息轮数（0 = 全部）',
+      defaultContextRoundsDesc: '每次请求携带的历史轮数（滑动窗口，不限制对话总轮数；0 = 使用默认值 20）',
       systemInstruction: '全局系统指令',
       systemInstructionDesc: '注入每一个用户的每一次对话，置于模型指令之后作为兜底行为准则。为空时不注入',
       systemInstructionPlaceholder: '输入全局系统指令（Markdown）...',

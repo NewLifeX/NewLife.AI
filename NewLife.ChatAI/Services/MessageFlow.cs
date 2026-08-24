@@ -576,7 +576,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             flow.ThinkingMode = message.ThinkingMode;
         }
 
-        var maxRounds = setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10;
+        var maxRounds = ResolveContextRounds(userId);
         flow.HistoryMessages = LoadHistoryMessages(conversation.Id, maxRounds);
 
         // 预初始化调用选项。按会话模式（StreamMessageAsync）会用请求参数覆盖 EnableThinking
@@ -636,7 +636,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             throw new InvalidOperationException(errMsg);
         }
 
-        var maxCount = (setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 10) * 2;
+        var maxCount = ResolveContextRounds(flow.UserId) * 2;
         if (beforeMessages.Count > maxCount)
             beforeMessages = beforeMessages.Skip(beforeMessages.Count - maxCount).ToList();
 
@@ -1390,6 +1390,21 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     #endregion
 
     #region 上下文构建
+
+    /// <summary>解析每次请求携带的历史轮数（滑动窗口）。用户设置优先，回退到系统默认，最终兜底 20</summary>
+    /// <remarks>会话不再限制总轮数（对齐竞品，轮数不是资源，Token 才是）；该值仅控制每次请求携带多少历史进 LLM 上下文，早期历史滑出窗口后由压缩/记忆补偿。</remarks>
+    /// <param name="userId">用户编号，≤0 时直接使用系统默认</param>
+    /// <returns>滑动窗口大小（对话轮数）</returns>
+    protected virtual Int32 ResolveContextRounds(Int32 userId)
+    {
+        if (userId > 0)
+        {
+            var userSetting = UserSetting.FindByUserId(userId);
+            if (userSetting?.ContextRounds > 0) return userSetting.ContextRounds;
+        }
+
+        return setting.DefaultContextRounds > 0 ? setting.DefaultContextRounds : 20;
+    }
 
     /// <summary>从数据库加载历史消息并按时间升序排列。派生类可覆写以修改加载来源（如网关路径不从 DB 加载）</summary>
     /// <param name="conversationId">会话编号</param>

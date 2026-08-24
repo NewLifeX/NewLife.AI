@@ -35,7 +35,7 @@ const defaultSettings: SystemSettings = {
   autoGenerateTitle: true,
   defaultModel: 0,
   defaultThinkingMode: 0,
-  defaultContextRounds: 10,
+  defaultContextRounds: 20,
   maxAttachmentSize: 10,
   allowedExtensions: '',
   defaultImageSize: '1024*1024',
