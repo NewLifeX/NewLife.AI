@@ -26,6 +26,10 @@ public abstract class ChatSseControllerBase : ChatApiControllerBase
     /// <summary>心跳间隔（毫秒）。无新事件时按此间隔推送保活帧，防止反向代理因连接静默而断连</summary>
     private const Int32 _heartbeatIntervalMs = 20_000;
 
+    /// <summary>释放时等待在途 MoveNextAsync 完成的上限（毫秒）。取消通常沿链路立即传播，此为极端兜底；
+    /// 超时后退化为直接 DisposeAsync（异常仍由外层 catch 兜底记录）</summary>
+    private const Int32 _disposeTimeoutMs = 5_000;
+
     /// <summary>SSE 事件单字段最大字符数。超过此长度时自动截断以防止 OOM</summary>
     private const Int32 _maxFieldLength = 100_000;
 
@@ -55,9 +59,10 @@ public abstract class ChatSseControllerBase : ChatApiControllerBase
         if (events == null) throw new ArgumentNullException(nameof(events));
 
         var enumerator = events.GetAsyncEnumerator(cancellationToken);
+        Task<Boolean>? nextTask = null;
         try
         {
-            var nextTask = enumerator.MoveNextAsync().AsTask();
+            nextTask = enumerator.MoveNextAsync().AsTask();
             var heartbeatDelay = Task.Delay(_heartbeatIntervalMs, cancellationToken);
 
             while (true)
@@ -103,6 +108,23 @@ public abstract class ChatSseControllerBase : ChatApiControllerBase
         {
             try
             {
+                // 关键修复：客户端断开（取消）或异常退出时，在途的 MoveNextAsync（nextTask）可能尚未完成。
+                // 若此时直接 DisposeAsync，编译器生成的 async iterator 释放逻辑会因 MoveNextAsync 仍在飞行
+                // 而抛出 NotSupportedException（Specified method is not supported）。
+                // 正确做法：先有界等待在途 MoveNextAsync 结束（取消会沿 HTTP 链路传播，通常立即以
+                // OperationCanceledException 结束，其 finally 已随异常展开执行），再安全释放。
+                if (nextTask is { IsCompleted: false })
+                {
+                    var pending = nextTask;
+                    var timeout = Task.Delay(_disposeTimeoutMs);
+                    if (await Task.WhenAny(pending, timeout).ConfigureAwait(false) == pending)
+                    {
+                        try { await pending.ConfigureAwait(false); }
+                        catch (OperationCanceledException) { }
+                        catch (Exception ex) { onError?.Invoke(ex); }
+                    }
+                }
+
                 await enumerator.DisposeAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
