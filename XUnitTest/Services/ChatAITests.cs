@@ -33,6 +33,7 @@ public class ChatAITests
         Assert.True(setting.EnableUsageStats);
         Assert.True(setting.BackgroundGeneration);
         Assert.Equal(5_000_000, setting.ToolMaxTotalTokens);
+        Assert.Equal(SupportPosition.None, setting.SupportPosition);
         //Assert.NotEmpty(setting.SuggestedQuestions);
     }
 
@@ -44,10 +45,12 @@ public class ChatAITests
         setting.ShareExpireMinutes = 0;
         setting.DefaultModel = 3;
         setting.GatewayRateLimit = 100;
+        setting.SupportPosition = SupportPosition.FloatingButton;
 
         Assert.Equal(0, setting.ShareExpireMinutes);
         Assert.Equal(3, setting.DefaultModel);
         Assert.Equal(100, setting.GatewayRateLimit);
+        Assert.Equal(SupportPosition.FloatingButton, setting.SupportPosition);
     }
 
     [Fact]
@@ -511,6 +514,15 @@ public class ChatAITests
         Assert.Equal(0, (Int32)ThinkingMode.Auto);
         Assert.Equal(1, (Int32)ThinkingMode.Think);
         Assert.Equal(2, (Int32)ThinkingMode.Fast);
+    }
+
+    [Fact]
+    public void SupportPositionEnumHasExpectedValues()
+    {
+        Assert.Equal(0, (Int32)SupportPosition.None);
+        Assert.Equal(1, (Int32)SupportPosition.SidebarBottom);
+        Assert.Equal(2, (Int32)SupportPosition.BelowNewChat);
+        Assert.Equal(3, (Int32)SupportPosition.FloatingButton);
     }
 
     [Fact]

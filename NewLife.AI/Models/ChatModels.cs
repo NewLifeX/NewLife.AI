@@ -96,6 +96,26 @@ public enum ResponseStyle
     Creative = 3,
 }
 
+/// <summary>客服入口位置。控制客服文本/链接在页面中的展示位置，None=不展示</summary>
+public enum SupportPosition
+{
+    /// <summary>不显示。客服入口不展示</summary>
+    [Description("不显示")]
+    None = 0,
+
+    /// <summary>侧边栏底部。显示在侧边栏底部</summary>
+    [Description("侧边栏底部")]
+    SidebarBottom = 1,
+
+    /// <summary>新对话按钮下方。显示在新对话按钮下方</summary>
+    [Description("新对话按钮下方")]
+    BelowNewChat = 2,
+
+    /// <summary>右下角悬浮球。显示为右下角悬浮球</summary>
+    [Description("右下角悬浮球")]
+    FloatingButton = 3,
+}
+
 /// <summary>计费模式。控制 ModelConfig 上价格字段的解释方式</summary>
 public enum PricingMode
 {

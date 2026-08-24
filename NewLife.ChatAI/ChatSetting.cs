@@ -50,10 +50,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("客服链接。点击客服文本跳转的 URL，支持 https://、mailto: 等")]
     public String SupportUrl { get; set; } = "";
 
-    /// <summary>客服入口位置。1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）</summary>
+    /// <summary>客服入口位置。None=不显示，SidebarBottom=侧边栏底部，BelowNewChat=新对话按钮下方，FloatingButton=右下角悬浮球</summary>
     [Category("外观与品牌")]
-    [Description("客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=右下角悬浮球（默认）")]
-    public Int32 SupportPosition { get; set; } = 0;
+    [Description("客服入口位置。不显示/侧边栏底部/新对话按钮下方/右下角悬浮球")]
+    public SupportPosition SupportPosition { get; set; } = SupportPosition.None;
 
     /// <summary>错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加</summary>
     [Category("外观与品牌")]

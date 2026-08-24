@@ -35,7 +35,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             AutoGenerateTitle = chatSetting.AutoGenerateTitle,
             // 对话默认
             DefaultModel = chatSetting.DefaultModel,
-            DefaultThinkingMode = (Int32)chatSetting.DefaultThinkingMode,
+            DefaultThinkingMode = chatSetting.DefaultThinkingMode,
             DefaultContextRounds = chatSetting.DefaultContextRounds,
             // 上传与分享
             MaxAttachmentSize = chatSetting.MaxAttachmentSize,
@@ -92,7 +92,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.AutoGenerateTitle.HasValue) chatSetting.AutoGenerateTitle = dto.AutoGenerateTitle.Value;
         // 对话默认
         if (dto.DefaultModel.HasValue) chatSetting.DefaultModel = dto.DefaultModel.Value;
-        if (dto.DefaultThinkingMode.HasValue) chatSetting.DefaultThinkingMode = (ThinkingMode)dto.DefaultThinkingMode.Value;
+        if (dto.DefaultThinkingMode.HasValue) chatSetting.DefaultThinkingMode = dto.DefaultThinkingMode.Value;
         if (dto.DefaultContextRounds.HasValue) chatSetting.DefaultContextRounds = dto.DefaultContextRounds.Value;
         // 上传与分享
         if (dto.MaxAttachmentSize.HasValue) chatSetting.MaxAttachmentSize = dto.MaxAttachmentSize.Value;

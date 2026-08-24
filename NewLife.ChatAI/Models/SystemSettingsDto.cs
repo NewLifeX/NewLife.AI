@@ -1,4 +1,4 @@
-namespace NewLife.ChatAI.Models;
+﻿namespace NewLife.ChatAI.Models;
 
 /// <summary>系统设置 DTO（读取）。包含 ChatSetting 开源版可配置项，供前端系统设置页展示和编辑</summary>
 public class SystemSettingsDto
@@ -28,8 +28,8 @@ public class SystemSettingsDto
     /// <summary>客服链接。点击客服文本跳转的 URL</summary>
     public String SupportUrl { get; set; } = "";
 
-    /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
-    public Int32 SupportPosition { get; set; }
+    /// <summary>客服入口位置。不显示/侧边栏底部/新对话按钮下方/右下角悬浮球</summary>
+    public SupportPosition SupportPosition { get; set; }
 
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     public Boolean AutoGenerateTitle { get; set; }
@@ -40,7 +40,7 @@ public class SystemSettingsDto
     public Int32 DefaultModel { get; set; }
 
     /// <summary>默认思考模式</summary>
-    public Int32 DefaultThinkingMode { get; set; }
+    public ThinkingMode DefaultThinkingMode { get; set; }
 
     /// <summary>上下文轮数。默认10</summary>
     public Int32 DefaultContextRounds { get; set; }
@@ -157,8 +157,8 @@ public class SystemSettingsUpdateDto
     /// <summary>客服链接</summary>
     public String? SupportUrl { get; set; }
 
-    /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
-    public Int32? SupportPosition { get; set; }
+    /// <summary>客服入口位置。不显示/侧边栏底部/新对话按钮下方/右下角悬浮球</summary>
+    public SupportPosition? SupportPosition { get; set; }
 
     /// <summary>自动生成标题</summary>
     public Boolean? AutoGenerateTitle { get; set; }
@@ -169,7 +169,7 @@ public class SystemSettingsUpdateDto
     public Int32? DefaultModel { get; set; }
 
     /// <summary>默认思考模式</summary>
-    public Int32? DefaultThinkingMode { get; set; }
+    public ThinkingMode? DefaultThinkingMode { get; set; }
 
     /// <summary>上下文轮数</summary>
     public Int32? DefaultContextRounds { get; set; }

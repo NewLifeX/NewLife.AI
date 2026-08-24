@@ -1,4 +1,6 @@
-﻿namespace NewLife.ChatAI.Models;
+﻿using NewLife.AI.Models;
+
+namespace NewLife.ChatAI.Models;
 
 /// <summary>模型信息</summary>
 public record ModelInfoDto(Int32 Id, String Code, String Name, Boolean SupportThinking, Boolean SupportFunction, Boolean SupportVision, Boolean SupportAudio, Boolean SupportImage, Boolean SupportVideo, Boolean SupportSpeech = false, Boolean SupportEmbedding = false, Int32 ContextLength = 0, String? ReasoningEfforts = null, String Provider = "");
@@ -187,8 +189,8 @@ public class SystemConfigDto
     /// <summary>客服链接。点击客服文本跳转的 URL</summary>
     public String? SupportUrl { get; set; }
 
-    /// <summary>客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球</summary>
-    public Int32 SupportPosition { get; set; }
+    /// <summary>客服入口位置。不显示/侧边栏底部/新对话按钮下方/右下角悬浮球</summary>
+    public SupportPosition SupportPosition { get; set; }
 
     /// <summary>错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加</summary>
     public String? ErrorGuidance { get; set; }
