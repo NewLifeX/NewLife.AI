@@ -115,7 +115,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (maxIterations <= 0) maxIterations = 10;
         var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
         // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
-        var toolsTokens = EstimateTokens(mergedTools);
+        var toolsTokens = TokenEstimator.EstimateTokens(mergedTools);
 
         IChatResponse response = null!;
         var iterations = 0;
@@ -141,7 +141,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (response.Usage != null)
                 accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
             else
-                _fallbackEstimatedTokens += EstimateTokens(workMessages);
+                _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
 
             // Token 总限额检查（优先使用 API 返回值，回退字符估算）
             if (CheckTotalTokenLimit(maxTotalTokens, accumulatedUsage)) break;
@@ -239,7 +239,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (response.Usage != null)
                 accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
             else
-                _fallbackEstimatedTokens += EstimateTokens(workMessages);
+                _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
         }
 
         // 将所有轮次的 Token 用量累加值写回最终 response，供上层（如 InvokeLlmDirectAsync）使用
@@ -279,7 +279,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (maxIterations <= 0) maxIterations = 10;
         var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
         // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
-        var toolsTokens = EstimateTokens(mergedTools);
+        var toolsTokens = TokenEstimator.EstimateTokens(mergedTools);
 
         UsageDetails? accumulatedUsage = null;
 
@@ -388,7 +388,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
             else
             {
-                _fallbackEstimatedTokens += EstimateTokens(workMessages);
+                _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
             }
 
             // Token 总限额检查（优先使用 API 返回值，回退字符估算）
@@ -688,7 +688,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <remarks>
     /// 预算由请求级 <c>MaxInputTokens</c> 传入（MessageFlow 按模型 ContextLength×0.85 注入，未配置时 128K 硬编码兜底）；
     /// 未设置预算（库直接使用者）时自动禁用，不影响既有行为。估算含工具 schema（同样占用上下文窗口）。
-    /// 超预算时优先调用 <see cref="ContextBudgetHelper.TryTruncateToBudget"/> 截断消息内容（只截不删，保持 assistant-tool 配对完整），
+    /// 超预算时优先调用 <see cref="TokenEstimator.TryTruncateToBudget"/> 截断消息内容（只截不删，保持 assistant-tool 配对完整），
     /// 使对话得以继续；全部截到最短仍超预算才中断循环。
     /// </remarks>
     /// <param name="workMessages">当前待发送的消息列表（含已累积的工具结果）</param>
@@ -700,11 +700,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         var maxInput = request?["MaxInputTokens"]?.ToInt() ?? 0;
         if (maxInput <= 0) return false;
 
-        var estimated = ContextBudgetHelper.EstimateTokens(workMessages) + toolsTokens;
+        var estimated = TokenEstimator.EstimateTokens(workMessages) + toolsTokens;
         if (estimated < maxInput) return false;
 
         // 超预算：先尝试截断消息内容（只截不删，保持 assistant-tool 配对完整），截到预算内则继续循环
-        if (ContextBudgetHelper.TryTruncateToBudget(workMessages, maxInput - toolsTokens))
+        if (TokenEstimator.TryTruncateToBudget(workMessages, maxInput - toolsTokens))
         {
             Log.Warn("上下文窗口预算已接近 {0:N0}（估算 {1:N0}），已截断工具结果内容，继续工具调用循环", maxInput, estimated);
             return false;
@@ -728,87 +728,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
             Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
         };
-
-    /// <summary>估算消息列表的 Token 数（粗略：中文按1字/token，英文按4字符/token）。API 不返回 Usage 时作为回退判定依据</summary>
-    /// <param name="messages">消息列表</param>
-    /// <returns>Token 估算值</returns>
-    private static Int32 EstimateTokens(IList<ChatMessage> messages)
-    {
-        if (messages == null || messages.Count == 0) return 0;
-
-        var total = 0;
-        foreach (var msg in messages)
-        {
-            total += 1; // role
-            if (msg.Content is String text)
-                total += EstimateTokens(text);
-            if (msg.ToolCalls != null)
-            {
-                foreach (var tc in msg.ToolCalls)
-                {
-                    total += EstimateTokens(tc.Function?.Name);
-                    total += EstimateTokens(tc.Function?.Arguments);
-                }
-            }
-            if (!msg.ToolCallId.IsNullOrEmpty())
-                total += 2;
-
-            // 多模态二进制内容（图片/音频/文档）：视觉模型按图计 token，粗略按 base64 字符数/4 估算，
-            // 避免 Contents 完全不计入导致窗口守卫对多模态请求失明
-            if (msg.Contents != null)
-            {
-                foreach (var c in msg.Contents)
-                {
-                    if (c is ImageContent img && img.Data != null)
-                        total += img.Data.Length * 4 / 3 / 4;
-                    else if (c is AudioContent au && au.Data != null)
-                        total += au.Data.Length * 4 / 3 / 4;
-                    else if (c is DataContent dc)
-                        total += dc.Data.Length * 4 / 3 / 4;
-                }
-            }
-        }
-        return total;
-    }
-
-    /// <summary>估算工具定义（schema）的 Token 数。工具参数 JSON、名称与描述均占用上下文窗口</summary>
-    /// <param name="tools">工具定义列表</param>
-    /// <returns>Token 估算值</returns>
-    private static Int32 EstimateTokens(List<ChatTool> tools)
-    {
-        if (tools == null || tools.Count == 0) return 0;
-
-        var total = 0;
-        foreach (var t in tools)
-        {
-            total += 10; // 固定开销（type/name/description 等字段）
-            total += EstimateTokens(t.Function?.Name);
-            total += EstimateTokens(t.Function?.Description);
-            total += EstimateTokens(t.Function?.Parameters?.ToJson());
-        }
-        return total;
-    }
-
-    /// <summary>估算单段文本的 Token 数</summary>
-    /// <param name="text">文本内容</param>
-    /// <returns>Token 估算值</returns>
-    private static Int32 EstimateTokens(String? text)
-    {
-        if (text.IsNullOrEmpty()) return 0;
-
-        var chineseCount = 0;
-        var otherCount = 0;
-        foreach (var ch in text)
-        {
-            if (ch >= 0x4E00 && ch <= 0x9FFF)
-                chineseCount++;
-            else
-                otherCount++;
-        }
-
-        // 保守估算：中文按 1 字/token（qwen/gpt 等主流分词器约 1 字/token），宁可多估不冒险
-        return (Int32)(chineseCount / 1.0 + otherCount / 4.0);
-    }
 
     /// <summary>按工具名路由到对应 Provider 执行工具调用。未找到则抛 <see cref="InvalidOperationException"/></summary>
     /// <param name="toolName">工具名称</param>
