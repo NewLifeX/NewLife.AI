@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.ChatAI.Controllers;
@@ -155,6 +156,44 @@ public class ChatAITests
         Assert.Equal("error", ev.Type);
         Assert.Equal("CONTEXT_TOO_LONG", ev.Code);
         Assert.Equal("上下文超出模型限制", ev.Message);
+    }
+
+    [Fact]
+    public void ChatStreamEventErrorWithExceptionKeepsContract()
+    {
+        var ex = new InvalidOperationException("测试异常");
+        var ev = ChatStreamEvent.ErrorEvent("STREAM_ERROR", "测试消息", ex);
+
+        Assert.Equal("error", ev.Type);
+        Assert.Equal("STREAM_ERROR", ev.Code);
+        Assert.Equal("测试消息", ev.Message);
+    }
+
+    [Fact]
+    public void ChatStreamEventErrorWithExceptionMarksSpanError()
+    {
+        // DefaultTracer.Instance 可注入时验证：ErrorEvent 带异常会把 ai:StreamError 标记为错误埋点并保存异常样本
+        var prop = typeof(DefaultTracer).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)!;
+        if (!prop.CanWrite) return;
+
+        var tracer = new DefaultTracer();
+        var old = prop.GetValue(null);
+        try
+        {
+            prop.SetValue(null, tracer);
+
+            var ex = new InvalidOperationException("测试异常栈信息");
+            ChatStreamEvent.ErrorEvent("TEST_CODE", "测试消息", ex);
+
+            var builders = tracer.TakeAll();
+            var span = Assert.Single(builders, b => b.Name == "ai:StreamError");
+            Assert.True(span.Errors > 0);
+            Assert.NotEmpty(span.ErrorSamples);
+        }
+        finally
+        {
+            prop.SetValue(null, old);
+        }
     }
 
     [Fact]

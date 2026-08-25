@@ -134,7 +134,7 @@ public class AiChatService(IChatClient client, ChatSessionService? sessions = nu
                     hasError = true;
                     WriteLog("AI 对话失败", ex.ToString());
                     var info = ChatErrorHelper.Classify(ex.Message);
-                    errorEvent = ChatStreamEvent.ErrorEvent(info.Code, info.Message);
+                    errorEvent = ChatStreamEvent.ErrorEvent(info.Code, info.Message, ex);
                     moved = false;
                 }
                 if (errorEvent != null) { yield return errorEvent; break; }

@@ -98,9 +98,21 @@ public class ChatStreamEvent
     /// <param name="code">错误码</param>
     /// <param name="message">错误描述</param>
     /// <returns></returns>
-    public static ChatStreamEvent ErrorEvent(String code, String message)
+    public static ChatStreamEvent ErrorEvent(String code, String message) => ErrorEvent(code, message, null);
+
+    /// <summary>错误事件。带异常时在 ai:StreamError 埋点上标记错误并保存异常栈，便于星尘监控定位根因</summary>
+    /// <param name="code">错误码</param>
+    /// <param name="message">错误描述</param>
+    /// <param name="ex">异常。可为 null，仅记录消息文本</param>
+    /// <returns></returns>
+    public static ChatStreamEvent ErrorEvent(String code, String message, Exception? ex)
     {
         using var span = DefaultTracer.Instance?.NewSpan("ai:StreamError", $"[{code}]{message}");
+
+        // 关键：标记为错误埋点。此前从不 SetError，导致星尘控制台显示"正常"且不保存异常栈，
+        // 生产环境的 Learning NRE / FormatException 解析失败等错误出现一两个月都无法定位根因
+        if (span != null && ex != null)
+            span.SetError(ex);
 
         return new() { Type = "error", Code = code, Message = message };
     }

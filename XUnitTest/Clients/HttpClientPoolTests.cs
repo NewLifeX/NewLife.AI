@@ -2,6 +2,7 @@
 using System;
 using System.ComponentModel;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
@@ -132,6 +133,41 @@ public class HttpClientPoolTests : IDisposable
         var resp = await client.GetAsync($"{TestHost}/test");
 
         Assert.Equal("OK", await resp.Content.ReadAsStringAsync());
+    }
+
+    /// <summary>在途请求未归零时 CleanExpired 不释放 handler（长流 SSE 防 disposed 修复）。
+    /// 轮换后旧 handler 进入待释放队列，若在途（SSE 长流）未归零则重新入队延迟释放，杜绝
+    /// "Cannot access a disposed object. Object name: 'System.Net.Http.SocketsHttpHandler'"</summary>
+    [Fact]
+    [DisplayName("在途请求未归零时 CleanExpired 不释放 handler")]
+    public void CleanExpiredSkipsInFlightHandler()
+    {
+        HttpClientPool.HandlerLifetime = TimeSpan.FromMilliseconds(50);
+        var h1 = HttpClientPool.GetHandler(TestHost);
+        Thread.Sleep(150);
+        var h2 = HttpClientPool.GetHandler(TestHost);   // 超过生命周期触发轮换，h1 进入待释放队列
+        Assert.NotSame(h1, h2);
+
+        // 反射读取 h1 的 InFlight 计数，模拟长流（SSE）在途
+        var inFlight = h1.GetType().GetField("InFlight", BindingFlags.Instance | BindingFlags.Public);
+        Assert.NotNull(inFlight);
+        inFlight.SetValue(h1, 1);
+
+        // 反射触发 CleanExpired
+        var clean = typeof(HttpClientPool).GetMethod("CleanExpired", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(clean);
+        clean.Invoke(null, null);
+
+        // h1 因在途未归零应重新入队保留，未被释放
+        var expiredField = typeof(HttpClientPool).GetField("_expired", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(expiredField);
+        var expired = (System.Collections.Concurrent.ConcurrentQueue<HttpMessageHandler>)expiredField.GetValue(null)!;
+        Assert.Contains(h1, expired.ToArray());
+
+        // 在途归零后再次清理，h1 应被释放出队
+        inFlight.SetValue(h1, 0);
+        clean.Invoke(null, null);
+        Assert.DoesNotContain(h1, expired.ToArray());
     }
 
     /// <summary>桩 Handler。返回固定响应，验证池化 handler 的 HttpClient 可用性</summary>

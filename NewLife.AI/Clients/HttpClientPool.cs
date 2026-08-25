@@ -101,26 +101,66 @@ public static class HttpClientPool
         }
     }
 
-    /// <summary>释放待释放队列中的过期 handler，并停用定时器</summary>
+    /// <summary>释放待释放队列中的过期 handler，并停用定时器。在途请求未归零的 handler 重新入队延迟释放</summary>
     private static void CleanExpired()
     {
+        var requeue = false;
         while (_expired.TryDequeue(out var handler))
         {
+            // 关键修复：长流（SSE 可数分钟）期间在途请求不为 0，此时释放底层 handler 会抛
+            // "Cannot access a disposed object. Object name: 'System.Net.Http.SocketsHttpHandler'"
+            // 在途未归零则重新入队等待，下轮定时器再释放
+            if (handler is CountingHandler ch && ch.InFlight > 0)
+            {
+                _expired.Enqueue(handler);
+                requeue = true;
+                break;
+            }
+
             try { handler.Dispose(); } catch { }
         }
 
         lock (_sync)
         {
-            _cleanTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            // 仍有在途请求的过期 handler：重新调度延迟释放；否则停用定时器
+            if (requeue)
+                _cleanTimer?.Change(_disposeDelay, Timeout.InfiniteTimeSpan);
+            else
+                _cleanTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         }
     }
 
-    /// <summary>创建默认 HttpMessageHandler（自动 GZip/Deflate 解压）</summary>
+    /// <summary>创建默认 HttpMessageHandler（自动 GZip/Deflate 解压），外包计数处理器跟踪在途请求</summary>
     /// <returns>新的 HttpMessageHandler 实例</returns>
-    private static HttpMessageHandler CreateHandler() => new HttpClientHandler
+    private static HttpMessageHandler CreateHandler() => new CountingHandler(new HttpClientHandler
     {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-    };
+    });
+
+    /// <summary>计数处理器。包装内部 handler 并跟踪在途请求数，供池释放前判断是否安全</summary>
+    /// <param name="innerHandler">内部 handler</param>
+    private sealed class CountingHandler(HttpMessageHandler innerHandler) : DelegatingHandler(innerHandler)
+    {
+        /// <summary>在途请求数</summary>
+        public Int32 InFlight;
+
+        /// <summary>发送请求。在途计数加一，请求完成后减一</summary>
+        /// <param name="request">HTTP 请求</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>响应消息</returns>
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref InFlight);
+            try
+            {
+                return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref InFlight);
+            }
+        }
+    }
 
     /// <summary>规范化 Endpoint 为池键。提取 scheme://host:port 忽略路径（同主机不同路径共享连接池）；无法解析时返回原始字符串</summary>
     /// <param name="endpoint">API 地址</param>

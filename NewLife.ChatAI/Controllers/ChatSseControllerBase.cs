@@ -142,9 +142,9 @@ public abstract class ChatSseControllerBase : ChatApiControllerBase
     private static ChatStreamEvent? MapError(Exception ex, String errorCode)
     {
         if (ex is OperationCanceledException)
-            return ChatStreamEvent.ErrorEvent(errorCode, "生成超时，请重试");
+            return ChatStreamEvent.ErrorEvent(errorCode, "生成超时，请重试", ex);
 
-        return ChatStreamEvent.ErrorEvent(errorCode, ex.Message);
+        return ChatStreamEvent.ErrorEvent(errorCode, ex.Message, ex);
     }
 
     /// <summary>异常时推送错误事件。客户端已断开时静默</summary>

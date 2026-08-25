@@ -760,6 +760,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 1. OnBefore 按 BeforeOrder 升序执行
         var beforeFailed = false;
         var beforeErrorMsg = (String?)null;
+        Exception? beforeErrorEx = null;
         foreach (var handler in Chain.BeforeHandlers)
         {
             var name = handler.GetType().Name.TrimSuffix("Handler");
@@ -775,6 +776,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 context.HasError = true;
                 beforeFailed = true;
                 beforeErrorMsg = $"处理器 {name} 执行失败: {ex.Message}";
+                beforeErrorEx = ex;
                 // 跳过后续 OnBefore 和 LLM 核心阶段，直接进入 OnAfter
                 context.FlowControl = ChatFlowControl.Cancel;
                 break;
@@ -787,7 +789,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // OnBefore 阶段有 Handler 失败时，推送错误事件
         if (beforeFailed)
         {
-            yield return ChatStreamEvent.ErrorEvent("HANDLER_ERROR", beforeErrorMsg!);
+            yield return ChatStreamEvent.ErrorEvent("HANDLER_ERROR", beforeErrorMsg!, beforeErrorEx);
         }
 
         // 所有 OnBefore 完成后，将 SystemSegments 结果统一写入 system 消息
