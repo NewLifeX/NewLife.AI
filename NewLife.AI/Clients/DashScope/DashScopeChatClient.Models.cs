@@ -25,18 +25,24 @@ namespace NewLife.AI.Clients.DashScope;
 // Qwen3-TTS 主力：非实时 HTTP 合成 + WebSocket 实时合成
 [AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
 [AiClientModel("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-// ===== 主力对话模型（2026-Q2 qwen3.6 系列）=====
-// -max：纯文本旗舰，不支持视觉；-plus/-flash：支持文本+视觉
+// ===== 主力对话模型（2026-Q3 qwen3.8/3.7 系列）=====
+// -max：qwen3.8 起为多模态旗舰（文本+图像+视频理解），qwen3.7-max 为纯文本旗舰；-plus/-flash：支持文本+视觉
+[AiClientModel("qwen3.8-max", "Qwen3.8 Max", Thinking = true, Vision = true, InputPrice = 12, OutputPrice = 36, CachedInputPrice = 1.5, CacheCreationPrice = 15)]
 [AiClientModel("qwen3.7-max", "Qwen3.7 Max", Thinking = true, InputPrice = 12, OutputPrice = 36, CachedInputPrice = 2.4, CacheCreationPrice = 15)]
 [AiClientModel("qwen3.7-plus", "Qwen3.7 Plus", Thinking = true, Vision = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.4, CacheCreationPrice = 2.5)]
+[AiClientModel("qwen3.7-flash", "Qwen3.7 Flash", Thinking = true, Vision = true, InputPrice = 0.2, OutputPrice = 0.8, CachedInputPrice = 0.04, CacheCreationPrice = 0.25)]
 [AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true, InputPrice = 2, OutputPrice = 12, CachedInputPrice = 0.2)]
 [AiClientModel("qwen3.6-plus", "Qwen3.6 Plus", Thinking = true, Vision = true, InputPrice = 1.4, OutputPrice = 5.6, CachedInputPrice = 0.14)]
 [AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true, Vision = true, InputPrice = 0.7, OutputPrice = 2.8, CachedInputPrice = 0.07)]
-[AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Thinking = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2, CacheCreationPrice = 2)]
-[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Thinking = true, InputPrice = 0.5, OutputPrice = 2, CachedInputPrice = 0.05, CacheCreationPrice = 0.5)]
+[AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Thinking = true, InputPrice = 12, OutputPrice = 24, CachedInputPrice = 1)]
+[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Thinking = true, InputPrice = 1, OutputPrice = 2, CachedInputPrice = 0.2)]
 [AiClientModel("glm-5.1", "GLM 5.1", Thinking = true, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
+[AiClientModel("glm-5.2", "GLM 5.2", Thinking = true, InputPrice = 8, OutputPrice = 28, CachedInputPrice = 2)]
 [AiClientModel("kimi-k2.6", "Kimi K2.6", Thinking = true, InputPrice = 1, OutputPrice = 4, CachedInputPrice = 0.1)]
+[AiClientModel("kimi-k3", "Kimi K3", Thinking = true, Vision = true, InputPrice = 20, OutputPrice = 100, CachedInputPrice = 2)]
 [AiClientModel("MiniMax-M2.5", "MiniMax M2.5", Thinking = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2)]
+[AiClientModel("MiniMax/MiniMax-M3", "MiniMax M3", Thinking = true, Vision = true, InputPrice = 4.2, OutputPrice = 16.8, CachedInputPrice = 0.84)]
+[AiClientModel("xiaomi/mimo-v2.5-pro", "MiMo V2.5 Pro", FunctionCalling = true, InputPrice = 7, OutputPrice = 21, CachedInputPrice = 1.4)]
 // ===== 嵌入与重排序模型 =====
 [AiClientModel("text-embedding-v4", "Text Embedding V4", Embedding = true, FunctionCalling = false, InputPrice = 0.5)]
 [AiClientModel("qwen3-vl-embedding", "Qwen3 VL Embedding", Vision = true, Embedding = true, FunctionCalling = false, InputPrice = 0.5)]

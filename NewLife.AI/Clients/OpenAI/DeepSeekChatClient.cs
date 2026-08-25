@@ -18,6 +18,7 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
 [AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Code = "DeepSeek", FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 9, OutputPrice = 27, CachedInputPrice = 0.3)]
 [AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Code = "DeepSeek", Thinking = true, FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 3, OutputPrice = 9, CachedInputPrice = 0.1)]
+[AiClientModel("deepseek-v4-flash-vision-exp", "DeepSeek V4 Flash Vision", Code = "DeepSeek", Thinking = true, Vision = true, FunctionCalling = true, InputPrice = 3, OutputPrice = 9, CachedInputPrice = 0.1)]
 public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
 {
     #region 属性

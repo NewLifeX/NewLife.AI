@@ -48,7 +48,7 @@ public class ModelFamilyTests
     #region 版本通配（新版本自动覆盖）
     [Theory]
     [DisplayName("Qwen3新版本_通配自动覆盖_能力正确")]
-    [InlineData("qwen3.8-max", true, false)]
+    [InlineData("qwen3.8-max", true, true)]
     [InlineData("qwen3.8-plus", true, true)]
     [InlineData("qwen3.8-flash", true, true)]
     [InlineData("qwen3.8-turbo", true, true)]
@@ -71,20 +71,27 @@ public class ModelFamilyTests
     [DisplayName("Qwen3新版本_上下文与价格_自动覆盖")]
     public void Qwen3NewVersion_ContextAndPricing()
     {
-        // qwen3.8 未在硬编码列表中，应自动按 qwen3* 系列推断上下文 131K
+        // qwen3.8 系列为 1M 上下文（官方 2026-Q3），自动按 qwen3.8* 规则推断
         var caps = ModelFamilyRegistry.Match("qwen3.8-plus");
         Assert.NotNull(caps);
-        Assert.Equal(131_072, caps!.ContextLength);
+        Assert.Equal(1_048_576, caps!.ContextLength);
         Assert.NotNull(caps.Pricing);
         Assert.Equal(0.7m, caps.Pricing!.InputPrice);
+
+        // qwen3.8-max 专属价格：12/36/2.4/15
+        var max = ModelFamilyRegistry.Match("qwen3.8-max");
+        Assert.NotNull(max);
+        Assert.Equal(1_048_576, max!.ContextLength);
+        Assert.Equal(12m, max.Pricing!.InputPrice);
+        Assert.Equal(36m, max.Pricing!.OutputPrice);
     }
 
     [Fact]
     [DisplayName("Qwen3.7系列_上下文1M_家族规则覆盖")]
     public void Qwen37_ContextLength_1M()
     {
-        // qwen3.7-max/plus/flash 均命中 qwen3.7* → 上下文 1M（与元数据表 dashscope.json 的 Context=1048576 一致）
-        foreach (var modelId in new[] { "qwen3.7-max", "qwen3.7-plus", "qwen3.7-flash" })
+        // qwen3.8/3.7-max/plus/flash 均命中对应规则 → 上下文 1M（与官方 1M 上下文一致）
+        foreach (var modelId in new[] { "qwen3.8-max", "qwen3.8-plus", "qwen3.7-max", "qwen3.7-plus", "qwen3.7-flash" })
         {
             var caps = ModelFamilyRegistry.Match(modelId);
             Assert.NotNull(caps);
@@ -136,7 +143,7 @@ public class ModelFamilyTests
     #region DashScope 委托基类
     [Theory]
     [DisplayName("DashScope_委托基类_家族模型能力正确")]
-    [InlineData("qwen3.8-max", true, false, true)]
+    [InlineData("qwen3.8-max", true, true, true)]
     [InlineData("qwen3.8-plus", true, true, true)]
     [InlineData("deepseek-v4-pro", true, false, true)]
     [InlineData("qwen-omni-turbo", false, true, false)]

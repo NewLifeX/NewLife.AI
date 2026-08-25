@@ -12,6 +12,10 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <remarks>用连接选项初始化 OpenAI 客户端</remarks>
 // ── OpenAI 原生 ──────────────────────────────────────────────────────────────────────
 [AiClient("OpenAI", "OpenAI", "https://api.openai.com", Description = "OpenAI GPT 系列模型", Order = 1)]
+[AiClientModel("gpt-5.6", "GPT-5.6", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 27.6, OutputPrice = 138, CachedInputPrice = 2.76, CacheCreationPrice = 34.5)]
+[AiClientModel("gpt-5.5", "GPT-5.5", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 34.5, OutputPrice = 207, CachedInputPrice = 3.45)]
+[AiClientModel("gpt-5.4", "GPT-5.4", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 17.25, OutputPrice = 103.5, CachedInputPrice = 1.725)]
+[AiClientModel("gpt-5.4-mini", "GPT-5.4 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 5.175, OutputPrice = 31.05, CachedInputPrice = 0.518)]
 [AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 13.8, OutputPrice = 55.2, CachedInputPrice = 3.45)]
 [AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 17.25, OutputPrice = 69, CachedInputPrice = 8.625)]
 [AiClientModel("gpt-4o-mini", "GPT-4o Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 1.035, OutputPrice = 4.14, CachedInputPrice = 0.518)]

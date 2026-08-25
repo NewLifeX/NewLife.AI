@@ -60,6 +60,8 @@ public static class ModelFamilies
             R("qwen3.*-flash*", vision: true),
             R("qwen3.*-turbo*", vision: true),
             R("qwen3.*-max*", vision: false),
+            // qwen3.8-max 为多模态旗舰（文本+图像+视频理解），覆盖 -max 纯文本规律
+            R("qwen3.8-max*", vision: true),
 
             // === Omni 全模态（覆盖 qwen3* 思考规则，晚于思考段） ===
             R("qwen3.5-omni*", thinking: false, func: false, vision: true, audio: true, speech: true, context: 131_072),
@@ -69,6 +71,7 @@ public static class ModelFamilies
             // === 上下文长度（兜底在前、具体规则在后覆盖；qwen3* 兜底曾排在 3.7/3.6 之后，导致 1M 被 131K 覆盖） ===
             R("qwen-long*", context: 1_000_000),
             R("qwen3*", context: 131_072),
+            R("qwen3.8*", context: 1_048_576),
             R("qwen3.7*", context: 1_048_576),
             R("qwen3.6*", context: 1_048_576),
             R("qwen3.6-max-preview*", context: 262_144),
@@ -80,8 +83,10 @@ public static class ModelFamilies
             R("qwen-vl-plus*", pricing: Price(1.5m, 9m, 0.15m)),
             R("qwen3.5-omni*|qwen3-omni*", pricing: Price(3.5m, 14m, 0.35m)),
             R("qwen*-omni*", pricing: Price(2m, 8m, 0.2m)),
+            R("qwen3.8-max*", pricing: Price(12m, 36m, 1.5m, 15m)),
             R("qwen3.7-max*", pricing: Price(12m, 36m, 2.4m, 15m)),
             R("qwen3.7-plus*", pricing: Price(2m, 8m, 0.4m, 2.5m)),
+            R("qwen3.7-flash*", pricing: Price(0.2m, 0.8m, 0.04m, 0.25m)),
             R("qwen3.6-max*", pricing: Price(2m, 12m, 0.2m)),
             R("qwen3.6-plus*", pricing: Price(1.4m, 5.6m, 0.14m)),
             R("qwen3.6-flash*", pricing: Price(0.7m, 2.8m, 0.07m)),
