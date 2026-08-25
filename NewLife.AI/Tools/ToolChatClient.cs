@@ -684,28 +684,35 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         return false;
     }
 
-    /// <summary>上下文窗口预算检查。工具结果逐轮累积进消息列表，超限时置中断标记并记录日志</summary>
+    /// <summary>上下文窗口预算检查。工具结果逐轮累积进消息列表，超限时先截断内容、仍超才中断循环</summary>
     /// <remarks>
-    /// 预算由请求级 <c>MaxInputTokens</c> 传入（MessageFlow 按模型 ContextLength×0.85 注入）；
+    /// 预算由请求级 <c>MaxInputTokens</c> 传入（MessageFlow 按模型 ContextLength×0.85 注入，未配置时 128K 硬编码兜底）；
     /// 未设置预算（库直接使用者）时自动禁用，不影响既有行为。估算含工具 schema（同样占用上下文窗口）。
+    /// 超预算时优先调用 <see cref="ContextBudgetHelper.TryTruncateToBudget"/> 截断消息内容（只截不删，保持 assistant-tool 配对完整），
+    /// 使对话得以继续；全部截到最短仍超预算才中断循环。
     /// </remarks>
     /// <param name="workMessages">当前待发送的消息列表（含已累积的工具结果）</param>
     /// <param name="toolsTokens">工具 schema 的 Token 估算（循环外一次计算，工具列表不变）</param>
     /// <param name="request">原始请求，读取请求级预算</param>
-    /// <returns>超限返回 true，调用方应中断循环</returns>
+    /// <returns>超限且无法截断时返回 true，调用方应中断循环</returns>
     private Boolean CheckContextLimit(List<ChatMessage> workMessages, Int32 toolsTokens, IChatRequest? request)
     {
         var maxInput = request?["MaxInputTokens"]?.ToInt() ?? 0;
         if (maxInput <= 0) return false;
 
-        var estimated = EstimateTokens(workMessages) + toolsTokens;
-        if (estimated >= maxInput)
+        var estimated = ContextBudgetHelper.EstimateTokens(workMessages) + toolsTokens;
+        if (estimated < maxInput) return false;
+
+        // 超预算：先尝试截断消息内容（只截不删，保持 assistant-tool 配对完整），截到预算内则继续循环
+        if (ContextBudgetHelper.TryTruncateToBudget(workMessages, maxInput - toolsTokens))
         {
-            IsContextLimitExceeded = true;
-            Log.Warn("上下文窗口预算已达到 {0:N0}（当前估算 {1:N0}），中断工具调用循环", maxInput, estimated);
-            return true;
+            Log.Warn("上下文窗口预算已接近 {0:N0}（估算 {1:N0}），已截断工具结果内容，继续工具调用循环", maxInput, estimated);
+            return false;
         }
-        return false;
+
+        IsContextLimitExceeded = true;
+        Log.Warn("上下文窗口预算已达到 {0:N0}（当前估算 {1:N0}），且无法进一步截断，中断工具调用循环", maxInput, estimated);
+        return true;
     }
 
     /// <summary>构建 assistant 消息（含工具调用）。透传思考内容与协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需</summary>
@@ -745,6 +752,21 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
             if (!msg.ToolCallId.IsNullOrEmpty())
                 total += 2;
+
+            // 多模态二进制内容（图片/音频/文档）：视觉模型按图计 token，粗略按 base64 字符数/4 估算，
+            // 避免 Contents 完全不计入导致窗口守卫对多模态请求失明
+            if (msg.Contents != null)
+            {
+                foreach (var c in msg.Contents)
+                {
+                    if (c is ImageContent img && img.Data != null)
+                        total += img.Data.Length * 4 / 3 / 4;
+                    else if (c is AudioContent au && au.Data != null)
+                        total += au.Data.Length * 4 / 3 / 4;
+                    else if (c is DataContent dc)
+                        total += dc.Data.Length * 4 / 3 / 4;
+                }
+            }
         }
         return total;
     }

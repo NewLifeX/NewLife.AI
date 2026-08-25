@@ -169,4 +169,39 @@ public class ToolChatClientContextGuardTests
         Assert.False(nativeClient.IsContextLimitExceeded);
         Assert.Equal(2, innerClient.CallCount);
     }
+
+    [Fact]
+    [DisplayName("工具结果累积超预算时截断内容而非中断")]
+    public async Task ToolChatClient_ContextLimit_TruncatesInsteadOfStops()
+    {
+        var innerClient = new ToolCallThenReplyCountingClient("big_result", "{}", "已完成");
+        var nativeClient = new ToolChatClient(innerClient, new BigResultToolProvider());
+
+        // 预算 300：第一轮（user + 工具 schema，约几十 tokens）通过；
+        // 工具结果（3000 中文字 ≈ 3000 tokens）累积后超限，CheckContextLimit 截断结果内容到预算内，循环继续而非中断
+        var request = CreateRequest(300);
+
+        var response = await nativeClient.GetResponseAsync(request, default);
+        var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
+
+        Assert.Equal("已完成", content);
+        Assert.False(nativeClient.IsContextLimitExceeded);
+        Assert.Equal(2, innerClient.CallCount);
+    }
+
+    [Fact]
+    [DisplayName("工具结果截断到最短仍超预算时中断")]
+    public async Task ToolChatClient_ContextLimit_TruncateToMinThenStops()
+    {
+        var innerClient = new ToolCallThenReplyCountingClient("big_result", "{}", "已完成");
+        var nativeClient = new ToolChatClient(innerClient, new BigResultToolProvider());
+
+        // 预算 100：工具结果（3000 中文字）截断到最短 200 字符（≈200 tokens）仍远超预算，无法进一步截断 → 中断
+        var request = CreateRequest(100);
+
+        await nativeClient.GetResponseAsync(request, default);
+
+        Assert.True(nativeClient.IsContextLimitExceeded);
+        Assert.Equal(1, innerClient.CallCount);
+    }
 }

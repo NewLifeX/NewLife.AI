@@ -996,9 +996,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         var request = ChatRequest.Create(contextMessages, context.Options, stream: true);
         request["IChatContext"] = context;
-        // 上下文窗口预算注入：供 ToolChatClient 逐轮守卫使用，工具结果累积超限时中断循环
-        if (model.ContextLength > 0)
-            request["MaxInputTokens"] = (Int32)(model.ContextLength * 0.85);
+        // 上下文窗口预算注入：供 ToolChatClient 逐轮守卫（估算+内容截断）使用。
+        // ContextLength 未配置（0）时用 128K 硬编码兜底，保证逐轮守卫始终生效；
+        // 曾因 ContextLength=0 导致守卫禁用，工具结果无上限累积撑爆网关请求体（LiteLLM 6MB）
+        var contextLength = model.ContextLength > 0 ? model.ContextLength : 128 * 1024;
+        request["MaxInputTokens"] = (Int32)(contextLength * 0.85);
         await foreach (var chunk in streamClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
         {
             // ToolChatClient 已在最终轮末尾 yield 包含全局累加 Usage 的专用 chunk
