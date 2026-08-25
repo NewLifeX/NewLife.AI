@@ -200,6 +200,7 @@ export default {
   systemSettings: {
     title: '系統設定',
     saveSuccess: '系統設定已儲存',
+    loadError: '系統設定載入失敗，已停用儲存以避免覆蓋現有配置',
     tabs: {
       siteConfig: '站點配置',
       dialogDefault: '對話預設',
@@ -234,6 +235,11 @@ export default {
       thinkingFast: '快速',
       defaultContextRounds: '預設上下文輪數',
       defaultContextRoundsDesc: '每次請求攜帶的歷史輪數（滑動窗口，不限制對話總輪數；0 = 使用預設值 20）',
+      enableUserIsolation: '用戶隔離',
+      enableUserIsolationDesc: '向 LLM 服務商透傳 User 欄位，用於服務商側 KVCache 隔離；關閉時不發送 User 欄位',
+      systemInstruction: '全域系統指令',
+      systemInstructionDesc: '注入每一個用戶的每一次對話，置於模型指令之後作為兜底行為準則。為空時不注入',
+      systemInstructionPlaceholder: '輸入全域系統指令（Markdown）...',
     },
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',

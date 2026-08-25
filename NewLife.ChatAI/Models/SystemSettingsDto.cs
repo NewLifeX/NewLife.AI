@@ -42,8 +42,11 @@ public class SystemSettingsDto
     /// <summary>默认思考模式</summary>
     public ThinkingMode DefaultThinkingMode { get; set; }
 
-    /// <summary>上下文轮数。默认10</summary>
+    /// <summary>上下文轮数。默认20</summary>
     public Int32 DefaultContextRounds { get; set; }
+
+    /// <summary>用户隔离。启用后向LLM服务商透传User字段，用于服务商侧KVCache隔离</summary>
+    public Boolean EnableUserIsolation { get; set; }
     #endregion
 
     #region 上传与分享
@@ -173,6 +176,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>上下文轮数</summary>
     public Int32? DefaultContextRounds { get; set; }
+
+    /// <summary>用户隔离。启用后向LLM服务商透传User字段，用于服务商侧KVCache隔离</summary>
+    public Boolean? EnableUserIsolation { get; set; }
     #endregion
 
     #region 上传与分享

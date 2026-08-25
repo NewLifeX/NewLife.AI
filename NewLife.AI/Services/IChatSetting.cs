@@ -50,7 +50,7 @@ public interface IChatSetting
     #endregion
 
     #region 系统指令
-    /// <summary>全局系统指令。注入每一个用户的每一次对话，置于 System Prompt 首部作为全局行为准则</summary>
+    /// <summary>全局系统指令。注入每一个用户的每一次对话，置于模型指令之后、优先级最低，仅作兜底行为准则</summary>
     String SystemInstruction { get; }
     #endregion
 

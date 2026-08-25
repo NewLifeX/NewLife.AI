@@ -242,6 +242,7 @@ export default {
   systemSettings: {
     title: '系统设置',
     saveSuccess: '系统设置已保存',
+    loadError: '系统设置加载失败，已禁用保存以防覆盖现有配置',
     tabs: {
       siteConfig: '站点配置',
       dialogDefault: '对话默认',
@@ -289,6 +290,8 @@ export default {
       thinkingFast: '快速',
       defaultContextRounds: '默认上下文轮数',
       defaultContextRoundsDesc: '每次请求携带的历史轮数（滑动窗口，不限制对话总轮数；0 = 使用默认值 20）',
+      enableUserIsolation: '用户隔离',
+      enableUserIsolationDesc: '向LLM服务商透传User字段，用于服务商侧KVCache隔离；关闭时不发送User字段',
       systemInstruction: '全局系统指令',
       systemInstructionDesc: '注入每一个用户的每一次对话，置于模型指令之后作为兜底行为准则。为空时不注入',
       systemInstructionPlaceholder: '输入全局系统指令（Markdown）...',

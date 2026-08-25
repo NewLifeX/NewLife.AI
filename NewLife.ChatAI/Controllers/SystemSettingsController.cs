@@ -37,6 +37,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             DefaultModel = chatSetting.DefaultModel,
             DefaultThinkingMode = chatSetting.DefaultThinkingMode,
             DefaultContextRounds = chatSetting.DefaultContextRounds,
+            EnableUserIsolation = chatSetting.EnableUserIsolation,
             // 上传与分享
             MaxAttachmentSize = chatSetting.MaxAttachmentSize,
             AllowedExtensions = chatSetting.AllowedExtensions,
@@ -94,6 +95,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.DefaultModel.HasValue) chatSetting.DefaultModel = dto.DefaultModel.Value;
         if (dto.DefaultThinkingMode.HasValue) chatSetting.DefaultThinkingMode = dto.DefaultThinkingMode.Value;
         if (dto.DefaultContextRounds.HasValue) chatSetting.DefaultContextRounds = dto.DefaultContextRounds.Value;
+        if (dto.EnableUserIsolation.HasValue) chatSetting.EnableUserIsolation = dto.EnableUserIsolation.Value;
         // 上传与分享
         if (dto.MaxAttachmentSize.HasValue) chatSetting.MaxAttachmentSize = dto.MaxAttachmentSize.Value;
         if (dto.AllowedExtensions != null) chatSetting.AllowedExtensions = dto.AllowedExtensions;

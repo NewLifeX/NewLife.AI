@@ -839,6 +839,7 @@ export interface SystemSettings {
   defaultModel: number
   defaultThinkingMode: number
   defaultContextRounds: number
+  enableUserIsolation: boolean
   // 上传与分享
   maxAttachmentSize: number
   allowedExtensions: string

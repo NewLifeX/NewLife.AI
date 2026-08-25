@@ -34,6 +34,16 @@ public class ChatAITests
         Assert.True(setting.BackgroundGeneration);
         Assert.Equal(5_000_000, setting.ToolMaxTotalTokens);
         Assert.Equal(SupportPosition.None, setting.SupportPosition);
+
+        // 对话/工具/学习默认值契约（前端 defaultSettings 需与此一致，防覆盖后端配置）
+        Assert.False(setting.EnableUserIsolation);
+        Assert.True(setting.EnableSuggestedQuestionCache);
+        Assert.Equal(20, setting.MaxMessagesPerMinute);
+        Assert.Equal(10, setting.ToolMaxIterations);
+        Assert.Equal(80000, setting.ToolResultMaxChars);
+        Assert.Equal(80000, setting.SkillBudgetChars);
+        Assert.True(setting.EnableAutoLearning);
+        Assert.Equal(50, setting.MinLearningContentLength);
         //Assert.NotEmpty(setting.SuggestedQuestions);
     }
 

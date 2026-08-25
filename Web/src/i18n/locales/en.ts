@@ -242,6 +242,7 @@ export default {
   systemSettings: {
     title: 'System Settings',
     saveSuccess: 'System settings saved',
+    loadError: 'Failed to load system settings. Saving is disabled to avoid overwriting existing configuration.',
     tabs: {
       siteConfig: 'Site Config',
       dialogDefault: 'Dialog Defaults',
@@ -287,6 +288,8 @@ export default {
       thinkingFast: 'Fast',
       defaultContextRounds: 'Default Context Rounds',
       defaultContextRoundsDesc: 'History rounds to carry per request (sliding window, conversation length is not limited; 0 = use default 20)',
+      enableUserIsolation: 'User Isolation',
+      enableUserIsolationDesc: 'Send the User field to the LLM provider for KVCache isolation; disabled means the User field is not sent',
       systemInstruction: 'Global System Instruction',
       systemInstructionDesc: 'Injected into every conversation for every user, placed after model instructions as a fallback behavior rule. No effect when empty.',
       systemInstructionPlaceholder: 'Enter global system instruction (Markdown)...',

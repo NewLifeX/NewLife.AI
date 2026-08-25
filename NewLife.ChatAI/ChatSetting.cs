@@ -62,9 +62,9 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     #endregion
 
     #region 对话行为
-    /// <summary>全局系统指令。注入每一个用户的每一次对话，置于 System Prompt 首部作为全局行为准则。为空时不注入</summary>
+    /// <summary>全局系统指令。注入每一个用户的每一次对话，置于模型指令之后、优先级最低，仅作兜底行为准则。为空时不注入</summary>
     [Category("对话行为")]
-    [Description("全局系统指令。注入每一个用户的每一次对话，置于 System Prompt 首部作为全局行为准则。为空时不注入")]
+    [Description("全局系统指令。注入每一个用户的每一次对话，置于模型指令之后、优先级最低，仅作兜底行为准则。为空时不注入")]
     public String SystemInstruction { get; set; } = "";
 
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
@@ -99,11 +99,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Category("对话行为")]
     [Description("重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分")]
     public String RerankModel { get; set; } = "";
-
-    /// <summary>图像生成默认尺寸</summary>
-    [Category("对话行为")]
-    [Description("图像生成默认尺寸")]
-    public String DefaultImageSize { get; set; } = "1024*1024";
 
     /// <summary>上下文轮数。每次请求携带的历史对话轮数（滑动窗口），默认20。不限制对话总轮数</summary>
     [Category("对话行为")]
@@ -146,6 +141,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Category("附件与分享")]
     [Description("允许匿名访问分享。开启后未登录用户也可查看分享链接；关闭后必须登录才能访问")]
     public Boolean AllowAnonymousShare { get; set; } = false;
+
+    /// <summary>图像生成默认尺寸</summary>
+    [Category("附件与分享")]
+    [Description("图像生成默认尺寸")]
+    public String DefaultImageSize { get; set; } = "1024*1024";
     #endregion
 
     #region API 网关
