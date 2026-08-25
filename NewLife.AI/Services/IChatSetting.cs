@@ -22,7 +22,7 @@ public interface IChatSetting
     /// <summary>重排序模型。CrossEncoder 二次精排场景调用的模型编码（ModelConfig.Code）；为空时跳过重排序步骤，直接使用 BM25+向量融合分</summary>
     String RerankModel { get; }
 
-    /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认10</summary>
+    /// <summary>上下文轮数。每次请求携带的历史对话轮数，默认20</summary>
     Int32 DefaultContextRounds { get; }
     #endregion
 
