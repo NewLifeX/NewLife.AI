@@ -110,6 +110,7 @@ public class ModelFamilyTests
     [DisplayName("跨平台DeepSeek_通用基类推断_能力一致")]
     [InlineData("deepseek-v4-pro", true, true, 1_048_576)]
     [InlineData("deepseek-v4-flash", true, true, 1_048_576)]
+    [InlineData("deepseek-v4-flash-vision-exp", true, true, 1_048_576)]
     [InlineData("deepseek-v4-flash-2026-06-01", true, true, 1_048_576)]
     [InlineData("deepseek-reasoner", true, false, 1_048_576)]
     [InlineData("deepseek-chat", false, true, 1_048_576)]
@@ -137,6 +138,20 @@ public class ModelFamilyTests
         Assert.True(caps!.SupportThinking);
         Assert.Equal(1_048_576, caps.ContextLength);
         Assert.Equal("high,max", caps.ReasoningEfforts);
+    }
+
+    [Fact]
+    [DisplayName("DeepSeek视觉模型_家族推断视觉能力")]
+    public void DeepSeekVision_InfersVision()
+    {
+        // deepseek-v4-flash-vision-exp 应被家族规则推断为：思考 + 工具 + 视觉输入，且非文生图
+        var caps = ModelFamilyRegistry.Match("deepseek-v4-flash-vision-exp");
+        Assert.NotNull(caps);
+        Assert.True(caps!.SupportVision);
+        Assert.False(caps.SupportImage);
+        Assert.True(caps.SupportThinking);
+        Assert.True(caps.SupportFunction);
+        Assert.Equal(1_048_576, caps.ContextLength);
     }
     #endregion
 

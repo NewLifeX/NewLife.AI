@@ -1127,6 +1127,25 @@ public class DeepSeekIntegrationTests
     }
 
     [Fact]
+    [DisplayName("注册表_DeepSeek视觉模型能力正确")]
+    public void Registry_DeepSeekVisionModel_Capabilities()
+    {
+        // deepseek-v4-flash-vision-exp：支持视觉输入（图片识别），不支持文生图
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        var caps = descriptor!.FindModelCapabilities("deepseek-v4-flash-vision-exp");
+        Assert.NotNull(caps);
+        Assert.True(caps!.SupportVision);
+        Assert.False(caps.SupportImage);
+        Assert.True(caps.SupportThinking);
+        Assert.True(caps.SupportFunction);
+
+        var info = descriptor.FindModelInfo("deepseek-v4-flash-vision-exp");
+        Assert.NotNull(info);
+        Assert.Equal("DeepSeek V4 Flash Vision", info!.DisplayName);
+    }
+
+    [Fact]
     [DisplayName("注册表_Models包含支持FunctionCalling模型")]
     public void Registry_Models_HasFunctionCallingModel()
     {

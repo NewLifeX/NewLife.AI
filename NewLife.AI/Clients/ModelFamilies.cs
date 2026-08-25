@@ -131,6 +131,8 @@ public static class ModelFamilies
             R("deepseek-v4-pro*", thinking: true, func: true, context: 1_048_576, efforts: "high,max", pricing: Price(9m, 27m, 0.3m)),
             // V4 快速版：思考 + 工具调用 + 1M
             R("deepseek-v4-flash*", thinking: true, func: true, context: 1_048_576, efforts: "high,max", pricing: Price(3m, 9m, 0.1m)),
+            // V4 视觉版：思考 + 工具调用 + 视觉输入（deepseek-v4-flash-vision-exp 等），后规则覆盖先规则
+            R("deepseek*-vision*", thinking: true, func: true, context: 1_048_576, vision: true, efforts: "high,max", pricing: Price(3m, 9m, 0.1m)),
             // chat 别名：不思考，支持工具调用
             R("deepseek-chat*", thinking: false, func: true, context: 1_048_576, efforts: "high,max", pricing: Price(3m, 9m, 0.1m)),
             // R1：始终思考，不支持工具调用，上下文 65K
