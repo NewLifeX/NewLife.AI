@@ -16,11 +16,7 @@ namespace NewLife.AI.Clients.OpenAI;
 [AiClientModel("gpt-5.5", "GPT-5.5", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 34.5, OutputPrice = 207, CachedInputPrice = 3.45)]
 [AiClientModel("gpt-5.4", "GPT-5.4", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 17.25, OutputPrice = 103.5, CachedInputPrice = 1.725)]
 [AiClientModel("gpt-5.4-mini", "GPT-5.4 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 5.175, OutputPrice = 31.05, CachedInputPrice = 0.518)]
-[AiClientModel("gpt-4.1", "GPT-4.1", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 13.8, OutputPrice = 55.2, CachedInputPrice = 3.45)]
-[AiClientModel("gpt-4o", "GPT-4o", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 17.25, OutputPrice = 69, CachedInputPrice = 8.625)]
-[AiClientModel("gpt-4o-mini", "GPT-4o Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 1.035, OutputPrice = 4.14, CachedInputPrice = 0.518)]
-[AiClientModel("gpt-5-mini", "GPT-5 Mini", Code = "OpenAI", Vision = true, FunctionCalling = true, InputPrice = 5.175, OutputPrice = 31.05, CachedInputPrice = 0.518)]
-[AiClientModel("o3-mini", "o3 Mini", Code = "OpenAI", Thinking = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.59, OutputPrice = 30.36, CachedInputPrice = 1.898)]
+// 推理 + 图像代表（历史 GPT-4.x/o3 由模型元数据表承载）
 [AiClientModel("o4-mini", "o4 Mini", Code = "OpenAI", Thinking = true, Vision = true, FunctionCalling = true, ReasoningEfforts = "low,medium,high", InputPrice = 7.59, OutputPrice = 30.36, CachedInputPrice = 1.898)]
 [AiClientModel("dall-e-3", "DALL·E 3", Code = "OpenAI", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.276)]
 public partial class OpenAIChatClient : OpenAIClientBase,

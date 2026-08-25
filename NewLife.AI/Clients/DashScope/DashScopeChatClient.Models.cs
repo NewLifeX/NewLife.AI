@@ -4,43 +4,22 @@ using NewLife.Serialization;
 
 namespace NewLife.AI.Clients.DashScope;
 
-// ===== 对话模型 =====
-[AiClientModel("qwen3-max", "Qwen3 Max", Thinking = true, InputPrice = 2.4, OutputPrice = 14.4, CachedInputPrice = 0.24)]
-[AiClientModel("qwq-plus", "QwQ Plus", Thinking = true, InputPrice = 2, OutputPrice = 12, CachedInputPrice = 0.2)]
-[AiClientModel("qwen-vl-max", "Qwen VL Max", Vision = true, InputPrice = 3, OutputPrice = 18, CachedInputPrice = 0.3)]
-[AiClientModel("qwen-image-2.0-pro", "Qwen Image 2.0 Pro", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen-image-edit", "Qwen Image Edit", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-coder-next", "Qwen3 Coder", InputPrice = 2.4, OutputPrice = 14.4, CachedInputPrice = 0.24)]
-// Omni 系列：视觉输入 + 语音识别输入 + 语音合成输出
-[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 3.5, OutputPrice = 14, CachedInputPrice = 0.35)]
-[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
-[AiClientModel("qwen3-omni-flash", "Qwen3 Omni Flash", Vision = true, Audio = true, Speech = true, Thinking = true, FunctionCalling = false, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
-[AiClientModel("qwen-omni-turbo", "Qwen Omni Turbo", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2)]
-[AiClientModel("wan2.6-t2i", "文生图（万相2.6）", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("wan2.7-t2v", "文生视频（万相2.7）", VideoGeneration = true, FunctionCalling = false, InputPrice = 0.6)]
-[AiClientModel("wan2.7-i2v", "图生视频（万相2.7）", Vision = true, VideoGeneration = true, FunctionCalling = false, InputPrice = 0.6)]
-// ===== TTS 语音合成模型（Speech=true 表示音频输出） =====
-[AiClientModel("cosyvoice-v3-flash", "CosyVoice V3 Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("cosyvoice-v3-plus", "CosyVoice V3 Plus", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-// Qwen3-TTS 主力：非实时 HTTP 合成 + WebSocket 实时合成
-[AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-[AiClientModel("qwen3-tts-flash-realtime", "千问3 TTS Flash Realtime", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
-// ===== 主力对话模型（2026-Q3 qwen3.8/3.7 系列）=====
-// -max：qwen3.8 起为多模态旗舰（文本+图像+视频理解），qwen3.7-max 为纯文本旗舰；-plus/-flash：支持文本+视觉
+// ===== 主力对话模型（2026-Q3 代表性：最新旗舰 + 无新版替代的同档型号；历史型号由模型元数据表承载） =====
+// qwen3.8-max 多模态旗舰；qwen3.7-plus/flash 保留（3.8 无对应档位）
 [AiClientModel("qwen3.8-max", "Qwen3.8 Max", Thinking = true, Vision = true, InputPrice = 12, OutputPrice = 36, CachedInputPrice = 1.5, CacheCreationPrice = 15)]
-[AiClientModel("qwen3.7-max", "Qwen3.7 Max", Thinking = true, InputPrice = 12, OutputPrice = 36, CachedInputPrice = 2.4, CacheCreationPrice = 15)]
 [AiClientModel("qwen3.7-plus", "Qwen3.7 Plus", Thinking = true, Vision = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.4, CacheCreationPrice = 2.5)]
 [AiClientModel("qwen3.7-flash", "Qwen3.7 Flash", Thinking = true, Vision = true, InputPrice = 0.2, OutputPrice = 0.8, CachedInputPrice = 0.04, CacheCreationPrice = 0.25)]
-[AiClientModel("qwen3.6-max", "Qwen3.6 Max", Thinking = true, InputPrice = 2, OutputPrice = 12, CachedInputPrice = 0.2)]
-[AiClientModel("qwen3.6-plus", "Qwen3.6 Plus", Thinking = true, Vision = true, InputPrice = 1.4, OutputPrice = 5.6, CachedInputPrice = 0.14)]
-[AiClientModel("qwen3.6-flash", "Qwen3.6 Flash", Thinking = true, Vision = true, InputPrice = 0.7, OutputPrice = 2.8, CachedInputPrice = 0.07)]
+// Omni 全模态（最新 3.5 系列）
+[AiClientModel("qwen3.5-omni-plus", "Qwen3.5 Omni Plus", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 3.5, OutputPrice = 14, CachedInputPrice = 0.35)]
+[AiClientModel("qwen3.5-omni-flash", "Qwen3.5 Omni Flash", Vision = true, Audio = true, Speech = true, FunctionCalling = false, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
+// TTS 主力 + 图像编辑（无新版替代）
+[AiClientModel("qwen3-tts-flash", "千问3 TTS Flash", Speech = true, FunctionCalling = false, InputPrice = 0.2)]
+[AiClientModel("qwen-image-edit", "Qwen Image Edit", ImageGeneration = true, FunctionCalling = false, InputPrice = 0.2)]
+// 百炼托管第三方（价格与官方渠道不同，必须精确注册；历史版本由模型元数据表承载）
 [AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Thinking = true, InputPrice = 12, OutputPrice = 24, CachedInputPrice = 1)]
 [AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Thinking = true, InputPrice = 1, OutputPrice = 2, CachedInputPrice = 0.2)]
-[AiClientModel("glm-5.1", "GLM 5.1", Thinking = true, InputPrice = 1.5, OutputPrice = 6, CachedInputPrice = 0.15)]
 [AiClientModel("glm-5.2", "GLM 5.2", Thinking = true, InputPrice = 8, OutputPrice = 28, CachedInputPrice = 2)]
-[AiClientModel("kimi-k2.6", "Kimi K2.6", Thinking = true, InputPrice = 1, OutputPrice = 4, CachedInputPrice = 0.1)]
 [AiClientModel("kimi-k3", "Kimi K3", Thinking = true, Vision = true, InputPrice = 20, OutputPrice = 100, CachedInputPrice = 2)]
-[AiClientModel("MiniMax-M2.5", "MiniMax M2.5", Thinking = true, InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.2)]
 [AiClientModel("MiniMax/MiniMax-M3", "MiniMax M3", Thinking = true, Vision = true, InputPrice = 4.2, OutputPrice = 16.8, CachedInputPrice = 0.84)]
 [AiClientModel("xiaomi/mimo-v2.5-pro", "MiMo V2.5 Pro", FunctionCalling = true, InputPrice = 7, OutputPrice = 21, CachedInputPrice = 1.4)]
 // ===== 嵌入与重排序模型 =====

@@ -387,9 +387,10 @@ public class AiProviderTests
         var models = descriptor.Models;
         Assert.NotNull(models);
         Assert.NotEmpty(models);
-        var qwenPlus = models.FirstOrDefault(m => m.Model == "qwen3.6-plus");
-        Assert.NotNull(qwenPlus);
-        Assert.Equal("Qwen3.6 Plus", qwenPlus!.DisplayName);
+        // 精简后仅注册代表性模型（最新旗舰 + 无新版替代档位），历史型号由模型元数据表承载
+        var qwenMax = models.FirstOrDefault(m => m.Model == "qwen3.8-max");
+        Assert.NotNull(qwenMax);
+        Assert.Equal("Qwen3.8 Max", qwenMax!.DisplayName);
     }
 
     [Fact]
@@ -406,35 +407,30 @@ public class AiProviderTests
     }
 
     [Fact]
-    [DisplayName("DashScope_TTS模型_注册了V3.5系列")]
+    [DisplayName("DashScope_TTS模型_注册了Qwen3-TTS主力")]
     public void DashScope_HasTtsModels()
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
-        var flash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-flash");
+        // 精简后仅保留 TTS 主力 qwen3-tts-flash；cosyvoice 等历史型号不直接注册，走前缀推断
+        var flash = descriptor.Models!.FirstOrDefault(m => m.Model == "qwen3-tts-flash");
         Assert.NotNull(flash);
-        Assert.Equal("CosyVoice V3 Flash", flash!.DisplayName);
+        Assert.Equal("千问3 TTS Flash", flash!.DisplayName);
         Assert.True(flash.Capabilities!.SupportSpeech);
         Assert.False(flash.Capabilities!.SupportAudio);
 
-        var plus = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-plus");
-        Assert.NotNull(plus);
-        Assert.Equal("CosyVoice V3 Plus", plus!.DisplayName);
-        Assert.True(plus.Capabilities!.SupportSpeech);
-        Assert.False(plus.Capabilities!.SupportAudio);
-
-        // v3.5 系列不直接注册 [AiClientModel]，通过 InferModelCapabilities 前缀匹配 cosyvoice-* 推断
-        var v35Flash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3.5-flash");
-        Assert.Null(v35Flash);
+        // cosyvoice 系列不直接注册 [AiClientModel]，通过 InferModelCapabilities 前缀匹配 cosyvoice-* 推断
+        var cosyFlash = descriptor.Models!.FirstOrDefault(m => m.Model == "cosyvoice-v3-flash");
+        Assert.Null(cosyFlash);
     }
 
     [Fact]
-    [DisplayName("DashScope_QwenPlus模型_能力标记正确")]
+    [DisplayName("DashScope_Qwen3.7Plus模型_能力标记正确")]
     public void DashScope_QwenPlus_CapabilitiesCorrect()
     {
         var descriptor = AiClientRegistry.Default.GetDescriptor("DashScope")!;
-        var qwenPlus = descriptor.Models!.First(m => m.Model == "qwen3.6-plus");
+        var qwenPlus = descriptor.Models!.First(m => m.Model == "qwen3.7-plus");
 
-        // qwen3.6-plus 支持思考模式、视觉，不支持文生图，支持函数调用
+        // qwen3.7-plus 支持思考模式、视觉，不支持文生图，支持函数调用
         Assert.True(qwenPlus.Capabilities!.SupportThinking);
         Assert.True(qwenPlus.Capabilities.SupportVision);
         Assert.False(qwenPlus.Capabilities.SupportImage);
