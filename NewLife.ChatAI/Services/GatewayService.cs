@@ -138,11 +138,12 @@ public class GatewayService(UsageService usageService, ModelService modelService
             .ToList();
 
         // 根据接入类型选择系统消息版本：
-        // - 个人密钥（ProjectId == 0）：注入用户信息 + 个性化设置
-        // - 项目密钥（ProjectId > 0）：注入项目级指令 + 模型指令，不包含任何用户个人信息
+        // - 个人密钥（ProjectId == 0）：注入用户信息 + 个性化设置，与 Web 一致
+        // - 项目密钥（ProjectId > 0）：融合"项目 + 个人"双维系统提示词
+        //   （个人由 GatewayController 按请求顶层 user 字段解析、限项目成员后注入 ResolvedUserId）
 #if STARCHAT
         var sysMsg = appKey.ProjectId > 0
-            ? MessageFlow.BuildSystemMessageForProject(appKey.ProjectId, config)
+            ? MessageFlow.BuildSystemMessageForGateway(ResolveGatewayUserId(request), appKey.ProjectId, config)
             : MessageFlow.BuildSystemMessage(appKey.UserId, config);
 #else
         var sysMsg = MessageFlow.BuildSystemMessage(appKey.UserId, config);
@@ -178,6 +179,14 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
         return messages;
     }
+
+#if STARCHAT
+    /// <summary>从请求扩展数据读取网关解析后的用户编号（GatewayController 注入，键见 StarChatMessageFlowForGateway.ResolvedUserIdItemKey）</summary>
+    /// <param name="request">网关请求</param>
+    /// <returns>解析后的用户编号，未注入时为 0</returns>
+    private static Int32 ResolveGatewayUserId(IChatRequest? request)
+        => request != null ? request[NewLife.StarChat.Services.StarChatMessageFlowForGateway.ResolvedUserIdItemKey].ToInt() : 0;
+#endif
     #endregion
 
     #region 请求转发

@@ -32,7 +32,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
             var conversation = flow.Conversation;
             if (skillCode.EqualIgnoreCase("none"))
             {
-                if (conversation.SkillId != 0)
+                if (conversation.Id > 0 && conversation.SkillId != 0)
                 {
                     conversation.SkillId = 0;
                     conversation.SkillName = null;
@@ -45,7 +45,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
                 var skill = Skill.FindByCode(skillCode);
                 if (skill != null && skill.Enable)
                 {
-                    if (conversation.SkillId != skill.Id)
+                    if (conversation.Id > 0 && conversation.SkillId != skill.Id)
                     {
                         conversation.SkillId = skill.Id;
                         conversation.SkillName = skill.Name;
@@ -88,7 +88,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
                 if (defaultSkill != null && defaultSkill.Enable)
                 {
                     var conversation = flow3.Conversation;
-                    if (conversation.SkillId != defaultSkill.Id)
+                    if (conversation.Id > 0 && conversation.SkillId != defaultSkill.Id)
                     {
                         conversation.SkillId = defaultSkill.Id;
                         conversation.SkillName = defaultSkill.Name;
@@ -150,7 +150,8 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
     {
         if (skillService == null) return;
 
-        var matches = skillService.MatchSkillsByContent(lastUserContent);
+        // 网关/渠道项目接入按项目过滤技能；Web 场景 context["ProjectId"] 为空保持全量行为
+        var matches = skillService.MatchSkillsByContent(lastUserContent, projectId: ResolveProjectId(context));
         if (matches.Count == 0) return;
 
         // 全部命中技能加入 ActivatedSkills，供 IntentGateHandler 做模式判断
@@ -172,13 +173,25 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
         if (context is MessageFlowContext flow2)
         {
             var conversation = flow2.Conversation;
-            if (conversation.SkillId != best.Id)
+            if (conversation.Id > 0 && conversation.SkillId != best.Id)
             {
                 conversation.SkillId = best.Id;
                 conversation.SkillName = best.Name;
                 conversation.Update();
             }
         }
+    }
+
+    /// <summary>解析当前请求的项目编号。优先使用会话实体 ProjectId（StarChat 独有），缺失时回退读取上下文扩展字段（网关/渠道注入）</summary>
+    /// <param name="context">对话上下文</param>
+    /// <returns>项目编号，0 表示个人/未指定</returns>
+    private static Int32 ResolveProjectId(IChatContext context)
+    {
+#if STARCHAT
+        if (context.Conversation is Conversation conversation && conversation.ProjectId > 0)
+            return conversation.ProjectId;
+#endif
+        return context["ProjectId"].ToInt();
     }
 
     /// <summary>构建技能目录。列出所有启用技能的编码、名称和描述</summary>

@@ -325,13 +325,16 @@ public class SkillService(IChatSetting chatSetting, ILog log)
     /// <summary>根据用户消息内容匹配所有命中的技能。遍历启用技能，消息包含任一触发词时加入结果列表（按Sort降序）</summary>
     /// <param name="content">用户消息内容</param>
     /// <param name="primaryOnly">仅匹配主技能（IsPrimary=true）</param>
+    /// <param name="projectId">项目编号。大于 0 时仅匹配全局技能（ProjectId=0）与该项目的专属技能，用于网关/渠道项目接入</param>
     /// <returns>匹配到的技能列表，无匹配返回空列表</returns>
-    public IList<Skill> MatchSkillsByContent(String? content, Boolean primaryOnly = false)
+    public IList<Skill> MatchSkillsByContent(String? content, Boolean primaryOnly = false, Int32 projectId = 0)
     {
         var result = new List<Skill>();
         if (content.IsNullOrWhiteSpace()) return result;
 
         var allSkills = GetAllEnabledSkillsForTriggerMatch();
+        if (projectId > 0)
+            allSkills = allSkills.Where(e => e.ProjectId == 0 || e.ProjectId == projectId).ToList();
         foreach (var skill in allSkills)
         {
             if (primaryOnly && !skill.IsPrimary) continue;

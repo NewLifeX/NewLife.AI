@@ -103,7 +103,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         _fallbackEstimatedTokens = 0;
         _consecutiveFailureRounds = 0;
 
-        var (mergedTools, toolMap) = GetMergedTools(request);
+        var (mergedTools, toolMap, providerToolNames) = GetMergedTools(request);
         if (mergedTools.Count == 0)
             return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -120,6 +120,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         IChatResponse response = null!;
         var iterations = 0;
         var executedAnyTool = false;
+        // 混合工具透传标记：本轮含客户端工具时置位，禁止末尾"强制产出最终回答"兜底（否则会吞掉透传的 tool_calls）
+        var passthroughRound = false;
         UsageDetails? accumulatedUsage = null;
 
         // 请求级跨轮去重集合（局部变量，天然隔离并发请求的共享状态）
@@ -150,6 +152,17 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
             var toolCalls = assistantMessage?.ToolCalls;
             if (toolCalls == null || toolCalls.Count == 0) break;
+
+            // 混合工具分流：含客户端工具（非任何 StarChat Provider 注册、仅客户端定义）的轮次整轮透传——
+            // 不执行、不追加 tool 结果，原样返回 tool_calls 由客户端执行后在下一次请求回传。
+            // 已注册但被 SelectedTools 过滤的目录工具仍走 ExecuteToolAsync 的目录回退执行
+            if (HasClientToolCalls(toolCalls, toolMap, providerToolNames))
+            {
+                passthroughRound = true;
+                Log?.Info("本轮含客户端工具调用，整轮透传：{0}",
+                    String.Join(",", toolCalls.Where(t => t.Function?.Name != null).Select(t => t.Function!.Name)));
+                break;
+            }
 
             executedAnyTool = true;
 
@@ -227,7 +240,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         // 兜底：执行过工具但最终轮未产出正文（模型只输出思考/工具调用即结束，或轮次达上限），
         // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；Token 超限或上下文超限时不追加）
-        if (!IsTotalTokenLimitExceeded && !IsContextLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
+        if (!passthroughRound && !IsTotalTokenLimitExceeded && !IsContextLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
         {
             Log.Info("最终回复内容为空，追加提示后强制产出最终回答");
             workMessages.Add(new ChatMessage
@@ -264,7 +277,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         _fallbackEstimatedTokens = 0;
         _consecutiveFailureRounds = 0;
 
-        var (mergedTools, toolMap) = GetMergedTools(request);
+        var (mergedTools, toolMap, providerToolNames) = GetMergedTools(request);
         if (mergedTools.Count == 0)
         {
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(request, cancellationToken).ConfigureAwait(false))
@@ -410,6 +423,26 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 Pool.StringBuilder.Return(contentSb);
                 Pool.StringBuilder.Return(reasoningSb);
                 // 兜底：最终轮无 Usage chunk 但存在历史轮（极少见），补发累计总量
+                if (iterUsage == null && accumulatedUsage != null)
+                    yield return new ChatResponse { Usage = accumulatedUsage };
+                yield break;
+            }
+
+            // 混合工具分流：含客户端工具（非任何 StarChat Provider 注册、仅客户端定义）的轮次整轮透传——
+            // 不执行、不追加 tool 结果，仅补发 start/done 事件，由客户端执行后在下一次请求回传
+            if (HasClientToolCalls(toolCalls, toolMap, providerToolNames))
+            {
+                Pool.StringBuilder.Return(contentSb);
+                Pool.StringBuilder.Return(reasoningSb);
+                Log?.Info("本轮含客户端工具调用，整轮透传：{0}",
+                    String.Join(",", toolCalls.Where(t => t.Function?.Name != null).Select(t => t.Function!.Name)));
+                foreach (var tc in toolCalls)
+                {
+                    if (tc.Function == null) continue;
+                    var args = tc.Function.Arguments.IsNullOrEmpty() ? "{}" : tc.Function.Arguments;
+                    yield return new ChatResponse { ToolCallEvents = [new ToolCallEventInfo("start", tc.Id, tc.Function.Name, args)] };
+                    yield return new ChatResponse { ToolCallEvents = [new ToolCallEventInfo("done", tc.Id, tc.Function.Name, args)] };
+                }
                 if (iterUsage == null && accumulatedUsage != null)
                     yield return new ChatResponse { Usage = accumulatedUsage };
                 yield break;
@@ -993,12 +1026,34 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
     }
 
-    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典</summary>
-    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap) GetMergedTools(IChatRequest? options)
+    /// <summary>判断本轮工具调用是否包含客户端工具（非任何 StarChat Provider 注册、仅客户端定义）。含任一客户端工具时整轮透传，
+    /// 由客户端执行后在下一次请求回传；仅当全部工具均为 StarChat 工具（含 SelectedTools 过滤外的目录工具）时才由服务端执行</summary>
+    /// <param name="toolCalls">本轮工具调用列表</param>
+    /// <param name="toolMap">工具名到 Provider 的路由字典（仅当前 SelectedTools 可见工具）</param>
+    /// <param name="providerToolNames">全部 Provider 注册的工具名（不受 SelectedTools 过滤），用于区分客户端工具与目录工具</param>
+    /// <returns>true=含客户端工具，需整轮透传</returns>
+    private static Boolean HasClientToolCalls(IList<ToolCall> toolCalls, Dictionary<String, IToolProvider> toolMap, HashSet<String> providerToolNames)
+        => toolCalls.Any(tc => tc.Function?.Name != null
+            && !toolMap.ContainsKey(tc.Function.Name)
+            && !providerToolNames.Contains(tc.Function.Name));
+
+    /// <summary>聚合所有提供者的工具定义，合并 options.Tools，同时建立工具名到 Provider 的路由字典与全部 Provider 工具名集合</summary>
+    private (List<ChatTool> tools, Dictionary<String, IToolProvider> toolMap, HashSet<String> providerToolNames) GetMergedTools(IChatRequest? options)
     {
         var tools = new List<ChatTool>();
         var toolMap = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+        // 全部 Provider 注册的工具路由（不受 SelectedTools 过滤），用于目录工具识别与同名客户端工具路由
+        var providerNames = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
+        foreach (var provider in Providers)
+        {
+            foreach (var t in provider.GetTools(null))
+            {
+                var n = t.Function?.Name;
+                if (!n.IsNullOrEmpty() && !providerNames.ContainsKey(n))
+                    providerNames[n] = provider;
+            }
+        }
         foreach (var provider in Providers)
         {
             foreach (var t in provider.GetTools(SelectedTools))
@@ -1012,25 +1067,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
         if (options?.Tools != null)
         {
-            // options.Tools 中的工具尝试按名字路由到已有 Provider；
-            // 路由不到则注入但记录警告——模型调用必然失败，避免静默误导（A-73）
-            var providerNames = new Dictionary<String, IToolProvider>(StringComparer.OrdinalIgnoreCase);
-            foreach (var provider in Providers)
-            {
-                foreach (var t in provider.GetTools(null))
-                {
-                    var n = t.Function?.Name;
-                    if (!n.IsNullOrEmpty() && !providerNames.ContainsKey(n))
-                        providerNames[n] = provider;
-                }
-            }
+            // options.Tools 中的工具尝试按名字路由到已有 Provider（同名 StarChat 优先）；
+            // 路由不到且非 Provider 注册 → 客户端工具，整轮透传由客户端执行
             foreach (var t in options.Tools)
             {
                 var name = t.Function?.Name;
                 if (!name.IsNullOrEmpty() && !toolMap.ContainsKey(name) && providerNames.TryGetValue(name, out var owner))
                     toolMap[name] = owner;
                 else if (!name.IsNullOrEmpty() && !providerNames.ContainsKey(name))
-                    Log?.Warn("options.Tools 中工具 {0} 无对应 Provider 路由，模型调用将失败", name);
+                    Log?.Info("options.Tools 中工具 {0} 无对应 Provider 路由，将由客户端透传执行", name);
                 tools.Add(t);
             }
         }
@@ -1043,7 +1088,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             schemaSpan?.AppendTag(toolNames);
         }
 
-        return (tools, toolMap);
+        return (tools, toolMap, [.. providerNames.Keys]);
     }
 
     /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>

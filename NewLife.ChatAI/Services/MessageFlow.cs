@@ -744,6 +744,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
     }
 
+    /// <summary>按请求解析对话处理器链。默认返回实例固定链 <see cref="Chain"/>；
+    /// 派生类可覆写以实现按请求（来源/密钥/项目）动态切换（如网关/渠道领域模式）</summary>
+    /// <param name="context">对话上下文</param>
+    /// <returns>本次请求实际使用的处理器链</returns>
+    protected virtual ChatHandlerChain ResolveChain(IChatContext context) => Chain;
+
     /// <summary>执行 <see cref="IChatHandler"/> 三段式调用链：OnBefore（BeforeOrder 升序） → 核心阶段（含 LLM 调用与可选拦截器洋葱） → OnAfter（AfterOrder 升序）。
     /// 任一 OnBefore 将 <see cref="IChatContext.FlowControl"/> 设为 <see cref="ChatFlowControl.SkipRemaining"/> 即跳过后续 OnBefore，但仍执行 LLM 核心阶段；
     /// 设为 <see cref="ChatFlowControl.Cancel"/> 则同时跳过后续 OnBefore 与整个核心阶段。已经过的 OnAfter 仍会按序执行。
@@ -753,6 +759,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <returns>事件流</returns>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> InvokeChainAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // 按请求解析处理器链（默认返回实例固定链；派生类按来源/密钥/项目动态切换）
+        var chain = ResolveChain(context);
+
         // ranBefore：记录哪些处理器的 OnBefore 确实被执行过（短路时后续的 Before 不推入此集合）
         // After-only（无 Before 能力）的处理器不在此集合内，OnAfter 阶段无条件调用
         var ranBefore = new HashSet<IChatHandler>(ReferenceEqualityComparer.Instance);
@@ -761,7 +770,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var beforeFailed = false;
         var beforeErrorMsg = (String?)null;
         Exception? beforeErrorEx = null;
-        foreach (var handler in Chain.BeforeHandlers)
+        foreach (var handler in chain.BeforeHandlers)
         {
             var name = handler.GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnBefore:{name}");
@@ -813,7 +822,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 3. OnAfter 按 AfterOrder 升序执行
         // 调用规则：After-only（无 Before 能力）的处理器无条件调用；Before+After 的处理器仅当其 OnBefore 确实执行过才调用
-        foreach (var handler in Chain.AfterHandlers)
+        foreach (var handler in chain.AfterHandlers)
         {
             var hasBefore = handler.Capabilities.HasFlag(ChatHandlerCapabilities.Before);
             if (hasBefore && !ranBefore.Contains(handler)) continue;
@@ -841,11 +850,14 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <returns>事件流</returns>
     protected virtual async IAsyncEnumerable<ChatStreamEvent> CoreStreamAsync(IChatContext context, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // 按请求解析处理器链
+        var chain = ResolveChain(context);
+
         // 链路终点：LLM 调用
         ChatNextDelegate next = ct => InvokeLlmAsync(context, ct);
 
         // 倒序包裹：Interceptors[0] 为最外层，Interceptors[^1] 为最内层（紧挨 LLM 调用）
-        var interceptors = Chain.Interceptors;
+        var interceptors = chain.Interceptors;
         for (var i = interceptors.Count - 1; i >= 0; i--)
         {
             var handler = interceptors[i];
@@ -1194,10 +1206,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
     /// <param name="cancellationToken">取消令牌</param>
     protected virtual async Task InvokeNonStreamAsync(IChatContext context, CancellationToken cancellationToken)
     {
+        // 按请求解析处理器链（默认返回实例固定链；派生类按来源/密钥/项目动态切换）
+        var chain = ResolveChain(context);
         var ranBefore = new HashSet<IChatHandler>(ReferenceEqualityComparer.Instance);
 
         // 1. OnBefore 按 BeforeOrder 升序执行
-        foreach (var handler in Chain.BeforeHandlers)
+        foreach (var handler in chain.BeforeHandlers)
         {
             var name = handler.GetType().Name.TrimSuffix("Handler");
             using var span = tracer?.NewSpan($"handler:OnBefore:{name}");
@@ -1232,7 +1246,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 3. OnAfter 按 AfterOrder 升序执行
         // 调用规则：After-only（无 Before 能力）的处理器无条件调用；Before+After 的处理器仅当其 OnBefore 确实执行过才调用
-        foreach (var handler in Chain.AfterHandlers)
+        foreach (var handler in chain.AfterHandlers)
         {
             var hasBefore = handler.Capabilities.HasFlag(ChatHandlerCapabilities.Before);
             if (hasBefore && !ranBefore.Contains(handler)) continue;
@@ -1561,6 +1575,96 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
 
         // 3. 多轮对话时强调最新消息优先级
+        if (userHistoryCount > 1)
+            parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
+
+        if (parts.Count == 0) return null;
+        span?.AppendTag(null!, parts.Count);
+
+        return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
+    }
+
+    /// <summary>构建网关融合系统提示词消息（项目 + 用户双维）。项目密钥接入时使用，
+    /// 同时注入项目级指令与（可选解析后的）用户个人信息/个性化/自定义指令，使网关请求与 Web 对话尽可能接近。</summary>
+    /// <remarks>静态公共实现：<see cref="GatewayService"/> 在项目密钥（AppKey.ProjectId &gt; 0）下调用，
+    /// 替代单独调用 <see cref="BuildSystemMessageForProject"/> 或 <see cref="BuildSystemMessage"/>（两者维度互不交叉）。
+    /// 项目指令定义 AI 整体行为与角色，优先级仅次于 AppKey.SystemPrompt（业务层，由调用方合并时置首）；
+    /// 用户维度在项目指令之后注入，供领域智能体感知具体对话者。AppKey.SystemPrompt（业务层）由调用方在合并时置首。</remarks>
+    /// <param name="userId">当前用户编号。项目密钥下可为 0（未匹配到用户）或由网关按 user 字段解析后的真实用户</param>
+    /// <param name="projectId">项目编号。0 或未指定时跳过项目级信息读取</param>
+    /// <param name="model">模型配置（可选）</param>
+    /// <param name="userHistoryCount">当前上下文中历史消息条数，大于 0 时才注入多轮优先级提示</param>
+    /// <param name="tracer">追踪器（可选）</param>
+    /// <returns>系统消息，无提示词时返回 null</returns>
+    public static AiChatMessage? BuildSystemMessageForGateway(Int32 userId, Int32 projectId, ModelConfig? model, Int32 userHistoryCount = 0, ITracer? tracer = null)
+    {
+        using var span = tracer?.NewSpan("ai:BuildSystemMessageForGateway", new { userId, projectId, model?.Name, userHistoryCount });
+        var parts = new List<String>();
+
+        // 0. 当前日期（降精度到日期级，保证 system prompt 前缀稳定以命中 Prompt Cache）
+        parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
+
+        // 1. 项目级系统提示词（StarChat 独有；AgentProject 不在 ChatAI 实体，故用条件编译）
+#if STARCHAT
+        if (projectId > 0)
+        {
+            var project = NewLife.StarChat.Entity.AgentProject.FindById(projectId);
+            if (project != null && !String.IsNullOrWhiteSpace(project.SystemPrompt))
+                parts.Add(project.SystemPrompt.Trim());
+        }
+#endif
+
+        // 2. 当前用户基础信息（与 BuildSystemMessage 一致）
+        if (userId > 0 && ManageProvider.Provider?.FindByID(userId) is IUser user)
+        {
+            var sb = Pool.StringBuilder.Get();
+            sb.Append($"当前用户：{user.DisplayName}（{user.Name}）");
+            var roles = user.Roles;
+            if (roles?.Length > 0) sb.Append($"，角色：{roles.Join(",")}");
+            var dept = Department.FindByID(user.DepartmentID);
+            if (dept != null) sb.Append($"，部门：{dept.Name}");
+
+            parts.Add(sb.Return(true));
+        }
+
+        // 3. 个性化定制 + 用户自定义指令（与 BuildSystemMessage 一致）
+        if (userId > 0)
+        {
+            var userSetting = UserSetting.FindByUserId(userId);
+            if (userSetting != null)
+            {
+                if (!String.IsNullOrWhiteSpace(userSetting.Nickname))
+                    parts.Add($"用户希望你称呼他为「{userSetting.Nickname.Trim()}」");
+
+                if (!String.IsNullOrWhiteSpace(userSetting.UserBackground))
+                    parts.Add($"## 用户背景信息\n{userSetting.UserBackground.Trim()}");
+
+                var stylePrompt = userSetting.ResponseStyle switch
+                {
+                    ResponseStyle.Precise => "请给出准确、确定性高的回答。优先引用事实和数据，避免模糊表述和不确定的推测。回答简洁有条理。",
+                    ResponseStyle.Vivid => "请用丰富的表达方式回答，善于使用类比、举例和故事来解释概念。让回答有温度、易于理解，适当展开讨论。",
+                    ResponseStyle.Creative => "请大胆发散思维，提供新颖独特的视角和创意方案。鼓励联想、跨界类比和非常规思路，不必拘泥于常规答案。",
+                    _ => null
+                };
+                if (stylePrompt != null) parts.Add(stylePrompt);
+
+                if (!String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
+                    parts.Add(userSetting.SystemPrompt.Trim());
+            }
+        }
+
+        // 4. 模型级系统提示词
+        if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
+            parts.Add(model.SystemPrompt.Trim());
+
+        // 4.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
+        {
+            var chatSetting = ChatSetting.Current;
+            if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
+                parts.Add(chatSetting.SystemInstruction.Trim());
+        }
+
+        // 5. 多轮对话时强调最新消息优先级
         if (userHistoryCount > 1)
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
 
