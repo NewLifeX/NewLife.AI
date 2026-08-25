@@ -78,6 +78,24 @@ public class ModelFamilyTests
         Assert.NotNull(caps.Pricing);
         Assert.Equal(0.7m, caps.Pricing!.InputPrice);
     }
+
+    [Fact]
+    [DisplayName("Qwen3.7系列_上下文1M_家族规则覆盖")]
+    public void Qwen37_ContextLength_1M()
+    {
+        // qwen3.7-max/plus/flash 均命中 qwen3.7* → 上下文 1M（与元数据表 dashscope.json 的 Context=1048576 一致）
+        foreach (var modelId in new[] { "qwen3.7-max", "qwen3.7-plus", "qwen3.7-flash" })
+        {
+            var caps = ModelFamilyRegistry.Match(modelId);
+            Assert.NotNull(caps);
+            Assert.Equal(1_048_576, caps!.ContextLength);
+        }
+
+        // 分档验证：qwen3.6-max-preview 命中更具体规则 → 262K（后规则覆盖先规则）
+        var preview = ModelFamilyRegistry.Match("qwen3.6-max-preview");
+        Assert.NotNull(preview);
+        Assert.Equal(262_144, preview!.ContextLength);
+    }
     #endregion
 
     #region 跨平台 deepseek（腾讯/火山等通用 OpenAI 兼容平台）

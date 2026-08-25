@@ -66,12 +66,12 @@ public static class ModelFamilies
             R("qwen3-omni*", thinking: true, func: false, vision: true, audio: true, speech: true, context: 131_072),
             R("qwen*-omni*", func: false, vision: true, audio: true, speech: true, context: 32_768),
 
-            // === 上下文长度 ===
+            // === 上下文长度（兜底在前、具体规则在后覆盖；qwen3* 兜底曾排在 3.7/3.6 之后，导致 1M 被 131K 覆盖） ===
             R("qwen-long*", context: 1_000_000),
+            R("qwen3*", context: 131_072),
             R("qwen3.7*", context: 1_048_576),
             R("qwen3.6*", context: 1_048_576),
             R("qwen3.6-max-preview*", context: 262_144),
-            R("qwen3*", context: 131_072),
             R("qwen-max*|qwen-plus*|qwen-flash*|qwen-turbo*|qwen2.5*", context: 131_072),
 
             // === 默认价格（元/百万Token，兜底价在前，具体系列价在后覆盖；服务商可精确注册覆盖） ===
