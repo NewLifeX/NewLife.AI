@@ -20,6 +20,12 @@ public class McpServer : ApiHost, IServiceProvider
     public IServiceProvider ServiceProvider { get; set; } = null!;
 
     private IApiHandler _handler;
+
+    /// <summary>资源集合。uri → 资源定义与读取器</summary>
+    private readonly Dictionary<String, McpResource> _resources = [];
+
+    /// <summary>提示词集合。name → 提示词定义与处理器</summary>
+    private readonly Dictionary<String, McpPrompt> _prompts = [];
     #endregion
 
     #region 构造
@@ -47,6 +53,39 @@ public class McpServer : ApiHost, IServiceProvider
         Manager.Register<TTools>();
     }
 
+    /// <summary>添加工具类型。其公共方法将作为 MCP 工具暴露（snake_case 命名）</summary>
+    /// <param name="type">工具类型</param>
+    public void AddTool(Type type)
+    {
+        if (type == null) throw new ArgumentNullException(nameof(type));
+
+        // 基类 Register(object, string) 传 Type 会被当作实例注册（AddSingleton(Type)）导致类型转换异常；
+        // 走泛型 Register<T>() 等价路径：controller=null，仅注册类型供按需创建
+        var method = typeof(IApiManager).GetMethod(nameof(IApiManager.Register), Type.EmptyTypes);
+        method!.MakeGenericMethod(type).Invoke(Manager, null);
+    }
+
+    /// <summary>添加资源</summary>
+    /// <param name="uri">资源标识，如 knowledge://articles/123</param>
+    /// <param name="name">资源名称</param>
+    /// <param name="description">资源描述</param>
+    /// <param name="mimeType">MIME 类型，默认 text/plain</param>
+    /// <param name="read">资源读取委托。接收 uri，返回内容文本或对象</param>
+    public void AddResource(String uri, String name, String? description = null, String? mimeType = null, Func<String?, Object?>? read = null)
+    {
+        _resources[uri] = new McpResource(new ResourceDefinition(uri, name, description, mimeType ?? "text/plain"), read);
+    }
+
+    /// <summary>添加提示词</summary>
+    /// <param name="name">提示词名称</param>
+    /// <param name="description">提示词描述</param>
+    /// <param name="arguments">参数定义</param>
+    /// <param name="get">提示词获取委托。接收参数字典，返回文本或 <see cref="IList{PromptMessage}"/></param>
+    public void AddPrompt(String name, String? description = null, IList<PromptArgument>? arguments = null, Func<IDictionary<String, Object?>?, Object?>? get = null)
+    {
+        _prompts[name] = new McpPrompt(new PromptDefinition(name, description, arguments), get);
+    }
+
     /// <summary>处理MCP请求</summary>
     public JsonRpcResponse Process(JsonRpcRequest request, McpContext context)
     {
@@ -63,8 +102,14 @@ public class McpServer : ApiHost, IServiceProvider
             {
                 "initialize" => OnInitialize(context, request),
                 "notifications/initialized" => null,   // JSON-RPC notification 无 Id，不得响应
+                "ping" => OnPing(),
                 "tools/list" => OnToolList(context, request),
                 "tools/call" => OnToolCall(context, request, context.Services),
+                "resources/list" => OnResourceList(context, request),
+                "resources/read" => OnResourceRead(context, request),
+                "prompts/list" => OnPromptList(context, request),
+                "prompts/get" => OnPromptGet(context, request),
+                "notifications/cancelled" => null,      // JSON-RPC notification，无需响应
                 _ => throw new ApiException(ApiCode.NotFound, $"Method '{request.Method}' not found in MCP server capabilities."),
             };
             if (result is JsonRpcResponse response) return response;
@@ -104,10 +149,17 @@ public class McpServer : ApiHost, IServiceProvider
         }
 
         return new InitializeResult("2025-06-18",
-            new ServerCapabilities(new { listChanged = true }),
+            new ServerCapabilities(
+                new { listChanged = true },
+                new { subscribe = false, listChanged = false },
+                new { listChanged = false }
+            ),
             new ClientInfo("PureAspNetCoreMcpServer", "1.0.0")
         );
     }
+
+    /// <summary>心跳。MCP ping 请求，返回空对象表示服务存活</summary>
+    protected virtual Object OnPing() => new { };
     #endregion
 
     #region 工具
@@ -159,13 +211,15 @@ public class McpServer : ApiHost, IServiceProvider
 
         SetSessionId(context);
 
-        var ps = JsonHelper.Convert<ToolCallParams>(request.Params);
+        var ps = ConvertParams<ToolCallParams>(request.Params);
         if (ps == null) throw new ArgumentOutOfRangeException(nameof(request.Params), "Tool call parameters are invalid.");
 
         //var tool = Tools.FirstOrDefault(t => t.Name.Equals(ps.Name, StringComparison.OrdinalIgnoreCase));
         //if (tool == null) throw new ArgumentOutOfRangeException(nameof(request.Params), $"Tool '{ps.Name}' not found in the server capabilities.");
 
-        var result = _handler.Execute(null!, ps.Name, ps.Arguments, null!, serviceProvider);
+        // 提供非空 IApiSession：ApiHandler.Prepare 首行访问会话 Encoder，传 null 必然 NRE（此前工具调用从未真正成功过）
+        var session = new McpSession(this, context.GetRequest("Mcp-Session-Id"));
+        var result = _handler.Execute(session, ps.Name, ps.Arguments, null!, serviceProvider);
 
         List<ContentItem> content = [new("text", result?.ToString() ?? String.Empty)];
         return new(content);
@@ -181,7 +235,90 @@ public class McpServer : ApiHost, IServiceProvider
     }
     #endregion
 
+    #region 资源与提示词
+    /// <summary>资源列表</summary>
+    /// <param name="context">MCP 上下文</param>
+    /// <param name="request">请求</param>
+    /// <returns>资源列表结果</returns>
+    protected virtual ResourceListResult OnResourceList(McpContext context, JsonRpcRequest request)
+    {
+        var list = _resources.Values.Select(e => e.Definition).ToList();
+        return new ResourceListResult(list);
+    }
+
+    /// <summary>资源读取</summary>
+    /// <param name="context">MCP 上下文</param>
+    /// <param name="request">请求</param>
+    /// <returns>资源读取结果</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    protected virtual ReadResourceResult OnResourceRead(McpContext context, JsonRpcRequest request)
+    {
+        if (request.Params == null) throw new ArgumentNullException(nameof(request.Params), "Resource read parameters cannot be null.");
+
+        var ps = ConvertParams<ResourceReadParams>(request.Params);
+        if (ps == null || ps.Uri.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Resource read parameters are invalid.");
+
+        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(ApiCode.NotFound, $"Resource '{ps.Uri}' not found in the server capabilities.");
+
+        var data = res.Read?.Invoke(ps.Uri) ?? String.Empty;
+        return new ReadResourceResult([new ResourceContentItem(ps.Uri, data?.ToString() ?? String.Empty, res.Definition.MimeType)]);
+    }
+
+    /// <summary>提示词列表</summary>
+    /// <param name="context">MCP 上下文</param>
+    /// <param name="request">请求</param>
+    /// <returns>提示词列表结果</returns>
+    protected virtual PromptListResult OnPromptList(McpContext context, JsonRpcRequest request)
+    {
+        var list = _prompts.Values.Select(e => e.Definition).ToList();
+        return new PromptListResult(list);
+    }
+
+    /// <summary>提示词获取</summary>
+    /// <param name="context">MCP 上下文</param>
+    /// <param name="request">请求</param>
+    /// <returns>提示词获取结果</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    protected virtual GetPromptResult OnPromptGet(McpContext context, JsonRpcRequest request)
+    {
+        if (request.Params == null) throw new ArgumentNullException(nameof(request.Params), "Prompt get parameters cannot be null.");
+
+        var ps = ConvertParams<PromptGetParams>(request.Params);
+        if (ps == null || ps.Name.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Prompt get parameters are invalid.");
+
+        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(ApiCode.NotFound, $"Prompt '{ps.Name}' not found in the server capabilities.");
+
+        var content = prompt.Get?.Invoke(ps.Arguments) ?? String.Empty;
+        if (content is IList<PromptMessage> messages) return new GetPromptResult(prompt.Definition.Description, messages);
+
+        return new GetPromptResult(prompt.Definition.Description, [new PromptMessage("user", new ContentItem("text", content?.ToString() ?? String.Empty))]);
+    }
+    #endregion
+
     #region 辅助
+    /// <summary>转换请求参数。兼容 NewLife JsonReader 解码的 Dictionary 与 System.Text.Json 反序列化产生的 JsonElement（其 ToString() 返回原始 JSON 文本）</summary>
+    /// <typeparam name="T">目标类型</typeparam>
+    /// <param name="p">参数对象</param>
+    /// <returns>转换结果</returns>
+    private static T? ConvertParams<T>(Object? p) where T : class
+    {
+        if (p == null) return default;
+
+        if (p is T t) return t;
+
+        // JsonElement.ToString() 返回原始 JSON 文本；Dictionary.ToString() 返回类型名，不会命中此分支
+        if (p is not System.Collections.IDictionary)
+        {
+            var json = p.ToString();
+            if (!json.IsNullOrEmpty() && (json[0] == '{' || json[0] == '['))
+                return json.ToJsonEntity<T>();
+        }
+
+        return JsonHelper.Convert<T>(p);
+    }
+
     private static String GetJsonType(Type type) => Type.GetTypeCode(type) switch
     {
         TypeCode.String => "string",
@@ -199,6 +336,30 @@ public class McpServer : ApiHost, IServiceProvider
         if (serviceType == typeof(IApiManager)) return Manager;
 
         return ServiceProvider?.GetService(serviceType)!;
+    }
+
+    /// <summary>资源定义与读取器</summary>
+    /// <param name="definition">资源定义</param>
+    /// <param name="read">读取委托</param>
+    private sealed class McpResource(ResourceDefinition definition, Func<String?, Object?>? read)
+    {
+        /// <summary>资源定义</summary>
+        public ResourceDefinition Definition { get; } = definition;
+
+        /// <summary>读取委托</summary>
+        public Func<String?, Object?>? Read { get; } = read;
+    }
+
+    /// <summary>提示词定义与处理器</summary>
+    /// <param name="definition">提示词定义</param>
+    /// <param name="get">获取委托</param>
+    private sealed class McpPrompt(PromptDefinition definition, Func<IDictionary<String, Object?>?, Object?>? get)
+    {
+        /// <summary>提示词定义</summary>
+        public PromptDefinition Definition { get; } = definition;
+
+        /// <summary>获取委托</summary>
+        public Func<IDictionary<String, Object?>?, Object?>? Get { get; } = get;
     }
     #endregion
 }

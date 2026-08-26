@@ -16,6 +16,10 @@ internal class McpToolManager(IServiceProvider serviceProvider) : ApiManager(ser
     {
         if (String.IsNullOrEmpty(name)) return name;
 
+        // 去掉 Async 后缀（对齐官方 SDK：异步方法工具名不带 _async 后缀）
+        if (name.EndsWith("Async", StringComparison.Ordinal) && name.Length > 5)
+            name = name[..^5];
+
         var sb = Pool.StringBuilder.Get();
         for (var i = 0; i < name.Length; i++)
         {

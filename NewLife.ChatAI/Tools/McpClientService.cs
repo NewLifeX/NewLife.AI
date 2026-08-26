@@ -291,7 +291,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
                 client.DefaultRequestHeaders.Add("X-Api-Key", config.AuthToken);
         }
 
-        var json = request.ToJson();
+        var json = request.ToJson(false, false, true);
         using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         using var httpResponse = await client.PostAsync(config.Endpoint, content, cancellationToken).ConfigureAwait(false);
 
