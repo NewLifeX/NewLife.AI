@@ -30,6 +30,15 @@ public class McpCrossCompatibilityTests
         /// <param name="b">第二个数</param>
         /// <returns>两数之和</returns>
         public Int32 Add(Int32 a, Int32 b) => a + b;
+
+        /// <summary>回显消息（含中文）</summary>
+        /// <param name="message">消息</param>
+        /// <returns>原样返回</returns>
+        public String Echo(String message) => message;
+
+        /// <summary>返回长文本</summary>
+        /// <returns>长文本内容</returns>
+        public String LongText() => String.Join("", Enumerable.Repeat("这是一段较长的中文测试文本，用于验证 MCP 工具返回大文本时不被截断。", 50));
     }
 
     /// <summary>构建带工具/资源/提示词的 Kestrel 宿主 MCP 服务器</summary>
@@ -43,7 +52,10 @@ public class McpCrossCompatibilityTests
         {
             s.ResponseFormat = McpResponseFormat.Json;
             s.AddResource("knowledge://articles/1", "文章1", "示例文章", "text/plain", _ => "这是文章内容");
-            // 提示词名用 ASCII：官方客户端 v2.2.0 会把提示词参数注入 Mcp-Param-* HTTP 头，中文会触发“headers must contain only ASCII”
+            // 参数化提示词：官方客户端把参数注入 Mcp-Param-* HTTP 头，参数名须 ASCII（值可为中文）
+            s.AddPrompt("greet", "打招呼",
+                arguments: [new NewLife.AI.ModelContextProtocol.PromptArgument("name", "姓名", true)],
+                get: args => $"你好，{args?["name"]}");
             s.AddPrompt("knowledge_qa", "基于知识库回答", get: _ => "这是回答内容");
         }, typeof(TestTools));
         await app.StartAsync();
@@ -144,6 +156,82 @@ public class McpCrossCompatibilityTests
         var result = await client.PingAsync();
 
         Assert.NotNull(result);
+
+        await app.StopAsync();
+        await app.DisposeAsync();
+    }
+
+    [Fact]
+    [DisplayName("N2-官方客户端调用中文工具参数与返回")]
+    public async Task N2_OfficialClient_ChineseArgsAndResult()
+    {
+        var (app, endpoint) = await CreateServer();
+        await using var client = await CreateClient(endpoint);
+
+        var result = await client.CallToolAsync("echo", new Dictionary<String, Object?> { ["message"] = "你好，世界！中文参数测试。" });
+
+        Assert.False(result.IsError);
+        var text = result.Content.OfType<TextContentBlock>().First().Text;
+        Assert.Equal("你好，世界！中文参数测试。", text);
+
+        await app.StopAsync();
+        await app.DisposeAsync();
+    }
+
+    [Fact]
+    [DisplayName("N2-官方客户端获取长文本工具结果（不被截断）")]
+    public async Task N2_OfficialClient_LongTextResult()
+    {
+        var (app, endpoint) = await CreateServer();
+        await using var client = await CreateClient(endpoint);
+
+        var result = await client.CallToolAsync("long_text");
+
+        Assert.False(result.IsError);
+        var text = result.Content.OfType<TextContentBlock>().First().Text;
+        // 50 段 × 33 字 ≈ 1650 字，验证大文本完整返回
+        Assert.True(text.Length > 1500, $"长文本被截断：{text.Length}");
+        Assert.Contains("这是一段较长的中文测试文本", text);
+
+        await app.StopAsync();
+        await app.DisposeAsync();
+    }
+
+    [Fact]
+    [DisplayName("N2-官方客户端带参数获取提示词（Mcp-Param-* 头注入）")]
+    public async Task N2_OfficialClient_GetPrompt_WithArguments()
+    {
+        var (app, endpoint) = await CreateServer();
+        await using var client = await CreateClient(endpoint);
+
+        var prompts = await client.ListPromptsAsync();
+        var greet = prompts.FirstOrDefault(p => p.Name == "greet");
+        Assert.NotNull(greet);
+
+        // 官方客户端经 Mcp-Param-* HTTP 头注入提示词参数
+        var result = await greet.GetAsync(new Dictionary<String, Object?> { ["name"] = "星语" });
+        Assert.NotNull(result);
+        var text = ((TextContentBlock)result.Messages.First().Content).Text;
+        Assert.Equal("你好，星语", text);
+
+        await app.StopAsync();
+        await app.DisposeAsync();
+    }
+
+    [Fact]
+    [DisplayName("N2-官方客户端连续调用多个工具（会话内多请求）")]
+    public async Task N2_OfficialClient_MultipleCalls_SameSession()
+    {
+        var (app, endpoint) = await CreateServer();
+        await using var client = await CreateClient(endpoint);
+
+        // 同一客户端连续调用多个工具，验证会话保持与多请求链路
+        for (var i = 0; i < 5; i++)
+        {
+            var result = await client.CallToolAsync("add", new Dictionary<String, Object?> { ["a"] = i, ["b"] = 1 });
+            Assert.False(result.IsError);
+            Assert.Equal((i + 1).ToString(), result.Content.OfType<TextContentBlock>().First().Text);
+        }
 
         await app.StopAsync();
         await app.DisposeAsync();

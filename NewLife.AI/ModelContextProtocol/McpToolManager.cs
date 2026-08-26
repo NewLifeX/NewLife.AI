@@ -74,6 +74,10 @@ public class McpTool
         {
             task.GetAwaiter().GetResult();
 
+            // 方法返回非泛型 Task（async Task）→ 无返回值。注意：async Task 的运行时对象是
+            // Task&lt;VoidTaskResult&gt;（编译器实现细节），不能靠运行时类型泛型判断，须看方法签名
+            if (Method.ReturnType == typeof(Task)) return null;
+
             // 泛型 Task&lt;T&gt; 取 Result
             var prop = task.GetType().GetProperty("Result");
             if (prop != null) rs = prop.GetValue(task);
@@ -161,9 +165,9 @@ public class McpToolManager
 
         foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
         {
-            // 排除属性访问器/运算符等特殊方法、Object 基类方法与泛型方法
+            // 排除属性访问器/运算符等特殊方法、Object 基类方法（含重写：ToString/GetHashCode/Equals）与泛型方法
             if (method.IsSpecialName) continue;
-            if (method.DeclaringType == typeof(Object)) continue;
+            if (method.GetBaseDefinition().DeclaringType == typeof(Object)) continue;
             if (method.ContainsGenericParameters) continue;
 
             var name = ToSnakeCase(method.Name);

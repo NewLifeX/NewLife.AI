@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -282,6 +283,68 @@ public class AspNetMcpServerTests
         var httpResponse = await client.PostAsync("/mcp", new StringContent(big, Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, httpResponse.StatusCode);
+    }
+    #endregion
+
+    #region 并发与 DI 注入
+    /// <summary>计数器（DI 注入依赖）</summary>
+    public class TestCounter
+    {
+        /// <summary>当前值</summary>
+        public Int32 Value { get; set; } = 42;
+    }
+
+    /// <summary>依赖注入工具类（构造函数注入 TestCounter）</summary>
+    public class DiTools(TestCounter counter)
+    {
+        /// <summary>获取计数值</summary>
+        /// <returns>计数值</returns>
+        public Int32 GetCount() => counter.Value;
+    }
+
+    [Fact]
+    [DisplayName("MapMcp—并发 20 个工具调用均正确")]
+    public async Task MapMcp_ConcurrentToolCalls()
+    {
+        using var app = await CreateHost();
+        var client = app.GetTestClient();
+
+        var tasks = Enumerable.Range(0, 20).Select(async i =>
+        {
+            var call = await PostAsync(client, "/mcp", new JsonRpcRequest("2.0", "tools/call",
+                new ToolCallParams("add", new Dictionary<String, Object?> { ["a"] = i, ["b"] = 1 }, null), i + 1));
+            Assert.Null(call.Error);
+            var result = call.Result?.ToJson().ToJsonEntity<ToolCallResult>();
+            Assert.NotNull(result);
+            Assert.Equal((i + 1).ToString(), result.Content[0].Text);
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
+    [Fact]
+    [DisplayName("MapMcp—DI 注入工具依赖（构造函数解析服务）")]
+    public async Task MapMcp_DiInjectedToolDependency()
+    {
+        using var app = await CreateHost(builder =>
+        {
+            builder.Services.AddSingleton(new TestCounter());
+            builder.Services.AddMcp<DiTools>();
+        }, toolTypes: [typeof(DiTools)]);
+        var client = app.GetTestClient();
+
+        var list = await PostAsync(client, "/mcp", new JsonRpcRequest("2.0", "tools/list", null, 1));
+        Assert.Null(list.Error);
+        var tools = list.Result?.ToJson().ToJsonEntity<ToolListResult>();
+        Assert.NotNull(tools);
+        Assert.Contains(tools.Tools, t => t.Name == "get_count");
+
+        var call = await PostAsync(client, "/mcp", new JsonRpcRequest("2.0", "tools/call",
+            new ToolCallParams("get_count", new Dictionary<String, Object?>(), null), 2));
+        Assert.Null(call.Error);
+        var result = call.Result?.ToJson().ToJsonEntity<ToolCallResult>();
+        Assert.NotNull(result);
+        Assert.Equal("42", result.Content[0].Text);
     }
     #endregion
 }

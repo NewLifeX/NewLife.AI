@@ -290,3 +290,28 @@ var tools = await client.ListToolsAsync();
   - 本地工具被 AI 客户端**子进程拉起** → `StdioMcpServer`
 - 三者共享同一协议核心，工具/资源/提示词注册 API 完全一致，切换宿主零成本。
 
+---
+
+## 9. 测试覆盖
+
+`NAI/XUnitTest/Mcp/` 下共 130+ 个 MCP 测试，分四层覆盖：
+
+| 层次 | 测试文件 | 覆盖内容 |
+|------|----------|----------|
+| 协议单元 | `McpServerTests` / `McpServerCapabilitiesTests` / `McpErrorCodeTests` / `McpToolManagerTests` / `McpAsyncToolTests` | initialize/ping/tools/resources/prompts/取消、错误码对齐、注册过滤、schema 生成、异步工具、参数转换、必填校验 |
+| 传输层 | `McpTransportTests` / `HttpMcpServerTests` | 线上格式（jsonrpc 全小写/序列化）、stdio 服务端、HttpMcpServer 真实 HTTP（JSON/SSE/405/chunked） |
+| 宿主集成 | `AspNetMcpServerTests` | Kestrel 全链路、认证、legacy SSE、多类型注册、413、**并发调用、DI 注入工具** |
+| 外部交叉验证 | `McpCrossCompatibilityTests` / `McpStreamTransportTests` / `McpHttpServerCrossCompatibilityTests` | 官方 ModelContextProtocol 客户端：工具/资源/提示词/ping、中文与长文本、参数化提示词、in-memory Stream、错误码识别 |
+
+运行方式：
+
+```bash
+# 全部 MCP 测试
+dotnet test NAI/XUnitTest/XUnitTest.csproj --filter "FullyQualifiedName~XUnitTest.Mcp"
+
+# 仅官方客户端交叉验证（外部测试，需真实 HTTP 端口）
+dotnet test NAI/XUnitTest/XUnitTest.csproj --filter "FullyQualifiedName~CrossCompatibility|FullyQualifiedName~StreamTransport"
+```
+
+StarChat 侧集成测试（`XUnitTest/Services/McpServerExposeTests.cs`、`XUnitTest/Tools/McpClientServiceIntegrationTests.cs`）验证 `/mcp` 对外暴露与客户端全链路。
+
