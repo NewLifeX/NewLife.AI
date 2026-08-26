@@ -1,4 +1,5 @@
-﻿using NewLife.Log;
+﻿using System.Reflection;
+using NewLife.Log;
 using NewLife.Remoting;
 using NewLife.Security;
 using NewLife.Serialization;
@@ -7,40 +8,52 @@ namespace NewLife.AI.ModelContextProtocol;
 
 /// <summary>模型上下文协议服务器</summary>
 /// <remarks>
-/// 继承 <see cref="ApiHost"/> 以获得 IApiHost/ILogFeature/ITracerFeature/IExtend 基础设施，
-/// 使 <see cref="ApiHandler.Host"/> 可绑定到本服务器，ApiHandler 才能从 Host 解析出 <see cref="IApiManager"/> 完成工具调用。
+/// 自包含实现：不依赖 NewLife.Remoting 包。实现 <see cref="ILogFeature"/>/<see cref="ITracerFeature"/> 提供日志与追踪，
+/// 通过 <see cref="McpToolManager"/> 完成工具注册、发现与调用（参数绑定/异步解包自实现），对外仅依赖 NewLife.Core。
 /// </remarks>
-public class McpServer : ApiHost, IServiceProvider
+public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposable
 {
     #region 属性
-    /// <summary>接口动作管理器</summary>
-    public IApiManager Manager { get; }
+    /// <summary>名称</summary>
+    public String Name { get; set; } = "Mcp";
+
+    /// <summary>工具管理器</summary>
+    public McpToolManager Manager { get; }
 
     /// <summary>服务提供者</summary>
     public IServiceProvider ServiceProvider { get; set; } = null!;
 
-    private IApiHandler _handler;
+    /// <summary>日志。实现 <see cref="ILogFeature"/></summary>
+    public ILog Log { get; set; } = Logger.Null;
+
+    /// <summary>链路追踪。实现 <see cref="ITracerFeature"/></summary>
+    public ITracer? Tracer { get; set; }
 
     /// <summary>资源集合。uri → 资源定义与读取器</summary>
     private readonly Dictionary<String, McpResource> _resources = [];
 
     /// <summary>提示词集合。name → 提示词定义与处理器</summary>
     private readonly Dictionary<String, McpPrompt> _prompts = [];
+
+    /// <summary>写日志。带名称前缀，对齐原 ApiHost 行为</summary>
+    /// <param name="format">格式化字符串</param>
+    /// <param name="args">格式化参数</param>
+    public void WriteLog(String format, params Object?[] args)
+    {
+        var name = Name;
+        if (!name.IsNullOrEmpty()) format = $"[{name}]{format}";
+        Log?.Info(format, args);
+    }
+
+    /// <summary>释放资源。基类无托管资源，子类宿主（如 HttpMcpServer 的 HttpServer）可重写释放</summary>
+    public virtual void Dispose() { }
     #endregion
 
     #region 构造
     /// <summary>实例化</summary>
     public McpServer()
     {
-        Name = "Mcp";
-
-        // 使用 JSON 编码器，与 ApiServer 初始化方式一致
-        Encoder = new JsonEncoder { JsonHost = JsonHelper.Default };
-
-        Manager = new McpToolManager(this);
-
-        // 将处理器绑定到本服务器，使 ApiHandler 能从 Host 解析到 IApiManager（否则 tools/call 必然 NotFound）
-        _handler = new McpHandler { Host = this };
+        Manager = new McpToolManager();
     }
     #endregion
 
@@ -59,10 +72,7 @@ public class McpServer : ApiHost, IServiceProvider
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 
-        // 基类 Register(object, string) 传 Type 会被当作实例注册（AddSingleton(Type)）导致类型转换异常；
-        // 走泛型 Register<T>() 等价路径：controller=null，仅注册类型供按需创建
-        var method = typeof(IApiManager).GetMethod(nameof(IApiManager.Register), Type.EmptyTypes);
-        method!.MakeGenericMethod(type).Invoke(Manager, null);
+        Manager.Register(type);
     }
 
     /// <summary>添加资源</summary>
@@ -190,30 +200,35 @@ public class McpServer : ApiHost, IServiceProvider
         SetSessionId(context);
 
         var list = new List<ToolDefinition>();
-        foreach (var item in Manager.Services)
+        foreach (var tool in Manager.Tools.Values)
         {
-            var api = item.Value;
+            var schema = tool.Schema;
+            if (schema == null) schema = tool.Schema = BuildSchema(tool.Method);
 
-            var schema = api["schema"];
-            if ((schema == null))
-            {
-                Dictionary<String, Object> properties = [];
-                List<String> required = [];
-                foreach (var param in api.Method.GetParameters())
-                {
-                    if (param.ParameterType == typeof(IProgress<ProgressValue>)) continue;
-
-                    properties[param.Name] = new { type = GetJsonType(param.ParameterType) };
-                    if (!param.IsOptional) required.Add(param.Name!);
-                }
-                api["schema"] = schema = new { type = "object", properties, required };
-            }
-
-            var info = new ToolDefinition(api.Name, api.Method.GetDescription(), schema);
-            list.Add(info);
+            list.Add(new ToolDefinition(tool.Name, tool.Method.GetDescription(), schema));
         }
 
         return new(list);
+    }
+
+    /// <summary>构建工具输入 schema。对齐原 ApiManager 行为：基础设施参数（CancellationToken/IProgress）不暴露给客户端</summary>
+    /// <param name="method">工具方法</param>
+    /// <returns>JSON Schema 对象</returns>
+    private static Object BuildSchema(MethodInfo method)
+    {
+        Dictionary<String, Object> properties = [];
+        List<String> required = [];
+        foreach (var param in method.GetParameters())
+        {
+            // IProgress / CancellationToken 等基础设施参数由框架注入，不进入工具 schema
+            if (param.ParameterType == typeof(IProgress<ProgressValue>)) continue;
+            if (param.ParameterType == typeof(CancellationToken)) continue;
+
+            properties[param.Name!] = new { type = GetJsonType(param.ParameterType) };
+            if (!param.IsOptional) required.Add(param.Name!);
+        }
+
+        return new { type = "object", properties, required };
     }
 
     /// <summary>工具调用</summary>
@@ -232,12 +247,11 @@ public class McpServer : ApiHost, IServiceProvider
         var ps = ConvertParams<ToolCallParams>(request.Params);
         if (ps == null) throw new ArgumentOutOfRangeException(nameof(request.Params), "Tool call parameters are invalid.");
 
-        //var tool = Tools.FirstOrDefault(t => t.Name.Equals(ps.Name, StringComparison.OrdinalIgnoreCase));
-        //if (tool == null) throw new ArgumentOutOfRangeException(nameof(request.Params), $"Tool '{ps.Name}' not found in the server capabilities.");
+        // 查找工具。未知工具名属于协议级无效参数（官方 SDK：tools/call 未知工具返回 InvalidParams）
+        var tool = Manager.Find(ps.Name) ?? throw new ApiException(McpErrorCode.InvalidParams, $"Tool '{ps.Name}' not found in the server capabilities.");
 
-        // 提供非空 IApiSession：ApiHandler.Prepare 首行访问会话 Encoder，传 null 必然 NRE（此前工具调用从未真正成功过）
-        var session = new McpSession(this, context.GetRequest("Mcp-Session-Id"));
-        var result = _handler.Execute(session, ps.Name, ps.Arguments, null!, serviceProvider);
+        var instance = tool.CreateInstance(serviceProvider) ?? throw new ApiException(McpErrorCode.InternalError, $"无法创建工具 '{ps.Name}' 实例");
+        var result = tool.Invoke(instance, ps.Arguments);
 
         List<ContentItem> content = [new("text", result?.ToString() ?? String.Empty)];
         return new(content);
@@ -351,8 +365,8 @@ public class McpServer : ApiHost, IServiceProvider
     {
         if (serviceType == typeof(McpServer)) return this;
 
-        // 让 ApiHandler 能从 Host 解析到本服务器的工具管理器（A-27：此前返回 null 导致 tools/call 必然 NotFound）
-        if (serviceType == typeof(IApiManager)) return Manager;
+        // 让工具管理可从服务提供者解析（A-27 语义保留：此前返回 IApiManager）
+        if (serviceType == typeof(McpToolManager)) return Manager;
 
         return ServiceProvider?.GetService(serviceType)!;
     }

@@ -65,8 +65,8 @@ public class McpErrorCodeTests
     }
 
     [Fact]
-    [DisplayName("tools/call 未知工具—映射底层 404 为 MethodNotFound(-32601)")]
-    public void ToolCall_UnknownTool_ReturnsMethodNotFound()
+    [DisplayName("tools/call 未知工具—返回 InvalidParams(-32602)")]
+    public void ToolCall_UnknownTool_ReturnsInvalidParams()
     {
         var server = CreateServer();
         var request = new JsonRpcRequest("2.0", "tools/call", new ToolCallParams("nonexistent", new Dictionary<String, Object?>(), null), 1);
@@ -75,7 +75,8 @@ public class McpErrorCodeTests
 
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(McpErrorCode.MethodNotFound, error.Code);
+        // 官方 SDK：tools/call 未知工具属于协议级无效参数
+        Assert.Equal(McpErrorCode.InvalidParams, error.Code);
         Assert.Contains("nonexistent", error.Message);
     }
 
@@ -204,10 +205,20 @@ public class McpErrorCodeTests
     }
 
     [Fact]
-    [DisplayName("诊断-NewLife 反序列化 JSON 空字符串值到参数字典")]
-    public void Diagnostic_JsonDeserialize_EmptyStringValue()
+    [DisplayName("序列化回归—ToJson 保留空字符串参数值（nullValue=true）")]
+    public void ToJson_EmptyStringValue_Preserved()
     {
-        // 复现 Kestrel 路径：System.Text.Json 得到 JsonElement，ConvertParams 走 ToJsonEntity
+        // 回归保护：请求序列化 nullValue 必须为 true，否则空字符串参数（如 text1=""）会被省略
+        var json = new ToolCallParams("concat", new Dictionary<String, Object?> { ["text1"] = "" }, null).ToJson(false, true, true);
+
+        Assert.Contains("\"text1\":\"\"", json);
+    }
+
+    [Fact]
+    [DisplayName("反序列化回归—ToJsonEntity 保留空字符串值键")]
+    public void JsonDeserialize_EmptyStringValue_PreservesKey()
+    {
+        // 回归保护：NewLife ToJsonEntity 反序列化 {"query":""} 不得丢键或改值
         var json = "{\"name\":\"search_knowledge\",\"arguments\":{\"query\":\"\"}}";
         var ps = json.ToJsonEntity<ToolCallParams>();
 
@@ -218,35 +229,10 @@ public class McpErrorCodeTests
     }
 
     [Fact]
-    [DisplayName("诊断-concat 场景反序列化参数字典")]
-    public void Diagnostic_Concat_Arguments()
+    [DisplayName("System.Text.Json 全链路回归—空字符串参数正常绑定")]
+    public void SystemTextJsonRoundtrip_EmptyString_Binds()
     {
-        // AspNetMcpServerTests.MapMcp_EmptyStringParam_Binds 失败复现：
-        // concat(text1, text2="World") 传 text1="" 报 Missing
-        var json = "{\"name\":\"concat\",\"arguments\":{\"text1\":\"\"}}";
-        var ps = json.ToJsonEntity<ToolCallParams>();
-
-        Assert.NotNull(ps);
-        Assert.True(ps.Arguments != null, "Arguments 不应为 null");
-        Assert.True(ps.Arguments.ContainsKey("text1"), "text1 不应丢");
-        Assert.Equal("", ps.Arguments["text1"]);
-    }
-
-    [Fact]
-    [DisplayName("诊断-ToJson 序列化含空字符串值的参数字典")]
-    public void Diagnostic_ToJson_EmptyStringValue()
-    {
-        // AspNetMcpServerTests.PostAsync 用 ToJson 序列化请求；nullValue 必须为 true 保留空字符串参数
-        var json = new ToolCallParams("concat", new Dictionary<String, Object?> { ["text1"] = "" }, null).ToJson(false, true, true);
-
-        Assert.Contains("text1", json);
-    }
-
-    [Fact]
-    [DisplayName("诊断-System.Text.Json 反序列化后 Process 空字符串参数")]
-    public void Diagnostic_SystemTextJsonRoundtrip_EmptyString()
-    {
-        // 精确复现 AspNetMcpServer：System.Text.Json 反序列化 JsonRpcRequest → Params 是 JsonElement
+        // 回归保护：精确复现 AspNetMcpServer（System.Text.Json 反序列化 → JsonElement → ConvertParams）
         var json = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"echo\",\"arguments\":{\"message\":\"\"}},\"id\":1}";
         var request = System.Text.Json.JsonSerializer.Deserialize<JsonRpcRequest>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 

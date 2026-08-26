@@ -93,15 +93,15 @@ public class McpStreamTransportTests
         }));
 
     [Fact]
-    [DisplayName("N2-官方客户端调用不存在的工具—抛异常且错误码为 MethodNotFound(-32601)")]
+    [DisplayName("N2-官方客户端调用不存在的工具—抛异常且错误码为 InvalidParams(-32602)")]
     public async Task N2_OfficialClient_UnknownTool_Throws()
     {
         var (app, endpoint) = await CreateServer();
         await using var client = await CreateClient(endpoint);
 
-        // 我们的服务端对未知工具返回 MethodNotFound error envelope，官方客户端应识别并抛出协议异常
+        // 我们的服务端对未知工具返回 InvalidParams error envelope，官方客户端应识别并抛出协议异常
         var ex = await Assert.ThrowsAsync<McpProtocolException>(async () => await client.CallToolAsync("nonexistent", new Dictionary<String, Object?>()));
-        Assert.Equal(NewLife.AI.ModelContextProtocol.McpErrorCode.MethodNotFound, (Int32)ex.ErrorCode);
+        Assert.Equal(NewLife.AI.ModelContextProtocol.McpErrorCode.InvalidParams, (Int32)ex.ErrorCode);
     }
 
     [Fact]

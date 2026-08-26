@@ -283,7 +283,7 @@ var tools = await client.ListToolsAsync();
 | `HttpMcpServer` | NewLife.AI | NewLife.Core HttpServer 宿主 | 非 Web：控制台/服务/嵌入式 |
 | `StdioMcpServer` | NewLife.AI | stdin/stdout 宿主 | 本地工具被 IDE 等子进程拉起 |
 
-- `McpServer` 继承 `ApiHost`（NewLife.Remoting 基础架构：编码器/日志/追踪/DI/IExtend），**不是**基于 `ApiServer`（网络 RPC 服务器，面向网关↔内部服务 RPC，HttpCodec 按 URL 路由 action，不适合 MCP 语义）。
+- `McpServer` 为**自包含协议核心**（仅依赖 `NewLife.Core`，不依赖 NewLife.Remoting 包）：自行完成 JSON-RPC 2.0 处理、工具注册/发现/调用（`McpToolManager`）、参数绑定与异步解包。**不是**基于 `ApiServer`（网络 RPC 服务器，面向网关↔内部服务 RPC，HttpCodec 按 URL 路由 action，不适合 MCP 语义）。
 - 选择原则：
   - 目标应用是 **Web 应用** → `AspNetMcpServer`（`MapMcp`），最标准、官方客户端实测互通
   - 目标应用**不是 Web** 但需要 HTTP 对外 → `HttpMcpServer`

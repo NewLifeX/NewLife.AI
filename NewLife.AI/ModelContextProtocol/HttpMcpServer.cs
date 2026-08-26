@@ -48,6 +48,15 @@ public class HttpMcpServer : McpServer
         Server = server;
     }
 
+    /// <summary>释放资源。释放内部 HttpServer</summary>
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        Server.TryDispose();
+        Server = null!;
+    }
+
     /// <summary>处理MCP请求</summary>
     /// <param name="context">HTTP 上下文</param>
     public void ProcessRequest(IHttpContext context)

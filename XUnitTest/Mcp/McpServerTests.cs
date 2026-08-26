@@ -78,8 +78,8 @@ public class McpServerTests
         // Assert
         Assert.NotNull(server.Manager);
         Assert.Equal(Logger.Null, server.Log);
-        // A-27：Host 绑定后应从本服务器解析出 IApiManager（tools/call 可用）
-        Assert.Same(server.Manager, ((IServiceProvider)server).GetService(typeof(NewLife.Remoting.IApiManager)));
+        // A-27：应从本服务器解析出工具管理器（tools/call 可用）
+        Assert.Same(server.Manager, ((IServiceProvider)server).GetService(typeof(McpToolManager)));
     }
     #endregion
 
