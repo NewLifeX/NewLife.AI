@@ -37,6 +37,10 @@ public class ToolContextHandler(IEnumerable<IToolProvider> toolProviders, SkillS
         if (context.Source == ChatFlowSource.Gateway)
             return Task.CompletedTask;
 
+        // 关闭函数调用时，不激活任何工具（@引用/触发词/历史补全/全量填充/目录注入全部跳过）
+        if (!chatSetting.EnableFunctionCalling)
+            return Task.CompletedTask;
+
         var providers = toolProviders.ToArray();
         var messages = context.ContextMessages;
         var lastUserContent = context.UserMessage?.Content;

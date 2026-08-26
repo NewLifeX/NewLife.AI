@@ -10,7 +10,8 @@ namespace NewLife.ChatAI.Tools;
 /// <remarks>实例化 MCP 客户端服务</remarks>
 /// <param name="log">日志</param>
 /// <param name="httpClientFactory">HTTP 客户端工厂。提供命名客户端，handler 生命周期由工厂管理</param>
-public class McpClientService(ILog log, IHttpClientFactory httpClientFactory) : IToolProvider
+/// <param name="chatSetting">AI 对话配置（读取 EnableMcp / EnableFunctionCalling 控制工具可见性）</param>
+public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IChatSetting chatSetting) : IToolProvider
 {
     #region 缓存
     private IList<McpToolInfo>? _allToolsCache;
@@ -141,6 +142,9 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory) : 
     /// <returns>工具定义列表，供注入 ChatCompletionRequest.Tools</returns>
     public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
     {
+        // 未启用 MCP 或函数调用时，不暴露任何 MCP 工具（在访问 DB 前短路）
+        if (!chatSetting.EnableMcp || !chatSetting.EnableFunctionCalling) return [];
+
         var mcpTools = GetAllTools();
         var tools = new List<ChatTool>(mcpTools.Count);
         foreach (var t in mcpTools)
@@ -167,6 +171,9 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory) : 
     public ISet<String> MatchToolNamesByContent(String? content)
     {
         var result = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
+
+        // 未启用 MCP 时不做触发词匹配（在访问 DB 前短路）
+        if (!chatSetting.EnableMcp) return result;
 
         var servers = McpServerConfig.FindAllWithCache();
         foreach (var server in servers)

@@ -1329,7 +1329,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             clientBuilder = clientBuilder.UseFilters(filter);
 
         var providers = ToolProviders;
-        if (providers.Length > 0)
+        if (providers.Length > 0 && setting.EnableFunctionCalling)
         {
             clientBuilder = clientBuilder.UseTools((IToolSetting)setting, context.SelectedTools, providers);
 

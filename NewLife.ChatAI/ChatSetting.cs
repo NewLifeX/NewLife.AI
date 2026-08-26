@@ -176,6 +176,11 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("启用函数调用")]
     public Boolean EnableFunctionCalling { get; set; } = true;
 
+    /// <summary>启用 MCP 工具调用</summary>
+    [Category("工具与扩展")]
+    [Description("启用 MCP 工具调用")]
+    public Boolean EnableMcp { get; set; } = true;
+
     /// <summary>推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型</summary>
     [Category("工具与扩展")]
     [Description("推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型")]
