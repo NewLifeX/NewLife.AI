@@ -16,18 +16,19 @@ public class McpTransportTests
 {
     #region 线上格式
     [Fact]
-    [DisplayName("请求序列化—jsonrpc 字段全小写，params 为空省略")]
+    [DisplayName("请求序列化—jsonrpc 字段全小写，params 为 null 保留")]
     public void Request_Serialize_CamelCase_SpecCompliant()
     {
         var request = new JsonRpcRequest("2.0", "tools/list", null, 1);
 
-        var json = request.ToJson(false, false, true);
+        // 生产序列化 nullValue=true：保留 null/空字符串（否则空字符串参数会丢失）
+        var json = request.ToJson(false, true, true);
 
         Assert.Contains("\"jsonrpc\":\"2.0\"", json);
         Assert.Contains("\"method\":\"tools/list\"", json);
         Assert.Contains("\"id\":1", json);
-        // params 为空应省略（nullValue=false）
-        Assert.DoesNotContain("\"params\"", json);
+        // params 为 null 时输出 "params":null（合法 JSON-RPC，官方客户端可解析）
+        Assert.Contains("\"params\":null", json);
         // 不得出现 PascalCase 或错误驼峰
         Assert.DoesNotContain("jsonRpc", json);
         Assert.DoesNotContain("JsonRpc", json);
@@ -39,7 +40,8 @@ public class McpTransportTests
     {
         var response = new JsonRpcResponse("2.0", new ToolCallResult([new ContentItem("text", "你好")]), null, 1);
 
-        var json = response.ToJson(false, false, true);
+        // 生产响应序列化 nullValue=true（isError:false 等默认值不丢）
+        var json = response.ToJson(false, true, true);
 
         Assert.Contains("\"jsonrpc\":\"2.0\"", json);
         Assert.Contains("\"result\":", json);
@@ -47,8 +49,8 @@ public class McpTransportTests
         Assert.Contains("\"type\":\"text\"", json);
         Assert.Contains("\"text\":\"你好\"", json);
         Assert.Contains("\"id\":1", json);
-        // Error 为空应省略
-        Assert.DoesNotContain("\"error\"", json);
+        // Error 为 null 时输出 "error":null
+        Assert.Contains("\"error\":null", json);
     }
 
     [Fact]
@@ -95,7 +97,7 @@ public class McpTransportTests
         };
         var result = new ToolListResult([new ToolDefinition("search", "搜索", schema)]);
 
-        var json = result.ToJson(false, false, true);
+        var json = result.ToJson(false, true, true);
 
         // 关键字段必须完整保留（若被 MaxDepth 截断，description/minimum 等会丢失）
         Assert.Contains("\"name\":\"search\"", json);
@@ -133,8 +135,8 @@ public class McpTransportTests
         server.Output = output;
 
         // 两行请求：tools/list + tools/call
-        var req1 = new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, false, true);
-        var req2 = new JsonRpcRequest("2.0", "tools/call", new ToolCallParams("add", new Dictionary<String, Object?> { ["a"] = 2, ["b"] = 3 }, null), 2).ToJson(false, false, true);
+        var req1 = new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, true, true);
+        var req2 = new JsonRpcRequest("2.0", "tools/call", new ToolCallParams("add", new Dictionary<String, Object?> { ["a"] = 2, ["b"] = 3 }, null), 2).ToJson(false, true, true);
         var text = $"{req1}\n{req2}\n";
         input.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
         input.Position = 0;
@@ -172,7 +174,7 @@ public class McpTransportTests
         server.Input = input;
         server.Output = output;
 
-        var req = new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, false, true);
+        var req = new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, true, true);
         var text = req + "\n";
         input.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
         input.Position = 0;
@@ -232,7 +234,7 @@ public class McpTransportTests
         using var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Post, $"http://localhost:{server.Port}/")
         {
-            Content = new StringContent(new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, false, true), Encoding.UTF8, "application/json"),
+            Content = new StringContent(new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, true, true), Encoding.UTF8, "application/json"),
         };
         request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
 
@@ -261,7 +263,7 @@ public class McpTransportTests
 
     private static async Task<JsonRpcResponse> PostAsync(HttpClient client, String url, JsonRpcRequest request)
     {
-        var httpResponse = await client.PostAsync(url, new StringContent(request.ToJson(false, false, true), Encoding.UTF8, "application/json"));
+        var httpResponse = await client.PostAsync(url, new StringContent(request.ToJson(false, true, true), Encoding.UTF8, "application/json"));
         httpResponse.EnsureSuccessStatusCode();
         var body = await httpResponse.Content.ReadAsStringAsync();
         var response = body.ToJsonEntity<JsonRpcResponse>();

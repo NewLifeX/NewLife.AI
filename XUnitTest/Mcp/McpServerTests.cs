@@ -93,7 +93,7 @@ public class McpServerTests
 
         // Act & Assert
         var ex = Assert.Throws<ApiException>(() => server.Process(null!, context));
-        Assert.Equal(ApiCode.BadRequest, ex.Code);
+        Assert.Equal(McpErrorCode.InvalidRequest, ex.Code);
         Assert.Equal("异常请求！", ex.Message);
     }
 
@@ -116,7 +116,7 @@ public class McpServerTests
 
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.NotFound, error.Code);
+        Assert.Equal(McpErrorCode.MethodNotFound, error.Code);
         Assert.Contains("not found in MCP server capabilities", error.Message);
     }
 
@@ -272,7 +272,7 @@ public class McpServerTests
 
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.BadRequest, error.Code);
+        Assert.Equal(McpErrorCode.InvalidParams, error.Code);
         Assert.Contains("Tool call parameters cannot be null", error.Message);
     }
 
@@ -295,7 +295,8 @@ public class McpServerTests
 
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.InternalServerError, error.Code);
+        // 参数无法转换属于协议级无效参数（-32602）
+        Assert.Equal(McpErrorCode.InvalidParams, error.Code);
         // 由于JsonHelper.Convert会抛出不同的异常消息，我们只验证有错误消息即可
         Assert.False(String.IsNullOrEmpty(error.Message));
     }
@@ -319,7 +320,7 @@ public class McpServerTests
 
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.NotFound, error.Code);
+        Assert.Equal(McpErrorCode.MethodNotFound, error.Code);
     }
 
     [Fact]
@@ -338,7 +339,7 @@ public class McpServerTests
 
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.BadRequest, error.Code);
+        Assert.Equal(McpErrorCode.InvalidParams, error.Code);
     }
     #endregion
 

@@ -88,7 +88,7 @@ public class McpHttpServerCrossCompatibilityTests
         for (var i = 0; i < 3; i++)
         {
             var response = await client.PostAsync($"http://localhost:{server.Port}/",
-                new StringContent(new NewLife.AI.ModelContextProtocol.JsonRpcRequest("2.0", "tools/list", null, i + 1).ToJson(false, false, true), Encoding.UTF8, "application/json"));
+                new StringContent(new NewLife.AI.ModelContextProtocol.JsonRpcRequest("2.0", "tools/list", null, i + 1).ToJson(false, true, true), Encoding.UTF8, "application/json"));
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync();
             var rpc = body.ToJsonEntity<NewLife.AI.ModelContextProtocol.JsonRpcResponse>();

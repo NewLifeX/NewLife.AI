@@ -89,11 +89,11 @@ public class McpServer : ApiHost, IServiceProvider
     /// <summary>处理MCP请求</summary>
     public JsonRpcResponse Process(JsonRpcRequest request, McpContext context)
     {
-        if (request == null) throw new ApiException(ApiCode.BadRequest, "异常请求！");
+        if (request == null) throw new ApiException(McpErrorCode.InvalidRequest, "异常请求！");
 
         // A-34：校验 JSON-RPC 版本（原未校验，协议漂移时静默返回错误格式）
         if (request.JsonRpc != "2.0")
-            return new("2.0", null, new JsonRpcError(ApiCode.BadRequest, "不支持的 JSON-RPC 版本，仅支持 2.0"), request.Id);
+            return new("2.0", null, new JsonRpcError(McpErrorCode.InvalidRequest, "不支持的 JSON-RPC 版本，仅支持 2.0"), request.Id);
 
         try
         {
@@ -110,7 +110,7 @@ public class McpServer : ApiHost, IServiceProvider
                 "prompts/list" => OnPromptList(context, request),
                 "prompts/get" => OnPromptGet(context, request),
                 "notifications/cancelled" => null,      // JSON-RPC notification，无需响应
-                _ => throw new ApiException(ApiCode.NotFound, $"Method '{request.Method}' not found in MCP server capabilities."),
+                _ => throw new ApiException(McpErrorCode.MethodNotFound, $"Method '{request.Method}' not found in MCP server capabilities."),
             };
             if (result is JsonRpcResponse response) return response;
 
@@ -121,15 +121,33 @@ public class McpServer : ApiHost, IServiceProvider
         }
         catch (Exception ex)
         {
-            var code = ApiCode.InternalServerError;
+            // 错误码对齐 MCP/JSON-RPC 规范：参数/资源/方法相关异常映射为协议错误码，其余为内部错误
+            var code = McpErrorCode.InternalError;
             if (ex is ApiException apiEx)
-                code = apiEx.Code;
-            else if (ex is ArgumentException)
-                code = ApiCode.BadRequest;
+                code = MapToMcpErrorCode(apiEx.Code);
+            else if (ex is ArgumentException or KeyNotFoundException or InvalidCastException or FormatException)
+                code = McpErrorCode.InvalidParams;
 
             WriteLog("MCP 处理 {0} 失败：{1}", request.Method, ex.Message);
             return new("2.0", null, new JsonRpcError(code, ex.Message), request.Id);
         }
+    }
+
+    /// <summary>映射错误码为 MCP/JSON-RPC 规范错误码。底层 ApiHandler 抛出的 ApiException 使用 HTTP 风格码（400/404/500），此处映射；本服务器抛出的 MCP 错误码（负值）直接透传</summary>
+    /// <param name="code">原始错误码</param>
+    /// <returns>MCP 规范错误码</returns>
+    private static Int32 MapToMcpErrorCode(Int32 code)
+    {
+        // 已使用 MCP 错误码（负值）直接透传
+        if (code < 0) return code;
+
+        return code switch
+        {
+            ApiCode.BadRequest => McpErrorCode.InvalidParams,
+            ApiCode.Unauthorized or ApiCode.Forbidden => McpErrorCode.InvalidRequest,
+            ApiCode.NotFound => McpErrorCode.MethodNotFound,
+            _ => McpErrorCode.InternalError,
+        };
     }
     #endregion
 
@@ -259,7 +277,7 @@ public class McpServer : ApiHost, IServiceProvider
         var ps = ConvertParams<ResourceReadParams>(request.Params);
         if (ps == null || ps.Uri.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Resource read parameters are invalid.");
 
-        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(ApiCode.NotFound, $"Resource '{ps.Uri}' not found in the server capabilities.");
+        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(McpErrorCode.ResourceNotFound, $"Resource '{ps.Uri}' not found in the server capabilities.");
 
         var data = res.Read?.Invoke(ps.Uri) ?? String.Empty;
         return new ReadResourceResult([new ResourceContentItem(ps.Uri, data?.ToString() ?? String.Empty, res.Definition.MimeType)]);
@@ -288,7 +306,8 @@ public class McpServer : ApiHost, IServiceProvider
         var ps = ConvertParams<PromptGetParams>(request.Params);
         if (ps == null || ps.Name.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Prompt get parameters are invalid.");
 
-        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(ApiCode.NotFound, $"Prompt '{ps.Name}' not found in the server capabilities.");
+        // 官方 SDK：未知提示词名属于协议级无效参数（InvalidParams）
+        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(McpErrorCode.InvalidParams, $"Prompt '{ps.Name}' not found in the server capabilities.");
 
         var content = prompt.Get?.Invoke(ps.Arguments) ?? String.Empty;
         if (content is IList<PromptMessage> messages) return new GetPromptResult(prompt.Definition.Description, messages);

@@ -116,7 +116,8 @@ public class McpServerCapabilitiesTests
         Assert.Null(response.Result);
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.NotFound, error.Code);
+        // MCP 2025-06-18 协议：未知资源 URI 返回 ResourceNotFound（-32002）
+        Assert.Equal(McpErrorCode.ResourceNotFound, error.Code);
         Assert.Contains("not found", error.Message);
     }
 
@@ -132,7 +133,8 @@ public class McpServerCapabilitiesTests
         Assert.Null(response.Result);
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.BadRequest, error.Code);
+        // 参数缺失属于协议级无效参数（-32602）
+        Assert.Equal(McpErrorCode.InvalidParams, error.Code);
     }
     #endregion
 
@@ -227,7 +229,8 @@ public class McpServerCapabilitiesTests
         Assert.Null(response.Result);
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
-        Assert.Equal(ApiCode.NotFound, error.Code);
+        // 官方 SDK：未知提示词名属于协议级无效参数（-32602）
+        Assert.Equal(McpErrorCode.InvalidParams, error.Code);
     }
     #endregion
 

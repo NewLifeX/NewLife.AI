@@ -291,7 +291,9 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
                 client.DefaultRequestHeaders.Add("X-Api-Key", config.AuthToken);
         }
 
-        var json = request.ToJson(false, false, true);
+        // 请求序列化：ToJson(indented, nullValue, camelCase)。nullValue 必须为 true 保留空值，
+        // 否则空字符串参数（如 query=""）会被 JsonWriter.IsNull 判定为空值省略，导致工具必填参数丢失
+        var json = request.ToJson(false, true, true);
         using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         using var httpResponse = await client.PostAsync(config.Endpoint, content, cancellationToken).ConfigureAwait(false);
 

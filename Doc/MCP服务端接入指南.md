@@ -61,7 +61,10 @@ curl -X POST http://localhost:5000/mcp \
 | Bearer 认证 | ✅（可选） | 配置后所有端点需带 `Authorization: Bearer` |
 | 多工具类型批量注册 | ✅ | `MapMcp("/mcp", typeof(T1), typeof(T2))` |
 | 非 Web HTTP 宿主 | ✅ | `HttpMcpServer`，基于 NewLife.Core HttpServer，零 ASP.NET 依赖（见第 7 节） |
-| stdio 服务端 | ✅ | `StdioMcpServer`，供 IDE 子进程拉起 |
+| stdio 服务端 | ✅ | `StdioMcpServer`，供 IDE 子进程拉起；可注入任意流做 in-memory 传输（见第 7 节） |
+| in-memory / Stream 传输 | ✅ | `StdioMcpServer` 注入双流与官方 `StreamClientTransport` 配对，进程内零网络互通 |
+| 错误码对齐 | ✅ | 协议级错误返回 JSON-RPC 规范负值（-32601/-32602/-32603/-32002），官方客户端可识别 |
+| 必填参数校验 | ✅ | 缺必填标量参数返回 `InvalidParams(-32602)`；空字符串参数正确保留 |
 | 请求体限制 | ✅ | 1MB 上限，防 DoS |
 
 ---
@@ -171,8 +174,11 @@ var result = await client.CallToolAsync("add", new() { ["a"] = 1, ["b"] = 2 });
 
 - **Streamable HTTP**（默认）：客户端 `POST` JSON-RPC 到 `/mcp`，服务端按 `Accept` 头返回单条 JSON 或 SSE。会话通过 `Mcp-Session-Id` 响应头回写。
 - **legacy SSE**（可选）：客户端 `GET /mcp/sse` 建立事件流，`POST /mcp/message` 提交消息，响应经事件流推送。
-- **JSON-RPC 2.0**：`jsonrpc` 字段全小写（规范要求），错误码对齐规范；`notifications/*`（无 Id）不响应。
-- **序列化**：统一 camelCase + 省略空值，兼容官方与主流第三方客户端。
+- **JSON-RPC 2.0**：`jsonrpc` 字段全小写（规范要求）；`notifications/*`（无 Id）不响应。
+- **错误码**：协议级错误返回 JSON-RPC 规范负值——方法未找到 `-32601`、参数无效 `-32602`、内部错误 `-32603`、无效请求 `-32600`、资源未找到 `-32002`（2025-06-18 协议）。对齐官方 SDK `McpErrorCode`，官方客户端可正确识别。
+- **必填参数校验**：`tools/call` 缺必填标量参数返回 `InvalidParams(-32602)`；`resources/read` 未知 URI 返回 `ResourceNotFound(-32002)`；`prompts/get` 未知名称返回 `InvalidParams`。工具方法内部业务异常返回 `InternalError(-32603)`。
+- **序列化**：统一 camelCase + 保留空值（`ToJson(indented, nullValue:true, camelCase:true)`）。⚠️ `nullValue` 必须为 `true`，否则空字符串参数（如 `query=""`）会被判定为空值省略，导致必填参数丢失——这是易踩的坑。
+- **进度（IProgress）**：工具方法可声明 `IProgress<ProgressValue>` 参数，框架注入安全实现不会空引用；完整 progress 通知推送（服务端→客户端）需独立 SSE 通道，属后续增强。
 
 ---
 
@@ -181,6 +187,8 @@ var result = await client.CallToolAsync("add", new() { ["a"] = 1, ["b"] = 2 });
 | 问题 | 处理 |
 |------|------|
 | 工具调用返回 500 / 参数丢失 | 工具类需 public + 无参构造或已注册 DI；方法参数为标量类型（`ToolCallContext` 等特殊参数不受 MCP 协议支持） |
+| 空字符串参数丢失 | 请求序列化 `nullValue` 必须为 `true`（`ToJson(false, true, true)`），否则 `""` 被省略；`McpClientService` 已内置修复 |
+| 缺参数不报错 / 参数错乱 | 必填标量参数缺失会返回 `InvalidParams(-32602)`；确保 arguments 传全必填项 |
 | 官方客户端连不上 | 确认端点路径（默认 `/mcp`）、认证头、协议版本兼容（服务端声明 2025-06-18，客户端会协商降级） |
 | 需要知识库/自定义资源 | 用 `AddResource` 注册，客户端走 `resources/list` + `resources/read` |
 | 公网部署安全 | 务必配置 `Mcp:AuthToken`；按需配置 `AllowedHosts` 与 CORS（见 ASP.NET Core 文档） |
@@ -235,6 +243,34 @@ Claude Desktop 配置 stdio 服务：
   }
 }
 ```
+
+### 7.3 in-memory / Stream 传输（进程内零网络）
+
+`StdioMcpServer` 的 `Input`/`Output` 可注入**任意流**（不限于控制台），配合官方 `StreamClientTransport` 即可实现进程内 in-memory 互通（对齐官方 `StreamServerTransport`/`StreamClientTransport`）：
+
+```csharp
+using System.IO.Pipelines;
+using ModelContextProtocol.Client;          // 官方客户端（测试/嵌入式）
+
+var toServer = new Pipe();                  // 客户端写 → 服务器读
+var toClient = new Pipe();                  // 服务器写 → 客户端读
+
+var server = new StdioMcpServer
+{
+    Input = toServer.Reader.AsStream(),
+    Output = toClient.Writer.AsStream(),
+};
+server.AddTool<MyTools>(server);
+var serverTask = Task.Run(() => server.Run());
+
+// 官方客户端走 Stream 传输（in-memory，无网络、无端口）
+await using var client = await McpClient.CreateAsync(
+    new StreamClientTransport(toServer.Writer.AsStream(), toClient.Reader.AsStream()));
+var tools = await client.ListToolsAsync();
+```
+
+- 适用：进程内测试、嵌入式场景（同一进程内服务端↔客户端直接互通）。
+- 交叉验证：`McpStreamTransportTests` 覆盖官方客户端经 Stream 传输的完整工具发现/调用链路。
 
 ---
 

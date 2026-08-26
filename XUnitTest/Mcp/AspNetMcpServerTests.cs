@@ -64,7 +64,7 @@ public class AspNetMcpServerTests
 
     private static async Task<JsonRpcResponse> PostAsync(HttpClient client, String url, JsonRpcRequest request)
     {
-        var httpResponse = await client.PostAsync(url, new StringContent(request.ToJson(false, false, true), Encoding.UTF8, "application/json"));
+        var httpResponse = await client.PostAsync(url, new StringContent(request.ToJson(false, true, true), Encoding.UTF8, "application/json"));
         var body = await httpResponse.Content.ReadAsStringAsync();
         var response = body.ToJsonEntity<JsonRpcResponse>();
         Assert.NotNull(response);
@@ -102,13 +102,30 @@ public class AspNetMcpServerTests
     }
 
     [Fact]
+    [DisplayName("MapMcp—tools/call 传空字符串参数绑定正常")]
+    public async Task MapMcp_EmptyStringParam_Binds()
+    {
+        using var app = await CreateHost(configureServer: null, toolTypes: [typeof(TestTools), typeof(MoreTools)]);
+        var client = app.GetTestClient();
+
+        // text1 必填传空字符串，text2 用默认值——验证空字符串不被误判为缺参
+        var call = await PostAsync(client, "/mcp", new JsonRpcRequest("2.0", "tools/call",
+            new ToolCallParams("concat", new Dictionary<String, Object?> { ["text1"] = "" }, null), 3));
+
+        Assert.Null(call.Error);
+        var result = call.Result?.ToJson().ToJsonEntity<ToolCallResult>();
+        Assert.NotNull(result);
+        Assert.Equal(" World", result.Content[0].Text);
+    }
+
+    [Fact]
     [DisplayName("MapMcp—JSON 响应 Content-Type 为 application/json")]
     public async Task MapMcp_JsonResponse_ContentType()
     {
         using var app = await CreateHost();
         var client = app.GetTestClient();
 
-        var httpResponse = await client.PostAsync("/mcp", new StringContent(new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, false, true), Encoding.UTF8, "application/json"));
+        var httpResponse = await client.PostAsync("/mcp", new StringContent(new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, true, true), Encoding.UTF8, "application/json"));
 
         Assert.Equal("application/json", httpResponse.Content.Headers.ContentType?.MediaType);
         var body = await httpResponse.Content.ReadAsStringAsync();
@@ -124,7 +141,7 @@ public class AspNetMcpServerTests
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
-            Content = new StringContent(new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, false, true), Encoding.UTF8, "application/json"),
+            Content = new StringContent(new JsonRpcRequest("2.0", "ping", null, 1).ToJson(false, true, true), Encoding.UTF8, "application/json"),
         };
         request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
 
@@ -159,7 +176,7 @@ public class AspNetMcpServerTests
         using var app = await CreateHost(null, s => s.AuthToken = "secret-token");
         var client = app.GetTestClient();
 
-        var httpResponse = await client.PostAsync("/mcp", new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, false, true), Encoding.UTF8, "application/json"));
+        var httpResponse = await client.PostAsync("/mcp", new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, true, true), Encoding.UTF8, "application/json"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, httpResponse.StatusCode);
     }
@@ -173,7 +190,7 @@ public class AspNetMcpServerTests
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
-            Content = new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, false, true), Encoding.UTF8, "application/json"),
+            Content = new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, true, true), Encoding.UTF8, "application/json"),
         };
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer secret-token");
 
@@ -193,7 +210,7 @@ public class AspNetMcpServerTests
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
-            Content = new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, false, true), Encoding.UTF8, "application/json"),
+            Content = new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 1).ToJson(false, true, true), Encoding.UTF8, "application/json"),
         };
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer cfg-token");
 
@@ -227,7 +244,7 @@ public class AspNetMcpServerTests
 
         // POST 消息（202 无响应体，响应经事件流推送）
         var msgResponse = await client.PostAsync($"/mcp/message?sessionId={sessionId}",
-            new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 5).ToJson(false, false, true), Encoding.UTF8, "application/json"));
+            new StringContent(new JsonRpcRequest("2.0", "tools/list", null, 5).ToJson(false, true, true), Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.Accepted, msgResponse.StatusCode);
 
         // 从事件流读取响应事件
