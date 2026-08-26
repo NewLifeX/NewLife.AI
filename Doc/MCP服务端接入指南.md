@@ -2,6 +2,7 @@
 
 > 目标：任何 ASP.NET Core Web 应用只需引入 `NewLife.AI.Extensions`，即可把自身业务能力包装为标准 MCP 服务接口，供外部 AI 客户端（Claude Desktop、Cursor、VS Code 等）或编程方式调用。
 > 能力对标 NuGet 官方 `ModelContextProtocol` 包（v2.x）的 P0+P1 常用能力，自研实现保持零外部依赖。
+> 非 Web 场景（控制台、桌面工具等）使用 `NewLife.AI` 内置的 `HttpMcpServer` / `StdioMcpServer`，见第 7 节；宿主关系见第 8 节。
 
 ---
 
@@ -59,6 +60,7 @@ curl -X POST http://localhost:5000/mcp \
 | legacy SSE（GET /sse + POST /message） | ✅（可选） | 兼容旧客户端，`EnableLegacySse = true` 开启 |
 | Bearer 认证 | ✅（可选） | 配置后所有端点需带 `Authorization: Bearer` |
 | 多工具类型批量注册 | ✅ | `MapMcp("/mcp", typeof(T1), typeof(T2))` |
+| 非 Web HTTP 宿主 | ✅ | `HttpMcpServer`，基于 NewLife.Core HttpServer，零 ASP.NET 依赖（见第 7 节） |
 | stdio 服务端 | ✅ | `StdioMcpServer`，供 IDE 子进程拉起 |
 | 请求体限制 | ✅ | 1MB 上限，防 DoS |
 
@@ -182,3 +184,73 @@ var result = await client.CallToolAsync("add", new() { ["a"] = 1, ["b"] = 2 });
 | 官方客户端连不上 | 确认端点路径（默认 `/mcp`）、认证头、协议版本兼容（服务端声明 2025-06-18，客户端会协商降级） |
 | 需要知识库/自定义资源 | 用 `AddResource` 注册，客户端走 `resources/list` + `resources/read` |
 | 公网部署安全 | 务必配置 `Mcp:AuthToken`；按需配置 `AllowedHosts` 与 CORS（见 ASP.NET Core 文档） |
+
+---
+
+## 7. 非 Web 场景：HttpMcpServer 与 StdioMcpServer
+
+前 6 节针对 ASP.NET Core Web 应用（Kestrel 宿主）。目标应用**不是 Web** 时（控制台、Windows 服务、桌面工具、嵌入式设备），使用 `NewLife.AI` 包内置的两种轻量宿主，零 ASP.NET 依赖，工具/资源/提示词注册 API 与 Web 场景完全一致。
+
+### 7.1 控制台应用：HttpMcpServer（HTTP 宿主）
+
+```csharp
+using NewLife.AI.ModelContextProtocol;   // HttpMcpServer / McpResponseFormat
+
+var server = new HttpMcpServer
+{
+    Port = 8080,                          // 0 表示自动分配，Start 后从 server.Port 回读实际端口
+    ResponseFormat = McpResponseFormat.Auto, // Auto/Json/Sse
+};
+server.AddTool<MyTools>(server);          // 注册工具类
+server.Start();
+
+Console.WriteLine($"MCP 服务已启动：http://localhost:{server.Port}/");
+Console.ReadLine();
+```
+
+- 基于 `NewLife.Core` 的 `HttpServer`，无 ASP.NET 依赖，适合控制台/Windows 服务/嵌入式设备。
+- 已兼容官方 MCP 客户端（含 `Transfer-Encoding: chunked` 请求体解码），`POST http://host:port/` 即为 Streamable HTTP 端点。
+- 端口 `0` 时由系统自动分配，启动后从 `server.Port` 读实际端口（便于动态注册与测试）。
+
+### 7.2 桌面/CLI 工具：StdioMcpServer（标准输入输出）
+
+```csharp
+using NewLife.AI.ModelContextProtocol;   // StdioMcpServer
+
+var server = new StdioMcpServer();
+server.AddTool<MyTools>(server);
+server.Run();                             // 阻塞读取 stdin，响应写入 stdout
+```
+
+- 被外部进程（IDE、Claude Desktop、Cursor 等）作为**子进程**拉起：客户端启动本程序并接管 stdin/stdout。
+- 每条 JSON-RPC 消息独占一行（newline-delimited JSON），UTF-8 无 BOM。
+- 适合桌面客户端内的本地工具进程（如 StarWing 的 MCP 工具）。
+
+Claude Desktop 配置 stdio 服务：
+
+```json
+{
+  "mcpServers": {
+    "my-cli": { "command": "MyTool.exe", "args": [] }
+  }
+}
+```
+
+---
+
+## 8. 宿主关系澄清：McpServer 与三种宿主
+
+| 类型 | 所在包 | 职责 | 适用场景 |
+|------|--------|------|----------|
+| `McpServer` | NewLife.AI | **协议核心**：JSON-RPC 2.0 处理、工具/资源/提示词管理 | 被各宿主复用，不直接对外 |
+| `AspNetMcpServer` | NewLife.AI.Extensions | ASP.NET Core（Kestrel）宿主 | Web 应用（推荐，最标准成熟） |
+| `HttpMcpServer` | NewLife.AI | NewLife.Core HttpServer 宿主 | 非 Web：控制台/服务/嵌入式 |
+| `StdioMcpServer` | NewLife.AI | stdin/stdout 宿主 | 本地工具被 IDE 等子进程拉起 |
+
+- `McpServer` 继承 `ApiHost`（NewLife.Remoting 基础架构：编码器/日志/追踪/DI/IExtend），**不是**基于 `ApiServer`（网络 RPC 服务器，面向网关↔内部服务 RPC，HttpCodec 按 URL 路由 action，不适合 MCP 语义）。
+- 选择原则：
+  - 目标应用是 **Web 应用** → `AspNetMcpServer`（`MapMcp`），最标准、官方客户端实测互通
+  - 目标应用**不是 Web** 但需要 HTTP 对外 → `HttpMcpServer`
+  - 本地工具被 AI 客户端**子进程拉起** → `StdioMcpServer`
+- 三者共享同一协议核心，工具/资源/提示词注册 API 完全一致，切换宿主零成本。
+
