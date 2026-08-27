@@ -49,10 +49,10 @@ export function GatewaySettings({ settings, onChange }: Props) {
         description={t('systemSettings.gateway.enableGatewayDesc')}
       />
       <Toggle
-        checked={settings.enableGatewayRecording}
-        onChange={(v) => onChange({ enableGatewayRecording: v })}
-        label={t('systemSettings.gateway.enableGatewayRecording')}
-        description={t('systemSettings.gateway.enableGatewayRecordingDesc')}
+        checked={settings.enableGatewayDomainMode}
+        onChange={(v) => onChange({ enableGatewayDomainMode: v })}
+        label={t('systemSettings.gateway.enableGatewayDomainMode')}
+        description={t('systemSettings.gateway.enableGatewayDomainModeDesc')}
       />
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">

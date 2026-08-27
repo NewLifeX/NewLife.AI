@@ -27,9 +27,9 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
     /// <inheritdoc/>
     public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
-        // 未开启持久化时跳过数据库写入
+        // 未开启持久化时跳过数据库写入（网关场景：领域模式开启才记录）
         if (context.Source.HasFlag(ChatFlowSource.Web) ||
-            context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayRecording
+            context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayDomainMode
 #if STARCHAT
             || context.Source.HasFlag(ChatFlowSource.Channel) && setting.EnableChannelPersist
 #endif
@@ -82,9 +82,9 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
     /// <inheritdoc/>
     public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
-        // 未开启持久化时跳过数据库写入
+        // 未开启持久化时跳过数据库写入（网关场景：领域模式开启才记录）
         if (context.Source.HasFlag(ChatFlowSource.Web) ||
-            context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayRecording
+            context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayDomainMode
 #if STARCHAT
             || context.Source.HasFlag(ChatFlowSource.Channel) && setting.EnableChannelPersist
 #endif

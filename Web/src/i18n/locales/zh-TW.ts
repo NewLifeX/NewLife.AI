@@ -260,8 +260,8 @@ export default {
       gatewayRateLimit: '閘道限流（次/分鐘）',
       gatewayRateLimitDesc: '每分鐘每使用者最大請求次數',
 
-      enableGatewayRecording: '啟用閘道錄製',
-      enableGatewayRecordingDesc: '記錄通過閘道的完整請求與回應',
+      enableGatewayDomainMode: '閘道領域模式',
+      enableGatewayDomainModeDesc: '關閉=純淨 LLM 閘道僅轉發流量；開啟=領域智能體閘道（完整處理器鏈+對話記錄），與 Web 對話能力對齊',
     },
     tools: {
       enableFunctionCalling: '啟用函數呼叫',

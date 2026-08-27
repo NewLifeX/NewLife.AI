@@ -44,7 +44,7 @@ const defaultSettings: SystemSettings = {
   allowAnonymousShare: false,
   enableGateway: true,
   gatewayRateLimit: 60,
-  enableGatewayRecording: false,
+  enableGatewayDomainMode: false,
   enableFunctionCalling: true,
   enableSuggestedQuestionCache: true,
   streamingSpeed: 3,

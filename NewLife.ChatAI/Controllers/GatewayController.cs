@@ -799,8 +799,8 @@ public class GatewayController(GatewayService gatewayService, ModelService model
             return;
         }
 
-        // 网关对话记录：收集流式输出内容
-        var enableRecording = chatSetting.EnableGatewayRecording;
+        // 网关对话记录：领域模式开启时自动记录（收集流式输出内容）
+        var enableRecording = chatSetting.EnableGatewayDomainMode;
         var contentBuilder = enableRecording ? new StringBuilder() : null;
         var thinkingBuilder = enableRecording ? new StringBuilder() : null;
 
@@ -818,7 +818,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
                 }
             }
 
-            var messages = gatewayService.BuildContextMessages(request, appKey, config);
+            var messages = gatewayService.BuildContextMessages(request, appKey, config, chatSetting.EnableGatewayDomainMode);
             var convId = request.ConversationId.ToLong();
 
             if (request.Stream)

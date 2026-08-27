@@ -47,7 +47,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             // API 网关
             EnableGateway = chatSetting.EnableGateway,
             GatewayRateLimit = chatSetting.GatewayRateLimit,
-            EnableGatewayRecording = chatSetting.EnableGatewayRecording,
+            EnableGatewayDomainMode = chatSetting.EnableGatewayDomainMode,
             // 工具与能力
             EnableFunctionCalling = chatSetting.EnableFunctionCalling,
             EnableSuggestedQuestionCache = chatSetting.EnableSuggestedQuestionCache,
@@ -105,7 +105,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         // API 网关
         if (dto.EnableGateway.HasValue) chatSetting.EnableGateway = dto.EnableGateway.Value;
         if (dto.GatewayRateLimit.HasValue) chatSetting.GatewayRateLimit = dto.GatewayRateLimit.Value;
-        if (dto.EnableGatewayRecording.HasValue) chatSetting.EnableGatewayRecording = dto.EnableGatewayRecording.Value;
+        if (dto.EnableGatewayDomainMode.HasValue) chatSetting.EnableGatewayDomainMode = dto.EnableGatewayDomainMode.Value;
         // 工具与能力
         if (dto.EnableFunctionCalling.HasValue) chatSetting.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
         if (dto.EnableSuggestedQuestionCache.HasValue) chatSetting.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;

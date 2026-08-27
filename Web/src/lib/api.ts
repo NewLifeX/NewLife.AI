@@ -849,7 +849,7 @@ export interface SystemSettings {
   // 网关
   enableGateway: boolean
   gatewayRateLimit: number
-  enableGatewayRecording: boolean
+  enableGatewayDomainMode: boolean
   // 工具能力
   enableFunctionCalling: boolean
   enableSuggestedQuestionCache: boolean

@@ -312,8 +312,8 @@ export default {
       gatewayRateLimit: 'Gateway Rate Limit (req/min)',
       gatewayRateLimitDesc: 'Maximum requests per user per minute',
 
-      enableGatewayRecording: 'Enable Gateway Recording',
-      enableGatewayRecordingDesc: 'Record complete requests and responses through the gateway',
+      enableGatewayDomainMode: 'Gateway Domain Mode',
+      enableGatewayDomainModeDesc: 'Off = pure LLM gateway (forward only); On = domain agent gateway (full handler chain + conversation recording), aligned with Web conversations',
     },
     tools: {
       enableFunctionCalling: 'Enable Function Calling',

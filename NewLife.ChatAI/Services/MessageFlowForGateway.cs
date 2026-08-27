@@ -8,7 +8,7 @@ namespace NewLife.ChatAI.Services;
 /// <summary>网关消息流。继承 <see cref="MessageFlow"/> 核心管道，专为 API 网关路径适配。
 /// <list type="bullet">
 ///   <item>不从数据库加载历史消息（<see cref="LoadHistoryMessages"/> 始终返回空列表）</item>
-///   <item><see cref="MessageFlow.Chain"/> 由 <see cref="ChatHandlerChain.BuildFor"/> 按 <see cref="ChatFlowSource.Gateway"/> 过滤，<c>EnableGatewayHandlers=false</c> 时仅保留 Core 级处理器（精简链），为 true 时保留全部处理器（完整链）</item>
+///   <item><see cref="MessageFlow.Chain"/> 由 <see cref="ChatHandlerChain.BuildFor"/> 按 <see cref="ChatFlowSource.Gateway"/> 过滤，<c>EnableGatewayDomainMode=false</c> 时仅保留 Core 级处理器（精简链，纯净转发），为 true 时保留全部处理器（完整链）</item>
 ///   <item>工具调用：始终透传，不装配 ToolChatClient。客户端传入的工具定义原样传给 LLM，tool_calls 原样返回由客户端执行。派生类（如 StarChatMessageFlowForGateway）可覆盖以按 AppKey 条件启用服务端工具调用</item>
 /// </list>
 /// </summary>
@@ -31,10 +31,10 @@ public class MessageFlowForGateway : MessageFlow
         _setting = setting;
 
         // 按来源和链模式从全量 Handler 集合中过滤：
-        //   EnableGatewayHandlers=false → 精简链（Core 级处理器：配额、用量等）
-        //   EnableGatewayHandlers=true  → 完整链（含知识进化、用户记忆等高级能力）
+        //   领域模式关闭 → 精简链（Core 级处理器：配额、用量等，纯净转发）
+        //   领域模式开启 → 完整链（含知识进化、用户记忆等高级能力）
         var allHandlers = services?.GetServices<IChatHandler>() ?? [];
-        Chain = ChatHandlerChain.BuildFor(allHandlers, ChatFlowSource.Gateway, setting.EnableGatewayHandlers);
+        Chain = ChatHandlerChain.BuildFor(allHandlers, ChatFlowSource.Gateway, setting.EnableGatewayDomainMode);
     }
 
     #endregion
@@ -135,7 +135,7 @@ public class MessageFlowForGateway : MessageFlow
             ModelConfig = modelConfig,
             UserId = userId,
             Conversation = new Conversation { Id = conversationId, Enable = true },
-            // 标记来源为 Gateway；是否持久化由 EnableGatewayRecording 配置决定
+            // 标记来源为 Gateway；是否持久化由领域模式（EnableGatewayDomainMode）配置决定
             Source = ChatFlowSource.Gateway,
             ThinkingMode = request?.EnableThinking switch
             {

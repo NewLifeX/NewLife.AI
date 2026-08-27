@@ -73,8 +73,8 @@ public class SystemSettingsDto
     /// <summary>网关限流（每分钟每用户）</summary>
     public Int32 GatewayRateLimit { get; set; }
 
-    /// <summary>网关对话记录</summary>
-    public Boolean EnableGatewayRecording { get; set; }
+    /// <summary>网关领域模式。关闭=纯净转发；开启=领域智能体（完整链+记录）</summary>
+    public Boolean EnableGatewayDomainMode { get; set; }
     #endregion
 
     #region 工具与能力
@@ -205,8 +205,8 @@ public class SystemSettingsUpdateDto
     /// <summary>网关限流</summary>
     public Int32? GatewayRateLimit { get; set; }
 
-    /// <summary>网关对话记录</summary>
-    public Boolean? EnableGatewayRecording { get; set; }
+    /// <summary>网关领域模式。关闭=纯净转发；开启=领域智能体（完整链+记录）</summary>
+    public Boolean? EnableGatewayDomainMode { get; set; }
     #endregion
 
     #region 工具与能力

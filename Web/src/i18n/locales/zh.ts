@@ -314,8 +314,8 @@ export default {
       gatewayRateLimit: '网关限流（次/分钟）',
       gatewayRateLimitDesc: '每分钟每用户最大请求次数',
 
-      enableGatewayRecording: '启用网关录制',
-      enableGatewayRecordingDesc: '记录通过网关的完整请求与响应',
+      enableGatewayDomainMode: '网关领域模式',
+      enableGatewayDomainModeDesc: '关闭=纯净 LLM 网关仅转发流量；开启=领域智能体网关（完整处理器链+对话记录），与 Web 对话能力对齐',
     },
     tools: {
       enableFunctionCalling: '启用函数调用',

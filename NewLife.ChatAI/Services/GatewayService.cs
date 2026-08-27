@@ -119,12 +119,14 @@ public class GatewayService(UsageService usageService, ModelService modelService
     #endregion
 
     #region 消息构建
-    /// <summary>为网关请求构建上下文消息列表。注入系统提示词（AppKey系统指令 + 用户信息 + UserSetting + ModelConfig），过滤请求中原有系统消息</summary>
+    /// <summary>为网关请求构建上下文消息列表。注入系统提示词（AppKey系统指令 + 领域模式下的用户/项目信息），过滤请求中原有系统消息。
+    /// 领域模式关闭（纯净转发）时仅注入 AppKey 业务角色指令与客户端系统消息，不注入用户/项目上下文</summary>
     /// <param name="request">网关请求</param>
     /// <param name="appKey">应用密钥</param>
     /// <param name="config">模型配置</param>
+    /// <param name="domainMode">是否领域模式。false=纯净转发，仅保留密钥业务角色；true=注入用户/项目信息（领域智能体）</param>
     /// <returns>上下文消息列表</returns>
-    public IList<AiChatMessage> BuildContextMessages(IChatRequest request, AppKey appKey, ModelConfig config)
+    public IList<AiChatMessage> BuildContextMessages(IChatRequest request, AppKey appKey, ModelConfig config, Boolean domainMode = true)
     {
         var messages = new List<AiChatMessage>();
 
@@ -137,29 +139,33 @@ public class GatewayService(UsageService usageService, ModelService modelService
             .Where(c => !String.IsNullOrWhiteSpace(c))
             .ToList();
 
-        // 根据接入类型选择系统消息版本：
-        // - 个人密钥（ProjectId == 0）：注入用户信息 + 个性化设置，与 Web 一致
-        // - 项目密钥（ProjectId > 0）：融合"项目 + 个人"双维系统提示词
-        //   （个人由 GatewayController 按请求顶层 user 字段解析、限项目成员后注入 ResolvedUserId）
-#if STARCHAT
-        var sysMsg = appKey.ProjectId > 0
-            ? MessageFlow.BuildSystemMessageForGateway(ResolveGatewayUserId(request), appKey.ProjectId, config)
-            : MessageFlow.BuildSystemMessage(appKey.UserId, config);
-#else
-        var sysMsg = MessageFlow.BuildSystemMessage(appKey.UserId, config);
-#endif
-
-        // 合并系统消息：优先级从高到低为 AppKey系统指令 > 自动生成信息 > 客户端注入
+        // 合并系统消息：优先级从高到低为 AppKey系统指令 > 领域信息 > 客户端注入
         // AppKey.SystemPrompt 置于最前，定义业务角色与场景约束，后续各层可叠加但不应覆盖
         var sysParts = new List<String>();
         if (!String.IsNullOrWhiteSpace(appKey.SystemPrompt))
             sysParts.Add(appKey.SystemPrompt.Trim());
-        if (sysMsg != null)
+
+        // 领域模式：根据接入类型选择系统消息版本（纯净转发模式跳过，避免泄露用户/项目上下文）
+        // - 个人密钥（ProjectId == 0）：注入用户信息 + 个性化设置，与 Web 一致
+        // - 项目密钥（ProjectId > 0）：融合"项目 + 个人"双维系统提示词
+        //   （个人由 GatewayController 按请求顶层 user 字段解析、限项目成员后注入 ResolvedUserId）
+        if (domainMode)
         {
-            var sysMsgText = GetMessageText(sysMsg.Content);
-            if (!String.IsNullOrWhiteSpace(sysMsgText))
-                sysParts.Add(sysMsgText);
+#if STARCHAT
+            var sysMsg = appKey.ProjectId > 0
+                ? MessageFlow.BuildSystemMessageForGateway(ResolveGatewayUserId(request), appKey.ProjectId, config)
+                : MessageFlow.BuildSystemMessage(appKey.UserId, config);
+#else
+            var sysMsg = MessageFlow.BuildSystemMessage(appKey.UserId, config);
+#endif
+            if (sysMsg != null)
+            {
+                var sysMsgText = GetMessageText(sysMsg.Content);
+                if (!String.IsNullOrWhiteSpace(sysMsgText))
+                    sysParts.Add(sysMsgText);
+            }
         }
+
         sysParts.AddRange(clientSysParts);
 
         if (sysParts.Count > 0)

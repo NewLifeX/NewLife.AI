@@ -159,15 +159,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("网关限流。每分钟每用户最大请求次数")]
     public Int32 GatewayRateLimit { get; set; } = 60;
 
-    /// <summary>网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析</summary>
+    /// <summary>网关领域模式。关闭时作为纯净 LLM 网关仅转发流量（鉴权/限流/配额/用量，不记录对话、不注入领域上下文、不装配工具）；开启时启用完整 IChatHandler 链（知识/记忆/技能）并自动记录对话，与 Web 对话能力对齐</summary>
     [Category("API 网关")]
-    [Description("网关对话记录。开启后API网关的对话将同步记录为Conversation和ChatMessage，用于数据分析")]
-    public Boolean EnableGatewayRecording { get; set; } = false;
-
-    /// <summary>网关处理器链。开启后网关对话与 Web 对话走完全相同的 IChatHandler 链（含知识进化、用户记忆等高级能力），默认关闭（轻量直连 LLM）</summary>
-    [Category("API 网关")]
-    [Description("网关处理器链。开启后网关对话与 Web 对话走完全相同的 IChatHandler 链（含知识进化、用户记忆等高级能力），默认关闭（轻量直连 LLM）")]
-    public Boolean EnableGatewayHandlers { get; set; } = false;
+    [Description("网关领域模式。关闭=纯净LLM网关仅转发流量；开启=领域智能体网关（完整处理器链+对话记录+领域上下文），与Web对话能力对齐")]
+    public Boolean EnableGatewayDomainMode { get; set; } = false;
     #endregion
 
     #region 工具与扩展
