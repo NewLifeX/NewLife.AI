@@ -33,7 +33,7 @@ public class ChatAITests
         Assert.Equal("1024*1024", setting.DefaultImageSize);
         Assert.True(setting.EnableUsageStats);
         Assert.True(setting.BackgroundGeneration);
-        Assert.Equal(5_000_000, setting.ToolMaxTotalTokens);
+        Assert.Equal(50, setting.ToolSlotLimit);
         Assert.Equal(SupportPosition.None, setting.SupportPosition);
 
         // 对话/工具/学习默认值契约（前端 defaultSettings 需与此一致，防覆盖后端配置）

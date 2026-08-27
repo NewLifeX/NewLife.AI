@@ -1114,16 +1114,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         context.FinishReason = lastFinishReason;
 
-        // Token 总限额检查：ToolChatClient 超限中断时推送错误事件给前端
-        if (streamClient is ToolChatClient tcc && tcc.IsTotalTokenLimitExceeded)
-        {
-            var limitMsg = $"本消息工具调用累计Token已超过限额（{tcc.ToolSetting?.ToolMaxTotalTokens ?? 0:N0}），已停止继续调用。请精简问题或开启新会话。";
-            log?.Warn("Token总限额触发: MaxTotalTokens={0:N0}", tcc.ToolSetting?.ToolMaxTotalTokens ?? 0);
-            yield return ChatStreamEvent.ErrorEvent("total_tokens_exceeded", limitMsg);
-        }
-
         // 上下文窗口预算触发：工具结果逐轮累积超限，中断循环并推送友好错误给前端
-        if (streamClient is ToolChatClient tcc2 && tcc2.IsContextLimitExceeded)
+        if (streamClient is ToolChatClient tcc && tcc.IsContextLimitExceeded)
         {
             log?.Warn("上下文窗口预算触发，中断工具调用循环");
             var limit = model.ContextLength > 0 ? (Int64?)model.ContextLength : null;

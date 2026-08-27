@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife;
-using NewLife.Caching;
 using NewLife.Log;
 using NewLife.Serialization;
 
@@ -13,12 +12,10 @@ namespace NewLife.ChatAI.Handlers;
 /// <para>事前 (<see cref="OnBefore"/>)：精确匹配当天缓存。命中则写入 <c>Items["SuggestedHit"]</c> 标记。</para>
 /// <para>核心 (<see cref="InvokeAsync"/>)：检查标记。命中则插入 assistant 消息、流式回放缓存内容（固定节流速度）；
 /// 未命中则透传给下游（最终 LLM 调用）。</para>
-/// <para>事后 (<see cref="OnAfter"/>)：已在推荐列表的问题回写本次回复；不在列表的问题追踪热度，1小时内被2个不同会话提问则自动晋升。</para>
+/// <para>事后 (<see cref="OnAfter"/>)：仅在推荐列表中的问题回写本次回复，供下次命中回放缓存；推荐问题由人工维护。</para>
 /// </remarks>
-/// <param name="setting">对话配置</param>
-/// <param name="cacheProvider">缓存提供者，用于热门问题统计</param>
 [ChatHandlerOrder(10)]
-public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cacheProvider) : IChatHandler, IChatHandlerScope
+public class SuggestedCacheHandler : IChatHandler, IChatHandlerScope
 {
     private const String HitKey = "SuggestedHit";
 
@@ -120,54 +117,19 @@ public class SuggestedCacheHandler(IChatSetting setting, ICacheProvider cachePro
         var question = context.UserMessage?.Content;
         if (question.IsNullOrEmpty()) return Task.CompletedTask;
 
+        // 仅在推荐列表中的问题回写本次回复，供下次命中回放缓存（推荐问题由人工维护，不自动晋升）
         var sq = SuggestedQuestion.FindCachedByQuestion(question);
-        if (sq != null)
+        if (sq == null) return Task.CompletedTask;
+
+        if (context.AssistantMessage is DbChatMessage savedMsg)
         {
-            // 已在推荐列表：回写本次生成的助手消息 Id 到缓存
-            if (context.AssistantMessage is DbChatMessage savedMsg)
-            {
-                sq.ConversationId = savedMsg.ConversationId;
-                sq.MessageId = savedMsg.Id;
-                sq.Update();
-            }
-            // fire-and-forget：记录命中，更新热度分数，不阻塞主流程
-            _ = Task.Run(() => sq.RecordHit());
-            return Task.CompletedTask;
+            sq.ConversationId = savedMsg.ConversationId;
+            sq.MessageId = savedMsg.Id;
+            sq.Update();
         }
-
-        // 不在推荐列表：追踪热度，1小时内被2个不同会话提问则自动晋升
-        if (question.Length > 200) return Task.CompletedTask;
-
-        var conversationId = context.Conversation?.Id ?? 0;
-        if (conversationId <= 0) return Task.CompletedTask;
-
-        var key = $"ai:hotq:{question}";
-        var convIds = cacheProvider.Cache.Get<List<Int64>>(key) ?? [];
-        if (convIds.Contains(conversationId)) return Task.CompletedTask;
-
-        convIds.Add(conversationId);
-        cacheProvider.Cache.Set(key, convIds, TimeSpan.FromHours(1));
-
-        if (convIds.Count >= 2)
-            _ = Task.Run(() => TryPromoteQuestion(question));
-
+        // fire-and-forget：记录命中，更新热度分数，不阻塞主流程
+        _ = Task.Run(() => sq.RecordHit());
         return Task.CompletedTask;
-    }
-
-    /// <summary>尝试将热门问题插入推荐问题列表（二次检查防并发重复插入）</summary>
-    /// <param name="question">问题全文</param>
-    private static void TryPromoteQuestion(String question)
-    {
-        if (SuggestedQuestion.FindCachedByQuestion(question) != null) return;
-
-        var title = question.Length > 20 ? question[..20] : question;
-        var entity = new SuggestedQuestion
-        {
-            Title = title,
-            Question = question,
-            Enable = true,
-        };
-        entity.Insert(); // Valid() 自动补全 Icon 与 Color
     }
 
     /// <summary>缓存回放分块大小。固定速度 4 档：每块字符数</summary>

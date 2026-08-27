@@ -39,9 +39,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>工具调用配置。为 null 时使用内置默认值（MaxIterations=10, MaxTotalTokens=0/不限制, MaxResultChars=0/不限制）</summary>
     public IToolSetting? ToolSetting { get; set; }
 
-    /// <summary>是否因Token总限额触发中断</summary>
-    public Boolean IsTotalTokenLimitExceeded { get; private set; }
-
     /// <summary>是否因工具调用轮次上限触发中断</summary>
     public Boolean IsToolLoopLimitExceeded { get; private set; }
 
@@ -96,8 +93,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (request == null) throw new ArgumentNullException(nameof(request));
 
         // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），否则上一请求的
-        // 限额/超限标志/失败轮数会污染下一请求的判定
-        IsTotalTokenLimitExceeded = false;
+        // 超限标志/失败轮数会污染下一请求的判定
         IsToolLoopLimitExceeded = false;
         IsContextLimitExceeded = false;
         _fallbackEstimatedTokens = 0;
@@ -113,7 +109,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
         if (maxIterations <= 0) maxIterations = 10;
-        var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
         // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
         var toolsTokens = TokenEstimator.EstimateTokens(mergedTools);
 
@@ -144,9 +139,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
             else
                 _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
-
-            // Token 总限额检查（优先使用 API 返回值，回退字符估算）
-            if (CheckTotalTokenLimit(maxTotalTokens, accumulatedUsage)) break;
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
@@ -239,8 +231,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         }
 
         // 兜底：执行过工具但最终轮未产出正文（模型只输出思考/工具调用即结束，或轮次达上限），
-        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；Token 超限或上下文超限时不追加）
-        if (!passthroughRound && !IsTotalTokenLimitExceeded && !IsContextLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
+        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；上下文超限时不追加）
+        if (!passthroughRound && !IsContextLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
         {
             Log.Info("最终回复内容为空，追加提示后强制产出最终回答");
             workMessages.Add(new ChatMessage
@@ -271,7 +263,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (request == null) throw new ArgumentNullException(nameof(request));
 
         // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），与 GetResponseAsync 保持一致
-        IsTotalTokenLimitExceeded = false;
         IsToolLoopLimitExceeded = false;
         IsContextLimitExceeded = false;
         _fallbackEstimatedTokens = 0;
@@ -290,7 +281,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
         if (maxIterations <= 0) maxIterations = 10;
-        var maxTotalTokens = ToolSetting?.ToolMaxTotalTokens ?? 0;
         // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
         var toolsTokens = TokenEstimator.EstimateTokens(mergedTools);
 
@@ -402,18 +392,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             else
             {
                 _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
-            }
-
-            // Token 总限额检查（优先使用 API 返回值，回退字符估算）
-            if (CheckTotalTokenLimit(maxTotalTokens, accumulatedUsage))
-            {
-                // 归还池化 StringBuilder，避免超限中断路径泄漏池对象（A-73）
-                Pool.StringBuilder.Return(contentSb);
-                Pool.StringBuilder.Return(reasoningSb);
-                // 兜底补发累计总量后退出
-                if (accumulatedUsage != null)
-                    yield return new ChatResponse { Usage = accumulatedUsage };
-                yield break;
             }
 
             var isToolRound = finishReason.EqualIgnoreCase("tool_calls") || (toolCalls.Count > 0 && finishReason.IsNullOrEmpty());
@@ -697,24 +675,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             });
             _consecutiveFailureRounds = 0;
         }
-    }
-
-    /// <summary>Token 总限额检查（优先使用 API 返回值，回退字符估算）。超限时置中断标记并记录日志</summary>
-    /// <param name="maxTotalTokens">限额值，0 表示不限制</param>
-    /// <param name="accumulatedUsage">累计 Token 用量</param>
-    /// <returns>超限返回 true，调用方应中断循环</returns>
-    private Boolean CheckTotalTokenLimit(Int32 maxTotalTokens, UsageDetails? accumulatedUsage)
-    {
-        if (maxTotalTokens <= 0) return false;
-
-        var totalTokens = accumulatedUsage != null ? accumulatedUsage.TotalTokens : _fallbackEstimatedTokens;
-        if (totalTokens >= maxTotalTokens)
-        {
-            IsTotalTokenLimitExceeded = true;
-            Log.Warn("Token总限额已达到 {0:N0}（当前累计 {1:N0}），中断工具调用循环", maxTotalTokens, totalTokens);
-            return true;
-        }
-        return false;
     }
 
     /// <summary>上下文窗口预算检查。工具结果逐轮累积进消息列表，超限时先截断内容、仍超才中断循环</summary>

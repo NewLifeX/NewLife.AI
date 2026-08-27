@@ -176,10 +176,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("启用 MCP 工具调用")]
     public Boolean EnableMcp { get; set; } = true;
 
-    /// <summary>工具仓位上限。每次请求注入完整 Schema 的工具数上限，超出的工具降级为纯文本目录；0 表示不限制，默认15</summary>
+    /// <summary>工具仓位上限。每次请求注入完整 Schema 的工具数上限，超出的工具降级为纯文本目录；0 表示不限制，默认50</summary>
     [Category("工具与扩展")]
-    [Description("工具仓位上限。每次请求注入完整 Schema 的工具数上限；超出的工具降级为纯文本目录；0 表示不限制，默认15")]
-    public Int32 ToolSlotLimit { get; set; } = 15;
+    [Description("工具仓位上限。每次请求注入完整 Schema 的工具数上限；超出的工具降级为纯文本目录；0 表示不限制，默认50")]
+    public Int32 ToolSlotLimit { get; set; } = 50;
 
     /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制，默认80000</summary>
     [Category("工具与扩展")]
@@ -190,11 +190,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Category("工具与扩展")]
     [Description("工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10")]
     public Int32 ToolMaxIterations { get; set; } = 10;
-
-    /// <summary>单条消息Token总限额。工具调用累计Token超过此值时停止继续调用，0表示不限制，默认500万</summary>
-    [Category("工具与扩展")]
-    [Description("单条消息Token总限额。工具调用累计Token超过此值时停止继续调用，0表示不限制，默认500万")]
-    public Int32 ToolMaxTotalTokens { get; set; } = 5_000_000;
 
     /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000</summary>
     [Category("工具与扩展")]
