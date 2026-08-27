@@ -266,10 +266,6 @@ export default {
     tools: {
       enableFunctionCalling: '啟用函數呼叫',
       enableFunctionCallingDesc: '允許 AI 呼叫工具函數',
-      enableSuggestedQuestionCache: '啟用推薦問題快取',
-      enableSuggestedQuestionCacheDesc: '快取 AI 生成的推薦追問',
-      streamingSpeed: '串流輸出速度',
-      streamingSpeedDesc: '控制串流輸出的字元渲染速率',
       toolSlotLimit: '工具倉位上限',
       toolSlotLimitDesc: '每次請求注入完整 Schema 的工具數上限，超出的工具降級為純文本目錄，0 表示不限制',
       toolResultMaxChars: '工具結果最大字元數',

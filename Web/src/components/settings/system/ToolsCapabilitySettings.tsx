@@ -48,32 +48,6 @@ export function ToolsCapabilitySettings({ settings, onChange }: Props) {
         label={t('systemSettings.tools.enableFunctionCalling')}
         description={t('systemSettings.tools.enableFunctionCallingDesc')}
       />
-      <Toggle
-        checked={settings.enableSuggestedQuestionCache}
-        onChange={(v) => onChange({ enableSuggestedQuestionCache: v })}
-        label={t('systemSettings.tools.enableSuggestedQuestionCache')}
-        description={t('systemSettings.tools.enableSuggestedQuestionCacheDesc')}
-      />
-      <div className="py-3">
-        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-          {t('systemSettings.tools.streamingSpeed')}
-        </label>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.tools.streamingSpeedDesc')}</p>
-        <input
-          type="range"
-          min={1}
-          max={6}
-          step={1}
-          value={settings.streamingSpeed}
-          onChange={(e) => onChange({ streamingSpeed: Number(e.target.value) })}
-          className="w-full accent-primary"
-        />
-        <div className="flex justify-between text-xs text-gray-400 mt-1">
-          <span>{t('settings.speedSlow')}</span>
-          <span>{settings.streamingSpeed}</span>
-          <span>{t('settings.speedMax')}</span>
-        </div>
-      </div>
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
           {t('systemSettings.tools.toolSlotLimit')}

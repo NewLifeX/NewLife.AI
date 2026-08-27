@@ -23,6 +23,18 @@ public class SuggestedQuestionController : EntityController<SuggestedQuestion>
         ListFields.RemoveField("Question");
         ListFields.RemoveCreateField().RemoveRemarkField();
 
+        // 缓存时长友好显示：-1=不缓存，0=当天，正数=N分钟
+        {
+            var lf = ListFields.GetField("CacheDuration") as ListField;
+            if (lf != null)
+                lf.GetValue = e => ((SuggestedQuestion)e).CacheDuration switch
+                {
+                    -1 => "不缓存",
+                    0 => "当天",
+                    var n => $"{n} 分钟",
+                };
+        }
+
         //{
         //    var df = ListFields.GetField("Code") as ListField;
         //    df.Url = "?code={Code}";

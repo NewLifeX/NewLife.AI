@@ -50,8 +50,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             EnableGatewayDomainMode = chatSetting.EnableGatewayDomainMode,
             // 工具与能力
             EnableFunctionCalling = chatSetting.EnableFunctionCalling,
-            EnableSuggestedQuestionCache = chatSetting.EnableSuggestedQuestionCache,
-            StreamingSpeed = chatSetting.StreamingSpeed,
             ToolSlotLimit = chatSetting.ToolSlotLimit,
             ToolResultMaxChars = chatSetting.ToolResultMaxChars,
             ToolMaxIterations = chatSetting.ToolMaxIterations,
@@ -108,8 +106,6 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.EnableGatewayDomainMode.HasValue) chatSetting.EnableGatewayDomainMode = dto.EnableGatewayDomainMode.Value;
         // 工具与能力
         if (dto.EnableFunctionCalling.HasValue) chatSetting.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
-        if (dto.EnableSuggestedQuestionCache.HasValue) chatSetting.EnableSuggestedQuestionCache = dto.EnableSuggestedQuestionCache.Value;
-        if (dto.StreamingSpeed.HasValue) chatSetting.StreamingSpeed = dto.StreamingSpeed.Value;
         if (dto.ToolSlotLimit.HasValue) chatSetting.ToolSlotLimit = dto.ToolSlotLimit.Value;
         if (dto.ToolResultMaxChars.HasValue) chatSetting.ToolResultMaxChars = dto.ToolResultMaxChars.Value;
         if (dto.ToolMaxIterations.HasValue) chatSetting.ToolMaxIterations = dto.ToolMaxIterations.Value;

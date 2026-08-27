@@ -318,10 +318,6 @@ export default {
     tools: {
       enableFunctionCalling: 'Enable Function Calling',
       enableFunctionCallingDesc: 'Allow AI to invoke tool functions',
-      enableSuggestedQuestionCache: 'Enable Suggested Question Cache',
-      enableSuggestedQuestionCacheDesc: 'Cache AI-generated follow-up suggestions',
-      streamingSpeed: 'Streaming Speed',
-      streamingSpeedDesc: 'Controls the character render rate for streaming output',
       toolSlotLimit: 'Tool Slot Limit',
       toolSlotLimitDesc: 'Max tools with full schema per request; excess tools degrade to text catalog. 0 = unlimited',
       toolResultMaxChars: 'Tool Result Max Chars',

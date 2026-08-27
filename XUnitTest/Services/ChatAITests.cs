@@ -38,7 +38,6 @@ public class ChatAITests
 
         // 对话/工具/学习默认值契约（前端 defaultSettings 需与此一致，防覆盖后端配置）
         Assert.False(setting.EnableUserIsolation);
-        Assert.True(setting.EnableSuggestedQuestionCache);
         Assert.Equal(20, setting.MaxMessagesPerMinute);
         Assert.Equal(10, setting.ToolMaxIterations);
         Assert.Equal(80000, setting.ToolResultMaxChars);

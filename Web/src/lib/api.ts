@@ -852,8 +852,6 @@ export interface SystemSettings {
   enableGatewayDomainMode: boolean
   // 工具能力
   enableFunctionCalling: boolean
-  enableSuggestedQuestionCache: boolean
-  streamingSpeed: number
   toolSlotLimit: number
   toolResultMaxChars: number
   toolMaxIterations: number

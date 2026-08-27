@@ -320,10 +320,6 @@ export default {
     tools: {
       enableFunctionCalling: '启用函数调用',
       enableFunctionCallingDesc: '允许 AI 调用工具函数',
-      enableSuggestedQuestionCache: '启用推荐问题缓存',
-      enableSuggestedQuestionCacheDesc: '缓存 AI 生成的推荐追问',
-      streamingSpeed: '流式输出速度',
-      streamingSpeedDesc: '控制流式输出的字符渲染速率',
       toolSlotLimit: '工具仓位上限',
       toolSlotLimitDesc: '每次请求注入完整 Schema 的工具数上限，超出的工具降级为纯文本目录，0 表示不限制',
       toolResultMaxChars: '工具结果最大字符数',

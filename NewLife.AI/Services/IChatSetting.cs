@@ -36,12 +36,6 @@ public interface IChatSetting
     /// <summary>工具结果最大字符数。工具返回结果超过此长度时自动截断并追加摘要提示，0表示不限制</summary>
     Int32 ToolResultMaxChars { get; }
 
-    /// <summary>推荐问题缓存。开启后命中当天缓存时直接返回，不请求大模型</summary>
-    Boolean EnableSuggestedQuestionCache { get; }
-
-    /// <summary>流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容</summary>
-    Int32 StreamingSpeed { get; }
-
     /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认8000</summary>
     Int32 SkillBudgetChars { get; }
 

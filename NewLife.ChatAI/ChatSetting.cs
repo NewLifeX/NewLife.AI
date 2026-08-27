@@ -176,16 +176,6 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("启用 MCP 工具调用")]
     public Boolean EnableMcp { get; set; } = true;
 
-    /// <summary>推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型</summary>
-    [Category("工具与扩展")]
-    [Description("推荐问题缓存。开启后用户提问命中推荐问题且缓存有效（当天更新）时，直接返回缓存响应而不请求大模型")]
-    public Boolean EnableSuggestedQuestionCache { get; set; } = true;
-
-    /// <summary>流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容，不做延迟</summary>
-    [Category("工具与扩展")]
-    [Description("流式输出速度。缓存命中时的分块节流等级，1~5，默认3（约500字/秒）；超过5时直接一次性输出全部内容，不做延迟")]
-    public Int32 StreamingSpeed { get; set; } = 3;
-
     /// <summary>工具仓位上限。每次请求注入完整 Schema 的工具数上限，超出的工具降级为纯文本目录；0 表示不限制，默认15</summary>
     [Category("工具与扩展")]
     [Description("工具仓位上限。每次请求注入完整 Schema 的工具数上限；超出的工具降级为纯文本目录；0 表示不限制，默认15")]

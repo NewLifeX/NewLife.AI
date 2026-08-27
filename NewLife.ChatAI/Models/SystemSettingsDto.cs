@@ -81,12 +81,6 @@ public class SystemSettingsDto
     /// <summary>启用函数调用</summary>
     public Boolean EnableFunctionCalling { get; set; }
 
-    /// <summary>推荐问题缓存</summary>
-    public Boolean EnableSuggestedQuestionCache { get; set; }
-
-    /// <summary>流式输出速度（1~5）</summary>
-    public Int32 StreamingSpeed { get; set; }
-
     /// <summary>工具仓位上限</summary>
     public Int32 ToolSlotLimit { get; set; }
 
@@ -212,12 +206,6 @@ public class SystemSettingsUpdateDto
     #region 工具与能力
     /// <summary>启用函数调用</summary>
     public Boolean? EnableFunctionCalling { get; set; }
-
-    /// <summary>推荐问题缓存</summary>
-    public Boolean? EnableSuggestedQuestionCache { get; set; }
-
-    /// <summary>流式输出速度（1~5）</summary>
-    public Int32? StreamingSpeed { get; set; }
 
     /// <summary>工具仓位上限</summary>
     public Int32? ToolSlotLimit { get; set; }

@@ -46,8 +46,6 @@ const defaultSettings: SystemSettings = {
   gatewayRateLimit: 60,
   enableGatewayDomainMode: false,
   enableFunctionCalling: true,
-  enableSuggestedQuestionCache: true,
-  streamingSpeed: 3,
   toolSlotLimit: 15,
   toolResultMaxChars: 80000,
   toolMaxIterations: 10,
