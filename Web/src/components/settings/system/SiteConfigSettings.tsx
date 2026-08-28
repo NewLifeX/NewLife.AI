@@ -152,6 +152,21 @@ export function SiteConfigSettings({ settings, onChange }: Props) {
         label={t('systemSettings.siteConfig.autoGenerateTitle')}
         description={t('systemSettings.siteConfig.autoGenerateTitleDesc')}
       />
+
+      {/* 错误引导文案 */}
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.siteConfig.errorGuidance')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.siteConfig.errorGuidanceDesc')}</p>
+        <input
+          type="text"
+          value={settings.errorGuidance || ''}
+          onChange={(e) => onChange({ errorGuidance: e.target.value })}
+          placeholder={t('systemSettings.siteConfig.errorGuidancePlaceholder')}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
     </div>
   )
 }

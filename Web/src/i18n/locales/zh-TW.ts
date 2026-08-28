@@ -222,6 +222,9 @@ export default {
       welcomeMessageDesc: '歡迎頁大標題文案，為空時使用前端預設文案',
       autoGenerateTitle: '自動生成對話標題',
       autoGenerateTitleDesc: '根據首條訊息自動生成簡潔的對話標題',
+      errorGuidance: '錯誤引導文案',
+      errorGuidanceDesc: '對話生成出錯時在錯誤訊息下方顯示的引導內容，為空時不追加',
+      errorGuidancePlaceholder: '如：如需幫助請聯絡管理員',
     },
     dialogDefault: {
       defaultModel: '預設模型',
@@ -240,6 +243,9 @@ export default {
       systemInstruction: '全域系統指令',
       systemInstructionDesc: '注入每一個用戶的每一次對話，置於模型指令之後作為兜底行為準則。為空時不注入',
       systemInstructionPlaceholder: '輸入全域系統指令（Markdown）...',
+      rerankModel: '重排序模型',
+      rerankModelDesc: 'CrossEncoder 二次精排場景使用的模型編碼，為空時跳過重排',
+      rerankModelPlaceholder: '留空跳過重排',
     },
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',
@@ -266,6 +272,8 @@ export default {
     tools: {
       enableFunctionCalling: '啟用函數呼叫',
       enableFunctionCallingDesc: '允許 AI 呼叫工具函數',
+      enableMcp: '啟用 MCP 工具呼叫',
+      enableMcpDesc: '允許模型呼叫配置的 MCP 伺服器工具',
       toolSlotLimit: '工具倉位上限',
       toolSlotLimitDesc: '每次請求注入完整 Schema 的工具數上限，超出的工具降級為純文本目錄，0 表示不限制',
       toolResultMaxChars: '工具結果最大字元數',
@@ -274,6 +282,9 @@ export default {
       toolMaxIterationsDesc: '單次對話中工具呼叫循環的最大次數，超過後停止',
       skillBudgetChars: '技能內容最大字元數',
       skillBudgetCharsDesc: '技能提示詞總長度超過此值時按優先順序截斷',
+      querySqlAllowedOperations: 'SQL 允許的非查詢操作',
+      querySqlAllowedOperationsDesc: '逗號分隔，預設允許 INSERT 和 UPDATE；SELECT/WITH 始終允許',
+      querySqlAllowedOperationsPlaceholder: 'INSERT,UPDATE',
     },
     features: {
       enableUsageStats: '啟用使用統計',

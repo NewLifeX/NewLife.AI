@@ -835,11 +835,15 @@ export interface SystemSettings {
   /** 客服入口位置。0=不显示，1=侧边栏底部，2=新对话按钮下方，3=悬浮球 */
   supportPosition: number
   autoGenerateTitle: boolean
+  /** 错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加 */
+  errorGuidance: string
   // 对话默认
   defaultModel: number
   defaultThinkingMode: number
   defaultContextRounds: number
   enableUserIsolation: boolean
+  /** 重排序模型编码。CrossEncoder 二次精排场景使用，为空时跳过重排 */
+  rerankModel: string
   // 上传与分享
   maxAttachmentSize: number
   allowedExtensions: string
@@ -852,10 +856,14 @@ export interface SystemSettings {
   enableGatewayDomainMode: boolean
   // 工具能力
   enableFunctionCalling: boolean
+  /** 启用 MCP 工具调用 */
+  enableMcp: boolean
   toolSlotLimit: number
   toolResultMaxChars: number
   toolMaxIterations: number
   skillBudgetChars: number
+  /** SQL查询允许的非查询操作。逗号分隔，默认允许 INSERT 和 UPDATE；SELECT/WITH 始终允许 */
+  querySqlAllowedOperations: string
   // 系统功能
   enableUsageStats: boolean
   backgroundGeneration: boolean

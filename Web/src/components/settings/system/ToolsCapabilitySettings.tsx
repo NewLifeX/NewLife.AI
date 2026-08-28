@@ -48,6 +48,12 @@ export function ToolsCapabilitySettings({ settings, onChange }: Props) {
         label={t('systemSettings.tools.enableFunctionCalling')}
         description={t('systemSettings.tools.enableFunctionCallingDesc')}
       />
+      <Toggle
+        checked={settings.enableMcp}
+        onChange={(v) => onChange({ enableMcp: v })}
+        label={t('systemSettings.tools.enableMcp')}
+        description={t('systemSettings.tools.enableMcpDesc')}
+      />
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
           {t('systemSettings.tools.toolSlotLimit')}
@@ -99,6 +105,21 @@ export function ToolsCapabilitySettings({ settings, onChange }: Props) {
           step={1000}
           value={settings.skillBudgetChars}
           onChange={(e) => onChange({ skillBudgetChars: Number(e.target.value) })}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+
+      {/* SQL 允许的非查询操作 */}
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.tools.querySqlAllowedOperations')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.tools.querySqlAllowedOperationsDesc')}</p>
+        <input
+          type="text"
+          value={settings.querySqlAllowedOperations || ''}
+          onChange={(e) => onChange({ querySqlAllowedOperations: e.target.value })}
+          placeholder={t('systemSettings.tools.querySqlAllowedOperationsPlaceholder')}
           className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>

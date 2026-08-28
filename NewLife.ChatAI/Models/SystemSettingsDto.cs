@@ -33,6 +33,9 @@ public class SystemSettingsDto
 
     /// <summary>自动生成标题。首条消息后是否自动生成会话标题</summary>
     public Boolean AutoGenerateTitle { get; set; }
+
+    /// <summary>错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加</summary>
+    public String ErrorGuidance { get; set; } = "";
     #endregion
 
     #region 对话默认
@@ -47,6 +50,9 @@ public class SystemSettingsDto
 
     /// <summary>用户隔离。启用后向LLM服务商透传User字段，用于服务商侧KVCache隔离</summary>
     public Boolean EnableUserIsolation { get; set; }
+
+    /// <summary>重排序模型编码。CrossEncoder 二次精排场景使用，为空时跳过重排</summary>
+    public String RerankModel { get; set; } = "";
     #endregion
 
     #region 上传与分享
@@ -81,6 +87,9 @@ public class SystemSettingsDto
     /// <summary>启用函数调用</summary>
     public Boolean EnableFunctionCalling { get; set; }
 
+    /// <summary>启用 MCP 工具调用</summary>
+    public Boolean EnableMcp { get; set; }
+
     /// <summary>工具仓位上限</summary>
     public Int32 ToolSlotLimit { get; set; }
 
@@ -92,6 +101,9 @@ public class SystemSettingsDto
 
     /// <summary>技能内容最大字符数</summary>
     public Int32 SkillBudgetChars { get; set; }
+
+    /// <summary>SQL查询允许的非查询操作。逗号分隔，默认允许 INSERT 和 UPDATE；SELECT/WITH 始终允许</summary>
+    public String QuerySqlAllowedOperations { get; set; } = "";
     #endregion
 
     #region 功能开关
@@ -156,6 +168,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>自动生成标题</summary>
     public Boolean? AutoGenerateTitle { get; set; }
+
+    /// <summary>错误引导文案。对话生成出错时在错误信息下方显示的引导内容，为空时不追加</summary>
+    public String? ErrorGuidance { get; set; }
     #endregion
 
     #region 对话默认
@@ -170,6 +185,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>用户隔离。启用后向LLM服务商透传User字段，用于服务商侧KVCache隔离</summary>
     public Boolean? EnableUserIsolation { get; set; }
+
+    /// <summary>重排序模型编码。CrossEncoder 二次精排场景使用，为空时跳过重排</summary>
+    public String? RerankModel { get; set; }
     #endregion
 
     #region 上传与分享
@@ -204,6 +222,9 @@ public class SystemSettingsUpdateDto
     /// <summary>启用函数调用</summary>
     public Boolean? EnableFunctionCalling { get; set; }
 
+    /// <summary>启用 MCP 工具调用</summary>
+    public Boolean? EnableMcp { get; set; }
+
     /// <summary>工具仓位上限</summary>
     public Int32? ToolSlotLimit { get; set; }
 
@@ -215,6 +236,9 @@ public class SystemSettingsUpdateDto
 
     /// <summary>技能内容最大字符数</summary>
     public Int32? SkillBudgetChars { get; set; }
+
+    /// <summary>SQL查询允许的非查询操作。逗号分隔，默认允许 INSERT 和 UPDATE；SELECT/WITH 始终允许</summary>
+    public String? QuerySqlAllowedOperations { get; set; }
     #endregion
 
     #region 功能开关

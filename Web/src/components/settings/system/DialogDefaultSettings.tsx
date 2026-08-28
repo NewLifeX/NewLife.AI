@@ -96,6 +96,21 @@ export function DialogDefaultSettings({ settings, models, onChange }: Props) {
         description={t('systemSettings.dialogDefault.enableUserIsolationDesc')}
       />
 
+      {/* 重排序模型 */}
+      <div className="py-3">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          {t('systemSettings.dialogDefault.rerankModel')}
+        </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('systemSettings.dialogDefault.rerankModelDesc')}</p>
+        <input
+          type="text"
+          value={settings.rerankModel || ''}
+          onChange={(e) => onChange({ rerankModel: e.target.value })}
+          placeholder={t('systemSettings.dialogDefault.rerankModelPlaceholder')}
+          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+
       {/* 全局系统指令 */}
       <div className="py-3">
         <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">

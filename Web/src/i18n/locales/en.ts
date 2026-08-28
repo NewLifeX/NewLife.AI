@@ -275,6 +275,9 @@ export default {
       supportPositionSidebarBottom: 'Sidebar Bottom',
       supportPositionBelowNewChat: 'Below New Chat',
       supportPositionFloatingButton: 'Floating Button (bottom-right)',
+      errorGuidance: 'Error Guidance',
+      errorGuidanceDesc: 'Guidance text displayed below the error message when generation fails. Leave empty to disable',
+      errorGuidancePlaceholder: 'e.g. Please contact your administrator for assistance',
     },
     dialogDefault: {
       defaultModel: 'Default Model',
@@ -293,6 +296,9 @@ export default {
       systemInstruction: 'Global System Instruction',
       systemInstructionDesc: 'Injected into every conversation for every user, placed after model instructions as a fallback behavior rule. No effect when empty.',
       systemInstructionPlaceholder: 'Enter global system instruction (Markdown)...',
+      rerankModel: 'Rerank Model',
+      rerankModelDesc: 'CrossEncoder reranking model code. Leave empty to skip reranking.',
+      rerankModelPlaceholder: 'Leave empty to skip',
     },
     upload: {
       maxAttachmentSize: 'Max Attachment Size (MB)',
@@ -318,6 +324,8 @@ export default {
     tools: {
       enableFunctionCalling: 'Enable Function Calling',
       enableFunctionCallingDesc: 'Allow AI to invoke tool functions',
+      enableMcp: 'Enable MCP Tool Calling',
+      enableMcpDesc: 'Allow models to invoke configured MCP server tools',
       toolSlotLimit: 'Tool Slot Limit',
       toolSlotLimitDesc: 'Max tools with full schema per request; excess tools degrade to text catalog. 0 = unlimited',
       toolResultMaxChars: 'Tool Result Max Chars',
@@ -326,6 +334,9 @@ export default {
       toolMaxIterationsDesc: 'Maximum number of tool call loops per conversation, stops after exceeding',
       skillBudgetChars: 'Skill Content Max Chars',
       skillBudgetCharsDesc: 'Truncates skill prompts by priority when total length exceeds this value',
+      querySqlAllowedOperations: 'SQL Allowed Non-Query Ops',
+      querySqlAllowedOperationsDesc: 'Comma-separated. INSERT/UPDATE allowed by default; SELECT/WITH always allowed.',
+      querySqlAllowedOperationsPlaceholder: 'INSERT,UPDATE',
     },
     features: {
       enableUsageStats: 'Enable Usage Stats',

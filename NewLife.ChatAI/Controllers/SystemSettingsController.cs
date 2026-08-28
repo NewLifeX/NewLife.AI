@@ -32,6 +32,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             SupportText = chatSetting.SupportText,
             SupportUrl = chatSetting.SupportUrl,
             SupportPosition = chatSetting.SupportPosition,
+            ErrorGuidance = chatSetting.ErrorGuidance,
             AutoGenerateTitle = chatSetting.AutoGenerateTitle,
             // 对话默认
             DefaultModel = chatSetting.DefaultModel,
@@ -50,10 +51,12 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             EnableGatewayDomainMode = chatSetting.EnableGatewayDomainMode,
             // 工具与能力
             EnableFunctionCalling = chatSetting.EnableFunctionCalling,
+            EnableMcp = chatSetting.EnableMcp,
             ToolSlotLimit = chatSetting.ToolSlotLimit,
             ToolResultMaxChars = chatSetting.ToolResultMaxChars,
             ToolMaxIterations = chatSetting.ToolMaxIterations,
             SkillBudgetChars = chatSetting.SkillBudgetChars,
+            QuerySqlAllowedOperations = chatSetting.QuerySqlAllowedOperations,
             // 功能开关
             EnableUsageStats = chatSetting.EnableUsageStats,
             BackgroundGeneration = chatSetting.BackgroundGeneration,
@@ -62,6 +65,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
             EnableAutoLearning = chatSetting.EnableAutoLearning,
             LightweightModel = chatSetting.LightweightModel,
             EmbedModel = chatSetting.EmbedModel,
+            RerankModel = chatSetting.RerankModel,
             MinLearningContentLength = chatSetting.MinLearningContentLength,
             // 可用模型列表
             Models = [.. models],
@@ -87,6 +91,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.SupportText != null) chatSetting.SupportText = dto.SupportText;
         if (dto.SupportUrl != null) chatSetting.SupportUrl = dto.SupportUrl;
         if (dto.SupportPosition.HasValue) chatSetting.SupportPosition = dto.SupportPosition.Value;
+        if (dto.ErrorGuidance != null) chatSetting.ErrorGuidance = dto.ErrorGuidance;
         if (dto.AutoGenerateTitle.HasValue) chatSetting.AutoGenerateTitle = dto.AutoGenerateTitle.Value;
         // 对话默认
         if (dto.DefaultModel.HasValue) chatSetting.DefaultModel = dto.DefaultModel.Value;
@@ -105,10 +110,12 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.EnableGatewayDomainMode.HasValue) chatSetting.EnableGatewayDomainMode = dto.EnableGatewayDomainMode.Value;
         // 工具与能力
         if (dto.EnableFunctionCalling.HasValue) chatSetting.EnableFunctionCalling = dto.EnableFunctionCalling.Value;
+        if (dto.EnableMcp.HasValue) chatSetting.EnableMcp = dto.EnableMcp.Value;
         if (dto.ToolSlotLimit.HasValue) chatSetting.ToolSlotLimit = dto.ToolSlotLimit.Value;
         if (dto.ToolResultMaxChars.HasValue) chatSetting.ToolResultMaxChars = dto.ToolResultMaxChars.Value;
         if (dto.ToolMaxIterations.HasValue) chatSetting.ToolMaxIterations = dto.ToolMaxIterations.Value;
         if (dto.SkillBudgetChars.HasValue) chatSetting.SkillBudgetChars = dto.SkillBudgetChars.Value;
+        if (dto.QuerySqlAllowedOperations != null) chatSetting.QuerySqlAllowedOperations = dto.QuerySqlAllowedOperations;
         // 功能开关
         if (dto.EnableUsageStats.HasValue) chatSetting.EnableUsageStats = dto.EnableUsageStats.Value;
         if (dto.BackgroundGeneration.HasValue) chatSetting.BackgroundGeneration = dto.BackgroundGeneration.Value;
@@ -117,6 +124,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
         if (dto.EnableAutoLearning.HasValue) chatSetting.EnableAutoLearning = dto.EnableAutoLearning.Value;
         if (dto.LightweightModel != null) chatSetting.LightweightModel = dto.LightweightModel;
         if (dto.EmbedModel != null) chatSetting.EmbedModel = dto.EmbedModel;
+        if (dto.RerankModel != null) chatSetting.RerankModel = dto.RerankModel;
         if (dto.MinLearningContentLength.HasValue) chatSetting.MinLearningContentLength = dto.MinLearningContentLength.Value;
 
         chatSetting.Save();

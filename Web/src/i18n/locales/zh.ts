@@ -277,6 +277,9 @@ export default {
       supportPositionSidebarBottom: '侧边栏底部',
       supportPositionBelowNewChat: '新对话按钮下方',
       supportPositionFloatingButton: '右下角悬浮球',
+      errorGuidance: '错误引导文案',
+      errorGuidanceDesc: '对话生成出错时在错误信息下方显示的引导内容，为空时不追加',
+      errorGuidancePlaceholder: '如：如需帮助请联系管理员',
     },
     dialogDefault: {
       defaultModel: '默认模型',
@@ -295,6 +298,9 @@ export default {
       systemInstruction: '全局系统指令',
       systemInstructionDesc: '注入每一个用户的每一次对话，置于模型指令之后作为兜底行为准则。为空时不注入',
       systemInstructionPlaceholder: '输入全局系统指令（Markdown）...',
+      rerankModel: '重排序模型',
+      rerankModelDesc: 'CrossEncoder 二次精排场景使用的模型编码，为空时跳过重排',
+      rerankModelPlaceholder: '留空跳过重排',
     },
     upload: {
       maxAttachmentSize: '最大附件大小 (MB)',
@@ -320,6 +326,8 @@ export default {
     tools: {
       enableFunctionCalling: '启用函数调用',
       enableFunctionCallingDesc: '允许 AI 调用工具函数',
+      enableMcp: '启用 MCP 工具调用',
+      enableMcpDesc: '允许模型调用配置的 MCP 服务端工具',
       toolSlotLimit: '工具仓位上限',
       toolSlotLimitDesc: '每次请求注入完整 Schema 的工具数上限，超出的工具降级为纯文本目录，0 表示不限制',
       toolResultMaxChars: '工具结果最大字符数',
@@ -328,6 +336,9 @@ export default {
       toolMaxIterationsDesc: '单次对话中工具调用循环的最大次数，超过后停止',
       skillBudgetChars: '技能内容最大字符数',
       skillBudgetCharsDesc: '技能提示词总长度超过此值时按优先级截断',
+      querySqlAllowedOperations: 'SQL 允许的非查询操作',
+      querySqlAllowedOperationsDesc: '逗号分隔，默认允许 INSERT 和 UPDATE；SELECT/WITH 始终允许',
+      querySqlAllowedOperationsPlaceholder: 'INSERT,UPDATE',
     },
     features: {
       enableUsageStats: '启用使用统计',
