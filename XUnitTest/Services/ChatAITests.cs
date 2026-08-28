@@ -41,7 +41,7 @@ public class ChatAITests
         Assert.Equal(20, setting.MaxMessagesPerMinute);
         Assert.Equal(10, setting.ToolMaxIterations);
         Assert.Equal(80000, setting.ToolResultMaxChars);
-        Assert.Equal(80000, setting.SkillBudgetChars);
+        Assert.Equal(150000, setting.SkillBudgetChars);
         Assert.True(setting.EnableAutoLearning);
         Assert.Equal(50, setting.MinLearningContentLength);
         //Assert.NotEmpty(setting.SuggestedQuestions);

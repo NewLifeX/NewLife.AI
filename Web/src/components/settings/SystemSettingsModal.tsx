@@ -49,7 +49,7 @@ const defaultSettings: SystemSettings = {
   toolSlotLimit: 50,
   toolResultMaxChars: 80000,
   toolMaxIterations: 10,
-  skillBudgetChars: 80000,
+  skillBudgetChars: 150000,
   enableUsageStats: true,
   backgroundGeneration: true,
   maxMessagesPerMinute: 20,

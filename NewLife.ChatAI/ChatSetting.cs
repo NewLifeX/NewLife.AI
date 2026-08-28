@@ -191,10 +191,10 @@ public class ChatSetting : Config<ChatSetting>, IChatSetting, IToolSetting
     [Description("工具调用最大轮次。防止工具调用无限递归，提升此值可让 Agent 完成需要更多步骤的复杂任务，默认10")]
     public Int32 ToolMaxIterations { get; set; } = 10;
 
-    /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000</summary>
+    /// <summary>技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认150000</summary>
     [Category("工具与扩展")]
-    [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认80000")]
-    public Int32 SkillBudgetChars { get; set; } = 80000;
+    [Description("技能内容最大字符数。技能提示词总长度超过此值时按优先级截断，默认150000")]
+    public Int32 SkillBudgetChars { get; set; } = 150000;
 
     /// <summary>SQL查询允许的非查询操作。逗号分隔，默认允许 INSERT 和 UPDATE；SELECT/WITH 始终允许不受此限制</summary>
     [Category("工具与扩展")]
