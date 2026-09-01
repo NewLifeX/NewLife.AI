@@ -8,7 +8,7 @@
     <Description>集对话前端、统一 AI 网关、Agent 平台于一身的完整 AI 应用。支持多轮对话、流式输出、函数调用、图像生成、会话管理与使用量统计</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 NewLife</Copyright>
-    <VersionPrefix>1.5</VersionPrefix>
+    <VersionPrefix>1.6</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -35,7 +35,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>新增 5 个 IM 渠道（WeComBot/微信公众平台/微信客服/QQ/Discord），渠道体系达 11 个；大规模国际化适配，引入 useTranslation 与多语言资源；前端集成 Wiki Tab 与旧浏览器兼容；多维评分反馈机制替代点赞/点踩；主备模型路由与 Provider 屏蔽机制；守密指令注入与 AI 泄密特征检测；前端依赖瘦身与懒加载性能优化</PackageReleaseNotes>
+    <PackageReleaseNotes>协议客户端 v5.0 增强，支持多轮思考回放与多协议一致性；推理过程升级为枚举布局，支持右侧分栏与历史推理导航；新增用户隔离与安全拦截反哺配置；渠道领域模式统一开关；系统设置前端补齐错误引导/重排序模型/MCP工具/SQL操作四项配置；新增 Bing/搜狗/DuckDuckGo 搜索通道；MCP 全链路对标官方 SDK；前端依赖与性能优化</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -79,7 +79,7 @@
     <PackageReference Include="NewLife.Holiday" Version="1.4.2026.206" />
     <PackageReference Include="NewLife.MySql" Version="1.4.2026.801" />
     <PackageReference Include="NewLife.Office" Version="1.3.2026.810-beta1534" />
-    <PackageReference Include="NewLife.XCode" Version="12.1.2026.807-beta0759" />
+    <PackageReference Include="NewLife.XCode" Version="12.2.2026.901" />
   </ItemGroup>
 
   <ItemGroup>
