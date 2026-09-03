@@ -1,6 +1,6 @@
 namespace NewLife.AI.Tools;
 
-/// <summary>天气查询服务接口。支持多实现链式降级（中央气象台 → wttr.in → 远程兜底）</summary>
+/// <summary>天气查询服务接口。支持多实现链式降级（中央气象台 → wttr.in）</summary>
 public interface IWeatherService
 {
     /// <summary>获取指定城市的实时天气信息</summary>

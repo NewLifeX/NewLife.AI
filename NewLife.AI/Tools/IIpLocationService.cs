@@ -1,6 +1,6 @@
 ﻿namespace NewLife.AI.Tools;
 
-/// <summary>IP 归属地查询服务接口。支持多实现链式降级（太平洋电脑网 → ip-api → 远程兜底）</summary>
+/// <summary>IP 归属地查询服务接口。支持多实现链式降级（太平洋电脑网 pconline）</summary>
 public interface IIpLocationService
 {
     /// <summary>查询 IP 归属地信息</summary>

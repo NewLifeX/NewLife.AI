@@ -1,6 +1,6 @@
 namespace NewLife.AI.Tools;
 
-/// <summary>文本翻译服务接口。支持多实现链式降级（MyMemory → 远程兜底）</summary>
+/// <summary>文本翻译服务接口。支持多实现链式降级（MyMemory）</summary>
 public interface ITranslateService
 {
     /// <summary>将文本翻译为目标语言</summary>
