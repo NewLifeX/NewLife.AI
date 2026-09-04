@@ -2,7 +2,7 @@
 
 > 版本：v1.0 | 日期：2026-06-30
 
-本文档说明如何通过 Docker 一键部署 ChatAI（开源社区版 Web 对话应用）。
+本文档说明如何通过 Docker 一键部署 ChatAI（开源 Web 对话应用）。
 
 ## 前提
 
@@ -58,16 +58,5 @@ docker compose down
 docker compose build --no-cache
 docker compose up -d
 ```
-
-## StarChat 部署
-
-StarChat（商用增强版）同样支持 Docker 部署：
-
-```bash
-cd NewLife.StarChat
-docker compose up -d
-```
-
-打开浏览器访问 `http://localhost:5080`。首次启动自动创建 SQLite 数据库并初始化表结构。
 
 > **生产环境建议**：企业客户也可选择 IIS / Windows 服务部署。Docker 方案主要用于快速试用和 Linux 服务器场景。

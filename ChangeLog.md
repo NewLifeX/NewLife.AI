@@ -169,7 +169,7 @@
 - **知识审核**：引入知识审核功能，知识库主键统一为 Int32
 
 ### Docker 部署
-- **Docker 部署支持**：支持 ChatAI/StarChat Docker 部署，新增竞品分析报告
+- **Docker 部署支持**：支持 ChatAI Docker 部署，新增竞品分析报告
 
 ### 其他优化
 - 思考过程默认折叠，提升阅读体验

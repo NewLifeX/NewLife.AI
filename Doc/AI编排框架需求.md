@@ -4,7 +4,8 @@
 > 版本：v0.9（已完成）  
 > 日期：2026-03-15  
 > 参考：Microsoft Semantic Kernel / AutoGen / Vercel AI SDK  
-> 实现位置：`NewLife.AI` 核心库 + `Web/src/hooks/`
+> 实现位置：`NewLife.AI` 核心库 + `Web/src/hooks/`  
+> 📌 向量存储演进说明（2026-08 对齐 v1.6）：`IVectorStore` / `IVectorStoreCollection` / `VectorRecord` 两级向量存储接口改由 `NewLife.Data` 提供（移除 NAI 本地重复定义），`InMemoryVectorStore` / `InMemoryVectorStoreCollection` 为其内存实现；NAI 本地 `ISemanticMemory` / `InMemorySemanticMemory` 语义记忆封装已删除。本文 1.1/1.2 的接口级验收条件仍有效。
 
 ---
 

@@ -13,7 +13,7 @@
 - **MEAI 已从纯抽象扩展为能力域中间件集合**：包目录含 ChatCompletion/ChatReduction/ChatRouting/Embeddings/Files/Image/Realtime/SpeechToText/TextToSpeech 等，是微软官方**抽象规范 + 通用能力中间件**层
 - **NewLife.AI 是非微软阵营的独立全栈 .NET AI 库**：46 服务商统一接入 + 6 类原生协议 + 一体化工具/过滤/Agent/多模态接口 + net45~net10 低框架兼容
 
-**报告分层口径**：NewLife.AI 与 ChatAI/StarChat 分属库层与应用层。本文只评**库层**能力——凡实现在上层应用（如 10 类用户记忆自动提取的 `ConversationAnalysisService`、MCP 客户端 `McpClientService`）一律不计为库能力，仅标注为"待下沉"。上层应用竞品见 [StarChat 竞品分析](../../Doc/StarChat竞品分析.md)。
+**报告分层口径**：NewLife.AI 与 ChatAI 分属库层与应用层。本文只评**库层**能力——凡实现在应用层（如 10 类用户记忆自动提取的 `ConversationAnalysisService`、MCP 客户端 `McpClientService`）一律不计为库能力，仅标注为"待下沉"。应用层竞品不在本报告评估范围。
 
 ---
 
@@ -71,7 +71,7 @@
 
 **竞品对照**：MEAI/SK/MAF 仅对当前所用模型有零散 `ModelInfo`，无"能力标记 + 家族推断 + 报价 + Token 估算"的成体系元数据。MAF/SK 提供 `TokenPoller`/token counting 类工具但非模型路由级体系。
 
-**结论**：本域为 NewLife.AI **独家护城河**，是 StarChat 网关/额度/UI 能力的基础，竞品在库层面无对应物。
+**结论**：本域为 NewLife.AI **独家护城河**，是上层应用网关/额度/UI 能力的基础，竞品在库层面无对应物。
 
 ---
 
@@ -83,7 +83,7 @@
 - **工具可见性/受众**：`ToolAudience` 受众分级 + `GetTools` 的 filterNames 注入式过滤（AI 请求按需注入工具子集）
 - **参数别名**：`ParameterAliasAttribute` 解决模型参数名漂移
 - **结构化结果多路分发**：`IToolResult.Contents` 支持按受众分流（同一工具可向模型/UI/日志返回不同内容）
-- **审批**：`IToolApprovalProvider` 三档 **Allow/Ask/Deny**（库接口，StarChat 已实现人工审批）
+- **审批**：`IToolApprovalProvider` 三档 **Allow/Ask/Deny**（库接口已就绪，宿主可自行实现人工审批界面）
 - **健壮性**：`CircuitBreakerPolicy` 熔断、调用去重、SSRF 防护与状态隔离、结构化错误 `ToolError`/`ToolException`、Token 预算守卫
 - **库级内置工具服务**：搜索（Bing RSS/搜狗/DuckDuckGo/Serper）、天气（NMC/wttr）、翻译、网页抓取、IP 定位、网络工具（`BuiltinToolService` + 各 ISearchService 等接口）
 
@@ -342,4 +342,4 @@ var client = new ChatClientBuilder(AiClientRegistry.Default.CreateClient("OpenAI
 - 竞品事实来源：SK/MAF 官方 README（GitHub 原文，2026-09 拉取）、MAF dotnet/src 包目录实测、MEAI 包目录实测、dotnet/extensions v10.9.0
 - 本地依据：`NAI/NewLife.AI` 与 `NAI/NewLife.AI.Extensions` 源码（v1.6.2026.0902）
 - v2.1 变更：① 按 8 大能力域深度逐项对比（含真实类名/机制与竞品官方证据）；② 依据 SK 官方 README 修正"SK 已被 MAF 取代"；③ 修正库层/应用层口径（10 类记忆提取、MCP 客户端不计为库能力）；④ 新增 API 易用性真实代码对比；⑤ 新增 OTel/向量后端/工作流等差距项
-- 相关：上层应用竞品见 [StarChat 竞品分析](../../Doc/StarChat竞品分析.md)
+- 相关：上层应用能力（Web 对话、管理后台等）不在本报告评估范围

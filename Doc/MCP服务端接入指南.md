@@ -313,5 +313,5 @@ dotnet test NAI/XUnitTest/XUnitTest.csproj --filter "FullyQualifiedName~XUnitTes
 dotnet test NAI/XUnitTest/XUnitTest.csproj --filter "FullyQualifiedName~CrossCompatibility|FullyQualifiedName~StreamTransport"
 ```
 
-StarChat 侧集成测试（`XUnitTest/Services/McpServerExposeTests.cs`、`XUnitTest/Tools/McpClientServiceIntegrationTests.cs`）验证 `/mcp` 对外暴露与客户端全链路。
+宿主应用侧集成测试（`XUnitTest/Services/McpServerExposeTests.cs`、`XUnitTest/Tools/McpClientServiceIntegrationTests.cs`）验证 `/mcp` 对外暴露与客户端全链路。
 

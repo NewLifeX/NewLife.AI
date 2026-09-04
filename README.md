@@ -29,7 +29,6 @@
 |-----------|------|------|
 | `NewLife.AI` | 开源核心 AI 基础设施 | 统一接入主流模型服务商，覆盖底层 AI 能力 |
 | `NewLife.ChatAI` | 开源标准 Web 对话系统 | 本仓库 —— 标准对话应用与 AI 网关 |
-| `NewLife.StarChat` | 商用增强版 | 基于 ChatAI 增强知识进化、知识库、项目运营等能力 |
 
 ---
 
@@ -223,7 +222,7 @@ app.Run();
 
 ## API 网关
 
-NewLife.ChatAI 内置多协议 AI 网关，第三方系统无需改造即可接入，全路径经过记忆注入与技能增强。
+NewLife.ChatAI 内置多协议 AI 网关，第三方系统无需改造即可接入。默认以**纯净转发**模式运行（鉴权 / 限流 / 配额 / 用量，不记录对话）；开启**网关领域模式**（EnableGatewayDomainMode）后走完整处理器链，享受记忆注入与技能增强并自动记录对话。
 
 | 协议 | 路由 | 说明 |
 |------|------|------|
@@ -234,6 +233,10 @@ NewLife.ChatAI 内置多协议 AI 网关，第三方系统无需改造即可接�
 | Ollama | `POST /api/chat` `/api/tags` 等 | 伪装 Ollama 服务，兼容 Ollama 客户端 |
 | 图像生成 | `POST /v1/images/generations` | Text-to-Image |
 | 图像编辑 | `POST /v1/images/edits` | Inpainting（multipart/form-data）|
+| 嵌入向量 | `POST /v1/embeddings` | OpenAI 兼容 |
+| 语音 | `POST /v1/audio/speech` `/v1/audio/transcriptions` | TTS / ASR |
+| 视频生成 | `POST /v1/video/generations` | 任务式提交与状态查询 |
+| 重排序 | `POST /v1/reranks` | Rerank |
 | 模型发现 | `GET /v1/models` | 可用模型列表 |
 
 **认证**：`Authorization: Bearer sk-xxxx`（AppKey）
@@ -336,7 +339,7 @@ public class AuditFilter : IChatFilter
 | [功能清单](Doc/功能清单.md) | 完整功能清单，三维状态追踪 | ALL |
 | [架构设计](Doc/架构设计.md) | 四层架构、各模块设计细节 | ALL |
 | [协议客户端分析](Doc/协议客户端分析.md) | 协议客户端 chat/stream/think 健康度分析、缺口修复记录与测试覆盖 | AI |
-| [基础库审计](Doc/基础库审计.md) | 基础库 12 维度全景审计：72 问题登记与 4 轮修复记录（渠道/MCP/工具/Planner 等） | ALL |
+| [基础库审计](Doc/基础库审计.md) | 基础库 12 维度全景审计：分 15+ 轮登记与修复问题（协议客户端/MCP/工具链/记忆等） | ALL |
 | [AI 编排框架需求](Doc/AI编排框架需求.md) | 工具 / 智能体 / 规划器设计 | AI / AGENT |
 | [API 网关需求](Doc/API网关需求.md) | 网关协议适配详解 | GW |
 | [MCP 架构](Doc/MCP架构.md) | MCP 客户端与服务端设计 | TOOL |
