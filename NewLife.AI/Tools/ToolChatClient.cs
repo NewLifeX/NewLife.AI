@@ -36,14 +36,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <summary>工具提供者列表（按工具名直接路由执行工具调用）</summary>
     public IReadOnlyList<IToolProvider> Providers { get; } = (providers ?? []).ToList().AsReadOnly();
 
-    /// <summary>工具调用配置。为 null 时使用内置默认值（MaxIterations=10, MaxTotalTokens=0/不限制, MaxResultChars=0/不限制）</summary>
+    /// <summary>工具调用配置。为 null 时使用内置默认值（MaxIterations=10, ToolResultMaxChars=0/不限制）</summary>
     public IToolSetting? ToolSetting { get; set; }
 
-    /// <summary>是否因工具调用轮次上限触发中断</summary>
-    public Boolean IsToolLoopLimitExceeded { get; private set; }
-
-    /// <summary>是否因上下文窗口预算触发中断。工具结果逐轮累积超限时置位，供上层转为友好提示</summary>
-    public Boolean IsContextLimitExceeded { get; private set; }
+    /// <summary>工具调用循环终止原因。对标 LangChain 结构化终止（AgentFinish/AgentAction）与
+    /// OpenAI Agents SDK 的 run 终态，供上层结构化判断循环结束形态。循环内部各中断点在终止时赋值一次；
+    /// 上层判断是否因轮次上限/上下文预算触发中断时，直接与本枚举对应值比较
+    /// （如 <c>StopReason == ToolLoopStopReason.ContextLimit</c>），无需便捷布尔属性（2-属性简化收敛为单一枚举状态）</summary>
+    public ToolLoopStopReason StopReason { get; set; } = ToolLoopStopReason.Completed;
 
     /// <summary>API 不返回 Usage 时的回退估算累计值（基于内联字符估算）</summary>
     private Int32 _fallbackEstimatedTokens;
@@ -73,6 +73,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// 达到 <see cref="EscalationThreshold"/> 时向 LLM 注入升级警告，避免死循环消耗 Token。</summary>
     private Int32 _consecutiveFailureRounds;
 
+    /// <summary>请求级失败登记：工具名+参数 → 失败原因摘要。相同调用已在本请求失败时，后续轮次直接拦截不重复执行，
+    /// 引导模型修改参数或改用其他工具（对标 OpenAI Agents SDK 对重复失败调用的去重与错误回喂）</summary>
+    private readonly Dictionary<String, String> _failedKeys = new(StringComparer.Ordinal);
+
     private Int32 _escalationThreshold = 3;
     /// <summary>连续失败升级阈值。整轮工具调用连续失败达到此次数后，向 LLM 注入警告提示换思路。默认 3；设为 0 或负数时禁用升级检测</summary>
     public Int32 EscalationThreshold { get => _escalationThreshold; set => _escalationThreshold = value > 0 ? value : 3; }
@@ -93,9 +97,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (request == null) throw new ArgumentNullException(nameof(request));
 
         // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），否则上一请求的
-        // 超限标志/失败轮数会污染下一请求的判定
-        IsToolLoopLimitExceeded = false;
-        IsContextLimitExceeded = false;
+        // 终止原因/失败轮数会污染下一请求的判定
+        StopReason = ToolLoopStopReason.Completed;
+        _failedKeys.Clear();
         _fallbackEstimatedTokens = 0;
         _consecutiveFailureRounds = 0;
 
@@ -103,20 +107,20 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (mergedTools.Count == 0)
             return await InnerClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false);
 
+        using var span = Tracer?.NewSpan($"ai:tool:loop");
+
         // 合并工具定义到选项（不修改调用方的原始选项）
         var workOptions = MergeToolOptions(request, mergedTools);
         var workMessages = request.Messages.ToList();
 
         var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
         if (maxIterations <= 0) maxIterations = 10;
-        // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
+        // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复序列化
         var toolsTokens = TokenEstimator.EstimateTokens(mergedTools);
 
         IChatResponse response = null!;
         var iterations = 0;
         var executedAnyTool = false;
-        // 混合工具透传标记：本轮含客户端工具时置位，禁止末尾"强制产出最终回答"兜底（否则会吞掉透传的 tool_calls）
-        var passthroughRound = false;
         UsageDetails? accumulatedUsage = null;
 
         // 请求级跨轮去重集合（局部变量，天然隔离并发请求的共享状态）
@@ -129,48 +133,48 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // 上下文窗口预算检查：工具结果逐轮累积进消息列表，超限时中断循环，防止撑爆模型上下文窗口
+            // 上下文窗口预算检查（Token 守卫）：工具结果逐轮累积进消息列表，超限时折叠/截断，仍超限中断循环
             if (CheckContextLimit(workMessages, toolsTokens, request)) break;
+            if (span != null) span.Value++;
 
+            span?.AppendTag($"workMessages: {workMessages.Count}");
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
 
             // 累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）
-            if (response.Usage != null)
-                accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
-            else
-                _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
+            accumulatedUsage = AccumulateUsage(accumulatedUsage, response.Usage, workMessages);
 
             // 从第一个 Choice 中获取工具调用
             var assistantMessage = response.Messages?.FirstOrDefault()?.Message;
             var toolCalls = assistantMessage?.ToolCalls;
             if (toolCalls == null || toolCalls.Count == 0) break;
 
+            var toolNames = String.Join(",", toolCalls.Where(t => t.Function?.Name != null).Select(t => t.Function!.Name));
+            span?.AppendTag($"toolCalls: {toolNames}");
+
             // 混合工具分流：含客户端工具（非任何 StarChat Provider 注册、仅客户端定义）的轮次整轮透传——
             // 不执行、不追加 tool 结果，原样返回 tool_calls 由客户端执行后在下一次请求回传。
             // 已注册但被 SelectedTools 过滤的目录工具仍走 ExecuteToolAsync 的目录回退执行
             if (HasClientToolCalls(toolCalls, toolMap, providerToolNames))
             {
-                passthroughRound = true;
-                Log?.Info("本轮含客户端工具调用，整轮透传：{0}",
-                    String.Join(",", toolCalls.Where(t => t.Function?.Name != null).Select(t => t.Function!.Name)));
+                StopReason = ToolLoopStopReason.Passthrough;
+                WriteLog("本轮含客户端工具调用，整轮透传：{0}", toolNames);
                 break;
             }
 
             executedAnyTool = true;
 
-            if (++iterations >= maxIterations)
-            {
-                IsToolLoopLimitExceeded = true;
-                Log.Warn("工具调用轮次已达上限 {0}，中断工具调用循环", maxIterations);
-                break;
-            }
-
-            // 追加 assistant 消息（含工具调用）
+            // 追加 assistant 消息（含工具调用，ToolCalls 浅拷贝隔离后续修改）
             // DeepSeek 思考模式要求：有工具调用时必须将 reasoning_content 一并回传，否则 API 返回 400
-            workMessages.Add(BuildAssistantMessage(assistantMessage, toolCalls));
+            workMessages.Add(new ChatMessage
+            {
+                Role = "assistant",
+                Content = assistantMessage?.Content,
+                ReasoningContent = assistantMessage?.ReasoningContent,
+                ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
+                Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
+            });
 
             // Phase 1：构造与 toolCalls 等长的任务数组，并行启动（Function 为 null 则坑位留 null，Phase 2 跳过）
-            // 同轮/跨轮去重：同名同参或 show_* 跨轮重复调用只执行第一次（ask_user 豁免）
             var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
             var tasks = new Task<IToolResult>[toolCalls.Count];
             for (var i = 0; i < tasks.Length; i++)
@@ -178,19 +182,19 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                // 去重命中：直接返回占位结果，不执行工具
-                var dup = TryBuildDedupResult(tc.Function.Name, tc.Function.Arguments, dedupKeys, sessionDedupKeys);
-                if (dup != null)
+                // 去重/失败拦截命中：直接返回占位任务（不执行）；否则启动真实执行
+                var skip = TrySkipToolCall(tc, dedupKeys, sessionDedupKeys);
+                if (skip != null)
+                    tasks[i] = Task.FromResult(skip);
+                else
                 {
-                    tasks[i] = Task.FromResult<IToolResult>(dup);
-                    continue;
+                    var ctx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
+                    tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
                 }
-
-                var ctx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
-                tasks[i] = ExecuteToolAsync(tc.Function!.Name, tc.Function!.Arguments, toolMap, ctx, cancellationToken);
             }
 
-            // Phase 2：顺序 await + 写入（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
+            // Phase 2：顺序 await 并处理结果（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）。
+            // 去重复用/失败登记/回喂消息收敛于 CollectToolResult（返回值供流式产出 done 事件，同步忽略）
             var toolResults = new Dictionary<String, IToolResult>(StringComparer.OrdinalIgnoreCase);
             var roundSummaries = new List<ToolCallSummary>();
             for (var i = 0; i < tasks.Length; i++)
@@ -198,53 +202,48 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (tasks[i] == null) continue;
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
+
                 var toolResult = await tasks[i].ConfigureAwait(false);
-
-                // 去重复用：占位结果且缓存已有首次结果 → 替换为复用结果（用户端完整展示，LLM 端简短说明不重复消耗 Token）；
-                // 首次成功执行 → 写入缓存供后续去重复用
-                var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
-                if (toolResult is ToolResult { IsError: false } tr && tr["DedupPlaceholder"] is true
-                    && dedupCache.TryGetValue(key, out var cached) && cached != null)
-                    toolResult = BuildReuseResult(tc.Function.Name, cached);
-                else if (!toolResult.IsError && GetUserContent(toolResult) != null)
-                    dedupCache[key] = toolResult;
-
-                toolResults[tc.Function!.Name] = toolResult;
-                roundSummaries.Add(new ToolCallSummary(tc.Function.Name, toolResult.IsError, 0));
-                var llmContent = GetLlmContent(toolResult, tc.Function.Name);
-                workMessages.Add(new ChatMessage
-                {
-                    Role = "tool",
-                    ToolCallId = tc.Id,
-                    Content = TruncateResult(llmContent)
-                });
+                CollectToolResult(workMessages, dedupCache, tc, toolResult, toolResults, roundSummaries);
             }
 
             // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
             EvaluateFailureAndEscalate(roundSummaries, workMessages);
 
             // 触发循环迭代回调（检查点持久化等），回调异常不中断循环
-            FireLoopIteration(iterations - 1, maxIterations, accumulatedUsage, roundSummaries, cancellationToken);
+            FireLoopIteration(iterations, maxIterations, accumulatedUsage, roundSummaries, cancellationToken);
 
             // 若本轮所有工具结果均无 LLM 受众内容，继续循环无意义，直接退出
             if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) break;
+
+            // 执行满 maxIterations 轮工具后停止：本轮工具调用与结果已完整执行回传后才中断，不再发起新的 LLM-工具往返。
+            // 上限检查放在工具执行后（此前放在执行前会把第 maxIterations 轮工具调用直接丢弃且不回传结果），
+            // 与流式 GetStreamingResponseAsync 的执行轮数一致（对标竞品 max_turns/迭代上限语义）
+            if (++iterations >= maxIterations)
+            {
+                StopReason = ToolLoopStopReason.MaxIterations;
+                WriteLog("工具调用轮次已达上限 {0}，中断工具调用循环", maxIterations);
+                break;
+            }
         }
 
         // 兜底：执行过工具但最终轮未产出正文（模型只输出思考/工具调用即结束，或轮次达上限），
-        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；上下文超限时不追加）
-        if (!passthroughRound && !IsContextLimitExceeded && executedAnyTool && IsFinalContentEmpty(response))
+        // 追加提示再做一次 LLM 调用强制产出最终回答（仅一次，防死循环；上下文超限或累计预算超限时不追加）
+        if (StopReason != ToolLoopStopReason.Passthrough
+            && StopReason != ToolLoopStopReason.ContextLimit
+            && executedAnyTool && response.Text.IsNullOrEmpty()
+            // 兜底前再做一次预算守卫：最后一批工具结果追加后可能已逼近预算，追加提示前先折叠/截断；
+            // 若仍无法降到预算内则放弃兜底（CheckContextLimit 已置 ContextLimit 终止原因）
+            && !CheckContextLimit(workMessages, toolsTokens, request))
         {
-            Log.Info("最终回复内容为空，追加提示后强制产出最终回答");
+            WriteLog("最终回复内容为空，追加提示后强制产出最终回答");
             workMessages.Add(new ChatMessage
             {
                 Role = "user",
                 Content = "[系统提示] 请基于已有的工具调用结果，直接给出最终回答。不要再次调用工具。"
             });
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
-            if (response.Usage != null)
-                accumulatedUsage = accumulatedUsage?.Add(response.Usage) ?? response.Usage;
-            else
-                _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
+            accumulatedUsage = AccumulateUsage(accumulatedUsage, response.Usage, workMessages);
         }
 
         // 将所有轮次的 Token 用量累加值写回最终 response，供上层（如 InvokeLlmDirectAsync）使用
@@ -263,8 +262,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (request == null) throw new ArgumentNullException(nameof(request));
 
         // 请求级状态重置：工具循环内部状态不得跨请求残留（A-73），与 GetResponseAsync 保持一致
-        IsToolLoopLimitExceeded = false;
-        IsContextLimitExceeded = false;
+        StopReason = ToolLoopStopReason.Completed;
+        _failedKeys.Clear();
         _fallbackEstimatedTokens = 0;
         _consecutiveFailureRounds = 0;
 
@@ -276,12 +275,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             yield break;
         }
 
+        using var span = Tracer?.NewSpan($"ai:tool:loop");
+
+        // 合并工具定义到选项（不修改调用方的原始选项）
         var workOptions = MergeToolOptions(request, mergedTools);
         var workMessages = request.Messages.ToList();
 
         var maxIterations = ToolSetting?.ToolMaxIterations ?? 10;
         if (maxIterations <= 0) maxIterations = 10;
-        // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复 JSON 序列化
+        // 工具 schema Token 估算在循环外计算一次：工具列表在循环中不变，避免每轮重复序列化
         var toolsTokens = TokenEstimator.EstimateTokens(mergedTools);
 
         UsageDetails? accumulatedUsage = null;
@@ -292,12 +294,22 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         // 请求级去重复用缓存：同名同参工具首次执行结果，去重命中时复用给用户完整展示（局部变量，天然隔离并发请求）
         var dedupCache = new Dictionary<String, IToolResult>(StringComparer.Ordinal);
 
-        for (var iteration = 0; iteration < maxIterations; iteration++)
+        for (var iteration = 0; ; iteration++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // 上下文窗口预算检查：工具结果逐轮累积进消息列表，超限时中断循环，防止撑爆模型上下文窗口
+            // 达到工具轮次上限：执行满 maxIterations 轮工具后不再发起新的 LLM-工具往返。
+            // 与同步 GetResponseAsync 一致在满轮后置位终止原因（此前静默退出不置位，两入口行为不一致）
+            if (iteration >= maxIterations)
+            {
+                StopReason = ToolLoopStopReason.MaxIterations;
+                WriteLog("工具调用轮次已达上限 {0}，中断工具调用循环", maxIterations);
+                break;
+            }
+
+            // 上下文窗口预算检查（Token 守卫）：工具结果逐轮累积进消息列表，超限时折叠/截断，仍超限中断循环
             if (CheckContextLimit(workMessages, toolsTokens, request)) break;
+            if (span != null) span.Value++;
 
             var toolCalls = new List<ToolCall>();
             String? finishReason = null;
@@ -310,6 +322,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 记录已在流式传输阶段提前发出 start 事件的工具调用 ID，避免 Step 1 重复发送
             var earlyStartedToolIds = new HashSet<String>();
 
+            span?.AppendTag($"workMessages: {workMessages.Count}");
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(ChatRequest.Create(workMessages, workOptions, stream: true), cancellationToken).ConfigureAwait(false))
             {
                 // 轮次内合并 chunk Usage（各协议差异由 MergeChunkUsage 虚拟方法处理）
@@ -376,44 +389,38 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 // 始终透传原始 chunk，不做任何抑制
                 yield return chunk;
 
-                // 尽早原则：多轮场景下（有历史轮 accumulatedUsage），每个含 Usage 的 chunk 后
+                // 尽早原则：多轮场景下（有历史轮累计量），每个含 Usage 的 chunk 后
                 // 立即追加一个运行时累计总量 chunk，让消费方随时能获取到正确的跨轮累计值
                 if (chunk.Usage != null && accumulatedUsage != null)
                     yield return new ChatResponse { Usage = accumulatedUsage.Add(iterUsage!) };
             }
 
-            // 跨轮 Token 累加：将本轮 Usage 加到全局累加值
-            if (iterUsage != null)
-            {
-                DefaultSpan.Current?.AppendTag($"Tokens: {iterUsage.InputTokens}+{iterUsage.OutputTokens}={iterUsage.TotalTokens} finishReason: {finishReason}");
-
-                accumulatedUsage = accumulatedUsage?.Add(iterUsage) ?? iterUsage;
-            }
-            else
-            {
-                _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
-            }
+            // 跨轮 Token 累加：将本轮 Usage 加到全局累加值（缺失时回退字符估算）
+            accumulatedUsage = AccumulateUsage(accumulatedUsage, iterUsage, workMessages);
 
             var isToolRound = finishReason.EqualIgnoreCase("tool_calls") || (toolCalls.Count > 0 && finishReason.IsNullOrEmpty());
 
             if (!isToolRound || toolCalls.Count == 0)
             {
-                Pool.StringBuilder.Return(contentSb);
-                Pool.StringBuilder.Return(reasoningSb);
+                contentSb.Return();
+                reasoningSb.Return();
                 // 兜底：最终轮无 Usage chunk 但存在历史轮（极少见），补发累计总量
                 if (iterUsage == null && accumulatedUsage != null)
                     yield return new ChatResponse { Usage = accumulatedUsage };
                 yield break;
             }
 
+            var toolNames = String.Join(",", toolCalls.Where(t => t.Function?.Name != null).Select(t => t.Function!.Name));
+            span?.AppendTag($"toolCalls: {toolNames}");
+
             // 混合工具分流：含客户端工具（非任何 StarChat Provider 注册、仅客户端定义）的轮次整轮透传——
             // 不执行、不追加 tool 结果，仅补发 start/done 事件，由客户端执行后在下一次请求回传
             if (HasClientToolCalls(toolCalls, toolMap, providerToolNames))
             {
-                Pool.StringBuilder.Return(contentSb);
-                Pool.StringBuilder.Return(reasoningSb);
-                Log?.Info("本轮含客户端工具调用，整轮透传：{0}",
-                    String.Join(",", toolCalls.Where(t => t.Function?.Name != null).Select(t => t.Function!.Name)));
+                contentSb.Return();
+                reasoningSb.Return();
+                StopReason = ToolLoopStopReason.Passthrough;
+                WriteLog("本轮含客户端工具调用，整轮透传：{0}", toolNames);
                 foreach (var tc in toolCalls)
                 {
                     if (tc.Function == null) continue;
@@ -451,6 +458,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 构建本轮聚合响应，供工具上下文访问（流式下每轮由多个 chunk 拼合，工具通过 ToolCallContext.Response 读取本轮模型输出）
             var roundResponse = BuildRoundResponse(assistantContent, assistantReasoning, toolCalls, finishReason);
 
+            // 追加 assistant 消息（思考签名/redacted_thinking 放入 Items 原样回传，ToolCalls 浅拷贝隔离后续修改）
             var assistantItems = new Dictionary<String, Object?>();
             if (thinkingSignature != null) assistantItems["Signature"] = thinkingSignature;
             if (redactedThinking != null) assistantItems["RedactedThinking"] = redactedThinking;
@@ -460,31 +468,31 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 Role = "assistant",
                 Content = assistantContent,
                 ReasoningContent = assistantReasoning,
-                ToolCalls = toolCalls.ToList(),
-                Items = assistantItems,
+                ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
+                Items = assistantItems.Count > 0 ? new Dictionary<String, Object?>(assistantItems) : [],
             });
 
             // 同轮去重：同名同参工具调用只执行第一次（ask_user 豁免）
             var dedupKeys = new HashSet<String>(StringComparer.Ordinal);
+            var tasks = new Task<IToolResult>[toolCalls.Count];
 
             // Step 1: yield start 事件并并行启动工具任务。
             // 始终发送含完整 arguments 的 start 事件（流式阶段的 earlyStart 仅作 UX 预览，此处补充完整参数）。
             // CoreStreamAsync 层会按 toolCallId 去重：已存在则更新 Arguments，不追加重复条目。
-            var tasks = new Task<IToolResult>[toolCalls.Count];
             for (var i = 0; i < toolCalls.Count; i++)
             {
                 var tc = toolCalls[i];
                 if (tc.Function == null) continue;
 
-                // 去重命中：直接返回占位结果，不执行工具，也不 yield start 事件（前端不渲染重复卡片）
-                var dup = TryBuildDedupResult(tc.Function.Name, tc.Function.Arguments, dedupKeys, sessionDedupKeys);
-                if (dup != null)
+                // 去重/失败拦截命中：返回占位任务且不 yield start（前端不渲染重复卡片）
+                var skip = TrySkipToolCall(tc, dedupKeys, sessionDedupKeys);
+                if (skip != null)
                 {
-                    tasks[i] = Task.FromResult<IToolResult>(dup);
+                    tasks[i] = Task.FromResult(skip);
                     continue;
                 }
 
-                // 发送完整 Arguments 给前端（ToolResultMaxChars 仅控制发给 AI 的内容长度，
+                // 真实执行：先发含完整 Arguments 的 start 事件再启动任务（ToolResultMaxChars 仅控制发给 AI 的内容长度，
                 // 前端 ToolCallBadge 展示、ask_user 解析问题组都需要完整参数，不截断）
                 yield return new ChatResponse
                 {
@@ -495,7 +503,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
             }
 
-            // Step 2: 按序 await（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）
+            // Step 2: 按序 await（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）。
+            // 每个工具结果经 CollectToolResult 处理后立即产出事件，保持"每工具完成即时报到"的实时性
             var toolResults = new Dictionary<String, IToolResult>(StringComparer.OrdinalIgnoreCase);
             var roundSummaries = new List<ToolCallSummary>();
             for (var i = 0; i < toolCalls.Count; i++)
@@ -505,36 +514,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (tc.Function == null) continue;
 
                 var toolResult = await tasks[i].ConfigureAwait(false);
-
-                // 去重复用：占位结果且缓存已有首次结果 → 替换为复用结果（用户端完整展示，LLM 端简短说明不重复消耗 Token）；
-                // 首次成功执行 → 写入缓存供后续去重复用
-                var key = tc.Function.Name + "|" + (tc.Function.Arguments ?? "");
-                if (toolResult is ToolResult { IsError: false } tr && tr["DedupPlaceholder"] is true
-                    && dedupCache.TryGetValue(key, out var cached) && cached != null)
-                    toolResult = BuildReuseResult(tc.Function.Name, cached);
-                else if (!toolResult.IsError && GetUserContent(toolResult) != null)
-                    dedupCache[key] = toolResult;
-
-                toolResults[tc.Function!.Name] = toolResult;
-                roundSummaries.Add(new ToolCallSummary(tc.Function.Name, toolResult.IsError, 0));
-
-                // LLM 消息：提取 Llm 受众内容；无 Llm 内容时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
-                var llmContent = GetLlmContent(toolResult, tc.Function.Name);
-                workMessages.Add(new ChatMessage
-                {
-                    Role = "tool",
-                    ToolCallId = tc.Id,
-                    Content = TruncateResult(llmContent)
-                });
-
-                // SSE 事件：取用户内容（不截断——ToolResultMaxChars 仅控制发给 AI 的内容长度，
-                // 给用户展示的 SVG/HTML/图表 JSON 必须完整，否则前端解析失败）
-                var userContent = GetUserContent(toolResult);
-                var eventType = toolResult.IsError ? "error" : "done";
-                yield return new ChatResponse
-                {
-                    ToolCallEvents = [new ToolCallEventInfo(eventType, tc.Id, tc.Function.Name, userContent, llmContent)]
-                };
+                var evt = CollectToolResult(workMessages, dedupCache, tc, toolResult, toolResults, roundSummaries);
+                if (evt != null)
+                    yield return new ChatResponse { ToolCallEvents = [evt] };
             }
 
             // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
@@ -547,12 +529,105 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (toolCalls.All(call => call.Function?.Name is not null && !HasLlmAudience(toolResults, call.Function.Name))) yield break;
             // 继续下一轮（下一轮流的 chunk 透传给调用方）
         }
-        // 超过最大轮次，静默退出（调用方已收到全部 chunk）
+        // 超过最大轮次：StopReason 已在循环头置位，退出（调用方已收到全部 chunk）
     }
 
     #endregion
 
     #region 辅助
+
+    /// <summary>工具执行前的跳过判定：同轮/跨轮去重命中与跨轮重复失败拦截返回占位结果（不执行工具，前端不渲染卡片）；
+    /// 未命中返回 null，由调用方启动真实执行。是否跳过需在执行前显式得知（决定流式 start 事件与占位分支），
+    /// 不能依赖任务完成状态判断——真实执行的 async 任务在同步完成的工具下也可能立即完成</summary>
+    /// <param name="tc">工具调用</param>
+    /// <param name="dedupKeys">同轮去重集合（同名同参只执行第一次，轮级）</param>
+    /// <param name="sessionDedupKeys">请求级跨轮去重集合（show_* 工具整请求只执行一次）</param>
+    /// <returns>占位结果（去重/失败拦截命中）；未命中返回 null 表示应正常执行</returns>
+    private IToolResult? TrySkipToolCall(ToolCall tc, HashSet<String> dedupKeys, HashSet<String> sessionDedupKeys)
+    {
+        var name = tc.Function!.Name;
+
+        // 去重命中：直接返回占位结果，不执行工具
+        var dup = TryBuildDedupResult(name, tc.Function.Arguments, dedupKeys, sessionDedupKeys);
+        if (dup != null) return dup;
+
+        // 跨轮重复失败拦截：相同工具+参数已在本请求失败过 → 不再执行，回传失败原因引导模型修改参数/换工具
+        var failedKey = name + "|" + (tc.Function.Arguments ?? "");
+        if (!name.EqualIgnoreCase("ask_user") && _failedKeys.TryGetValue(failedKey, out var failedReason))
+            return BuildRepeatFailureResult(name, failedReason);
+
+        return null;
+    }
+
+    /// <summary>处理单个工具执行结果：去重复用（占位换缓存）、失败登记、追加 role=tool 回喂消息，更新工具结果表与轮摘要。
+    /// 返回流式需产出的事件数据（成功 done / 失败 error；Value=用户完整内容，LlmResult=截断后内容），同步忽略返回值。
+    /// 工作消息/去重缓存/失败登记等可变状态由调用方持有并以参数传入（就地更新）</summary>
+    /// <param name="workMessages">工作消息列表（追加 role=tool 回喂消息）</param>
+    /// <param name="dedupCache">请求级去重复用缓存（同名同参首次结果复用）</param>
+    /// <param name="tc">工具调用</param>
+    /// <param name="toolResult">工具执行结果</param>
+    /// <param name="toolResults">本轮工具结果表（按工具名）</param>
+    /// <param name="roundSummaries">本轮工具调用摘要</param>
+    /// <returns>流式需产出的事件数据；无 LLM 受众占位等场景调用方无需 yield 时返回 null 由调用方决定</returns>
+    private ToolCallEventInfo? CollectToolResult(List<ChatMessage> workMessages, Dictionary<String, IToolResult> dedupCache,
+        ToolCall tc, IToolResult toolResult, Dictionary<String, IToolResult> toolResults, List<ToolCallSummary> roundSummaries)
+    {
+        var name = tc.Function!.Name;
+
+        // 去重复用：占位结果且缓存已有首次结果 → 替换为复用结果（用户端完整展示，LLM 端简短说明不重复消耗 Token）；
+        // 首次成功执行 → 写入缓存供后续去重复用
+        var key = name + "|" + (tc.Function.Arguments ?? "");
+        if (toolResult is ToolResult { IsError: false } tr && tr["DedupPlaceholder"] is true
+            && dedupCache.TryGetValue(key, out var cached) && cached != null)
+            toolResult = BuildReuseResult(name, cached);
+        else if (!toolResult.IsError && GetUserContent(toolResult) != null)
+            dedupCache[key] = toolResult;
+
+        // 失败登记：同参失败写入请求级集合，供后续轮次相同调用直接拦截（防反复重试同一失败调用）
+        if (toolResult.IsError && !_failedKeys.ContainsKey(key))
+        {
+            var reason = GetUserContent(toolResult) ?? GetLlmContent(toolResult, name);
+            _failedKeys[key] = TruncateSummary(reason) ?? "未知错误";
+        }
+
+        toolResults[name] = toolResult;
+        roundSummaries.Add(new ToolCallSummary(name, toolResult.IsError, 0));
+
+        // LLM 消息：提取 Llm 受众内容；无 Llm 内容时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
+        var llmContent = GetLlmContent(toolResult, name);
+        workMessages.Add(new ChatMessage
+        {
+            Role = "tool",
+            ToolCallId = tc.Id,
+            Content = TruncateResult(llmContent)
+        });
+
+        // SSE 事件数据（流式方 yield）：取用户内容（不截断——ToolResultMaxChars 仅控制发给 AI 的内容长度，
+        // 给用户展示的 SVG/HTML/图表 JSON 必须完整，否则前端解析失败）
+        var userContent = GetUserContent(toolResult);
+        var eventType = toolResult.IsError ? "error" : "done";
+        // LlmResult 供历史回放（落库后下轮对话展开给 LLM），必须与发送给 LLM 的截断一致（5-A）：
+        // 此前落库为未截断完整结果，导致历史底账拖着每个旧工具完整结果，多轮对话上下文持续膨胀
+        return new ToolCallEventInfo(eventType, tc.Id, name, userContent, TruncateResult(llmContent));
+    }
+
+    /// <summary>累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）。
+    /// API 缺失 Usage 时回退基于工作消息的字符估算</summary>
+    /// <param name="accumulated">既有累计值（跨轮，可为 null）</param>
+    /// <param name="usage">本轮 Usage，可为 null（缺失时走回退估算）</param>
+    /// <param name="workMessages">当前工作消息（回退估算依据）</param>
+    /// <returns>累加后的新累计值（缺失时返回原值）</returns>
+    private UsageDetails? AccumulateUsage(UsageDetails? accumulated, UsageDetails? usage, List<ChatMessage> workMessages)
+    {
+        if (usage != null)
+        {
+            DefaultSpan.Current?.AppendTag($"Tokens: {usage.InputTokens}+{usage.OutputTokens}={usage.TotalTokens}");
+            return accumulated?.Add(usage) ?? usage;
+        }
+
+        _fallbackEstimatedTokens += TokenEstimator.EstimateTokens(workMessages);
+        return accumulated;
+    }
 
     /// <summary>构建流式单轮聚合响应。流式下每轮由多个 chunk 拼合，供工具方法通过 <see cref="ToolCallContext.Response"/> 访问本轮模型输出</summary>
     /// <param name="content">本轮正文内容</param>
@@ -591,12 +666,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 _ = task.ContinueWith(t =>
                 {
                     if (t.IsFaulted)
-                        Log.Warn("工具循环迭代回调异常：{0}", t.Exception?.GetBaseException().Message);
+                        WriteLog("工具循环迭代回调异常：{0}", t.Exception?.GetBaseException().Message ?? "");
                 }, TaskScheduler.Default);
         }
         catch (Exception ex)
         {
-            Log.Warn("工具循环迭代回调异常：{0}", ex.Message);
+            WriteLog("工具循环迭代回调异常：{0}", ex.Message);
         }
     }
 
@@ -618,14 +693,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             if (!sessionDedupKeys.Add(key))
             {
-                Log.Info("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", toolName);
+                WriteLog("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", toolName);
                 return BuildDedupResult(toolName, "跨轮次重复调用，已跳过执行");
             }
         }
 
         if (!dedupKeys.Add(key))
         {
-            Log.Info("跳过同轮重复工具调用 {0}（同名同参）", toolName);
+            WriteLog("跳过同轮重复工具调用 {0}（同名同参）", toolName);
             return BuildDedupResult(toolName, "调用与前序重复，已跳过执行");
         }
 
@@ -655,6 +730,16 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         return ToolResult.ForAudiences(userContent, $"[已复用：{toolName}] 参数与前序调用相同，已复用此前生成的结果");
     }
 
+    /// <summary>构建跨轮重复失败占位结果。同一请求内相同工具+参数已失败过时不再执行，回传失败原因引导模型修改参数或换工具/思路</summary>
+    /// <param name="toolName">工具名称</param>
+    /// <param name="reason">此前失败原因摘要</param>
+    private static ToolResult BuildRepeatFailureResult(String toolName, String? reason)
+    {
+        var dupInfo = "{\"kind\":\"repeat_failure\",\"for_user\":\"相同调用已失败，已跳过重复执行\"}";
+        var llmText = $"[重复失败：{toolName}] 相同参数调用此前已失败：{(reason.IsNullOrEmpty() ? "未知原因" : reason)}。请勿原样重试，请修改参数或改用其他工具/思路。";
+        return ToolResult.ForAudiences(dupInfo, llmText, true);
+    }
+
     /// <summary>连续失败检测与升级。整轮所有工具均失败时递增计数，任一成功则归零；达到升级阈值时向消息列表注入换思路提示</summary>
     /// <param name="roundSummaries">本轮工具调用摘要</param>
     /// <param name="workMessages">工作消息列表（升级提示注入于此）</param>
@@ -668,59 +753,199 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         if (EscalationThreshold > 0 && _consecutiveFailureRounds >= EscalationThreshold)
         {
+            // 具名失败工具（对标 Harness 实证：具体错误/指引比泛化提示显著提升模型自修复率 31%→78%）
+            var failedNames = String.Join("、", roundSummaries.Where(s => s.IsError).Select(s => s.ToolName).Distinct());
             workMessages.Add(new ChatMessage
             {
                 Role = "user",
-                Content = $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
+                Content = failedNames.IsNullOrEmpty()
+                    ? $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
+                    : $"[系统提示] 工具调用已连续失败 {_consecutiveFailureRounds} 轮（失败工具：{failedNames}）。请停止重试相同工具，修改参数或改用其他工具/思路，必要时调用 ask_user 工具向用户寻求帮助。"
             });
             _consecutiveFailureRounds = 0;
         }
     }
 
-    /// <summary>上下文窗口预算检查。工具结果逐轮累积进消息列表，超限时先截断内容、仍超才中断循环</summary>
+    /// <summary>上下文窗口预算检查（Token 守卫）。工具结果逐轮累积进消息列表，超限时优先折叠早期已消费
+    /// 工具步、再截断内容、仍超才中断循环。字节不单独守卫：主流 Agent 框架均仅按 token 治理上下文，
+    /// 网关字节上限（LiteLLM 默认 6MB）相对 token 窗口足够宽松（中文 1 token≈3B、ASCII≈4B，≤6B/token），
+    /// Token 预算（窗口×0.85）到位时请求体字节不会先超</summary>
     /// <remarks>
-    /// 预算由请求级 <c>MaxInputTokens</c> 传入（MessageFlow 按模型 ContextLength×0.85 注入，未配置时 128K 硬编码兜底）；
-    /// 未设置预算（库直接使用者）时自动禁用，不影响既有行为。估算含工具 schema（同样占用上下文窗口）。
-    /// 超预算时优先调用 <see cref="TokenEstimator.TryTruncateToBudget"/> 截断消息内容（只截不删，保持 assistant-tool 配对完整），
-    /// 使对话得以继续；全部截到最短仍超预算才中断循环。
+    /// <para>预算由请求级 <c>MaxInputTokens</c>（token，模型窗口×0.85）传入。</para>
+    /// <para>降级顺序：① 超折叠阈值（预算×0.6）时折叠早期已消费
+    /// 工具步为摘要，消除每轮整包重发的二次方累积，保留最近一组完整；② 内容截断（只截不删保持
+    /// assistant-tool 配对完整）；③ 全部截到最短仍超限 → 中断循环置 <see cref="ToolLoopStopReason.ContextLimit"/>。</para>
+    /// <para>未设置预算（库直接使用者）时自动禁用，不影响既有行为。</para>
     /// </remarks>
     /// <param name="workMessages">当前待发送的消息列表（含已累积的工具结果）</param>
-    /// <param name="toolsTokens">工具 schema 的 Token 估算（循环外一次计算，工具列表不变）</param>
+    /// <param name="toolsTokens">工具 schema 的 Token 估算（循环外一次计算）</param>
     /// <param name="request">原始请求，读取请求级预算</param>
-    /// <returns>超限且无法截断时返回 true，调用方应中断循环</returns>
+    /// <returns>超限且无法降级时返回 true，调用方应中断循环</returns>
     private Boolean CheckContextLimit(List<ChatMessage> workMessages, Int32 toolsTokens, IChatRequest? request)
     {
         var maxInput = request?["MaxInputTokens"]?.ToInt() ?? 0;
         if (maxInput <= 0) return false;
 
         var estimated = TokenEstimator.EstimateTokens(workMessages) + toolsTokens;
+        DefaultSpan.Current?.AppendTag($"CheckContextLimit Tokens: {estimated} (budget {maxInput})");
+
+        // ① 折叠早期已消费工具步：一旦超过 预算×0.6 即触发，而非等顶到硬预算才一次性压缩，
+        //    使每轮整包重发的体积持续受控于 预算×0.6 附近，消除二次方累积（固定 0.6，平衡保留细节与受控体积）
+        if (estimated >= maxInput * 0.6
+            && TryFoldConsumedToolSteps(workMessages, maxInput, toolsTokens))
+        {
+            // 折叠后重新计量；仍超硬预算则继续走下方截断（单组超大结果等场景）
+            estimated = TokenEstimator.EstimateTokens(workMessages) + toolsTokens;
+            WriteLog("上下文接近预算（估算 {0:N0} tokens，预算 {1:N0}），已折叠早期工具调用步骤，继续循环", estimated, maxInput);
+        }
+
+        // ② 未超硬预算则无需截断/中断
         if (estimated < maxInput) return false;
 
-        // 超预算：先尝试截断消息内容（只截不删，保持 assistant-tool 配对完整），截到预算内则继续循环
+        // ③ 超硬预算：先尝试截断消息内容（只截不删，保持 assistant-tool 配对完整），截到预算内则继续循环
         if (TokenEstimator.TryTruncateToBudget(workMessages, maxInput - toolsTokens))
         {
-            Log.Warn("上下文窗口预算已接近 {0:N0}（估算 {1:N0}），已截断工具结果内容，继续工具调用循环", maxInput, estimated);
+            WriteLog("上下文预算已接近 {0:N0} tokens（估算 {1:N0}），已截断工具结果内容，继续工具调用循环", maxInput, estimated);
             return false;
         }
 
-        IsContextLimitExceeded = true;
-        Log.Warn("上下文窗口预算已达到 {0:N0}（当前估算 {1:N0}），且无法进一步截断，中断工具调用循环", maxInput, estimated);
+        StopReason = ToolLoopStopReason.ContextLimit;
+        WriteLog("上下文预算已达到 {0:N0} tokens（当前估算 {1:N0}），且无法进一步降级，中断工具调用循环", maxInput, estimated);
         return true;
     }
 
-    /// <summary>构建 assistant 消息（含工具调用）。透传思考内容与协议专属元数据（如 Anthropic 思考签名/redacted_thinking），多轮思考原样回传必需</summary>
-    /// <param name="assistantMessage">本轮 LLM 返回的 assistant 消息</param>
-    /// <param name="toolCalls">工具调用列表</param>
-    /// <returns>追加到消息列表的 assistant 消息</returns>
-    private static ChatMessage BuildAssistantMessage(ChatMessage? assistantMessage, IList<ToolCall> toolCalls)
-        => new()
+    /// <summary>折叠早期已消费工具调用步骤。将"最早且已被后续回复消费"的工具步组 [assistant(tool_calls) + 其 tool 结果]
+    /// 折叠为一条 assistant 摘要消息，直到累积量降到 预算×0.6 之下或仅剩最近 1 组。
+    /// 只折叠非最近组（最近组是模型待回复的活跃工具步，必须保留完整），保证 assistant↔tool 协议配对不被破坏。
+    /// 折叠目标：使整包重发体积受控，消除每轮整包重发的二次方累积</summary>
+    /// <param name="workMessages">工作消息列表（会被就地折叠）</param>
+    /// <param name="maxInput">Token 预算（≤0 不检查）</param>
+    /// <param name="toolsTokens">工具 schema Token 估算</param>
+    /// <returns>折叠了至少一组返回 true</returns>
+    private static Boolean TryFoldConsumedToolSteps(List<ChatMessage> workMessages, Int32 maxInput, Int32 toolsTokens)
+    {
+        if (workMessages == null || workMessages.Count < 4) return false;
+
+        var folded = false;
+        while (true)
+        {
+            if (maxInput <= 0 || TokenEstimator.EstimateTokens(workMessages) + toolsTokens < maxInput * 0.6) break;
+
+            var group = FindEarliestFoldableGroup(workMessages);
+            if (group == null) break;
+
+            var digest = BuildFoldDigest(workMessages[group.Value.Start], workMessages.GetRange(group.Value.Start + 1, group.Value.End - group.Value.Start));
+            workMessages.RemoveRange(group.Value.Start, group.Value.End - group.Value.Start + 1);
+
+            // 与紧邻的前一条折叠摘要合并（对标 LangGraph RemoveMessage：已消费步删除/合并而非堆积），
+            // 避免每轮折叠都新增长摘要消息导致摘要随轮次线性膨胀
+            if (group.Value.Start > 0 && IsFoldDigest(workMessages[group.Value.Start - 1]))
+            {
+                var prev = workMessages[group.Value.Start - 1];
+                var prevText = prev.Content as String;
+                prev.Content = (prevText.IsNullOrEmpty() ? "" : prevText) + "\n" + digest.Content;
+            }
+            else
+            {
+                // 首次折叠：加头部说明（仅首个折叠摘要携带，后续合并直接追加正文避免重复）并打 FoldDigest 标记供合并识别
+                digest.Content = "[系统提示] 以下早期工具调用结果已压缩为摘要（如需细节请重新调用工具获取）：\n" + (digest.Content as String);
+                digest.Items["FoldDigest"] = true;
+                workMessages.Insert(group.Value.Start, digest);
+            }
+            folded = true;
+        }
+        return folded;
+    }
+
+    /// <summary>定位最早可折叠工具步组 [assistant(tool_calls) + 连续 tool 结果]。仅当存在至少 2 组时，
+    /// 折叠除最近一组外的组（最近组为模型待回复的活跃步骤，必须保留）；无 tool 结果的组不折叠</summary>
+    /// <param name="workMessages">工作消息列表</param>
+    /// <returns>最早可折叠组的下标范围 [Start, End]（含 tool 结果），无可折叠组返回 null</returns>
+    private static (Int32 Start, Int32 End)? FindEarliestFoldableGroup(List<ChatMessage> workMessages)
+    {
+        // 收集所有 assistant(tool_calls) 组 [start, end]，end 为其后连续 tool 结果的最后一条
+        var groups = new List<(Int32 Start, Int32 End)>();
+        for (var i = 0; i < workMessages.Count; i++)
+        {
+            var msg = workMessages[i];
+            if (msg == null || !msg.Role.EqualIgnoreCase("assistant")) continue;
+            var tcs = msg.ToolCalls;
+            if (tcs == null || tcs.Count == 0) continue;
+
+            var j = i + 1;
+            while (j < workMessages.Count && workMessages[j].Role.EqualIgnoreCase("tool")) j++;
+            if (j > i + 1) groups.Add((i, j - 1));
+        }
+
+        // 至少 2 组才有可折叠对象（保留最近一组完整）
+        if (groups.Count < 2) return null;
+        return groups[0];
+    }
+
+    /// <summary>构建工具步组的折叠摘要正文（assistant 角色文本，不带头部说明，由调用方统一加头并支持合并）。
+    /// 按 tool_call_id 配对工具名，结果做头尾预览保留要点</summary>
+    /// <param name="assistant">组内 assistant 消息（含 tool_calls）</param>
+    /// <param name="toolMessages">组内连续的 tool 结果消息</param>
+    /// <returns>折叠摘要正文消息</returns>
+    private static ChatMessage BuildFoldDigest(ChatMessage assistant, List<ChatMessage> toolMessages)
+    {
+        var idNames = new Dictionary<String, String>();
+        if (assistant.ToolCalls != null)
+        {
+            foreach (var tc in assistant.ToolCalls)
+            {
+                if (tc?.Id != null && tc.Function?.Name != null) idNames[tc.Id] = tc.Function.Name;
+            }
+        }
+
+        var sb = Pool.StringBuilder.Get();
+        foreach (var tm in toolMessages)
+        {
+            var name = tm.ToolCallId != null && idNames.TryGetValue(tm.ToolCallId, out var n) ? n : (tm.Name ?? "tool");
+            // 每条工具结果保留头尾合计 300 字符，结果做头尾预览保留要点
+            var brief = TruncatePreview(tm.Content as String, 300);
+            if (brief.IsNullOrEmpty()) continue;
+            sb.AppendLine($"- {name}: {brief}");
+        }
+
+        return new ChatMessage
         {
             Role = "assistant",
-            Content = assistantMessage?.Content,
-            ReasoningContent = assistantMessage?.ReasoningContent,
-            ToolCalls = toolCalls.Select(tc => new ToolCall { Id = tc.Id, Type = tc.Type, Function = tc.Function }).ToList(),
-            Items = assistantMessage?.Items is { Count: > 0 } ? new Dictionary<String, Object?>(assistantMessage.Items) : [],
+            Content = sb.Return(true),
         };
+    }
+
+    /// <summary>判断消息是否为折叠摘要（带 FoldDigest 标记的 assistant 文本），用于相邻摘要合并识别</summary>
+    /// <param name="msg">消息</param>
+    /// <returns>是否为折叠摘要</returns>
+    private static Boolean IsFoldDigest(ChatMessage msg)
+        => msg != null && msg.Role.EqualIgnoreCase("assistant")
+            && (msg.ToolCalls == null || msg.ToolCalls.Count == 0)
+            && msg.Items != null && msg.Items.ContainsKey("FoldDigest");
+
+    /// <summary>文本头尾预览。超长时保留头部与尾部各半（结论性信息常在尾部），中略并标注省略字符数；
+    /// 避免盲截只留头部丢失尾部结论；代理对（emoji/生僻汉字）边界安全切分（对标 OpenAI ToolOutputTrimmer 预览策略）</summary>
+    /// <param name="content">原文</param>
+    /// <param name="keepChars">保留字符上限（头尾合计）</param>
+    /// <returns>预览文本；不超长或 keepChars≤0 时原样返回</returns>
+    private static String? TruncatePreview(String? content, Int32 keepChars)
+    {
+        if (String.IsNullOrWhiteSpace(content)) return content;
+        if (keepChars <= 0 || content!.Length <= keepChars) return content;
+
+        var half = Math.Max(1, keepChars / 2);
+        var headLen = half;
+        if (Char.IsHighSurrogate(content[headLen - 1])) headLen--;
+        var tailStart = content.Length - half;
+        if (Char.IsLowSurrogate(content[tailStart])) tailStart++;
+        // keepChars 过小导致头尾重叠时退化为纯头部截断
+        if (headLen >= tailStart) return content.Substring(0, keepChars) + "...";
+
+        var omitted = content.Length - headLen - (content.Length - tailStart);
+        return content.Substring(0, headLen) +
+            $"\n...(内容过长已省略中间 {omitted} 字符，原始 {content.Length} 字符；如需完整内容请缩小查询范围或重新调用工具)...\n" +
+            content.Substring(tailStart);
+    }
 
     /// <summary>按工具名路由到对应 Provider 执行工具调用。未找到则抛 <see cref="InvalidOperationException"/></summary>
     /// <param name="toolName">工具名称</param>
@@ -847,7 +1072,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             span?.SetError(ex, null);
             // 记录完整异常（含堆栈），否则 EXECUTION_ERROR 仅回传 ex.Message，生产事故无法定位根因
-            Log.Error("工具 {0} 执行异常：{1}", toolName, ex);
+            WriteLog("工具 {0} 执行异常：{1}", toolName, ex);
             if (ex is OperationCanceledException) throw;
 
             // 目录调用（AI 未拿到 schema 就猜参数）：返回 INVALID_ARGUMENTS + schema hint，引导模型修正
@@ -907,16 +1132,6 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private static Boolean HasLlmAudience(Dictionary<String, IToolResult> results, String toolName)
         => results.TryGetValue(toolName, out var result)
             && result.Contents.Any(c => c.Audience.HasFlag(ToolAudience.Llm));
-
-    /// <summary>判断最终响应是否未产出正文内容（Content 为空，可能仅含思考或工具调用）</summary>
-    /// <param name="response">最终响应</param>
-    /// <returns>无正文内容返回 true</returns>
-    private static Boolean IsFinalContentEmpty(IChatResponse response)
-    {
-        var msg = response.Messages?.FirstOrDefault()?.Message;
-        if (msg == null) return true;
-        return (msg.Content as String).IsNullOrEmpty();
-    }
 
     /// <summary>创建错误工具结果</summary>
     private static ToolResult ToolErrorResult(String code, String message, String? hint = null)
@@ -1035,7 +1250,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (!name.IsNullOrEmpty() && !toolMap.ContainsKey(name) && providerNames.TryGetValue(name, out var owner))
                     toolMap[name] = owner;
                 else if (!name.IsNullOrEmpty() && !providerNames.ContainsKey(name))
-                    Log?.Info("options.Tools 中工具 {0} 无对应 Provider 路由，将由客户端透传执行", name);
+                    WriteLog("options.Tools 中工具 {0} 无对应 Provider 路由，将由客户端透传执行", name);
                 tools.Add(t);
             }
         }
@@ -1078,21 +1293,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         };
 
     /// <summary>按 <see cref="ToolSetting"/> 的 ToolResultMaxChars 截断过长结果，防止撑满 LLM Context Window。
-    /// 安全截断：避免在代理对（emoji/生僻汉字）中间切断，导致无效字符。</summary>
+    /// 头尾预览策略（保留首尾各半）：避免盲截只留头部丢失位于结果尾部的结论性信息（SQL 汇总、搜索结论常在末尾）</summary>
     /// <param name="result">工具原始返回文本</param>
     /// <returns>截断后的文本，不超限时原样返回</returns>
     private String? TruncateResult(String? result)
     {
         var maxResultChars = ToolSetting?.ToolResultMaxChars ?? 0;
-        if (maxResultChars <= 0 || result == null || result.Length <= maxResultChars)
-            return result;
+        if (maxResultChars <= 0 || result == null) return result;
 
-        // 安全截断：避免切断代理对（emoji/生僻汉字），退避到完整字符边界
-        var cutPos = maxResultChars;
-        if (Char.IsHighSurrogate(result[cutPos - 1]))
-            cutPos--;
-
-        return result.Substring(0, cutPos) + $"\n\n[... 内容已截断，原始长度 {result.Length} 字符，仅保留前 {maxResultChars} 字符]";
+        return TruncatePreview(result, maxResultChars);
     }
 
     #endregion
@@ -1103,7 +1312,36 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
     /// <summary>追踪器</summary>
     public ITracer? Tracer { get; set; }
+
+    /// <summary>写日志并同步写入当前埋点标签，便于分析跟踪（同一调用链上标签与日志对应）。
+    /// 统一 Info 级输出，级别区分依赖埋点标签与日志详情</summary>
+    /// <param name="format">日志格式</param>
+    /// <param name="args">格式化参数</param>
+    private void WriteLog(String format, params Object[] args)
+    {
+        var msg = args == null || args.Length == 0 ? format : String.Format(format, args);
+
+        // 日志全文落盘；埋点标签截断防超大文本（异常堆栈等）撑爆标签存储
+        DefaultSpan.Current?.AppendTag(msg.Length <= 1000 ? msg : msg[..1000]);
+        Log?.Info(msg);
+    }
     #endregion
+}
+
+/// <summary>工具调用循环终止原因。供上层结构化判断循环结束形态；对标 LangChain AgentFinish/AgentAction 与 OpenAI Agents SDK 的 run 终态</summary>
+public enum ToolLoopStopReason
+{
+    /// <summary>正常完成：模型产出最终回复（无更多工具调用），或未执行任何工具</summary>
+    Completed = 0,
+
+    /// <summary>达到工具调用轮次上限 <see cref="ToolSetting"/> 的 ToolMaxIterations</summary>
+    MaxIterations,
+
+    /// <summary>上下文窗口预算超限中断（单请求窗口 Token/字节双守卫）。上层用 <c>StopReason == ToolLoopStopReason.ContextLimit</c> 判断</summary>
+    ContextLimit,
+
+    /// <summary>本轮含客户端工具调用，整轮透传给客户端执行</summary>
+    Passthrough,
 }
 
 /// <summary>工具循环迭代状态快照。供 <see cref="ToolChatClient.OnLoopIteration"/> 回调使用</summary>

@@ -1,4 +1,4 @@
-using NewLife.AI.Tools;
+﻿using NewLife.AI.Tools;
 using NewLife.Collections;
 
 namespace NewLife.ChatAI.Services;
@@ -63,7 +63,7 @@ public class ToolDiscoveryProvider
 
         if (!hasAny)
         {
-            Pool.StringBuilder.Return(sb);
+            sb.Return();
             return String.Empty;
         }
 

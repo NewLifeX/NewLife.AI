@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace NewLife.AI.Models;
+﻿namespace NewLife.AI.Models;
 
 /// <summary>工具调用</summary>
 public class ToolCall
