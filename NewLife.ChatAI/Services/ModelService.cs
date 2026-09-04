@@ -933,9 +933,11 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                     config.SupportFunction = caps.SupportFunction;
                     config.SupportVision = caps.SupportVision;
                     config.SupportAudio = caps.SupportAudio;
+                    config.SupportSpeech = caps.SupportSpeech;
                     config.SupportImage = caps.SupportImage;
                     config.SupportVideo = caps.SupportVideo;
                     config.SupportEmbedding = caps.SupportEmbedding;
+                    config.SupportRerank = caps.SupportRerank;
                     if (config.ReasoningEfforts.IsNullOrEmpty())
                         config.ReasoningEfforts = caps.ReasoningEfforts;
                     if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;

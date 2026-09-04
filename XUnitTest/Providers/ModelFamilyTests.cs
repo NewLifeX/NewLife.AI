@@ -139,6 +139,21 @@ public class ModelFamilyTests
     }
 
     [Fact]
+    [DisplayName("DeepSeek官方客户端_[AiClientModel]注册_思考能力")]
+    public void DeepSeekOfficial_RegisteredModel_Thinking()
+    {
+        // 官方 [AiClientModel] 精确注册（描述符列表）是 StarChat 模型配置表 SupportThinking 的来源；
+        // v4-pro 曾漏标 Thinking=true 导致模型被识别为不支持思考（v4-flash 有标，家族/推断层均正常）
+        var descriptor = AiClientRegistry.Default.GetDescriptor("DeepSeek");
+        Assert.NotNull(descriptor);
+        var info = descriptor!.FindModelInfo("deepseek-v4-pro");
+        Assert.NotNull(info);
+        Assert.True(info!.Capabilities.SupportThinking);
+        Assert.True(info.Capabilities.SupportFunction);
+        Assert.Equal("high,max", info.Capabilities.ReasoningEfforts);
+    }
+
+    [Fact]
     [DisplayName("DeepSeek视觉模型_家族推断视觉能力")]
     public void DeepSeekVision_InfersVision()
     {
