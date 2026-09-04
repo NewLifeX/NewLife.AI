@@ -482,6 +482,10 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 usageService.Record(conversation, null, null, model, ud, source);
             }
         }
+        // 服务端响应可能缺失部分条目，对应元素保持 null；统一补空数组，兑现"与 texts 等长且无 null 元素"契约，避免调用方解引用 null
+        for (var i = 0; i < result.Length; i++)
+            result[i] ??= [];
+
         return result;
     }
     #endregion
