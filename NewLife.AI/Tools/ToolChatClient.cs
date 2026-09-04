@@ -138,6 +138,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (span != null) span.Value++;
 
             span?.AppendTag($"workMessages: {workMessages.Count}");
+            // 并行工具执行后当前上下文可能残留已结束的工具 span，每轮调用内层模型前重新挂载 loop span
+            if (span != null) DefaultSpan.Current = span;
+
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
 
             // 累加每轮 LLM 调用的 Token 用量（N 次工具调用 = N+1 次 LLM 调用，每轮都有独立 Usage）
@@ -189,7 +192,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 else
                 {
                     var ctx = new ToolCallContext { Request = request, Response = response, ToolCallId = tc.Id };
-                    tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
+                    tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, span, cancellationToken);
                 }
             }
 
@@ -242,6 +245,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 Role = "user",
                 Content = "[系统提示] 请基于已有的工具调用结果，直接给出最终回答。不要再次调用工具。"
             });
+            // 兜底调用前同样重挂 loop span（并行工具执行后当前上下文可能残留已结束的工具 span）
+            if (span != null) DefaultSpan.Current = span;
+
             response = await InnerClient.GetResponseAsync(ChatRequest.Create(workMessages, workOptions), cancellationToken).ConfigureAwait(false);
             accumulatedUsage = AccumulateUsage(accumulatedUsage, response.Usage, workMessages);
         }
@@ -323,6 +329,10 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var earlyStartedToolIds = new HashSet<String>();
 
             span?.AppendTag($"workMessages: {workMessages.Count}");
+            // async iterator 跨 yield 不保留 AsyncLocal：本方法首段设置的 ai:tool:loop 上下文在首个 chunk 后失效，
+            // 每轮发起内层模型流式调用前重新挂载，使各轮 ai:Streaming:{model} 都正确成为 ai:tool:loop 的子级
+            if (span != null) DefaultSpan.Current = span;
+
             await foreach (var chunk in InnerClient.GetStreamingResponseAsync(ChatRequest.Create(workMessages, workOptions, stream: true), cancellationToken).ConfigureAwait(false))
             {
                 // 轮次内合并 chunk Usage（各协议差异由 MergeChunkUsage 虚拟方法处理）
@@ -500,7 +510,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 };
 
                 var ctx = new ToolCallContext { Request = request, Response = roundResponse, ToolCallId = tc.Id };
-                tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, cancellationToken);
+                tasks[i] = ExecuteToolAsync(tc.Function.Name, tc.Function.Arguments, toolMap, ctx, span, cancellationToken);
             }
 
             // Step 2: 按序 await（埋点与异常处理已在 ExecuteToolAsync 内完成，此处无需 try/catch）。
@@ -952,9 +962,15 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="argumentsJson">参数 JSON 字符串（模型原文）</param>
     /// <param name="toolMap">工具名到 Provider 的路由字典</param>
     /// <param name="context">工具调用上下文，透传至工具方法</param>
+    /// <param name="parentSpan">父级埋点</param>
     /// <param name="cancellationToken">取消令牌</param>
-    private async Task<IToolResult> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, CancellationToken cancellationToken)
+    private async Task<IToolResult> ExecuteToolAsync(String toolName, String? argumentsJson, Dictionary<String, IToolProvider> toolMap, ToolCallContext context, ISpan? parentSpan, CancellationToken cancellationToken)
     {
+        // async iterator 跨 yield 不保留 AsyncLocal：工具调用发生在多次 yield 之后，当前上下文已不是 ai:tool:loop。
+        // NewSpan 前重新挂载父级埋点为当前上下文，使 ParentId/TraceId 由 Start 自然继承；并行多工具各自重挂互不污染。
+        // （此前 NewSpan 后补 ParentId 的方案不修 TraceId，且工具存活期间上下文不一致）
+        if (parentSpan != null) DefaultSpan.Current = parentSpan;
+
         using var span = Tracer?.NewSpan($"ai:tool:{toolName}", argumentsJson);
         var sw = Stopwatch.StartNew();
 

@@ -429,6 +429,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
         else
         {
+            // async iterator 跨 yield 不保留 AsyncLocal：message_start 已让出执行权，当前段 Current 已非 ai:Stream:{model}。
+            // 驱动调用链前重新挂载本埋点为当前上下文，使 handler:OnBefore/核心 LLM 链/ai:tool:loop 全部正确挂到其下
+            if (span != null) DefaultSpan.Current = span;
+
             await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
             {
                 yield return ev;
@@ -762,6 +766,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 按请求解析处理器链（默认返回实例固定链；派生类按来源/密钥/项目动态切换）
         var chain = ResolveChain(context);
 
+        // 记录段0进入时的环境父级（如 ai:Stream:{model}）。async iterator 跨 yield 后 DefaultSpan.Current
+        // 会重置为消费方上下文，OnAfter 等后续段需重新挂载此父级，保证整条链挂在同一埋点之下
+        var ambientSpan = DefaultSpan.Current;
+
         // ranBefore：记录哪些处理器的 OnBefore 确实被执行过（短路时后续的 Before 不推入此集合）
         // After-only（无 Before 能力）的处理器不在此集合内，OnAfter 阶段无条件调用
         var ranBefore = new HashSet<IChatHandler>(ReferenceEqualityComparer.Instance);
@@ -822,6 +830,9 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 3. OnAfter 按 AfterOrder 升序执行
         // 调用规则：After-only（无 Before 能力）的处理器无条件调用；Before+After 的处理器仅当其 OnBefore 确实执行过才调用
+        // 核心阶段跨大量 yield 后 Current 已重置为消费方上下文，重新挂载段0父级，使 OnAfter 埋点与 OnBefore/核心链同父级
+        if (ambientSpan != null) DefaultSpan.Current = ambientSpan;
+
         foreach (var handler in chain.AfterHandlers)
         {
             var hasBefore = handler.Capabilities.HasFlag(ChatHandlerCapabilities.Before);
