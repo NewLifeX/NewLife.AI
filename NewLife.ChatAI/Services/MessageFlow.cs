@@ -1115,7 +1115,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         context.FinishReason = lastFinishReason;
 
         // 上下文窗口预算触发：工具结果逐轮累积超限，中断循环并推送友好错误给前端
-        if (streamClient is ToolChatClient tcc && tcc.IsContextLimitExceeded)
+        if (streamClient is ToolChatClient tcc && tcc.StopReason == ToolLoopStopReason.ContextLimit)
         {
             log?.Warn("上下文窗口预算触发，中断工具调用循环");
             var limit = model.ContextLength > 0 ? (Int64?)model.ContextLength : null;
@@ -1152,6 +1152,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var sw = Stopwatch.StartNew();
         var request = ChatRequest.Create(contextMessages, context.Options, stream: false);
         request["IChatContext"] = context;
+
+        // 预算注入：非流式路径与流式保持一致。曾缺失导致 ToolChatClient.CheckContextLimit 因 maxInput<=0
+        // 整体禁用，工具结果无守卫累积 → 真实越窗 / LiteLLM 请求体超限（对齐 InvokeLlmAsync）
+        var contextLength = model.ContextLength > 0 ? model.ContextLength : 128 * 1024;
+        request["MaxInputTokens"] = (Int32)(contextLength * 0.85);
+
         var response = ChatResponse.From(await directClient.GetResponseAsync(request, cancellationToken).ConfigureAwait(false));
         sw.Stop();
 

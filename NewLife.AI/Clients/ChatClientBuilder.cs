@@ -131,7 +131,7 @@ public static class ChatClientBuilderExtensions
 
     /// <summary>添加工具中间件，并指定工具调用配置与工具可见性过滤集合</summary>
     /// <param name="builder">构建器</param>
-    /// <param name="toolSetting">工具调用配置（MaxIterations / MaxTotalTokens / MaxResultChars）</param>
+    /// <param name="toolSetting">工具调用配置（MaxIterations / ToolResultMaxChars）</param>
     /// <param name="selectedTools">工具可见性过滤集合；null 全量，空集合仅系统工具，非空集合系统工具 + 指定工具</param>
     /// <param name="providers">工具提供者列表</param>
     /// <returns>构建器（支持链式调用）</returns>

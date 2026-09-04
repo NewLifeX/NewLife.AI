@@ -115,7 +115,7 @@ public class ToolChatClientContextGuardTests
 
         await nativeClient.GetResponseAsync(request, default);
 
-        Assert.True(nativeClient.IsContextLimitExceeded);
+        Assert.Equal(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         Assert.Equal(0, innerClient.CallCount);
     }
 
@@ -131,7 +131,7 @@ public class ToolChatClientContextGuardTests
 
         await nativeClient.GetResponseAsync(request, default);
 
-        Assert.True(nativeClient.IsContextLimitExceeded);
+        Assert.Equal(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         // 第一轮 LLM 调用后工具结果累积超限，第二轮不再发起 LLM 调用（含兜底强制回答）
         Assert.Equal(1, innerClient.CallCount);
     }
@@ -149,7 +149,7 @@ public class ToolChatClientContextGuardTests
         var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
 
         Assert.Equal("已完成", content);
-        Assert.False(nativeClient.IsContextLimitExceeded);
+        Assert.NotEqual(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         Assert.Equal(2, innerClient.CallCount);
     }
 
@@ -166,7 +166,7 @@ public class ToolChatClientContextGuardTests
         var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
 
         Assert.Equal("已完成", content);
-        Assert.False(nativeClient.IsContextLimitExceeded);
+        Assert.NotEqual(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         Assert.Equal(2, innerClient.CallCount);
     }
 
@@ -185,7 +185,7 @@ public class ToolChatClientContextGuardTests
         var content = response.Messages?.FirstOrDefault()?.Message?.Content as String;
 
         Assert.Equal("已完成", content);
-        Assert.False(nativeClient.IsContextLimitExceeded);
+        Assert.NotEqual(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         Assert.Equal(2, innerClient.CallCount);
     }
 
@@ -201,7 +201,7 @@ public class ToolChatClientContextGuardTests
 
         await nativeClient.GetResponseAsync(request, default);
 
-        Assert.True(nativeClient.IsContextLimitExceeded);
+        Assert.Equal(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         Assert.Equal(1, innerClient.CallCount);
     }
 }

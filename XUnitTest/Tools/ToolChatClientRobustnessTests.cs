@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
 using NewLife.AI.Models;
+using NewLife.AI.Services;
 using NewLife.AI.Tools;
 using Xunit;
 
@@ -201,5 +202,41 @@ public class ToolChatClientRobustnessTests
         Assert.Equal("最终回答", response.Text);
         Assert.Equal(2, inner.Requests.Count);
         Assert.Single(provider.Calls);
+    }
+
+    [Fact]
+    [DisplayName("流式轮次上限：执行满全部工具轮次后置位MaxIterations")]
+    public async Task Stream_MaxIterations_SetsFlagAndStopReason()
+    {
+        var provider = new MultiToolProvider();
+        var inner = new FakeInnerClient();
+
+        // 模型每轮都请求 ok_tool（maxIterations=3），与同步语义一致应执行满 3 轮工具后中断并置位终止标志
+        for (var i = 0; i < 3; i++)
+        {
+            var chunk = new ChatResponse { Object = "chat.completion.chunk" };
+            chunk.AddToolCallDelta($"call_{i}", "ok_tool", "{}", FinishReason.ToolCalls);
+            inner.EnqueueStream(chunk);
+        }
+
+        using var client = new ToolChatClient(inner, provider)
+        {
+            ToolSetting = new ToolSetting { ToolMaxIterations = 3, ToolResultMaxChars = 0 },
+        };
+
+        var chunks = new List<IChatResponse>();
+        await foreach (var chunk in client.GetStreamingResponseAsync(new ChatRequest
+        {
+            Model = "test",
+            Messages = [new ChatMessage { Role = "user", Content = "测试" }],
+        }))
+        {
+            chunks.Add(chunk);
+        }
+
+        // 满轮后置位（原实现静默退出不置位，与同步不一致）：3 轮流式请求、3 轮工具全部执行
+        Assert.Equal(ToolLoopStopReason.MaxIterations, client.StopReason);
+        Assert.Equal(3, inner.Requests.Count);
+        Assert.Equal(3, provider.Calls.Count);
     }
 }
