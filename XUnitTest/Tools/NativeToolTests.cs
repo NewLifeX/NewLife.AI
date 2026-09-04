@@ -1455,10 +1455,5 @@ public class NativeToolTests
         Assert.Equal(2, named.Count);
         Assert.Contains(named, t => t.Function!.Name == "sys_check");
         Assert.Contains(named, t => t.Function!.Name == "user_tool");
-
-        // includeSystem=false → 排除系统工具
-        var noSystem = provider.GetTools(new HashSet<String>(["user_tool"]), includeSystem: false);
-        Assert.Single(noSystem);
-        Assert.Equal("user_tool", noSystem[0].Function!.Name);
     }
 }

@@ -51,7 +51,7 @@ public class ToolChatClientRobustnessTests
 
         public ToolCallContext? LastContext { get; private set; }
 
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             =>
             [
                 new ChatTool { Type = "function", Function = new FunctionDefinition { Name = "fail_tool", Description = "总是失败的工具" } },

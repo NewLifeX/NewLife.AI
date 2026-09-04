@@ -11,12 +11,12 @@ public interface IToolProvider
 {
     /// <summary>获取此提供者暴露的工具定义列表</summary>
     /// <param name="filterNames">
-    /// 工具可见性过滤集合：<c>null</c> 返回全量工具（目录展示/路由表构建）；
-    /// 空集合仅返回系统工具；非空集合返回系统工具 + 指定名称工具（AI 请求注入场景）
+    /// 工具可见性过滤集合：<c>null</c> 不过滤，返回全量工具（目录展示/路由表构建/无过滤注入）；
+    /// 非 <c>null</c>（含空集合）仅返回系统工具 + filterNames 指定工具（AI 请求注入场景，系统工具每次请求自动携带），空集合等价"仅系统工具"；
+    /// 无系统工具概念的提供者（如 MCP）退化为仅返回 filterNames 匹配工具，空集合返回空
     /// </param>
-    /// <param name="includeSystem">是否附带系统工具。false 时排除 IsSystem 工具</param>
     /// <returns>工具定义列表，供注入 <c>ChatCompletionRequest.Tools</c></returns>
-    IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true);
+    IList<ChatTool> GetTools(ISet<String>? filterNames = null);
 
     /// <summary>按名称调用工具并返回结构化结果</summary>
     /// <param name="toolName">工具名称（与 <see cref="GetTools"/> 返回的 Function.Name 一致）</param>

@@ -27,11 +27,10 @@ public class DbToolProvider(ToolRegistry registry, IChatSetting chatSetting) : I
 
     #region IToolProvider
     /// <summary>从 DB 读取已启用工具的定义列表。filterNames 为 null 时返回全量（含系统工具与非系统工具），用于目录展示和路由表构建；
-    /// 非 null 时返回系统工具 + filterNames 指定工具，用于 AI 请求注入</summary>
-    /// <param name="filterNames">工具可见性过滤集合；null 全量，空集合仅系统工具，非空集合系统工具 + 指定工具</param>
-    /// <param name="includeSystem">是否附带系统工具。false 时排除 IsSystem 工具</param>
+    /// 非 null 时返回系统工具 + filterNames 指定工具（空集合 = 仅系统工具），用于 AI 请求注入</summary>
+    /// <param name="filterNames">工具可见性过滤集合；null 返回全量，非 null 时系统工具恒携带 + 指定工具</param>
     /// <returns>工具定义列表；<see cref="IChatSetting.EnableFunctionCalling"/> 为 false 时返回空列表</returns>
-    public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+    public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
     {
         if (!chatSetting.EnableFunctionCalling) return [];
 
@@ -40,16 +39,11 @@ public class DbToolProvider(ToolRegistry registry, IChatSetting chatSetting) : I
         if (_toolsCache == null || now >= _toolsCacheExpiry)
             RefreshCache();
 
-        if (filterNames == null)
-        {
-            if (!includeSystem)
-                return [.. _toolsCache!.Where(t => t.Function?.Name is { } name && !_systemNamesCache!.Contains(name))];
-            return _toolsCache!;
-        }
+        if (filterNames == null) return _toolsCache!;
 
-        // 过滤：系统工具（includeSystem 时）始终携带；非系统工具仅携带 filterNames 中引用的（从缓存中筛选，不再访问 DB）
+        // 过滤：系统工具恒携带（每次请求自动注入）；非系统工具仅携带 filterNames 中引用的（从缓存中筛选，不再访问 DB）
         return [.. _toolsCache!.Where(t => t.Function?.Name is { } name &&
-            ((includeSystem && _systemNamesCache!.Contains(name)) || filterNames.Contains(name)))];
+            (_systemNamesCache!.Contains(name) || filterNames.Contains(name)))];
     }
 
     /// <summary>刷新全量工具缓存与系统工具名集合缓存</summary>
@@ -106,8 +100,8 @@ public class DbToolProvider(ToolRegistry registry, IChatSetting chatSetting) : I
         return new ToolResult(result);
     }
 
-    IList<ChatTool> IToolProvider.GetTools(ISet<String>? filterNames, Boolean includeSystem)
-        => GetTools(filterNames, includeSystem);
+    IList<ChatTool> IToolProvider.GetTools(ISet<String>? filterNames)
+        => GetTools(filterNames);
 
     #endregion
 }

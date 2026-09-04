@@ -24,7 +24,7 @@ public class ToolChatClientByteGuardTests
         public Int32 CallCount { get; private set; }
 
         /// <inheritdoc/>
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             => [new ChatTool { Function = new FunctionDefinition { Name = "big_result", Description = "返回大结果" } }];
 
         /// <inheritdoc/>
@@ -39,7 +39,7 @@ public class ToolChatClientByteGuardTests
     private sealed class HeadTailToolProvider : IToolProvider
     {
         /// <inheritdoc/>
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             => [new ChatTool { Function = new FunctionDefinition { Name = "big_result", Description = "返回大结果" } }];
 
         /// <inheritdoc/>
@@ -51,7 +51,7 @@ public class ToolChatClientByteGuardTests
     private sealed class FailingToolProvider : IToolProvider
     {
         /// <inheritdoc/>
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             => [new ChatTool { Function = new FunctionDefinition { Name = "big_result", Description = "返回失败" } }];
 
         /// <summary>真实执行次数</summary>

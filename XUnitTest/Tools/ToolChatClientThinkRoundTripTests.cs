@@ -19,7 +19,7 @@ public class ToolChatClientThinkRoundTripTests
     /// <summary>最小工具提供者：暴露 get_weather 工具并返回固定结果</summary>
     private sealed class FakeToolProvider : IToolProvider
     {
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             => [new ChatTool { Type = "function", Function = new FunctionDefinition { Name = "get_weather", Description = "查询天气" } }];
 
         public Task<IToolResult> CallToolAsync(String toolName, String? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)

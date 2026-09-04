@@ -20,7 +20,7 @@ public class ToolChatClientContextGuardTests
     private sealed class BigResultToolProvider : IToolProvider
     {
         /// <inheritdoc/>
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             => [new ChatTool { Function = new FunctionDefinition { Name = "big_result", Description = "返回大结果" } }];
 
         /// <inheritdoc/>

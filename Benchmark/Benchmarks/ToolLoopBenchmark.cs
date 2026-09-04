@@ -74,7 +74,7 @@ public class ToolLoopBenchmark
     /// <summary>最小工具提供者：暴露 get_time 工具并返回固定结果</summary>
     private sealed class FakeToolProvider : IToolProvider
     {
-        public IList<ChatTool> GetTools(ISet<string>? filterNames = null, bool includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<string>? filterNames = null)
             => [new ChatTool { Type = "function", Function = new FunctionDefinition { Name = "get_time", Description = "获取当前时间" } }];
 
         public Task<IToolResult> CallToolAsync(string toolName, string? arguments, ToolCallContext? context = null, CancellationToken cancellationToken = default)

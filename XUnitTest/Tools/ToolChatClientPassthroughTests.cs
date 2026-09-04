@@ -24,7 +24,7 @@ public class ToolChatClientPassthroughTests
         public Int32 CallCount { get; private set; }
 
         /// <inheritdoc/>
-        public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+        public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
             => [new ChatTool { Function = new FunctionDefinition { Name = "server_tool", Description = "服务端工具" } }];
 
         /// <inheritdoc/>

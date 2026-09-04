@@ -136,11 +136,11 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
         return false;
     }
 
-    /// <summary>实现 <see cref="IToolProvider.GetTools(ISet{String}?, Boolean)"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>
-    /// <param name="filterNames">工具可见性过滤集合；null 返回全部已启用 MCP 工具，非 null 时仅返回匹配工具</param>
-    /// <param name="includeSystem">MCP 工具无系统工具概念，此参数忽略</param>
+    /// <summary>实现 <see cref="IToolProvider.GetTools(ISet{String}?)"/>。将已启用 MCP 工具转换为 <see cref="ChatTool"/> 列表</summary>
+    /// <param name="filterNames">工具可见性过滤集合；null 返回全部已启用 MCP 工具；非 null 时因 MCP 无系统工具概念，
+    /// 按契约退化为仅返回 filterNames 匹配工具（空集合返回空）</param>
     /// <returns>工具定义列表，供注入 ChatCompletionRequest.Tools</returns>
-    public IList<ChatTool> GetTools(ISet<String>? filterNames = null, Boolean includeSystem = true)
+    public IList<ChatTool> GetTools(ISet<String>? filterNames = null)
     {
         // 未启用 MCP 或函数调用时，不暴露任何 MCP 工具（在访问 DB 前短路）
         if (!chatSetting.EnableMcp || !chatSetting.EnableFunctionCalling) return [];
