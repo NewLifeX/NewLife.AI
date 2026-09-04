@@ -10,7 +10,8 @@ namespace NewLife.AI.Tools;
 /// </remarks>
 /// <remarks>初始化中央气象台天气查询服务</remarks>
 /// <param name="httpClient">HTTP 客户端；为 null 时自动创建默认实例</param>
-public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
+/// <param name="requestTimeout">单次 HTTP 请求超时；为 null 时默认 5 秒。省份扫描被个别慢端点拖死时按超时跳过该省</param>
+public class WeatherNmcService(HttpClient? httpClient = null, TimeSpan? requestTimeout = null) : IWeatherService
 {
     // 城市名 → 站点代码全量缓存（进程内持久，首次查询时并发扫描所有省份后填充）
     private static readonly ConcurrentDictionary<String, String> _stationCache = new(StringComparer.OrdinalIgnoreCase);
@@ -20,6 +21,10 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
     private static Boolean _stationsLoaded;
 
     private readonly HttpClient _http = httpClient ?? ToolHelper.CreateDefaultHttpClient();
+
+    /// <summary>单次 HTTP 请求超时。省份扫描并发拉取全部省级城市表时，个别省份端点卡死会拖垮整轮
+    /// （实测单省耗时可达 7s+）；每次请求超时后跳过该省，避免整扫描被单端点拖死</summary>
+    private readonly TimeSpan _requestTimeout = requestTimeout ?? TimeSpan.FromSeconds(5);
 
     /// <summary>获取指定城市的实时天气信息</summary>
     /// <param name="city">城市名称，支持中文</param>
@@ -33,9 +38,8 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
             var stationId = await ResolveStationAsync(city.Trim(), cancellationToken).ConfigureAwait(false);
             if (String.IsNullOrEmpty(stationId)) return null;
 
-            var resp = await _http.GetAsync(
-                $"https://www.nmc.cn/rest/weather?stationid={stationId}",
-                cancellationToken).ConfigureAwait(false);
+            var resp = await GetWithTimeoutAsync($"https://www.nmc.cn/rest/weather?stationid={stationId}", cancellationToken).ConfigureAwait(false);
+            if (resp == null) return null;
             var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             var root = json.ToJsonEntity<NmcWeatherResponse>();
 
@@ -105,7 +109,8 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
     /// <summary>拉取全量省份→城市映射并填充缓存</summary>
     private async Task LoadAllStationsAsync(CancellationToken ct)
     {
-        var pvResp = await _http.GetAsync("https://www.nmc.cn/rest/province", ct).ConfigureAwait(false);
+        var pvResp = await GetWithTimeoutAsync("https://www.nmc.cn/rest/province", ct).ConfigureAwait(false);
+        if (pvResp == null) return;
         var pvJson = await pvResp.Content.ReadAsStringAsync().ConfigureAwait(false);
         var provinces = pvJson.ToJsonEntity<List<NmcProvince>>();
         if (provinces == null || provinces.Count == 0) return;
@@ -128,11 +133,32 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
         }
     }
 
-    private async Task<List<NmcCity>> FetchCitiesAsync(String provinceCode, CancellationToken ct)
+    /// <summary>带超时保护的 GET。省份扫描/天气查询被个别慢端点卡死时，由超时中断返回 null，
+    /// 调用方按失败跳过该省，避免整轮扫描被单端点拖死（默认超时见 <see cref="_requestTimeout"/>）</summary>
+    /// <param name="url">请求地址</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>响应；超时或外部取消时返回 null</returns>
+    private async Task<HttpResponseMessage?> GetWithTimeoutAsync(String url, CancellationToken ct)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(_requestTimeout);
+        try
+        {
+            return await _http.GetAsync(url, cts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // 单请求超时：按失败跳过，不抛出中断整轮扫描
+            return null;
+        }
+    }
+
+    internal async Task<List<NmcCity>> FetchCitiesAsync(String provinceCode, CancellationToken ct)
     {
         try
         {
-            var resp = await _http.GetAsync($"https://www.nmc.cn/rest/province/{provinceCode}", ct).ConfigureAwait(false);
+            var resp = await GetWithTimeoutAsync($"https://www.nmc.cn/rest/province/{provinceCode}", ct).ConfigureAwait(false);
+            if (resp == null) return [];
             var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             return json.ToJsonEntity<List<NmcCity>>() ?? [];
         }
@@ -146,7 +172,7 @@ public class WeatherNmcService(HttpClient? httpClient = null) : IWeatherService
 
     #region 内部模型
     private class NmcProvince { public String? Code { get; set; } public String? Name { get; set; } }
-    private class NmcCity { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
+    internal class NmcCity { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
     private class NmcStation { public String? Code { get; set; } public String? Province { get; set; } public String? City { get; set; } }
     private class NmcWeatherInfo
     {
