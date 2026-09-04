@@ -68,22 +68,20 @@ public class ModelFamilyTests
     }
 
     [Fact]
-    [DisplayName("Qwen3新版本_上下文与价格_自动覆盖")]
-    public void Qwen3NewVersion_ContextAndPricing()
+    [DisplayName("Qwen3新版本_上下文自动覆盖_家族不含价格")]
+    public void Qwen3NewVersion_ContextOnly()
     {
         // qwen3.8 系列为 1M 上下文（官方 2026-Q3），自动按 qwen3.8* 规则推断
         var caps = ModelFamilyRegistry.Match("qwen3.8-plus");
         Assert.NotNull(caps);
         Assert.Equal(1_048_576, caps!.ContextLength);
-        Assert.NotNull(caps.Pricing);
-        Assert.Equal(0.7m, caps.Pricing!.InputPrice);
+        // 家族只承载特性，不含价格（价格由服务商层与模型元数据表提供）
+        Assert.Null(caps.Pricing);
 
-        // qwen3.8-max 专属价格：12/36/2.4/15
         var max = ModelFamilyRegistry.Match("qwen3.8-max");
         Assert.NotNull(max);
         Assert.Equal(1_048_576, max!.ContextLength);
-        Assert.Equal(12m, max.Pricing!.InputPrice);
-        Assert.Equal(36m, max.Pricing!.OutputPrice);
+        Assert.Null(max.Pricing);
     }
 
     [Fact]
@@ -243,6 +241,322 @@ public class ModelFamilyTests
 
         // 恢复内置家族原实例，避免影响其他测试
         ModelFamilyRegistry.Register(original!);
+    }
+    #endregion
+
+    #region 新增 12 家族（hunyuan/glm/gpt/doubao/minimax/kimi/ernie/spark/grok/mistral/llama/gemma）
+    [Fact]
+    [DisplayName("注册表_新增12家族已注册")]
+    public void Registry_HasNewFamilies()
+    {
+        foreach (var name in new[] { "hunyuan", "glm", "gpt", "doubao", "minimax", "kimi", "ernie", "spark", "grok", "mistral", "llama", "gemma" })
+            Assert.NotNull(ModelFamilyRegistry.Find(name));
+    }
+
+    [Theory]
+    [DisplayName("Hunyuan家族_能力推断")]
+    [InlineData("hy3", true, true, false, 262_144)]
+    [InlineData("hunyuan-t1", true, true, true, 262_144)]
+    [InlineData("hunyuan-turbo", true, true, true, 131_072)]
+    [InlineData("hunyuan-pro", false, true, true, 131_072)]
+    [InlineData("hunyuan-lite", false, false, false, 32_768)]
+    public void Hunyuan_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Fact]
+    [DisplayName("Hunyuan_hy3_思考多档_家族不含价格")]
+    public void Hunyuan_Hy3_EffortsOnly()
+    {
+        var caps = ModelFamilyRegistry.Match("hy3");
+        Assert.NotNull(caps);
+        Assert.Equal("no_think,think_low,think_high", caps!.ReasoningEfforts);
+        Assert.Null(caps.Pricing);
+    }
+
+    [Theory]
+    [DisplayName("GLM家族_能力推断")]
+    [InlineData("glm-5.2", true, true, true, 262_144)]
+    [InlineData("glm-4.7", true, true, true, 262_144)]
+    [InlineData("glm-4.6", true, true, true, 262_144)]
+    [InlineData("glm-4", true, true, true, 131_072)]
+    [InlineData("glm-4v-plus", false, true, true, 8_192)]
+    [InlineData("glm-4-flash", false, false, false, 131_072)]
+    [InlineData("glm-4-alltools", false, true, false, 131_072)]
+    public void Glm_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Fact]
+    [DisplayName("GLM_cogview图像_家族不含价格_平台价走注册")]
+    public void Glm_CogViewImage_NoFamilyPricing()
+    {
+        // cogview 文生图：不支持工具
+        var cog = ModelFamilyRegistry.Match("cogview-3");
+        Assert.NotNull(cog);
+        Assert.True(cog!.SupportImage);
+        Assert.False(cog.SupportFunction);
+        // glm-5.x 家族只提供特性（思考+视觉），不含价格
+        var g5 = ModelFamilyRegistry.Match("glm-5.2");
+        Assert.NotNull(g5);
+        Assert.True(g5!.SupportThinking);
+        Assert.True(g5.SupportVision);
+        Assert.Null(g5.Pricing);
+        // DashScope 托管价 8/28 由 [AiClientModel] 精确注册承载（描述符层）
+        var info = AiClientRegistry.Default.GetDescriptor("DashScope")!.FindModelInfo("glm-5.2");
+        Assert.NotNull(info);
+        Assert.Equal(8m, info!.Pricing!.InputPrice);
+    }
+
+    [Theory]
+    [DisplayName("GPT家族_对话模型能力推断")]
+    [InlineData("gpt-5.6", true, true, true, 922_000)]
+    [InlineData("gpt-5.4-mini", true, true, true, 272_000)]
+    [InlineData("gpt-5-mini", true, true, true, 400_000)]
+    [InlineData("gpt-4.1", false, true, true, 1_048_576)]
+    [InlineData("gpt-4o", false, true, true, 131_072)]
+    [InlineData("gpt-4o-mini", false, true, true, 131_072)]
+    [InlineData("gpt-4-turbo", false, true, false, 128_000)]
+    [InlineData("gpt-4", false, true, false, 8_192)]
+    [InlineData("gpt-3.5-turbo", false, true, false, 16_385)]
+    [InlineData("o4-mini", true, true, true, 200_000)]
+    [InlineData("o3-mini", true, true, false, 200_000)]
+    public void Gpt_ChatCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Theory]
+    [DisplayName("GPT家族_媒体子模型能力不丢失")]
+    [InlineData("gpt-4o-audio", false, false, false, true, true)]        // 实时音频：输入+输出
+    [InlineData("gpt-4o-mini-tts", false, false, false, false, true)]    // 语音合成
+    [InlineData("gpt-4o-transcribe", false, false, false, true, false)]  // 语音识别
+    [InlineData("gpt-image-1", false, false, false, false, false)]       // 文生图（SupportImage 单独断言）
+    public void Gpt_MediaModels_Capabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Boolean expectAudio, Boolean expectSpeech)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectAudio, caps.SupportAudio);
+        Assert.Equal(expectSpeech, caps.SupportSpeech);
+        // 文生图：仅 gpt-image* 为 true
+        Assert.Equal(modelId.StartsWith("gpt-image", StringComparison.OrdinalIgnoreCase), caps.SupportImage);
+    }
+
+    [Fact]
+    [DisplayName("GPT家族_推理强度_价格走服务商层探测")]
+    public void Gpt_ReasoningEffortsAndPricing()
+    {
+        // 家族只提供特性（含推理强度），不含价格
+        var g56 = ModelFamilyRegistry.Match("gpt-5.6");
+        Assert.NotNull(g56);
+        Assert.Equal("low,medium,high", g56!.ReasoningEfforts);
+        Assert.Null(g56.Pricing);
+
+        // 服务商层（OpenAI 兼容基类）在家族特性上补充通用价格探测
+        var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
+        var o3 = client.InferModelCapabilities("o3-mini");
+        Assert.NotNull(o3);
+        Assert.True(o3!.SupportThinking);
+        Assert.False(o3.SupportVision);
+        Assert.Equal(200_000, o3.ContextLength);
+        Assert.Equal("low,medium,high", o3.ReasoningEfforts);
+        Assert.Equal(7.59m, o3.Pricing!.InputPrice);
+        Assert.Equal(30.36m, o3.Pricing!.OutputPrice);
+        // gpt-4o-audio 音频能力不因家族化而丢失，价格由服务商层探测（gpt-4o 档）
+        var audio = client.InferModelCapabilities("gpt-4o-audio");
+        Assert.NotNull(audio);
+        Assert.True(audio!.SupportAudio);
+        Assert.True(audio.SupportSpeech);
+        Assert.False(audio.SupportFunction);
+        Assert.Equal(17.25m, audio.Pricing!.InputPrice);
+        // 非 gpt 前缀媒体模型仍走基类通用兜底（无探测价则为 null）
+        var sora = client.InferModelCapabilities("sora-2");
+        Assert.NotNull(sora);
+        Assert.True(sora!.SupportVideo);
+        Assert.False(sora.SupportFunction);
+        Assert.Null(sora.Pricing);
+    }
+
+    [Theory]
+    [DisplayName("Doubao家族_能力推断")]
+    [InlineData("doubao-seed-1.6", true, true, true, 262_144)]
+    [InlineData("doubao-seed-1.6-thinking", true, true, true, 262_144)]
+    [InlineData("doubao-1.5-pro-32k", true, true, true, 32_768)]
+    [InlineData("doubao-1.5-vision-pro-32k", true, true, true, 32_768)]
+    [InlineData("doubao-1.5-lite-32k", false, false, false, 32_768)]
+    public void Doubao_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Theory]
+    [DisplayName("MiniMax家族_能力推断_含斜杠ID")]
+    [InlineData("MiniMax-M2.5", true, true, false, 196_608)]
+    [InlineData("MiniMax-M3", true, true, true, 196_608)]
+    [InlineData("MiniMax/MiniMax-M3", true, true, true, 196_608)]   // DashScope 托管斜杠前缀
+    [InlineData("MiniMax-Text-01", false, true, false, 1_048_576)]
+    [InlineData("abab6.5s-chat", false, true, false, 32_768)]
+    public void MiniMax_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Fact]
+    [DisplayName("MiniMax_斜杠ID_glob多备选匹配")]
+    public void MiniMax_SlashId_GlobMatch()
+    {
+        Assert.True(ModelFamily.GlobMatch("minimax*/minimax-m3*", "MiniMax/MiniMax-M3"));
+        Assert.False(ModelFamily.GlobMatch("minimax-m3*", "MiniMax/MiniMax-M3"));
+    }
+
+    [Theory]
+    [DisplayName("Kimi家族_能力推断")]
+    [InlineData("kimi-k3", true, true, true, 262_144)]
+    [InlineData("kimi-k2.6", true, true, false, 262_144)]
+    [InlineData("kimi-k2-0905", true, true, false, 262_144)]
+    [InlineData("kimi-k1.5", true, true, false, 131_072)]
+    [InlineData("moonshot-v1-8k", false, true, false, 8_192)]
+    [InlineData("moonshot-v1-32k", false, true, false, 32_768)]
+    [InlineData("moonshot-v1-128k", false, true, false, 131_072)]
+    public void Kimi_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Theory]
+    [DisplayName("文心/星火/Grok家族_能力推断")]
+    [InlineData("ernie-4.5-turbo", true, true, true, 8_192)]
+    [InlineData("ernie-speed", false, false, false, 8_192)]
+    [InlineData("spark-4.0-ultra", true, true, false, 131_072)]
+    [InlineData("spark-3.5-max", false, false, false, 131_072)]
+    [InlineData("grok-3", true, true, true, 131_072)]
+    [InlineData("grok-3-mini", true, true, false, 131_072)]
+    [InlineData("grok-2-vision", false, true, true, 32_768)]
+    public void ErnieSparkGrok_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
+    {
+        var caps = ModelFamilyRegistry.Match(modelId);
+        Assert.NotNull(caps);
+        Assert.Equal(expectThink, caps!.SupportThinking);
+        Assert.Equal(expectFunc, caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(expectContext, caps.ContextLength);
+    }
+
+    [Fact]
+    [DisplayName("精简家族_默认能力_不误伤")]
+    public void LeanFamilies_DefaultCapabilities()
+    {
+        // llama/gemma/mistral 默认支持工具、不思考
+        foreach (var model in new[] { "llama-3.3-70b-versatile", "gemma2-9b-it", "mistral-large-latest" })
+        {
+            var caps = ModelFamilyRegistry.Match(model);
+            Assert.NotNull(caps);
+            Assert.False(caps!.SupportThinking);
+            Assert.True(caps.SupportFunction);
+        }
+        Assert.Equal(131_072, ModelFamilyRegistry.Match("mistral-large-latest")!.ContextLength);
+        Assert.Equal(131_072, ModelFamilyRegistry.Match("llama-3.3-70b-versatile")!.ContextLength);
+        // mistral-embed 嵌入模型：不支持工具
+        var embed = ModelFamilyRegistry.Match("mistral-embed");
+        Assert.NotNull(embed);
+        Assert.True(embed!.SupportEmbedding);
+        Assert.False(embed.SupportFunction);
+        // 锚定：非家族前缀不误伤
+        Assert.Null(ModelFamilyRegistry.Match("text-embedding-3-large"));
+        Assert.Null(ModelFamilyRegistry.Match("claude-sonnet-4"));
+    }
+    #endregion
+
+    #region 价格分层与跨平台（家族特性 / 服务商探测 / 平台注册）
+    [Fact]
+    [DisplayName("价格分层_家族无价_服务商探测与平台注册")]
+    public void PricingLayering_FamilyNoPricing_ProbeVsProvider()
+    {
+        // 家族：只提供特性，不含价格
+        var family = ModelFamilyRegistry.Match("deepseek-v4-pro");
+        Assert.NotNull(family);
+        Assert.True(family!.SupportThinking);
+        Assert.Null(family.Pricing);
+
+        // 服务商层通用探测：OpenAI 兼容基类按命名规律给 DeepSeek 系列典型价 3/6
+        var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
+        var probe = client.InferModelCapabilities("deepseek-v4-pro");
+        Assert.NotNull(probe);
+        Assert.Equal(3m, probe!.Pricing!.InputPrice);
+
+        // 平台专属注册：DashScope [AiClientModel] 精确价 12/24（优先于服务商探测）
+        var dashScope = AiClientRegistry.Default.GetDescriptor("DashScope");
+        Assert.NotNull(dashScope);
+        var info = dashScope!.FindModelInfo("deepseek-v4-pro");
+        Assert.NotNull(info);
+        Assert.Equal(12m, info!.Pricing!.InputPrice);
+    }
+
+    [Fact]
+    [DisplayName("DashScope_第三方家族模型_预检删除后家族接管")]
+    public void DashScope_ThirdPartyFamilies_DelegatedToFamily()
+    {
+        var client = new DashScopeChatClient(new AiClientOptions { Endpoint = "https://dashscope.aliyuncs.com" });
+        // glm-5.3 未在 [AiClientModel]，由 glm 家族推断
+        var glm = client.InferModelCapabilities("glm-5.3");
+        Assert.NotNull(glm);
+        Assert.True(glm!.SupportThinking);
+        Assert.True(glm.SupportVision);
+        Assert.Equal(262_144, glm.ContextLength);
+        // kimi-k2.6 由 kimi 家族推断
+        var kimi = client.InferModelCapabilities("kimi-k2.6");
+        Assert.NotNull(kimi);
+        Assert.True(kimi!.SupportThinking);
+        Assert.Equal(262_144, kimi.ContextLength);
+        // MiniMax/MiniMax-M3（斜杠 ID）由 minimax 家族推断
+        var mini = client.InferModelCapabilities("MiniMax/MiniMax-M3");
+        Assert.NotNull(mini);
+        Assert.True(mini!.SupportThinking);
+        Assert.True(mini.SupportVision);
+        Assert.Equal(196_608, mini.ContextLength);
+        // hunyuan/doubao 等经 OpenAI 兼容平台基类推断
+        var hy = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" }).InferModelCapabilities("hunyuan-t1");
+        Assert.NotNull(hy);
+        Assert.True(hy!.SupportThinking);
+        Assert.True(hy.SupportVision);
+        var db = ModelFamilyRegistry.Match("doubao-seed-1.6");
+        Assert.NotNull(db);
+        Assert.True(db!.SupportThinking);
     }
     #endregion
 }

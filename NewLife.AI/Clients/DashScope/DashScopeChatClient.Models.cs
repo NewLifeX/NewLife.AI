@@ -67,7 +67,7 @@ public partial class DashScopeChatClient
     #region 模型能力推断
     /// <summary>根据千问模型 ID 命名规律推断模型能力。qwen/deepseek 家族规则由基类家族匹配统一接管，此处仅保留百炼专属模型预检</summary>
     /// <remarks>
-    /// <para>qwen/qwq/qvq/deepseek 家族命名规律已抽为 <see cref="ModelFamily"/> 家族档案（版本通配，新版本自动覆盖），
+    /// <para>qwen/qwq/qvq/deepseek/glm/kimi/minimax 等家族命名规律已抽为 <see cref="ModelFamily"/> 家族档案（版本通配，新版本自动覆盖），
     /// 由 <see cref="OpenAIClientBase.InferModelCapabilities"/> 基类匹配。此处仅保留百炼平台专属模型：</para>
     /// <list type="bullet">
     /// <item>embed / rerank：嵌入与重排序模型</item>
@@ -75,8 +75,8 @@ public partial class DashScopeChatClient
     /// <item>cosyvoice：语音合成（TTS）</item>
     /// <item>wanx / wan2 / flux / stable-diffusion / z-image：文生图/视频生成</item>
     /// <item>farui：专用模型，不支持函数调用</item>
-    /// <item>kimi-k2 / glm-5 / MiniMax-M2：百炼托管第三方推理模型</item>
     /// </list>
+    /// <para>百炼托管第三方模型（kimi/glm/MiniMax）能力由对应家族接管，价格差异走 [AiClientModel] 精确注册。</para>
     /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
@@ -121,18 +121,7 @@ public partial class DashScopeChatClient
         if (modelId.StartsWith("farui", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(SupportFunction: false);
 
-        // 百炼托管第三方推理模型：kimi / glm / MiniMax（v1 未抽家族，暂保留服务商预检）
-        if (modelId.StartsWithIgnoreCase("kimi-k2.", "glm-5.", "MiniMax-M2."))
-        {
-            var contextLength = modelId.StartsWithIgnoreCase("kimi-k2.") ? 262_144 :
-                modelId.StartsWithIgnoreCase("glm-5.") ? 200_704 : 196_608;
-            var pricing = modelId.StartsWithIgnoreCase("kimi-k2.") ? new AiModelPricing(1m, 4m, 0.1m) :
-                modelId.StartsWithIgnoreCase("glm-5.") ? new AiModelPricing(1.5m, 6m, 0.15m) :
-                new AiModelPricing(2m, 8m, 0.2m);
-            return new AiProviderCapabilities(SupportThinking: true, SupportFunction: true, ContextLength: contextLength, Pricing: pricing);
-        }
-
-        // 其余模型（qwen/qwq/qvq/deepseek 家族及未知模型）交给基类：先按家族规则匹配，未命中走通用兜底
+        // 其余模型（qwen/qwq/qvq/deepseek/glm/kimi/minimax 等家族及未知模型）交给基类：先按家族规则匹配，未命中走通用兜底
         return base.InferModelCapabilities(modelId);
     }
     #endregion

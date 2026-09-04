@@ -230,9 +230,12 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
 
     /// <summary>根据模型 ID 命名规律推断模型能力。子类可重写以实现服务商特定的推断逻辑</summary>
     /// <remarks>
-    /// 基类实现先匹配全局模型家族规则（qwen/deepseek/qwq/qvq 等，跨服务商共享），
-    /// 未命中时再走下方通用兜底（OpenAI 系列启发式）。任何 OpenAI 兼容服务商
+    /// 分层语义：非对话模型（embed/rerank/tts/whisper）直接返回带服务商层价的能力；
+    /// 再匹配全局模型家族规则（qwen/deepseek/hunyuan/glm/gpt/doubao/minimax/kimi 等，跨服务商共享）——
+    /// 家族只承载特性（思考/工具/视觉/上下文/efforts），命中后由 <see cref="ProbeProviderPricing"/> 服务商层通用价格探测补充
+    /// （不直接 return，否则价格探测不可达）；均未命中再走通用启发式。任何 OpenAI 兼容服务商
     /// （腾讯/火山/硅基流动等）托管家族模型时自动获得正确能力推断，无需各自实现。
+    /// 平台专属价格由 <see cref="AiClientModelAttribute"/> 精确注册（描述符优先）与部署侧模型元数据表覆盖。
     /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
@@ -240,11 +243,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // 先匹配全局模型家族规则（qwen/deepseek 等），新版本与跨平台模型零改动自动覆盖
-        var caps = ModelFamilyRegistry.Match(modelId);
-        if (caps != null) return caps;
-
-        // 非对话模型：嵌入、语音合成、语音识别等
+        // 非对话模型（服务商层价格探测，先于家族）：嵌入、语音合成、语音识别等
         if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 0.5m));
@@ -257,6 +256,12 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         if (modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase))
             return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false,
                 Pricing: new AiModelPricing(InputPrice: 0.2m));
+
+        // 家族规则：只承载特性（思考/工具/视觉/上下文/efforts），价格由服务商层通用探测补充——
+        // 不在此直接 return（否则下方 ProbeProviderPricing 不可达）
+        var familyCaps = ModelFamilyRegistry.Match(modelId);
+        if (familyCaps != null)
+            return familyCaps with { Pricing = ProbeProviderPricing(modelId) };
 
         var thinking = false;
         var funcCall = true;
@@ -275,12 +280,6 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         // 思考/推理能力
         if (modelId.Contains("-reasoner", StringComparison.OrdinalIgnoreCase) ||
             modelId.Contains("-thinking", StringComparison.OrdinalIgnoreCase))
-            thinking = true;
-
-        // OpenAI o 系列推理模型
-        if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
             thinking = true;
 
         // 高端系列（max/plus）通常支持思考
@@ -311,27 +310,10 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         }
 
         // === 上下文长度 ===
-        // OpenAI o 系列推理模型：200K
-        if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
-            contextLength = 200_000;
-        // GPT-4o 系列：128K
-        else if (modelId.StartsWith("gpt-4o", StringComparison.OrdinalIgnoreCase))
-            contextLength = 128_000;
-        // GPT-4 Turbo：128K
-        else if (modelId.StartsWith("gpt-4-turbo", StringComparison.OrdinalIgnoreCase))
-            contextLength = 128_000;
-        // GPT-4 经典：8K
-        else if (modelId.StartsWith("gpt-4", StringComparison.OrdinalIgnoreCase))
-            contextLength = 8_192;
-        // GPT-3.5 Turbo：16K
-        else if (modelId.StartsWith("gpt-3.5", StringComparison.OrdinalIgnoreCase))
-            contextLength = 16_385;
         // Claude 系列：200K
-        else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
+        if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
             contextLength = 200_000;
-        // DeepSeek V4 系列：1M
+        // DeepSeek V4 系列：1M（家族已接管，此处为未注册服务商托管时的兜底）
         else if (modelId.StartsWith("deepseek-v4", StringComparison.OrdinalIgnoreCase))
             contextLength = 1_048_576;
         // DeepSeek 旧系列：64K
@@ -340,65 +322,68 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
 
         // === 推理强度 ===
         String? reasoningEfforts = null;
-        if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase) ||
-            modelId.StartsWith("o4", StringComparison.OrdinalIgnoreCase))
-            reasoningEfforts = "low,medium,high";
-        else if (thinking)
-            // 其他支持思考的模型默认提供基础推理强度
+        if (thinking)
             reasoningEfforts = "high";
 
-        // === 价格推断（元/百万Token，汇率 6.9）===
-        AiModelPricing? pricing = null;
+        // === 价格推断（服务商层通用探测）===
+        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts, ProbeProviderPricing(modelId));
+    }
 
-        // OpenAI 系列
+    /// <summary>服务商层通用价格探测（元/百万Token，汇率 6.9）。对 OpenAI gpt/o 系、Claude、DeepSeek 等
+    /// 未在 [AiClientModel]/模型元数据表注册的历史/新版本模型，按命名规律给出服务商层行业典型价兜底。
+    /// 平台专属价由 [AiClientModel] 精确注册（描述符优先）与部署侧模型元数据表（ModelData/*.json）覆盖</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>探测到的价格，无法识别返回 null</returns>
+    private static AiModelPricing? ProbeProviderPricing(String modelId)
+    {
+        // OpenAI gpt 系列
         if (modelId.StartsWith("gpt-4.1-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(2.76m, 11.04m, 0.69m, 0);
+            return new AiModelPricing(2.76m, 11.04m, 0.69m, 0);
         else if (modelId.StartsWith("gpt-4.1", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(13.8m, 55.2m, 3.45m, 0);
+            return new AiModelPricing(13.8m, 55.2m, 3.45m, 0);
         else if (modelId.StartsWith("gpt-4o-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(1.035m, 4.14m, 0.518m, 0);
+            return new AiModelPricing(1.035m, 4.14m, 0.518m, 0);
         else if (modelId.StartsWith("gpt-4o", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(17.25m, 69m, 8.625m, 0);
+            return new AiModelPricing(17.25m, 69m, 8.625m, 0);
         else if (modelId.StartsWith("gpt-4-turbo", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(72m, 216m, 36m, 0);
+            return new AiModelPricing(72m, 216m, 36m, 0);
         else if (modelId.StartsWith("gpt-4", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(216m, 432m, 0, 0);
+            return new AiModelPricing(216m, 432m, 0, 0);
         else if (modelId.StartsWith("gpt-3.5", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(3.6m, 10.8m, 1.8m, 0);
+            return new AiModelPricing(3.6m, 10.8m, 1.8m, 0);
         else if (modelId.StartsWith("gpt-5-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(5.175m, 31.05m, 0.518m, 0);
+            return new AiModelPricing(5.175m, 31.05m, 0.518m, 0);
         else if (modelId.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(17.25m, 103.5m, 4.313m, 0);
-        // o 系列
+            return new AiModelPricing(17.25m, 103.5m, 4.313m, 0);
+        // o 系列推理
         else if (modelId.StartsWith("o4-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m, 0);
+            return new AiModelPricing(7.59m, 30.36m, 1.898m, 0);
         else if (modelId.StartsWith("o3-mini", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(7.59m, 30.36m, 1.898m, 0);
+            return new AiModelPricing(7.59m, 30.36m, 1.898m, 0);
         else if (modelId.StartsWith("o3", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(69m, 276m, 6.9m, 0);
+            return new AiModelPricing(69m, 276m, 6.9m, 0);
         else if (modelId.StartsWith("o1", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(103.5m, 414m, 10.35m, 0);
+            return new AiModelPricing(103.5m, 414m, 10.35m, 0);
         // Claude 系列（非 Bedrock）
         else if (modelId.StartsWith("claude-opus", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(34.5m, 172.5m, 3.45m, 0);
+            return new AiModelPricing(34.5m, 172.5m, 3.45m, 0);
         else if (modelId.StartsWith("claude-sonnet", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
+            return new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
         else if (modelId.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(6.9m, 34.5m, 0.69m, 0);
+            return new AiModelPricing(6.9m, 34.5m, 0.69m, 0);
         else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
-        // DeepSeek V4 系列（官网 2026-Q2 定价）
+            return new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
+        // DeepSeek 系列
         else if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(1m, 2m, 0.02m, 1m);
+            return new AiModelPricing(1m, 2m, 0.02m, 1m);
         else if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(3m, 6m, 0.025m, 3m);
+            return new AiModelPricing(3m, 6m, 0.025m, 3m);
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
-            pricing = new AiModelPricing(1m, 2m, 0.02m, 1m);
+            return new AiModelPricing(1m, 2m, 0.02m, 1m);
 
-        return new AiProviderCapabilities(thinking, funcCall, vision, audio, speech, imageGen, videoGen, false, false, contextLength, reasoningEfforts, pricing);
+        return null;
     }
 
     /// <summary>根据模型 ID 推断可读显示名称。将连字符分隔的各段首字母大写，如 qwen3.7-max → Qwen3.7 Max</summary>

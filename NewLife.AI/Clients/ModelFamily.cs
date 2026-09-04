@@ -47,9 +47,6 @@ public sealed record ModelCapabilityRule
     /// <summary>推理强度选项。null 表示不修改</summary>
     public String? ReasoningEfforts { get; init; }
 
-    /// <summary>默认 Token 定价。null 表示不修改</summary>
-    public AiModelPricing? Pricing { get; init; }
-
     /// <summary>将本规则非空能力位合并到指定能力上，返回新能力</summary>
     /// <param name="caps">当前能力</param>
     /// <returns>合并后的能力</returns>
@@ -64,15 +61,15 @@ public sealed record ModelCapabilityRule
         Embedding ?? caps.SupportEmbedding,
         Rerank ?? caps.SupportRerank,
         ContextLength > 0 ? ContextLength : caps.ContextLength,
-        ReasoningEfforts ?? caps.ReasoningEfforts,
-        Pricing ?? caps.Pricing);
+        ReasoningEfforts ?? caps.ReasoningEfforts);
 }
 
 /// <summary>模型家族档案。描述一个模型系列（如 qwen、deepseek）的命名规律与能力规律，供各服务商共享复用</summary>
 /// <remarks>
 /// 家族能力定义一次，任何服务商（含 OpenAI 兼容的第三方平台）发现该家族模型时均可复用，
 /// 实现"同一模型家族在不同平台（DashScope/腾讯/火山等）能力一致"。
-/// 服务商专属差异（价格、显示名）用 <see cref="AiClientModelAttribute"/> 精确注册覆盖。
+/// 家族仅承载特性（不含价格）；服务商专属差异（价格、显示名）由 <see cref="AiClientModelAttribute"/> 精确注册
+/// 与服务商层通用价格探测决定。
 /// </remarks>
 public sealed class ModelFamily(String name, String pattern, Int32 defaultContext = 0)
 {
