@@ -4,8 +4,8 @@ namespace NewLife.AI.Clients;
 
 /// <summary>语音识别（STT）能力接口。音频转文本</summary>
 /// <remarks>
-/// 已实现：OpenAI（Whisper / gpt-4o-transcribe）、DashScope（Paraformer，可选）、NewLifeAI、Azure；
-/// 不实现：DeepSeek、Anthropic、Gemini（多模态 chat 输入音频，无独立 STT 端点）、Bedrock（Transcribe 独立服务）、Ollama。
+/// 已实现：OpenAI（Whisper / gpt-4o-transcribe）、DashScope（Paraformer，可选）、NewLifeAI；
+/// 不实现：DeepSeek、Anthropic、Gemini（多模态 chat 输入音频，无独立 STT 端点）、Bedrock（Transcribe 独立服务）、Ollama、Azure（语音走 Azure Speech 独立服务）。
 /// </remarks>
 public interface ITranscriptionClient
 {

@@ -4,7 +4,8 @@ namespace NewLife.AI.Clients;
 
 /// <summary>文档重排序能力接口。RAG 检索后对候选文档按相关度重排</summary>
 /// <remarks>
-/// 已实现：DashScope（gte-rerank）、NewLifeAI、Bedrock（Cohere Rerank，可选）；
+/// 已实现：DashScope（gte-rerank）、NewLifeAI；
+/// 官方支持但 SDK 未实现：Bedrock（Cohere Rerank）；
 /// 不实现：OpenAI、DeepSeek、Anthropic、Gemini、Ollama、Azure。
 /// </remarks>
 public interface IRerankClient

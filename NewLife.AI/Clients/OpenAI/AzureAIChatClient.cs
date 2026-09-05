@@ -40,6 +40,9 @@ public class AzureAIChatClient(AiClientOptions options) : OpenAIClientBase(optio
         return $"{endpoint}/openai/deployments/{model}/chat/completions?api-version={ApiVersion}";
     }
 
+    /// <summary>构建模型列表地址。Azure 无 /v1/models 路径（基类端点必然 404），正确端点为 /openai/models?api-version=...</summary>
+    protected override String BuildModelListUrl() => $"{_options.GetEndpoint(DefaultEndpoint).TrimEnd('/')}/openai/models?api-version={ApiVersion}";
+
     /// <summary>设置请求头。Azure OpenAI 使用 api-key 请求头认证</summary>
     protected override void SetHeaders(HttpRequestMessage request, IChatRequest? chatRequest, AiClientOptions options)
     {

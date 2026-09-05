@@ -113,5 +113,21 @@ public class AzureAIChatClientTests
         return Task.CompletedTask;
     }
 
+    [Fact]
+    [DisplayName("BuildModelListUrl_生成Azure模型列表端点")]
+    public void BuildModelListUrl_AzureModelsEndpoint()
+    {
+        var client = new AzureAIChatClient("test-key", "gpt-4o", "https://myresource.openai.azure.com");
+
+        var method = typeof(AzureAIChatClient).GetMethod("BuildModelListUrl",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var url = method!.Invoke(client, null) as String;
+
+        Assert.NotNull(url);
+        Assert.Equal("https://myresource.openai.azure.com/openai/models?api-version=2024-10-21", url);
+        // 不应再落到基类 /v1/models 端点（对 Azure 必然 404）
+        Assert.DoesNotContain("/v1/models", url);
+    }
+
     #endregion
 }

@@ -342,7 +342,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not IEmbeddingClient ec)
+            if (!config!.SupportEmbedding || client is not IEmbeddingClient ec)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
 
             var resp = await ec.GenerateAsync(new EmbeddingRequest
@@ -384,7 +384,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not IEmbeddingClient ec)
+            if (!config!.SupportEmbedding || client is not IEmbeddingClient ec)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
 
             var resp = await ec.GenerateAsync(new EmbeddingRequest
@@ -439,6 +439,10 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var size = chatSetting.DefaultImageSize;
         if (body.TryGetValue("size", out var sizeObj) && sizeObj != null)
             size = sizeObj.ToString()!;
+
+        // 能力位校验：仅允许支持图像生成的模型通过
+        if (!config!.SupportImage)
+            return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{modelCode}' 不支持图像生成" });
 
         try
         {
@@ -504,7 +508,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var editClient = modelService.CreateClient(model)!;
-            if (editClient is not IImageClient imageClient)
+            if (!model.SupportImage || editClient is not IImageClient imageClient)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{model.Code}' 不支持图像编辑" });
 
             using var imageStream = imageFile.OpenReadStream();
@@ -550,7 +554,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not IEmbeddingClient ec)
+            if (!config!.SupportEmbedding || client is not IEmbeddingClient ec)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
 
             var resp = await ec.GenerateAsync(request, cancellationToken).ConfigureAwait(false);
@@ -580,7 +584,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not ISpeechClient sc)
+            if (!config!.SupportSpeech || client is not ISpeechClient sc)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持语音合成" });
 
             var bytes = await sc.SpeechAsync(request, cancellationToken).ConfigureAwait(false);
@@ -622,7 +626,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not ITranscriptionClient tc)
+            if (!config!.SupportAudio || client is not ITranscriptionClient tc)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{modelCode}' 不支持语音识别" });
 
             using var stream = file.OpenReadStream();
@@ -663,7 +667,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not IVideoClient vc)
+            if (!config!.SupportVideo || client is not IVideoClient vc)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持视频生成" });
 
             var resp = await vc.SubmitVideoGenerationAsync(request, cancellationToken).ConfigureAwait(false);
@@ -720,7 +724,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         try
         {
             using var client = modelService.CreateClient(config!);
-            if (client is not IRerankClient rc)
+            if (!config!.SupportRerank || client is not IRerankClient rc)
                 return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持重排序" });
 
             var resp = await rc.RerankAsync(request, cancellationToken).ConfigureAwait(false);

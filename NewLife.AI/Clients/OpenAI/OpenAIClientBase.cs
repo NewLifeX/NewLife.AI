@@ -79,12 +79,15 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     #endregion
 
     #region 模型列表
+    /// <summary>构建模型列表请求地址。默认 OpenAI 兼容 /v1/models；Azure 等端点形态不同的服务商可覆盖</summary>
+    protected virtual String BuildModelListUrl() => BuildApiUrl("/v1/models");
+
     /// <summary>获取该服务商当前可用的模型列表</summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>模型列表，服务不可用时返回 null</returns>
     public virtual async Task<ModelListResponse?> ListModelsAsync(CancellationToken cancellationToken = default)
     {
-        var url = BuildApiUrl("/v1/models");
+        var url = BuildModelListUrl();
 
         var json = await TryGetAsync(url, _options, cancellationToken).ConfigureAwait(false);
         if (json == null) return null;
