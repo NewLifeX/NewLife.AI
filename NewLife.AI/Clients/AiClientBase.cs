@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Log;
 using NewLife.Reflection;
@@ -356,6 +357,57 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     #endregion
 
     #region 模型识别
+    // 模型名切分正则：任意非字母数字（空格/横线/下划线/斜杠/点/冒号等）均作分隔符，如 text-embedding-3 → [text, embedding, 3]
+    private static readonly Regex _modelWordRx = new Regex("[^A-Za-z0-9]+", RegexOptions.Compiled);
+
+    /// <summary>判断模型标识分词后是否含指定能力词形（忽略大小写）。能力词形显式列举，如嵌入需写 embed/embedding/embeddings</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <param name="words">能力词形列表</param>
+    /// <returns>任一分词与任一能力词形相等返回 true；输入为空返回 false</returns>
+    protected static Boolean MatchModelWord(String? modelId, params String[] words)
+    {
+        if (modelId.IsNullOrEmpty() || words.Length == 0) return false;
+
+        var parts = _modelWordRx.Split(modelId!);
+        foreach (var part in parts)
+        {
+            if (part.Length == 0) continue;
+            foreach (var word in words)
+            {
+                if (part.Equals(word, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>识别模型标识中的非对话能力（嵌入/重排序/语音合成/语音识别）。按分词词形匹配，命中返回对应能力（不支持函数调用），可附加价格</summary>
+    /// <remarks>词形显式列举：嵌入 embed/embedding/embeddings、重排序 rerank/reranker/reranking、语音合成 tts、语音识别 whisper。
+    /// 基类默认不带价；OpenAI/DashScope 等服务商可传入各自定价（元/百万Token）。</remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <param name="embedPricing">嵌入模型定价，为空表示价格由上层兜底</param>
+    /// <param name="rerankPricing">重排序模型定价</param>
+    /// <param name="ttsPricing">语音合成模型定价</param>
+    /// <param name="asrPricing">语音识别模型定价</param>
+    /// <returns>命中返回对应能力对象，未命中返回 null</returns>
+    protected AiProviderCapabilities? InferNonChatCapabilities(String? modelId, AiModelPricing? embedPricing = null, AiModelPricing? rerankPricing = null, AiModelPricing? ttsPricing = null, AiModelPricing? asrPricing = null)
+    {
+        if (modelId.IsNullOrEmpty()) return null;
+
+        // 嵌入：text-embedding-3 / embedding-v3 / mistral-embed 等
+        if (MatchModelWord(modelId, "embed", "embedding", "embeddings"))
+            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false, Pricing: embedPricing);
+        // 重排序：bge-reranker / qwen3-rerank 等
+        if (MatchModelWord(modelId, "rerank", "reranker", "reranking"))
+            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false, Pricing: rerankPricing);
+        // 语音合成：tts-1 / qwen3-tts-flash 等
+        if (MatchModelWord(modelId, "tts"))
+            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false, Pricing: ttsPricing);
+        // 语音识别：whisper-1 等
+        if (MatchModelWord(modelId, "whisper"))
+            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false, Pricing: asrPricing);
+        return null;
+    }
+
     /// <summary>根据模型 ID 命名规律推断模型能力。默认实现：非对话模型（嵌入/重排/语音）直接识别 → 全局模型家族规则匹配
     /// （qwen/deepseek/claude/gemini/glm/kimi/doubao 等，跨协议共享）→ 通用命名启发式兑底。服务商子类可重写细化。</summary>
     /// <remarks>
@@ -370,25 +422,17 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // 非对话模型（价格由上层处理）：嵌入、重排序、语音合成、语音识别
-        if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false);
-        if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false);
-        if (modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false);
-        if (modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false);
+        // 非对话模型（价格由上层处理）：嵌入、重排序、语音合成、语音识别（分词词形匹配）
+        var nc = InferNonChatCapabilities(modelId);
+        if (nc != null) return nc;
 
         // 全局模型家族规则（跨协议共享）：家族只承载特性，不含价格
         var familyCaps = ModelFamilyRegistry.Match(modelId);
         if (familyCaps != null) return familyCaps;
 
-        // 通用命名启发式兑底（非任何家族的新模型）：-vl/-vision 视觉、-reasoner/-thinking 思考
-        var vision = modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
-                     modelId.Contains("vision", StringComparison.OrdinalIgnoreCase);
-        var thinking = modelId.Contains("-reasoner", StringComparison.OrdinalIgnoreCase) ||
-                       modelId.Contains("-thinking", StringComparison.OrdinalIgnoreCase);
+        // 通用命名启发式兑底（非任何家族的新模型）：vision/vl 视觉、reasoner/thinking 思考（分词词形匹配）
+        var vision = MatchModelWord(modelId, "vision", "vl");
+        var thinking = MatchModelWord(modelId, "reasoner", "thinking");
         return new AiProviderCapabilities(SupportThinking: thinking, SupportFunction: true, SupportVision: vision);
     }
 

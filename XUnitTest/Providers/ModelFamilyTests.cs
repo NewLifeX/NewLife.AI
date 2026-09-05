@@ -625,4 +625,74 @@ public class ModelFamilyTests
         Assert.NotNull(anthropic.InferModelCapabilities("unknown-model-xyz"));
     }
     #endregion
+
+    #region 分词词形匹配（非对话模型能力识别）
+    [Theory]
+    [DisplayName("分词词形_非对话模型_能力与价正确")]
+    // 嵌入（词形 embed/embedding/embeddings，大小写不敏感）
+    [InlineData("text-embedding-3-large", 1, 0.5)]
+    [InlineData("text-embedding-v4", 1, 0.5)]
+    [InlineData("embedding-v3", 1, 0.5)]
+    [InlineData("mistral-embed", 1, 0.5)]
+    [InlineData("TEXT-EMBEDDING-3", 1, 0.5)]
+    // 重排序（词形 rerank/reranker/reranking）
+    [InlineData("bge-reranker-v2", 2, 1)]
+    [InlineData("qwen3-rerank", 2, 1)]
+    // 语音合成（词形 tts，任意位置而非仅前缀）
+    [InlineData("qwen3-tts-flash", 3, 0.2)]
+    [InlineData("qwen-tts", 3, 0.2)]
+    // 语音识别（词形 whisper）
+    [InlineData("whisper-1", 4, 0.2)]
+    public void OpenAI_NonChatWordInference(String modelId, Int32 kind, Double price)
+    {
+        var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
+        var caps = client.InferModelCapabilities(modelId);
+        Assert.NotNull(caps);
+        Assert.False(caps!.SupportFunction);
+        switch (kind)
+        {
+            case 1: Assert.True(caps.SupportEmbedding); break;
+            case 2: Assert.True(caps.SupportRerank); break;
+            case 3: Assert.True(caps.SupportSpeech); break;
+            case 4: Assert.True(caps.SupportAudio); break;
+        }
+        Assert.Equal(price, (Double)caps.Pricing!.InputPrice);
+    }
+
+    [Theory]
+    [DisplayName("分词词形_对话模型_不误判专用非对话能力")]
+    [InlineData("MiniMax/MiniMax-M3")]   // 斜杠+点号分隔的托管 ID
+    [InlineData("qwen3.5-omni-plus")]    // omni 语音能力由家族授予，非专用识别误判
+    [InlineData("deepseek-v4-pro")]
+    [InlineData("claude-sonnet-4-6")]
+    public void OpenAI_NonChatWord_NoFalsePositive(String modelId)
+    {
+        var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
+        var caps = client.InferModelCapabilities(modelId);
+        Assert.NotNull(caps);
+        // 专用非对话能力（嵌入/重排）不得误判——一旦误判将关闭函数调用
+        Assert.False(caps!.SupportEmbedding);
+        Assert.False(caps.SupportRerank);
+    }
+
+    [Fact]
+    [DisplayName("分词词形_基类不带价_家族与兜底生效")]
+    public void Base_NonChatWord_NoPricing()
+    {
+        // Anthropic 直接继承 AiClientBase，embed 命中但价格由上层兜底（null）
+        var anthropic = new AnthropicChatClient(new AiClientOptions { Endpoint = "https://api.anthropic.com" });
+        var embed = anthropic.InferModelCapabilities("text-embedding-3-large");
+        Assert.NotNull(embed);
+        Assert.True(embed!.SupportEmbedding);
+        Assert.False(embed.SupportFunction);
+        Assert.Null(embed.Pricing);
+
+        // DashScope 复用基类分词识别并带百炼价
+        var dashScope = new DashScopeChatClient(new AiClientOptions { Endpoint = "https://dashscope.aliyuncs.com" });
+        var rerank = dashScope.InferModelCapabilities("qwen3-rerank");
+        Assert.NotNull(rerank);
+        Assert.True(rerank!.SupportRerank);
+        Assert.Equal(1m, rerank.Pricing!.InputPrice);
+    }
+    #endregion
 }

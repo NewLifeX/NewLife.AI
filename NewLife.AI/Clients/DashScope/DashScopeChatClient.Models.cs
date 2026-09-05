@@ -84,16 +84,11 @@ public partial class DashScopeChatClient
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // 嵌入向量模型
-        if (modelId.StartsWith("text-embedding", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 0.5m));
-
-        // 重排序模型
-        if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 1m));
+        // 嵌入向量与重排序模型（复用基类分词词形匹配，带百炼价）
+        var nc = InferNonChatCapabilities(modelId,
+            new AiModelPricing(InputPrice: 0.5m),   // 嵌入
+            new AiModelPricing(InputPrice: 1m));    // 重排序
+        if (nc != null) return nc;
 
         // 语音识别（ASR）模型：paraformer / sensevoice / fun-asr / sambert（qwen 系 ASR 由 qwen-media 家族接管）
         if (modelId.StartsWithIgnoreCase("paraformer", "sambert", "fun-asr", "sensevoice"))

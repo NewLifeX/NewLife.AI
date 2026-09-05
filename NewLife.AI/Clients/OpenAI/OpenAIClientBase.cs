@@ -233,7 +233,8 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
 
     /// <summary>根据模型 ID 命名规律推断模型能力。子类可重写以实现服务商特定的推断逻辑</summary>
     /// <remarks>
-    /// 分层语义：非对话模型（embed/rerank/tts/whisper）直接返回带服务商层价的能力；
+    /// 分层语义：非对话模型（embed/rerank/tts/whisper）复用基类 <see cref="AiClientBase.InferNonChatCapabilities"/>
+    /// 分词词形匹配（embed/embedding、rerank/reranker 等），命中直接返回带服务商层价的能力；
     /// 再匹配全局模型家族规则（qwen/deepseek/hunyuan/glm/gpt/doubao/minimax/kimi 等，跨服务商共享）——
     /// 家族只承载特性（思考/工具/视觉/上下文/efforts），命中后由 <see cref="ProbeProviderPricing"/> 服务商层通用价格探测补充
     /// （不直接 return，否则价格探测不可达）；均未命中再走通用启发式。任何 OpenAI 兼容服务商
@@ -246,19 +247,13 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     {
         if (modelId.IsNullOrEmpty()) return null;
 
-        // 非对话模型（服务商层价格探测，先于家族）：嵌入、语音合成、语音识别等
-        if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 0.5m));
-        if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 1m));
-        if (modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 0.2m));
-        if (modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase))
-            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false,
-                Pricing: new AiModelPricing(InputPrice: 0.2m));
+        // 非对话模型（服务商层价格探测，先于家族）：复用基类分词词形匹配，命中带服务商层价
+        var nc = InferNonChatCapabilities(modelId,
+            new AiModelPricing(InputPrice: 0.5m),   // 嵌入
+            new AiModelPricing(InputPrice: 1m),     // 重排序
+            new AiModelPricing(InputPrice: 0.2m),   // 语音合成
+            new AiModelPricing(InputPrice: 0.2m));  // 语音识别
+        if (nc != null) return nc;
 
         // 家族规则：只承载特性（思考/工具/视觉/上下文/efforts），价格由服务商层通用探测补充——
         // 不在此直接 return（否则下方 ProbeProviderPricing 不可达）
@@ -275,19 +270,16 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         var videoGen = false;
         var contextLength = 0;
 
-        // 视觉能力：含 -vl / -vision / 含 vision
-        if (modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("vision", StringComparison.OrdinalIgnoreCase))
+        // 视觉能力：分词词形 vision / vl（qwen3-vl-plus 等）
+        if (MatchModelWord(modelId, "vision", "vl"))
             vision = true;
 
-        // 思考/推理能力
-        if (modelId.Contains("-reasoner", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("-thinking", StringComparison.OrdinalIgnoreCase))
+        // 思考/推理能力：分词词形 reasoner / thinking
+        if (MatchModelWord(modelId, "reasoner", "thinking"))
             thinking = true;
 
         // 高端系列（max/plus）通常支持思考
-        if (modelId.Contains("-max", StringComparison.OrdinalIgnoreCase) ||
-            modelId.Contains("-plus", StringComparison.OrdinalIgnoreCase))
+        if (MatchModelWord(modelId, "max", "plus"))
             thinking = true;
 
         // 文生图
@@ -299,7 +291,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
         }
 
         // 音频能力：gpt-4o-audio 系列（既能语音识别输入，也能语音合成输出）
-        if (modelId.Contains("-audio", StringComparison.OrdinalIgnoreCase))
+        if (MatchModelWord(modelId, "audio"))
         {
             audio = true;
             speech = true;
