@@ -587,4 +587,7 @@ public class AnthropicDelta
 
     /// <summary>停止原因（message_delta 时使用）</summary>
     public String? StopReason { get; set; }
+
+    /// <summary>JSON 片段（input_json_delta 时使用）。工具调用参数流式分片下发，消费端按工具 Id 累积拼接</summary>
+    public String? PartialJson { get; set; }
 }

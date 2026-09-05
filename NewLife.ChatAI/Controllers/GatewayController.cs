@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.Bedrock;
 using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
@@ -769,6 +770,8 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         if (request is AnthropicRequest ar) return ar.ToChatRequest();
         if (request is GeminiRequest gr) return gr.ToChatRequest();
         if (request is OllamaChatRequest oc) return oc.ToChatRequest();
+        // Bedrock Converse 入站：A-94 网关统一化方案补全（原未接线，过滤器链修改会被静默丢弃）；DashScope 原生请求场景罕见且无 ToChatRequest，暂不纳入
+        if (request is BedrockRequest br) return br.ToChatRequest();
         return request;
     }
 

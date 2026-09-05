@@ -301,6 +301,78 @@ public class AnthropicChatClientStreamTests
         Assert.Equal("red_encrypted", redacted![0]);
     }
 
+    [Fact]
+    [DisplayName("流式_tool_use块_input_json分片_累积为完整工具调用")]
+    public async Task Stream_ToolUseBlocks_ArgumentsAccumulated()
+    {
+        // Anthropic 流式工具：content_block_start(tool_use 带 id/name) + content_block_delta(input_json_delta 分片)，
+        // 客户端应转 OpenAI 兼容 tool_call 增量块，消费端按 Id 合并追加参数为完整 JSON
+        var sse = String.Join("\n",
+        [
+            "event: content_block_start",
+            """data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_01","name":"get_weather","input":{}}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"location\":\"北京"}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"\"}"}}""",
+            "",
+            "event: content_block_stop",
+            """data: {"type":"content_block_stop","index":0}""",
+            "",
+            "event: content_block_start",
+            """data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}""",
+            "",
+            "event: content_block_delta",
+            """data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"正在查询"}}""",
+            "",
+            "event: message_delta",
+            """data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":10}}""",
+            "",
+            "event: message_stop",
+            """data: {"type":"message_stop"}""",
+            "",
+        ]);
+
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        // 收集工具调用增量（模拟消费端 MergeToolCallDelta：按 Id 匹配并追加 arguments）
+        List<ToolCall>? toolCalls = null;
+        await foreach (var chunk in client.GetStreamingResponseAsync(CreateRequest()))
+        {
+            var delta = chunk.Messages?.FirstOrDefault()?.Delta;
+            if (delta?.ToolCalls is { } tcs)
+            {
+                toolCalls ??= [];
+                foreach (var tc in tcs)
+                {
+                    var existing = toolCalls.FirstOrDefault(t => t.Id == tc.Id);
+                    if (existing == null)
+                    {
+                        toolCalls.Add(new ToolCall
+                        {
+                            Id = tc.Id,
+                            Type = tc.Type,
+                            Function = new FunctionCall { Name = tc.Function?.Name, Arguments = tc.Function?.Arguments ?? "" },
+                        });
+                    }
+                    else if (!String.IsNullOrEmpty(tc.Function?.Arguments))
+                    {
+                        existing.Function!.Arguments += tc.Function!.Arguments;
+                    }
+                }
+            }
+        }
+
+        Assert.NotNull(toolCalls);
+        var call = Assert.Single(toolCalls!);
+        Assert.Equal("toolu_01", call.Id);
+        Assert.Equal("get_weather", call.Function!.Name);
+        Assert.Equal("""{"location":"北京"}""", call.Function.Arguments);
+    }
+
     #endregion
 
     #region 思考请求序列化

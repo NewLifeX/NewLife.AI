@@ -473,8 +473,14 @@ public class BedrockStreamEvent
     /// <summary>消息开始事件</summary>
     public BedrockStreamMessageStartEvent? MessageStart { get; set; }
 
+    /// <summary>内容块开始事件（工具调用 toolUse 时使用）</summary>
+    public BedrockStreamContentBlockStartEvent? ContentBlockStart { get; set; }
+
     /// <summary>内容块增量事件</summary>
     public BedrockStreamContentBlockDeltaEvent? ContentBlockDelta { get; set; }
+
+    /// <summary>内容块停止事件（工具调用收尾时使用，携带 index 供清理状态）</summary>
+    public BedrockStreamContentBlockStopEvent? ContentBlockStop { get; set; }
 
     /// <summary>消息停止事件</summary>
     public BedrockStreamMessageStopEvent? MessageStop { get; set; }
@@ -557,6 +563,9 @@ public class BedrockStreamContentBlockDeltaEvent
 {
     /// <summary>增量内容</summary>
     public BedrockStreamContentBlockDelta? Delta { get; set; }
+
+    /// <summary>内容块索引（Converse 字段 contentBlockIndex，工具参数分片累积用）</summary>
+    public Int32? ContentBlockIndex { get; set; }
 }
 
 /// <summary>Bedrock 流式内容块增量</summary>
@@ -567,6 +576,50 @@ public class BedrockStreamContentBlockDelta
 
     /// <summary>推理内容增量</summary>
     public BedrockResponseReasoningContent? ReasoningContent { get; set; }
+
+    /// <summary>工具调用参数增量（toolUse delta，input 为 JSON 字符串分片）</summary>
+    public BedrockStreamToolUseDelta? ToolUse { get; set; }
+}
+
+/// <summary>Bedrock 流式内容块开始事件（contentBlockStart，工具调用时使用）</summary>
+public class BedrockStreamContentBlockStartEvent
+{
+    /// <summary>开始内容</summary>
+    public BedrockStreamContentBlockStart? Start { get; set; }
+
+    /// <summary>内容块索引（Converse 字段 contentBlockIndex，工具参数分片累积用）</summary>
+    public Int32? ContentBlockIndex { get; set; }
+}
+
+/// <summary>Bedrock 流式内容块开始（contentBlockStart 事件的内容）</summary>
+public class BedrockStreamContentBlockStart
+{
+    /// <summary>工具调用开始（toolUse 时使用）</summary>
+    public BedrockStreamToolUseStart? ToolUse { get; set; }
+}
+
+/// <summary>Bedrock 流式工具调用开始信息（toolUse start）</summary>
+public class BedrockStreamToolUseStart
+{
+    /// <summary>工具调用编号</summary>
+    public String? ToolUseId { get; set; }
+
+    /// <summary>工具名称</summary>
+    public String? Name { get; set; }
+}
+
+/// <summary>Bedrock 流式工具参数增量（toolUse delta）</summary>
+public class BedrockStreamToolUseDelta
+{
+    /// <summary>JSON 参数分片（字符串片段，需跨事件拼接）</summary>
+    public String? Input { get; set; }
+}
+
+/// <summary>Bedrock 流式内容块停止事件（contentBlockStop，携带 contentBlockIndex）</summary>
+public class BedrockStreamContentBlockStopEvent
+{
+    /// <summary>内容块索引（Converse 字段 contentBlockIndex）</summary>
+    public Int32? ContentBlockIndex { get; set; }
 }
 
 /// <summary>Bedrock 流式消息停止事件</summary>

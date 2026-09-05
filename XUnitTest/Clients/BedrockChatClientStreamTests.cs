@@ -146,6 +146,69 @@ public class BedrockChatClientStreamTests
         Assert.Contains("模型访问被拒绝", ex.Message);
     }
 
+    [Fact]
+    [DisplayName("流式_toolUse块_input分片_累积为完整工具调用")]
+    public async Task Stream_ToolUseBlocks_ArgumentsAccumulated()
+    {
+        // Bedrock Converse 流式工具：contentBlockStart(toolUse 带 toolUseId/name) + contentBlockDelta(toolUse.input 分片)，
+        // 客户端应转 OpenAI 兼容 tool_call 增量块，消费端按 Id 合并追加参数为完整 JSON
+        var sse = String.Join("\n",
+        [
+            "event: contentBlockStart",
+            """data: {"contentBlockStart":{"contentBlockIndex":0,"start":{"toolUse":{"toolUseId":"tooluse_01","name":"get_weather"}}}}""",
+            "",
+            "event: contentBlockDelta",
+            """data: {"contentBlockDelta":{"contentBlockIndex":0,"delta":{"toolUse":{"input":"{\"location\":\"北京"}}}}""",
+            "",
+            "event: contentBlockDelta",
+            """data: {"contentBlockDelta":{"contentBlockIndex":0,"delta":{"toolUse":{"input":"\"}"}}}}""",
+            "",
+            "event: contentBlockStop",
+            """data: {"contentBlockStop":{"contentBlockIndex":0}}""",
+            "",
+            "event: messageStop",
+            """data: {"messageStop":{"stopReason":"tool_use"}}""",
+            "",
+        ]);
+
+        var handler = new StubHttpMessageHandler(_ => StubHttpMessageHandler.Sse(sse));
+        using var client = CreateClient(handler);
+
+        // 收集工具调用增量（模拟消费端 MergeToolCallDelta：按 Id 匹配并追加 arguments）
+        List<ToolCall>? toolCalls = null;
+        await foreach (var chunk in client.GetStreamingResponseAsync(CreateRequest()))
+        {
+            var delta = chunk.Messages?.FirstOrDefault()?.Delta;
+            if (delta?.ToolCalls is { } tcs)
+            {
+                toolCalls ??= [];
+                foreach (var tc in tcs)
+                {
+                    var existing = toolCalls.FirstOrDefault(t => t.Id == tc.Id);
+                    if (existing == null)
+                    {
+                        toolCalls.Add(new ToolCall
+                        {
+                            Id = tc.Id,
+                            Type = tc.Type,
+                            Function = new FunctionCall { Name = tc.Function?.Name, Arguments = tc.Function?.Arguments ?? "" },
+                        });
+                    }
+                    else if (!String.IsNullOrEmpty(tc.Function?.Arguments))
+                    {
+                        existing.Function!.Arguments += tc.Function!.Arguments;
+                    }
+                }
+            }
+        }
+
+        Assert.NotNull(toolCalls);
+        var call = Assert.Single(toolCalls!);
+        Assert.Equal("tooluse_01", call.Id);
+        Assert.Equal("get_weather", call.Function!.Name);
+        Assert.Equal("""{"location":"北京"}""", call.Function.Arguments);
+    }
+
     #endregion
 
     #region 思考请求序列化
