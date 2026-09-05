@@ -67,16 +67,8 @@ public partial class ModelConfig
     [DisplayName("上下文")]
     [Description("上下文。模型支持的上下文窗口大小（令牌数）")]
     [DataObjectField(false, false, false, 0)]
-    [BindColumn("ContextLength", "上下文。模型支持的上下文窗口大小（令牌数）", "")]
+    [BindColumn("ContextLength", "上下文。模型支持的上下文窗口大小（令牌数）", "", ItemType = "GMK")]
     public Int32 ContextLength { get => _ContextLength; set { if (OnPropertyChanging("ContextLength", value)) { _ContextLength = value; OnPropertyChanged("ContextLength"); } } }
-
-    private Int32 _MaxOutputTokens;
-    /// <summary>最大输出。模型单次生成的最大输出令牌数，0 表示未知</summary>
-    [DisplayName("最大输出")]
-    [Description("最大输出。模型单次生成的最大输出令牌数，0 表示未知")]
-    [DataObjectField(false, false, false, 0)]
-    [BindColumn("MaxOutputTokens", "最大输出。模型单次生成的最大输出令牌数，0 表示未知", "")]
-    public Int32 MaxOutputTokens { get => _MaxOutputTokens; set { if (OnPropertyChanging("MaxOutputTokens", value)) { _MaxOutputTokens = value; OnPropertyChanged("MaxOutputTokens"); } } }
 
     private Boolean _SupportThinking;
     /// <summary>思考。是否支持思考模式</summary>
@@ -310,7 +302,6 @@ public partial class ModelConfig
             "Name" => _Name,
             "UpstreamModel" => _UpstreamModel,
             "ContextLength" => _ContextLength,
-            "MaxOutputTokens" => _MaxOutputTokens,
             "SupportThinking" => _SupportThinking,
             "SupportFunction" => _SupportFunction,
             "SupportVision" => _SupportVision,
@@ -349,7 +340,6 @@ public partial class ModelConfig
                 case "Name": _Name = Convert.ToString(value); break;
                 case "UpstreamModel": _UpstreamModel = Convert.ToString(value); break;
                 case "ContextLength": _ContextLength = value.ToInt(); break;
-                case "MaxOutputTokens": _MaxOutputTokens = value.ToInt(); break;
                 case "SupportThinking": _SupportThinking = value.ToBoolean(); break;
                 case "SupportFunction": _SupportFunction = value.ToBoolean(); break;
                 case "SupportVision": _SupportVision = value.ToBoolean(); break;
@@ -507,9 +497,6 @@ public partial class ModelConfig
         /// <summary>上下文。模型支持的上下文窗口大小（令牌数）</summary>
         public static readonly Field ContextLength = FindByName("ContextLength");
 
-        /// <summary>最大输出。模型单次生成的最大输出令牌数，0 表示未知</summary>
-        public static readonly Field MaxOutputTokens = FindByName("MaxOutputTokens");
-
         /// <summary>思考。是否支持思考模式</summary>
         public static readonly Field SupportThinking = FindByName("SupportThinking");
 
@@ -611,9 +598,6 @@ public partial class ModelConfig
 
         /// <summary>上下文。模型支持的上下文窗口大小（令牌数）</summary>
         public const String ContextLength = "ContextLength";
-
-        /// <summary>最大输出。模型单次生成的最大输出令牌数，0 表示未知</summary>
-        public const String MaxOutputTokens = "MaxOutputTokens";
 
         /// <summary>思考。是否支持思考模式</summary>
         public const String SupportThinking = "SupportThinking";
