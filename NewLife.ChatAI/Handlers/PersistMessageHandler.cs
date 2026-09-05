@@ -116,6 +116,12 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
                 // 用量与请求参数（不记录到 UsageService，仅写入消息字段）
                 ApplyUsageToMessage(assistantMsg, context.Usage, context.HasError, (context as MessageFlowContext)?.DeferredError?.Error);
                 ApplyRequestParams(assistantMsg, context.ModelConfig, context);
+
+#if STARCHAT
+                // 工具调用剥离：完整调用链（含入参/出参，巨型结果压缩）写入独立分片表 ChatToolCall，消息仅存不含参数的摘要，瘦身消息表
+                if (!assistantMsg.ToolCalls.IsNullOrEmpty())
+                    assistantMsg.ToolCalls = NewLife.StarChat.Services.ToolCallStore.Split(assistantMsg.ConversationId, assistantMsg.Id, assistantMsg.ToolCalls);
+#endif
                 assistantMsg.Update();
             }
 

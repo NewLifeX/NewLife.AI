@@ -492,6 +492,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (task.Status == BackgroundTaskStatus.Failed && !task.Error.IsNullOrEmpty())
                 msg.Content = task.Error;
 
+#if STARCHAT
+            // 工具调用剥离兜底：若消息仍持有完整调用链（PersistMessageHandler.OnAfter 未执行），拆分为独立表并回写摘要；
+            // 已拆分场景幂等（摘要重入解析为空、命中已有记录跳过写入），不会重复
+            if (!msg.ToolCalls.IsNullOrEmpty())
+                msg.ToolCalls = NewLife.StarChat.Services.ToolCallStore.Split(msg.ConversationId, msg.Id, msg.ToolCalls);
+#endif
             msg.Update();
         }
         catch (Exception ex)
@@ -673,7 +679,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (msg.Role == "assistant" && !msg.ToolCalls.IsNullOrEmpty())
             {
                 IList<ToolCallDto>? storedDtos = null;
+#if STARCHAT
+                // 工具调用已剥离到独立分片表 ChatToolCall：从新表取完整数据（含 LlmResult/完整结果），消息摘要仅作降级兜底
+                try { storedDtos = NewLife.StarChat.Services.ToolCallStore.Resolve(msg.Id, msg.ToolCalls); } catch { }
+#else
                 try { storedDtos = msg.ToolCalls.ToJsonEntity<List<ToolCallDto>>(); } catch { }
+#endif
                 if (storedDtos != null && storedDtos.Count > 0)
                 {
                     messages.Add(new AiChatMessage
