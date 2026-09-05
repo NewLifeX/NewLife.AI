@@ -355,6 +355,69 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     }
     #endregion
 
+    #region 模型识别
+    /// <summary>根据模型 ID 命名规律推断模型能力。默认实现：非对话模型（嵌入/重排/语音）直接识别 → 全局模型家族规则匹配
+    /// （qwen/deepseek/claude/gemini/glm/kimi/doubao 等，跨协议共享）→ 通用命名启发式兑底。服务商子类可重写细化。</summary>
+    /// <remarks>
+    /// 家族只承载特性（思考/工具/视觉/音频/上下文/推理强度），不含价格——价格由 <see cref="AiClientModelAttribute"/> 精确注册
+    /// （描述符优先）与部署侧模型元数据表（ModelData/*.json）及能力分级兑底提供。
+    /// <see cref="OpenAIClientBase"/> 覆盖本方法，在家族基础上补充 OpenAI 专属命名启发式与服务商层价格探测。
+    /// 基类默认实现供 Anthropic/Gemini/Bedrock/Ollama 等非 OpenAI 协议客户端直接继承使用。
+    /// </remarks>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断出的能力信息，无法推断时返回 null</returns>
+    public virtual AiProviderCapabilities? InferModelCapabilities(String? modelId)
+    {
+        if (modelId.IsNullOrEmpty()) return null;
+
+        // 非对话模型（价格由上层处理）：嵌入、重排序、语音合成、语音识别
+        if (modelId.Contains("embed", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportEmbedding: true, SupportFunction: false);
+        if (modelId.Contains("rerank", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportRerank: true, SupportFunction: false);
+        if (modelId.StartsWith("tts", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportSpeech: true, SupportFunction: false);
+        if (modelId.Contains("whisper", StringComparison.OrdinalIgnoreCase))
+            return new AiProviderCapabilities(SupportAudio: true, SupportFunction: false);
+
+        // 全局模型家族规则（跨协议共享）：家族只承载特性，不含价格
+        var familyCaps = ModelFamilyRegistry.Match(modelId);
+        if (familyCaps != null) return familyCaps;
+
+        // 通用命名启发式兑底（非任何家族的新模型）：-vl/-vision 视觉、-reasoner/-thinking 思考
+        var vision = modelId.Contains("-vl", StringComparison.OrdinalIgnoreCase) ||
+                     modelId.Contains("vision", StringComparison.OrdinalIgnoreCase);
+        var thinking = modelId.Contains("-reasoner", StringComparison.OrdinalIgnoreCase) ||
+                       modelId.Contains("-thinking", StringComparison.OrdinalIgnoreCase);
+        return new AiProviderCapabilities(SupportThinking: thinking, SupportFunction: true, SupportVision: vision);
+    }
+
+    /// <summary>根据模型 ID 推断可读显示名称。将连字符分隔的各段首字母大写，如 qwen3.7-max → Qwen3.7 Max。
+    /// 已在 <see cref="AiClientDescriptor"/> 注册的模型优先使用 DisplayName 属性，此方法作为未注册模型的兑底推断</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断出的显示名称，输入为空时返回 null</returns>
+    public virtual String? InferModelDisplayName(String? modelId)
+    {
+        if (modelId.IsNullOrEmpty()) return null;
+
+        var parts = modelId!.Split('-');
+        var sb = new StringBuilder();
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i > 0) sb.Append(' ');
+            var part = parts[i];
+            if (part.Length > 0 && Char.IsLower(part[0]))
+            {
+                sb.Append(Char.ToUpper(part[0]));
+                if (part.Length > 1) sb.Append(part, 1, part.Length - 1);
+            }
+            else
+                sb.Append(part);
+        }
+        return sb.ToString();
+    }
+    #endregion
+
     #region Http请求
     /// <summary>是否应对本次失败重试。仅 429 限流、5xx 服务端错误、网络异常（含超时，非用户取消）可重试；4xx 客户端错误不重试</summary>
     /// <param name="ex">捕获的异常</param>

@@ -535,7 +535,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 if (caps == null && model.Code != null)
                 {
                     using var client = descriptor.Factory(new AiClientOptions { Endpoint = "" });
-                    caps = (client as OpenAIClientBase)?.InferModelCapabilities(model.Code);
+                    caps = (client as AiClientBase)?.InferModelCapabilities(model.Code);
                 }
                 if (caps == null) continue;
 
@@ -923,14 +923,14 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             // 新建模型且名称为空时，优先从已注册列表取显示名，其次按命名规律（连字符各段首字母大写）推断
             if (isNew && config.Name.IsNullOrEmpty())
                 config.Name = descriptor?.FindModelInfo(model.Id)?.DisplayName
-                    ?? (client as OpenAIClientBase)?.InferModelDisplayName(model.Id);
+                    ?? (client as AiClientBase)?.InferModelDisplayName(model.Id);
 
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
 
             // 推断模型能力：新建模型总是推断；已有模型仅当未锁定时才覆盖
             if (isNew || !config.Locked)
             {
-                var caps = descriptor?.FindModelCapabilities(model.Id) ?? (client as OpenAIClientBase)?.InferModelCapabilities(model.Id);
+                var caps = descriptor?.FindModelCapabilities(model.Id) ?? (client as AiClientBase)?.InferModelCapabilities(model.Id);
                 if (caps != null)
                 {
                     config.SupportThinking = caps.SupportThinking;

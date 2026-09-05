@@ -239,7 +239,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     /// </remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的能力信息，无法推断时返回 null</returns>
-    public virtual AiProviderCapabilities? InferModelCapabilities(String? modelId)
+    public override AiProviderCapabilities? InferModelCapabilities(String? modelId)
     {
         if (modelId.IsNullOrEmpty()) return null;
 
@@ -390,7 +390,7 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
     /// <remarks>子类可重写以实现服务商特定格式（如品牌名全大写等）。已在 <see cref="AiClientDescriptor"/> 注册的模型优先使用 DisplayName 属性，此方法作为未注册模型的兜底推断</remarks>
     /// <param name="modelId">模型标识</param>
     /// <returns>推断出的显示名称，输入为空时返回 null</returns>
-    public virtual String? InferModelDisplayName(String? modelId)
+    public override String? InferModelDisplayName(String? modelId)
     {
         if (modelId.IsNullOrEmpty()) return null;
 

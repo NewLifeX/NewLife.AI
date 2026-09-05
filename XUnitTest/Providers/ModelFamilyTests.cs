@@ -1,7 +1,9 @@
 using System;
 using System.ComponentModel;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.Anthropic;
 using NewLife.AI.Clients.DashScope;
+using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.OpenAI;
 using Xunit;
 
@@ -297,9 +299,13 @@ public class ModelFamilyTests
 
     [Theory]
     [DisplayName("GLM家族_能力推断")]
-    [InlineData("glm-5.2", true, true, true, 262_144)]
+    [InlineData("glm-5.2", true, true, true, 1_048_576)]     // 5.x 主档 1M（2026-Q3 官方）
+    [InlineData("glm-5.3-flash", false, true, true, 1_048_576)]  // flash 快速档不思考
     [InlineData("glm-4.7", true, true, true, 262_144)]
-    [InlineData("glm-4.6", true, true, true, 262_144)]
+    [InlineData("glm-4.7-flash", false, true, false, 200_704)]   // flash 快速档 200K 不思考
+    [InlineData("glm-4.6", true, true, true, 131_072)]
+    [InlineData("glm-4.6v", false, true, true, 131_072)]     // v 视觉版不思考
+    [InlineData("glm-4.5v", false, true, true, 65_536)]      // 4.5v 视觉 64K 不思考
     [InlineData("glm-4", true, true, true, 131_072)]
     [InlineData("glm-4v-plus", false, true, true, 8_192)]
     [InlineData("glm-4-flash", false, false, false, 131_072)]
@@ -432,8 +438,8 @@ public class ModelFamilyTests
     [Theory]
     [DisplayName("MiniMax家族_能力推断_含斜杠ID")]
     [InlineData("MiniMax-M2.5", true, true, false, 196_608)]
-    [InlineData("MiniMax-M3", true, true, true, 196_608)]
-    [InlineData("MiniMax/MiniMax-M3", true, true, true, 196_608)]   // DashScope 托管斜杠前缀
+    [InlineData("MiniMax-M3", true, true, true, 1_048_576)]         // M3 1M（2026 旗舰）
+    [InlineData("MiniMax/MiniMax-M3", true, true, true, 1_048_576)] // DashScope 托管斜杠前缀
     [InlineData("MiniMax-Text-01", false, true, false, 1_048_576)]
     [InlineData("abab6.5s-chat", false, true, false, 32_768)]
     public void MiniMax_InferCapabilities(String modelId, Boolean expectThink, Boolean expectFunc, Boolean expectVision, Int32 expectContext)
@@ -456,9 +462,10 @@ public class ModelFamilyTests
 
     [Theory]
     [DisplayName("Kimi家族_能力推断")]
-    [InlineData("kimi-k3", true, true, true, 262_144)]
-    [InlineData("kimi-k2.6", true, true, false, 262_144)]
-    [InlineData("kimi-k2-0905", true, true, false, 262_144)]
+    [InlineData("kimi-k3", true, true, true, 1_048_576)]   // K3 1M（2026 旗舰）
+    [InlineData("kimi-k2.6", true, true, true, 262_144)]   // K2.x 多数支持视觉
+    [InlineData("kimi-k2.7-code", true, true, true, 262_144)]
+    [InlineData("kimi-k2-0905", true, true, false, 262_144)]  // 历史纯文本版特例
     [InlineData("kimi-k1.5", true, true, false, 131_072)]
     [InlineData("moonshot-v1-8k", false, true, false, 8_192)]
     [InlineData("moonshot-v1-32k", false, true, false, 32_768)]
@@ -475,8 +482,10 @@ public class ModelFamilyTests
 
     [Theory]
     [DisplayName("文心/星火/Grok家族_能力推断")]
-    [InlineData("ernie-4.5-turbo", true, true, true, 8_192)]
-    [InlineData("ernie-speed", false, false, false, 8_192)]
+    [InlineData("ernie-5.1", true, true, false, 131_072)]      // 5.x 主档无视觉 128K
+    [InlineData("ernie-4.5-turbo", true, true, true, 131_072)]
+    [InlineData("ernie-4.5-turbo-vl", false, true, true, 32_768)] // -vl 视觉版不思考
+    [InlineData("ernie-speed", false, false, false, 32_768)]
     [InlineData("spark-4.0-ultra", true, true, false, 131_072)]
     [InlineData("spark-3.5-max", false, false, false, 131_072)]
     [InlineData("grok-3", true, true, true, 131_072)]
@@ -513,7 +522,24 @@ public class ModelFamilyTests
         Assert.False(embed.SupportFunction);
         // 锚定：非家族前缀不误伤
         Assert.Null(ModelFamilyRegistry.Match("text-embedding-3-large"));
-        Assert.Null(ModelFamilyRegistry.Match("claude-sonnet-4"));
+        // claude/gemini 家族（Anthropic/Gemini 协议客户端）：全系思考 + 工具 + 视觉
+        var claude = ModelFamilyRegistry.Match("claude-sonnet-4-6");
+        Assert.NotNull(claude);
+        Assert.True(claude!.SupportThinking);
+        Assert.True(claude.SupportFunction);
+        Assert.True(claude.SupportVision);
+        Assert.Equal(200_000, claude.ContextLength);
+        // opus-4-7 旗舰 1M（其余 4-x 保持 200K）
+        Assert.Equal(1_000_000, ModelFamilyRegistry.Match("claude-opus-4-7")!.ContextLength);
+        Assert.Equal(200_000, ModelFamilyRegistry.Match("claude-opus-4-6")!.ContextLength);
+        // gemini 全系 1M
+        var gemini = ModelFamilyRegistry.Match("gemini-2.5-pro");
+        Assert.NotNull(gemini);
+        Assert.True(gemini!.SupportThinking);
+        Assert.True(gemini.SupportFunction);
+        Assert.True(gemini.SupportVision);
+        Assert.Equal(1_048_576, gemini.ContextLength);
+        Assert.Equal(1_048_576, ModelFamilyRegistry.Match("gemini-3.1-pro-preview")!.ContextLength);
     }
     #endregion
 
@@ -552,7 +578,7 @@ public class ModelFamilyTests
         Assert.NotNull(glm);
         Assert.True(glm!.SupportThinking);
         Assert.True(glm.SupportVision);
-        Assert.Equal(262_144, glm.ContextLength);
+        Assert.Equal(1_048_576, glm.ContextLength);
         // kimi-k2.6 由 kimi 家族推断
         var kimi = client.InferModelCapabilities("kimi-k2.6");
         Assert.NotNull(kimi);
@@ -563,7 +589,7 @@ public class ModelFamilyTests
         Assert.NotNull(mini);
         Assert.True(mini!.SupportThinking);
         Assert.True(mini.SupportVision);
-        Assert.Equal(196_608, mini.ContextLength);
+        Assert.Equal(1_048_576, mini.ContextLength);
         // hunyuan/doubao 等经 OpenAI 兼容平台基类推断
         var hy = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" }).InferModelCapabilities("hunyuan-t1");
         Assert.NotNull(hy);
@@ -572,6 +598,31 @@ public class ModelFamilyTests
         var db = ModelFamilyRegistry.Match("doubao-seed-1.6");
         Assert.NotNull(db);
         Assert.True(db!.SupportThinking);
+    }
+
+    [Fact]
+    [DisplayName("非OpenAI协议客户端_继承基类推断_家族生效")]
+    public void NonOpenAI_Clients_InheritFamilyInference()
+    {
+        // Anthropic/Gemini/Bedrock 直接继承 AiClientBase，经基类默认 InferModelCapabilities 走全局家族规则（B-08）
+        var anthropic = new AnthropicChatClient(new AiClientOptions { Endpoint = "https://api.anthropic.com" });
+        var claude = anthropic.InferModelCapabilities("claude-sonnet-4-6");
+        Assert.NotNull(claude);
+        Assert.True(claude!.SupportThinking);
+        Assert.True(claude.SupportFunction);
+        Assert.True(claude.SupportVision);
+        Assert.Equal(200_000, claude.ContextLength);
+        // opus-4-7 旗舰 1M
+        Assert.Equal(1_000_000, anthropic.InferModelCapabilities("claude-opus-4-7")!.ContextLength);
+
+        var gemini = new GeminiChatClient(new AiClientOptions { Endpoint = "https://generativelanguage.googleapis.com" });
+        var g = gemini.InferModelCapabilities("gemini-3-flash-preview");
+        Assert.NotNull(g);
+        Assert.True(g!.SupportThinking);
+        Assert.True(g.SupportVision);
+        Assert.Equal(1_048_576, g.ContextLength);
+        // 未知模型落入基类通用启发式兜底，返回非空而非 null
+        Assert.NotNull(anthropic.InferModelCapabilities("unknown-model-xyz"));
     }
     #endregion
 }

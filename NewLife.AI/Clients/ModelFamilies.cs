@@ -21,6 +21,8 @@ public static class ModelFamilies
         ModelFamilyRegistry.Register(CreateHunyuan());
         ModelFamilyRegistry.Register(CreateGlm());
         ModelFamilyRegistry.Register(CreateGpt());
+        ModelFamilyRegistry.Register(CreateClaude());
+        ModelFamilyRegistry.Register(CreateGemini());
         ModelFamilyRegistry.Register(CreateDoubao());
         ModelFamilyRegistry.Register(CreateMiniMax());
         ModelFamilyRegistry.Register(CreateKimi());
@@ -160,13 +162,20 @@ public static class ModelFamilies
         [
             // 兜底（最先）：现代 GLM 主档默认思考+工具，具体型号后覆盖
             R("glm*", thinking: true, func: true),
-            // glm-4 老档：默认视觉 + 128K（-4v/-flash/-air/-plus 等子型号后续覆盖视觉/思考）
+            // glm-5.x 主档：思考 + 视觉 + 1M（2026-Q3 官方；5v-turbo 视觉同档）
+            R("glm-5*", vision: true, context: 1_048_576),
+            // glm-5 flash 快速档：不思考（免费/低价档，如 glm-5.3-flash）
+            R("glm-5*-flash*", thinking: false),
+            // glm-4 老档：默认视觉 + 128K（-4v/-flash/-air/-plus 等子型号后续覆盖）
             R("glm-4*", vision: true, context: 131_072),
-            // glm-5.x：主档思考 + 视觉，256K
-            R("glm-5*", vision: true, context: 262_144),
-            // glm-4.x（4.5/4.6/4.7）：256K（视觉继承 glm-4* 档）
-            R("glm-4.5*|glm-4.6*|glm-4.7*", context: 262_144),
-            // glm-4v 视觉语言：不思考（视觉继承 glm-4* 档）
+            // glm-4.7 主档：256K（flash 快速档后覆盖）
+            R("glm-4.7*", context: 262_144),
+            R("glm-4.7-flash*", thinking: false, vision: false, context: 200_704),
+            // glm-4.5/4.6：128K（-v 视觉版不思考，后覆盖）
+            R("glm-4.5*|glm-4.6*", context: 131_072),
+            R("glm-4.5v*|glm-4.6v*", thinking: false),
+            R("glm-4.5v*", context: 65_536),
+            // glm-4v 视觉语言：不思考
             R("glm-4v*", thinking: false, context: 8_192),
             // 轻量档：不思考，通常不支持工具、无视觉
             R("glm-4-flash*", thinking: false, func: false, vision: false),
@@ -218,8 +227,30 @@ public static class ModelFamilies
             R("gpt-5*", context: 400_000),
             R("gpt-5.5*|gpt-5.4*", context: 1_050_000),
             R("gpt-5.6*", context: 922_000),
+            R("gpt-5.6-luna*", context: 270_000),
             R("gpt-5.4-mini*", context: 272_000),
             R("o1*|o3*|o4*", context: 200_000),
+        ],
+    };
+
+    /// <summary>Anthropic Claude 家族。opus/sonnet/haiku 三级；opus-4-7 旗舰 1M，其余 200K；全系思考+工具+视觉。数据源 ModelData/anthropic.json</summary>
+    private static ModelFamily CreateClaude() => new("claude", "claude*", 200_000)
+    {
+        Rules =
+        [
+            // 兜底（最先）：Claude 全系思考 + 工具 + 视觉，200K
+            R("claude*", thinking: true, func: true, vision: true, context: 200_000),
+            // opus-4-7 旗舰：1M 上下文（opus-4-6 及 sonnet/haiku 4-x 仍 200K，兜底已覆盖）
+            R("claude-opus-4-7*", context: 1_000_000),
+        ],
+    };
+
+    /// <summary>Google Gemini 家族。pro/flash 分档，全系 1M 上下文；思考+工具+视觉。数据源 ModelData/gemini.json</summary>
+    private static ModelFamily CreateGemini() => new("gemini", "gemini*", 1_048_576)
+    {
+        Rules =
+        [
+            R("gemini*", thinking: true, func: true, vision: true, context: 1_048_576),
         ],
     };
 
@@ -234,6 +265,10 @@ public static class ModelFamilies
             R("doubao-1.5-*", context: 32_768),
             // Seed 系列（1.6/2.x 及 -thinking 变体）：思考 + 视觉，256K
             R("doubao-seed*", thinking: true, vision: true, context: 262_144),
+            // seed 快速档（-flash）：不思考（如 doubao-seed-1.6-flash）
+            R("doubao-seed-*-flash*", thinking: false),
+            // seed 翻译专用：不思考、无工具（doubao-seed-translation）
+            R("doubao-seed-translation*", thinking: false, func: false),
             // 1.5 pro/vision/thinking：思考 + 视觉
             R("doubao-1.5-pro*|doubao-1.5-vision*|doubao-1.5-thinking*", thinking: true, vision: true),
             // lite 轻量：无思考/工具/视觉
@@ -250,8 +285,8 @@ public static class ModelFamilies
         [
             // 兜底（最先）：默认不思考、支持工具，旧 abab 与未知档后覆盖
             R("minimax*|abab*", thinking: false, func: true),
-            // M3 推理：思考 + 视觉（DashScope 托管 ID 为 MiniMax/MiniMax-M3）
-            R("minimax-m3*|minimax*/minimax-m3*", thinking: true, vision: true, context: 196_608),
+            // M3 推理：思考 + 视觉 + 1M（DashScope 托管 ID 为 MiniMax/MiniMax-M3）
+            R("minimax-m3*|minimax*/minimax-m3*", thinking: true, vision: true, context: 1_048_576),
             // M2.x 推理：思考（无视觉）
             R("minimax-m2*|minimax*/minimax-m2*", thinking: true, vision: false, context: 196_608),
             // Text-01：长上下文 1M，不思考
@@ -270,10 +305,11 @@ public static class ModelFamilies
         [
             // 兜底（最先）：kimi-k 系列默认思考+工具，具体型号后覆盖
             R("kimi*", thinking: true, func: true),
-            // K3：思考 + 视觉
-            R("kimi-k3*", vision: true, context: 262_144),
-            // K2 系列：思考，256K
-            R("kimi-k2*", vision: false, context: 262_144),
+            // K3：思考 + 视觉，1M（2026 旗舰）
+            R("kimi-k3*", vision: true, context: 1_048_576),
+            // K2 系列：思考 + 视觉，256K（k2-0905 等历史纯文本版特例）
+            R("kimi-k2*", vision: true, context: 262_144),
+            R("kimi-k2-0905*", vision: false),
             // K1.5：思考，128K
             R("kimi-k1.5*", vision: false, context: 131_072),
             // 旧 moonshot-v1 系列：不思考、支持工具，上下文按 ID 档位
@@ -286,16 +322,20 @@ public static class ModelFamilies
     };
 
     /// <summary>百度文心家族。ernie-4.5/4.0-turbo 主档思考+视觉，speed/lite/tiny 轻量档；数据源 ModelData/qianfan.json</summary>
-    private static ModelFamily CreateErnie() => new("ernie", "ernie*", 8_192)
+    private static ModelFamily CreateErnie() => new("ernie", "ernie*", 131_072)
     {
         Rules =
         [
             // 兜底（最先）：默认不思考、支持工具，主档后覆盖
             R("ernie*", thinking: false, func: true, vision: false),
-            // 主档 4.0/4.5/5.x：思考 + 视觉
-            R("ernie-5*|ernie-4.5*|ernie-4.0*", thinking: true, vision: true),
-            // 轻量档：无思考/工具/视觉
-            R("ernie-speed*|ernie-lite*|ernie-tiny*", thinking: false, func: false, vision: false),
+            // 主档 5.x/4.x：思考 + 128K（2026-Q3 千帆口径；5.x 主档无视觉）
+            R("ernie-5*|ernie-4.5*|ernie-4.0*", thinking: true, context: 131_072),
+            // 4.5-turbo：视觉增强（思考 + 128K 继承主档）
+            R("ernie-4.5-turbo*", vision: true),
+            // -vl/-vision 视觉版：不思考 + 32K（如 ernie-4.5-turbo-vl）
+            R("ernie*-vl*|ernie*-vision*", thinking: false, context: 32_768),
+            // 轻量档：无思考/工具/视觉 + 32K
+            R("ernie-speed*|ernie-lite*|ernie-tiny*", thinking: false, func: false, vision: false, context: 32_768),
         ],
     };
 
