@@ -113,7 +113,9 @@ public class ToolChatClientContextGuardTests
         var request = CreateRequest(5);
         Assert.Equal(5, request["MaxInputTokens"]);
 
-        await nativeClient.GetResponseAsync(request, default);
+        // 入口首次即超预算：同步路径抛类型化异常（T-1——原返回 null 使下游 ChatResponse.From NRE）
+        var ex = await Assert.ThrowsAsync<ContextLengthExceededException>(
+            async () => await nativeClient.GetResponseAsync(request, default));
 
         Assert.Equal(ToolLoopStopReason.ContextLimit, nativeClient.StopReason);
         Assert.Equal(0, innerClient.CallCount);

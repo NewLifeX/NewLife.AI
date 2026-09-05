@@ -134,7 +134,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             cancellationToken.ThrowIfCancellationRequested();
 
             // 上下文窗口预算检查（Token 守卫）：工具结果逐轮累积进消息列表，超限时折叠/截断，仍超限中断循环
-            if (CheckContextLimit(workMessages, toolsTokens, request)) break;
+            if (CheckContextLimit(workMessages, toolsTokens, request))
+            {
+                // 入口首次即超预算（尚未产生任何响应）：直接 break 会返回 null，下游 ChatResponse.From(null)
+                // 读取 response.Id 抛 NRE——抛类型化异常，上层经 ChatErrorHelper 映射为 CONTEXT_TOO_LONG 友好错误
+                if (response == null)
+                    throw new ContextLengthExceededException(400, "输入内容已超出模型上下文窗口预算，无法发起工具调用");
+                break;
+            }
             if (span != null) span.Value++;
 
             span?.AppendTag($"workMessages: {workMessages.Count}");
@@ -207,7 +214,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (tc.Function == null) continue;
 
                 var toolResult = await tasks[i].ConfigureAwait(false);
-                CollectToolResult(workMessages, dedupCache, tc, toolResult, toolResults, roundSummaries);
+                CollectToolResult(workMessages, dedupCache, tc, toolResult, toolResults, roundSummaries, sessionDedupKeys);
             }
 
             // 连续失败检测：整轮所有工具均失败时递增，任一成功则归零。达到升级阈值时注入警告消息
@@ -524,7 +531,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (tc.Function == null) continue;
 
                 var toolResult = await tasks[i].ConfigureAwait(false);
-                var evt = CollectToolResult(workMessages, dedupCache, tc, toolResult, toolResults, roundSummaries);
+                var evt = CollectToolResult(workMessages, dedupCache, tc, toolResult, toolResults, roundSummaries, sessionDedupKeys);
                 if (evt != null)
                     yield return new ChatResponse { ToolCallEvents = [evt] };
             }
@@ -580,7 +587,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="roundSummaries">本轮工具调用摘要</param>
     /// <returns>流式需产出的事件数据；无 LLM 受众占位等场景调用方无需 yield 时返回 null 由调用方决定</returns>
     private ToolCallEventInfo? CollectToolResult(List<ChatMessage> workMessages, Dictionary<String, IToolResult> dedupCache,
-        ToolCall tc, IToolResult toolResult, Dictionary<String, IToolResult> toolResults, List<ToolCallSummary> roundSummaries)
+        ToolCall tc, IToolResult toolResult, Dictionary<String, IToolResult> toolResults, List<ToolCallSummary> roundSummaries,
+        HashSet<String> sessionDedupKeys)
     {
         var name = tc.Function!.Name;
 
@@ -591,7 +599,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             && dedupCache.TryGetValue(key, out var cached) && cached != null)
             toolResult = BuildReuseResult(name, cached);
         else if (!toolResult.IsError && GetUserContent(toolResult) != null)
+        {
             dedupCache[key] = toolResult;
+            // show_* 跨轮去重：仅首次真实执行成功后才占键（T-4——原在执行前占键：首次执行失败后模型重试
+            // 会被去重当"已跳过执行"成功语义回喂，吞掉失败反馈；且与跨轮失败自修复引导矛盾）
+            if (name.StartsWith("show_", StringComparison.OrdinalIgnoreCase)
+                && toolResult is ToolResult t2 && t2["DedupPlaceholder"] is not true)
+                sessionDedupKeys.Add(key);
+        }
 
         // 失败登记：同参失败写入请求级集合，供后续轮次相同调用直接拦截（防反复重试同一失败调用）
         if (toolResult.IsError && !_failedKeys.ContainsKey(key))
@@ -698,10 +713,11 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
 
         var key = toolName + "|" + (arguments ?? "");
 
-        // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次
+        // 跨轮次去重：show_* 工具在同一用户请求的多轮工具循环中只执行一次。
+        // 占键在首次成功执行后（CollectToolResult）——执行前占键会吞掉失败后的重试（T-4）
         if (toolName.StartsWith("show_", StringComparison.OrdinalIgnoreCase))
         {
-            if (!sessionDedupKeys.Add(key))
+            if (sessionDedupKeys.Contains(key))
             {
                 WriteLog("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", toolName);
                 return BuildDedupResult(toolName, "跨轮次重复调用，已跳过执行");

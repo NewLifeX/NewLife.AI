@@ -96,18 +96,18 @@ public class TokenEstimatorTests
     }
 
     [Fact]
-    [DisplayName("多模态二进制内容按 base64 折算计入")]
+    [DisplayName("多模态二进制内容按固定token计入")]
     public void MultimodalContent_Counted()
     {
         var msg = new ChatMessage
         {
             Role = "user",
             Content = "看图",
-            Contents = [new ImageContent { Data = new Byte[12] }]  // 12B → 16 base64 → 4 token
+            Contents = [new ImageContent { Data = new Byte[12] }]  // 图按固定 1500 token（非字节折算，防长会话误杀）
         };
         var total = TokenEstimator.EstimateTokens(msg);
-        // role 1 + 中文 2 + 图 12*4/3/4=4 = 7
-        Assert.Equal(7, total);
+        // role 1 + 中文 2 + 图固定 1500 = 1503
+        Assert.Equal(1503, total);
     }
 
     [Fact]

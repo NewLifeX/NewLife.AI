@@ -139,6 +139,11 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
                 code = McpErrorCode.InvalidParams;
 
             WriteLog("MCP 处理 {0} 失败：{1}", request.Method, ex.Message);
+
+            // JSON-RPC 2.0：notification（无 Id）异常不得响应（D10——原 catch 无条件回 error envelope 违反规范）
+            if (request.Id == null) return null!;
+
+            // 工具业务异常消息保留原样回传（客户端/LLM 需据错误文本修正调用；整体改 isError 结果语义见 D5 待办）
             return new("2.0", null, new JsonRpcError(code, ex.Message), request.Id);
         }
     }
@@ -250,7 +255,10 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         // 查找工具。未知工具名属于协议级无效参数（官方 SDK：tools/call 未知工具返回 InvalidParams）
         var tool = Manager.Find(ps.Name) ?? throw new ApiException(McpErrorCode.InvalidParams, $"Tool '{ps.Name}' not found in the server capabilities.");
 
-        var instance = tool.CreateInstance(serviceProvider) ?? throw new ApiException(McpErrorCode.InternalError, $"无法创建工具 '{ps.Name}' 实例");
+        // 静态方法无需实例即可调用（Method.Invoke(null, args)）；实例方法需 DI/反射创建，失败返回 InternalError（D8）
+        var instance = tool.Method.IsStatic ? null : tool.CreateInstance(serviceProvider);
+        if (!tool.Method.IsStatic && instance == null)
+            throw new ApiException(McpErrorCode.InternalError, $"无法创建工具 '{ps.Name}' 实例");
         var result = tool.Invoke(instance, ps.Arguments);
 
         List<ContentItem> content = [new("text", result?.ToString() ?? String.Empty)];

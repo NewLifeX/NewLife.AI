@@ -94,15 +94,17 @@ public class HttpMcpServer : McpServer
         var rs = Process(request, ctx);
         if (rs == null) return;
 
-        // 内容协商：显式指定格式优先；否则客户端 Accept 不接受 text/event-stream 时用 JSON，默认 SSE（对齐 Streamable HTTP）
+        // 内容协商：显式指定格式优先；否则按 Accept 头协商（对齐 AspNetMcpServer）——
+        // 仅显式 Accept 含 text/event-stream 时回 SSE；无 Accept（.NET HttpClient 默认不带）或
+        // Accept 为 */* / application/json 时回 JSON（原无 Accept 默认 SSE 使裸客户端/本库客户端无法解析响应，D4）
         if (ResponseFormat == McpResponseFormat.Json)
             WriteJsonMessage(context, rs);
         else if (ResponseFormat == McpResponseFormat.Sse)
             WriteSseMessage(context, rs);
-        else if (context.Request.Headers.TryGetValue("Accept", out var accept) && !accept.IsNullOrEmpty() && !accept.Contains("text/event-stream"))
-            WriteJsonMessage(context, rs);
-        else
+        else if (context.Request.Headers.TryGetValue("Accept", out var accept) && !accept.IsNullOrEmpty() && accept.Contains("text/event-stream"))
             WriteSseMessage(context, rs);
+        else
+            WriteJsonMessage(context, rs);
     }
 
     /// <summary>读取并解码请求体文本。兼容 Transfer-Encoding: chunked（官方 MCP 客户端 JsonContent 默认 chunked）</summary>

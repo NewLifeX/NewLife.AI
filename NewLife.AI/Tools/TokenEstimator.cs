@@ -41,18 +41,19 @@ public static class TokenEstimator
         if (!message.Name.IsNullOrEmpty())
             total += EstimateTokens(message.Name);
 
-        // 多模态二进制内容（图片/音频/文档）：视觉模型按图计 token，粗略按 base64 字符数/4 估算，
-        // 避免 Contents 完全不计入导致窗口守卫对多模态请求失明
+        // 多模态二进制内容（图片/音频/文档）：按固定 token 估算（每图/每音频约 1-3K token），
+        // 真实模型按张/时长计费而非字节比例——按 base64 字节线性估算（原 字节/4）会使 500KB 图估出
+        // 17 万 token 直接击穿 128K 预算，视觉/音频会话首轮被守卫误杀（B-16/T-3）
         if (message.Contents != null)
         {
             foreach (var c in message.Contents)
             {
                 if (c is ImageContent img && img.Data != null)
-                    total += img.Data.Length * 4 / 3 / 4;
+                    total += 1500;
                 else if (c is AudioContent au && au.Data != null)
-                    total += au.Data.Length * 4 / 3 / 4;
+                    total += 1500;
                 else if (c is DataContent dc)
-                    total += dc.Data.Length * 4 / 3 / 4;
+                    total += dc.Data.Length > 0 ? 1500 : 0;
             }
         }
         return total;
