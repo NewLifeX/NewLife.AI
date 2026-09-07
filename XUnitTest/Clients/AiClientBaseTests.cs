@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
+using NewLife.AI.Models;
 using Xunit;
 
 namespace XUnitTest.Clients;
@@ -102,6 +103,63 @@ public class AiClientBaseTests
         var first = instances[0];
         for (var i = 1; i < instances.Length; i++)
             Assert.Same(first, instances[i]);
+    }
+    #endregion
+
+    #region SerializeBody 内部键剔除
+
+    [Theory]
+    [DisplayName("IsInternalItemKey_双规则_识别内部保留键")]
+    [InlineData("IChatContext", true)]
+    [InlineData("MaxInputTokens", true)]
+    [InlineData("__GatewayAppKey", true)]
+    [InlineData("__X", true)]
+    [InlineData("Foo", false)]
+    [InlineData("enable_search", false)]
+    [InlineData("seed", false)]
+    public void IsInternalItemKey_DualRule_DetectsInternalKeys(String key, Boolean expected)
+        => Assert.Equal(expected, AiClientBase.IsInternalItemKey(key));
+
+    [Fact]
+    [DisplayName("SerializeBody_内部键剔除_协议扩展键保留且原字典恢复")]
+    public void SerializeBody_InternalKeysStripped_ProtocolKeysKeptAndItemsRestored()
+    {
+        // 模拟管道：内部键与协议扩展键混在共享 Items 中（与 MessageFlow 写入 IChatContext/MaxInputTokens 同源）。
+        // 曾因未剔除，SystemJson 的 ExtendableConverter 把内部键扁平化到 JSON 顶层，Azure（经 liteLLM）报 Unknown parameter: 'IChatContext'
+        var options = new ChatOptions();
+        options["IChatContext"] = "ctx-marker";
+        options["MaxInputTokens"] = 100;
+        options["__X"] = 1;
+        options["Foo"] = "bar";
+
+        var request = ChatRequest.Create([new ChatMessage { Role = "user", Content = "hi" }], options, stream: true);
+        var wire = ChatCompletionRequest.FromChatRequest(request);
+
+        using var client = new OpenAIChatClient("test-key");
+        var json = AiClientBase.SerializeBody(wire, client.JsonHost, client.JsonOptions);
+
+        // 内部键不得上 wire
+        Assert.DoesNotContain("IChatContext", json);
+        Assert.DoesNotContain("MaxInputTokens", json);
+        Assert.DoesNotContain("__X", json);
+
+        // 协议扩展键仍正常透传
+        Assert.Contains("\"Foo\":\"bar\"", json);
+
+        // 序列化后恢复原字典（PostAsync 重试共用同一 body，内部键不能丢）
+        Assert.Equal("ctx-marker", wire["IChatContext"]);
+        Assert.Equal(100, (Int32)wire["MaxInputTokens"]!);
+        Assert.Equal(1, (Int32)wire["__X"]!);
+        Assert.Equal("bar", wire["Foo"]);
+    }
+
+    [Fact]
+    [DisplayName("SerializeBody_字符串_原样返回")]
+    public void SerializeBody_String_PassesThrough()
+    {
+        using var client = new OpenAIChatClient("test-key");
+        var json = AiClientBase.SerializeBody("raw-body", client.JsonHost, client.JsonOptions);
+        Assert.Equal("raw-body", json);
     }
     #endregion
 }

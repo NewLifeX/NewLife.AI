@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
+using NewLife.Data;
 using NewLife.Log;
 using NewLife.Reflection;
 using NewLife.Remoting;
@@ -492,6 +493,60 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
         return ms > 0 ? ms : 1000;
     }
 
+    /// <summary>是否管道内部保留键。双规则：显式键名 + <c>__</c> 前缀（内部约定），此类键仅作进程内管道传递，禁止序列化上 wire</summary>
+    /// <param name="key">扩展键名</param>
+    /// <returns>内部保留键返回 true</returns>
+    internal static Boolean IsInternalItemKey(String key) =>
+        key == "IChatContext" || key == "MaxInputTokens" || key.StartsWith("__", StringComparison.Ordinal);
+
+    /// <summary>序列化请求体。临时剔除 <see cref="IExtend.Items"/> 中的管道内部保留键，序列化后恢复原字典（重试共用同一 body）</summary>
+    /// <remarks>
+    /// net8+ 下 JSON 处理器为 SystemJson，其 <c>ExtendableConverter</c> 会把 <see cref="IExtend.Items"/> 内容
+    /// 扁平化写到 JSON 顶层（<c>[IgnoreDataMember]</c> 只阻止 Items 属性本身嵌套，防不住内容展开）。
+    /// 管道内部键（IChatContext/MaxInputTokens 等）绝不能被当成模型参数发出，否则严格校验的服务商
+    /// （如 Azure 经 liteLLM）会报 Unknown parameter。协议扩展参数（如 DashScope enable_search）不受影响。
+    /// </remarks>
+    /// <param name="body">请求体对象或字符串</param>
+    /// <param name="host">JSON 处理器</param>
+    /// <param name="options">JSON 选项</param>
+    /// <returns>JSON 字符串</returns>
+    internal static String SerializeBody(Object? body, IJsonHost host, JsonOptions? options)
+    {
+        if (body is String s) return s;
+
+        // 内部键剔除：SystemJson 的 ExtendableConverter 会把 IExtend.Items 内容扁平化到 JSON 顶层
+        if (body is IExtend extendable && extendable.Items is { Count: > 0 } items)
+        {
+            var internalKeys = new List<String>();
+            foreach (var key in items.Keys)
+            {
+                if (IsInternalItemKey(key)) internalKeys.Add(key);
+            }
+
+            if (internalKeys.Count > 0)
+            {
+                // 临时剔除后序列化，finally 恢复原字典（PostAsync 重试共用同一 body，内部键不能丢）
+                var removed = new Dictionary<String, Object?>();
+                try
+                {
+                    foreach (var key in internalKeys)
+                    {
+                        removed[key] = items[key];
+                        items.Remove(key);
+                    }
+                    return host.Write(body, options) ?? "";
+                }
+                finally
+                {
+                    foreach (var kv in removed)
+                        items[kv.Key] = kv.Value;
+                }
+            }
+        }
+
+        return host.Write(body, options) ?? "";
+    }
+
     /// <summary>发送 GET 请求并返回响应字符串。非 2xx 时抛出 HttpRequestException</summary>
     /// <param name="url">请求地址</param>
     /// <param name="chatRequest">对话请求，可为 null，传递给 SetHeaders 以支持运行时参数覆盖</param>
@@ -552,7 +607,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <summary>发送单次 POST 请求并返回响应字符串</summary>
     private async Task<String> PostOnceAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
+        var bodyStr = SerializeBody(body, JsonHost, JsonOptions);
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -574,7 +629,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字符串，服务不可用时返回 null</returns>
     protected async Task<String?> TryPostAsync(String url, Object? body, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
+        var bodyStr = SerializeBody(body, JsonHost, JsonOptions);
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -613,7 +668,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <summary>发送单次 POST 流式请求</summary>
     private async Task<HttpResponseMessage> PostOnceStreamAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
+        var bodyStr = SerializeBody(body, JsonHost, JsonOptions);
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
@@ -640,7 +695,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>响应字节数组</returns>
     protected async Task<Byte[]> PostBinaryAsync(String url, Object? body, IChatRequest? chatRequest, AiClientOptions options, CancellationToken cancellationToken = default)
     {
-        var bodyStr = body is String s ? s : JsonHost.Write(body!, JsonOptions!) ?? "";
+        var bodyStr = SerializeBody(body, JsonHost, JsonOptions);
         using var req = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(bodyStr, Encoding.UTF8, "application/json"),
