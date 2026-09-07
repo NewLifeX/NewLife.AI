@@ -478,7 +478,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             if (msg.ThinkingContent.IsNullOrEmpty() && task.ThinkingBuilder.Length > 0)
                 msg.ThinkingContent = task.ThinkingBuilder.ToString();
             if (msg.ToolCalls.IsNullOrEmpty() && task.ToolCalls.Count > 0)
-                msg.ToolCalls = task.ToolCalls.ToJson();
+                // 工具信息序列化跳过 null 值字段
+                msg.ToolCalls = task.ToolCalls.ToJson(new JsonOptions { IgnoreNullValues = true });
 
             // 用量兜底
             if (task.Usage is { TotalTokens: > 0 } && msg.TotalTokens <= 0)

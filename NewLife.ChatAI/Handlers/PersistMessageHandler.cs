@@ -100,7 +100,8 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
                 var toolCalls = context.ToolCalls;
                 if (toolCalls.Count > 0)
                 {
-                    assistantMsg.ToolCalls = toolCalls.ToJson();
+                    // 工具信息序列化跳过 null 值字段（未执行的入参/出参等省略），存储与解析均更精简
+                    assistantMsg.ToolCalls = toolCalls.ToJson(new JsonOptions { IgnoreNullValues = true });
                     assistantMsg.ToolNames = toolCalls.Select(t => t.Name).Distinct().Join();
                 }
 
