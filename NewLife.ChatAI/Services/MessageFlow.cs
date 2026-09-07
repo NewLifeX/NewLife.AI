@@ -698,7 +698,13 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                             Function = new AiFunctionCall { Name = tc.Name, Arguments = tc.Arguments },
                         }).ToList(),
                         // 思考模式下工具调用的推理内容必须回传，否则 DeepSeek 返回 400
-                        ReasoningContent = msg.ThinkingContent.IsNullOrEmpty() ? null : msg.ThinkingContent,
+                        // STARCHAT：思考内容压缩存储，回传前还原明文
+                        ReasoningContent = msg.ThinkingContent.IsNullOrEmpty() ? null
+#if STARCHAT
+                            : msg.GetThinking(),
+#else
+                            : msg.ThinkingContent,
+#endif
                     });
                     foreach (var tc in storedDtos)
                     {
@@ -1476,7 +1482,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var aiMsg = new AiChatMessage { Role = msg.Role ?? "user", Content = msg.Content };
         // DeepSeek 思考模式要求：历史 assistant 消息有 reasoning_content 时必须原样回传，否则 API 返回 400
         if (msg.Role.EqualIgnoreCase("assistant") && !msg.ThinkingContent.IsNullOrEmpty())
+#if STARCHAT
+            // STARCHAT：思考内容压缩存储（NLBR: 前缀），回传 LLM 前还原明文
+            aiMsg.ReasoningContent = msg.GetThinking();
+#else
             aiMsg.ReasoningContent = msg.ThinkingContent;
+#endif
         return aiMsg;
     }
 

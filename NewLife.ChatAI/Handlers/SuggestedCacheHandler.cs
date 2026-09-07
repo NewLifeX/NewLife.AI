@@ -83,8 +83,16 @@ public class SuggestedCacheHandler : IChatHandler, IChatHandlerScope
         // 1. 思考过程
         if (!sourceMsg.ThinkingContent.IsNullOrEmpty())
         {
-            await foreach (var chunk in ThrottleTextAsync(sourceMsg.ThinkingContent!, CachedChunkSize, CachedDelayMs, cancellationToken))
-                yield return new ChatStreamEvent { Type = "thinking_delta", Content = chunk };
+            var thinking = sourceMsg.ThinkingContent;
+#if STARCHAT
+            // STARCHAT：思考内容压缩存储（NLBR: 前缀），回放给前端前还原明文
+            thinking = sourceMsg.GetThinking();
+#endif
+            if (!thinking.IsNullOrEmpty())
+            {
+                await foreach (var chunk in ThrottleTextAsync(thinking!, CachedChunkSize, CachedDelayMs, cancellationToken))
+                    yield return new ChatStreamEvent { Type = "thinking_delta", Content = chunk };
+            }
         }
 
         // 2. 工具调用
