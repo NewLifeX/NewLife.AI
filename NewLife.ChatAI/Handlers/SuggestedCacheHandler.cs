@@ -83,11 +83,8 @@ public class SuggestedCacheHandler : IChatHandler, IChatHandlerScope
         // 1. 思考过程
         if (!sourceMsg.ThinkingContent.IsNullOrEmpty())
         {
+            // STARCHAT：压缩存储由实体 OnLoad 自动还原明文，此处直接读属性回放给前端
             var thinking = sourceMsg.ThinkingContent;
-#if STARCHAT
-            // STARCHAT：思考内容压缩存储（NLBR: 前缀），回放给前端前还原明文
-            thinking = sourceMsg.GetThinking();
-#endif
             if (!thinking.IsNullOrEmpty())
             {
                 await foreach (var chunk in ThrottleTextAsync(thinking!, CachedChunkSize, CachedDelayMs, cancellationToken))
