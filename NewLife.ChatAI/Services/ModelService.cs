@@ -509,10 +509,12 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             : $"{providerConfig.Name} 发现 {models.Length} 个模型：{models.Join("、")}";
     }
 
-    /// <summary>遍历所有 ModelConfig 记录，从 AiClientDescriptor 刷新模型能力（含 ReasoningEfforts）</summary>
+    /// <summary>遍历所有 ModelConfig 记录，从模型元数据解析链刷新模型能力（能力位/上下文/推理强度）。
+    /// 能力值由解析链合成：高优先级精确值（如 StarChat ModelData 元数据表）声明优先，
+    /// 描述符/家族推断补齐未声明字段；仅覆盖未锁定模型</summary>
     /// <remarks>
-    /// 启动时由 DataPreloadService 调用一次，确保所有模型的能力字段与最新的 [AiClientModel] 注解保持一致。
-    /// <para>保护策略：仅当模型全部能力标记均为默认值（false/空）时才覆盖，若管理员已手动配置过任何能力字段则跳过，避免覆盖人工调整。</para>
+    /// 启动时由 DataPreloadService 调用一次。模型元数据刷新（价格/全量）、发现与初始化入口均消费
+    /// 同一条解析链，能力与价格同源，避免多个写者（粗值推断 vs 精确元数据表）相互覆盖造成每次启动翻转写入。
     /// </remarks>
     public async Task RefreshModelCapabilitiesAsync()
     {
@@ -526,37 +528,28 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 var provider = model.ProviderInfo;
                 if (provider == null || provider.Provider.IsNullOrEmpty()) continue;
 
-                var descriptor = _registry.GetDescriptor(provider.Provider);
-                if (descriptor == null) continue;
+                // 模型元数据解析链：高优先级精确值优先，低优先级（描述符/家族推断）补未声明字段
+                var md = ModelMetadataResolverChain.Resolve(provider.Code ?? provider.Provider, model.Code);
+                if (md == null || !md.HasCapability) continue;
 
-                var caps = descriptor.FindModelCapabilities(model.Code);
-
-                // 未注册的模型通过 InferModelCapabilities 模式匹配推断（如 cosyvoice-v3.5-*、qwen-tts-* 变体）
-                if (caps == null && model.Code != null)
-                {
-                    using var client = descriptor.Factory(new AiClientOptions { Endpoint = "" });
-                    caps = (client as AiClientBase)?.InferModelCapabilities(model.Code);
-                }
-                if (caps == null) continue;
-
-                // 保护策略：仅当模型未锁定时覆盖（管理员手动保存后自动锁定，禁止自动覆盖）
+                // 仅未锁定模型覆盖（管理员保存后自动锁定，禁止自动覆盖）
                 if (!model.Locked)
                 {
-                    model.SupportThinking = caps.SupportThinking;
-                    model.SupportFunction = caps.SupportFunction;
-                    model.SupportVision = caps.SupportVision;
-                    model.SupportAudio = caps.SupportAudio;
-                    model.SupportSpeech = caps.SupportSpeech;
-                    model.SupportImage = caps.SupportImage;
-                    model.SupportVideo = caps.SupportVideo;
-                    model.SupportEmbedding = caps.SupportEmbedding;
-                    model.SupportRerank = caps.SupportRerank;
-                    if (caps.ContextLength > 0) model.ContextLength = caps.ContextLength;
+                    if (md.SupportThinking != null) model.SupportThinking = md.SupportThinking.Value;
+                    if (md.SupportFunction != null) model.SupportFunction = md.SupportFunction.Value;
+                    if (md.SupportVision != null) model.SupportVision = md.SupportVision.Value;
+                    if (md.SupportAudio != null) model.SupportAudio = md.SupportAudio.Value;
+                    if (md.SupportSpeech != null) model.SupportSpeech = md.SupportSpeech.Value;
+                    if (md.SupportImage != null) model.SupportImage = md.SupportImage.Value;
+                    if (md.SupportVideo != null) model.SupportVideo = md.SupportVideo.Value;
+                    if (md.SupportEmbedding != null) model.SupportEmbedding = md.SupportEmbedding.Value;
+                    if (md.SupportRerank != null) model.SupportRerank = md.SupportRerank.Value;
+                    if (md.ContextLength is > 0) model.ContextLength = md.ContextLength.Value;
                 }
 
-                // ReasoningEfforts 是新增字段，当前 DB 中必然为 null，安全写入
-                if (model.ReasoningEfforts.IsNullOrEmpty() && !caps.ReasoningEfforts.IsNullOrEmpty())
-                    model.ReasoningEfforts = caps.ReasoningEfforts;
+                // ReasoningEfforts 仅填空（已有值不覆盖，精确覆盖由模型元数据刷新入口处理）
+                if (model.ReasoningEfforts.IsNullOrEmpty() && !md.ReasoningEfforts.IsNullOrEmpty())
+                    model.ReasoningEfforts = md.ReasoningEfforts;
 
                 // 嵌入向量模型且 Settings 为空时，自动写入默认设置项（保留 null 字段，使管理员看到可配置项）
                 if (model.SupportEmbedding && model.Settings.IsNullOrEmpty())
@@ -594,45 +587,61 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         var updated = 0;
         foreach (var model in models)
         {
-            var modelInfo = descriptor.FindModelInfo(model.Code);
-            var caps = modelInfo?.Capabilities ?? descriptor.FindModelCapabilities(model.Code);
-            if (caps == null) continue;
+            // 模型元数据解析链：精确值优先（如 StarChat ModelData 元数据表），描述符/家族推断补未声明
+            var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, model.Code);
+            if (md == null || !md.HasAny) continue;
 
-            model.Name = modelInfo?.DisplayName ?? model.Name;
+            // 显示名：精确/描述符注册优先；未注册变体不覆盖已有名称
+            if (!md.Name.IsNullOrEmpty()) model.Name = md.Name;
 
-            // 未锁定时更新能力
-            if (!model.Locked)
+            // 未锁定时更新能力（合成值：精确声明位优先，推断补缺）
+            if (!model.Locked && md.HasCapability)
             {
-                model.SupportThinking = caps.SupportThinking;
-                model.SupportFunction = caps.SupportFunction;
-                model.SupportVision = caps.SupportVision;
-                model.SupportAudio = caps.SupportAudio;
-                model.SupportSpeech = caps.SupportSpeech;
-                model.SupportImage = caps.SupportImage;
-                model.SupportVideo = caps.SupportVideo;
-                model.SupportEmbedding = caps.SupportEmbedding;
-                model.SupportRerank = caps.SupportRerank;
-                if (caps.ContextLength > 0) model.ContextLength = caps.ContextLength;
+                if (md.SupportThinking != null) model.SupportThinking = md.SupportThinking.Value;
+                if (md.SupportFunction != null) model.SupportFunction = md.SupportFunction.Value;
+                if (md.SupportVision != null) model.SupportVision = md.SupportVision.Value;
+                if (md.SupportAudio != null) model.SupportAudio = md.SupportAudio.Value;
+                if (md.SupportSpeech != null) model.SupportSpeech = md.SupportSpeech.Value;
+                if (md.SupportImage != null) model.SupportImage = md.SupportImage.Value;
+                if (md.SupportVideo != null) model.SupportVideo = md.SupportVideo.Value;
+                if (md.SupportEmbedding != null) model.SupportEmbedding = md.SupportEmbedding.Value;
+                if (md.SupportRerank != null) model.SupportRerank = md.SupportRerank.Value;
+                if (md.ContextLength is > 0) model.ContextLength = md.ContextLength.Value;
             }
 
-            // 价格初始化（StarChat 专属）
+            // 价格初始化（StarChat 专属）：Token 四档 或 非 Token 单价
 #if STARCHAT
-            if (modelInfo?.Pricing != null)
+            if (md.Pricing != null || md.PricingMode != null)
             {
-                var pricing = modelInfo.Pricing;
-                model.PricingMode = NewLife.AI.Models.PricingMode.Token;
-                model.InputPrice = pricing.InputPrice;
-                model.OutputPrice = pricing.OutputPrice;
-                model.CachedInputPrice = pricing.CachedInputPrice > 0 ? pricing.CachedInputPrice : 0;
-                model.CacheCreationPrice = pricing.CacheCreationPrice > 0 ? pricing.CacheCreationPrice : 0;
-                // 嵌入/重排序等非对话模型使用 UnitPrice 承载单价
-                if (caps.SupportEmbedding)
-                    model.PricingMode = NewLife.AI.Models.PricingMode.Embedding;
+                var mode = md.PricingMode;
+                if (mode == null || mode == NewLife.AI.Models.PricingMode.Token)
+                {
+                    if (md.Pricing != null)
+                    {
+                        var pricing = md.Pricing;
+                        model.PricingMode = NewLife.AI.Models.PricingMode.Token;
+                        model.InputPrice = pricing.InputPrice;
+                        model.OutputPrice = pricing.OutputPrice;
+                        model.CachedInputPrice = pricing.CachedInputPrice > 0 ? pricing.CachedInputPrice : 0;
+                        model.CacheCreationPrice = pricing.CacheCreationPrice > 0 ? pricing.CacheCreationPrice : 0;
+                        model.Unit = "";
+                    }
+                }
+                else if (md.UnitPrice is { } unit)
+                {
+                    // 非 Token：单价承载（元/张、元/秒、元/百万Token、元/千字符），四档清零
+                    model.PricingMode = mode.Value;
+                    model.InputPrice = unit;
+                    model.OutputPrice = 0;
+                    model.CachedInputPrice = 0;
+                    model.CacheCreationPrice = 0;
+                    model.Unit = md.UnitName ?? "";
+                }
             }
 #endif
 
             // 嵌入向量模型且 Settings 为空时自动初始化
-            if (caps.SupportEmbedding && model.Settings.IsNullOrEmpty())
+            if (model.SupportEmbedding && model.Settings.IsNullOrEmpty())
             {
                 var defaultSettings = new EmbeddingModelSetting();
                 model.Settings = defaultSettings.ToJson(false, false, false);
@@ -743,7 +752,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         }
         if (tags?.Models == null || tags.Models.Length == 0) return [];
 
-        return SyncModelsToConfig(tags, providerConfig, client);
+        return SyncModelsToConfig(tags, providerConfig);
     }
 
     /// <summary>探测云端 Ollama 并同步模型到数据库</summary>
@@ -762,20 +771,16 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         var tags = await client.ListModelsAsync().ConfigureAwait(false);
         if (tags?.Models == null || tags.Models.Length == 0) return [];
 
-        return SyncModelsToConfig(tags, providerConfig, client);
+        return SyncModelsToConfig(tags, providerConfig);
     }
 
     /// <summary>将 Ollama 模型列表同步到模型配置表</summary>
     /// <param name="tags">Ollama 模型标签列表</param>
     /// <param name="providerConfig">提供商配置</param>
-    /// <param name="client">Ollama 客户端，用于推断模型能力</param>
     /// <returns>已处理的模型编码列表</returns>
-    private String[] SyncModelsToConfig(OllamaTagsResponse tags, ProviderConfig providerConfig, OllamaChatClient? client = null)
+    private String[] SyncModelsToConfig(OllamaTagsResponse tags, ProviderConfig providerConfig)
     {
         if (tags.Models == null || tags.Models.Length == 0) return [];
-
-        // 查找 Ollama 描述符，用于已知模型精确匹配
-        var descriptor = _registry.GetDescriptor("Ollama");
 
         var codes = new List<String>();
         var synced = 0;
@@ -808,20 +813,22 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             config.Name = name;
             if (model.ModifiedAt > DateTime.MinValue) config.ModelTime = model.ModifiedAt;
 
-            // 推断模型能力：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动设置）
+            // 模型能力解析链：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动设置）
             if (isNew || (!config.SupportThinking && !config.SupportVision && !config.SupportImage))
             {
-                var caps = descriptor?.FindModelCapabilities(modelCode) ?? client?.InferModelCapabilities(modelCode, model.Details);
-                if (caps != null)
+                var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, modelCode);
+                if (md != null)
                 {
-                    config.SupportThinking = caps.SupportThinking;
-                    config.SupportFunction = caps.SupportFunction;
-                    config.SupportVision = caps.SupportVision;
-                    config.SupportAudio = caps.SupportAudio;
-                    config.SupportImage = caps.SupportImage;
-                    config.SupportVideo = caps.SupportVideo;
-                    config.SupportEmbedding = caps.SupportEmbedding;
-                    if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
+                    if (md.SupportThinking != null) config.SupportThinking = md.SupportThinking.Value;
+                    if (md.SupportFunction != null) config.SupportFunction = md.SupportFunction.Value;
+                    if (md.SupportVision != null) config.SupportVision = md.SupportVision.Value;
+                    if (md.SupportAudio != null) config.SupportAudio = md.SupportAudio.Value;
+                    if (md.SupportSpeech != null) config.SupportSpeech = md.SupportSpeech.Value;
+                    if (md.SupportImage != null) config.SupportImage = md.SupportImage.Value;
+                    if (md.SupportVideo != null) config.SupportVideo = md.SupportVideo.Value;
+                    if (md.SupportEmbedding != null) config.SupportEmbedding = md.SupportEmbedding.Value;
+                    if (md.SupportRerank != null) config.SupportRerank = md.SupportRerank.Value;
+                    if (md.ContextLength is > 0) config.ContextLength = md.ContextLength.Value;
                 }
 
                 // 嵌入向量模型且 Settings 为空时，自动写入默认设置项
@@ -870,16 +877,15 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             log?.Info("{0} 服务提供者已自动启用，发现 {1} 个可用模型", providerConfig.Name, modelList.Data.Length);
         }
 
-        return SyncModelsFromList(providerConfig, modelList, descriptor, listClient);
+        return SyncModelsFromList(providerConfig, modelList, listClient);
     }
 
     /// <summary>将 OpenAI 兼容模型列表同步到模型配置表</summary>
     /// <param name="providerConfig">提供商配置</param>
     /// <param name="modelList">远端模型列表</param>
-    /// <param name="descriptor">服务商描述符，用于查找已知模型能力</param>
-    /// <param name="client">协议客户端，用于按命名规律推断模型能力</param>
+    /// <param name="client">协议客户端，用于按命名规律推断显示名</param>
     /// <returns>已处理的模型编码列表</returns>
-    private String[] SyncModelsFromList(ProviderConfig providerConfig, ModelListResponse modelList, AiClientDescriptor? descriptor = null, IModelListClient? client = null)
+    private String[] SyncModelsFromList(ProviderConfig providerConfig, ModelListResponse modelList, IModelListClient? client = null)
     {
         if (modelList.Data == null) return [];
 
@@ -918,34 +924,32 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 Enable = providerConfig.Enable,
             };
 
+            // 模型元数据解析链：精确值优先（如 StarChat ModelData），描述符/家族推断补未声明
+            var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, model.Id);
+
             if (!model.Name.IsNullOrEmpty()) config.Name = model.Name;
 
-            // 新建模型且名称为空时，优先从已注册列表取显示名，其次按命名规律（连字符各段首字母大写）推断
+            // 新建模型且名称为空时，优先取链合成显示名（精确/描述符注册），其次按命名规律（连字符各段首字母大写）推断
             if (isNew && config.Name.IsNullOrEmpty())
-                config.Name = descriptor?.FindModelInfo(model.Id)?.DisplayName
-                    ?? (client as AiClientBase)?.InferModelDisplayName(model.Id);
+                config.Name = md?.Name ?? (client as AiClientBase)?.InferModelDisplayName(model.Id);
 
             if (model.Created > DateTime.MinValue) config.ModelTime = model.Created;
 
-            // 推断模型能力：新建模型总是推断；已有模型仅当未锁定时才覆盖
-            if (isNew || !config.Locked)
+            // 模型能力解析链：新建模型总是推断；已有模型仅当未锁定时才覆盖
+            if ((isNew || !config.Locked) && md != null)
             {
-                var caps = descriptor?.FindModelCapabilities(model.Id) ?? (client as AiClientBase)?.InferModelCapabilities(model.Id);
-                if (caps != null)
-                {
-                    config.SupportThinking = caps.SupportThinking;
-                    config.SupportFunction = caps.SupportFunction;
-                    config.SupportVision = caps.SupportVision;
-                    config.SupportAudio = caps.SupportAudio;
-                    config.SupportSpeech = caps.SupportSpeech;
-                    config.SupportImage = caps.SupportImage;
-                    config.SupportVideo = caps.SupportVideo;
-                    config.SupportEmbedding = caps.SupportEmbedding;
-                    config.SupportRerank = caps.SupportRerank;
-                    if (config.ReasoningEfforts.IsNullOrEmpty())
-                        config.ReasoningEfforts = caps.ReasoningEfforts;
-                    if (caps.ContextLength > 0) config.ContextLength = caps.ContextLength;
-                }
+                if (md.SupportThinking != null) config.SupportThinking = md.SupportThinking.Value;
+                if (md.SupportFunction != null) config.SupportFunction = md.SupportFunction.Value;
+                if (md.SupportVision != null) config.SupportVision = md.SupportVision.Value;
+                if (md.SupportAudio != null) config.SupportAudio = md.SupportAudio.Value;
+                if (md.SupportSpeech != null) config.SupportSpeech = md.SupportSpeech.Value;
+                if (md.SupportImage != null) config.SupportImage = md.SupportImage.Value;
+                if (md.SupportVideo != null) config.SupportVideo = md.SupportVideo.Value;
+                if (md.SupportEmbedding != null) config.SupportEmbedding = md.SupportEmbedding.Value;
+                if (md.SupportRerank != null) config.SupportRerank = md.SupportRerank.Value;
+                if (config.ReasoningEfforts.IsNullOrEmpty() && !md.ReasoningEfforts.IsNullOrEmpty())
+                    config.ReasoningEfforts = md.ReasoningEfforts;
+                if (md.ContextLength is > 0) config.ContextLength = md.ContextLength.Value;
 
                 // 嵌入向量模型且 Settings 为空时，自动写入默认设置项
                 if (config.SupportEmbedding && config.Settings.IsNullOrEmpty())
