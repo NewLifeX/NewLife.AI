@@ -1377,63 +1377,22 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var parts = new List<String>();
 
         // 0. 当前日期（置首，确保 AI 在处理"今天"/"2号那天"等模糊表达时有明确锚点）
-        // 降精度到日期级：毫秒级时间戳每次请求都会变化，破坏 Prompt Cache 前缀命中与重生成上下文一致性；
-        // 精确时刻由"当前时间"系统工具（BuiltinToolService.GetCurrentTime）按需调用
-        {
-            parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
-        }
+        AddDateAnchor(parts);
 
         // 1. 当前用户基础信息（基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强）
-        if (userId > 0 && ManageProvider.Provider?.FindByID(userId) is IUser user)
-        {
-            var sb = Pool.StringBuilder.Get();
-            sb.Append($"当前用户：{user.DisplayName}（{user.Name}）");
-            var roles = user.Roles;
-            if (roles?.Length > 0) sb.Append($"，角色：{roles.Join(",")}");
-            var dept = Department.FindByID(user.DepartmentID);
-            if (dept != null) sb.Append($"，部门：{dept.Name}");
+        AddUserBasicInfo(parts, userId);
 
-            parts.Add(sb.Return(true));
-        }
-
-        // 2. 个性化定制
-        var userSetting = UserSetting.FindByUserId(userId);
-        if (userSetting != null)
-        {
-            if (!String.IsNullOrWhiteSpace(userSetting.Nickname))
-                parts.Add($"用户希望你称呼他为「{userSetting.Nickname.Trim()}」");
-
-            if (!String.IsNullOrWhiteSpace(userSetting.UserBackground))
-                parts.Add($"## 用户背景信息\n{userSetting.UserBackground.Trim()}");
-
-            var stylePrompt = userSetting.ResponseStyle switch
-            {
-                ResponseStyle.Precise => "请给出准确、确定性高的回答。优先引用事实和数据，避免模糊表述和不确定的推测。回答简洁有条理。",
-                ResponseStyle.Vivid => "请用丰富的表达方式回答，善于使用类比、举例和故事来解释概念。让回答有温度、易于理解，适当展开讨论。",
-                ResponseStyle.Creative => "请大胆发散思维，提供新颖独特的视角和创意方案。鼓励联想、跨界类比和非常规思路，不必拘泥于常规答案。",
-                _ => null
-            };
-            if (stylePrompt != null) parts.Add(stylePrompt);
-        }
-
-        // 3. 用户自定义指令
-        if (userSetting != null && !String.IsNullOrWhiteSpace(userSetting.SystemPrompt))
-            parts.Add(userSetting.SystemPrompt.Trim());
+        // 2. 个性化定制 + 3. 用户自定义指令
+        AddUserPersonalization(parts, userId);
 
         // 4. 模型级系统提示词
-        if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
-            parts.Add(model.SystemPrompt.Trim());
+        AddModelInstruction(parts, model);
 
         // 4.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一个用户的每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
-        {
-            var chatSetting = ChatSetting.Current;
-            if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
-                parts.Add(chatSetting.SystemInstruction.Trim());
-        }
+        AddGlobalInstruction(parts);
 
         // 5. 多轮对话时强调最新消息优先级
-        if (userHistoryCount > 1)
-            parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
+        AddMultiTurnPriority(parts, userHistoryCount);
 
         if (parts.Count == 0) return null;
         span?.AppendTag(null!, parts.Count);
@@ -1453,34 +1412,21 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         using var span = tracer?.NewSpan("ai:BuildSystemMessageForProject", new { projectId, model?.Name, userHistoryCount });
         var parts = new List<String>();
 
-        // 0. 当前日期（降精度到日期级，理由同 BuildSystemMessage：保证 system prompt 前缀稳定以命中 Prompt Cache）
-        parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
+        // 0. 当前日期（降精度到日期级，保证 system prompt 前缀稳定以命中 Prompt Cache）
+        AddDateAnchor(parts);
 
         // 1. 项目级系统提示词（StarChat 独有；AgentProject 不在 ChatAI 实体，故用条件编译）
         // 项目级指令定义 AI 整体行为与角色，优先级仅次于 AppKey.SystemPrompt（业务层）
-#if STARCHAT
-        if (projectId > 0)
-        {
-            var project = NewLife.StarChat.Entity.AgentProject.FindById(projectId);
-            if (project != null && !String.IsNullOrWhiteSpace(project.SystemPrompt))
-                parts.Add(project.SystemPrompt.Trim());
-        }
-#endif
+        AddProjectInstruction(parts, projectId);
 
         // 2. 模型级系统提示词（项目接入仍遵从模型配置指令）
-        if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
-            parts.Add(model.SystemPrompt.Trim());
+        AddModelInstruction(parts, model);
 
         // 2.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
-        {
-            var chatSetting = ChatSetting.Current;
-            if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
-                parts.Add(chatSetting.SystemInstruction.Trim());
-        }
+        AddGlobalInstruction(parts);
 
         // 3. 多轮对话时强调最新消息优先级
-        if (userHistoryCount > 1)
-            parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
+        AddMultiTurnPriority(parts, userHistoryCount);
 
         if (parts.Count == 0) return null;
         span?.AppendTag(null!, parts.Count);
@@ -1506,19 +1452,44 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var parts = new List<String>();
 
         // 0. 当前日期（降精度到日期级，保证 system prompt 前缀稳定以命中 Prompt Cache）
-        parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
+        AddDateAnchor(parts);
 
         // 1. 项目级系统提示词（StarChat 独有；AgentProject 不在 ChatAI 实体，故用条件编译）
-#if STARCHAT
-        if (projectId > 0)
-        {
-            var project = NewLife.StarChat.Entity.AgentProject.FindById(projectId);
-            if (project != null && !String.IsNullOrWhiteSpace(project.SystemPrompt))
-                parts.Add(project.SystemPrompt.Trim());
-        }
-#endif
+        AddProjectInstruction(parts, projectId);
 
         // 2. 当前用户基础信息（与 BuildSystemMessage 一致）
+        AddUserBasicInfo(parts, userId);
+
+        // 3. 个性化定制 + 用户自定义指令（与 BuildSystemMessage 一致）
+        AddUserPersonalization(parts, userId);
+
+        // 4. 模型级系统提示词
+        AddModelInstruction(parts, model);
+
+        // 4.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
+        AddGlobalInstruction(parts);
+
+        // 5. 多轮对话时强调最新消息优先级
+        AddMultiTurnPriority(parts, userHistoryCount);
+
+        if (parts.Count == 0) return null;
+        span?.AppendTag(null!, parts.Count);
+
+        return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
+    }
+
+    #region 系统提示词公共段（BuildSystemMessage 三方法共用，消重后单一事实源）
+
+    /// <summary>添加日期锚点段（置首）。降精度到日期级：毫秒级时间戳每次请求都会变化，破坏 Prompt Cache 前缀命中与重生成上下文一致性；
+    /// 精确时刻由"当前时间"系统工具（BuiltinToolService.GetCurrentTime）按需调用</summary>
+    private static void AddDateAnchor(List<String> parts)
+    {
+        parts.Add($"当前日期：{DateTimeOffset.Now:yyyy-MM-dd}");
+    }
+
+    /// <summary>添加当前用户基础信息段。基类只拼 DisplayName/Name/Roles，不查部门——派生类按需增强</summary>
+    private static void AddUserBasicInfo(List<String> parts, Int32 userId)
+    {
         if (userId > 0 && ManageProvider.Provider?.FindByID(userId) is IUser user)
         {
             var sb = Pool.StringBuilder.Get();
@@ -1530,8 +1501,12 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
             parts.Add(sb.Return(true));
         }
+    }
 
-        // 3. 个性化定制 + 用户自定义指令（与 BuildSystemMessage 一致）
+    /// <summary>添加个性化定制 + 用户自定义指令段（昵称 → 背景 → 回复风格 → 自定义指令，顺序即优先级）。
+    /// userId 不大于 0 时跳过（UserSetting.FindByUserId(0) 无记录，与调用方语义一致）</summary>
+    private static void AddUserPersonalization(List<String> parts, Int32 userId)
+    {
         if (userId > 0)
         {
             var userSetting = UserSetting.FindByUserId(userId);
@@ -1556,27 +1531,45 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                     parts.Add(userSetting.SystemPrompt.Trim());
             }
         }
+    }
 
-        // 4. 模型级系统提示词
+    /// <summary>添加项目级系统提示词段。StarChat 独有（AgentProject 不在 ChatAI 实体），故用条件编译；
+    /// 项目级指令定义 AI 整体行为与角色，优先级仅次于 AppKey.SystemPrompt（业务层）</summary>
+    private static void AddProjectInstruction(List<String> parts, Int32 projectId)
+    {
+#if STARCHAT
+        if (projectId > 0)
+        {
+            var project = NewLife.StarChat.Entity.AgentProject.FindById(projectId);
+            if (project != null && !String.IsNullOrWhiteSpace(project.SystemPrompt))
+                parts.Add(project.SystemPrompt.Trim());
+        }
+#endif
+    }
+
+    /// <summary>添加模型级系统提示词段（项目接入仍遵从模型配置指令）</summary>
+    private static void AddModelInstruction(List<String> parts, ModelConfig? model)
+    {
         if (model != null && !String.IsNullOrWhiteSpace(model.SystemPrompt))
             parts.Add(model.SystemPrompt.Trim());
+    }
 
-        // 4.5 全局系统指令（管理员在 ChatSetting 中配置，注入每一次对话。置于模型指令之后，优先级最低，仅作兜底行为准则）
-        {
-            var chatSetting = ChatSetting.Current;
-            if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
-                parts.Add(chatSetting.SystemInstruction.Trim());
-        }
+    /// <summary>添加全局系统指令段。管理员在 ChatSetting 中配置，注入每一次对话；置于模型指令之后，优先级最低，仅作兜底行为准则</summary>
+    private static void AddGlobalInstruction(List<String> parts)
+    {
+        var chatSetting = ChatSetting.Current;
+        if (!String.IsNullOrWhiteSpace(chatSetting.SystemInstruction))
+            parts.Add(chatSetting.SystemInstruction.Trim());
+    }
 
-        // 5. 多轮对话时强调最新消息优先级
+    /// <summary>添加多轮对话优先级段。仅当历史消息条数大于 1 时注入，强调以最新消息为准</summary>
+    private static void AddMultiTurnPriority(List<String> parts, Int32 userHistoryCount)
+    {
         if (userHistoryCount > 1)
             parts.Add("请优先回应用户的最新消息。如果最新消息与之前的对话内容存在矛盾或方向变化，以最新消息为准。");
-
-        if (parts.Count == 0) return null;
-        span?.AppendTag(null!, parts.Count);
-
-        return new AiChatMessage { Role = "system", Content = String.Join("\n\n", parts) };
     }
+
+    #endregion
 
     /// <summary>判断是否应跳过历史消息。用于过滤预分配但尚未写入正文的 assistant 占位消息，避免发送非法上下文给上游模型</summary>
     /// <param name="message">历史消息实体</param>
