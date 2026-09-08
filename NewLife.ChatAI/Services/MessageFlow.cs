@@ -146,55 +146,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!);
 
-        // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成）
-        var useBackground = backgroundService != null && setting.BackgroundGeneration;
-        if (useBackground)
-        {
-            backgroundService!.Register(
-                assistantMsg.Id,
-                InvokeChainAsync(flow, CancellationToken.None),
-                task => OnBackgroundCompleteAsync(task, flow));
-
-            var hasError = false;
-            await foreach (var ev in backgroundService.Subscribe(assistantMsg.Id, cancellationToken).ConfigureAwait(false))
-            {
-                if (ev.Type == "error") hasError = true;
-                yield return ev;
-                if (hasError) break;
-            }
-
-            if (!hasError)
-            {
-                var bgTask = backgroundService.GetTask(assistantMsg.Id);
-                if (bgTask is { Status: BackgroundTaskStatus.Failed, Error: not null })
-                {
-                    hasError = true;
-                    var bgInfo = ChatErrorHelper.Classify(bgTask.Error);
-                    yield return ChatStreamEvent.ErrorEvent(bgInfo.Code, bgInfo.Message);
-                }
-            }
-
-            if (!hasError && !cancellationToken.IsCancellationRequested)
-            {
-                var bgTask = backgroundService.GetTask(assistantMsg.Id);
-                yield return new ChatStreamEvent
-                {
-                    Type = "message_done",
-                    MessageId = assistantMsg.Id,
-                    Usage = bgTask?.Usage ?? flow.Usage,
-                };
-            }
-        }
-        else
-        {
-            await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
-
-            if (!flow.HasError && !cancellationToken.IsCancellationRequested)
-                yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = flow.Usage, };
-        }
+        // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成），
+        // 由 RunChainAsync 统一处理后台/前台双分支回放与 message_done 收尾
+        await foreach (var ev in RunChainAsync(flow, assistantMsg.Id, null, cancellationToken).ConfigureAwait(false))
+            yield return ev;
     }
 
     /// <summary>流式重新生成 AI 回复。替换当前 AI 回复并通过 SSE 事件流返回新内容</summary>
@@ -252,55 +207,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var assistantMessage = flow.AssistantMessage;
         yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!);
 
-        // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成）
-        var useBackground = backgroundService != null && setting.BackgroundGeneration;
-        if (useBackground)
-        {
-            backgroundService!.Register(
-                assistantMessage.Id,
-                InvokeChainAsync(flow, CancellationToken.None),
-                task => OnBackgroundCompleteAsync(task, flow));
-
-            var hasError = false;
-            await foreach (var ev in backgroundService.Subscribe(assistantMessage.Id, cancellationToken).ConfigureAwait(false))
-            {
-                if (ev.Type == "error") hasError = true;
-                yield return ev;
-                if (hasError) break;
-            }
-
-            if (!hasError)
-            {
-                var bgTask = backgroundService.GetTask(assistantMessage.Id);
-                if (bgTask is { Status: BackgroundTaskStatus.Failed, Error: not null })
-                {
-                    hasError = true;
-                    var bgInfo = ChatErrorHelper.Classify(bgTask.Error);
-                    yield return ChatStreamEvent.ErrorEvent(bgInfo.Code, bgInfo.Message);
-                }
-            }
-
-            if (!hasError && !cancellationToken.IsCancellationRequested)
-            {
-                var bgTask = backgroundService.GetTask(assistantMessage.Id);
-                yield return new ChatStreamEvent
-                {
-                    Type = "message_done",
-                    MessageId = assistantMessage.Id,
-                    Usage = bgTask?.Usage ?? flow.Usage,
-                };
-            }
-        }
-        else
-        {
-            await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
-            {
-                yield return ev;
-            }
-
-            if (!flow.HasError && !cancellationToken.IsCancellationRequested)
-                yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMessage.Id, Usage = flow.Usage };
-        }
+        // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成），
+        // 由 RunChainAsync 统一处理后台/前台双分支回放与 message_done 收尾
+        await foreach (var ev in RunChainAsync(flow, assistantMessage.Id, null, cancellationToken).ConfigureAwait(false))
+            yield return ev;
     }
 
     /// <summary>流式发送消息并获取 AI 回复。依次：保存用户消息 → 构建上下文 → 委托管道流式生成 → 持久化结果 → 推送 SSE 事件</summary>
@@ -385,19 +295,32 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 flow[kv.Key] = kv.Value;
         }
 
-        // Step3: 执行 IChatHandler 三段式调用链（OnBefore 正序 → 核心 LLM 调用 → OnAfter 倒序）
+        // Step3: 执行 IChatHandler 三段式调用链（OnBefore 正序 → 核心 LLM 调用 → OnAfter 倒序），
+        // 由 RunChainAsync 统一处理后台/前台双分支回放与 message_done 收尾
+        await foreach (var ev in RunChainAsync(flow, assistantMsg.Id, span, cancellationToken).ConfigureAwait(false))
+            yield return ev;
+    }
+
+    /// <summary>执行调用链并按后台/前台双分支回放事件。统一三个流式入口的 Step3 尾段（后台 Register+Subscribe、前台直跑 + message_done），消除复制粘贴</summary>
+    /// <param name="flow">流程上下文</param>
+    /// <param name="messageId">助手消息编号（后台任务注册与 message_done 事件使用）</param>
+    /// <param name="ambientSpan">入口已让出执行权（message_start 已 yield）前的追踪埋点。async iterator 跨 yield 不保留 AsyncLocal，
+    /// 前台分支驱动调用链前需重新挂载，使 handler:OnBefore/核心 LLM 链/ai:tool:loop 正确挂到其下；无则传 null</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    private async IAsyncEnumerable<ChatStreamEvent> RunChainAsync(MessageFlowContext flow, Int64 messageId, ISpan? ambientSpan, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         var useBackground = backgroundService != null && setting.BackgroundGeneration;
         if (useBackground)
         {
             // 后台生成路径：Register 独立消费 InvokeChainAsync（使用 CancellationToken.None 确保客户端断连不影响生成），
             // SSE 通过 Subscribe 回放 BackgroundTask.Events 中的事件
             backgroundService!.Register(
-                assistantMsg.Id,
+                messageId,
                 InvokeChainAsync(flow, CancellationToken.None),
                 task => OnBackgroundCompleteAsync(task, flow));
 
             var hasError = false;
-            await foreach (var ev in backgroundService.Subscribe(assistantMsg.Id, cancellationToken).ConfigureAwait(false))
+            await foreach (var ev in backgroundService.Subscribe(messageId, cancellationToken).ConfigureAwait(false))
             {
                 if (ev.Type == "error") hasError = true;
                 yield return ev;
@@ -407,7 +330,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             // 检查后台任务错误（InvokeChainAsync 内部异常不会生成 error 事件，需单独检查）
             if (!hasError)
             {
-                var bgTask = backgroundService.GetTask(assistantMsg.Id);
+                var bgTask = backgroundService.GetTask(messageId);
                 if (bgTask is { Status: BackgroundTaskStatus.Failed, Error: not null })
                 {
                     hasError = true;
@@ -418,20 +341,20 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
             if (!hasError && !cancellationToken.IsCancellationRequested)
             {
-                var bgTask = backgroundService.GetTask(assistantMsg.Id);
+                var bgTask = backgroundService.GetTask(messageId);
                 yield return new ChatStreamEvent
                 {
                     Type = "message_done",
-                    MessageId = assistantMsg.Id,
+                    MessageId = messageId,
                     Usage = bgTask?.Usage ?? flow.Usage,
                 };
             }
         }
         else
         {
-            // async iterator 跨 yield 不保留 AsyncLocal：message_start 已让出执行权，当前段 Current 已非 ai:Stream:{model}。
-            // 驱动调用链前重新挂载本埋点为当前上下文，使 handler:OnBefore/核心 LLM 链/ai:tool:loop 全部正确挂到其下
-            if (span != null) DefaultSpan.Current = span;
+            // 前台路径：message_start 已让出执行权，若入口持有追踪埋点则重新挂载，
+            // 使 handler:OnBefore/核心 LLM 链/ai:tool:loop 全部正确挂到其下
+            if (ambientSpan != null) DefaultSpan.Current = ambientSpan;
 
             await foreach (var ev in InvokeChainAsync(flow, cancellationToken).ConfigureAwait(false))
             {
@@ -440,9 +363,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
             // message_done
             if (!flow.HasError && !cancellationToken.IsCancellationRequested)
-            {
-                yield return new ChatStreamEvent { Type = "message_done", MessageId = assistantMsg.Id, Usage = flow.Usage, };
-            }
+                yield return new ChatStreamEvent { Type = "message_done", MessageId = messageId, Usage = flow.Usage };
         }
     }
 
