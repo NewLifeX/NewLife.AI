@@ -25,7 +25,11 @@ public class UsageRecordHandler(UsageService? usageService) : ChatHandlerBase, I
         if (usageService == null) return Task.CompletedTask;
         //if (context is not MessageFlowContext flow) return Task.CompletedTask;
 
-        // 主流程用量（Source=Chat）
+        // 网关来源的用量由网关出口适配器（GatewayService2.RecordUsage，Source=Gateway）统一落库并扣减配额；
+        // 网关流无持久化消息实体（messageId=0，无幂等保护），此处再以 Source=Chat 记录会造成 UsageRecord 双写
+        if (context.Source == ChatFlowSource.Gateway) return Task.CompletedTask;
+
+        // 主流程用量（Source=Chat）。渠道来源暂由本 Handler 记录（渠道适配器侧暂无独立用量记录点）
         if (context.Usage != null)
             usageService.Record(context.Conversation, context.AssistantMessage, null, context.ModelConfig, context.Usage, "Chat");
 
