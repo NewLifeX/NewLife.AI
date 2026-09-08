@@ -69,16 +69,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // 软删除旧消息，保留历史版本；为本次重新生成创建新消息实体
         var oldMsg = flow.AssistantMessage;
-        var newMsg = new DbChatMessage
-        {
-            ConversationId = oldMsg.ConversationId,
-            Role = "assistant",
-            ThinkingMode = oldMsg.ThinkingMode,
-            Enable = true,
-        };
-        newMsg.Insert();
-        oldMsg.Enable = false;
-        oldMsg.Update();
+        var newMsg = MessageStore.CreateAssistant(oldMsg.ConversationId, oldMsg.ThinkingMode);
+        MessageStore.SoftDelete(oldMsg);
         flow.HistoryMessages = flow.HistoryMessages.Where(e => e.Id != oldMsg.Id).ToList();
         flow.HistoryMessages.Add(newMsg);
         flow.AssistantMessage = newMsg;
@@ -129,15 +121,8 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         userMessage.Content = newContent;
         userMessage.Update();
 
-        // 预分配 AI 回复消息
-        var assistantMsg = new DbChatMessage
-        {
-            ConversationId = userMessage.ConversationId,
-            Role = "assistant",
-            ThinkingMode = userMessage.ThinkingMode,
-            Enable = true,
-        };
-        assistantMsg.Insert();
+        // 预分配 AI 回复消息（正文由 PersistMessageHandler/后台兜底事后写入）
+        var assistantMsg = MessageStore.CreateAssistant(userMessage.ConversationId, userMessage.ThinkingMode);
         flow.AssistantMessage = assistantMsg;
         flow.HistoryMessages.Add(assistantMsg);
 
@@ -181,18 +166,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
         flow[regenKey] = regenCount + 1;
 
-        var newMsg = new DbChatMessage
-        {
-            ConversationId = oldMsg.ConversationId,
-            Role = "assistant",
-            ThinkingMode = oldMsg.ThinkingMode,
-            Enable = true,
-        };
-        newMsg.Insert();
+        var newMsg = MessageStore.CreateAssistant(oldMsg.ConversationId, oldMsg.ThinkingMode);
         if (newMsg.Id <= 0)
             throw new InvalidOperationException("新消息插入失败，未获取有效 Id");
-        oldMsg.Enable = false;
-        oldMsg.Update();
+        MessageStore.SoftDelete(oldMsg);
         flow.HistoryMessages = flow.HistoryMessages.Where(e => e.Id != oldMsg.Id).ToList();
         flow.HistoryMessages.Add(newMsg);
         flow.AssistantMessage = newMsg;
@@ -240,29 +217,11 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
 
         // 保存用户消息
-        var userMsg = new DbChatMessage
-        {
-            ConversationId = conversationId,
-            Role = "user",
-            Content = request.Content,
-            ThinkingMode = request.ThinkingMode,
-            ModelName = model.Code,
-            Enable = true,
-        };
-        if (request.AttachmentIds is { Count: > 0 })
-            userMsg.Attachments = request.AttachmentIds.ToJson();
-        userMsg.Insert();
+        var userMsg = MessageStore.CreateUser(conversationId, request.Content, request.ThinkingMode, model.Code,
+            request.AttachmentIds is { Count: > 0 } ? request.AttachmentIds.ToJson() : null);
 
-        // 预分配AI回复消息编号
-        var assistantMsg = new DbChatMessage
-        {
-            ConversationId = conversationId,
-            Role = "assistant",
-            ThinkingMode = request.ThinkingMode,
-            ModelName = model.Code,
-            Enable = true,
-        };
-        assistantMsg.Insert();
+        // 预分配AI回复消息编号（正文由 PersistMessageHandler/后台兜底事后写入）
+        var assistantMsg = MessageStore.CreateAssistant(conversationId, request.ThinkingMode, model.Code);
 
         flow.HistoryMessages.Add(userMsg);
         flow.HistoryMessages.Add(assistantMsg);
