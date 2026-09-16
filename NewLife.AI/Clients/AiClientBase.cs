@@ -134,10 +134,12 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     /// <returns>新的 HttpClient 实例</returns>
     protected virtual HttpClient CreateHttpClient()
     {
-        // 池化 HttpMessageHandler（按 Endpoint 主机分组），连接复用避免每次新建连接池导致 socket 与内存膨胀；
-        // disposeHandler:false 使 Dispose 只释放 HttpClient 对象，不关闭共享 handler 的连接池
-        var handler = HttpClientPool.GetHandler(_options.GetEndpoint(DefaultEndpoint));
-        var client = new HttpClient(handler, disposeHandler: false)
+        // 每客户端私有 HttpMessageHandler（含 GZip/Deflate 自动解压）：连接池随客户端创建与释放；
+        // 低频调用场景不做跨客户端共享——共享连接池的"轮换/释放"策略需回答"谁还在用"，曾引发线上故障
+        var client = new HttpClient(new HttpClientHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        })
         {
             Timeout = Timeout,
         };

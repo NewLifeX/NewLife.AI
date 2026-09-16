@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Net.WebSockets;
 using NewLife.AI.Clients;
@@ -117,9 +118,14 @@ public partial class DashScopeChatClient
                 request.CharactersUsed = chars;
             }
 
-            // 池化 HttpMessageHandler：TTS 音频下载按主机复用连接，避免每次新建连接池（A-01/A-02 同类反模式）
-            var handler = HttpClientPool.GetHandler(audioUrl);
-            using var httpClient = new HttpClient(handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(30) };
+            // 短命私有 handler：音频下载完成后随客户端一并释放（低频场景无需池化共享）
+            using var httpClient = new HttpClient(new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            })
+            {
+                Timeout = TimeSpan.FromSeconds(30),
+            };
 #if NET5_0_OR_GREATER
             var audioBytes = await httpClient.GetByteArrayAsync(audioUrl, cancellationToken).ConfigureAwait(false);
 #else
