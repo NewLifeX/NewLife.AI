@@ -129,7 +129,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // Step2: 构建对话上下文
         await BuildContextAsync(flow, newContent, cancellationToken).ConfigureAwait(false);
 
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, flow.ModelConfig.Code!, userMessage.Id);
 
         // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成），
         // 由 RunChainAsync 统一处理后台/前台双分支回放与 message_done 收尾
@@ -182,7 +182,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // message_start
         var assistantMessage = flow.AssistantMessage;
-        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!);
+        yield return ChatStreamEvent.MessageStart(assistantMessage.Id, flow.ModelConfig.Code!, flow.UserMessage?.Id ?? 0);
 
         // Step3: 执行 IChatHandler 三段式调用链（持久化由 PersistMessageHandler 等事后 Handler 完成），
         // 由 RunChainAsync 统一处理后台/前台双分支回放与 message_done 收尾
@@ -245,7 +245,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         // message_start
         using var span = tracer?.NewSpan($"ai:Stream:{model.Code}", request.Content);
-        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!);
+        yield return ChatStreamEvent.MessageStart(assistantMsg.Id, model.Code!, userMsg.Id);
 
         // 记录请求选项供 Handler 读取
         if (request.Options is { Count: > 0 })
