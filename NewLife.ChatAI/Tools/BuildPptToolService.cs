@@ -244,23 +244,32 @@ public class BuildPptToolService(ILog log)
             var powerPointSlide = writer.AddSlide();
             var idx = si;
 
-            // 背景色（优先使用 model 指定，否则用主题默认）
+            // 背景色（AI 显式指定优先；封面未指定时用品牌深色封面，对齐真实汇报习惯；其余用主题默认）
+            var layout = (model.Layout ?? "title_content").ToLowerInvariant();
+            var isCover = layout == "title_only";
             var bg = !model.Background.IsNullOrEmpty() ? model.Background! : palette.Background;
+            if (isCover && model.Background.IsNullOrEmpty())
+                bg = OfficeStyleKit.Shade(palette.Primary, 0.5);
             if (!bg.EqualIgnoreCase("FFFFFF"))
                 writer.SetBackground(idx, bg);
 
-            // 深色背景下自动反色默认文字（避免缺省黑字撞深底）
+            // 默认文字色：深底反色为浅色，浅底用品牌深灰（替代纯黑，正文更有质感）
             var defaultTextColor = OfficeStyleKit.IsDarkColor(bg)
                 ? (OfficeStyleKit.Luma(palette.Foreground) > 150 ? palette.Foreground : "FFFFFF")
+                : palette.PaperForeground;
+
+            // 封面副标题用柔和色调（深色封面取主色淡调，浅色封面取次要文字色）
+            var coverSubtitleColor = isCover
+                ? (OfficeStyleKit.IsDarkColor(bg) ? OfficeStyleKit.Tint(palette.Primary, 0.45) : palette.PaperMutedForeground)
                 : null;
 
             // 设置布局策略，供 NuGet LayoutEngine.Apply 使用
-            powerPointSlide.Layout = model.Layout ?? "title_content";
+            powerPointSlide.Layout = layout;
 
             // 先将所有元素填充到 PptSlide（用临时坐标，LayoutEngine 会重新计算）
             foreach (var elem in model.Elements)
             {
-                await AddElementToSlide(writer, idx, elem, palette, defaultTextColor).ConfigureAwait(false);
+                await AddElementToSlide(writer, idx, elem, palette, defaultTextColor, isCover, coverSubtitleColor).ConfigureAwait(false);
             }
 
             // 由 NewLife.Office.LayoutEngine 自动排版
@@ -279,7 +288,7 @@ public class BuildPptToolService(ILog log)
                 writer.SetSlideFooter(idx, model.Footer, model.ShowPageNumber);
 
             // 自动装饰（标题分隔线、封面色柱）
-            AddAutoDecoration(writer, idx, model, palette.Primary);
+            AddAutoDecoration(writer, idx, model, palette);
         }
 
         using var ms = new MemoryStream();
@@ -287,13 +296,13 @@ public class BuildPptToolService(ILog log)
         return ms.ToArray();
     }
 
-    private static async Task AddElementToSlide(PptxWriter writer, Int32 idx, PptElement elem, OfficePalette palette, String? defaultTextColor)
+    private static async Task AddElementToSlide(PptxWriter writer, Int32 idx, PptElement elem, OfficePalette palette, String? defaultTextColor, Boolean isCover, String? coverSubtitleColor)
     {
         switch (elem.Type.ToLowerInvariant())
         {
             case "text":
             {
-                var fontSize = elem.FontSize ?? DefaultFontSize(elem.Role);
+                var fontSize = elem.FontSize ?? DefaultFontSize(elem.Role, isCover);
                 var bold = elem.Bold ?? elem.Role is "title" or "kpi";
                 var hasItalic = elem.Italic == true;
                 var hasUnderline = elem.Underline == true;
@@ -305,6 +314,8 @@ public class BuildPptToolService(ILog log)
                 {
                     tb.Role = elem.Role;
                     if (!elem.Color.IsNullOrEmpty()) tb.FontColor = elem.Color;
+                    else if (elem.Role == "kpi") tb.FontColor = palette.Primary;                                  // KPI 数值用品牌主色
+                    else if (isCover && elem.Role == "subtitle" && coverSubtitleColor != null) tb.FontColor = coverSubtitleColor;
                     else if (defaultTextColor != null) tb.FontColor = defaultTextColor;
                     if (!elem.Alignment.IsNullOrEmpty()) tb.Alignment = elem.Alignment;
                     if (!elem.BackgroundColor.IsNullOrEmpty()) tb.BackgroundColor = elem.BackgroundColor;
@@ -362,8 +373,8 @@ public class BuildPptToolService(ILog log)
                         for (var c = 0; c < colCount; c++)
                             table.CellStyles[(0, c)] = headerStyle;
 
-                        // 斑马纹：AI 显式或用纸面浅灰（表格为白底，浅灰斑马纹更协调）
-                        var stripe = !ts?.StripeColor.IsNullOrEmpty() == true ? ts!.StripeColor : palette.PaperMuted;
+                        // 斑马纹：AI 显式或用主色淡染（与 Excel 报表保持同一套视觉语言）
+                        var stripe = !ts?.StripeColor.IsNullOrEmpty() == true ? ts!.StripeColor : OfficeStyleKit.Tint(palette.Primary, 0.08);
                         if (!stripe.IsNullOrEmpty())
                         {
                             var stripeStyle = new CellStyle { BackgroundColor = stripe };
@@ -443,7 +454,7 @@ public class BuildPptToolService(ILog log)
     }
 
     /// <summary>根据布局类型自动添加视觉装饰元素（分隔线、封面色柱）</summary>
-    private static void AddAutoDecoration(PptxWriter writer, Int32 idx, PptPageModel slide, String accentColor)
+    private static void AddAutoDecoration(PptxWriter writer, Int32 idx, PptPageModel slide, OfficePalette palette)
     {
         const Double marginL = 2.0;
         const Double contentW = 29.87;
@@ -452,14 +463,14 @@ public class BuildPptToolService(ILog log)
 
         if (layout is "title_only")
         {
-            // 封面左侧装饰色柱（x=0, y=0, 宽1.5cm, 全高）
-            var sp = writer.AddShape(idx, "rect", 0.0, 0.0, 1.5, 19.05, accentColor);
+            // 封面左侧装饰色柱（亮强调色，在深色封面上更醒目）
+            var sp = writer.AddShape(idx, "rect", 0.0, 0.0, 1.5, 19.05, palette.Accent);
             if (sp != null) sp.LineColor = null;
         }
         else if (layout is "title_content" or "two_column")
         {
             // 标题下方细分隔线（y≈3.65cm，高0.09cm，全内容宽）
-            var sp = writer.AddShape(idx, "rect", marginL, 3.65, contentW, 0.09, accentColor);
+            var sp = writer.AddShape(idx, "rect", marginL, 3.65, contentW, 0.09, palette.Primary);
             if (sp != null) sp.LineColor = null;
         }
     }
@@ -532,10 +543,10 @@ public class BuildPptToolService(ILog log)
         return new ArchiveResult(attachment.Id, url);
     }
 
-    private static Int32 DefaultFontSize(String? role) => role switch
+    private static Int32 DefaultFontSize(String? role, Boolean isCover = false) => role switch
     {
-        "title"    => 28,
-        "subtitle" => 18,
+        "title"    => isCover ? 40 : 32,
+        "subtitle" => isCover ? 20 : 18,
         "kpi"      => 44,
         "caption"  => 12,
         _          => 16,

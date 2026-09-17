@@ -9,6 +9,9 @@ using NewLife.Office.Word;
 using Xunit;
 using ExcelWriter = NewLife.Office.Excel.ExcelWriter;
 using PptxWriter = NewLife.Office.Ppt.PptxWriter;
+using ChartSeries = NewLife.Office.Ppt.ChartSeries;
+using LayoutEngine = NewLife.Office.Ppt.LayoutEngine;
+using PptCellStyle = NewLife.Office.Ppt.CellStyle;
 
 namespace XUnitTest.Helpers;
 
@@ -76,12 +79,15 @@ public class OfficeSampleExportTests
 
     [Fact]
     [DisplayName("样张—Excel品牌报表生成")]
-    public void Export_ExcelSample()
+    public void Export_ExcelSample() => ExportExcelCore("enterprise-blue", "样张-Excel品牌报表.xlsx");
+
+    /// <summary>导出 Excel 样张（标题带 + 品牌表头 + 真数值数据 + 主色淡染斑马纹）</summary>
+    private static void ExportExcelCore(String themeKey, String fileName)
     {
         Directory.CreateDirectory(_outDir);
-        var path = Path.Combine(_outDir, "样张-Excel品牌报表.xlsx");
+        var path = Path.Combine(_outDir, fileName);
 
-        var palette = OfficePalette.Resolve("enterprise-blue");
+        var palette = OfficePalette.Resolve(themeKey);
         using var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite);
         using var writer = new ExcelWriter(fs);
         writer.DefaultFontName = palette.ChineseFont;
@@ -122,37 +128,79 @@ public class OfficeSampleExportTests
 
     [Fact]
     [DisplayName("样张—PPT品牌演示生成")]
-    public void Export_PptSample()
+    public void Export_PptSample() => ExportPptCore("enterprise-blue", "样张-PPT品牌演示.pptx");
+
+    [Fact]
+    [DisplayName("样张—主题变体（暖色）验证卡片风格驱动三件套配色")]
+    public void Export_ThemeVariants_Warm()
+    {
+        ExportExcelCore("warm", "样张-Excel品牌报表-暖色.xlsx");
+        ExportPptCore("warm", "样张-PPT品牌演示-暖色.pptx");
+    }
+
+    /// <summary>导出 PPT 样张（品牌深色封面 + LayoutEngine 自动排版，与 BuildPptToolService 输出一致）</summary>
+    private static void ExportPptCore(String themeKey, String fileName)
     {
         Directory.CreateDirectory(_outDir);
-        var path = Path.Combine(_outDir, "样张-PPT品牌演示.pptx");
+        var path = Path.Combine(_outDir, fileName);
 
-        var palette = OfficePalette.Resolve("dark");
+        var palette = OfficePalette.Resolve(themeKey);
         using var writer = new PptxWriter();
         writer.SetAccentColors(palette.SeriesColors);
         writer.SetThemeFonts(palette.LatinFont, palette.ChineseFont);
 
-        // 封面（深色背景 + 品牌色柱 + 反色标题）
-        writer.AddSlide();
-        writer.SetBackground(0, palette.Background);
-        var title = writer.AddTextBox(0, "星语 · 文档设计系统", 4, 6, 24, 3, 36, true);
-        title.FontColor = palette.Foreground;
-        title.Alignment = "ctr";
-        var subtitle = writer.AddTextBox(0, "Word / Excel / PPT 品牌化升级", 4, 9.5, 24, 2, 16);
-        subtitle.FontColor = palette.MutedForeground;
-        subtitle.Alignment = "ctr";
-        writer.AddShape(0, "rect", 0, 0, 1.5, 19.05, palette.Primary);
+        // 封面：品牌深色底 + 亮色装饰柱（标题 40pt 白字居中，副标题柔和主色）；由 LayoutEngine 计算坐标
+        var cover = writer.AddSlide();
+        cover.Layout = "title_only";
+        writer.SetBackground(0, OfficeStyleKit.Shade(palette.Primary, 0.5));
+        var coverTitle = writer.AddTextBox(0, "星语 · 文档设计系统", 0, 0, 1, 1, 40, true);
+        coverTitle.Role = "title";
+        coverTitle.FontColor = "FFFFFF";
+        coverTitle.Alignment = "ctr";
+        var coverSubtitle = writer.AddTextBox(0, "Word / Excel / PPT 品牌化输出", 0, 0, 1, 1, 20);
+        coverSubtitle.Role = "subtitle";
+        coverSubtitle.FontColor = OfficeStyleKit.Tint(palette.Primary, 0.45);
+        coverSubtitle.Alignment = "ctr";
+        var coverBar = writer.AddShape(0, "rect", 0.0, 0.0, 1.5, 19.05, palette.Accent);
+        if (coverBar != null) coverBar.LineColor = null;
+        LayoutEngine.Apply(cover);
 
-        // 内容页 + 品牌色图表
-        writer.AddSlide();
-        var chart = writer.AddBarChart(1, ["Q1", "Q2", "Q3", "Q4"], 2, 4.5, 28, 12);
-        chart.Series.Add(new NewLife.Office.Ppt.ChartSeries { Name = "营收", Values = [120, 190, 240, 305], Color = palette.SeriesColors[0] });
-        chart.Series.Add(new NewLife.Office.Ppt.ChartSeries { Name = "利润", Values = [30, 62, 88, 121], Color = palette.SeriesColors[1] });
+        // 指标页：标题 + KPI 行（KPI 主色、页码页脚）
+        var kpiSlide = writer.AddSlide();
+        kpiSlide.Layout = "title_content";
+        var kpiTitle = writer.AddTextBox(1, "本季度核心指标", 0, 0, 1, 1, 32, true);
+        kpiTitle.Role = "title";
+        kpiTitle.FontColor = palette.PaperForeground;
+        var kpi1 = writer.AddTextBox(1, "128,400", 0, 0, 1, 1, 44, true); kpi1.Role = "kpi"; kpi1.FontColor = palette.Primary;
+        var kpi2 = writer.AddTextBox(1, "98.6%", 0, 0, 1, 1, 44, true); kpi2.Role = "kpi"; kpi2.FontColor = palette.Primary;
+        var kpi3 = writer.AddTextBox(1, "12.8%", 0, 0, 1, 1, 44, true); kpi3.Role = "kpi"; kpi3.FontColor = palette.Primary;
+        var kpiBody = writer.AddTextBox(1, "月活跃用户、服务可用性与付费转化率同比保持双位数增长。", 0, 0, 1, 1, 16);
+        kpiBody.Role = "body";
+        kpiBody.FontColor = palette.PaperMutedForeground;
+        writer.SetSlideFooter(1, "星语 · 文档设计系统", true);
+        LayoutEngine.Apply(kpiSlide);
 
-        // 表格页（品牌表头 + 斑马纹）
-        writer.AddSlide();
-        var tableTitle = writer.AddTextBox(2, "分渠道数据", 2, 1.6, 26, 1.6, 25, true);
-        tableTitle.FontColor = "262626";
+        // 图表页：标题 + 品牌色系柱状图
+        var chartSlide = writer.AddSlide();
+        chartSlide.Layout = "title_content";
+        var chartTitle = writer.AddTextBox(2, "季度营收与利润", 0, 0, 1, 1, 32, true);
+        chartTitle.Role = "title";
+        chartTitle.FontColor = palette.PaperForeground;
+        var chart = writer.AddBarChart(2, ["Q1", "Q2", "Q3", "Q4"], 0, 0, 1, 1);
+        if (chart?.Series != null)
+        {
+            chart.Series.Add(new ChartSeries { Name = "营收", Values = [120, 190, 240, 305], Color = palette.SeriesColors[0] });
+            chart.Series.Add(new ChartSeries { Name = "利润", Values = [30, 62, 88, 121], Color = palette.SeriesColors[1] });
+        }
+        writer.SetSlideFooter(2, "星语 · 文档设计系统", true);
+        LayoutEngine.Apply(chartSlide);
+
+        // 表格页：品牌表头 + 主色淡染斑马纹
+        var tableSlide = writer.AddSlide();
+        tableSlide.Layout = "title_content";
+        var tableTitle = writer.AddTextBox(3, "分渠道数据", 0, 0, 1, 1, 32, true);
+        tableTitle.Role = "title";
+        tableTitle.FontColor = palette.PaperForeground;
         var tableRows = new List<String[]>
         {
             new[] { "渠道", "新增用户", "转化率" },
@@ -160,14 +208,19 @@ public class OfficeSampleExportTests
             new[] { "生态合作", "5,180", "9.4%" },
             new[] { "内容投放", "2,760", "7.6%" },
         };
-        var table = writer.AddTable(2, tableRows, 2, 4.2, 26);
-        var ppHeader = new NewLife.Office.Ppt.CellStyle { BackgroundColor = palette.Primary, FontColor = palette.OnPrimary, Bold = true };
-        for (var c = 0; c < 3; c++)
-            table.CellStyles[(0, c)] = ppHeader;
-        var ppStripe = new NewLife.Office.Ppt.CellStyle { BackgroundColor = palette.PaperMuted };
-        for (var r = 2; r < tableRows.Count; r += 2)
+        var table = writer.AddTable(3, tableRows, 0, 0, 1, firstRowHeader: true);
+        if (table != null)
+        {
+            var ppHeader = new PptCellStyle { BackgroundColor = palette.Primary, FontColor = palette.OnPrimary, Bold = true };
             for (var c = 0; c < 3; c++)
-                table.CellStyles[(r, c)] = ppStripe;
+                table.CellStyles[(0, c)] = ppHeader;
+            var ppStripe = new PptCellStyle { BackgroundColor = OfficeStyleKit.Tint(palette.Primary, 0.08) };
+            for (var r = 2; r < tableRows.Count; r += 2)
+                for (var c = 0; c < 3; c++)
+                    table.CellStyles[(r, c)] = ppStripe;
+        }
+        writer.SetSlideFooter(3, "星语 · 文档设计系统", true);
+        LayoutEngine.Apply(tableSlide);
 
         writer.Save(path);
         Assert.True(File.Exists(path));
