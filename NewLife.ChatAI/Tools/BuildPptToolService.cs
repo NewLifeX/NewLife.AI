@@ -320,6 +320,10 @@ public class BuildPptToolService(ILog log)
                     if (!elem.Alignment.IsNullOrEmpty()) tb.Alignment = elem.Alignment;
                     if (!elem.BackgroundColor.IsNullOrEmpty()) tb.BackgroundColor = elem.BackgroundColor;
 
+                    // 多行文本：DrawingML 不识别 \n，拆为独立段落（130% 行距 + 段前间距，观感更透气）
+                    if (elem.Runs == null && !elem.Content.IsNullOrEmpty() && elem.Content!.Contains('\n'))
+                        OfficeStyleKit.FillParagraphs(tb, elem.Content!, fontSize, bold, tb.FontColor);
+
                     // italic/underline 只能在 Run 层面设置，若无 Runs 则构造一个
                     if (hasItalic || hasUnderline && elem.Runs == null && !elem.Content.IsNullOrEmpty())
                     {
@@ -363,12 +367,18 @@ public class BuildPptToolService(ILog log)
                         var ts = elem.TableStyle;
                         var colCount = tableRows[0].Length;
 
+                        // 全表统一字号 14pt，表头 15pt 加粗更醒目
+                        for (var r = 0; r < tableRows.Count; r++)
+                            for (var c = 0; c < tableRows[r].Length; c++)
+                                table.CellStyles[(r, c)] = new CellStyle { FontSize = 14 };
+
                         // 表头：AI 显式给色时用它的，否则品牌主色底 + 反色字
                         var headerStyle = new CellStyle
                         {
                             BackgroundColor = !ts?.HeaderBgColor.IsNullOrEmpty() == true ? ts!.HeaderBgColor : palette.Primary,
                             FontColor = !ts?.HeaderFontColor.IsNullOrEmpty() == true ? ts!.HeaderFontColor : palette.OnPrimary,
                             Bold = true,
+                            FontSize = 15,
                         };
                         for (var c = 0; c < colCount; c++)
                             table.CellStyles[(0, c)] = headerStyle;
@@ -377,7 +387,7 @@ public class BuildPptToolService(ILog log)
                         var stripe = !ts?.StripeColor.IsNullOrEmpty() == true ? ts!.StripeColor : OfficeStyleKit.Tint(palette.Primary, 0.08);
                         if (!stripe.IsNullOrEmpty())
                         {
-                            var stripeStyle = new CellStyle { BackgroundColor = stripe };
+                            var stripeStyle = new CellStyle { BackgroundColor = stripe, FontSize = 14 };
                             for (var r = 2; r < tableRows.Count; r += 2)
                                 for (var c = 0; c < tableRows[r].Length; c++)
                                     table.CellStyles[(r, c)] = stripeStyle;

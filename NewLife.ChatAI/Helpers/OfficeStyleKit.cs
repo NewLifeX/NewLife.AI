@@ -167,6 +167,46 @@ public static class OfficeStyleKit
     }
     #endregion
 
+    #region PPT
+    /// <summary>把含换行的文本填充为多段落（DrawingML 不识别 \n，须拆为 &lt;a:p&gt;；统一 130% 行距与段前 6pt，可加项目符号）</summary>
+    /// <param name="textBox">目标文本框（段落写入其 Paragraphs）</param>
+    /// <param name="content">原始文本（以 \n 分行）</param>
+    /// <param name="fontSize">字号（磅）</param>
+    /// <param name="bold">是否加粗</param>
+    /// <param name="fontColor">文字颜色（可空，空表示继承）</param>
+    /// <param name="bulletChar">项目符号字符（可空表示不加符号）</param>
+    public static void FillParagraphs(NewLife.Office.Ppt.TextBox textBox, String content, Int32 fontSize, Boolean bold, String? fontColor, String? bulletChar = null)
+    {
+        if (textBox == null || content.IsNullOrEmpty()) return;
+
+        var lines = content.Split('\n')
+            .Select(l => l.TrimEnd('\r').Trim())
+            .Where(l => l.Length > 0)
+            .ToArray();
+        if (lines.Length == 0) return;
+
+        textBox.Text = String.Empty;
+        textBox.Paragraphs.Clear();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var para = new NewLife.Office.Ppt.Paragraph
+            {
+                LineSpacingPct = 130000,
+                SpaceBeforePt = i > 0 ? 6 : 0,
+            };
+            if (!bulletChar.IsNullOrEmpty()) para.BulletChar = bulletChar;
+            para.Runs.Add(new NewLife.Office.Ppt.Run
+            {
+                Text = lines[i],
+                FontSize = fontSize,
+                Bold = bold,
+                FontColor = fontColor,
+            });
+            textBox.Paragraphs.Add(para);
+        }
+    }
+    #endregion
+
     #region 颜色工具
     /// <summary>标准化颜色值为 6 位大写十六进制（去掉 # 前缀）；无效时返回 fallback</summary>
     /// <param name="hex">颜色值（可带 # 前缀）</param>

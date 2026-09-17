@@ -168,6 +168,7 @@ public class OfficeSampleExportTests
         // 指标页：标题 + KPI 行（KPI 主色、页码页脚）
         var kpiSlide = writer.AddSlide();
         kpiSlide.Layout = "title_content";
+        writer.AddShape(1, "rect", 2.0, 3.65, 29.87, 0.09, palette.Primary);   // 标题分隔线（与服务装饰一致）
         var kpiTitle = writer.AddTextBox(1, "本季度核心指标", 0, 0, 1, 1, 32, true);
         kpiTitle.Role = "title";
         kpiTitle.FontColor = palette.PaperForeground;
@@ -183,6 +184,7 @@ public class OfficeSampleExportTests
         // 图表页：标题 + 品牌色系柱状图
         var chartSlide = writer.AddSlide();
         chartSlide.Layout = "title_content";
+        writer.AddShape(2, "rect", 2.0, 3.65, 29.87, 0.09, palette.Primary);
         var chartTitle = writer.AddTextBox(2, "季度营收与利润", 0, 0, 1, 1, 32, true);
         chartTitle.Role = "title";
         chartTitle.FontColor = palette.PaperForeground;
@@ -198,6 +200,7 @@ public class OfficeSampleExportTests
         // 表格页：品牌表头 + 主色淡染斑马纹
         var tableSlide = writer.AddSlide();
         tableSlide.Layout = "title_content";
+        writer.AddShape(3, "rect", 2.0, 3.65, 29.87, 0.09, palette.Primary);
         var tableTitle = writer.AddTextBox(3, "分渠道数据", 0, 0, 1, 1, 32, true);
         tableTitle.Role = "title";
         tableTitle.FontColor = palette.PaperForeground;
@@ -211,16 +214,34 @@ public class OfficeSampleExportTests
         var table = writer.AddTable(3, tableRows, 0, 0, 1, firstRowHeader: true);
         if (table != null)
         {
-            var ppHeader = new PptCellStyle { BackgroundColor = palette.Primary, FontColor = palette.OnPrimary, Bold = true };
+            // 全表统一字号 14pt，表头 15pt 加粗（与服务输出一致）
+            for (var r = 0; r < tableRows.Count; r++)
+                for (var c = 0; c < 3; c++)
+                    table.CellStyles[(r, c)] = new PptCellStyle { FontSize = 14 };
+            var ppHeader = new PptCellStyle { BackgroundColor = palette.Primary, FontColor = palette.OnPrimary, Bold = true, FontSize = 15 };
             for (var c = 0; c < 3; c++)
                 table.CellStyles[(0, c)] = ppHeader;
-            var ppStripe = new PptCellStyle { BackgroundColor = OfficeStyleKit.Tint(palette.Primary, 0.08) };
+            var ppStripe = new PptCellStyle { BackgroundColor = OfficeStyleKit.Tint(palette.Primary, 0.08), FontSize = 14 };
             for (var r = 2; r < tableRows.Count; r += 2)
                 for (var c = 0; c < 3; c++)
                     table.CellStyles[(r, c)] = ppStripe;
         }
         writer.SetSlideFooter(3, "星语 · 文档设计系统", true);
         LayoutEngine.Apply(tableSlide);
+
+        // 要点页：标题 + 项目符号列表（多行文本段落化渲染，130% 行距）
+        var bulletSlide = writer.AddSlide();
+        bulletSlide.Layout = "title_content";
+        writer.AddShape(4, "rect", 2.0, 3.65, 29.87, 0.09, palette.Primary);
+        var bulletTitle = writer.AddTextBox(4, "交付节奏", 0, 0, 1, 1, 32, true);
+        bulletTitle.Role = "title";
+        bulletTitle.FontColor = palette.PaperForeground;
+        var bulletBody = writer.AddTextBox(4, "第 1 周：需求冻结与接口评审\n第 2-3 周：开发联调与自动化测试\n第 4 周：性能压测与验收上线", 0, 0, 1, 1, 16);
+        bulletBody.Role = "body";
+        bulletBody.FontColor = palette.PaperForeground;
+        OfficeStyleKit.FillParagraphs(bulletBody, bulletBody.Text, 16, false, palette.PaperForeground, "•");
+        writer.SetSlideFooter(4, "星语 · 文档设计系统", true);
+        LayoutEngine.Apply(bulletSlide);
 
         writer.Save(path);
         Assert.True(File.Exists(path));
