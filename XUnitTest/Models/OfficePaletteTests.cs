@@ -44,6 +44,18 @@ public class OfficePaletteTests
     }
 
     [Fact]
+    [DisplayName("Resolve—dark主题_深底自动配浅色文字")]
+    public void Resolve_DarkTheme_LightText()
+    {
+        var palette = OfficePalette.Resolve("dark");
+
+        Assert.True(palette.IsDark);
+        Assert.Equal("F1F5F9", palette.Foreground);
+        Assert.Equal("94A3B8", palette.MutedForeground);
+        Assert.Equal("262626", palette.PaperForeground);
+    }
+
+    [Fact]
     [DisplayName("Paper适配—深色主题浅色文字映射深灰_浅色主题保留原值")]
     public void PaperForeground_DarkTheme_MapsToCarbon()
     {

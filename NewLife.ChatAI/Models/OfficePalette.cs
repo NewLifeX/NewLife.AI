@@ -134,6 +134,14 @@ public class OfficePalette
             palette.SeriesColors = [palette.Primary, palette.Accent, palette.Secondary, "8B5CF6", "10B981", "F59E0B"];
 
         palette.IsDark = OfficeStyleKit.Luma(palette.Background) < 128;
+
+        // 深底深字兜底：内置主题只提供背景与强调色，文字槽仍是浅色主题的深灰默认值
+        if (palette.IsDark)
+        {
+            if (OfficeStyleKit.Luma(palette.Foreground) < 128) palette.Foreground = "F1F5F9";
+            if (OfficeStyleKit.Luma(palette.MutedForeground) < 128) palette.MutedForeground = "94A3B8";
+        }
+
         return palette;
     }
 
