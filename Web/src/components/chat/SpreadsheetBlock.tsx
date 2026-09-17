@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
+import { getThemeColors } from '@/lib/theme-colors'
 
 /** build_excel 工具返回的 JSON 结构 */
 export interface SpreadsheetData {
@@ -16,20 +17,6 @@ export interface SpreadsheetData {
 
 interface SpreadsheetBlockProps { data: SpreadsheetData; className?: string }
 
-const THEME_COLORS: Record<string, { bg: string; accent: string; text: string }> = {
-  blue:      { bg: '#1E40AF', accent: '#2563EB', text: '#FFFFFF' },
-  dark:      { bg: '#0F172A', accent: '#6366F1', text: '#F1F5F9' },
-  corporate: { bg: '#374151', accent: '#1F2937', text: '#FFFFFF' },
-  warm:      { bg: '#C2410C', accent: '#EA580C', text: '#FFFFFF' },
-  green:     { bg: '#15803D', accent: '#16A34A', text: '#FFFFFF' },
-  minimal:   { bg: '#18181B', accent: '#71717A', text: '#FAFAFA' },
-  ocean:     { bg: '#0C4A6E', accent: '#0EA5E9', text: '#FFFFFF' },
-  sunset:    { bg: '#1E1B4B', accent: '#F97316', text: '#FFFFFF' },
-  forest:    { bg: '#064E3B', accent: '#059669', text: '#FFFFFF' },
-  slate:     { bg: '#0F172A', accent: '#64748B', text: '#F8FAFC' },
-  amber:     { bg: '#451A03', accent: '#F59E0B', text: '#FFFFFF' },
-}
-
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -37,7 +24,7 @@ function formatSize(bytes: number): string {
 }
 
 function resolveColors(theme?: string) {
-  return THEME_COLORS[theme ?? 'blue'] ?? THEME_COLORS['blue']
+  return getThemeColors(theme)
 }
 
 export function SpreadsheetBlock({ data, className }: SpreadsheetBlockProps) {

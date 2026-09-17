@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
+import { getThemeColors } from '@/lib/theme-colors'
 
 /** show_slide 工具返回的 JSON 结构 */
 export interface SlideData {
@@ -18,21 +19,6 @@ interface SlideBlockProps {
   className?: string
 }
 
-/** 内置主题的预览色（与后端 ThemeColors 对应） */
-const THEME_COLORS: Record<string, { bg: string; accent: string; text: string }> = {
-  blue:      { bg: '#1E40AF', accent: '#2563EB', text: '#FFFFFF' },
-  dark:      { bg: '#0F172A', accent: '#6366F1', text: '#F1F5F9' },
-  corporate: { bg: '#374151', accent: '#1F2937', text: '#FFFFFF' },
-  warm:      { bg: '#C2410C', accent: '#EA580C', text: '#FFFFFF' },
-  green:     { bg: '#15803D', accent: '#16A34A', text: '#FFFFFF' },
-  minimal:   { bg: '#18181B', accent: '#71717A', text: '#FAFAFA' },
-  ocean:     { bg: '#0C4A6E', accent: '#0EA5E9', text: '#FFFFFF' },
-  sunset:    { bg: '#1E1B4B', accent: '#F97316', text: '#FFFFFF' },
-  forest:    { bg: '#064E3B', accent: '#059669', text: '#FFFFFF' },
-  slate:     { bg: '#0F172A', accent: '#64748B', text: '#F8FAFC' },
-  amber:     { bg: '#451A03', accent: '#F59E0B', text: '#FFFFFF' },
-}
-
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -41,7 +27,7 @@ function formatFileSize(bytes: number): string {
 
 /** 幻灯片预览缩略图（主题色色块 + 页标题） */
 function SlideThumbnail({ title, themeKey }: { title: string; themeKey?: string }) {
-  const colors = THEME_COLORS[themeKey ?? 'blue'] ?? THEME_COLORS['blue']
+  const colors = getThemeColors(themeKey)
   return (
     <div
       className="flex flex-col items-center justify-center rounded-md overflow-hidden border border-gray-200/60 dark:border-gray-600/60 shrink-0"
@@ -71,7 +57,7 @@ function SlideThumbnail({ title, themeKey }: { title: string; themeKey?: string 
 /** show_slide 工具结果渲染块。展示元数据预览卡 + 下载按钮 */
 export function SlideBlock({ data, className }: SlideBlockProps) {
   const themeKey = data.theme ?? 'blue'
-  const colors = THEME_COLORS[themeKey] ?? THEME_COLORS['blue']
+  const colors = getThemeColors(themeKey)
 
   return (
     <div
