@@ -76,6 +76,9 @@ public class BuildExcelToolService(ILog log)
         {
             var sheetName = sheet.Name ?? "Sheet1";
 
+            // 工作表标签色跟随品牌主色
+            writer.SetSheetTabColor(sheetName, palette.Primary);
+
             // 表头（headers 为空时跳过，避免空行占用首行且行高留白）
             if (sheet.Headers is { Length: > 0 })
             {
