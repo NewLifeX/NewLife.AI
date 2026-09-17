@@ -10,15 +10,17 @@ namespace NewLife.AI.Clients.OpenAI;
 /// <item>思考控制：<see cref="IChatRequest.EnableThinking"/> 映射为 <c>thinking: {type: "enabled"|"disabled"}</c>，而非 OpenAI 不支持的 <c>enable_thinking</c></item>
 /// <item>deepseek-reasoner 始终输出 <c>reasoning_content</c> 思维链，不支持 temperature/top_p/presence_penalty/frequency_penalty 及部分采样参数</item>
 /// <item>reasoning_content 字段由基类 <see cref="OpenAIClientBase.ParseChatMessage"/> 负责解析，无需额外处理</item>
-/// <item>V4 系列（deepseek-v4-flash/v4-pro）统一上下文 1M，支持工具调用；旧 deepseek-chat/reasoner 作为兼容别名保留</item>
+/// <item>V4.1 系列（deepseek-flash/v4-pro）统一上下文 1M、支持工具调用，deepseek-flash 支持图像理解；
+/// 旧名 v4-flash/vision-exp 请求由 V4.1 Flash 服务，deepseek-chat/reasoner 作为兼容别名保留</item>
 /// <item>模型能力推断（思考/工具/上下文/价格）由 deepseek 模型家族统一接管（见 <see cref="ModelFamilies"/>），
 /// 跨平台（DashScope/腾讯/火山等）托管 deepseek 模型时能力一致，服务商价格可精确注册覆盖</item>
 /// </list>
 /// </remarks>
 [AiClient("DeepSeek", "深度求索", "https://api.deepseek.com", Description = "DeepSeek 系列推理和对话模型", Order = 2)]
+[AiClientModel("deepseek-flash", "DeepSeek Flash", Code = "DeepSeek", Thinking = true, FunctionCalling = true, Vision = true, ReasoningEfforts = "high,max", InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.04)]
 [AiClientModel("deepseek-v4-pro", "DeepSeek V4 Pro", Code = "DeepSeek", Thinking = true, FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 9, OutputPrice = 27, CachedInputPrice = 0.3)]
-[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Code = "DeepSeek", Thinking = true, FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 3, OutputPrice = 9, CachedInputPrice = 0.1)]
-[AiClientModel("deepseek-v4-flash-vision-exp", "DeepSeek V4 Flash Vision", Code = "DeepSeek", Thinking = true, FunctionCalling = true, Vision = true, ReasoningEfforts = "high,max", InputPrice = 3, OutputPrice = 9, CachedInputPrice = 0.1)]
+[AiClientModel("deepseek-v4-flash", "DeepSeek V4 Flash", Code = "DeepSeek", Thinking = true, FunctionCalling = true, ReasoningEfforts = "high,max", InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.04)]
+[AiClientModel("deepseek-v4-flash-vision-exp", "DeepSeek V4 Flash Vision", Code = "DeepSeek", Thinking = true, FunctionCalling = true, Vision = true, ReasoningEfforts = "high,max", InputPrice = 2, OutputPrice = 8, CachedInputPrice = 0.04)]
 public class DeepSeekChatClient : OpenAIClientBase, IBalanceClient
 {
     #region 属性

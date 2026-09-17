@@ -23,6 +23,7 @@ namespace NewLife.AI.Clients;
 /// <param name="UnitPrice">非 Token 模式单价（元/张、元/秒、元/百万Token、元/千字符）</param>
 /// <param name="UnitName">单价单位标签</param>
 /// <param name="FromFallbackPricing">价格是否来自能力分级兜底。写库方据此保留管理员已设置的价格</param>
+/// <param name="Description">模型简介。JSON 精确简介优先、家族系列简介兜底，写库方写入模型配置备注（Remark）</param>
 public record AiModelMetadata(
     String? Name = null,
     Boolean? SupportThinking = null,
@@ -41,7 +42,8 @@ public record AiModelMetadata(
     AiModelPricing? Pricing = null,
     Decimal? UnitPrice = null,
     String? UnitName = null,
-    Boolean FromFallbackPricing = false)
+    Boolean FromFallbackPricing = false,
+    String? Description = null)
 {
     /// <summary>是否声明了任一能力位/上下文/推理强度字段。用于判断是否为能力覆盖，纯价格条目返回 false</summary>
     public Boolean HasCapability =>
@@ -49,10 +51,10 @@ public record AiModelMetadata(
         SupportSpeech != null || SupportImage != null || SupportVideo != null || SupportEmbedding != null ||
         SupportRerank != null || ContextLength != null || ReasoningEfforts != null;
 
-    /// <summary>是否声明了任一字段（能力/名称/价格）。全空表示解析器未识别该模型</summary>
+    /// <summary>是否声明了任一字段（能力/名称/简介/价格）。全空表示解析器未识别该模型</summary>
     public Boolean HasAny =>
         HasCapability || Name != null || MaxOutputTokens != null || PricingMode != null || Pricing != null ||
-        UnitPrice != null || UnitName != null;
+        UnitPrice != null || UnitName != null || Description != null;
 }
 
 /// <summary>模型元数据解析器。按 <see cref="Order"/> 升序参与解析链合成，高优先级（Order 小）声明的字段生效，
@@ -138,6 +140,7 @@ public static class ModelMetadataResolverChain
         return md with
         {
             Name = md.Name ?? block.Name,
+            Description = md.Description ?? block.Description,
             SupportThinking = md.SupportThinking ?? block.SupportThinking,
             SupportFunction = md.SupportFunction ?? block.SupportFunction,
             SupportVision = md.SupportVision ?? block.SupportVision,

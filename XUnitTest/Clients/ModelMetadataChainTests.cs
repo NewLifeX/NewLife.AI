@@ -151,6 +151,11 @@ public class ModelMetadataChainTests
         Assert.True(cap.HasCapability);
         Assert.True(cap.HasAny);
 
+        // 简介：无能力位但计入 HasAny（纯简介条目不被当作空壳拦截）
+        var desc = new AiModelMetadata(Description: "系列简介");
+        Assert.False(desc.HasCapability);
+        Assert.True(desc.HasAny);
+
         var empty = new AiModelMetadata();
         Assert.False(empty.HasCapability);
         Assert.False(empty.HasAny);
@@ -167,5 +172,35 @@ public class ModelMetadataChainTests
         var idxDesc = Array.FindIndex(list, e => e is DescriptorModelMetadataResolver);
         var idxFall = Array.FindIndex(list, e => e is FallbackModelMetadataResolver);
         Assert.True(idxDesc >= 0 && idxDesc < idxFall);
+    }
+
+    [Fact]
+    [DisplayName("简介合并：高优先级声明优先、低位补缺")]
+    public void Resolve_Description_Priority()
+    {
+        ModelMetadataResolverChain.Register(new FakeResolver(1, P, new AiModelMetadata(Description: "精确简介")));
+        ModelMetadataResolverChain.Register(new FakeResolver(2, P, new AiModelMetadata(Description: "家族兜底")));
+
+        var md = ModelMetadataResolverChain.Resolve(P, "m8");
+        Assert.NotNull(md);
+        Assert.Equal("精确简介", md!.Description);
+
+        // 高位未声明简介时由低位补缺
+        ModelMetadataResolverChain.Register(new FakeResolver(1, P, new AiModelMetadata(SupportThinking: true)));
+        var md2 = ModelMetadataResolverChain.Resolve(P, "m9");
+        Assert.NotNull(md2);
+        Assert.Equal("家族兜底", md2!.Description);
+    }
+
+    [Fact]
+    [DisplayName("描述符解析：未注册新版本模型_家族系列简介兜底")]
+    public void DescriptorResolver_FamilyDescriptionFallback()
+    {
+        // 未在 [AiClientModel] 注册的新版本（qwen3.9-max-preview）→ 家族推断，随能力携带系列简介
+        var resolver = new DescriptorModelMetadataResolver();
+        var md = resolver.Resolve(null, "DashScope", "qwen3.9-max-preview");
+        Assert.NotNull(md);
+        Assert.Equal("Qwen 通义千问系列", md!.Description);
+        Assert.True(md.SupportThinking);
     }
 }

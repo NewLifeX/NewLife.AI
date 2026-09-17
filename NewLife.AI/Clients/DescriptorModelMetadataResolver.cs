@@ -47,6 +47,7 @@ public class DescriptorModelMetadataResolver : IModelMetadataResolver
         // 能力位与上下文（cap 恒有值；Context 0 视为未知不覆盖）
         var md = new AiModelMetadata(
             Name: mi?.DisplayName,
+            Description: ModelFamilyRegistry.MatchFamily(model)?.Description,
             SupportThinking: caps.SupportThinking,
             SupportFunction: caps.SupportFunction,
             SupportVision: caps.SupportVision,

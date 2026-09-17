@@ -41,6 +41,7 @@ public static class ModelFamilies
     private static ModelFamily CreateQwenMedia() => new("qwen-media",
         "qwen-tts*|qwen3-tts*|qwen-image*|qwen-audio*|qwen3-asr*|qwen-voice*")
     {
+        Description = "Qwen 多媒体系列（语音与图像）",
         Rules =
         [
             R("qwen-tts*|qwen3-tts*", func: false, speech: true),
@@ -52,6 +53,7 @@ public static class ModelFamilies
     /// <summary>qwen 对话家族。基于 2026-Q2 官方命名规律，通配覆盖 qwen3.x 全部新版本</summary>
     private static ModelFamily CreateQwen() => new("qwen", "qwen*", 32_768)
     {
+        Description = "Qwen 通义千问系列",
         Rules =
         [
             // 专用翻译模型：不支持函数调用
@@ -92,12 +94,16 @@ public static class ModelFamilies
             R("qwen3.6*", context: 1_048_576),
             R("qwen3.6-max-preview*", context: 262_144),
             R("qwen-max*|qwen-plus*|qwen-flash*|qwen-turbo*|qwen2.5*", context: 131_072),
+
+            // === 实时翻译（Livetranslate）：音频/图片输入、语音输出，不思考、不支持工具（放最后覆盖前面思考规则） ===
+            R("qwen*-livetranslate*", thinking: false, func: false, audio: true, vision: true, context: 1_048_576),
         ],
     };
 
     /// <summary>qwq 专用推理家族</summary>
     private static ModelFamily CreateQwq() => new("qwq", "qwq*", 131_072)
     {
+        Description = "Qwq 推理系列（通义千问）",
         Rules =
         [
             R("qwq*", thinking: true),
@@ -107,6 +113,7 @@ public static class ModelFamilies
     /// <summary>qvq 视觉推理家族</summary>
     private static ModelFamily CreateQvq() => new("qvq", "qvq*", 131_072)
     {
+        Description = "Qvq 视觉推理系列（通义千问）",
         Rules =
         [
             R("qvq*", thinking: true, vision: true),
@@ -116,6 +123,7 @@ public static class ModelFamilies
     /// <summary>deepseek 家族。能力跨平台共享：官方、DashScope、腾讯、火山等托管 deepseek 时能力一致</summary>
     private static ModelFamily CreateDeepSeek() => new("deepseek", "deepseek*")
     {
+        Description = "DeepSeek 深度求索系列",
         Rules =
         [
             // 兜底（最先）：v4+ 新版本默认思考 + 工具 + 1M，被后续更具体规则覆盖
@@ -124,8 +132,12 @@ public static class ModelFamilies
             R("deepseek-reasoner*", thinking: true, func: false, context: 1_048_576, efforts: "high,max"),
             // V4 标准版：思考 + 工具调用 + 1M
             R("deepseek-v4-pro*", thinking: true, func: true, context: 1_048_576, efforts: "high,max"),
-            // V4 快速版：思考 + 工具调用 + 1M
+            // V4 快速版：思考 + 工具调用 + 1M（v4-flash 旧名已下线，请求由 V4.1 Flash 服务）
             R("deepseek-v4-flash*", thinking: true, func: true, context: 1_048_576, efforts: "high,max"),
+            // V4.1 快速版（百炼托管 ID deepseek-v4.1-flash 点号命名）：思考 + 工具 + 1M，仅文本（托管平台不支持图片输入）
+            R("deepseek-v4.1-flash*", thinking: true, func: true, context: 1_048_576, vision: false, efforts: "high,max"),
+            // 官方新命名 deepseek-flash（DeepSeek V4.1 Flash）：思考 + 工具 + 1M + 图像理解（视觉输入）
+            R("deepseek-flash*", thinking: true, func: true, context: 1_048_576, vision: true, efforts: "high,max"),
             // V4 视觉版：思考 + 工具调用 + 视觉输入（deepseek-v4-flash-vision-exp 等），后规则覆盖先规则
             R("deepseek*-vision*", thinking: true, func: true, context: 1_048_576, vision: true, efforts: "high,max"),
             // chat 别名：不思考，支持工具调用
@@ -138,6 +150,7 @@ public static class ModelFamilies
     /// <summary>腾讯混元家族。新版 TokenHub 主力 hy3（295B/21B MoE）与旧 hunyuan-* 兼容；数据源 ModelData/hunyuan.json</summary>
     private static ModelFamily CreateHunyuan() => new("hunyuan", "hunyuan*|hy3*", 131_072)
     {
+        Description = "腾讯混元系列",
         Rules =
         [
             // 兜底（最先）：现代混元默认思考+工具，具体型号后覆盖
@@ -156,14 +169,19 @@ public static class ModelFamilies
     };
 
     /// <summary>智谱 GLM 家族。含文生图 cogview / 视频 cogvideox；数据源 ModelData/zhipu.json 与 DashScope 百炼托管</summary>
-    private static ModelFamily CreateGlm() => new("glm", "glm*|cogview*|cogvideox*", 131_072)
+    private static ModelFamily CreateGlm() => new("glm", "glm*|cogview*|cogvideox*|zhipu*", 131_072)
     {
+        Description = "智谱 GLM 系列",
         Rules =
         [
             // 兜底（最先）：现代 GLM 主档默认思考+工具，具体型号后覆盖
             R("glm*", thinking: true, func: true),
+            // 智谱直供斜杠 ID（ZHIPU/GLM-5.3 等）：同 GLM 主档
+            R("zhipu/*", thinking: true, func: true),
             // glm-5.x 主档：思考 + 视觉 + 1M（2026-Q3 官方；5v-turbo 视觉同档）
             R("glm-5*", vision: true, context: 1_048_576),
+            // 斜杠 ID 的 GLM-5.x 同档
+            R("zhipu/glm-5*", vision: true, context: 1_048_576),
             // glm-5 flash 快速档：不思考（免费/低价档，如 glm-5.3-flash）
             R("glm-5*-flash*", thinking: false),
             // glm-4 老档：默认视觉 + 128K（-4v/-flash/-air/-plus 等子型号后续覆盖）
@@ -192,6 +210,7 @@ public static class ModelFamilies
     /// 数据源 ModelData/openai.json。dall-e/sora/whisper/tts-1/text-embedding 非 gpt 前缀，仍由基类通用兜底处理</summary>
     private static ModelFamily CreateGpt() => new("gpt", "gpt*|o1*|o3*|o4*|o5*")
     {
+        Description = "OpenAI GPT 系列",
         Rules =
         [
             // === 思考能力 ===
@@ -236,6 +255,7 @@ public static class ModelFamilies
     /// <summary>Anthropic Claude 家族。opus/sonnet/haiku 三级；opus-4-7 旗舰 1M，其余 200K；全系思考+工具+视觉。数据源 ModelData/anthropic.json</summary>
     private static ModelFamily CreateClaude() => new("claude", "claude*", 200_000)
     {
+        Description = "Anthropic Claude 系列",
         Rules =
         [
             // 兜底（最先）：Claude 全系思考 + 工具 + 视觉，200K
@@ -248,6 +268,7 @@ public static class ModelFamilies
     /// <summary>Google Gemini 家族。pro/flash 分档，全系 1M 上下文；思考+工具+视觉。数据源 ModelData/gemini.json</summary>
     private static ModelFamily CreateGemini() => new("gemini", "gemini*", 1_048_576)
     {
+        Description = "Google Gemini 系列",
         Rules =
         [
             R("gemini*", thinking: true, func: true, vision: true, context: 1_048_576),
@@ -257,6 +278,7 @@ public static class ModelFamilies
     /// <summary>火山方舟豆包家族。主力 doubao-seed 系列与 doubao-1.5 系列；数据源 ModelData/volcengine.json</summary>
     private static ModelFamily CreateDoubao() => new("doubao", "doubao*", 32_768)
     {
+        Description = "字节豆包系列",
         Rules =
         [
             // 兜底（最先）：豆包轻量档默认不思考，seed/pro 后覆盖
@@ -281,6 +303,7 @@ public static class ModelFamilies
     /// <summary>MiniMax 家族。官方 API 用 MiniMax-M2.5 等标识，DashScope 托管用 MiniMax/MiniMax-M3 斜杠前缀；数据源 ModelData/minimax.json</summary>
     private static ModelFamily CreateMiniMax() => new("minimax", "minimax*|abab*", 196_608)
     {
+        Description = "MiniMax 系列",
         Rules =
         [
             // 兜底（最先）：默认不思考、支持工具，旧 abab 与未知档后覆盖
@@ -301,6 +324,7 @@ public static class ModelFamilies
     /// <summary>月之暗面 Kimi 家族。kimi-k 系列推理与旧 moonshot-v1 系列；数据源 ModelData/moonshot.json 与 DashScope 百炼托管</summary>
     private static ModelFamily CreateKimi() => new("kimi", "kimi*|moonshot-v1*", 131_072)
     {
+        Description = "月之暗面 Kimi 系列",
         Rules =
         [
             // 兜底（最先）：kimi-k 系列默认思考+工具，具体型号后覆盖
@@ -309,6 +333,8 @@ public static class ModelFamilies
             R("kimi-k3*", vision: true, context: 1_048_576),
             // K2 系列：思考 + 视觉，256K（k2-0905 等历史纯文本版特例）
             R("kimi-k2*", vision: true, context: 262_144),
+            // K2 系列百炼托管斜杠 ID（kimi/kimi-k2.8-preview 等）
+            R("kimi*/kimi-k2*", vision: true, context: 262_144),
             R("kimi-k2-0905*", vision: false),
             // K1.5：思考，128K
             R("kimi-k1.5*", vision: false, context: 131_072),
@@ -324,6 +350,7 @@ public static class ModelFamilies
     /// <summary>百度文心家族。ernie-4.5/4.0-turbo 主档思考+视觉，speed/lite/tiny 轻量档；数据源 ModelData/qianfan.json</summary>
     private static ModelFamily CreateErnie() => new("ernie", "ernie*", 131_072)
     {
+        Description = "百度文心系列",
         Rules =
         [
             // 兜底（最先）：默认不思考、支持工具，主档后覆盖
@@ -342,6 +369,7 @@ public static class ModelFamilies
     /// <summary>讯飞星火家族。spark-4.0-ultra 主档思考，3.5-max 轻量；数据源 ModelData/spark.json</summary>
     private static ModelFamily CreateSpark() => new("spark", "spark*", 131_072)
     {
+        Description = "讯飞星火系列",
         Rules =
         [
             // 兜底（最先）：默认不思考、支持工具
@@ -356,6 +384,7 @@ public static class ModelFamilies
     /// <summary>xAI Grok 家族。grok-3/4 主档思考+视觉，grok-2 旧档；数据源 ModelData/xai.json</summary>
     private static ModelFamily CreateGrok() => new("grok", "grok*", 131_072)
     {
+        Description = "xAI Grok 系列",
         Rules =
         [
             // 兜底（最先）：默认不思考、支持工具
@@ -375,6 +404,7 @@ public static class ModelFamilies
     /// <summary>Mistral 家族。精简档：默认支持工具，上下文 128K；平台专属价由 [AiClientModel] 精确注册覆盖</summary>
     private static ModelFamily CreateMistral() => new("mistral", "mistral*", 131_072)
     {
+        Description = "Mistral 系列",
         Rules =
         [
             // 兜底：不思考、支持工具
@@ -387,6 +417,7 @@ public static class ModelFamilies
     /// <summary>Meta Llama 家族。精简档：默认支持工具与 128K 上下文，广泛托管于 Groq/Cerebras/Together 等 OpenAI 兼容平台</summary>
     private static ModelFamily CreateLlama() => new("llama", "llama*", 131_072)
     {
+        Description = "Meta Llama 系列",
         Rules =
         [
             R("llama*", thinking: false, func: true),
@@ -396,6 +427,7 @@ public static class ModelFamilies
     /// <summary>Google Gemma 家族。精简档：默认支持工具，gemma3 支持 128K 上下文</summary>
     private static ModelFamily CreateGemma() => new("gemma", "gemma*", 8_192)
     {
+        Description = "Google Gemma 系列",
         Rules =
         [
             R("gemma*", thinking: false, func: true),
