@@ -42,7 +42,7 @@ public class BuildExcelToolService(ILog log)
         var themeKey = OfficeStyleKit.ResolveTheme(theme, context?.Request?.ConversationId);
         log.Info("[BuildExcel] 开始生成：{0}，{1} 个工作表，主题：{2}", title, sheetList.Length, themeKey ?? "default");
 
-        var xlsxBytes = await BuildXlsxAsync(sheetList, themeKey);
+        var xlsxBytes = await BuildXlsxAsync(sheetList, title, themeKey);
         var archiveResult = await ArchiveFileAsync(xlsxBytes, title,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx", "Excel");
 
@@ -62,7 +62,7 @@ public class BuildExcelToolService(ILog log)
 
     #region Excel 构建
 
-    private async Task<Byte[]> BuildXlsxAsync(ExcelSheetModel[] sheetList, String? theme)
+    private async Task<Byte[]> BuildXlsxAsync(ExcelSheetModel[] sheetList, String title, String? theme)
     {
         using var ms = new MemoryStream();
         var writer = new ExcelWriter(ms);
@@ -79,9 +79,16 @@ public class BuildExcelToolService(ILog log)
             // 工作表标签色跟随品牌主色
             writer.SetSheetTabColor(sheetName, palette.Primary);
 
-            // 表头（headers 为空时跳过，避免空行占用首行且行高留白）
+            // 标题带：跨列合并的品牌深色标题行（对齐真实报表习惯），后续内容整体下移一行
+            var offset = 0;
             if (sheet.Headers is { Length: > 0 })
             {
+                writer.WriteRow(sheetName, [title], OfficeStyleKit.CreateExcelTitleFormat(palette));
+                if (sheet.Headers.Length > 1)
+                    writer.MergeCell(sheetName, 0, 0, 0, sheet.Headers.Length - 1);
+                writer.SetRowHeight(sheetName, 1, 38);
+                offset = 1;
+
                 // 表头样式：品牌默认，AI 显式传色时覆盖（只给背景色时自动配对比字色）
                 var headerStyle = OfficeStyleKit.CreateExcelHeaderFormat(palette);
                 if (sheet.Style != null)
@@ -97,8 +104,13 @@ public class BuildExcelToolService(ILog log)
                 writer.WriteHeader(sheetName, sheet.Headers, headerStyle);
 
                 // 表头行高，增强层次感
-                writer.SetRowHeight(sheetName, 1, 22);
+                writer.SetRowHeight(sheetName, 1 + offset, 24);
             }
+
+            // 列宽：AI 显式指定优先，否则按内容智能估算（中文按 2 字符宽）；先行计算供数据行换行判断
+            var widths = sheet.ColumnWidths is { Length: > 0 }
+                ? sheet.ColumnWidths
+                : OfficeStyleKit.EstimateColumnWidths(sheet.Headers ?? [], sheet.Rows);
 
             if (sheet.Rows is { Length: > 0 })
             {
@@ -107,19 +119,26 @@ public class BuildExcelToolService(ILog log)
                 if (sheet.Style != null && !sheet.Style.StripeColor.IsNullOrEmpty())
                     stripeStyle.BackgroundColor = sheet.Style.StripeColor;
 
+                CellFormat? dataWrap = null;
+                CellFormat? stripeWrap = null;
+                var baseRow = offset + (sheet.Headers is { Length: > 0 } ? 1 : 0);
                 var rows = sheet.Rows.Select(r => r.Cast<Object>().ToArray()).ToList();
                 for (var ri = 0; ri < rows.Count; ri++)
                 {
-                    // 斑马纹：奇数行叠加浅底（0-based，第0行是首数据行）
-                    var style = ri % 2 == 1 ? stripeStyle : dataStyle;
+                    // 斑马纹：奇数行叠加淡染底色（0-based，第0行是首数据行）
+                    var striped = ri % 2 == 1;
+                    var needWrap = HasOverflowText(rows[ri], widths);
+                    // 长文本行开自动换行、交给 Excel 自适应行高；常规行固定 22 磅提升呼吸感
+                    var style = striped
+                        ? (needWrap ? stripeWrap ??= OfficeStyleKit.CreateExcelDataFormat(palette, true, sheet.NumberFormat, true) : stripeStyle)
+                        : (needWrap ? dataWrap ??= OfficeStyleKit.CreateExcelDataFormat(palette, false, sheet.NumberFormat, true) : dataStyle);
+                    if (needWrap && striped && sheet.Style?.StripeColor.IsNullOrEmpty() == false)
+                        style.BackgroundColor = sheet.Style.StripeColor;
                     writer.WriteRow(sheetName, rows[ri], style);
+                    if (!needWrap) writer.SetRowHeight(sheetName, baseRow + ri + 1, 22);
                 }
             }
 
-            // 列宽：AI 显式指定优先，否则按内容智能估算（中文按 2 字符宽）
-            var widths = sheet.ColumnWidths is { Length: > 0 }
-                ? sheet.ColumnWidths
-                : OfficeStyleKit.EstimateColumnWidths(sheet.Headers ?? [], sheet.Rows);
             for (var ci = 0; ci < widths.Length; ci++)
                 writer.SetColumnWidth(sheetName, ci, widths[ci]);
 
@@ -141,19 +160,19 @@ public class BuildExcelToolService(ILog log)
                         "notbetween" => ConditionalFormatValues.NotBetween,
                         _ => ConditionalFormatValues.GreaterThan,
                     };
-                    writer.AddConditionalFormat(sheetName, cf.Range, type, cf.Value, cf.Color);
+                    writer.AddConditionalFormat(sheetName, ShiftRange(cf.Range!, offset), type, cf.Value, cf.Color);
                 }
             }
 
             if (sheet.FreezeRows is > 0)
-                writer.FreezePane(sheetName, sheet.FreezeRows.Value, 0);
+                writer.FreezePane(sheetName, sheet.FreezeRows.Value + offset, 0);
 
             if (!sheet.AutoFilter.IsNullOrEmpty())
-                writer.SetAutoFilter(sheetName, sheet.AutoFilter!);
+                writer.SetAutoFilter(sheetName, ShiftRange(sheet.AutoFilter!, offset));
 
             if (sheet.Dropdowns != null)
                 foreach (var dd in sheet.Dropdowns.Where(d => d.Items is { Length: > 0 }))
-                    writer.AddDropdownValidation(sheetName, dd.Range ?? "A2:A1000", dd.Items!);
+                    writer.AddDropdownValidation(sheetName, ShiftRange(dd.Range ?? "A2:A1000", offset), dd.Items!);
 
             // 图表：模型声明支持但此前未实现，补齐 AddChart 调用
             if (sheet.Charts is { Length: > 0 })
@@ -181,6 +200,44 @@ public class BuildExcelToolService(ILog log)
 
         writer.Save();
         return ms.ToArray();
+    }
+
+    /// <summary>判断数据行是否存在超出列宽的文本（需要自动换行并由 Excel 自适应行高）</summary>
+    /// <param name="row">单元格值数组</param>
+    /// <param name="widths">列宽数组（字符宽）</param>
+    /// <returns>是否需换行</returns>
+    private static Boolean HasOverflowText(Object[] row, Int32[] widths)
+    {
+        for (var c = 0; c < row.Length && c < widths.Length; c++)
+        {
+            if (row[c] is not String text || text.Length == 0) continue;
+            if (OfficeStyleKit.DisplayWidth(text) > widths[c]) return true;
+        }
+        return false;
+    }
+
+    /// <summary>把 Excel 区域引用整体下移若干行（如 "A1:E5" → "A2:E6"），用于标题带占位后的区域修正</summary>
+    /// <param name="range">区域引用（单元格或区域）</param>
+    /// <param name="rows">下移行数</param>
+    /// <returns>修正后的区域引用</returns>
+    private static String ShiftRange(String range, Int32 rows)
+    {
+        if (rows == 0 || range.IsNullOrEmpty()) return range;
+
+        var parts = range!.Split(':');
+        for (var i = 0; i < parts.Length; i++)
+            parts[i] = ShiftCellRef(parts[i], rows);
+        return String.Join(":", parts);
+    }
+
+    /// <summary>把单元格引用下移若干行（保留列名与绝对引用符号）</summary>
+    private static String ShiftCellRef(String cellRef, Int32 rows)
+    {
+        var i = 0;
+        while (i < cellRef.Length && (cellRef[i] < '0' || cellRef[i] > '9')) i++;
+        // 无行号（整列引用如 "A"）或行号非法时保持原样
+        if (i >= cellRef.Length || !Int32.TryParse(cellRef[i..], out var row)) return cellRef;
+        return cellRef[..i] + (row + rows);
     }
 
     #endregion

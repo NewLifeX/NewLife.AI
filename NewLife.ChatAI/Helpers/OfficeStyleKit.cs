@@ -89,27 +89,43 @@ public static class OfficeStyleKit
         BorderColor = palette.PaperBorder,
     };
 
-    /// <summary>创建 Excel 数据单元格样式（垂直居中 + 浅色边框；stripe=true 时叠加斑马纹底色）</summary>
+    /// <summary>创建 Excel 标题行样式（品牌主色加深底 + 白色大字居中，用于跨列合并的报表标题带）</summary>
+    /// <param name="palette">办公文档调色板</param>
+    /// <returns>标题行样式</returns>
+    public static CellFormat CreateExcelTitleFormat(OfficePalette palette) => new()
+    {
+        Bold = true,
+        FontName = palette.ChineseFont,
+        FontSize = 14,
+        FontColor = "FFFFFF",
+        BackgroundColor = Shade(palette.Primary, 0.5),
+        HAlign = HorizontalAlignment.Center,
+        VAlign = VerticalAlignment.Center,
+    };
+
+    /// <summary>创建 Excel 数据单元格样式（垂直居中 + 浅色边框；stripe=true 时叠加主色淡染斑马纹）</summary>
     /// <param name="palette">办公文档调色板</param>
     /// <param name="stripe">是否斑马纹行</param>
     /// <param name="numberFormat">数字格式（可选）</param>
+    /// <param name="wrap">是否自动换行（长文本行交给 Excel 自适应行高）</param>
     /// <returns>数据单元格样式</returns>
-    public static CellFormat CreateExcelDataFormat(OfficePalette palette, Boolean stripe = false, String? numberFormat = null)
+    public static CellFormat CreateExcelDataFormat(OfficePalette palette, Boolean stripe = false, String? numberFormat = null, Boolean wrap = false)
     {
         var fmt = new CellFormat
         {
             FontName = palette.ChineseFont,
             FontSize = 10.5,
             VAlign = VerticalAlignment.Center,
+            WrapText = wrap,
             Border = BorderStyle.Thin,
             BorderColor = palette.PaperBorder,
             NumberFormat = numberFormat,
         };
-        if (stripe) fmt.BackgroundColor = palette.PaperMuted;
+        if (stripe) fmt.BackgroundColor = Tint(palette.Primary, 0.08);
         return fmt;
     }
 
-    /// <summary>估算列宽（字符数）。综合表头与数据行的最大显示宽度，中文/全角按 2 字符计，限制在 8~50</summary>
+    /// <summary>估算列宽（字符数）。综合表头与数据行的最大显示宽度，中文/全角按 2 字符计，限制在 8~60</summary>
     /// <param name="headers">表头数组</param>
     /// <param name="rows">数据行（可空）</param>
     /// <returns>与列数等长的列宽数组</returns>
@@ -135,13 +151,13 @@ public static class OfficeStyleKit
         for (var i = 0; i < n; i++)
         {
             var w = (Int32)(widths[i] + 3);   // 单元格内边距
-            result[i] = w < 8 ? 8 : w > 50 ? 50 : w;
+            result[i] = w < 8 ? 8 : w > 60 ? 60 : w;
         }
         return result;
     }
 
     /// <summary>按字符宽度估算字符串显示宽度（中文/全角按 2 计）</summary>
-    private static Double DisplayWidth(String? text)
+    public static Double DisplayWidth(String? text)
     {
         if (text.IsNullOrEmpty()) return 0;
         var w = 0d;
@@ -191,6 +207,36 @@ public static class OfficeStyleKit
     /// <param name="threshold">亮度阈值（默认 128）</param>
     /// <returns>是否深色</returns>
     public static Boolean IsDarkColor(String? hex, Int32 threshold = 128) => Luma(hex) < threshold;
+
+    /// <summary>颜色加深：保留 keep 比例的原色与黑色混合（keep=0.5 得到约半亮度的深色带）</summary>
+    /// <param name="color">原色（可带 # 前缀）</param>
+    /// <param name="keep">原色保留比例（0~1）</param>
+    /// <returns>加深后的颜色</returns>
+    public static String Shade(String color, Double keep) => BlendColor(color, "000000", keep);
+
+    /// <summary>颜色变淡：保留 keep 比例的原色与白色混合（keep=0.08 得到接近纸面的淡染底）</summary>
+    /// <param name="color">原色（可带 # 前缀）</param>
+    /// <param name="keep">原色保留比例（0~1）</param>
+    /// <returns>变淡后的颜色</returns>
+    public static String Tint(String color, Double keep) => BlendColor(color, "FFFFFF", keep);
+
+    /// <summary>颜色混合：结果 = 原色 × keep + 目标色 × (1 - keep)，逐通道四舍五入</summary>
+    /// <param name="color">原色（可带 # 前缀）</param>
+    /// <param name="other">目标色（可带 # 前缀）</param>
+    /// <param name="keep">原色保留比例（0~1）</param>
+    /// <returns>混合后的 6 位大写十六进制颜色</returns>
+    public static String BlendColor(String color, String other, Double keep)
+    {
+        var c1 = TryNormalizeColor(color) ?? "000000";
+        var c2 = TryNormalizeColor(other) ?? "FFFFFF";
+        if (keep < 0) keep = 0;
+        if (keep > 1) keep = 1;
+
+        var r = (Int32)(Convert.ToInt32(c1[..2], 16) * keep + Convert.ToInt32(c2[..2], 16) * (1 - keep) + 0.5);
+        var g = (Int32)(Convert.ToInt32(c1[2..4], 16) * keep + Convert.ToInt32(c2[2..4], 16) * (1 - keep) + 0.5);
+        var b = (Int32)(Convert.ToInt32(c1[4..6], 16) * keep + Convert.ToInt32(c2[4..6], 16) * (1 - keep) + 0.5);
+        return $"{r:X2}{g:X2}{b:X2}";
+    }
 
     /// <summary>获取提示框（callout）的背景色与左边框色（语义柔和色板）</summary>
     /// <param name="variant">变体：info/success/warning/danger</param>

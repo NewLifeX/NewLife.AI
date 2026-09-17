@@ -88,8 +88,14 @@ public class OfficeSampleExportTests
         writer.DefaultFontSize = 11;
 
         var headers = new[] { "日期", "渠道", "订单数", "营收（元）", "环比" };
+
+        // 标题带：跨列合并的品牌深色标题行（与 BuildExcelToolService 输出一致）
+        writer.WriteRow("经营报表", ["星语季度经营报表"], OfficeStyleKit.CreateExcelTitleFormat(palette));
+        writer.MergeCell("经营报表", 0, 0, 0, headers.Length - 1);
+        writer.SetRowHeight("经营报表", 1, 38);
+
         writer.WriteHeader("经营报表", headers, OfficeStyleKit.CreateExcelHeaderFormat(palette));
-        writer.SetRowHeight("经营报表", 1, 22);
+        writer.SetRowHeight("经营报表", 2, 24);
 
         var data = new[]
         {
@@ -102,13 +108,14 @@ public class OfficeSampleExportTests
         {
             var style = OfficeStyleKit.CreateExcelDataFormat(palette, i % 2 == 1);
             writer.WriteRow("经营报表", data[i].Cast<Object>().ToArray(), style);
+            writer.SetRowHeight("经营报表", 3 + i, 22);
         }
 
         var widths = OfficeStyleKit.EstimateColumnWidths(headers, data);
         for (var c = 0; c < widths.Length; c++)
             writer.SetColumnWidth("经营报表", c, widths[c]);
 
-        writer.FreezePane("经营报表", 1, 0);
+        writer.FreezePane("经营报表", 2, 0);
         writer.Save();
         Assert.True(File.Exists(path));
     }
