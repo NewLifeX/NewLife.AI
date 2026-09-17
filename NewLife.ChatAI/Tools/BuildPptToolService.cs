@@ -46,6 +46,7 @@ public class BuildPptToolService(ILog log)
     /// 示例（带样式）：
     /// [{"title":"封面","layout":"title_only","background":"0F172A","footer":"新生命团队","showPageNumber":true,"elements":[{"type":"text","role":"title","content":"2026 Q2 年度报告","alignment":"ctr","color":"60A5FA"},{"type":"text","role":"subtitle","content":"新生命团队","color":"94A3B8"}]}]
     /// </param>
+    /// <param name="widgetSrc">show_widget 卡片 ID 列表（逗号分隔），与 slides 互斥；将已生成卡片嵌入为幻灯片图片</param>
     /// <param name="theme">主题：卡片风格 Key（如 enterprise-blue/ppt-executive）或内置名（blue/dark/corporate/warm/green/minimal），不传则沿用会话风格或品牌默认</param>
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=预览 JSON + ForLlm=简短确认）</returns>
@@ -346,24 +347,26 @@ public class BuildPptToolService(ILog log)
                 if (tableRows.Count > 0)
                 {
                     var table = writer.AddTable(idx, tableRows, 0, 0, 1, firstRowHeader: true);
-                    if (table != null && elem.TableStyle != null)
+                    if (table != null)
                     {
                         var ts = elem.TableStyle;
-                        if (!ts.HeaderBgColor.IsNullOrEmpty())
+                        var colCount = tableRows[0].Length;
+
+                        // 表头：AI 显式给色时用它的，否则品牌主色底 + 反色字
+                        var headerStyle = new CellStyle
                         {
-                            var colCount = tableRows[0].Length;
-                            var headerStyle = new CellStyle
-                            {
-                                BackgroundColor = ts.HeaderBgColor,
-                                FontColor = ts.HeaderFontColor,
-                                Bold = true,
-                            };
-                            for (var c = 0; c < colCount; c++)
-                                table.CellStyles[(0, c)] = headerStyle;
-                        }
-                        if (!ts.StripeColor.IsNullOrEmpty())
+                            BackgroundColor = !ts?.HeaderBgColor.IsNullOrEmpty() == true ? ts!.HeaderBgColor : palette.Primary,
+                            FontColor = !ts?.HeaderFontColor.IsNullOrEmpty() == true ? ts!.HeaderFontColor : palette.OnPrimary,
+                            Bold = true,
+                        };
+                        for (var c = 0; c < colCount; c++)
+                            table.CellStyles[(0, c)] = headerStyle;
+
+                        // 斑马纹：AI 显式或用纸面浅灰（表格为白底，浅灰斑马纹更协调）
+                        var stripe = !ts?.StripeColor.IsNullOrEmpty() == true ? ts!.StripeColor : palette.PaperMuted;
+                        if (!stripe.IsNullOrEmpty())
                         {
-                            var stripeStyle = new CellStyle { BackgroundColor = ts.StripeColor };
+                            var stripeStyle = new CellStyle { BackgroundColor = stripe };
                             for (var r = 2; r < tableRows.Count; r += 2)
                                 for (var c = 0; c < tableRows[r].Length; c++)
                                     table.CellStyles[(r, c)] = stripeStyle;
@@ -397,6 +400,7 @@ public class BuildPptToolService(ILog log)
                         {
                             sp.Text = elem.Shape.Text;
                             if (!elem.Shape.FontColor.IsNullOrEmpty()) sp.FontColor = elem.Shape.FontColor;
+                            else if (defaultTextColor != null && elem.Shape.FillColor.IsNullOrEmpty()) sp.FontColor = defaultTextColor;
                             if (elem.Shape.FontSize > 0) sp.FontSize = elem.Shape.FontSize;
                         }
                     }

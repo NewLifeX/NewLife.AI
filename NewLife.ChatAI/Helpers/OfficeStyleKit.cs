@@ -29,7 +29,9 @@ public static class OfficeStyleKit
         sb.Append($"<w:styles xmlns:w=\"{W}\">");
         // 默认排版：西文与中文字体分离，五号字（10.5pt），1.3 倍行距，段后 6pt，正文用纸面适配色
         sb.Append("<w:docDefaults><w:rPrDefault><w:rPr>");
-        sb.Append($"<w:rFonts w:ascii=\"{palette.LatinFont}\" w:hAnsi=\"{palette.LatinFont}\" w:eastAsia=\"{palette.ChineseFont}\"/>");
+        var latin = EscapeXml(palette.LatinFont);
+        var chinese = EscapeXml(palette.ChineseFont);
+        sb.Append($"<w:rFonts w:ascii=\"{latin}\" w:hAnsi=\"{latin}\" w:eastAsia=\"{chinese}\"/>");
         sb.Append("<w:sz w:val=\"21\"/>");
         sb.Append($"<w:color w:val=\"{palette.PaperForeground}\"/>");
         sb.Append("</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>");
@@ -200,6 +202,12 @@ public static class OfficeStyleKit
         "danger" => ("FEF2F2", "EF4444"),
         _ => ("EFF6FF", "3B82F6"),
     };
+
+    /// <summary>XML 属性与文本转义（字体名等可能来自管理端配置，防止破坏样式表结构）</summary>
+    /// <param name="value">原始文本</param>
+    /// <returns>转义后的文本</returns>
+    private static String EscapeXml(String value) => value
+        .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
     #endregion
 
     #region 主题解析

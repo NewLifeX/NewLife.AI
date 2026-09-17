@@ -18,6 +18,7 @@ public class BuildExcelToolService(ILog log)
 {
     #region 工具方法
 
+    /// <summary>生成 Excel 电子表格（.xlsx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_excel", IsSystem = false,
         Triggers = "生成Excel,制作Excel,生成报表,导出Excel",
         AssistantTriggers = "Excel,报表,xlsx,电子表格,数据表,生成Excel,生成报表,导出Excel,build_excel",
@@ -75,22 +76,26 @@ public class BuildExcelToolService(ILog log)
         {
             var sheetName = sheet.Name ?? "Sheet1";
 
-            // 表头样式：品牌默认，AI 显式传色时覆盖（只给背景色时自动配对比字色）
-            var headerStyle = OfficeStyleKit.CreateExcelHeaderFormat(palette);
-            if (sheet.Style != null)
+            // 表头（headers 为空时跳过，避免空行占用首行且行高留白）
+            if (sheet.Headers is { Length: > 0 })
             {
-                if (!sheet.Style.HeaderBgColor.IsNullOrEmpty())
-                    headerStyle.BackgroundColor = sheet.Style.HeaderBgColor;
-                if (!sheet.Style.HeaderFontColor.IsNullOrEmpty())
-                    headerStyle.FontColor = sheet.Style.HeaderFontColor;
-                else if (!sheet.Style.HeaderBgColor.IsNullOrEmpty())
-                    headerStyle.FontColor = OfficeStyleKit.Luma(sheet.Style.HeaderBgColor) < 160 ? "FFFFFF" : "262626";
+                // 表头样式：品牌默认，AI 显式传色时覆盖（只给背景色时自动配对比字色）
+                var headerStyle = OfficeStyleKit.CreateExcelHeaderFormat(palette);
+                if (sheet.Style != null)
+                {
+                    if (!sheet.Style.HeaderBgColor.IsNullOrEmpty())
+                        headerStyle.BackgroundColor = sheet.Style.HeaderBgColor;
+                    if (!sheet.Style.HeaderFontColor.IsNullOrEmpty())
+                        headerStyle.FontColor = sheet.Style.HeaderFontColor;
+                    else if (!sheet.Style.HeaderBgColor.IsNullOrEmpty())
+                        headerStyle.FontColor = OfficeStyleKit.Luma(sheet.Style.HeaderBgColor) < 160 ? "FFFFFF" : "262626";
+                }
+
+                writer.WriteHeader(sheetName, sheet.Headers, headerStyle);
+
+                // 表头行高，增强层次感
+                writer.SetRowHeight(sheetName, 1, 22);
             }
-
-            writer.WriteHeader(sheetName, sheet.Headers ?? [], headerStyle);
-
-            // 表头行高，增强层次感
-            writer.SetRowHeight(sheetName, 1, 22);
 
             if (sheet.Rows is { Length: > 0 })
             {

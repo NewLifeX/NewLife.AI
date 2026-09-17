@@ -19,6 +19,7 @@ public class BuildDocToolService(ILog log)
 
     #region 工具方法
 
+    /// <summary>生成 Word 文档（.docx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_doc", IsSystem = false,
         Triggers = "生成Word,生成文档,制作文档,写报告",
         AssistantTriggers = "Word,docx,文档,报告,方案书,周报,会议纪要,生成文档,生成Word,报告文档,build_doc",
@@ -118,8 +119,13 @@ public class BuildDocToolService(ILog log)
                             var imgBytes = await TryLoadImageAsync(elem.Src!);
                             if (imgBytes != null)
                             {
-                                var w = elem.WidthCm ?? 14.0;
-                                var h = elem.HeightCm ?? 10.0;
+                                // 按图片原始比例适配：只给单边尺寸时按比例推算另一边，避免拉伸变形
+                                var (fitW, fitH) = FitImageSize(imgBytes);
+                                Double w, h;
+                                if (elem.WidthCm.HasValue && elem.HeightCm.HasValue) { w = elem.WidthCm.Value; h = elem.HeightCm.Value; }
+                                else if (elem.WidthCm.HasValue) { w = elem.WidthCm.Value; h = Math.Round(w * fitH / fitW, 2); }
+                                else if (elem.HeightCm.HasValue) { h = elem.HeightCm.Value; w = Math.Round(h * fitW / fitH, 2); }
+                                else { w = fitW; h = fitH; }
                                 writer.InsertImage(imgBytes, "png", w, h);
                             }
                         }
@@ -188,16 +194,27 @@ public class BuildDocToolService(ILog log)
         var brand = OfficeStyleKit.CreateWordTableStyle(palette);
         if (elem.TableStyle != null)
         {
-            // 显式背景色优先；表头字色未传时按底色亮度自动选黑/白，避免白字浅底看不清
+            // 显式样式优先：底色/字色可单独覆盖；只给底色时自动配对比字色
             if (!elem.TableStyle.HeaderBgColor.IsNullOrEmpty())
-            {
                 brand.HeaderBgColor = elem.TableStyle.HeaderBgColor;
-                brand.HeaderFontColor = !elem.TableStyle.HeaderFontColor.IsNullOrEmpty()
-                    ? elem.TableStyle.HeaderFontColor
-                    : OfficeStyleKit.Luma(elem.TableStyle.HeaderBgColor) < 160 ? "FFFFFF" : "262626";
-            }
+            if (!elem.TableStyle.HeaderFontColor.IsNullOrEmpty())
+                brand.HeaderFontColor = elem.TableStyle.HeaderFontColor;
+            else if (!elem.TableStyle.HeaderBgColor.IsNullOrEmpty())
+                brand.HeaderFontColor = OfficeStyleKit.Luma(elem.TableStyle.HeaderBgColor) < 160 ? "FFFFFF" : "262626";
             if (!elem.TableStyle.StripeColor.IsNullOrEmpty())
                 brand.StripeColor = elem.TableStyle.StripeColor;
+        }
+
+        // 列宽：按内容宽度比例分配页面可用宽度（替代均分，宽窄列更协调）
+        var availW = writer.PageSettings.PageWidth - writer.PageSettings.MarginLeft - writer.PageSettings.MarginRight;
+        var weights = OfficeStyleKit.EstimateColumnWidths(elem.Headers, elem.Rows);
+        var total = weights.Sum();
+        if (total > 0 && availW > 0)
+        {
+            var widths = new Int32[weights.Length];
+            for (var i = 0; i < weights.Length; i++)
+                widths[i] = availW * weights[i] / total;
+            brand.ColumnWidths = widths;
         }
 
         writer.AppendTable(allRows, firstRowHeader: true, brand);
@@ -221,7 +238,7 @@ public class BuildDocToolService(ILog log)
                 },
             },
         };
-        para.Runs.Add(new Run { Text = elem.Text, Properties = runProps ?? new RunProperties() });
+        para.Runs.Add(new Run { Text = elem.Text ?? String.Empty, Properties = runProps ?? new RunProperties() });
         writer.AppendParagraph(para);
     }
 
@@ -305,6 +322,69 @@ public class BuildDocToolService(ILog log)
             },
         });
         writer.AppendParagraph(para);
+    }
+
+    /// <summary>按图片原始宽高比计算排版尺寸。宽 14cm 基准、高不超 17cm，解析失败回退 14×10</summary>
+    private static (Double WidthCm, Double HeightCm) FitImageSize(Byte[] bytes)
+    {
+        const Double maxW = 14.0;
+        const Double maxH = 17.0;
+
+        var (px, py) = TryGetImageSize(bytes);
+        if (px <= 0 || py <= 0) return (maxW, 10.0);
+
+        var ratio = (Double)py / px;
+        var w = maxW;
+        var h = w * ratio;
+        if (h > maxH)
+        {
+            h = maxH;
+            w = h / ratio;
+        }
+        return (Math.Round(w, 2), Math.Round(h, 2));
+    }
+
+    /// <summary>轻量解析 PNG/GIF/JPEG 原始像素尺寸（读取文件头，失败返回 0）</summary>
+    private static (Int32 Width, Int32 Height) TryGetImageSize(Byte[] bytes)
+    {
+        try
+        {
+            // PNG：8 字节签名 + 8 字节块头后为 IHDR 宽高（大端）
+            if (bytes.Length > 24 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+            {
+                var w = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+                var h = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+                return (w, h);
+            }
+            // GIF：宽高在 6-11 字节（小端）
+            if (bytes.Length > 10 && bytes[0] == (Byte)'G' && bytes[1] == (Byte)'I' && bytes[2] == (Byte)'F')
+            {
+                var w = bytes[6] | (bytes[7] << 8);
+                var h = bytes[8] | (bytes[9] << 8);
+                return (w, h);
+            }
+            // JPEG：扫描 SOF 段中的高宽
+            if (bytes.Length > 4 && bytes[0] == 0xFF && bytes[1] == 0xD8)
+            {
+                var i = 2;
+                while (i + 9 < bytes.Length)
+                {
+                    if (bytes[i] != 0xFF) { i++; continue; }
+                    var marker = bytes[i + 1];
+                    if (marker == 0xD8 || marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) { i += 2; continue; }
+                    var len = (bytes[i + 2] << 8) | bytes[i + 3];
+                    if (marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC)
+                    {
+                        var h = (bytes[i + 5] << 8) | bytes[i + 6];
+                        var w = (bytes[i + 7] << 8) | bytes[i + 8];
+                        return (w, h);
+                    }
+                    i += 2 + len;
+                }
+            }
+        }
+        catch { /* 解析失败按未知尺寸处理 */ }
+        return (0, 0);
     }
 
     private async Task<Byte[]?> TryLoadImageAsync(String src)

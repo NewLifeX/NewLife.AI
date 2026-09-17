@@ -142,6 +142,26 @@ public class OfficeSampleExportTests
         chart.Series.Add(new NewLife.Office.Ppt.ChartSeries { Name = "营收", Values = [120, 190, 240, 305], Color = palette.SeriesColors[0] });
         chart.Series.Add(new NewLife.Office.Ppt.ChartSeries { Name = "利润", Values = [30, 62, 88, 121], Color = palette.SeriesColors[1] });
 
+        // 表格页（品牌表头 + 斑马纹）
+        writer.AddSlide();
+        var tableTitle = writer.AddTextBox(2, "分渠道数据", 2, 1.6, 26, 1.6, 25, true);
+        tableTitle.FontColor = "262626";
+        var tableRows = new List<String[]>
+        {
+            new[] { "渠道", "新增用户", "转化率" },
+            new[] { "官网直销", "3,240", "12.8%" },
+            new[] { "生态合作", "5,180", "9.4%" },
+            new[] { "内容投放", "2,760", "7.6%" },
+        };
+        var table = writer.AddTable(2, tableRows, 2, 4.2, 26);
+        var ppHeader = new NewLife.Office.Ppt.CellStyle { BackgroundColor = palette.Primary, FontColor = palette.OnPrimary, Bold = true };
+        for (var c = 0; c < 3; c++)
+            table.CellStyles[(0, c)] = ppHeader;
+        var ppStripe = new NewLife.Office.Ppt.CellStyle { BackgroundColor = palette.PaperMuted };
+        for (var r = 2; r < tableRows.Count; r += 2)
+            for (var c = 0; c < 3; c++)
+                table.CellStyles[(r, c)] = ppStripe;
+
         writer.Save(path);
         Assert.True(File.Exists(path));
     }
