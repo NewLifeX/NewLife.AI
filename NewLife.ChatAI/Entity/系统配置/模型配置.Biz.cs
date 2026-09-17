@@ -156,13 +156,18 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
         return list.Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
     }
 
-    /// <summary>判断该模型是否为对话模型（可出现在 /chat 首页选择器中）。计算属性，不存库</summary>
+    /// <summary>判断该模型是否为对话模型（可走文本 LLM 对话链路）。计算属性，不存库</summary>
     /// <remarks>
-    /// 有任一 LLM 核心能力（思考/工具/视觉/语音识别）则为对话模型；或无任何专用输出标记则为纯文本对话模型
+    /// 含语音识别/语音合成/嵌入/排序专用特征的模型不是对话模型（语音合成请在发信框音色选择中使用）；
+    /// 其余模型中，具备思考/工具/视觉任一 LLM 能力，或不带图像/视频生成标记的纯文本模型，视为对话模型
     /// </remarks>
     public Boolean IsChatModel =>
-        SupportThinking || SupportFunction || SupportVision || SupportAudio
-        || (!SupportSpeech && !SupportImage && !SupportVideo && !SupportEmbedding && !SupportRerank);
+        !SupportAudio && !SupportSpeech && !SupportEmbedding && !SupportRerank
+        && (SupportThinking || SupportFunction || SupportVision || (!SupportImage && !SupportVideo));
+
+    /// <summary>判断该模型是否可出现在主模型选择器（/chat 首页选择器）。计算属性，不存库</summary>
+    /// <remarks>主模型 = 对话模型 + 媒体生成模型（文生图/文生视频/图生视频）；语音识别/语音合成/嵌入/排序模型不可作为主模型</remarks>
+    public Boolean IsMainModel => IsChatModel || SupportImage || SupportVideo;
 
     // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
     static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))

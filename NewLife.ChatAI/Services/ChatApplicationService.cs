@@ -380,7 +380,7 @@ public class ChatApplicationService
     #endregion
 
     #region 模型
-    /// <summary>获取可用模型列表</summary>
+    /// <summary>获取可用主模型列表（对话模型 + 文生图/文生视频等媒体生成模型）</summary>
     /// <param name="roleIds">角色组</param>
     /// <param name="departmentId">部门编号</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -401,7 +401,7 @@ public class ChatApplicationService
         }
 
         var models = list
-            .Where(e => e.IsChatModel)
+            .Where(e => e.IsMainModel)
             .Select(e => new ModelInfoDto(e.Id, e.Code ?? String.Empty, e.Name ?? String.Empty, e.SupportThinking, e.SupportFunction, e.SupportVision, e.SupportAudio, e.SupportImage, e.SupportVideo, e.SupportSpeech, e.SupportEmbedding, e.ContextLength, e.ReasoningEfforts, e.ProviderInfo?.Name ?? "")).ToArray();
         return Task.FromResult(models);
     }
