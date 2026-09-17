@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
 using NewLife.AI.Tools;
+using NewLife.ChatAI.Helpers;
 using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Log;
@@ -45,7 +46,7 @@ public class BuildPptToolService(ILog log)
     /// 示例（带样式）：
     /// [{"title":"封面","layout":"title_only","background":"0F172A","footer":"新生命团队","showPageNumber":true,"elements":[{"type":"text","role":"title","content":"2026 Q2 年度报告","alignment":"ctr","color":"60A5FA"},{"type":"text","role":"subtitle","content":"新生命团队","color":"94A3B8"}]}]
     /// </param>
-    /// <param name="theme">主题：blue（科技蓝，默认）/ dark（深色）/ corporate（商务灰）/ warm（暖橙）/ green（清新绿）/ minimal（极简白）</param>
+    /// <param name="theme">主题：卡片风格 Key（如 enterprise-blue/ppt-executive）或内置名（blue/dark/corporate/warm/green/minimal），不传则沿用会话风格或品牌默认</param>
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=预览 JSON + ForLlm=简短确认）</returns>
     [ToolDescription("build_ppt", IsSystem = false,
@@ -53,12 +54,12 @@ public class BuildPptToolService(ILog log)
         AssistantTriggers = "PPT,幻灯片,演示文稿,汇报,展示文稿,slide,做PPT,生成PPT,制作PPT,build_ppt",
         ReadOnly = false)]
     [DisplayName("PPT生成")]
-    [Description("生成 PowerPoint 演示文稿（.pptx）并返回下载链接。两种输入模式互斥：①slides模式=AI描述结构化内容自动排版；②widgetSrc模式=嵌入已生成的show_widget卡片为幻灯片图片。theme参数使用卡片风格 Key（如 tech-blue/dark-mode/corporate）或内置名（blue/dark/green/warm/corporate/minimal）。")]
+    [Description("生成 PowerPoint 演示文稿（.pptx）并返回下载链接。两种输入模式互斥：①slides模式=AI描述结构化内容自动排版；②widgetSrc模式=嵌入已生成的show_widget卡片为幻灯片图片。theme参数使用卡片风格 Key（如 enterprise-blue/raycast-dark/ppt-executive）或内置名（blue/dark/green/warm/corporate/minimal）。")]
     public async Task<ToolResult> BuildPpt(
         [Description("演示文稿标题（≤ 30 字），如「Q2季度汇报」")] String title,
         [Description(@"幻灯片数组（JSON）。1个元素=单页；多个=完整PPT。与widgetSrc互斥，二选一。每页字段：title、layout(title_only/title_content/two_column/chart_only/blank)、background(背景色16进制)、footer(页脚)、showPageNumber(显示页码true/false)、elements(元素列表)、notes(备注)、transition(切换)。elements支持：text(role=title/subtitle/body/kpi/caption，可选bold/italic/underline/alignment=l/ctr/r/backgroundColor/color)、table(headers+rows，rows为二维数组每行一个单元格值数组如 [[""张三"",""85""],[""李四"",""92""]]，可加tableStyle={headerBgColor/headerFontColor/stripeColor})、chart(chartType=bar/line/pie/area/scatter+categories+series)、image(src)、shape(shape={shapeType,fillColor,lineColor,text,fontColor})。示例：[{""title"":""封面"",""layout"":""title_only"",""background"":""0F172A"",""elements"":[{""type"":""text"",""role"":""title"",""content"":""Q2汇报"",""alignment"":""ctr"",""color"":""60A5FA""},{""type"":""text"",""role"":""subtitle"",""content"":""新生命团队"",""color"":""94A3B8""}]}]")] PptPageModel[]? slides = null,
         [Description("show_widget 卡片 ID 列表（逗号分隔），如 'call_abc123,call_def456'。与slides互斥，二选一。将已生成的卡片渲染结果嵌入为幻灯片图片")] String? widgetSrc = null,
-        [Description("主题（可选）：blue（科技蓝，默认）/ dark（深色紫）/ corporate（商务灰）/ warm（暖橙）/ green（清新绿）/ minimal（极简白）/ ocean（深海蓝）/ sunset（日落橙紫）/ forest（翠绿森林）/ slate（高级石板）/ amber（琥珀金）")] String? theme = null,
+        [Description("主题（可选）：卡片风格 Key（如 enterprise-blue/ppt-executive）或内置名（blue/dark/corporate/warm/green/minimal 等），不传则沿用会话风格或品牌默认")] String? theme = null,
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
@@ -72,18 +73,21 @@ public class BuildPptToolService(ILog log)
         if (hasSlides && hasWidgetSrc)
             throw new ToolException("参数错误：slides 与 widgetSrc 互斥，只能提供其一", "请选择一种模式后重试，或直接回复用户说明情况。");
 
+        // 主题解析：显式传参 > 会话卡片风格 > 品牌默认
+        var themeKey = OfficeStyleKit.ResolveTheme(theme, context?.Request?.ConversationId);
+
         // widgetSrc 模式：从历史消息中提取 show_widget 卡片内容，转换为幻灯片
         if (hasWidgetSrc)
-            return await BuildPptFromWidgets(title, widgetSrc!, theme, context).ConfigureAwait(false);
+            return await BuildPptFromWidgets(title, widgetSrc!, themeKey, context).ConfigureAwait(false);
 
         // slides 模式（现有逻辑）
         if (slides == null || slides.Length == 0)
             throw new ToolException("参数错误：slides 不能为空", "请提供幻灯片数组后重试，或直接回复用户说明无法生成 PPT。");
         var slideList = slides;
 
-        log.Info("[Slide] 开始生成 PPT：{0}，{1} 页，主题：{2}", title, slideList.Length, theme ?? "blue");
+        log.Info("[Slide] 开始生成 PPT：{0}，{1} 页，主题：{2}", title, slideList.Length, themeKey ?? "default");
 
-        var pptxBytes = await BuildPptxAsync(slideList, theme).ConfigureAwait(false);
+        var pptxBytes = await BuildPptxAsync(slideList, themeKey).ConfigureAwait(false);
 
         // 归档到附件表，复用 AI 生成媒体的同一套基础设施
         var archiveResult = await ArchivePptxAsync(pptxBytes, title, slideList.Length, theme).ConfigureAwait(false);
@@ -102,7 +106,7 @@ public class BuildPptToolService(ILog log)
             AttachmentId: archiveResult.AttachmentId,
             FileSize: pptxBytes.Length,
             SlideTitles: slideTitles,
-            Theme: theme ?? "blue");
+            Theme: themeKey);
 
         // System.Text.Json camelCase 命名策略，与前端 parseSlideData 字段对齐。
         // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
@@ -167,7 +171,7 @@ public class BuildPptToolService(ILog log)
             AttachmentId: archiveResult.AttachmentId,
             FileSize: pptxBytes.Length,
             SlideTitles: slideTitles,
-            Theme: theme ?? "blue");
+            Theme: theme);
 
         // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
         var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerOptions.Default)
@@ -228,9 +232,10 @@ public class BuildPptToolService(ILog log)
     {
         using var writer = new PptxWriter();
 
-        // 应用主题强调色
-        var accentColors = ThemeColors.Get(theme);
-        writer.SetAccentColors(accentColors);
+        // 品牌视觉：卡片风格主题 → 完整调色板；强调色 + 主题字体统一品牌化
+        var palette = OfficePalette.Resolve(theme);
+        writer.SetAccentColors(palette.SeriesColors);
+        writer.SetThemeFonts(palette.LatinFont, palette.ChineseFont);
 
         for (var si = 0; si < slideList.Length; si++)
         {
@@ -239,9 +244,14 @@ public class BuildPptToolService(ILog log)
             var idx = si;
 
             // 背景色（优先使用 model 指定，否则用主题默认）
-            var bg = !model.Background.IsNullOrEmpty() ? model.Background! : ThemeColors.GetBackground(theme);
+            var bg = !model.Background.IsNullOrEmpty() ? model.Background! : palette.Background;
             if (!bg.EqualIgnoreCase("FFFFFF"))
                 writer.SetBackground(idx, bg);
+
+            // 深色背景下自动反色默认文字（避免缺省黑字撞深底）
+            var defaultTextColor = OfficeStyleKit.IsDarkColor(bg)
+                ? (OfficeStyleKit.Luma(palette.Foreground) > 150 ? palette.Foreground : "FFFFFF")
+                : null;
 
             // 设置布局策略，供 NuGet LayoutEngine.Apply 使用
             powerPointSlide.Layout = model.Layout ?? "title_content";
@@ -249,7 +259,7 @@ public class BuildPptToolService(ILog log)
             // 先将所有元素填充到 PptSlide（用临时坐标，LayoutEngine 会重新计算）
             foreach (var elem in model.Elements)
             {
-                await AddElementToSlide(writer, idx, elem).ConfigureAwait(false);
+                await AddElementToSlide(writer, idx, elem, palette, defaultTextColor).ConfigureAwait(false);
             }
 
             // 由 NewLife.Office.LayoutEngine 自动排版
@@ -268,7 +278,7 @@ public class BuildPptToolService(ILog log)
                 writer.SetSlideFooter(idx, model.Footer, model.ShowPageNumber);
 
             // 自动装饰（标题分隔线、封面色柱）
-            AddAutoDecoration(writer, idx, model, ThemeColors.GetPrimary(theme));
+            AddAutoDecoration(writer, idx, model, palette.Primary);
         }
 
         using var ms = new MemoryStream();
@@ -276,7 +286,7 @@ public class BuildPptToolService(ILog log)
         return ms.ToArray();
     }
 
-    private static async Task AddElementToSlide(PptxWriter writer, Int32 idx, PptElement elem)
+    private static async Task AddElementToSlide(PptxWriter writer, Int32 idx, PptElement elem, OfficePalette palette, String? defaultTextColor)
     {
         switch (elem.Type.ToLowerInvariant())
         {
@@ -294,6 +304,7 @@ public class BuildPptToolService(ILog log)
                 {
                     tb.Role = elem.Role;
                     if (!elem.Color.IsNullOrEmpty()) tb.FontColor = elem.Color;
+                    else if (defaultTextColor != null) tb.FontColor = defaultTextColor;
                     if (!elem.Alignment.IsNullOrEmpty()) tb.Alignment = elem.Alignment;
                     if (!elem.BackgroundColor.IsNullOrEmpty()) tb.BackgroundColor = elem.BackgroundColor;
 
@@ -307,7 +318,7 @@ public class BuildPptToolService(ILog log)
                             Bold = bold,
                             Italic = hasItalic,
                             Underline = hasUnderline,
-                            FontColor = elem.Color,
+                            FontColor = elem.Color ?? defaultTextColor,
                         });
                     }
 
@@ -321,7 +332,7 @@ public class BuildPptToolService(ILog log)
                             Bold = r.Bold,
                             Italic = r.Italic,
                             Underline = r.Underline,
-                            FontColor = r.Color,
+                            FontColor = r.Color ?? defaultTextColor,
                             HyperlinkUrl = r.HyperlinkUrl,
                         }));
                     }
@@ -363,7 +374,7 @@ public class BuildPptToolService(ILog log)
             }
 
             case "chart":
-                AddChart(writer, idx, elem);
+                AddChart(writer, idx, elem, palette);
                 break;
 
             case "image":
@@ -394,8 +405,8 @@ public class BuildPptToolService(ILog log)
         }
     }
 
-    /// <summary>向幻灯片添加图表。由 LayoutEngine.Apply 统一排版坐标</summary>
-    private static void AddChart(PptxWriter writer, Int32 idx, PptElement elem)
+    /// <summary>向幻灯片添加图表。由 LayoutEngine.Apply 统一排版坐标；系列色回退品牌图表色板</summary>
+    private static void AddChart(PptxWriter writer, Int32 idx, PptElement elem, OfficePalette palette)
     {
         var categories = elem.Categories ?? [];
         var chartType = (elem.ChartType ?? "bar").ToLowerInvariant();
@@ -413,12 +424,15 @@ public class BuildPptToolService(ILog log)
 
         if (elem.Series != null && chart?.Series != null)
         {
-            foreach (var s in elem.Series)
+            for (var i = 0; i < elem.Series.Length; i++)
             {
+                var s = elem.Series[i];
+                if (s.Data == null) continue;
                 chart.Series.Add(new NewLife.Office.Ppt.ChartSeries
                 {
                     Name = s.Name,
-                    Values = s.Data!.Cast<Double>().ToArray(),
+                    Values = s.Data.Cast<Double>().ToArray(),
+                    Color = palette.SeriesColors[i % palette.SeriesColors.Length],
                 });
             }
         }
