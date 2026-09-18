@@ -79,6 +79,21 @@ public class ServiceTests
     }
 
     [Fact]
+    [DisplayName("MessageRateLimiter—不同作用域计数相互独立（appkey 与 user 不串扰）")]
+    public void MessageRateLimiter_DifferentScopes_Independent()
+    {
+        var limiter = new MessageRateLimiter();
+
+        // 密钥作用域达到上限
+        Assert.True(limiter.IsAllowed("appkey", 7, 1));
+        Assert.False(limiter.IsAllowed("appkey", 7, 1));
+
+        // 同编号的用户作用域独立计数（旧重载与 "user" 作用域共享计数器）
+        Assert.True(limiter.IsAllowed(7, 1));
+        Assert.False(limiter.IsAllowed("user", 7, 1));
+    }
+
+    [Fact]
     [DisplayName("MessageRateLimiter—userId=0 也可正常计数")]
     public void MessageRateLimiter_UserIdZero_Works()
     {
@@ -120,13 +135,13 @@ public class ServiceTests
 
         // 注入一个 10 分钟前的过期桶（应被清理的候选）
         var staleBucket = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMinute - 10;
-        counters[(9999, staleBucket)] = 5;
+        counters[(MessageRateLimiter.UserScope, 9999, staleBucket)] = 5;
 
         // 仅 1 次调用（count=1）。修复前 count%200==1 会触发全表扫描清理，误删过期桶；
         // 修复后 count>=200 才进入清理节奏，首条消息不清理
         limiter.IsAllowed(8888, 1000);
 
-        Assert.True(counters.ContainsKey((9999, staleBucket)), "count=1 不应触发清理，过期桶应保留");
+        Assert.True(counters.ContainsKey((MessageRateLimiter.UserScope, 9999, staleBucket)), "count=1 不应触发清理，过期桶应保留");
     }
 
     [Fact]
@@ -138,20 +153,20 @@ public class ServiceTests
 
         // 注入一个 10 分钟前的过期桶
         var staleBucket = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMinute - 10;
-        counters[(9999, staleBucket)] = 5;
+        counters[(MessageRateLimiter.UserScope, 9999, staleBucket)] = 5;
 
         // 同一用户新桶连调 200 次，第 200 次计数（count>=200 && %200==0）触发清理
         for (var i = 0; i < 200; i++)
             limiter.IsAllowed(8888, 1000);
 
-        Assert.False(counters.ContainsKey((9999, staleBucket)), "第 200 次计数应触发清理，过期桶被移除");
+        Assert.False(counters.ContainsKey((MessageRateLimiter.UserScope, 9999, staleBucket)), "第 200 次计数应触发清理，过期桶被移除");
     }
 
     /// <summary>通过反射读取 MessageRateLimiter 内部计数器字典（测试专用）</summary>
-    private static System.Collections.Concurrent.ConcurrentDictionary<(Int32, Int64), Int32> GetRateLimiterCounters(MessageRateLimiter limiter)
+    private static System.Collections.Concurrent.ConcurrentDictionary<(String, Int32, Int64), Int32> GetRateLimiterCounters(MessageRateLimiter limiter)
     {
         var field = typeof(MessageRateLimiter).GetField("_counters", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        return (System.Collections.Concurrent.ConcurrentDictionary<(Int32, Int64), Int32>)field.GetValue(limiter)!;
+        return (System.Collections.Concurrent.ConcurrentDictionary<(String, Int32, Int64), Int32>)field.GetValue(limiter)!;
     }
 
     #endregion
