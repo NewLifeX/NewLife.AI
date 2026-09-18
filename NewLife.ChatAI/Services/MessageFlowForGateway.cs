@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using NewLife.AI.Clients;
+using NewLife.AI.Handlers;
 using NewLife.AI.Models;
 using NewLife.Log;
 
@@ -14,6 +15,29 @@ namespace NewLife.ChatAI.Services;
 /// </summary>
 public class MessageFlowForGateway : MessageFlow
 {
+    #region 能力开关键
+    /// <summary>记录对话能力键。GatewayController 按 AppKey.EnableRecording 注入，Handler 读取；键缺失时默认启用</summary>
+    public const String EnableRecordingItemKey = "__GatewayEnableRecording";
+
+    /// <summary>记忆注入能力键。GatewayController 按 AppKey.EnableMemory 注入</summary>
+    public const String EnableMemoryItemKey = "__GatewayEnableMemory";
+
+    /// <summary>记忆学习能力键。GatewayController 按 AppKey.EnableLearning 注入</summary>
+    public const String EnableLearningItemKey = "__GatewayEnableLearning";
+
+    /// <summary>技能注入能力键。GatewayController 按 AppKey.EnableSkill 注入</summary>
+    public const String EnableSkillItemKey = "__GatewayEnableSkill";
+
+    /// <summary>知识检索能力键。GatewayController 按 AppKey.EnableKnowledge 注入</summary>
+    public const String EnableKnowledgeItemKey = "__GatewayEnableKnowledge";
+
+    /// <summary>检查上下文中的网关能力开关是否启用。键缺失（Web/渠道请求，或社区版网关）时默认启用，保证既有行为不变</summary>
+    /// <param name="context">对话上下文</param>
+    /// <param name="key">能力键，取 EnableXxxItemKey 常量</param>
+    /// <returns>true=启用；false=该密钥显式关闭</returns>
+    public static Boolean IsCapabilityEnabled(IChatContext context, String key) => context[key] is not Boolean value || value;
+    #endregion
+
     #region 字段
     private readonly ChatSetting _setting;
     #endregion

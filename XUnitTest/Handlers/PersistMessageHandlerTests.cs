@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NewLife.AI.Handlers;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Handlers;
+using NewLife.ChatAI.Services;
 using Xunit;
 
 namespace XUnitTest.Handlers;
@@ -149,6 +150,58 @@ public class PersistMessageHandlerTests
 
         Assert.Contains("search_web", flow.AssistantMessage.ToolNames);
         Assert.Contains("read_file", flow.AssistantMessage.ToolNames);
+    }
+
+    #endregion
+
+    #region 网关记录开关（按密钥）
+
+    [Fact]
+    [DisplayName("OnAfter—网关记录开关关闭时跳过持久化（不写字段）")]
+    public async Task OnAfter_GatewayRecordingDisabled_SkipsPersist()
+    {
+        var handler = new PersistMessageHandler(new ChatSetting { EnableGatewayDomainMode = true });
+        var flow = BuildFlow(withAssistantMessage: true);
+        flow.Source = ChatFlowSource.Gateway;
+        flow[MessageFlowForGateway.EnableRecordingItemKey] = false;
+        flow.ContentBuilder.Append("网关回复");
+
+        await handler.OnAfter(flow, CancellationToken.None);
+
+        // 跳过持久化：内容不写入消息实体，也不会触发 DB 异常
+        Assert.Null(flow.AssistantMessage.Content);
+    }
+
+    [Fact]
+    [DisplayName("OnBefore—网关记录开关关闭时跳过持久化（不写字段）")]
+    public async Task OnBefore_GatewayRecordingDisabled_SkipsPersist()
+    {
+        var handler = new PersistMessageHandler(new ChatSetting { EnableGatewayDomainMode = true });
+        var flow = BuildFlow(withAssistantMessage: false);
+        flow.Source = ChatFlowSource.Gateway;
+        flow[MessageFlowForGateway.EnableRecordingItemKey] = false;
+        flow.UserMessage = new DbChatMessage { Id = 2 };
+        flow.ContextMessages.Add(new AiChatMessage { Role = "user", Content = "你好" });
+
+        // 跳过时不会调用 Update（DB 未就绪也不应抛异常）
+        await handler.OnBefore(flow, CancellationToken.None);
+
+        Assert.Null(flow.UserMessage.ThinkingContent);
+    }
+
+    [Fact]
+    [DisplayName("OnAfter—网关记录开关缺省（未注入）时保持既有行为")]
+    public async Task OnAfter_GatewayRecordingDefault_WritesFields()
+    {
+        var handler = new PersistMessageHandler(new ChatSetting { EnableGatewayDomainMode = true });
+        var flow = BuildFlow(withAssistantMessage: true);
+        flow.Source = ChatFlowSource.Gateway;
+        flow.ContentBuilder.Append("网关回复");
+
+        try { await handler.OnAfter(flow, CancellationToken.None); }
+        catch { /* DB 未就绪时忽略持久化异常 */ }
+
+        Assert.Equal("网关回复", flow.AssistantMessage.Content);
     }
 
     #endregion
