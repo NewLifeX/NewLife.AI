@@ -136,5 +136,9 @@ public partial class UserSetting : Entity<UserSetting>
     #endregion
 
     #region 业务操作
+    /// <summary>判断指定用户的个人学习是否启用。用户编号无效或尚无设置记录时默认启用（全局开关与密钥开关由调用方叠加）</summary>
+    /// <param name="userId">用户编号</param>
+    /// <returns>true=允许参与自学习分析与记忆提取</returns>
+    public static Boolean IsLearningEnabled(Int32 userId) => userId <= 0 || FindByUserId(userId) is not { } us || us.EnableLearning;
     #endregion
 }

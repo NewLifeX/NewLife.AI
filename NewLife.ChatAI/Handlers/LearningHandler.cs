@@ -41,6 +41,8 @@ public class LearningHandler(ConversationAnalysisService analysisService, ChatSe
         if (!chatSetting.EnableAutoLearning) return Task.CompletedTask;
         // 网关密钥关闭记忆学习时不触发自学习分析
         if (!MessageFlowForGateway.IsCapabilityEnabled(context, MessageFlowForGateway.EnableLearningItemKey)) return Task.CompletedTask;
+        // 用户级自学习开关：用户在设置中关闭个人学习后不再触发自动分析（无设置记录默认启用）
+        if (!UserSetting.IsLearningEnabled(context.UserId)) return Task.CompletedTask;
         if (context.HasError) return Task.CompletedTask;
 
         TriggerAnalysisFireAndForget(context, "Chat");
