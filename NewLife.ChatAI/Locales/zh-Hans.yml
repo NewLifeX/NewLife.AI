@@ -1,0 +1,22 @@
+# 简体中文译文。键为英文源文，缺失时运行期回退英文。
+# 覆盖范围：NewLife.ChatAI 应用层已英文化的运行时消息（当前为 API 网关控制器）。
+# 后续按文件分批把其余中文消息改为英文源文并在此追加词条。
+"No available model found: '{0}'": "未找到可用模型 '{0}'"
+"Current API key cannot use model '{0}'": "当前密钥无权使用模型 '{0}'"
+"Model '{0}' does not support embeddings": "模型 '{0}' 不支持嵌入向量"
+"Model '{0}' does not support speech synthesis": "模型 '{0}' 不支持语音合成"
+"Model '{0}' does not support speech recognition": "模型 '{0}' 不支持语音识别"
+"Model '{0}' does not support video generation": "模型 '{0}' 不支持视频生成"
+"Model '{0}' does not support image generation": "模型 '{0}' 不支持图像生成"
+"Model '{0}' does not support image editing": "模型 '{0}' 不支持图像编辑"
+"Model '{0}' does not support reranking": "模型 '{0}' 不支持重排序"
+"AppKey is invalid or disabled": "AppKey 无效或已禁用"
+"API gateway is disabled": "API 网关已关闭"
+"model cannot be empty": "model 不能为空"
+"Request body cannot be empty": "请求体不能为空"
+"input cannot be empty": "input 不能为空"
+"prompt cannot be empty": "prompt 不能为空"
+"image file cannot be empty": "image 文件不能为空"
+"file cannot be empty": "file 不能为空"
+"taskId cannot be empty": "taskId 不能为空"
+"query cannot be empty": "query 不能为空"
