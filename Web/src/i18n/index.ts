@@ -7,6 +7,14 @@ type LocaleModule = { default: Record<string, unknown> }
 const localeLoaders: Record<string, () => Promise<LocaleModule>> = {
   'zh-TW': () => import('./locales/zh-TW'),
   en: () => import('./locales/en'),
+  ja: () => import('./locales/ja'),
+  ko: () => import('./locales/ko'),
+  de: () => import('./locales/de'),
+  fr: () => import('./locales/fr'),
+  es: () => import('./locales/es'),
+  pt: () => import('./locales/pt'),
+  ru: () => import('./locales/ru'),
+  ar: () => import('./locales/ar'),
 }
 
 i18n.use(initReactI18next).init({
