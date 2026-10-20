@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { getMermaid } from '@/components/chat/mermaidLazy'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
@@ -369,6 +370,7 @@ interface WidgetFullscreenDialogProps {
  * - ESC / 点击背景关闭
  */
 function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<'preview' | 'code'>('preview')
   const [editCode, setEditCode] = useState(data.code)
   const [previewCode, setPreviewCode] = useState(data.code)
@@ -482,7 +484,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
         {/* 标题栏 */}
         <div className="flex-none flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 text-white">
           <div className="text-sm font-medium truncate">
-            {data.title || (data.kind === 'svg' ? 'SVG 图形' : 'HTML 组件')}
+            {data.title || (data.kind === 'svg' ? t('widget.svgGraphic') : t('widget.htmlComponent'))}
           </div>
           <div className="flex items-center gap-2">
             {/* 预览 / 代码 切换 */}
@@ -497,7 +499,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
                     : 'text-white/60 hover:bg-white/10 hover:text-white/90',
                 )}
               >
-                预览
+                {t('common.preview')}
               </button>
               <button
                 type="button"
@@ -509,7 +511,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
                     : 'text-white/60 hover:bg-white/10 hover:text-white/90',
                 )}
               >
-                代码
+                {t('widget.code')}
               </button>
             </div>
             {/* SVG 缩放控件（Ctrl+滚轮 或 按钮）*/}
@@ -519,19 +521,19 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
                   type="button"
                   onClick={() => setZoom(z => Math.max(0.25, z - 0.25))}
                   className="px-2.5 py-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-                  title="缩小"
+                  title={t('common.zoomOut')}
                 >−</button>
                 <button
                   type="button"
                   onClick={() => setZoom(1)}
                   className="px-2 py-1.5 text-white/70 tabular-nums min-w-[3.5rem] text-center hover:bg-white/10 hover:text-white transition-colors"
-                  title="点击重置为 100%"
+                  title={t('widget.resetZoom')}
                 >{Math.round(zoom * 100)}%</button>
                 <button
                   type="button"
                 onClick={() => setZoom(z => Math.min(16, z + 0.25))}
                   className="px-2.5 py-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-                  title="放大"
+                  title={t('common.zoomIn')}
                 >+</button>
               </div>
             )}
@@ -541,7 +543,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
                 <button
                   type="button"
                   onClick={copyFsImage}
-                  title={fsImageCopyErr ? '复制失败' : fsImageCopied ? '已复制' : '复制图片'}
+                  title={fsImageCopyErr ? t('common.copyFailed') : fsImageCopied ? t('common.copied') : t('common.copyImage')}
                   className={cn(
                     fsBtnClass,
                     fsImageCopyErr
@@ -554,7 +556,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
                 <button
                   type="button"
                   onClick={saveFsImage}
-                  title={fsImageSaved ? '已保存' : '另存为图片'}
+                  title={fsImageSaved ? t('common.saved') : t('common.saveAsImage')}
                   className={cn(fsBtnClass, 'text-white/70 hover:text-white hover:bg-white/10')}
                 >
                   <Icon name={fsImageSaved ? 'check' : 'save_alt'} size="sm" />
@@ -566,7 +568,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-white hover:bg-white/15 transition-colors"
-              title="关闭 (ESC)"
+              title={t('common.closeEsc')}
             >
               <Icon name="close" size="sm" />
             </button>
@@ -624,7 +626,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
               ref={fsIframeRef}
               sandbox="allow-scripts"
               srcDoc={srcDoc}
-              title={data.title || 'HTML 全屏预览'}
+              title={data.title || t('widget.htmlFullscreenPreview')}
               className="absolute inset-0 w-full h-full border-0 bg-white"
             />
           )}
@@ -659,6 +661,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
  * - 后端 WidgetToolService 已对体积上限与 <script src=...> 做白名单校验（仅允许 jsdelivr/cdnjs/unpkg/bootcdn/staticfile）
  */
 export function WidgetBlock({ data, className }: WidgetBlockProps) {
+  const { t } = useTranslation()
   const [iframeHeight, setIframeHeight] = useState<number>(data.initialHeight ?? 480)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [copied, setCopied] = useState(false)
@@ -774,11 +777,11 @@ export function WidgetBlock({ data, className }: WidgetBlockProps) {
     >
       <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
         <span className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate">
-          {data.title || (data.kind === 'svg' ? 'SVG 图形' : 'HTML 组件')}
+          {data.title || (data.kind === 'svg' ? t('widget.svgGraphic') : t('widget.htmlComponent'))}
         </span>
         <div className="flex items-center gap-0.5">
           <button type="button" onClick={() => setIsFullscreen(true)}
-            title="全屏"
+            title={t('common.fullscreen')}
             className={iconBtnClass}
           >
             <Icon name="fullscreen" size="sm" />
@@ -786,7 +789,7 @@ export function WidgetBlock({ data, className }: WidgetBlockProps) {
           <button
             type="button"
             onClick={copyImage}
-            title={imageCopyErr ? '复制失败' : imageCopied ? '已复制' : '复制图片'}
+            title={imageCopyErr ? t('common.copyFailed') : imageCopied ? t('common.copied') : t('common.copyImage')}
             className={cn(
               iconBtnClass,
               imageCopyErr && 'text-red-500 hover:text-red-400 dark:text-red-500',
@@ -795,21 +798,21 @@ export function WidgetBlock({ data, className }: WidgetBlockProps) {
             <Icon name={imageCopyErr ? 'error' : imageCopied ? 'check' : 'content_copy'} size="sm" />
           </button>
           <button type="button" onClick={saveImage}
-            title={imageSaved ? '已保存' : '另存为图片'}
+            title={imageSaved ? t('common.saved') : t('common.saveAsImage')}
             className={iconBtnClass}
           >
             <Icon name={imageSaved ? 'check' : 'save_alt'} size="sm" />
           </button>
           {data.kind === 'svg' && (
             <button type="button" onClick={downloadSvg}
-              title="下载 SVG（可拖入 PowerPoint 矢量编辑）"
+              title={t('widget.downloadSvg')}
               className={iconBtnClass}
             >
               <Icon name="download" size="sm" />
             </button>
           )}
           <button type="button" onClick={copyCode}
-            title={copied ? '已复制' : '复制代码'}
+            title={copied ? t('common.copied') : t('common.copyCode')}
             className={iconBtnClass}
           >
             <Icon name={copied ? 'check' : 'code'} size="sm" />

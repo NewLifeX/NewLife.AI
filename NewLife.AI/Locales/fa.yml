@@ -1,4 +1,3 @@
-# Persian translation. Keys are the English source text; missing entries fall back to English at runtime.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "عامل بازبینی: بررسی کیفیت پیش‌نویس و ارائه پیشنهادهای بهبود یا سیگنال APPROVED"
 "Agent list cannot be empty": "فهرست عامل‌ها نمی‌تواند خالی باشد"
 "Worker agent list cannot be empty": "فهرست عامل‌های کارگر نمی‌تواند خالی باشد"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "منبع '{0}' در قابلیت‌های سرور یافت نشد."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' در قابلیت‌های سرور یافت نشد."
 "Missing required argument '{0}' for tool '{1}'": "آرگومان الزامی '{0}' برای ابزار '{1}' وجود ندارد"
+"Rerank call failed": "فراخوانی بازچینش ناموفق بود"
+"Tool not found: '{0}', searched {1} in {2} providers": "ابزار یافت نشد: '{0}'، {1} مورد در {2} ارائه‌دهنده جستجو شد"

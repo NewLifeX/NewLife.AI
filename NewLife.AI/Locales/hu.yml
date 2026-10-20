@@ -1,4 +1,3 @@
-# Hungarian translation. Keys are the English source text; falls back to English when missing.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Ellenőrző ügynök: a piszkozat minőségének ellenőrzése, fejlesztési javaslatok vagy APPROVED jelzés kiadása"
 "Agent list cannot be empty": "Az ügynöklista nem lehet üres"
 "Worker agent list cannot be empty": "A munkásügynök-lista nem lehet üres"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "A '{0}' erőforrás nem található a kiszolgáló képességei között."
 "Prompt '{0}' not found in the server capabilities.": "A '{0}' prompt nem található a kiszolgáló képességei között."
 "Missing required argument '{0}' for tool '{1}'": "Hiányzik a kötelező '{0}' argumentum a '{1}' eszközhöz"
+"Rerank call failed": "Az újrarangsorolási hívás sikertelen"
+"Tool not found: '{0}', searched {1} in {2} providers": "Az eszköz nem található: '{0}', {1} keresve {2} szolgáltatónál"

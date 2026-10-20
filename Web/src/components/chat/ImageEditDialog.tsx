@@ -170,7 +170,7 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {t('imageEdit.title', '图像编辑')}
+            {t('imageEdit.title')}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <Icon name="close" variant="outlined" size="base" />
@@ -180,7 +180,7 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
         {/* Canvas 区域 */}
         <div className="flex-1 overflow-auto p-6">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            {t('imageEdit.hint', '在图片上涂抹红色区域，标记需要重绘的部分')}
+            {t('imageEdit.hint')}
           </p>
 
           <div className="relative inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
@@ -199,7 +199,7 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
           {/* 工具栏 */}
           <div className="flex items-center gap-4 mt-4">
             <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-              {t('imageEdit.brushSize', '画笔大小')}
+              {t('imageEdit.brushSize')}
               <input
                 type="range"
                 min={5}
@@ -214,11 +214,11 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
               onClick={handleClearMask}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              {t('imageEdit.clearMask', '清除涂抹')}
+              {t('imageEdit.clearMask')}
             </button>
             {models.length > 1 && (
               <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-auto">
-                {t('imageEdit.model', '模型')}
+                {t('imageEdit.model')}
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
@@ -243,7 +243,7 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder={t('imageEdit.promptPlaceholder', '描述你想要的编辑效果...')}
+              placeholder={t('imageEdit.promptPlaceholder')}
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600',
                 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100',
@@ -264,7 +264,7 @@ export function ImageEditDialog({ imageUrl, models, onSubmit, onClose }: ImageEd
                 'bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >
-              {submitting ? t('common.loading') : t('imageEdit.submit', '开始编辑')}
+              {submitting ? t('common.loading') : t('imageEdit.submit')}
             </button>
           </div>
         </div>

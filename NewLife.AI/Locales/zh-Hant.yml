@@ -138,3 +138,5 @@
 "Resource '{0}' not found in the server capabilities.": "伺服器能力中不存在資源 '{0}'。"
 "Prompt '{0}' not found in the server capabilities.": "伺服器能力中不存在提示詞 '{0}'。"
 "Missing required argument '{0}' for tool '{1}'": "工具 '{1}' 缺少必填參數 '{0}'"
+"Rerank call failed": "重排序呼叫失敗"
+"Tool not found: '{0}', searched {1} in {2} providers": "未找到工具 '{0}'，已檢查 {1} 個工具、{2} 個服務商"

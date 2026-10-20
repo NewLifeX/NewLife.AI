@@ -1,4 +1,3 @@
-# คำแปลภาษาไทย คีย์เป็นข้อความต้นฉบับภาษาอังกฤษ หากไม่มีจะย้อนกลับเป็นภาษาอังกฤษขณะทำงาน
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "เอเจนต์ตรวจสอบ: ตรวจสอบคุณภาพฉบับร่างและให้คำแนะนำในการปรับปรุงหรือสัญญาณอนุมัติ APPROVED"
 "Agent list cannot be empty": "รายการเอเจนต์ต้องไม่ว่างเปล่า"
 "Worker agent list cannot be empty": "รายการเอเจนต์ผู้ปฏิบัติงานต้องไม่ว่างเปล่า"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "ไม่พบทรัพยากร '{0}' ในความสามารถของเซิร์ฟเวอร์"
 "Prompt '{0}' not found in the server capabilities.": "ไม่พบพรอมต์ '{0}' ในความสามารถของเซิร์ฟเวอร์"
 "Missing required argument '{0}' for tool '{1}'": "ไม่พบอาร์กิวเมนต์ที่จำเป็น '{0}' สำหรับเครื่องมือ '{1}'"
+"Rerank call failed": "การเรียก rerank ล้มเหลว"
+"Tool not found: '{0}', searched {1} in {2} providers": "ไม่พบเครื่องมือ: '{0}' ค้นหา {1} รายการใน {2} ผู้ให้บริการ"

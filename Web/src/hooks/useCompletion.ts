@@ -15,6 +15,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react'
+import i18n from '@/i18n'
 import { streamMessage } from '@/lib/api'
 import type { ChatStreamEvent } from '@/lib/api'
 
@@ -105,7 +106,7 @@ export function useCompletion(options: UseCompletionOptions): UseCompletionRetur
                 break
 
               case 'error':
-                setError(new Error(event.error ?? '补全失败'))
+                setError(new Error(event.error ?? i18n.t('errors.completionFailed')))
                 break
             }
           },

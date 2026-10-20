@@ -1,4 +1,5 @@
 import type { Conversation, Message, UserSettings, ModelInfo } from '@/types'
+import i18n from '@/i18n'
 import { showToast } from '@/stores/toastStore'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -54,12 +55,12 @@ async function fetchSSE(
           try {
             const body = await res.clone().json()
             if (body?.code === 'CHAT_FORBIDDEN') {
-              showToast('warning', body.message ?? '您没有发送消息的权限')
+              showToast('warning', body.message ?? i18n.t('errors.forbiddenChat'))
             } else {
-              showToast('warning', '无权限访问该资源')
+              showToast('warning', i18n.t('errors.forbiddenResource'))
             }
           } catch {
-            showToast('warning', '无权限访问该资源')
+            showToast('warning', i18n.t('errors.forbiddenResource'))
           }
           throw new DOMException('Forbidden', 'AbortError')
         }
@@ -67,12 +68,12 @@ async function fetchSSE(
           try {
             const body = await res.clone().json()
             if (body?.code === 'QUOTA_EXCEEDED') {
-              showToast('error', body.message ?? '您的用量额度已耗尽，请联系管理员')
+              showToast('error', body.message ?? i18n.t('errors.quotaExceeded'))
             } else {
-              showToast('error', '请求过于频繁，请稍后再试')
+              showToast('error', i18n.t('errors.rateLimited'))
             }
           } catch {
-            showToast('error', '请求过于频繁，请稍后再试')
+            showToast('error', i18n.t('errors.rateLimited'))
           }
           throw new DOMException('Rate limited', 'AbortError')
         }
@@ -108,9 +109,9 @@ async function fetchSSE(
       if (attempt === SSE_MAX_RETRIES) {
         // 最终重试仍失败，弹出友好提示
         if (lastError.message.includes('Failed to fetch') || lastError.message === 'Network error: server unreachable') {
-          showToast('error', '无法连接到服务器，请检查网络连接或稍后重试')
+          showToast('error', i18n.t('errors.networkUnreachable'))
         } else {
-          showToast('error', `请求失败：${lastError.message}`)
+          showToast('error', i18n.t('errors.requestFailed', { message: lastError.message }))
         }
         throw lastError
       }
@@ -134,48 +135,48 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     })
   } catch {
     // 网络不通 / DNS 解析失败 / 后端未启动
-    showToast('error', '无法连接到服务器，请检查网络连接或稍后重试')
+    showToast('error', i18n.t('errors.networkUnreachable'))
     throw new Error('Network error: server unreachable')
   }
   if (!res.ok) {
     if (res.status === 404) {
-      showToast('error', `请求的资源不存在 (${path})`)
+      showToast('error', i18n.t('errors.notFound', { path }))
     } else if (res.status === 401) {
       redirectToLogin()
     } else if (res.status === 403) {
       try {
         const body = await res.clone().json()
         if (body?.code === 'CHAT_FORBIDDEN') {
-          showToast('warning', body.message ?? '您没有发送消息的权限')
+          showToast('warning', body.message ?? i18n.t('errors.forbiddenChat'))
         } else {
-          showToast('warning', '无权限访问该资源')
+          showToast('warning', i18n.t('errors.forbiddenResource'))
         }
       } catch {
-        showToast('warning', '无权限访问该资源')
+        showToast('warning', i18n.t('errors.forbiddenResource'))
       }
     } else if (res.status === 429) {
       try {
         const body = await res.clone().json()
         if (body?.code === 'QUOTA_EXCEEDED') {
-          showToast('error', body.message ?? '您的用量额度已耗尽，请联系管理员')
+          showToast('error', body.message ?? i18n.t('errors.quotaExceeded'))
         } else {
-          showToast('error', '请求过于频繁，请稍后再试')
+          showToast('error', i18n.t('errors.rateLimited'))
         }
       } catch {
-        showToast('error', '请求过于频繁，请稍后再试')
+        showToast('error', i18n.t('errors.rateLimited'))
       }
     } else if (res.status === 400) {
       try {
         const body = await res.clone().json()
         const msg = typeof body === 'string' ? body : (body?.message || body?.title || '')
-        showToast('error', msg || '请求参数错误')
+        showToast('error', msg || i18n.t('errors.badRequest'))
       } catch {
-        showToast('error', '请求参数错误')
+        showToast('error', i18n.t('errors.badRequest'))
       }
     } else if (res.status >= 500) {
-      showToast('error', `服务器内部错误 (${res.status})，请稍后重试`)
+      showToast('error', i18n.t('errors.serverError', { status: res.status }))
     } else {
-      showToast('error', `请求失败 (${res.status}: ${res.statusText})`)
+      showToast('error', i18n.t('errors.requestFailedStatus', { status: res.status, statusText: res.statusText }))
     }
     throw new Error(`API ${res.status}: ${res.statusText}`)
   }

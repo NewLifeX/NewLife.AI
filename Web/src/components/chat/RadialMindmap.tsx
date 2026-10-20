@@ -1,4 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 import type { MindmapSpec } from './MindmapBlock'
 
 // ── 类型 ─────────────────────────────────────────────────────────────────────
@@ -6,14 +8,17 @@ import type { MindmapSpec } from './MindmapBlock'
 /** 脑图布局模式 */
 export type MindmapLayout = 'tree' | 'radial' | 'lr' | 'rl' | 'tb' | 'bt'
 
-/** 布局标签 */
-export const LAYOUT_LABELS: Record<MindmapLayout, string> = {
-  tree: '缩进树',
-  radial: '左右放射',
-  lr: '中心→右',
-  rl: '中心→左',
-  tb: '中心→下',
-  bt: '中心→上',
+/** 布局标签（按当前界面语言实时解析） */
+export function layoutLabels(): Record<MindmapLayout, string> {
+  const { t } = i18n
+  return {
+    tree: t('mindmap.layouts.tree'),
+    radial: t('mindmap.layouts.radial'),
+    lr: t('mindmap.layouts.lr'),
+    rl: t('mindmap.layouts.rl'),
+    tb: t('mindmap.layouts.tb'),
+    bt: t('mindmap.layouts.bt'),
+  }
 }
 
 /** 脑图放射方向 */
@@ -270,6 +275,7 @@ interface RadialMindmapProps {
 }
 
 export function RadialMindmap({ spec, direction }: RadialMindmapProps) {
+  const { t } = useTranslation()
   const [isDark, setIsDark] = useState(() =>
     typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   )
@@ -306,7 +312,7 @@ export function RadialMindmap({ spec, direction }: RadialMindmapProps) {
       viewBox={`0 0 ${VIEW_W} ${viewH}`}
       className="w-full h-auto"
       style={{ background: bgColor, borderRadius: '12px' }}
-      aria-label={spec.title || '思维导图'}
+      aria-label={spec.title || t('artifactTypes.mindmap')}
     >
       <defs>
         <filter id="mm-shadow" x="-20%" y="-20%" width="140%" height="140%">

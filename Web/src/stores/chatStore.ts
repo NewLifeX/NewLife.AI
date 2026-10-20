@@ -23,6 +23,7 @@ import {
 import { useSettingsStore } from '@/stores/settingsStore'
 import { showToast } from '@/stores/toastStore'
 import { isExtensionAllowed } from '@/lib/systemSettings'
+import i18n from '@/i18n'
 import type { Attachment, ModelInfo } from '@/types'
 
 type ThinkingModeKey = 'fast' | 'auto' | 'think'
@@ -184,7 +185,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 前端预检：检查文件扩展名是否在允许列表中
     if (!await isExtensionAllowed(file.name, file.type)) {
       const ext = file.name.split('.').pop()?.toLowerCase() || file.name
-      showToast('warning', `不支持的文件类型：.${ext}`)
+      showToast('warning', i18n.t('errors.unsupportedFileType', { ext }))
       return
     }
 
@@ -400,7 +401,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           case 'error': {
             // 意图门控拒绝：显示为正常完成消息而非错误
             if (event.code === 'intent_gate_no_match' && event.message) {
-              const gateMsg = event.message ?? '抱歉，暂不支持该问题。'
+              const gateMsg = event.message ?? i18n.t('errors.intentGateUnsupported')
               if (assistantMsgId != null) {
                 set((s) => ({
                   messages: s.messages.map((m) =>
@@ -416,7 +417,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               break
             }
 
-            const errorMsg = event.message || event.error || '发生错误'
+            const errorMsg = event.message || event.error || i18n.t('errors.generic')
             if (assistantMsgId != null) {
               set((s) => ({
                 messages: s.messages.map((m) =>
@@ -654,7 +655,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               if (assistantMsgId != null) {
                 set((s) => ({
                   messages: s.messages.map((m) =>
-                    m.id === assistantMsgId ? { ...m, content: event.error ?? '生成失败', status: 'error' as const } : m,
+                    m.id === assistantMsgId ? { ...m, content: event.error ?? i18n.t('errors.completionFailed'), status: 'error' as const } : m,
                   ),
                   isGenerating: false,
                   _abortController: null,

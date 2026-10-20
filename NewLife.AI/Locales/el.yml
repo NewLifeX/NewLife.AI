@@ -1,4 +1,3 @@
-# Greek translation. Keys are the English source text; falls back to English when missing.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Πράκτορας αξιολόγησης: ελέγχει την ποιότητα του προσχεδίου και εξάγει προτάσεις βελτίωσης ή σήμα APPROVED"
 "Agent list cannot be empty": "Η λίστα πρακτόρων δεν μπορεί να είναι κενή"
 "Worker agent list cannot be empty": "Η λίστα πρακτόρων εργασίας δεν μπορεί να είναι κενή"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Ο πόρος '{0}' δεν βρέθηκε στις δυνατότητες του διακομιστή."
 "Prompt '{0}' not found in the server capabilities.": "Το Prompt '{0}' δεν βρέθηκε στις δυνατότητες του διακομιστή."
 "Missing required argument '{0}' for tool '{1}'": "Λείπει το απαιτούμενο όρισμα '{0}' για το εργαλείο '{1}'"
+"Rerank call failed": "Η κλήση επανακατάταξης απέτυχε"
+"Tool not found: '{0}', searched {1} in {2} providers": "Το εργαλείο δεν βρέθηκε: '{0}', αναζητήθηκαν {1} σε {2} παρόχους"

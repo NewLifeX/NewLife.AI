@@ -1,4 +1,3 @@
-# Turkish translation. Keys are the English source text; missing entries fall back to English at runtime.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "İnceleme aracısı: taslak kalitesini denetle ve iyileştirme önerileri veya APPROVED sinyali üret"
 "Agent list cannot be empty": "Aracı listesi boş olamaz"
 "Worker agent list cannot be empty": "Çalışan aracı listesi boş olamaz"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Kaynak '{0}' sunucu yeteneklerinde bulunamadı."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' sunucu yeteneklerinde bulunamadı."
 "Missing required argument '{0}' for tool '{1}'": "'{1}' aracı için gerekli '{0}' bağımsız değişkeni eksik"
+"Rerank call failed": "Yeniden sıralama çağrısı başarısız oldu"
+"Tool not found: '{0}', searched {1} in {2} providers": "Araç bulunamadı: '{0}', {2} sağlayıcıda {1} arandı"

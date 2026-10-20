@@ -44,7 +44,7 @@ public partial class DashScopeChatClient
             }
         }
 
-        throw last ?? new InvalidOperationException("重排序调用失败");
+        throw last ?? new InvalidOperationException(NewLife.Localization.Translate("Rerank call failed"));
     }
 
     private static Dictionary<String, Object> BuildRerankParameters(RerankRequest request)

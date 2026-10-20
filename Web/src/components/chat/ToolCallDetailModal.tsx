@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/common/Modal'
 import { Icon } from '@/components/common/Icon'
 import { formatToolCallJson } from './ToolCallBadge'
@@ -13,13 +14,14 @@ interface ToolCallDetailModalProps {
   result?: string
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  calling: '调用中',
-  done: '已完成',
-  error: '错误',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  calling: 'toolCall.calling',
+  done: 'toolCall.completed',
+  error: 'toolCall.error',
 }
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text)
@@ -29,7 +31,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      title={copied ? '已复制' : '复制'}
+      title={copied ? t('common.copied') : t('common.copy')}
       className="flex items-center justify-center w-6 h-6 rounded text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)] transition-colors"
     >
       <Icon name={copied ? 'check' : 'content_copy'} size="xs" />
@@ -53,6 +55,7 @@ function JsonCodeBlock({ text }: { text: string }) {
 }
 
 export function ToolCallDetailModal({ open, onClose, name, status, arguments: args, result }: ToolCallDetailModalProps) {
+  const { t } = useTranslation()
   return (
     <Modal open={open} onClose={onClose} maxWidth="max-w-4xl">
       <div className="flex flex-col w-full" style={{ minHeight: '50vh', maxHeight: '80vh' }}>
@@ -74,7 +77,7 @@ export function ToolCallDetailModal({ open, onClose, name, status, arguments: ar
           </span>
           <h2 className="text-sm font-semibold text-[var(--color-text-primary)] font-mono truncate">{name}</h2>
           <span className="ml-auto text-xs text-[var(--color-text-tertiary)] uppercase tracking-wider flex-shrink-0">
-            {STATUS_LABEL[status]}
+            {t(STATUS_LABEL_KEYS[status])}
           </span>
         </div>
 
@@ -84,7 +87,7 @@ export function ToolCallDetailModal({ open, onClose, name, status, arguments: ar
             <div className={`flex flex-col overflow-hidden ${result ? 'flex-1 border-r border-[var(--color-border-subtle)]' : 'flex-1'}`}>
               <div className="px-6 pt-4 pb-2 flex-shrink-0 flex items-center justify-between">
                 <div className="text-[10px] uppercase tracking-wider font-medium text-[var(--color-text-tertiary)]">
-                  入参
+                  {t('toolCall.input')}
                 </div>
                 <CopyButton text={formatToolCallJson(args)} />
               </div>
@@ -98,7 +101,7 @@ export function ToolCallDetailModal({ open, onClose, name, status, arguments: ar
             <div className="flex flex-col flex-1 overflow-hidden">
               <div className="px-6 pt-4 pb-2 flex-shrink-0 flex items-center justify-between">
                 <div className="text-[10px] uppercase tracking-wider font-medium text-[var(--color-text-tertiary)]">
-                  出参
+                  {t('toolCall.output')}
                 </div>
                 <CopyButton text={formatToolCallJson(result)} />
               </div>

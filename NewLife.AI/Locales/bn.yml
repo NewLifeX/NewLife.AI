@@ -1,4 +1,3 @@
-# বাংলা অনুবাদ। কী হলো ইংরেজি মূল পাঠ; অনুপস্থিত হলে রানটাইমে ইংরেজিতে ফিরে যায়।
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "রিভিউ এজেন্ট: খসড়ার গুণমান যাচাই করুন এবং উন্নতির পরামর্শ বা APPROVED অনুমোদন সংকেত দিন"
 "Agent list cannot be empty": "এজেন্ট তালিকা খালি হতে পারে না"
 "Worker agent list cannot be empty": "ওয়ার্কার এজেন্ট তালিকা খালি হতে পারে না"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "সার্ভার সক্ষমতায় রিসোর্স '{0}' পাওয়া যায়নি।"
 "Prompt '{0}' not found in the server capabilities.": "সার্ভার সক্ষমতায় Prompt '{0}' পাওয়া যায়নি।"
 "Missing required argument '{0}' for tool '{1}'": "টুল '{1}' এর জন্য প্রয়োজনীয় আর্গুমেন্ট '{0}' অনুপস্থিত"
+"Rerank call failed": "রির্যাঙ্ক কল ব্যর্থ হয়েছে"
+"Tool not found: '{0}', searched {1} in {2} providers": "টুল পাওয়া যায়নি: '{0}', {2}টি প্রদানকারীতে {1}টি খোঁজা হয়েছে"

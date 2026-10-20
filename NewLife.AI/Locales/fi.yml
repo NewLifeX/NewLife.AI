@@ -1,4 +1,3 @@
-# Finnish translation. Keys are the English source text; falls back to English when missing.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Arviointiedustaja: tarkistaa luonnoksen laadun ja tuottaa parannusehdotuksia tai APPROVED-signaalin"
 "Agent list cannot be empty": "Agenttilista ei voi olla tyhjä"
 "Worker agent list cannot be empty": "Työskentelyagenttien lista ei voi olla tyhjä"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Resurssia '{0}' ei löytynyt palvelimen ominaisuuksista."
 "Prompt '{0}' not found in the server capabilities.": "Kehotetta '{0}' ei löytynyt palvelimen ominaisuuksista."
 "Missing required argument '{0}' for tool '{1}'": "Pakollinen argumentti '{0}' puuttuu työkalulta '{1}'"
+"Rerank call failed": "Uudelleenjärjestyskutsu epäonnistui"
+"Tool not found: '{0}', searched {1} in {2} providers": "Työkalua ei löytynyt: '{0}', haettiin {1} {2} tarjoajalta"

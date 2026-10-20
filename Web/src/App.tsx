@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState, useRef, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { lazyLoad } from '@/utils/lazyLoad'
 import { useNavigate, useParams, Routes, Route, Navigate } from 'react-router-dom'
 import { ChatLayout } from '@/layouts/ChatLayout'
@@ -19,6 +20,7 @@ import { applyBrandTheme } from '@/lib/theme'
 function ChatApp() {
   const { conversationId } = useParams<{ conversationId: string }>()
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const {
     conversations,
@@ -57,7 +59,8 @@ function ChatApp() {
   const [isSystem, setIsSystem] = useState(false)
   const [appReady, setAppReady] = useState(false)
   const [systemSettingsOpen, setSystemSettingsOpen] = useState(false)
-  const [siteTitle, setSiteTitle] = useState('智能助手')
+  const [siteTitle, setSiteTitle] = useState<string>()
+  const resolvedSiteTitle = siteTitle || t('common.appDefaultTitle')
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([])
   const [welcomeMessage, setWelcomeMessage] = useState<string | undefined>(undefined)
   const [welcomeSubtitle, setWelcomeSubtitle] = useState<string | undefined>(undefined)
@@ -187,8 +190,8 @@ function ChatApp() {
 
   // 当前会话标题变化时更新网页标题，离开对话时恢复站点名
   useEffect(() => {
-    document.title = activeConv?.title ? `${activeConv.title} - ${siteTitle}` : siteTitle
-  }, [activeConversationId, activeConv?.title, siteTitle])
+    document.title = activeConv?.title ? `${activeConv.title} - ${resolvedSiteTitle}` : resolvedSiteTitle
+  }, [activeConversationId, activeConv?.title, resolvedSiteTitle])
 
   // 当前模型不支持思考时，若已选了 think 模式则自动回退到 auto
   useEffect(() => {
@@ -310,7 +313,7 @@ function ChatApp() {
         {isWelcome ? (
           <WelcomePage
             onSend={sendMessage}
-            siteTitle={siteTitle}
+            siteTitle={resolvedSiteTitle}
             welcomeMessage={welcomeMessage}
             welcomeSubtitle={welcomeSubtitle}
             suggestedQuestions={suggestedQuestions}

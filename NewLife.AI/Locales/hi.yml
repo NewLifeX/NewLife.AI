@@ -1,4 +1,3 @@
-# हिन्दी अनुवाद। कुंजी अंग्रेज़ी स्रोत पाठ है; अनुपस्थित होने पर रनटाइम अंग्रेज़ी पर लौटता है।
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "समीक्षा एजेंट: ड्राफ़्ट की गुणवत्ता जाँचें और सुधार सलाह या APPROVED स्वीकृति संकेत दें"
 "Agent list cannot be empty": "एजेंट सूची खाली नहीं हो सकती"
 "Worker agent list cannot be empty": "वर्कर एजेंट सूची खाली नहीं हो सकती"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "सर्वर क्षमताओं में संसाधन '{0}' नहीं मिला।"
 "Prompt '{0}' not found in the server capabilities.": "सर्वर क्षमताओं में प्रॉम्प्ट '{0}' नहीं मिला।"
 "Missing required argument '{0}' for tool '{1}'": "टूल '{1}' के लिए आवश्यक तर्क '{0}' अनुपस्थित है"
+"Rerank call failed": "रीरैंक कॉल विफल रहा"
+"Tool not found: '{0}', searched {1} in {2} providers": "टूल नहीं मिला: '{0}', {2} प्रदाताओं में {1} खोजे गए"

@@ -1,4 +1,3 @@
-# Český překlad. Klíče jsou anglický zdrojový text; chybějící položky se za běhu vracejí k angličtině.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Agent pro kontrolu: prověřit kvalitu konceptu a vydat doporučení ke zlepšení nebo signál APPROVED"
 "Agent list cannot be empty": "Seznam agentů nesmí být prázdný"
 "Worker agent list cannot be empty": "Seznam pracovních agentů nesmí být prázdný"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Zdroj '{0}' nebyl nalezen v možnostech serveru."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' nebyl nalezen v možnostech serveru."
 "Missing required argument '{0}' for tool '{1}'": "Chybí povinný argument '{0}' pro nástroj '{1}'"
+"Rerank call failed": "Volání rerankingu selhalo"
+"Tool not found: '{0}', searched {1} in {2} providers": "Nástroj nebyl nalezen: '{0}', prohledáno {1} v {2} poskytovatelích"

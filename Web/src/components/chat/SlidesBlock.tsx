@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 import { cn } from '@/lib/utils'
 import { getThemeColors } from '@/lib/theme-colors'
 import { Icon } from '@/components/common/Icon'
@@ -44,7 +46,7 @@ function buildSlideSrcDoc(html: string): string {
 </head>
 <body>
   <div class="frame">
-    <div class="loader">加载中…</div>
+    <div class="loader">${i18n.t('common.loading')}</div>
     <div class="stage">${html}</div>
   </div>
   <script>
@@ -70,6 +72,7 @@ function buildSlideSrcDoc(html: string): string {
 
 /** HTML 幻灯片缩略图（960x540 缩略） */
 function SlideThumb({ title, index, active, onClick }: { title: string; index: number; active: boolean; onClick: () => void }) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
@@ -85,7 +88,7 @@ function SlideThumb({ title, index, active, onClick }: { title: string; index: n
       {/* 16:9 缩略占位（64x36） */}
       <div className="flex items-center justify-center rounded-md overflow-hidden border border-gray-200/60 dark:border-gray-600/60 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700" style={{ width: 64, height: 36 }}>
         <span className="text-[9px] text-gray-400 dark:text-gray-500 px-1 text-center line-clamp-2 leading-tight">
-          {title || `第 ${index + 1} 页`}
+          {title || t('slides.pageNumber', { n: index + 1 })}
         </span>
       </div>
       <span className="text-[10px] tabular-nums text-gray-400 dark:text-gray-500">
@@ -97,6 +100,7 @@ function SlideThumb({ title, index, active, onClick }: { title: string; index: n
 
 /** 全屏预览对话框（逐页 iframe 渲染） */
 function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; initial: number; onClose: () => void }) {
+  const { t } = useTranslation()
   const [page, setPage] = useState(initial)
 
   // 键盘左右翻页
@@ -125,7 +129,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-sm font-medium truncate">{data.title}</span>
             <span className="text-xs text-white/50 shrink-0">
-              {page + 1} / {data.pageCount} 页
+              {t('slides.pageOf', { current: page + 1, total: data.pageCount })}
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -134,7 +138,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              title="上一页 (←)"
+              title={t('common.prevPage')}
             >
               <Icon name="chevron_left" size="sm" />
             </button>
@@ -143,7 +147,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
               onClick={() => setPage(p => Math.min(data.pageCount - 1, p + 1))}
               disabled={page >= data.pageCount - 1}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              title="下一页 (→)"
+              title={t('common.nextPage')}
             >
               <Icon name="chevron_right" size="sm" />
             </button>
@@ -151,7 +155,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/10 hover:bg-white/15 transition-colors"
-              title="关闭 (ESC)"
+              title={t('common.closeEsc')}
             >
               <Icon name="close" size="sm" />
             </button>
@@ -163,7 +167,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
             <iframe
               sandbox="allow-scripts"
               srcDoc={srcDoc}
-              title={`${data.title} - 第 ${page + 1} 页`}
+              title={t('slides.pageTitle', { title: data.title, n: page + 1 })}
               className="absolute inset-0 w-full h-full border-0"
               data-testid="slides-fullscreen-frame"
             />
@@ -177,6 +181,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
 
 /** build_slides 工具结果渲染块。展示多页 HTML 幻灯片，支持逐页预览与迭代修改 */
 export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProps) {
+  const { t } = useTranslation()
   const [activePage, setActivePage] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
 
@@ -212,7 +217,7 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
           className="shrink-0 ml-2 text-xs font-medium px-2 py-0.5 rounded-full"
           style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: colors.text }}
         >
-          {data.pageCount} 页{data.version > 1 ? ` · v${data.version}` : ''}
+          {t('slides.pages', { count: data.pageCount })}{data.version > 1 ? ` · v${data.version}` : ''}
         </span>
       </div>
 
@@ -222,7 +227,7 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
           <iframe
             sandbox="allow-scripts"
             srcDoc={srcDoc}
-            title={`${data.title} - 第 ${activePage + 1} 页`}
+            title={t('slides.pageTitle', { title: data.title, n: activePage + 1 })}
             className="absolute inset-0 w-full h-full border-0 bg-white"
             data-testid="slides-preview-frame"
           />
@@ -235,17 +240,17 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
           data-testid="slides-fullscreen-btn"
         >
           <Icon name="fullscreen" size="xs" />
-          全屏
+          {t('common.fullscreen')}
         </button>
       </div>
 
       {/* 缩略图横向列表 */}
       <div className="px-3 py-2">
         <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
-          {data.pageTitles.map((t, i) => (
+          {data.pageTitles.map((pageTitle, i) => (
             <SlideThumb
               key={i}
-              title={t}
+              title={pageTitle}
               index={i}
               active={i === activePage}
               onClick={() => setActivePage(i)}
@@ -257,7 +262,7 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
       {/* 底部：修改此制品 + 导出（可选） */}
       <div className="flex items-center justify-between px-3 pb-3 gap-3">
         <span className="text-xs text-gray-400 dark:text-gray-500">
-          HTML 幻灯片 · #{data.artifactId}
+          {t('slides.htmlLabel', { id: data.artifactId })}
         </span>
         <div className="flex items-center gap-2">
           {onEditArtifact && (
@@ -269,7 +274,7 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
               data-testid="slides-edit-btn"
             >
               <Icon name="edit" size="sm" />
-              修改此制品
+              {t('slides.editArtifact')}
             </button>
           )}
         </div>

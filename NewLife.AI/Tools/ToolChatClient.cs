@@ -1019,7 +1019,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                     if (tools != null && tools.Count > 0) { provider = p; break; }
                 }
                 if (provider == null)
-                    throw new InvalidOperationException($"Tool not found: '{toolName}', searched {toolMap.Count} in {Providers.Count} providers");
+                    throw new InvalidOperationException(Localization.Translate("Tool not found: '{0}', searched {1} in {2} providers", toolName, toolMap.Count, Providers.Count));
             }
 
             // 权限三档检查（代码强制原则：权限由代码控制，不依赖提示词约束）

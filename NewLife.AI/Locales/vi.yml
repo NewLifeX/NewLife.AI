@@ -1,4 +1,3 @@
-# Bản dịch tiếng Việt. Khóa là nguyên văn tiếng Anh; khi thiếu sẽ quay về tiếng Anh lúc chạy.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Agent đánh giá: kiểm tra chất lượng bản nháp và đưa ra gợi ý cải thiện hoặc tín hiệu phê duyệt APPROVED"
 "Agent list cannot be empty": "Danh sách agent không được để trống"
 "Worker agent list cannot be empty": "Danh sách agent công việc không được để trống"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Không tìm thấy tài nguyên '{0}' trong các khả năng của máy chủ."
 "Prompt '{0}' not found in the server capabilities.": "Không tìm thấy prompt '{0}' trong các khả năng của máy chủ."
 "Missing required argument '{0}' for tool '{1}'": "Thiếu đối số bắt buộc '{0}' cho công cụ '{1}'"
+"Rerank call failed": "Gọi xếp hạng lại thất bại"
+"Tool not found: '{0}', searched {1} in {2} providers": "Không tìm thấy công cụ: '{0}', đã tìm {1} trong {2} nhà cung cấp"

@@ -47,16 +47,16 @@ export interface KanbanSpec {
   swimlanes?: { id: string; title: string; columnIds: string[] }[]
 }
 
-const PRIORITY_STYLES: Record<string, { label: string; className: string }> = {
-  high:   { label: '高',   className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
-  medium: { label: '中',   className: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
-  low:    { label: '低',   className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' },
+const PRIORITY_STYLES: Record<string, { labelKey: string; className: string }> = {
+  high:   { labelKey: 'kanban.priorityHigh',   className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
+  medium: { labelKey: 'kanban.priorityMedium', className: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+  low:    { labelKey: 'kanban.priorityLow',    className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' },
 }
 
 const SORT_OPTIONS = [
-  { value: 'default', label: '默认' },
-  { value: 'priority', label: '优先级' },
-  { value: 'title', label: '标题' },
+  { value: 'default', labelKey: 'kanban.sortDefault' },
+  { value: 'priority', labelKey: 'kanban.sortPriority' },
+  { value: 'title', labelKey: 'kanban.sortTitle' },
 ] as const
 
 type SortMode = (typeof SORT_OPTIONS)[number]['value']
@@ -183,7 +183,7 @@ function KanbanCardDetailModal({ card, onClose }: CardDetailModalProps) {
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{card.title}</h3>
             {priority && (
               <span className={cn('shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded', priority.className)}>
-                {priority.label}
+                {t(priority.labelKey)}
               </span>
             )}
           </div>
@@ -346,14 +346,14 @@ function KanbanCardItem({ card, columnId, isHidden, onDragStart, onClick }: Kanb
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="text-gray-400 hover:text-blue-500"
-              title="打开链接"
+              title={t('kanban.openLink')}
             >
               <Icon name="open_in_new" size="sm" />
             </a>
           )}
           {priority && (
             <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', priority.className)}>
-              {priority.label}
+              {t(priority.labelKey)}
             </span>
           )}
         </div>
@@ -429,6 +429,7 @@ function KanbanFilterBar({
   activeTags, onToggleTag,
   allTags, totalVisible, totalCards,
 }: KanbanFilterBarProps) {
+  const { t } = useTranslation()
   const hasActiveFilters = activePriorities.size > 0 || activeTags.size > 0
 
   return (
@@ -450,7 +451,7 @@ function KanbanFilterBar({
                   : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-600 opacity-50 hover:opacity-80',
               )}
             >
-              {style.label}
+              {t(style.labelKey)}
             </button>
           )
         })}
@@ -707,7 +708,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
             <button
               type="button"
               onClick={toggleFullscreen}
-              title={isFullscreen ? '退出全屏' : '全屏'}
+              title={isFullscreen ? t('common.exitFullscreen') : t('common.fullscreen')}
               className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}
             >
               <Icon name={isFullscreen ? 'fullscreen_exit' : 'fullscreen'} size="sm" />
@@ -715,7 +716,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
             <button
               type="button"
               onClick={copyImage}
-              title={imageCopyErr ? '复制失败' : imageCopied ? '已复制' : '复制图片'}
+              title={imageCopyErr ? t('common.copyFailed') : imageCopied ? t('common.copied') : t('common.copyImage')}
               className={cn(
                 iconBtnClass,
                 imageCopyErr ? 'text-red-500' : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400',
@@ -726,7 +727,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
             <button
               type="button"
               onClick={saveImage}
-              title={imageSaved ? '已保存' : '另存为图片'}
+              title={imageSaved ? t('common.saved') : t('common.saveAsImage')}
               className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}
             >
               <Icon name={imageSaved ? 'check' : 'save_alt'} size="sm" />
@@ -793,7 +794,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); cycleSort(col.id) }}
-                    title={`排序：${SORT_OPTIONS.find((o) => o.value === currentSort)?.label}`}
+                    title={t('kanban.sortTooltip', { mode: t(SORT_OPTIONS.find((o) => o.value === currentSort)?.labelKey ?? 'kanban.sortDefault') })}
                     className="ml-0.5 text-gray-400 hover:text-blue-500 shrink-0"
                     data-no-capture
                   >
@@ -816,7 +817,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
                     ))}
                     {col.cards.length === 0 && (
                       <div className="text-center text-xs text-gray-400 dark:text-gray-600 py-4 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                        空
+                        {t('kanban.emptyColumn')}
                       </div>
                     )}
                   </div>

@@ -243,7 +243,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
     {
         var allTools = GetAllTools();
         var tool = allTools.FirstOrDefault(t => t.Name.EqualIgnoreCase(toolName));
-        if (tool == null) throw new KeyNotFoundException($"MCP tool not found: '{toolName}'");
+        if (tool == null) throw new KeyNotFoundException(Localization.Translate("MCP tool not found: '{0}'", toolName));
 
         var args = new Dictionary<String, Object?>();
         if (!arguments.IsNullOrEmpty())

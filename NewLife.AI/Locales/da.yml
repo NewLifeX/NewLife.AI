@@ -1,4 +1,3 @@
-# Danish translation. Keys are the English source text; missing entries fall back to English at runtime.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Reviewagent: gennemgå kladdekvaliteten og giv forbedringsforslag eller signalet APPROVED"
 "Agent list cannot be empty": "Agentlisten må ikke være tom"
 "Worker agent list cannot be empty": "Listen over arbejderagenter må ikke være tom"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Ressourcen '{0}' blev ikke fundet i serverens funktioner."
 "Prompt '{0}' not found in the server capabilities.": "Prompten '{0}' blev ikke fundet i serverens funktioner."
 "Missing required argument '{0}' for tool '{1}'": "Påkrævet argument '{0}' mangler for værktøjet '{1}'"
+"Rerank call failed": "Rerank-kald mislykkedes"
+"Tool not found: '{0}', searched {1} in {2} providers": "Værktøj blev ikke fundet: '{0}', søgte {1} i {2} udbydere"

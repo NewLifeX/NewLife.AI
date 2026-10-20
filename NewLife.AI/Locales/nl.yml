@@ -1,4 +1,3 @@
-# Dutch translation. Keys are the English source text; missing entries fall back to English at runtime.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Beoordelingsagent: controleer de kwaliteit van het concept en geef verbeteradvies of het signaal APPROVED"
 "Agent list cannot be empty": "Agentlijst mag niet leeg zijn"
 "Worker agent list cannot be empty": "Lijst met worker-agents mag niet leeg zijn"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Bron '{0}' niet gevonden in de mogelijkheden van de server."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' niet gevonden in de mogelijkheden van de server."
 "Missing required argument '{0}' for tool '{1}'": "Vereist argument '{0}' ontbreekt voor tool '{1}'"
+"Rerank call failed": "Rerank-aanroep mislukt"
+"Tool not found: '{0}', searched {1} in {2} providers": "Hulpprogramma niet gevonden: '{0}', {1} doorzocht in {2} providers"

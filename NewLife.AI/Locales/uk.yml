@@ -1,4 +1,3 @@
-# Український переклад. Ключі — це англійський вихідний текст; відсутні записи під час виконання повертаються до англійської.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Агент перевірки: перевірити якість чернетки та надати рекомендації щодо покращення або сигнал APPROVED"
 "Agent list cannot be empty": "Список агентів не може бути порожнім"
 "Worker agent list cannot be empty": "Список робочих агентів не може бути порожнім"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Ресурс '{0}' не знайдено в можливостях сервера."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' не знайдено в можливостях сервера."
 "Missing required argument '{0}' for tool '{1}'": "Відсутній обов'язковий аргумент '{0}' для інструмента '{1}'"
+"Rerank call failed": "Виклик переранжування не вдався"
+"Tool not found: '{0}', searched {1} in {2} providers": "Інструмент не знайдено: '{0}', виконано пошук {1} у {2} провайдерів"

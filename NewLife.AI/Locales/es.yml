@@ -1,4 +1,3 @@
-# Traducción al español. Las claves son el texto original en inglés; si faltan, se recurre al inglés en tiempo de ejecución.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Agente revisor: audita la calidad del borrador y emite consejos de mejora o la señal APPROVED"
 "Agent list cannot be empty": "La lista de agentes no puede estar vacía"
 "Worker agent list cannot be empty": "La lista de agentes trabajadores no puede estar vacía"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "No se encontró el recurso '{0}' en las capacidades del servidor."
 "Prompt '{0}' not found in the server capabilities.": "No se encontró el prompt '{0}' en las capacidades del servidor."
 "Missing required argument '{0}' for tool '{1}'": "Falta el argumento obligatorio '{0}' para la herramienta '{1}'"
+"Rerank call failed": "Error en la llamada de reranking"
+"Tool not found: '{0}', searched {1} in {2} providers": "No se encontró la herramienta: '{0}', se buscaron {1} en {2} proveedores"

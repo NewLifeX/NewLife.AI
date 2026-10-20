@@ -1,27 +1,28 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Modal } from '@/components/common/Modal'
 import { Icon } from '@/components/common/Icon'
 import { createShareLink, revokeShareLink, fetchSystemConfig } from '@/lib/api'
 import { useChatStore } from '@/stores'
 
 const QUICK_PRESETS = [
-  { min: 10, zh: '10分', en: '10m' },
-  { min: 30, zh: '30分', en: '30m' },
-  { min: 120, zh: '2时', en: '2h' },
-  { min: 1440, zh: '1天', en: '1d' },
-  { min: 10080, zh: '1周', en: '1wk' },
-  { min: 43200, zh: '1月', en: '1mo' },
-  { min: 525600, zh: '1年', en: '1yr' },
+  { min: 10, labelKey: 'share.expiryQuick.m10' },
+  { min: 30, labelKey: 'share.expiryQuick.m30' },
+  { min: 120, labelKey: 'share.expiryQuick.h2' },
+  { min: 1440, labelKey: 'share.expiryQuick.d1' },
+  { min: 10080, labelKey: 'share.expiryQuick.w1' },
+  { min: 43200, labelKey: 'share.expiryQuick.mo1' },
+  { min: 525600, labelKey: 'share.expiryQuick.y1' },
 ]
 const TICKS = [
-  { min: 10, label: '10分', labelEn: '10m' },
-  { min: 60, label: '1时', labelEn: '1h' },
-  { min: 360, label: '6时', labelEn: '6h' },
-  { min: 1440, label: '1天', labelEn: '1d' },
-  { min: 10080, label: '1周', labelEn: '1wk' },
-  { min: 43200, label: '1月', labelEn: '1mo' },
-  { min: 525600, label: '1年', labelEn: '1yr' },
+  { min: 10, labelKey: 'share.expiryQuick.m10' },
+  { min: 60, labelKey: 'share.expiryQuick.h1' },
+  { min: 360, labelKey: 'share.expiryQuick.h6' },
+  { min: 1440, labelKey: 'share.expiryQuick.d1' },
+  { min: 10080, labelKey: 'share.expiryQuick.w1' },
+  { min: 43200, labelKey: 'share.expiryQuick.mo1' },
+  { min: 525600, labelKey: 'share.expiryQuick.y1' },
 ]
 const LOG_MIN = Math.log(10)
 const LOG_MAX = Math.log(525600)
@@ -37,24 +38,18 @@ function sliderToMinutes(value: number): number {
   return Math.round(raw / 1440) * 1440
 }
 
-function fmtDur(minutes: number, lang: string): string {
-  const zh = lang.startsWith('zh')
-  if (minutes < 60) return zh ? `${minutes} 分钟` : `${minutes} min`
+function fmtDur(minutes: number, t: TFunction): string {
+  if (minutes < 60) return t('share.durationMinutes', { n: minutes })
   if (minutes < 1440) {
     const h = minutes / 60
-    const hs = h % 1 === 0 ? `${h}` : h.toFixed(1)
-    return zh ? `${hs} 小时` : `${hs} hr${h !== 1 ? 's' : ''}`
+    return t('share.durationHours', { count: h, n: h % 1 === 0 ? `${h}` : h.toFixed(1) })
   }
   if (minutes < 43200) {
     const d = minutes / 1440
-    const ds = d % 1 === 0 ? `${d}` : d.toFixed(1)
-    return zh ? `${ds} 天` : `${ds} day${d !== 1 ? 's' : ''}`
+    return t('share.durationDays', { count: d, n: d % 1 === 0 ? `${d}` : d.toFixed(1) })
   }
-  if (minutes < 525600) {
-    const mo = Math.round(minutes / 43200)
-    return zh ? `${mo} 月` : `${mo} mo`
-  }
-  return zh ? '1 年' : '1 yr'
+  if (minutes < 525600) return t('share.durationMonths', { n: Math.round(minutes / 43200) })
+  return t('share.durationYears')
 }
 
 interface ShareDialogProps {
@@ -64,7 +59,7 @@ interface ShareDialogProps {
 }
 
 export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -184,7 +179,7 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
               </label>
               {/* 快捷预设 */}
               <div className="flex flex-wrap gap-1.5">
-                {QUICK_PRESETS.map(({ min, zh, en }) => (
+                {QUICK_PRESETS.map(({ min, labelKey }) => (
                   <button
                     key={min}
                     type="button"
@@ -195,7 +190,7 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
                         : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-primary hover:text-primary'
                     }`}
                   >
-                    {i18n.language.startsWith('zh') ? zh : en}
+                    {t(labelKey)}
                   </button>
                 ))}
               </div>
@@ -215,7 +210,7 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
                 />
                 {/* 刻度标签 */}
                 <div className="relative h-4">
-                  {TICKS.map(({ min, label, labelEn }, idx) => (
+                  {TICKS.map(({ min, labelKey }, idx) => (
                     <span
                       key={min}
                       style={{
@@ -224,14 +219,14 @@ export function ShareDialog({ open, onClose, conversationId }: ShareDialogProps)
                       }}
                       className="absolute text-[10px] text-gray-400 dark:text-gray-500 select-none"
                     >
-                      {i18n.language.startsWith('zh') ? label : labelEn}
+                      {t(labelKey)}
                     </span>
                   ))}
                 </div>
               </div>
               {/* 当前值 */}
               <div className="text-center py-1.5 rounded-lg bg-primary/10 dark:bg-primary/15">
-                <span className="text-sm font-semibold text-primary">{fmtDur(expireMinutes, i18n.language)}</span>
+                <span className="text-sm font-semibold text-primary">{fmtDur(expireMinutes, t)}</span>
               </div>
             </div>
             {error && (

@@ -1,9 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 import { cn } from '@/lib/utils'
 import { captureDomAsPng, copyImageOrFallback, savePngBlob } from '@/utils/imageCapture'
 import { MobileImageFallback } from '@/components/atoms/MobileImageFallback'
 import { Icon } from '@/components/common/Icon'
-import { RadialMindmap, LAYOUT_LABELS, layoutToDirection } from './RadialMindmap'
+import { RadialMindmap, layoutLabels, layoutToDirection } from './RadialMindmap'
 import { MindmapECharts } from './MindmapECharts'
 import type { MindmapLayout } from './RadialMindmap'
 
@@ -42,7 +44,7 @@ const BRANCH_COLORS = [
 /** 将 Markdown 大纲（# / ## / ###）解析为树结构 */
 function parseOutline(content: string): { rootLabel: string; branches: TreeNode[] } {
   const lines = content.split('\n').map(l => l.trim()).filter(Boolean)
-  let rootLabel = '中心主题'
+  let rootLabel = i18n.t('mindmap.defaultRoot')
   const branches: TreeNode[] = []
   let currentBranch: TreeNode | null = null
   let currentL2: TreeNode | null = null
@@ -175,6 +177,7 @@ interface MindmapBlockProps {
 }
 
 export function MindmapBlock({ spec, className }: MindmapBlockProps) {
+  const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState<MindmapLayout>(spec.layout ?? 'tree')
   const [imageCopied, setImageCopied] = useState(false)
@@ -184,6 +187,7 @@ export function MindmapBlock({ spec, className }: MindmapBlockProps) {
   const isTreeLayout = layout === 'tree'
   // ECharts 正交树：lr / rl / tb / bt
   const isEChartsLayout = layout === 'lr' || layout === 'rl' || layout === 'tb' || layout === 'bt'
+  const labels = layoutLabels()
 
   const copyImage = useCallback(async () => {
     if (!rootRef.current) return
@@ -219,7 +223,7 @@ export function MindmapBlock({ spec, className }: MindmapBlockProps) {
   if (spec.branches.length === 0) {
     return (
       <div className={cn('rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-500', className)}>
-        思维导图暂无数据
+        {t('mindmap.empty')}
       </div>
     )
   }
@@ -247,7 +251,7 @@ export function MindmapBlock({ spec, className }: MindmapBlockProps) {
                   key={mode}
                   type="button"
                   onClick={() => setLayout(mode)}
-                  title={LAYOUT_LABELS[mode]}
+                  title={labels[mode]}
                   className={cn(
                     iconBtnClass,
                     layout === mode
@@ -268,7 +272,7 @@ export function MindmapBlock({ spec, className }: MindmapBlockProps) {
             <button
               type="button"
               onClick={copyImage}
-              title={imageCopyErr ? '复制失败' : imageCopied ? '已复制' : '复制图片'}
+              title={imageCopyErr ? t('common.copyFailed') : imageCopied ? t('common.copied') : t('common.copyImage')}
               className={cn(
                 iconBtnClass,
                 imageCopyErr ? 'text-red-500' : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400',
@@ -279,7 +283,7 @@ export function MindmapBlock({ spec, className }: MindmapBlockProps) {
             <button
               type="button"
               onClick={saveImage}
-              title={imageSaved ? '已保存' : '另存为图片'}
+              title={imageSaved ? t('common.saved') : t('common.saveAsImage')}
               className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}
             >
               <Icon name={imageSaved ? 'check' : 'save_alt'} size="sm" />

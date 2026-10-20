@@ -1,4 +1,3 @@
-# 日本語訳。キーは英語原文、欠落時は実行時に英語へフォールバックします。
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "レビューエージェント：草稿の品質を審査し、改善提案または APPROVED 承認シグナルを出力"
 "Agent list cannot be empty": "エージェント一覧を空にすることはできません"
 "Worker agent list cannot be empty": "ワーカーエージェント一覧を空にすることはできません"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "サーバー機能にリソース '{0}' が見つかりません。"
 "Prompt '{0}' not found in the server capabilities.": "サーバー機能にプロンプト '{0}' が見つかりません。"
 "Missing required argument '{0}' for tool '{1}'": "ツール '{1}' の必須引数 '{0}' がありません"
+"Rerank call failed": "リランク呼び出しに失敗しました"
+"Tool not found: '{0}', searched {1} in {2} providers": "ツールが見つかりません: '{0}'、{2} 個のプロバイダーで {1} 個を検索しました"

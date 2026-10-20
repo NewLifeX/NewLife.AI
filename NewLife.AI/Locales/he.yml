@@ -1,4 +1,3 @@
-# Hebrew translation. Keys are the English source text; missing entries fall back to English at runtime.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "סוכן ביקורת: בדיקת איכות הטיוטה והפקת הצעות שיפור או אות APPROVED"
 "Agent list cannot be empty": "רשימת הסוכנים לא יכולה להיות ריקה"
 "Worker agent list cannot be empty": "רשימת סוכני העבודה לא יכולה להיות ריקה"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "המשאב '{0}' לא נמצא ביכולות השרת."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' לא נמצא ביכולות השרת."
 "Missing required argument '{0}' for tool '{1}'": "חסר ארגומנט חובה '{0}' עבור הכלי '{1}'"
+"Rerank call failed": "קריאת הדירוג מחדש נכשלה"
+"Tool not found: '{0}', searched {1} in {2} providers": "הכלי לא נמצא: '{0}', חיפשו {1} ב-{2} ספקים"

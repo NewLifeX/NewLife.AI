@@ -9,7 +9,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ECharts, EChartsOption } from 'echarts'
+import i18n from '@/i18n'
 import { cn, withTimeout } from '@/lib/utils'
 
 // ── ECharts 懒加载（首屏不加载 ~1MB 的图表库，首次渲染图表时才拉取）───────────
@@ -67,7 +69,7 @@ function ensureChinaMap(): Promise<void> {
     }
     // 所有源都失败
     _chinaGeoPromise = null   // 允许重试
-    throw lastError || new Error('无法加载中国地图数据（所有数据源均不可用）')
+    throw lastError || new Error(i18n.t('chart.loadGeoFailed'))
   })()
   
   return _chinaGeoPromise
@@ -148,7 +150,7 @@ function normalizeChartData(type: ChartType, title: string, rawData: unknown): C
   const wrapSeries = (seriesData: unknown, seriesName?: string, extra?: Record<string, unknown>): ChartSpec['data'] => ({
     ...(extra ?? {}),
     series: [{
-      name: (seriesName ?? title) || '数据',
+      name: (seriesName ?? title) || i18n.t('chart.seriesData'),
       data: seriesData,
     }],
   }) as ChartSpec['data']
@@ -186,7 +188,7 @@ function normalizeChartData(type: ChartType, title: string, rawData: unknown): C
       if (type === 'gauge' && typeof dataObj.value === 'number') {
         return wrapSeries([
           {
-            name: typeof dataObj.name === 'string' ? dataObj.name : title || '数值',
+            name: typeof dataObj.name === 'string' ? dataObj.name : title || i18n.t('chart.seriesValue'),
             value: dataObj.value,
           },
         ])
@@ -348,7 +350,7 @@ function buildOption(spec: ChartSpec, isDark: boolean): EChartsOption {
             name: s.name ?? `item${i}`,
             value: (s.data as number[])[i],
           }))
-          mergedSeries = [{ name: title || '数据', data: merged }]
+          mergedSeries = [{ name: title || i18n.t('chart.seriesData'), data: merged }]
         }
       }
 
@@ -466,7 +468,7 @@ function buildOption(spec: ChartSpec, isDark: boolean): EChartsOption {
         },
         visualMap: {
           min: minVal, max: maxVal,
-          text: [`高${unitSuffix}`, `低${unitSuffix}`],
+          text: [i18n.t('chart.legendHigh', { unit: unitSuffix }), i18n.t('chart.legendLow', { unit: unitSuffix })],
           textStyle: { color: mutedColor },
           realtime: false, calculable: true,
           inRange: { color: ['#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695'] },
@@ -647,6 +649,7 @@ const DEFAULT_HEIGHT = 360
 // ── 组件 ─────────────────────────────────────────────────────────────────────
 
 export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef     = useRef<ECharts | null>(null)
   const lastChartIdRef = useRef<string | null>(null)
@@ -667,7 +670,7 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
       .then(() => { if (!cancelled) setLoading(false) })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : '地图数据加载失败')
+          setError(e instanceof Error ? e.message : i18n.t('chart.mapLoadFailed'))
           setLoading(false)
         }
       })
@@ -688,7 +691,7 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
       try {
         chartRef.current.setOption(buildOption(spec, isDark))
       } catch (e) {
-        setError(e instanceof Error ? e.message : '图表更新失败')
+        setError(e instanceof Error ? e.message : i18n.t('chart.updateFailed'))
       }
       return
     }
@@ -712,7 +715,7 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
         chart.setOption(buildOption(spec, isDark))
         lastChartIdRef.current = spec.chartId
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : '图表渲染失败')
+        if (!cancelled) setError(e instanceof Error ? e.message : i18n.t('chart.renderFailed'))
       }
     })
 
@@ -814,7 +817,7 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
           <button
             type="button"
             onClick={copyImage}
-            title={imageCopyErr ? '复制失败' : imageCopied ? '已复制' : '复制图片'}
+            title={imageCopyErr ? t('common.copyFailed') : imageCopied ? t('common.copied') : t('common.copyImage')}
             className={cn(
               'flex items-center justify-center w-7 h-7 rounded-md',
               'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-sm transition-colors',
@@ -826,7 +829,7 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
           <button
             type="button"
             onClick={saveImage}
-            title={imageSaved ? '已保存' : '另存为图片'}
+            title={imageSaved ? t('common.saved') : t('common.saveAsImage')}
             className="flex items-center justify-center w-7 h-7 rounded-md bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             <Icon name={imageSaved ? 'check' : 'save_alt'} size="xs" />
@@ -835,13 +838,13 @@ export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
       )}
       {error && (
         <div className="m-3 rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400">
-          图表渲染失败：{error}
+          {t('chart.renderFailedDetail', { message: error })}
         </div>
       )}
       {loading && (
         <div className="flex items-center justify-center" style={{ height }}>
           <span className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">
-            正在加载地图数据…
+            {t('chart.loadingMap')}
           </span>
         </div>
       )}

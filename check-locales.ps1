@@ -169,13 +169,13 @@ if (!$SkipOrphan) {
 # 源码消息缺少词条：L.T / XException 系列 / 带前缀日志会按词表翻译，缺键时静默回退英文
 if (!$SkipMessageCheck) {
     $messagePatterns = @(
-        'L\.T\(\s*"((?:[^"\\]|\\.)*)"',
-        'new\s+(?:XCodeException|XException|EntityException)\s*\(\s*"((?:[^"\\]|\\.)*)"',
+        'L\.T\(\s*\$?"((?:[^"\\]|\\.)*)"',
+        'new\s+(?:XCodeException|XException|EntityException)\s*\(\s*\$?"((?:[^"\\]|\\.)*)"',
         '(?:Info|Error|Warn|Debug|Fatal)Prefixed\([^,]*,\s*"((?:[^"\\]|\\.)*)"',
         'XTrace\.WriteLine\(\s*"((?:[^"\\]|\\.)*)"',
         '[\w]*[Ll]og\??\.(?:Info|Error|Warn|Debug|Fatal)\(\s*"((?:[^"\\]|\\.)*)"',
         'WriteLog\(\s*"((?:[^"\\]|\\.)*)"',
-        'Localization\.Translate\(\s*"((?:[^"\\]|\\.)*)"'
+        'Localization\.Translate\(\s*\$?"((?:[^"\\]|\\.)*)"'
     )
     $sourceDirs = @($SourceDir | ForEach-Object {
         if ([IO.Path]::IsPathRooted($_)) { $_ } else { Join-Path $root $_ }

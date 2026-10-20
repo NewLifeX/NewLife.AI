@@ -13,15 +13,15 @@ interface ModelSelectorProps {
   className?: string
 }
 
-// 能力标签配置：key / 显示文字 / 颜色
-const CAPABILITIES: { key: keyof ModelInfo; label: string; cls: string }[] = [
-  { key: 'supportThinking', label: '思考', cls: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/25' },
-  { key: 'supportFunction', label: '工具', cls: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/25' },
-  { key: 'supportVision', label: '视觉', cls: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/25' },
-  { key: 'supportAudio', label: '语音识别', cls: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/25' },
-  { key: 'supportSpeech', label: '语音合成', cls: 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/25' },
-  { key: 'supportImage', label: '图像', cls: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/25' },
-  { key: 'supportVideo', label: '视频', cls: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-900/25' },
+// 能力标签配置：字段 / 词表键 / 颜色
+const CAPABILITIES: { key: keyof ModelInfo; labelKey: string; cls: string }[] = [
+  { key: 'supportThinking', labelKey: 'modelCapability.thinking', cls: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/25' },
+  { key: 'supportFunction', labelKey: 'modelCapability.tools', cls: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/25' },
+  { key: 'supportVision', labelKey: 'modelCapability.vision', cls: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/25' },
+  { key: 'supportAudio', labelKey: 'modelCapability.audio', cls: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/25' },
+  { key: 'supportSpeech', labelKey: 'modelCapability.speech', cls: 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/25' },
+  { key: 'supportImage', labelKey: 'modelCapability.image', cls: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/25' },
+  { key: 'supportVideo', labelKey: 'modelCapability.video', cls: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-900/25' },
 ]
 
 export function ModelSelector({
@@ -136,7 +136,7 @@ export function ModelSelector({
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder={manyModels ? '搜索模型或服务商...' : '搜索模型...'}
+                    placeholder={manyModels ? t('modelSelector.searchProvider') : t('modelSelector.search')}
                     className="flex-1 text-sm bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400"
                   />
                   {search && (
@@ -189,10 +189,10 @@ export function ModelSelector({
                           </div>
                           {/* 右侧：能力标签 + 选中勾 */}
                           <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                            {CAPABILITIES.map(({ key, label, cls }) =>
+                            {CAPABILITIES.map(({ key, labelKey, cls }) =>
                               model[key] ? (
                                 <span key={key} className={cn('text-[10px] font-medium leading-none px-1 py-0.5 rounded', cls)}>
-                                  {label}
+                                  {t(labelKey)}
                                 </span>
                               ) : null,
                             )}
@@ -210,7 +210,9 @@ export function ModelSelector({
             {models.length > 5 && (
               <div className="px-3 py-1.5 border-t border-gray-100 dark:border-gray-700 flex-shrink-0">
                 <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-                  {search ? `${filteredModels.length} / ${models.length} 个模型` : `共 ${models.length} 个模型`}
+                  {search
+                    ? t('modelSelector.filteredCount', { filtered: filteredModels.length, total: models.length })
+                    : t('modelSelector.totalCount', { count: models.length })}
                 </p>
               </div>
             )}

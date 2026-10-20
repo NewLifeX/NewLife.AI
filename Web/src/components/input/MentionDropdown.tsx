@@ -104,7 +104,7 @@ export function MentionDropdown({
         <div ref={listRef} className="p-1.5 max-h-80 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="px-3 py-4 text-center text-sm text-[var(--color-text-tertiary)]">
-              {t('skills.noMatch', '无匹配技能')}
+              {t('skills.noMatch')}
             </div>
           ) : (
             filtered.map((skill, idx) => {
@@ -146,7 +146,7 @@ export function MentionDropdown({
                     </span>
                     {isTool && (
                       <span className="text-[10px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 leading-none">
-                        {t('skills.tool', '工具')}
+                        {t('skills.tool')}
                       </span>
                     )}
                   </div>

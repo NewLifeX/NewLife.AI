@@ -55,10 +55,10 @@ export function AgentTaskCard({ toolCalls, className }: AgentTaskCardProps) {
           )}
         />
         <span className="flex-1 text-[13px] font-medium text-[var(--color-text-primary)]">
-          {t('chat.agentTaskProgress', 'Agent 任务进度')}
+          {t('chat.agentTaskProgress')}
         </span>
         <span className="text-[12px] text-[var(--color-text-tertiary)]">
-          {doneCount}/{totalCount} {t('chat.steps', '步')}
+          {doneCount}/{totalCount} {t('chat.steps', { count: totalCount })}
         </span>
         <Icon
           name={expanded ? 'expand_less' : 'expand_more'}

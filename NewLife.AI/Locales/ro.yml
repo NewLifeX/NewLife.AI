@@ -1,4 +1,3 @@
-# Traducere în română. Cheile sunt textul original în engleză; dacă lipsesc, se revine la engleză la rulare.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Agent de revizuire: verifică calitatea schiței și emite sfaturi de îmbunătățire sau semnalul APPROVED"
 "Agent list cannot be empty": "Lista de agenți nu poate fi goală"
 "Worker agent list cannot be empty": "Lista agenților de lucru nu poate fi goală"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Resursa '{0}' nu a fost găsită în capacitățile serverului."
 "Prompt '{0}' not found in the server capabilities.": "Promptul '{0}' nu a fost găsit în capacitățile serverului."
 "Missing required argument '{0}' for tool '{1}'": "Lipsește argumentul obligatoriu '{0}' pentru instrumentul '{1}'"
+"Rerank call failed": "Apelul de reranjare a eșuat"
+"Tool not found: '{0}', searched {1} in {2} providers": "Instrumentul nu a fost găsit: '{0}', s-au căutat {1} în {2} furnizori"

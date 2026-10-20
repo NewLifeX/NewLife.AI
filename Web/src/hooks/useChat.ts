@@ -14,6 +14,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react'
+import i18n from '@/i18n'
 import { streamMessage } from '@/lib/api'
 import type { ChatStreamEvent } from '@/lib/api'
 import type { Message } from '@/types'
@@ -174,7 +175,7 @@ export function useChat(options: UseChatOptions): UseChatReturn {
                 updateAssistant((m) => ({
                   ...m,
                   status: 'error',
-                  content: m.content || (event.error ?? '发生错误'),
+                  content: m.content || (event.error ?? i18n.t('errors.generic')),
                 }))
                 break
             }

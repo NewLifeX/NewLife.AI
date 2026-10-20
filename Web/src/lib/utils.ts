@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import i18n from '@/i18n'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -14,12 +15,13 @@ export function formatRelativeTime(dateStr: string, locale: string = 'zh'): stri
   const diffHour = Math.floor(diffMin / 60)
   const diffDay = Math.floor(diffHour / 24)
 
+  const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, { lng: locale, ...options })
   const isZh = locale.startsWith('zh')
-  if (diffSec < 60) return isZh ? '刚刚' : 'just now'
-  if (diffMin < 60) return isZh ? `${diffMin} 分钟前` : `${diffMin}m ago`
-  if (diffHour < 24) return isZh ? `${diffHour} 小时前` : `${diffHour}h ago`
-  if (diffDay === 1) return isZh ? '昨天' : 'yesterday'
-  if (diffDay < 7) return isZh ? `${diffDay} 天前` : `${diffDay}d ago`
+  if (diffSec < 60) return t('time.justNow')
+  if (diffMin < 60) return t('time.minutesAgo', { n: diffMin })
+  if (diffHour < 24) return t('time.hoursAgo', { n: diffHour })
+  if (diffDay === 1) return t('time.yesterday')
+  if (diffDay < 7) return t('time.daysAgo', { n: diffDay })
   return date.toLocaleDateString(isZh ? 'zh-CN' : 'en-US')
 }
 

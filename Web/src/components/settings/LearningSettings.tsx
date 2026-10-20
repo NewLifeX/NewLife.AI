@@ -94,7 +94,7 @@ export function LearningSettings() {
           onClick={loadAll}
           className="px-4 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90"
         >
-          {t('common.retry') ?? '重试'}
+          {t('common.retry')}
         </button>
       </div>
     )

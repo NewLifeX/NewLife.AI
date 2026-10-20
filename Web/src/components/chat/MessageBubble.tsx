@@ -49,18 +49,18 @@ interface MessageBubbleProps {
   className?: string
 }
 
-/** 工具调用中文显示名 */
-const TOOL_DISPLAY_NAMES: Record<string, string> = {
-  show_timeline: '时间轴',
-  show_chart: '图表',
-  show_widget: '可视化',
-  show_china_map: '地图',
-  show_mindmap: '思维导图',
-  show_kanban: '看板',
-  build_ppt: '幻灯片',
-  build_excel: '电子表格',
-  build_doc: '文档',
-  ask_user: '提问',
+/** 工具调用显示名对应的词表键 */
+const TOOL_DISPLAY_KEYS: Record<string, string> = {
+  show_timeline: 'artifactTypes.timeline',
+  show_chart: 'artifactTypes.chart',
+  show_widget: 'artifactTypes.widget',
+  show_china_map: 'artifactTypes.chinaMap',
+  show_mindmap: 'artifactTypes.mindmap',
+  show_kanban: 'artifactTypes.kanban',
+  build_ppt: 'artifactTypes.slides',
+  build_excel: 'artifactTypes.spreadsheet',
+  build_doc: 'artifactTypes.document',
+  ask_user: 'artifactTypes.askUser',
 }
 
 /** 检测技术性内部错误（如 JSON 解析失败），不应直接暴露给用户 */
@@ -145,14 +145,14 @@ function renderToolResult(tc: ToolCall, showToolCalls: boolean, t: (key: string,
     if (outputInfo.type === 'error') {
       return (
         <div key={tc.id} className="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">
-          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} ${t('chat.genFailed')}`}
+          {outputInfo.forUser || `${TOOL_DISPLAY_KEYS[tc.name] ? t(TOOL_DISPLAY_KEYS[tc.name]) : tc.name} ${t('chat.genFailed')}`}
         </div>
       )
     }
     if (outputInfo.type === 'duplicate') {
       return (
         <div key={tc.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 px-3 py-2 text-sm text-gray-400 dark:text-gray-500">
-          {outputInfo.forUser || `${TOOL_DISPLAY_NAMES[tc.name] ?? tc.name} ${t('chat.duplicateSkipped')}`}
+          {outputInfo.forUser || `${TOOL_DISPLAY_KEYS[tc.name] ? t(TOOL_DISPLAY_KEYS[tc.name]) : tc.name} ${t('chat.duplicateSkipped')}`}
         </div>
       )
     }

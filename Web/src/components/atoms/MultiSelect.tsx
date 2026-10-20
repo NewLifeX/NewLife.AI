@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/components/common/Icon'
 import type { SelectOption } from './Select'
@@ -33,6 +34,7 @@ export function MultiSelect({
   const [dropdownPos, setDropdownPos] = useState({ left: 0, top: 0, width: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
 
   // 已选项映射，用于快速查找
   const selectedSet = new Set(values)
@@ -178,7 +180,7 @@ export function MultiSelect({
                 type="button"
                 onClick={(e) => removeValue(opt.value, e)}
                 className="flex-shrink-0 hover:opacity-70 focus-visible:outline-none"
-                aria-label={`移除 ${opt.label}`}
+                aria-label={t('common.removeItem', { name: opt.label })}
               >
                 <Icon name="close" size="xs" />
               </button>
@@ -232,13 +234,13 @@ export function MultiSelect({
                 size="xs"
                 className="mr-2"
               />
-              {allSelected ? '取消全选' : '全选'}
+              {allSelected ? t('common.clearAll') : t('common.selectAll')}
             </button>
           )}
 
           {options.length === 0 ? (
             <div className="px-3 py-4 text-xs text-center text-gray-400 dark:text-gray-500">
-              无可用选项
+              {t('common.noOptions')}
             </div>
           ) : (
             options.map((opt, idx) => {

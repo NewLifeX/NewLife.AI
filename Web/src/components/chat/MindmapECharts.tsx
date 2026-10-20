@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ECharts, EChartsOption } from 'echarts'
+import i18n from '@/i18n'
 import { cn } from '@/lib/utils'
 import type { MindmapSpec } from './MindmapBlock'
 
@@ -19,14 +20,17 @@ function loadECharts(): Promise<typeof import('echarts')> {
 /** 脑图布局模式 */
 export type MindmapLayout = 'tree' | 'radial' | 'lr' | 'rl' | 'tb' | 'bt'
 
-/** 布局标签 */
-export const LAYOUT_LABELS: Record<MindmapLayout, string> = {
-  tree: '缩进树',
-  radial: '中心放射',
-  lr: '左→右树',
-  rl: '右→左树',
-  tb: '上→下树',
-  bt: '下→上树',
+/** 布局标签（按当前界面语言实时解析） */
+export function layoutLabels(): Record<MindmapLayout, string> {
+  const { t } = i18n
+  return {
+    tree: t('mindmap.layouts.tree'),
+    radial: t('mindmap.layouts.radialEcharts'),
+    lr: t('mindmap.layouts.lr'),
+    rl: t('mindmap.layouts.rl'),
+    tb: t('mindmap.layouts.tb'),
+    bt: t('mindmap.layouts.bt'),
+  }
 }
 
 // ── 默认配色 ─────────────────────────────────────────────────────────────────

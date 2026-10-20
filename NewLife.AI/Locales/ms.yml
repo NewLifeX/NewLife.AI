@@ -1,4 +1,3 @@
-# Terjemahan bahasa Melayu. Kunci ialah teks sumber bahasa Inggeris; jika tiada, semasa runtime kembali kepada bahasa Inggeris.
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "Ejen semakan: audit kualiti draf dan keluarkan nasihat penambahbaikan atau isyarat kelulusan APPROVED"
 "Agent list cannot be empty": "Senarai ejen tidak boleh kosong"
 "Worker agent list cannot be empty": "Senarai ejen pekerja tidak boleh kosong"
@@ -138,3 +137,5 @@
 "Resource '{0}' not found in the server capabilities.": "Sumber '{0}' tidak ditemui dalam keupayaan pelayan."
 "Prompt '{0}' not found in the server capabilities.": "Prompt '{0}' tidak ditemui dalam keupayaan pelayan."
 "Missing required argument '{0}' for tool '{1}'": "Argumen wajib '{0}' tiada untuk alat '{1}'"
+"Rerank call failed": "Panggilan rerank gagal"
+"Tool not found: '{0}', searched {1} in {2} providers": "Alat tidak ditemui: '{0}', {1} dicari dalam {2} pembekal"

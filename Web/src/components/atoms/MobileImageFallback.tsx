@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { savePngBlob } from '@/utils/imageCapture'
 
 interface MobileImageFallbackProps {
@@ -21,6 +22,8 @@ interface MobileImageFallbackProps {
 }
 
 export function MobileImageFallback({ open, blob, onClose, filename = 'image.png' }: MobileImageFallbackProps) {
+  const { t } = useTranslation()
+
   // ESC 关闭
   useEffect(() => {
     if (!open) return
@@ -52,26 +55,26 @@ export function MobileImageFallback({ open, blob, onClose, filename = 'image.png
           type="button"
           onClick={handleClose}
           className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors"
-          title="关闭"
-          aria-label="关闭"
+          title={t('common.close')}
+          aria-label={t('common.close')}
         >
           ✕
         </button>
 
         {/* 标题 */}
-        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-1">复制图片</p>
+        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-1">{t('common.copyImage')}</p>
 
         {/* 图片预览 */}
         <img
           src={objectUrl}
-          alt="预览"
+          alt={t('common.preview')}
           className="max-h-64 w-full rounded-xl object-contain border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
         />
 
         {/* 提示文字 */}
         <p className="text-xs text-center text-gray-500 dark:text-gray-400 leading-relaxed">
-          当前环境不支持直接复制图片，<br />
-          <span className="font-medium text-gray-700 dark:text-gray-300">长按图片</span>可保存到相册或复制
+          {t('imageFallback.unsupported')}<br />
+          <span className="font-medium text-gray-700 dark:text-gray-300">{t('imageFallback.longPress')}</span>{' '}{t('imageFallback.longPressTail')}
         </p>
 
         {/* 另存为按钮 */}
@@ -80,7 +83,7 @@ export function MobileImageFallback({ open, blob, onClose, filename = 'image.png
           onClick={() => { savePngBlob(blob, filename); handleClose() }}
           className="w-full rounded-xl bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-medium py-2.5 transition-colors"
         >
-          保存图片
+          {t('imageFallback.saveImage')}
         </button>
       </div>
     </div>,

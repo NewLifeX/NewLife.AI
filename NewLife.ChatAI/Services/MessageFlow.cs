@@ -418,7 +418,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             // 按消息查找
             message = DbChatMessage.FindById(messageId.Value);
             if (message == null || (!expectedRole.IsNullOrEmpty() && !message.Role.EqualIgnoreCase(expectedRole)))
-                return new MessageFlowContext { Error = new ChatException("MESSAGE_NOT_FOUND", "消息不存在或角色不匹配") };
+                return new MessageFlowContext { Error = new ChatException("MESSAGE_NOT_FOUND", "The message does not exist or the role does not match") };
 
             conversation = Conversation.FindById(message.ConversationId);
         }
@@ -429,7 +429,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
 
         if (conversation == null)
-            return new MessageFlowContext { Error = new ChatException("CONVERSATION_NOT_FOUND", "会话不存在") };
+            return new MessageFlowContext { Error = new ChatException("CONVERSATION_NOT_FOUND", "The conversation does not exist") };
 
         // 解析模型：按消息模式用 ResolveModel + IsAvailable；按会话模式用 ResolveModelOrDefault（支持降级）
         ModelConfig? modelConfig;
@@ -437,14 +437,14 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         {
             modelConfig = modelService.ResolveModel(conversation.ModelId);
             if (modelConfig == null || !modelService.IsAvailable(modelConfig))
-                return new MessageFlowContext { Error = new ChatException("MODEL_UNAVAILABLE", $"模型 '{conversation.ModelName}' 不可用") };
+                return new MessageFlowContext { Error = new ChatException("MODEL_UNAVAILABLE", L.T("Model '{0}' is unavailable", conversation.ModelName)) };
         }
         else
         {
             var effectiveModelId = modelId > 0 ? modelId.Value : conversation.ModelId;
             modelConfig = modelService.ResolveModelOrDefault(effectiveModelId);
             if (modelConfig == null)
-                return new MessageFlowContext { Error = new ChatException("MODEL_UNAVAILABLE", "系统暂无可用模型，请先在管理后台配置并启用至少一个模型") };
+                return new MessageFlowContext { Error = new ChatException("MODEL_UNAVAILABLE", "No model is available; configure and enable at least one model in the admin console first") };
         }
 
         var flow = new MessageFlowContext

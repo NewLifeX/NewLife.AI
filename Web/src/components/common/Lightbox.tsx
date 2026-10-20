@@ -80,7 +80,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: Li
           <button
             onClick={handleZoomOut}
             className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-            title="缩小"
+            title={t('common.zoomOut')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
@@ -92,7 +92,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: Li
           <button
             onClick={handleZoomIn}
             className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-            title="放大"
+            title={t('common.zoomIn')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
@@ -105,7 +105,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: Li
             <button
               onClick={() => onEdit(images[currentIndex])}
               className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors ml-1"
-              title={t('imageEdit.editImage', '编辑图片')}
+              title={t('imageEdit.editImage')}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -116,7 +116,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: Li
           <button
             onClick={onClose}
             className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors ml-2"
-            title="关闭 (Esc)"
+            title={t('common.closeEsc')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18" />
@@ -132,7 +132,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: Li
           <button
             onClick={handlePrev}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white p-3 rounded-full hover:bg-white/10 transition-colors z-10"
-            title="上一张 (←)"
+            title={t('common.prevImage')}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
@@ -141,7 +141,7 @@ export function Lightbox({ images, initialIndex = 0, open, onClose, onEdit }: Li
           <button
             onClick={handleNext}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white p-3 rounded-full hover:bg-white/10 transition-colors z-10"
-            title="下一张 (→)"
+            title={t('common.nextImage')}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18l6-6-6-6" />

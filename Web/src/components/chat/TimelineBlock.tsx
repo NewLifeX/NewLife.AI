@@ -514,15 +514,15 @@ const LAYOUT_RENDERERS: Record<TimelineLayout, React.FC<LayoutRendererProps>> = 
   'fishbone-right': FishboneRightLayout,
 }
 
-const LAYOUT_LABELS: Record<TimelineLayout, string> = {
-  vertical: '纵向',
-  'alternating-top': '交替上',
-  'alternating-bottom': '交替下',
-  'horizontal-left': '横向左',
-  'horizontal-right': '横向右',
-  's-curve': 'S形',
-  'fishbone-left': '鱼骨左',
-  'fishbone-right': '鱼骨右',
+const LAYOUT_LABEL_KEYS: Record<TimelineLayout, string> = {
+  vertical: 'timeline.layoutVertical',
+  'alternating-top': 'timeline.layoutAlternatingTop',
+  'alternating-bottom': 'timeline.layoutAlternatingBottom',
+  'horizontal-left': 'timeline.layoutHorizontalLeft',
+  'horizontal-right': 'timeline.layoutHorizontalRight',
+  's-curve': 'timeline.layoutSCurve',
+  'fishbone-left': 'timeline.layoutFishboneLeft',
+  'fishbone-right': 'timeline.layoutFishboneRight',
 }
 
 const ALL_LAYOUTS: TimelineLayout[] = [
@@ -532,17 +532,17 @@ const ALL_LAYOUTS: TimelineLayout[] = [
 ]
 
 const DENSITY_OPTIONS = [
-  { value: 'compact', label: '紧凑' },
-  { value: 'normal', label: '默认' },
-  { value: 'relaxed', label: '宽松' },
+  { value: 'compact', labelKey: 'timeline.densityCompact' },
+  { value: 'normal', labelKey: 'timeline.densityNormal' },
+  { value: 'relaxed', labelKey: 'timeline.densityRelaxed' },
 ]
 
 const PER_ROW_OPTIONS = [
-  { value: '0', label: '自动' },
-  { value: '2', label: '2个' },
-  { value: '3', label: '3个' },
-  { value: '4', label: '4个' },
-  { value: '5', label: '5个' },
+  { value: '0', labelKey: 'timeline.perRowAuto' },
+  { value: '2', labelKey: 'timeline.perRowCount' },
+  { value: '3', labelKey: 'timeline.perRowCount' },
+  { value: '4', labelKey: 'timeline.perRowCount' },
+  { value: '5', labelKey: 'timeline.perRowCount' },
 ]
 
 function resolveLayout(layout: TimelineLayout | undefined, itemCount: number): TimelineLayout {
@@ -593,7 +593,9 @@ export function TimelineBlock({ spec, className }: TimelineBlockProps) {
     return JSON.stringify(obj, null, 2)
   }, [spec, dataOverrides])
 
-  const layoutOptions = ALL_LAYOUTS.map((lt) => ({ value: lt, label: LAYOUT_LABELS[lt] }))
+  const layoutOptions = ALL_LAYOUTS.map((lt) => ({ value: lt, label: t(LAYOUT_LABEL_KEYS[lt]) }))
+  const densityOptions = DENSITY_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))
+  const perRowOptions = PER_ROW_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey, { n: o.value }) }))
 
   const copyImage = useCallback(async () => {
     if (!rootRef.current) return
@@ -627,9 +629,9 @@ export function TimelineBlock({ spec, className }: TimelineBlockProps) {
       <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 shrink-0">{dataOverrides?.title ?? spec.title}</h3>
       <div className="flex items-center gap-1.5" data-no-capture>
         <Select options={layoutOptions} value={layout} onChange={(v) => setLayout(v as TimelineLayout)} className="w-[84px] [&_button]:text-[10px] [&_button]:px-1.5 [&_button]:py-1 [&_button]:min-h-0" />
-        <Select options={DENSITY_OPTIONS} value={density} onChange={(v) => setDensity(v as 'compact' | 'normal' | 'relaxed')} className="w-[68px] [&_button]:text-[10px] [&_button]:px-1.5 [&_button]:py-1 [&_button]:min-h-0" />
+        <Select options={densityOptions} value={density} onChange={(v) => setDensity(v as 'compact' | 'normal' | 'relaxed')} className="w-[68px] [&_button]:text-[10px] [&_button]:px-1.5 [&_button]:py-1 [&_button]:min-h-0" />
         {layout === 's-curve' && (
-          <Select options={PER_ROW_OPTIONS} value={String(perRow)} onChange={(v) => setPerRow(Number(v))} className="w-[64px] [&_button]:text-[10px] [&_button]:px-1.5 [&_button]:py-1 [&_button]:min-h-0" />
+          <Select options={perRowOptions} value={String(perRow)} onChange={(v) => setPerRow(Number(v))} className="w-[64px] [&_button]:text-[10px] [&_button]:px-1.5 [&_button]:py-1 [&_button]:min-h-0" />
         )}
         <button type="button" onClick={() => {
           if (codeMode) {
@@ -653,21 +655,21 @@ export function TimelineBlock({ spec, className }: TimelineBlockProps) {
           } else { setEditedJson(rawJson) }
           setCodeMode((v) => !v)
         }}
-          title={codeMode ? '退出代码模式' : '代码模式'}
+          title={codeMode ? t('timeline.exitCodeMode') : t('timeline.codeMode')}
           className={cn(iconBtnClass, codeMode ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
           <Icon name="code" size="sm" />
         </button>
         <button type="button" onClick={() => setFullscreen(true)}
-          title="全屏查看" className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
+          title={t('common.fullscreen')} className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
           <Icon name="fullscreen" size="sm" />
         </button>
         <button type="button" onClick={copyImage}
-          title={imageCopyErr ? '复制失败' : imageCopied ? '已复制' : '复制图片'}
+          title={imageCopyErr ? t('common.copyFailed') : imageCopied ? t('common.copied') : t('common.copyImage')}
           className={cn(iconBtnClass, imageCopyErr ? 'text-red-500' : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
           <Icon name={imageCopyErr ? 'error' : imageCopied ? 'check' : 'content_copy'} size="sm" />
         </button>
         <button type="button" onClick={saveImage}
-          title={imageSaved ? '已保存' : '另存为图片'}
+          title={imageSaved ? t('common.saved') : t('common.saveAsImage')}
           className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
           <Icon name={imageSaved ? 'check' : 'save_alt'} size="sm" />
         </button>
@@ -685,7 +687,7 @@ export function TimelineBlock({ spec, className }: TimelineBlockProps) {
             <textarea value={editedJson} onChange={(e) => setEditedJson(e.target.value)}
               className="w-full text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-blue-400 dark:focus:border-blue-500 resize-y"
               style={{ minHeight: '200px', maxHeight: '500px' }} spellCheck={false} />
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">编辑 JSON 后再次点击 <Icon name="code" size="sm" className="inline" /> 退出以重新渲染</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">{t('timeline.jsonEditHintPrefix')} <Icon name="code" size="sm" className="inline" /> {t('timeline.jsonEditHintSuffix')}</p>
           </div>
         ) : (
           <LayoutRenderer items={items} density={density} perRow={perRow > 0 ? perRow : undefined} />
@@ -703,17 +705,17 @@ export function TimelineBlock({ spec, className }: TimelineBlockProps) {
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{dataOverrides?.title ?? spec.title}</h3>
             <div className="flex items-center gap-1" data-no-capture>
               <button type="button" onClick={copyImage}
-                title={imageCopyErr ? '复制失败' : imageCopied ? '已复制' : '复制图片'}
+                title={imageCopyErr ? t('common.copyFailed') : imageCopied ? t('common.copied') : t('common.copyImage')}
                 className={cn(iconBtnClass, imageCopyErr ? 'text-red-500' : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
                 <Icon name={imageCopyErr ? 'error' : imageCopied ? 'check' : 'content_copy'} size="sm" />
               </button>
               <button type="button" onClick={saveImage}
-                title={imageSaved ? '已保存' : '另存为图片'}
+                title={imageSaved ? t('common.saved') : t('common.saveAsImage')}
                 className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')}>
                 <Icon name={imageSaved ? 'check' : 'save_alt'} size="sm" />
               </button>
               <button type="button" onClick={() => setFullscreen(false)}
-                className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')} title="退出全屏">
+                className={cn(iconBtnClass, 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400')} title={t('common.exitFullscreen')}>
                 <Icon name="close" size="sm" />
               </button>
             </div>
