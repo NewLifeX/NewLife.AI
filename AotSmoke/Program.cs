@@ -13,6 +13,7 @@ using NewLife.AI.Clients.Gemini;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
+using NewLife.AI.Filters;
 using NewLife.AI.Memory;
 using NewLife.AI.ModelContextProtocol;
 using NewLife.AI.Models;
@@ -429,6 +430,37 @@ Run("33.内置工具 计算器", () =>
     return json.Contains("16");
 });
 
+// 34. IChatFilter 洋葱圈管道
+RunAsync("34.IChatFilter 洋葱圈管道", async () =>
+{
+    var filter = new CountingFilter();
+    var client = new ChatClientBuilder(new FakeChatClient()).UseFilters(filter).Build();
+    var request = new ChatRequest { Model = "fake", Messages = [new ChatMessage { Role = "user", Content = "hi" }] };
+    var response = await client.GetResponseAsync(request);
+    Console.WriteLine($"    (before={filter.Before} after={filter.After} touched={filter.Touched} model={response.Model})");
+    return filter.Before == 1 && filter.After == 1 && filter.Touched && response.Model == "fake";
+});
+
+// 35. 流式聚合与过滤器回调
+RunAsync("35.流式聚合与过滤器回调", async () =>
+{
+    var filter = new StreamingFilter();
+    var client = new ChatClientBuilder(new StreamingChatClient()).UseFilters(filter).Build();
+    var request = new ChatRequest { Model = "stream-model", Messages = [new ChatMessage { Role = "user", Content = "hi" }] };
+
+    var text = new StringBuilder();
+    await foreach (var chunk in client.GetStreamingResponseAsync(request))
+    {
+        var delta = chunk.Messages?.FirstOrDefault()?.Delta?.Content as String;
+        if (!String.IsNullOrEmpty(delta)) text.Append(delta);
+    }
+
+    var completed = await filter.WaitAsync(TimeSpan.FromSeconds(5));
+    var summary = filter.Context?.Response;
+    Console.WriteLine($"    (text={text} callback={completed} model={summary?.Model} total={summary?.Usage?.TotalTokens})");
+    return completed && text.ToString() == "hello world" && summary?.Text == "hello world" && summary.Usage?.TotalTokens == 5;
+});
+
 Console.WriteLine();
 if (failures.Count > 0)
 {
@@ -501,4 +533,63 @@ sealed class SmokeTools
 
     [ToolDescription("get_current_time")]
     public String GetCurrentTime() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+}
+
+sealed class CountingFilter : IChatFilter
+{
+    public Int32 Before { get; private set; }
+    public Int32 After { get; private set; }
+    public Boolean Touched { get; private set; }
+
+    public async Task OnChatAsync(ChatFilterContext context, Func<ChatFilterContext, CancellationToken, Task> next, CancellationToken cancellationToken = default)
+    {
+        Before++;
+        await next(context, cancellationToken);
+        After++;
+        Touched = context.Response != null;
+    }
+
+    public Task OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
+sealed class StreamingFilter : IChatFilter
+{
+    private readonly TaskCompletionSource<Boolean> _completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public ChatFilterContext? Context { get; private set; }
+
+    public Task OnChatAsync(ChatFilterContext context, Func<ChatFilterContext, CancellationToken, Task> next, CancellationToken cancellationToken = default) => next(context, cancellationToken);
+
+    public Task OnStreamCompletedAsync(ChatFilterContext context, CancellationToken cancellationToken = default)
+    {
+        Context = context;
+        _completed.TrySetResult(true);
+        return Task.CompletedTask;
+    }
+
+    public Task<Boolean> WaitAsync(TimeSpan timeout) => _completed.Task.WaitAsync(timeout);
+}
+
+sealed class StreamingChatClient : IChatClient
+{
+    public Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
+        => Task.FromResult<IChatResponse>(new ChatResponse { Model = request.Model });
+
+    public async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var head = new ChatResponse { Model = "stream-model" };
+        head.AddDelta("hello ");
+        yield return head;
+        await Task.Yield();
+
+        var body = new ChatResponse();
+        body.AddDelta("world");
+        yield return body;
+
+        var tail = new ChatResponse { Usage = new UsageDetails { InputTokens = 3, OutputTokens = 2, TotalTokens = 5 } };
+        tail.AddDelta(null, null, FinishReason.Stop);
+        yield return tail;
+    }
+
+    public void Dispose() { }
 }

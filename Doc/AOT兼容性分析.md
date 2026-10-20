@@ -8,7 +8,7 @@
 
 ## 1. 结论
 
-NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户端创建、工具 Schema 与调用、ToolChatClient 多轮循环、MCP 服务端、对话消息 JSON、Token 估算、哈希嵌入、限流、规划器等 33 个场景在 `win-x64` 原生发布件中全部通过。
+NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户端创建、工具 Schema 与调用、ToolChatClient 多轮循环、MCP 服务端、对话消息 JSON、Token 估算、哈希嵌入、限流、规划器等 35 个场景在 `win-x64` 原生发布件中全部通过。
 
 - `net8.0` / `net10.0` 目标启用 `IsAotCompatible=true`，库自身裁剪/AOT 分析器告警为 0。
 - 冒烟工程 `AotSmoke` 以同一份代码双跑 JIT 与 NativeAOT，便于区分"运行时行为变化"与"AOT 特有问题"。
@@ -33,7 +33,7 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 
 > 官方无 LA64 / RISC-V 的 runtime pack 与 NativeAOT 承诺，这两个 RID 只做"有产物才运行"的发布探索；主信号是同一份冒烟代码在该架构上的 JIT 行为一致性。
 
-冒烟覆盖 33 个场景：
+冒烟覆盖 35 个场景：
 
 1. 基础类型转换
 2. `ChatMessage` JSON 往返
@@ -68,6 +68,8 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 31. 内存向量库写入与检索
 32. 显式注册服务商（自定义程序集场景）
 33. 内置计算器（`DataTable.Compute` 在 AOT 下的行为）
+34. `IChatFilter` 洋葱圈管道（before/after 阶段与响应可见性）
+35. 流式聚合与过滤器回调（`OnStreamCompletedAsync` 火焰即忘、正文与用量汇总）
 
 ---
 
