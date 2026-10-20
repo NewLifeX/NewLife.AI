@@ -65,6 +65,18 @@ public class LocalizationTests
         => Assert.Equal("Message list cannot be empty", WithCulture("sw-KE", () => L10n.Translate("Message list cannot be empty")));
 
     [Fact]
+    [DisplayName("应用层词表（ChatAI）随程序集生效，繁体与简体各自命中")]
+    public void AppLayerLocale_Translate()
+    {
+        // 词表由 ModuleInitializer 在程序集首次加载时注册，断言前先触碰 ChatAI 的类型触发加载
+        _ = typeof(NewLife.ChatAI.ChatAIExtensions).Assembly;
+
+        const String key = "AppKey is invalid or disabled";
+        Assert.Equal("AppKey 无效或已禁用", WithCulture("zh-CN", () => L10n.Translate(key)));
+        Assert.Equal("AppKey 無效或已禁用", WithCulture("zh-TW", () => L10n.Translate(key)));
+    }
+
+    [Fact]
     [DisplayName("31 种语言词表均已注册")]
     public void AllLocales_Registered()
     {
