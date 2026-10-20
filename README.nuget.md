@@ -1,27 +1,32 @@
+<!-- generated from README.md by sync-readme-package.ps1; do not edit -->
+
 # NewLife.AI
 
-<p align="center">
-  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/v/NewLife.AI.svg" alt="NuGet"></a>
-  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/dt/NewLife.AI.svg" alt="Downloads"></a>
-  <img src="https://img.shields.io/badge/.NET-netstandard2.1%20%7C%20net8.0%20%7C%20net10.0-blue" alt=".NET">
-  <a href="https://github.com/NewLifeX/NewLife.AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/NewLifeX/NewLife.AI.svg" alt="License"></a>
-</p>
+![GitHub License](https://img.shields.io/github/license/NewLifeX/NewLife.AI?logo=github)
+![NuGet Downloads](https://img.shields.io/nuget/dt/NewLife.AI?logo=nuget)
+![NuGet](https://img.shields.io/nuget/v/NewLife.AI?logo=nuget)
+![NuGet prerelease](https://img.shields.io/nuget/vpre/NewLife.AI?label=dev%20nuget&logo=nuget)
+[![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
+[![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
+<!-- metrics:start -->
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-22%2F22-brightgreen?logo=dotnet)](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/AOT兼容性分析.md)
+[![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
+[![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/多语言本地化.md)
+<!-- metrics:end -->
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-blue)
+![arch](https://img.shields.io/badge/arch-x64%20%7C%20x86%20%7C%20arm64%20%7C%20arm%20%7C%20loongarch64%20%7C%20riscv64%20%7C%20s390x-orange)
+[![contributors](https://img.shields.io/github/contributors/NewLifeX/NewLife.AI?logo=github)](https://github.com/NewLifeX/NewLife.AI/graphs/contributors)
 
-<p align="center">
-  <b>English</b> |
-  <a href="README.md">简体中文</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.pt.md">Português</a>
-</p>
+<!-- lang:start -->
+🌐 [简体中文](https://github.com/NewLifeX/NewLife.AI/blob/master/README.zh-CN.md) | [繁體中文](https://github.com/NewLifeX/NewLife.AI/blob/master/README.zh-TW.md) | [Español](https://github.com/NewLifeX/NewLife.AI/blob/master/README.es.md) | [Deutsch](https://github.com/NewLifeX/NewLife.AI/blob/master/README.de.md) | [日本語](https://github.com/NewLifeX/NewLife.AI/blob/master/README.ja.md) | [Français](https://github.com/NewLifeX/NewLife.AI/blob/master/README.fr.md) | [Português](https://github.com/NewLifeX/NewLife.AI/blob/master/README.pt.md) | [Русский](https://github.com/NewLifeX/NewLife.AI/blob/master/README.ru.md) | [한국어](https://github.com/NewLifeX/NewLife.AI/blob/master/README.ko.md) | [العربية](https://github.com/NewLifeX/NewLife.AI/blob/master/README.ar.md)
+<!-- lang:end -->
+
 
 ## Introduction
 
-**NewLife.AI** is an open-source AI foundation library for the .NET ecosystem, providing a unified `IChatClient` interface that wraps **46 mainstream LLM providers**. It features built-in function calling, MCP protocol, streaming output, multimodal support, multi-agent capabilities, and can be embedded as a NuGet package in any .NET project (`net45 / netstandard2.1`).
+**NewLife.AI** is an open-source AI foundation library for the .NET ecosystem, providing a unified `IChatClient` interface that wraps **46 mainstream LLM providers**. It features built-in function calling, MCP protocol, streaming output, multimodal support, multi-agent capabilities, and can be embedded as a NuGet package in any .NET project (`net45 → net10.0`, NativeAOT ready).
+
+The library ships **31 runtime languages** (English source with automatic fallback) and targets Windows, Linux, macOS, Android and iOS across x64 / x86 / arm64 / arm / loongarch64 / riscv64 / s390x.
 
 **NewLife.ChatAI** is a complete web chat application built on NewLife.AI (ASP.NET Core), offering an out-of-the-box multi-model chat frontend, a unified AI gateway, and automatic memory evolution. It can be deployed standalone or embedded into existing ASP.NET Core projects via NuGet.
 
@@ -29,6 +34,8 @@
 
 ## Core Features
 
+- **NativeAOT Ready**: `IsAotCompatible` on net8.0/net10.0, 22-scenario NativeAOT smoke matrix across Windows / Linux / macOS and x64 / arm64 / loongarch64
+- **31 Runtime Languages**: English source messages with compiled locale tables; missing translations fall back to English, no code changes needed for new languages
 - **46 AI Providers, 6 Protocols**: OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — switch with a single line of code
 - **Unified `IChatClient` Interface**: Aligned with MEAI specification — single-turn, streaming, function calling, multimodal all via a single API
 - **Function Calling (Tools)**: `[ToolDescription]` attribute auto-generates JSON Schema; `ToolChatClient` multi-turn loop; built-in search / weather / translation / web scraping / IP geolocation tools
@@ -323,15 +330,17 @@ public class AuditFilter : IChatFilter
 
 | Document | Description |
 |----------|-------------|
-| [Requirements Specification](Doc/需求规格说明.md) | Product goals, feature list, non-functional requirements |
-| [Architecture Design](Doc/架构设计.md) | Four-layer architecture, module design details |
-| [AI Orchestration Framework](Doc/AI编排框架需求.md) | Tools / Agents / Planner design |
-| [API Gateway Requirements](Doc/API网关需求.md) | Gateway protocol adaptation details |
-| [MCP Architecture](Doc/MCP架构.md) | MCP client and server design |
-| [Skill Management](Doc/技能管理需求.md) | Skill system detailed design |
-| [Self-Learning System](Doc/自学习系统需求.md) | Conversation analysis + memory extraction |
-| [Chat Data Persistence Flow](Doc/对话数据保存流程.md) | MessageFlow detailed process |
-| [Feature Module List](Doc/功能模块清单.md) | Complete feature inventory |
+| [Requirements Specification](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/需求规格说明.md) | Product goals, feature list, non-functional requirements |
+| [Architecture Design](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/架构设计.md) | Four-layer architecture, module design details |
+| [AI Orchestration Framework](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/AI编排框架需求.md) | Tools / Agents / Planner design |
+| [API Gateway Requirements](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/API网关需求.md) | Gateway protocol adaptation details |
+| [MCP Architecture](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/MCP架构.md) | MCP client and server design |
+| [Skill Management](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/技能管理需求.md) | Skill system detailed design |
+| [Self-Learning System](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/自学习系统需求.md) | Conversation analysis + memory extraction |
+| [Chat Data Persistence Flow](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/对话数据保存流程.md) | MessageFlow detailed process |
+| [AOT Compatibility](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/AOT兼容性分析.md) | NativeAOT support boundary, smoke matrix and platform/architecture coverage |
+| [Runtime Localization](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/多语言本地化.md) | 31 runtime languages, locale tables and contribution workflow |
+| [Feature Module List](https://github.com/NewLifeX/NewLife.AI/blob/master/Doc/功能清单.md) | Complete feature inventory |
 
 ---
 
@@ -404,7 +413,7 @@ Website: https://newlifex.com · Open source organization: https://github.com/Ne
 
 ## License
 
-[MIT License](LICENSE)
+[MIT License](https://github.com/NewLifeX/NewLife.AI/blob/master/LICENSE)
 
 Issues and Pull Requests are welcome.
 

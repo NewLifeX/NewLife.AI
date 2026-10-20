@@ -1,27 +1,30 @@
 # NewLife.AI
 
-<p align="center">
-  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/v/NewLife.AI.svg" alt="NuGet"></a>
-  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/dt/NewLife.AI.svg" alt="Downloads"></a>
-  <img src="https://img.shields.io/badge/.NET-netstandard2.1%20%7C%20net8.0%20%7C%20net10.0-blue" alt=".NET">
-  <a href="https://github.com/NewLifeX/NewLife.AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/NewLifeX/NewLife.AI.svg" alt="License"></a>
-</p>
+![GitHub License](https://img.shields.io/github/license/NewLifeX/NewLife.AI?logo=github)
+![NuGet Downloads](https://img.shields.io/nuget/dt/NewLife.AI?logo=nuget)
+![NuGet](https://img.shields.io/nuget/v/NewLife.AI?logo=nuget)
+![NuGet prerelease](https://img.shields.io/nuget/vpre/NewLife.AI?label=dev%20nuget&logo=nuget)
+[![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
+[![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
+<!-- metrics:start -->
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-22%2F22-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
+[![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
+[![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](Doc/多语言本地化.md)
+<!-- metrics:end -->
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-blue)
+![arch](https://img.shields.io/badge/arch-x64%20%7C%20x86%20%7C%20arm64%20%7C%20arm%20%7C%20loongarch64%20%7C%20riscv64%20%7C%20s390x-orange)
+[![contributors](https://img.shields.io/github/contributors/NewLifeX/NewLife.AI?logo=github)](https://github.com/NewLifeX/NewLife.AI/graphs/contributors)
 
-<p align="center">
-  <a href="README.en.md">English</a> |
-  <a href="README.md">简体中文</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.ko.md">한국어</a> |
-  <b>Español</b> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.pt.md">Português</a>
-</p>
+<!-- lang:start -->
+🌐 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [한국어](README.ko.md) | [العربية](README.ar.md)
+<!-- lang:end -->
+
+> ⚠️ Esta traducción puede estar desactualizada; la versión autorizada es el [English README](README.md).
+
 
 ## Introducción
 
-**NewLife.AI** es una **biblioteca de IA de código abierto** para el ecosistema .NET, que proporciona una interfaz unificada `IChatClient` que encapsula **46 proveedores principales de LLM**. Incluye llamadas a funciones, protocolo MCP, salida en streaming, soporte multimodal, capacidades multi-agente, y puede integrarse como paquete NuGet en cualquier proyecto .NET (`net45 / netstandard2.1`).
+**NewLife.AI** es una **biblioteca de IA de código abierto** para el ecosistema .NET, que proporciona una interfaz unificada `IChatClient` que encapsula **46 proveedores principales de LLM**. Incluye llamadas a funciones, protocolo MCP, salida en streaming, soporte multimodal, capacidades multi-agente, y puede integrarse como paquete NuGet en cualquier proyecto .NET (`net45 → net10.0`).
 
 **NewLife.ChatAI** es una **aplicación web de chat completa** construida sobre NewLife.AI (ASP.NET Core), que ofrece un frontend de chat multi-modelo listo para usar, una puerta de enlace AI unificada y evolución automática de memoria. Puede desplegarse de forma independiente o integrarse en proyectos ASP.NET Core existentes.
 

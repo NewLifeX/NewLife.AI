@@ -8,7 +8,18 @@
     <File Path="Doc/models.md" />
     <File Path="Doc/架构设计.md" />
     <File Path="Doc/需求规格说明.md" />
-    <File Path="Readme.MD" />
+    <File Path="Doc/AOT兼容性分析.md" />
+    <File Path="Doc/多语言本地化.md" />
+    <File Path="README.md" />
+    <File Path="README.nuget.md" />
+    <File Path="readme-languages.json" />
+    <File Path="readme-package.json" />
+    <File Path="readme-metrics.json" />
+    <File Path="check-locales.ps1" />
+    <File Path="check-english-exceptions.ps1" />
+    <File Path="sync-readme-languages.ps1" />
+    <File Path="sync-readme-package.ps1" />
+    <File Path="sync-readme-metrics.ps1" />
   </Folder>
   <Project Path="AotSmoke/AotSmoke.csproj" />
   <Project Path="NewLife.AI.Extensions/NewLife.AI.Extensions.csproj" />
