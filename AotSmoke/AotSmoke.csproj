@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>AotSmoke</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
+    <!-- 服务商注册表通过程序集扫描发现 [AiClient] 类型，裁剪根保留整个 NewLife.AI 程序集 -->
+    <TrimmerRootAssembly Include="NewLife.AI" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using NewLife.Collections;
 using NewLife.Reflection;
 using NewLife.Remoting;
@@ -57,6 +58,7 @@ public class McpTool
     /// <param name="instance">工具实例</param>
     /// <param name="args">已绑定的参数数组</param>
     /// <returns>工具返回值</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Task<T> 的 Result 属性运行时反射；AOT 场景由调用方保留工具返回类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     private Object? InvokeCore(Object? instance, Object?[] args)
     {
         Object? rs;
@@ -109,7 +111,7 @@ public class McpTool
 
         // 缺失的必填标量参数 → 协议级无效参数（MCP 规范要求 tools/call 缺必填字段返回 InvalidParams）
         if (!found && Reflect.GetTypeCode(p.ParameterType) != TypeCode.Object)
-            throw new ApiException(McpErrorCode.InvalidParams, $"Missing required argument '{name}' for tool '{Method.Name}'");
+            throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Missing required argument '{0}' for tool '{1}'", name, Method.Name));
 
         if (Reflect.GetTypeCode(p.ParameterType) != TypeCode.Object)
             return value == null ? null : Reflect.ChangeType(value, p.ParameterType);
@@ -125,6 +127,7 @@ public class McpTool
     /// <summary>创建 NoOp 进度实现。注入 null 会导致工具内 <c>progress.Report()</c> 空引用崩溃；真正的 progress 通知推送（服务端→客户端）需要独立 SSE 通道，属后续增强</summary>
     /// <param name="progressType">IProgress&lt;T&gt; 类型</param>
     /// <returns>NoOp 实例</returns>
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "仅在工具方法声明 IProgress<T> 参数时按运行期类型构造泛型实例；AOT 冒烟场景不覆盖进度参数，裁剪根需保留对应泛型实例")]
     private static Object CreateProgress(Type progressType)
     {
         var itemType = progressType.GetGenericArguments()[0];
@@ -155,11 +158,11 @@ public class McpToolManager
 
     /// <summary>注册工具类型。其公共方法将作为 MCP 工具暴露（方法名自动转 snake_case，剥 Async 后缀）</summary>
     /// <typeparam name="T">工具类型</typeparam>
-    public void Register<T>() => Register(typeof(T));
+    public void Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>() => Register(typeof(T));
 
     /// <summary>注册工具类型。其公共方法将作为 MCP 工具暴露（snake_case 命名）</summary>
     /// <param name="type">工具类型</param>
-    public void Register(Type type)
+    public void Register([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 

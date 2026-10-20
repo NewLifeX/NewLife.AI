@@ -10,6 +10,7 @@
     <File Path="Doc/需求规格说明.md" />
     <File Path="Readme.MD" />
   </Folder>
+  <Project Path="AotSmoke/AotSmoke.csproj" />
   <Project Path="NewLife.AI.Extensions/NewLife.AI.Extensions.csproj" />
   <Project Path="NewLife.AI/NewLife.AI.csproj" />
   <Project Path="NewLife.ChatAI/NewLife.ChatAI.csproj" />
