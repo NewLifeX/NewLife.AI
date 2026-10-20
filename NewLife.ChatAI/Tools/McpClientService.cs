@@ -28,9 +28,9 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
     public async Task<IList<ToolDefinition>> DiscoverToolsAsync(Int32 serverId, CancellationToken cancellationToken = default)
     {
         var config = McpServerConfig.FindById(serverId);
-        if (config == null) throw new ArgumentException($"MCP 服务配置 {serverId} 不存在");
+        if (config == null) throw new ArgumentException(Localization.Translate("MCP server configuration {0} does not exist", serverId));
 
-        if (!config.Enable) throw new InvalidOperationException($"MCP 服务 '{config.Name}' 未启用");
+        if (!config.Enable) throw new InvalidOperationException(Localization.Translate("MCP server '{0}' is not enabled", config.Name));
 
         // 先初始化
         await InitializeAsync(config, cancellationToken).ConfigureAwait(false);
@@ -42,7 +42,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
         if (response.Error != null)
         {
             var error = response.Error.ToJson().ToJsonEntity<JsonRpcError>();
-            throw new InvalidOperationException($"工具发现失败: {error?.Message}");
+            throw new InvalidOperationException(Localization.Translate("Tool discovery failed: {0}", error?.Message));
         }
 
         // 解析工具列表
@@ -215,9 +215,9 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
     public async Task<ToolCallResult> CallToolAsync(Int32 serverId, String toolName, Dictionary<String, Object?> arguments, CancellationToken cancellationToken = default)
     {
         var config = McpServerConfig.FindById(serverId);
-        if (config == null) throw new ArgumentException($"MCP 服务配置 {serverId} 不存在");
+        if (config == null) throw new ArgumentException(Localization.Translate("MCP server configuration {0} does not exist", serverId));
 
-        if (!config.Enable) throw new InvalidOperationException($"MCP 服务 '{config.Name}' 未启用");
+        if (!config.Enable) throw new InvalidOperationException(Localization.Translate("MCP server '{0}' is not enabled", config.Name));
 
         var toolParams = new ToolCallParams(toolName, arguments, null);
         var request = new JsonRpcRequest("2.0", "tools/call", toolParams, 3);
@@ -226,7 +226,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
         if (response.Error != null)
         {
             var error = response.Error.ToJson().ToJsonEntity<JsonRpcError>();
-            throw new InvalidOperationException($"工具调用失败: {error?.Message}");
+            throw new InvalidOperationException(Localization.Translate("Tool call failed: {0}", error?.Message));
         }
 
         var result = response.Result?.ToJson().ToJsonEntity<ToolCallResult>();
@@ -303,7 +303,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
 
         var response = responseBody.ToJsonEntity<JsonRpcResponse>();
         if (response == null)
-            throw new InvalidOperationException("MCP Server 返回了无效的 JSON-RPC 响应");
+            throw new InvalidOperationException(Localization.Translate("MCP server returned an invalid JSON-RPC response"));
 
         return response;
     }

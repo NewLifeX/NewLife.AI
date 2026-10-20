@@ -64,15 +64,15 @@ public class BuildPptToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
-            throw new ToolException("参数错误：title 不能为空", "请提供演示文稿标题后重试。");
+            throw new ToolException("Invalid parameter: title cannot be empty", "Provide a presentation title and try again.");
 
         // slides 与 widgetSrc 互斥校验
         var hasSlides = slides is { Length: > 0 };
         var hasWidgetSrc = !widgetSrc.IsNullOrEmpty();
         if (!hasSlides && !hasWidgetSrc)
-            throw new ToolException("参数错误：slides 与 widgetSrc 必须提供其一", "请提供幻灯片 JSON 数组或 show_widget 卡片 ID 列表后重试，或直接回复用户说明无法生成 PPT。");
+            throw new ToolException("Invalid parameter: either slides or widgetSrc must be provided", "Provide a slides JSON array or a list of show_widget card IDs and try again, or reply to the user that the PPT cannot be generated.");
         if (hasSlides && hasWidgetSrc)
-            throw new ToolException("参数错误：slides 与 widgetSrc 互斥，只能提供其一", "请选择一种模式后重试，或直接回复用户说明情况。");
+            throw new ToolException("Invalid parameter: slides and widgetSrc are mutually exclusive", "Choose one mode and try again, or reply to the user explaining the situation.");
 
         // 主题解析：显式传参 > 会话卡片风格 > 品牌默认
         var themeKey = OfficeStyleKit.ResolveTheme(theme, context?.Request?.ConversationId);
@@ -83,17 +83,17 @@ public class BuildPptToolService(ILog log)
 
         // slides 模式（现有逻辑）
         if (slides == null || slides.Length == 0)
-            throw new ToolException("参数错误：slides 不能为空", "请提供幻灯片数组后重试，或直接回复用户说明无法生成 PPT。");
+            throw new ToolException("Invalid parameter: slides cannot be empty", "Provide a slides array and try again, or reply to the user that the PPT cannot be generated.");
         var slideList = slides;
 
-        log.Info("[Slide] 开始生成 PPT：{0}，{1} 页，主题：{2}", title, slideList.Length, themeKey ?? "default");
+        log.Info("[Slide] Generating PPT: {0}, {1} slides, theme: {2}", title, slideList.Length, themeKey ?? "default");
 
         var pptxBytes = await BuildPptxAsync(slideList, themeKey).ConfigureAwait(false);
 
         // 归档到附件表，复用 AI 生成媒体的同一套基础设施
         var archiveResult = await ArchivePptxAsync(pptxBytes, title, slideList.Length, theme).ConfigureAwait(false);
 
-        log.Info("[Slide] 生成完成：{0}，{1} 页，{2} 字节，URL：{3}",
+        log.Info("[Slide] Generated: {0}, {1} slides, {2} bytes, URL: {3}",
             title, slideList.Length, pptxBytes.Length, archiveResult.Url);
 
         var slideTitles = slideList.Select(s => s.Title ?? String.Empty).ToArray();
@@ -547,7 +547,7 @@ public class BuildPptToolService(ILog log)
 
         await using var memory = new MemoryStream(pptxBytes);
         var saved = await attachment.SaveFile(memory, null, fileName).ConfigureAwait(false);
-        if (!saved) throw new InvalidOperationException($"PPTX 归档失败：{fileName}");
+        if (!saved) throw new InvalidOperationException(Localization.Translate("Failed to archive PPTX: {0}", fileName));
 
         var url = $"/cube/file?id={attachment.Id}.pptx";
         return new ArchiveResult(attachment.Id, url);
