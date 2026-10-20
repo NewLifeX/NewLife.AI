@@ -91,6 +91,7 @@ export default {
     thinkingDeep: '深度思考中...',
     thinkingInProgress: '思考中...',
     thinkingProcess: '思考过程',
+    thinkingToggleTip: '展开/收起思考过程',
     thinkingLayoutTip: '切换到右侧分栏对照',
     thinkingLayoutRestoreTip: '恢复为内容上方',
     thinkingResizeTip: '拖动调整推理栏宽度',

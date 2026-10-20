@@ -91,6 +91,7 @@ export default {
     thinkingDeep: 'Deep Thinking...',
     thinkingInProgress: 'Thinking...',
     thinkingProcess: 'Thinking Process',
+    thinkingToggleTip: 'Expand or collapse the reasoning process',
     thinkingLayoutTip: 'Switch to side-by-side view',
     thinkingLayoutRestoreTip: 'Restore to above content',
     thinkingResizeTip: 'Drag to resize the reasoning panel',
