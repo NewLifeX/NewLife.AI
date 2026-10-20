@@ -36,7 +36,7 @@ public class TimelineToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (items == null || items.Count == 0)
-            throw new ToolException("参数错误：items 不能为空", "请重新构建时间轴事件数组后重试，或直接回复用户说明无法生成时间轴。示例：[{\"date\":\"2024-01\",\"title\":\"v1.0发布\"}]");
+            throw new ToolException("Invalid parameter: items cannot be empty", "Rebuild the timeline event array and try again, or reply to the user that the timeline cannot be generated. Example: [{\"date\":\"2024-01\",\"title\":\"v1.0 release\"}]");
 
         var timelineId = context?.ToolCallId;
         if (timelineId.IsNullOrEmpty()) timelineId = $"tl_{Guid.NewGuid():N}";
@@ -82,7 +82,7 @@ public class TimelineToolService(ILog log)
         if (!density.IsNullOrEmpty() && density is "compact" or "normal" or "relaxed")
             result["density"] = density;
 
-        log.Info("[Timeline] 渲染时间轴「{0}」，id={1}，layout={2}", title, timelineId, layout ?? "vertical");
+        log.Info("[Timeline] Rendering timeline '{0}', id={1}, layout={2}", title, timelineId, layout ?? "vertical");
 
         // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver：
         // 若用裸 new JsonSerializerOptions，当节点树含 JsonValueCustomized 时 ToJsonString 内部

@@ -35,7 +35,7 @@ public class DataPreloadService(ToolRegistry registry, ModelService modelService
         {
             var count = registry.SyncNativeTools(NativeTool.FindByName, static e => e.Save(), XTrace.WriteException);
             if (count > 0)
-                XTrace.WriteLine("内置工具同步完成，处理 {0} 个工具", count);
+                XTrace.WriteLine("Built-in tool synchronization completed, {0} tools processed", count);
         }
         catch (Exception ex)
         {

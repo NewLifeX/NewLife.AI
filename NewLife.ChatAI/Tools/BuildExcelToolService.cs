@@ -32,21 +32,21 @@ public class BuildExcelToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
-            throw new ToolException("参数错误：title 不能为空", "请提供工作簿标题后重试。");
+            throw new ToolException("Invalid parameter: title cannot be empty", "Provide a workbook title and try again.");
 
         if (sheets == null || sheets.Length == 0)
-            throw new ToolException("参数错误：sheets 不能为空", "请提供工作表数组后重试，或直接回复用户说明无法生成 Excel。");
+            throw new ToolException("Invalid parameter: sheets cannot be empty", "Provide a sheet array and try again, or reply to the user that the Excel file cannot be generated.");
         var sheetList = sheets;
 
         // 主题解析：显式传参 > 会话卡片风格 > 品牌默认
         var themeKey = OfficeStyleKit.ResolveTheme(theme, context?.Request?.ConversationId);
-        log.Info("[BuildExcel] 开始生成：{0}，{1} 个工作表，主题：{2}", title, sheetList.Length, themeKey ?? "default");
+        log.Info("[BuildExcel] Generating: {0}, {1} sheets, theme: {2}", title, sheetList.Length, themeKey ?? "default");
 
         var xlsxBytes = await BuildXlsxAsync(sheetList, title, themeKey);
         var archiveResult = await ArchiveFileAsync(xlsxBytes, title,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx", "Excel");
 
-        log.Info("[BuildExcel] 生成完成：{0}，{1} 字节，URL：{2}", title, xlsxBytes.Length, archiveResult.Url);
+        log.Info("[BuildExcel] Generated: {0}, {1} bytes, URL: {2}", title, xlsxBytes.Length, archiveResult.Url);
 
         var buildId = context?.ToolCallId ?? $"xlsx_{Guid.NewGuid():N}";
         var sheetNames = sheetList.Select(s => s.Name).ToArray();
@@ -252,7 +252,7 @@ public class BuildExcelToolService(ILog log)
         var att = new Attachment { Category = "StarChat", ContentType = contentType, Size = fileBytes.Length, Enable = true, UploadTime = DateTime.Now };
         try { att["Remark"] = $"AI生成{kind}｜标题:{title}"; } catch { }
         await using var ms = new MemoryStream(fileBytes);
-        if (!await att.SaveFile(ms, null, fileName)) throw new InvalidOperationException($"{kind} 归档失败");
+        if (!await att.SaveFile(ms, null, fileName)) throw new InvalidOperationException(Localization.Translate("{0} archiving failed", kind));
         return new ArchiveResult(att.Id, $"/cube/file?id={att.Id}{extension}");
     }
 

@@ -124,9 +124,9 @@ public class BuildPptToolService(ILog log)
     {
         var widgetIds = widgetSrc.Split(',', '\uff0c').Select(s => s.Trim()).Where(s => !s.IsNullOrEmpty()).ToArray();
         if (widgetIds.Length == 0)
-            throw new ArgumentException("widgetSrc \u683c\u5f0f\u9519\u8bef\uff0c\u5e94\u4e3a\u9017\u53f7\u5206\u9694\u7684 Widget ID \u5217\u8868", nameof(widgetSrc));
+            throw new ArgumentException(Localization.Translate("widgetSrc is invalid; expected a comma-separated list of Widget IDs"), nameof(widgetSrc));
 
-        log.Info("[Slide] Widget \u5bfc\u5165\u6a21\u5f0f\uff1a{0}\uff0c{1} \u4e2a\u5361\u7247\uff0c\u4e3b\u9898\uff1a{2}", title, widgetIds.Length, theme ?? "blue");
+        log.Info("[Slide] Widget import mode: {0}, {1} cards, theme: {2}", title, widgetIds.Length, theme ?? "blue");
 
         var pages = new List<PptPageModel>();
         foreach (var wid in widgetIds)
@@ -134,7 +134,7 @@ public class BuildPptToolService(ILog log)
             var widgetCode = FindWidgetContent(wid);
             if (widgetCode == null)
             {
-                log.Warn("[Slide] \u672a\u627e\u5230 Widget {0} \u7684\u5185\u5bb9\uff0c\u8df3\u8fc7", wid);
+                log.Warn("[Slide] Content of Widget {0} was not found, skipping", wid);
                 continue;
             }
 
@@ -156,7 +156,7 @@ public class BuildPptToolService(ILog log)
         }
 
         if (pages.Count == 0)
-            throw new InvalidOperationException("\u672a\u627e\u5230\u4efb\u4f55\u6709\u6548\u7684 Widget \u5185\u5bb9\uff0c\u8bf7\u786e\u8ba4 Widget \u5df2\u6210\u529f\u751f\u6210");
+            throw new InvalidOperationException(Localization.Translate("No valid Widget content was found; make sure the Widget has been generated successfully"));
 
         var pptxBytes = await BuildPptxAsync(pages.ToArray(), theme).ConfigureAwait(false);
         var archiveResult = await ArchivePptxAsync(pptxBytes, title, pages.Count, theme).ConfigureAwait(false);
@@ -180,7 +180,7 @@ public class BuildPptToolService(ILog log)
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
-        log.Info("[Slide] Widget \u5bfc\u5165\u5b8c\u6210\uff1a{0}\uff0c{1} \u9875\uff0cURL\uff1a{2}",
+        log.Info("[Slide] Widget import completed: {0}, {1} slides, URL: {2}",
             title, pages.Count, archiveResult.Url);
 
         return ToolResult.ForAudiences(resultJson, $"[已生成{widgetIds.Length}个Widget卡片已导出为{pages.Count}页PPT：{title}]");

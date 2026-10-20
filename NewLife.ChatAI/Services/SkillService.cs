@@ -251,7 +251,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
 
             if (visited.Contains(skillName))
             {
-                log?.Warn("技能@引用循环检测: {0}", skillName);
+                log?.Warn("Skill @reference loop detected: {0}", skillName);
                 continue;
             }
 

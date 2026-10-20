@@ -130,7 +130,7 @@ public class TitleGenerationHandler(ModelService modelService, IChatSetting sett
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                Log?.Warn("模型生成标题失败，回退截取: {0}", ex.Message);
+                Log?.Warn("Failed to generate the title with the model; falling back to truncation: {0}", ex.Message);
             }
         }
 

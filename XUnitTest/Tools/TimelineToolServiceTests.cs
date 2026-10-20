@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -57,7 +57,7 @@ public class TimelineToolServiceTests
     {
         var service = NewService();
         var ex = Assert.Throws<ToolException>(() => service.ShowTimeline("标题", []));
-        Assert.Contains("items 不能为空", ex.ForUser);
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: items cannot be empty"), ex.ForUser);
     }
 
     // ── ToolRegistry 全链路：类型化参数解析 ─────────────────────────────────
@@ -114,7 +114,7 @@ public class TimelineToolServiceTests
         registry.AddTools(NewService());
 
         var ex = await Assert.ThrowsAsync<ToolException>(() => registry.InvokeAsync("show_timeline", """{"title":"测试"}"""));
-        Assert.Contains("items 不能为空", ex.ForUser);
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: items cannot be empty"), ex.ForUser);
     }
 
     // ── Schema ─────────────────────────────────────────────────────────────

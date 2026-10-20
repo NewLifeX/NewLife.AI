@@ -108,7 +108,7 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         {
             var extractedCount = await ExtractAndSaveMemoriesAsync(userId, conversationId, messages, response, cancellationToken).ConfigureAwait(false);
             sw.Stop();
-            log?.Info("用户 {0} 记忆提取完成，提取 {1} 条，耗时 {2}ms", userId, extractedCount, sw.ElapsedMilliseconds);
+            log?.Info("Memory extraction for user {0} completed, {1} items extracted, elapsed {2}ms", userId, extractedCount, sw.ElapsedMilliseconds);
 
             span?.Value += extractedCount;
         }
@@ -116,7 +116,7 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         {
             span?.SetError(ex);
             sw.Stop();
-            log?.Error("用户 {0} 记忆提取失败（耗时 {1}ms）: {2}", userId, sw.ElapsedMilliseconds, ex.Message);
+            log?.Error("Memory extraction for user {0} failed (elapsed {1}ms): {2}", userId, sw.ElapsedMilliseconds, ex.Message);
         }
     }
     #endregion
@@ -198,7 +198,7 @@ public class ConversationAnalysisService(ModelService modelService, MemoryServic
         }
         catch
         {
-            log?.Warn("记忆提取 JSON 解析失败: {0}", jsonText.Cut(200));
+            log?.Warn("Failed to parse the memory extraction JSON: {0}", jsonText.Cut(200));
             return 0;
         }
 

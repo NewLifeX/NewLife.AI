@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife.Security;
 
@@ -30,7 +30,7 @@ public class AppKeyApiController : ChatApiControllerBase
     public ActionResult<AppKeyCreateResponseDto> Create([FromBody] CreateAppKeyRequest request)
     {
         if (String.IsNullOrWhiteSpace(request.Name))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "名称不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = Localization.Translate("name cannot be empty") });
 
         var userId = GetCurrentUserId();
 

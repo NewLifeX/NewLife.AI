@@ -206,7 +206,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     {
         using var rawClient = modelService.CreateClient(model);
         if (rawClient == null)
-            throw new InvalidOperationException($"未找到服务商，模型 '{model.Code}' 关联的提供商类型 '{model.ProviderInfo?.Provider}' 未注册");
+            throw new InvalidOperationException(Localization.Translate("Provider not found; the provider type '{1}' referenced by model '{0}' is not registered", model.Code, model.ProviderInfo?.Provider));
 
         // 应用 IChatFilter 链（通用横切：日志、监控等；网关场景 ConversationId=0，filter 实现需自行处理）
         var clientBuilder = rawClient.AsBuilder();
@@ -228,7 +228,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             {
                 lastError = ex;
                 var delay = GetRetryDelay(i);
-                log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
+                log?.Info("Upstream rate limited (429), retry {0}, waiting {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (i < maxRetry)
@@ -236,7 +236,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 // 非 429 错误（如 5xx、连接超时）：记录失败并继续重试
                 lastError = ex;
                 _providerStatus?.RecordFailure(model.ProviderId);
-                log?.Error("上游错误 {0}，第 {1} 次重试", ex.GetType().Name, i + 1);
+                log?.Error("Upstream error {0}, retry {1}", ex.GetType().Name, i + 1);
             }
         }
 
@@ -245,7 +245,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             // 重试耗尽，记录最后一次失败
             if (lastError != null)
                 _providerStatus?.RecordFailure(model.ProviderId);
-            throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
+            throw new InvalidOperationException(Localization.Translate("Upstream service is rate limited and all retries are exhausted"));
         }
 
         // 写入用量记录（内部完成费用计算 + 配额累加）
@@ -264,7 +264,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     {
         using var rawStreamClient = modelService.CreateClient(config);
         if (rawStreamClient == null)
-            throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
+            throw new InvalidOperationException(Localization.Translate("Provider not found; the provider type '{1}' referenced by model '{0}' is not registered", config.Code, config.ProviderInfo?.Provider));
 
         // 应用 IChatFilter 链
         var streamBuilder = rawStreamClient.AsBuilder();
@@ -286,7 +286,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             {
                 lastError = ex;
                 var delay = GetRetryDelay(i);
-                log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
+                log?.Info("Upstream rate limited (429), retry {0}, waiting {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (i < maxRetry)
@@ -294,7 +294,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 // 非 429 错误（如 5xx、连接超时）：记录失败并继续重试
                 lastError = ex;
                 _providerStatus?.RecordFailure(config.ProviderId);
-                log?.Error("上游错误 {0}，第 {1} 次重试", ex.GetType().Name, i + 1);
+                log?.Error("Upstream error {0}, retry {1}", ex.GetType().Name, i + 1);
             }
         }
 
@@ -303,7 +303,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             // 重试耗尽，记录最后一次失败
             if (lastError != null)
                 _providerStatus?.RecordFailure(config.ProviderId);
-            throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
+            throw new InvalidOperationException(Localization.Translate("Upstream service is rate limited and all retries are exhausted"));
         }
 
         UsageDetails? lastUsage = null;
@@ -697,7 +697,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         }
         catch (Exception ex)
         {
-            log?.Error("预创建网关会话失败: {0}", ex.Message);
+            log?.Error("Failed to pre-create gateway conversation: {0}", ex.Message);
             return null;
         }
     }
@@ -801,7 +801,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         catch (Exception ex)
         {
             // 记录失败不影响 API 响应
-            log?.Error("网关对话记录失败: {0}", ex.Message);
+            log?.Error("Failed to record gateway conversation: {0}", ex.Message);
         }
     }
 
@@ -875,7 +875,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             }
             catch (Exception ex)
             {
-                log?.Error("保存网关附件失败: {0}", ex.Message);
+                log?.Error("Failed to save gateway attachment: {0}", ex.Message);
             }
         }
 

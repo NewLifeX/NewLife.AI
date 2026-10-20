@@ -88,7 +88,7 @@ public partial class ProviderConfig : Entity<ProviderConfig>
         }
 
         if (count > 0)
-            XTrace.WriteLine("完成初始化ProviderConfig[提供商配置]数据，修改 {0} 个提供商配置！", count);
+            XTrace.WriteLine("Finished initializing ProviderConfig data, {0} provider configs modified!", count);
     }
     #endregion
 
@@ -196,7 +196,7 @@ public partial class ProviderConfig : Entity<ProviderConfig>
                 Enable = false,
                 Sort = sort++,
             };
-            XTrace.WriteLine("发现新提供商配置：{0}（{1}）", name, providerFullName);
+            XTrace.WriteLine("New provider configuration discovered: {0} ({1})", name, providerFullName);
         }
         else
         {

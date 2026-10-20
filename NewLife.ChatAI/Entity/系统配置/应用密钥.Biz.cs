@@ -68,7 +68,7 @@ public partial class AppKey : Entity<AppKey>, IAppKey
         // InitData一般用于当数据表没有数据时添加一些默认数据，该实体类的任何第一次数据库操作都会触发该方法，默认异步调用
         if (Meta.Session.Count > 0) return;
 
-        if (XTrace.Debug) XTrace.WriteLine("开始初始化AppKey[应用密钥]数据……");
+        if (XTrace.Debug) XTrace.WriteLine("Starting to initialize AppKey data...");
 
         var entity = new AppKey
         {
@@ -80,7 +80,7 @@ public partial class AppKey : Entity<AppKey>, IAppKey
         };
         entity.Insert();
 
-        if (XTrace.Debug) XTrace.WriteLine("完成初始化AppKey[应用密钥]数据！");
+        if (XTrace.Debug) XTrace.WriteLine("Finished initializing AppKey data!");
     }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>

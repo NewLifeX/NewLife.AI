@@ -65,7 +65,7 @@ public class LearningHandler(ConversationAnalysisService analysisService, ChatSe
         }
         catch (Exception ex)
         {
-            log?.Error("[Learning] 注入记忆上下文失败: {0}", ex.Message);
+            log?.Error("[Learning] Failed to inject the memory context: {0}", ex.Message);
         }
     }
 
@@ -95,7 +95,7 @@ public class LearningHandler(ConversationAnalysisService analysisService, ChatSe
             }
             catch (Exception ex)
             {
-                log?.Error("[Learning] 自学习分析异步任务异常: {0}", ex.Message);
+                log?.Error("[Learning] Self-learning analysis task failed: {0}", ex.Message);
             }
         });
     }

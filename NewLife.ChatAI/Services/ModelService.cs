@@ -563,12 +563,12 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             }
             catch (Exception ex)
             {
-                log?.Debug("刷新模型能力 {0}/{1} 失败：{2}", model.ProviderId, model.Code, ex.Message);
+                log?.Debug("Failed to refresh capabilities of model {0}/{1}: {2}", model.ProviderId, model.Code, ex.Message);
             }
         }
 
         if (count > 0)
-            XTrace.WriteLine("刷新模型能力完成，更新 {0} 个模型配置", count);
+            XTrace.WriteLine("Model capability refresh completed, {0} model configs updated", count);
     }
 
     /// <summary>初始化指定提供商的所有模型。设置未锁定模型的能力、价格和默认 Settings</summary>
@@ -693,7 +693,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             }
             catch (Exception ex)
             {
-                log?.Debug("{0} 模型发现异常：{1}", providerConfig.Name, ex.Message);
+                log?.Debug("{0} model discovery failed: {1}", providerConfig.Name, ex.Message);
             }
         }
 
@@ -704,7 +704,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         }
         catch (Exception ex)
         {
-            log?.Debug("Ollama 探测异常：{0}", ex.Message);
+            log?.Debug("Ollama probe failed: {0}", ex.Message);
         }
     }
 
@@ -732,7 +732,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         {
             providerConfig.Enable = true;
             providerConfig.Save();
-            log?.Info("Ollama 服务提供者已自动启用，版本：{0}", version);
+            log?.Info("Ollama provider has been enabled automatically, version: {0}", version);
         }
 
         // 获取已安装模型列表
@@ -741,15 +741,15 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         {
             // Ollama 在线但没有任何模型，自动拉取默认轻量模型
             const String defaultModel = "qwen3.5:0.8b";
-            log?.Info("Ollama 尚无模型，开始拉取 {0}（预计需数分钟）...", defaultModel);
+            log?.Info("Ollama has no model yet, starting to pull {0} (may take several minutes)...", defaultModel);
             try
             {
                 var status = await client.PullModelAsync(defaultModel).ConfigureAwait(false);
-                log?.Info("Ollama 拉取 {0} 完成，状态：{1}", defaultModel, status?.Status);
+                log?.Info("Ollama pull of {0} completed, status: {1}", defaultModel, status?.Status);
             }
             catch (Exception ex)
             {
-                log?.Debug("Ollama 拉取 {0} 失败：{1}", defaultModel, ex.Message);
+                log?.Debug("Ollama pull of {0} failed: {1}", defaultModel, ex.Message);
             }
 
             // 拉取后重新获取列表
@@ -851,7 +851,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             if (config.Save() > 0)
             {
                 synced++;
-                log?.Info("同步 {0} 模型：{1}", providerConfig.Name, modelCode);
+                log?.Info("Syncing {0} model: {1}", providerConfig.Name, modelCode);
             }
         }
         return [.. codes];
@@ -883,7 +883,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         {
             providerConfig.Enable = true;
             providerConfig.Save();
-            log?.Info("{0} 服务提供者已自动启用，发现 {1} 个可用模型", providerConfig.Name, modelList.Data.Length);
+            log?.Info("{0} provider has been enabled automatically, {1} models available", providerConfig.Name, modelList.Data.Length);
         }
 
         return SyncModelsFromList(providerConfig, modelList, listClient);
@@ -976,7 +976,7 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             if (model.ContextLength > 0) config.ContextLength = model.ContextLength;
 
             if (config.Save() > 0)
-                log?.Info("同步 {0} 模型：{1}", providerConfig.Name, model.Id);
+                log?.Info("Syncing {0} model: {1}", providerConfig.Name, model.Id);
         }
         return [.. codes];
     }

@@ -51,8 +51,8 @@ public class NativeToolController(ToolRegistry registry) : EntityController<Nati
     public ActionResult Resync()
     {
         var count = registry.SyncNativeTools(NativeTool.FindByName, static e => e.Save(), XTrace.WriteException);
-        XTrace.WriteLine("手动触发内置工具重新扫描，处理 {0} 个工具", count);
-        return JsonRefresh($"重新扫描完成，处理 {count} 个工具");
+        XTrace.WriteLine("Manual built-in tool rescan triggered, {0} tools processed", count);
+        return JsonRefresh(Localization.Translate("Rescan completed, {0} tools processed", count));
     }
 
     /// <summary>高级搜索。列表页查询、导出Excel、导出Json、分享页等使用</summary>

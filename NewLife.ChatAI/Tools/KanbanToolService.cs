@@ -63,7 +63,7 @@ public class KanbanToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (columns == null || columns.Count == 0)
-            throw new ToolException("参数错误：columns 不能为空", "请提供列定义数组后重试，或直接回复用户说明无法生成看板。示例：[{\"id\":\"todo\",\"title\":\"待办\",\"cards\":[...]}]");
+            throw new ToolException("Invalid parameter: columns cannot be empty", "Provide a column definition array and try again, or reply to the user that the kanban cannot be generated. Example: [{\"id\":\"todo\",\"title\":\"todo\",\"cards\":[...]}]");
 
         var kanbanId = context?.ToolCallId;
         if (kanbanId.IsNullOrEmpty()) kanbanId = $"kb_{Guid.NewGuid():N}";
@@ -83,7 +83,7 @@ public class KanbanToolService(ILog log)
         if (swimlanes is { Count: > 0 })
             result["swimlanes"] = JsonSerializer.SerializeToNode(swimlanes, _jsonOptions);
 
-        log.Info("[Kanban] 渲染看板「{0}」，id={1}，layout={2}", title, kanbanId, layout ?? "board");
+        log.Info("[Kanban] Rendering kanban '{0}', id={1}, layout={2}", title, kanbanId, layout ?? "board");
 
         // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免 ToJsonString 内部
         // 对 JsonValueCustomized 节点调用 MakeReadOnly() 时抛 "must specify a TypeInfoResolver"

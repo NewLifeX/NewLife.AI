@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Models;
 using NewLife.ChatAI.Services;
@@ -16,7 +16,7 @@ public class ProviderApiController(ModelService modelService) : ChatApiControlle
     public ActionResult<ProviderDto[]> GetAll()
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可访问提供商配置" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = Localization.Translate("Only a system administrator can access provider configuration") });
 
         var providers = ProviderConfig.FindAll();
         var result = providers
@@ -35,11 +35,11 @@ public class ProviderApiController(ModelService modelService) : ChatApiControlle
     public ActionResult<ProviderDto> Update(Int32 id, [FromBody] ProviderUpdateDto dto)
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可修改提供商配置" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = Localization.Translate("Only a system administrator can modify provider configuration") });
 
         var provider = ProviderConfig.FindById(id);
         if (provider == null)
-            return NotFound(new { code = "NOT_FOUND", message = "提供商不存在" });
+            return NotFound(new { code = "NOT_FOUND", message = Localization.Translate("Provider does not exist") });
 
         provider.Enable = dto.Enable;
 
@@ -61,11 +61,11 @@ public class ProviderApiController(ModelService modelService) : ChatApiControlle
     public async Task<ActionResult> RefreshAsync(Int32 id)
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可刷新模型" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = Localization.Translate("Only a system administrator can refresh models") });
 
         var provider = ProviderConfig.FindById(id);
         if (provider == null)
-            return NotFound(new { code = "NOT_FOUND", message = "提供商不存在" });
+            return NotFound(new { code = "NOT_FOUND", message = Localization.Translate("Provider does not exist") });
 
         var message = await modelService.DiscoverAsync(provider).ConfigureAwait(false);
         return Ok(new { message });

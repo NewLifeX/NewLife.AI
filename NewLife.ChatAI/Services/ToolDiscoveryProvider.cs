@@ -48,7 +48,7 @@ public class ToolDiscoveryProvider
                 if (excludeTools != null && excludeTools.Contains(name)) continue;
 
                 var desc = func.Description;
-                if (desc.IsNullOrEmpty()) desc = "无描述";
+                if (desc.IsNullOrEmpty()) desc = "No description";
 
                 // 截断过长描述
                 if (desc.Length > 80) desc = desc[..80] + "...";

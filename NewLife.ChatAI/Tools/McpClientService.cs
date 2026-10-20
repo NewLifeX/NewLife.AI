@@ -53,7 +53,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
         config.AvailableTools = tools.ToJson();
         config.Update();
 
-        log?.Info("MCP Server '{0}' 发现 {1} 个工具", config.Name, tools.Count);
+        log?.Info("MCP Server '{0}' discovered {1} tools", config.Name, tools.Count);
 
         return tools;
     }

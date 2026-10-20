@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -79,6 +79,6 @@ public class KanbanToolServiceTests
     {
         var service = NewService();
         var ex = Assert.Throws<ToolException>(() => service.ShowKanban("标题", []));
-        Assert.Contains("columns 不能为空", ex.ForUser);
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: columns cannot be empty"), ex.ForUser);
     }
 }
