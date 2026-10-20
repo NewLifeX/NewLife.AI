@@ -28,6 +28,20 @@ i18n.use(initReactI18next).init({
   },
 })
 
+/** 从右向左书写的语言 */
+const rtlLanguages = new Set(['ar', 'fa', 'he', 'ur'])
+
+/** 同步 <html lang> 与 dir：RTL 语言整页镜像，语言代码统一成 BCP 47（zh → zh-Hans） */
+function applyDocumentLocale(lng: string) {
+  if (typeof document === 'undefined') return
+  const lang = lng === 'zh' ? 'zh-Hans' : lng === 'zh-TW' ? 'zh-Hant' : lng
+  document.documentElement.lang = lang
+  document.documentElement.dir = rtlLanguages.has(lng) ? 'rtl' : 'ltr'
+}
+
+applyDocumentLocale(i18n.language)
+i18n.on('languageChanged', applyDocumentLocale)
+
 // 包装 changeLanguage：切换语言时先按需加载对应语言包
 const _originalChangeLanguage = i18n.changeLanguage.bind(i18n)
 i18n.changeLanguage = async function (lng, ...args) {
