@@ -50,13 +50,13 @@ export function parseTimelineData(result: string): TimelineSpec | null {
   try {
     const raw = JSON.parse(result)
     if (!raw?.timelineId || !Array.isArray(raw.items)) return null
-    var palette: string[] | undefined
+    let palette: string[] | undefined
     if (Array.isArray(raw.palette) && raw.palette.every((c: unknown) => typeof c === 'string'))
       palette = raw.palette as string[]
-    var density: TimelineSpec['density']
+    let density: TimelineSpec['density']
     if (raw.density === 'compact' || raw.density === 'normal' || raw.density === 'relaxed')
       density = raw.density
-    var layout: TimelineSpec['layout']
+    let layout: TimelineSpec['layout']
     if (typeof raw.layout === 'string' && VALID_LAYOUTS.includes(raw.layout as TimelineLayout))
       layout = raw.layout as TimelineLayout
     return {

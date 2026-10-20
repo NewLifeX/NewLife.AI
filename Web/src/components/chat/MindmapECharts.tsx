@@ -257,7 +257,7 @@ function buildOption(
 // ── 动态尺寸 ─────────────────────────────────────────────────────────────────
 
 /** 根据节点总数和布局方向估算合适高度 */
-function estimateHeight(spec: MindmapSpec, layout: MindmapLayout, _containerWidth: number): number {
+function estimateHeight(spec: MindmapSpec, layout: MindmapLayout): number {
   const branchCount = spec.branches.length
   const leafCount = spec.branches.reduce((sum, b) => sum + b.children.length, 0)
   const totalNodes = branchCount + leafCount
@@ -376,7 +376,7 @@ export function MindmapECharts({ spec, layout, className, onChartReady }: Mindma
   }, [])
 
   const { w: cw, h: ch } = containerSize
-  const height = useMemo(() => estimateHeight(spec, layout, cw), [spec.branches, layout, cw])
+  const height = useMemo(() => estimateHeight(spec, layout), [spec.branches, layout])
   const margins = useMemo(
     () => computeMargins(spec, layout, cw, ch),
     [spec.rootLabel, spec.branches, layout, cw, ch],

@@ -46,7 +46,7 @@ export async function captureDomAsPng(el: HTMLElement, scale = 2): Promise<Blob>
  *
  * 调用方在返回 false 时应展示移动端降级对话框（长按图片保存）。
  */
-export async function copyImageOrFallback(blob: Blob): Promise<Boolean> {
+export async function copyImageOrFallback(blob: Blob): Promise<boolean> {
   try {
     if (
       typeof ClipboardItem === 'undefined' ||

@@ -79,19 +79,19 @@ export function parseMindmapData(result: string): MindmapSpec | null {
     const content = String(raw.content ?? '')
     const { rootLabel, branches } = parseOutline(content)
     // 解析 AI 传入的配色数组
-    var branchColors: string[] | undefined;
+    let branchColors: string[] | undefined;
     if (Array.isArray(raw.branchColors) && raw.branchColors.every((c: unknown) => typeof c === 'string'))
       branchColors = raw.branchColors as string[];
     // 解析初始折叠节点 ID 列表
-    var collapsed: string[] | undefined;
+    let collapsed: string[] | undefined;
     if (Array.isArray(raw.collapsed) && raw.collapsed.every((c: unknown) => typeof c === 'string'))
       collapsed = raw.collapsed as string[];
     // 解析布局模式
-    var layout: MindmapLayout | undefined;
+    let layout: MindmapLayout | undefined;
     if (typeof raw.layout === 'string' && ['tree', 'radial', 'lr', 'rl', 'tb', 'bt'].includes(raw.layout))
       layout = raw.layout as MindmapLayout;
     // 解析最大深度
-    var maxDepth: number | undefined;
+    let maxDepth: number | undefined;
     if (typeof raw.maxDepth === 'number' && raw.maxDepth >= 1)
       maxDepth = raw.maxDepth;
     return {

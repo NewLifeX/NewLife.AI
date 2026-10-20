@@ -53,6 +53,10 @@ jobs:
       # vitest 单测（当前 Web/src 下的 *.test.ts）
       run: pnpm --dir Web test
 
+    - name: Lint frontend
+      # 0 error 门禁；存量告警（hooks/refresh 等）见功能清单 IMP-1，分批治理后再收紧为 --max-warnings 0
+      run: pnpm --dir Web lint
+
     - name: Build backend
       run: dotnet build -c Release NewLife.AI.slnx
 

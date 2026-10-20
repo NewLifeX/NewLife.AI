@@ -649,7 +649,7 @@ const DEFAULT_HEIGHT = 360
 export function ChartBlock({ spec, className, hideActions }: ChartBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef     = useRef<ECharts | null>(null)
-  const lastChartIdRef = useRef<String | null>(null)
+  const lastChartIdRef = useRef<string | null>(null)
   const [error,   setError]   = useState<string | null>(null)
   const [loading, setLoading] = useState(spec.type === 'map_china')
   const [imageCopied, setImageCopied] = useState(false)

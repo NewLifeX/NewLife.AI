@@ -577,7 +577,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
   }, [])
 
   // ── 拖拽处理 ──
-  const handleDragStart = useCallback((_cardId: string, _fromColumnId: string) => {
+  const handleDragStart = useCallback(() => {
     /* 拖拽开始：无需额外状态，仅用于触发 drag 事件 */
   }, [])
 
@@ -701,8 +701,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
   const boardContent = (
     <>
       {/* 标题栏 */}
-      {(spec.title || true) && (
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 bg-[var(--color-surface-0)] border-b border-[var(--color-border-subtle)]">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3 bg-[var(--color-surface-0)] border-b border-[var(--color-border-subtle)]">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{spec.title || t('chat.kanban')}</h3>
           <div className="flex items-center gap-0.5" data-no-capture>
             <button
@@ -733,8 +732,7 @@ export function KanbanBlock({ spec, className }: KanbanBlockProps) {
               <Icon name={imageSaved ? 'check' : 'save_alt'} size="sm" />
             </button>
           </div>
-        </div>
-      )}
+      </div>
 
       {/* 筛选栏（无搜索框） */}
       <KanbanFilterBar

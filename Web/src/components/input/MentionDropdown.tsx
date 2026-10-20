@@ -167,6 +167,6 @@ export function MentionDropdown({
 }
 
 /** 键盘事件处理函数引用，供父组件在 onKeyDown 中调用 */
-MentionDropdown.handleKeyDown = ((_e: ReactKeyboardEvent | globalThis.KeyboardEvent): boolean => false) as (
+MentionDropdown.handleKeyDown = ((): boolean => false) as (
   e: ReactKeyboardEvent | globalThis.KeyboardEvent,
 ) => boolean

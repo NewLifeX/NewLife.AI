@@ -15,6 +15,10 @@ const { reloadMock } = vi.hoisted(() => ({ reloadMock: vi.fn() }))
 
 import { lazyLoad, isChunkLoadError, __resetLazyLoadState } from './lazyLoad'
 
+// React.lazy 组件不公开 factory，测试里按其 mock 形状取值，避免 as any
+type LazyWithFactory = { factory: () => Promise<{ default: unknown }> }
+const asFactory = (component: unknown) => (component as LazyWithFactory).factory
+
 // jsdom 中 window.location.reload 属性不可配置，通过整体替换 location 对象注入 mock
 let originalLocation: Location | undefined
 
@@ -64,7 +68,7 @@ describe('lazyLoad', () => {
       Promise.reject(new Error('Failed to fetch dynamically imported module: http://localhost:5080/assets/SettingsModal-abc.js')),
     )
 
-    await expect((comp as any).factory()).rejects.toThrow()
+    await expect(asFactory(comp)()).rejects.toThrow()
     expect(reloadMock).toHaveBeenCalledTimes(1)
   })
 
@@ -74,24 +78,24 @@ describe('lazyLoad', () => {
     )
 
     // 第一次失败：刷新
-    await expect((comp as any).factory()).rejects.toThrow()
+    await expect(asFactory(comp)()).rejects.toThrow()
     expect(reloadMock).toHaveBeenCalledTimes(1)
 
     // 冷却期内（<5s）再失败：不刷新
     vi.setSystemTime(new Date('2026-01-01T00:00:04Z'))
-    await expect((comp as any).factory()).rejects.toThrow()
+    await expect(asFactory(comp)()).rejects.toThrow()
     expect(reloadMock).toHaveBeenCalledTimes(1)
 
     // 超过冷却期后再失败：再次刷新
     vi.setSystemTime(new Date('2026-01-01T00:00:06Z'))
-    await expect((comp as any).factory()).rejects.toThrow()
+    await expect(asFactory(comp)()).rejects.toThrow()
     expect(reloadMock).toHaveBeenCalledTimes(2)
   })
 
   it('普通错误不刷新，仍抛出由 ErrorBoundary 兜底', async () => {
     const comp = lazyLoad(() => Promise.reject(new Error('normal render error')))
 
-    await expect((comp as any).factory()).rejects.toThrow('normal render error')
+    await expect(asFactory(comp)()).rejects.toThrow('normal render error')
     expect(reloadMock).not.toHaveBeenCalled()
   })
 
@@ -99,7 +103,7 @@ describe('lazyLoad', () => {
     const Comp = () => null
     const comp = lazyLoad(() => Promise.resolve({ default: Comp }))
 
-    const mod = await (comp as any).factory()
+    const mod = await asFactory(comp)()
     expect(mod.default).toBe(Comp)
     expect(reloadMock).not.toHaveBeenCalled()
   })

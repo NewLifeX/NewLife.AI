@@ -602,8 +602,7 @@ function WidgetFullscreenDialog({ data, onClose }: WidgetFullscreenDialogProps) 
                       transformOrigin: 'top left',
                     }}
                     className="bg-white rounded-2xl p-6 shadow-2xl [&_svg]:block [&_svg]:max-w-full [&_svg]:h-auto"
-                    // eslint-disable-next-line react/no-danger
-                    dangerouslySetInnerHTML={{ __html: previewCode }}
+                                    dangerouslySetInnerHTML={{ __html: previewCode }}
                   />
                 </div>
               </div>
@@ -823,8 +822,7 @@ export function WidgetBlock({ data, className }: WidgetBlockProps) {
           // [&>svg]:h-auto：强制浏览器依据 viewBox 宽高比计算高度，消除 LLM 偏大的 height 属性造成的底部空白
           <div
             className="widget-svg overflow-auto max-h-[600px] [&>svg]:block [&>svg]:max-w-full [&>svg]:h-auto"
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{ __html: data.code }}
+                    dangerouslySetInnerHTML={{ __html: data.code }}
           />
         ) : isMermaid ? (
           // show_widget 工具传入原始 Mermaid 语法时（kind='html' 但以 flowchart/graph 等开头，

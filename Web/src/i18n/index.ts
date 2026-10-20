@@ -3,7 +3,8 @@ import { initReactI18next } from 'react-i18next'
 import zh from './locales/zh'
 
 /** 非默认语言的动态加载表。切换语言时按需 import，减少首屏打包体积。 */
-const localeLoaders: Record<string, () => Promise<{ default: any }>> = {
+type LocaleModule = { default: Record<string, unknown> }
+const localeLoaders: Record<string, () => Promise<LocaleModule>> = {
   'zh-TW': () => import('./locales/zh-TW'),
   en: () => import('./locales/en'),
 }
