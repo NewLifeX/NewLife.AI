@@ -46,7 +46,7 @@ public class TelegramChannel : IMessageChannel, ILogFeature
         // BotToken 本身含有 ":" 分隔符（格式为 数字:字符串），因此取最后一个 ":" 前的部分作为 token
         var lastColon = target.LastIndexOf(':');
         if (lastColon <= 0)
-            throw new ArgumentException($"Telegram target 格式错误，期望 {{BotToken}}:{{ChatId}}，实际：{target}");
+            throw new ArgumentException(Localization.Translate("Invalid Telegram target format. Expected {{BotToken}}:{{ChatId}}, actual: {0}", target));
 
         // BotToken 格式：{数字}:{字符串}，ChatId 可能为负数（群组）或正数（用户）
         // 由于 BotToken 含一个冒号，格式为 数字:字母数字...，ChatId 为最后一段（可能以 - 开头）
@@ -54,7 +54,7 @@ public class TelegramChannel : IMessageChannel, ILogFeature
         // 策略：从后往前找第二个冒号（即 BotToken 和 ChatId 的分隔冒号）
         var secondLastColon = target.LastIndexOf(':', lastColon - 1);
         if (secondLastColon < 0)
-            throw new ArgumentException($"Telegram target 格式错误，需包含 BotToken（含冒号）和 ChatId，实际：{target}");
+            throw new ArgumentException(Localization.Translate("Invalid Telegram target format. BotToken (with colon) and ChatId are required, actual: {0}", target));
 
         botToken = target[..lastColon];
         chatId = target[(lastColon + 1)..];
@@ -84,12 +84,12 @@ public class TelegramChannel : IMessageChannel, ILogFeature
         {
             // Telegram Bot API：POST /bot{token}/sendMessage
             var result = await client.InvokeAsync<Object>("sendMessage", payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("Telegram 发送成功：{0}", result);
+            Log.Debug("Telegram message sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("Telegram 发送失败：{0}", ex.Message);
+            Log.Error("Telegram send failed: {0}", ex.Message);
             return false;
         }
     }

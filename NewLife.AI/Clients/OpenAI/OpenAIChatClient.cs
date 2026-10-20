@@ -122,7 +122,7 @@ public partial class OpenAIChatClient : OpenAIClientBase,
     /// <returns>逐段返回音频字节分片</returns>
     public virtual IAsyncEnumerable<Byte[]> SpeechStreamAsync(SpeechRequest request, CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException($"[{nameof(ISpeechClient)}] 流式语音合成暂未实现");
+        throw new NotSupportedException("[ISpeechClient] Streaming speech synthesis is not implemented yet");
     }
 
     /// <summary>判断是否支持指定模型的流式语音合成（WebSocket / SSE 逻片式）。默认返回 false，子类按需重写</summary>

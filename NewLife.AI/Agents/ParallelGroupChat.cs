@@ -46,7 +46,7 @@ public sealed class ParallelGroupChat
     /// <param name="aggregator">聚合代理</param>
     public ParallelGroupChat(IList<IAgent> workers, IAgent aggregator)
     {
-        if (workers == null || workers.Count == 0) throw new ArgumentException("工作代理列表不能为空", nameof(workers));
+        if (workers == null || workers.Count == 0) throw new ArgumentException(Localization.Translate("Worker agent list cannot be empty"), nameof(workers));
         if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));
 
         Workers = workers;
@@ -140,14 +140,14 @@ public sealed class ParallelGroupChat
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // 工作代理超时，降级跳过
-            XTrace.WriteLine("[ParallelGroupChat] 工作代理 {0} 超时（{1}s），降级跳过", worker.GetType().Name, WorkerTimeoutSeconds);
+            XTrace.WriteLine("[ParallelGroupChat] Worker agent {0} timed out ({1}s); skipped", worker.GetType().Name, WorkerTimeoutSeconds);
             return (worker, new List<AgentMessage>());
         }
         catch (Exception ex)
         {
             // 工作代理执行失败，降级跳过但记录原因（A-17：原裸 catch 吞异常，排障无据）
             XTrace.WriteException(ex);
-            XTrace.WriteLine("[ParallelGroupChat] 工作代理 {0} 执行失败，降级跳过：{1}", worker.GetType().Name, ex.Message);
+            XTrace.WriteLine("[ParallelGroupChat] Worker agent {0} failed; skipped: {1}", worker.GetType().Name, ex.Message);
             return (worker, new List<AgentMessage>());
         }
         finally

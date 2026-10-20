@@ -86,7 +86,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
             {
                 var errDic = JsonParser.Decode(line);
                 var message = errDic?["error"] as String ?? line;
-                throw new HttpRequestException($"[{Name}] 流式错误 {message}");
+                throw new HttpRequestException(Localization.Translate("[{0}] Streaming error {1}", Name, message));
             }
 
             var chunk = ParseChunk(line, request, null);
@@ -189,7 +189,7 @@ public class OllamaChatClient : AiClientBase, IModelListClient
         catch (ApiException ex) when (ex.Message.Contains("does not support embeddings"))
         {
             throw new ApiException(400,
-                $"模型 '{request.Model}' 不支持嵌入向量生成。请改用专用嵌入模型，安装命令：ollama pull {DefaultEmbedModel}");
+                Localization.Translate("Model '{0}' does not support embeddings. Use a dedicated embedding model, install with: ollama pull {1}", request.Model, DefaultEmbedModel));
         }
     }
 

@@ -21,7 +21,7 @@ public partial class DashScopeChatClient
     {
         // CosyVoice WebSocket 仅限北京 MaaS 端点，必须提供 Organization（工作空间 ID）
         if (_options.Organization.IsNullOrEmpty())
-            throw new InvalidOperationException("CosyVoice WebSocket 实时语音合成需北京地域 MaaS 业务空间。请在 AiClientOptions.Organization 中设置工作空间 ID（阿里云百炼控制台 → 业务空间 → 复制空间ID）");
+            throw new InvalidOperationException(Localization.Translate("CosyVoice WebSocket realtime speech synthesis requires a Beijing-region MaaS workspace. Set the workspace ID in AiClientOptions.Organization (Alibaba Cloud Bailian console -> Workspace -> Copy workspace ID)"));
 
         return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference";
     }
@@ -34,7 +34,7 @@ public partial class DashScopeChatClient
     private String BuildQwenTtsRealtimeWebSocketUrl(String modelCode)
     {
         if (_options.Organization.IsNullOrEmpty())
-            throw new InvalidOperationException("Qwen-TTS Realtime WebSocket 实时语音合成需北京地域 MaaS 业务空间。请在 AiClientOptions.Organization 中设置工作空间 ID");
+            throw new InvalidOperationException(Localization.Translate("Qwen-TTS Realtime WebSocket speech synthesis requires a Beijing-region MaaS workspace. Set the workspace ID in AiClientOptions.Organization"));
 
         return $"wss://{_options.Organization}.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model={Uri.EscapeDataString(modelCode)}";
     }
@@ -64,7 +64,7 @@ public partial class DashScopeChatClient
                 var evType = GetEventType(sessionCreated);
                 var errDetail = evType == "error" ? ExtractErrorDetail(sessionCreated) : null;
                 var suffix = errDetail != null ? $"，错误详情: {errDetail}" : "";
-                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.created，实际收到 {evType ?? "(null/Close)"}{suffix}");
+                throw new InvalidOperationException(Localization.Translate("Qwen-TTS Realtime expected session.created but received {0}{1}", evType ?? "(null/Close)", suffix));
             }
 
             // 2. 发送 session.update 配置音色/格式/模式
@@ -98,7 +98,7 @@ public partial class DashScopeChatClient
                 var evType = GetEventType(sessionUpdated);
                 var errDetail = evType == "error" ? ExtractErrorDetail(sessionUpdated) : null;
                 var suffix = errDetail != null ? $"，错误详情: {errDetail}" : "";
-                throw new InvalidOperationException($"Qwen-TTS Realtime 期望 session.updated，实际收到 {evType ?? "(null/Close)"}{suffix}");
+                throw new InvalidOperationException(Localization.Translate("Qwen-TTS Realtime expected session.updated but received {0}{1}", evType ?? "(null/Close)", suffix));
             }
 
             // 4. 分批发送文本到缓冲区（每片 ≤500 字符）
@@ -170,11 +170,11 @@ public partial class DashScopeChatClient
                         yield break;
 
                     case "error":
-                        var errMsg = "未知错误";
+                        var errMsg = "Unknown error";
                         if (ev.TryGetValue("error", out var errObj) && errObj is IDictionary<String, Object?> errDic
                             && errDic.TryGetValue("message", out var em))
                             errMsg = em as String ?? errMsg;
-                        throw new InvalidOperationException($"Qwen-TTS Realtime 错误: {errMsg}");
+                        throw new InvalidOperationException(Localization.Translate("Qwen-TTS Realtime error: {0}", errMsg));
 
                     default:
                         // input_text_buffer.committed / response.created / response.output_item.added / response.content_part.*  等中间事件，忽略继续
@@ -279,7 +279,7 @@ public partial class DashScopeChatClient
                 var extra = modelCode.StartsWith("cosyvoice-v3.5", StringComparison.OrdinalIgnoreCase)
                     ? "。v3.5 模型仅限北京地域 MaaS 业务空间（需设置 Organization），且仅支持声音复刻（自定义音色）"
                     : "";
-                throw new InvalidOperationException($"CosyVoice WebSocket 期望 task-started，实际收到 {GetHeaderAction(started) ?? "(Close/非文本帧)"}{reason}{extra}");
+                throw new InvalidOperationException(Localization.Translate("CosyVoice WebSocket expected task-started but received {0}{1}{2}", GetHeaderAction(started) ?? "(Close/non-text frame)", reason, extra));
             }
 
             // 文本分片发送（每片 ≤500 UTF-8 字节，保守取 ≤166 字符）
@@ -345,11 +345,11 @@ public partial class DashScopeChatClient
                         yield break;
 
                     case "task-failed":
-                        var errMsg = "未知错误";
+                        var errMsg = "Unknown error";
                         if (json.TryGetValue("payload", out var ep) && ep is IDictionary<String, Object> epDic
                             && epDic.TryGetValue("message", out var em))
                             errMsg = em as String ?? errMsg;
-                        throw new InvalidOperationException($"CosyVoice WebSocket 任务失败: {errMsg}");
+                        throw new InvalidOperationException(Localization.Translate("CosyVoice WebSocket task failed: {0}", errMsg));
 
                     default:
                         break;

@@ -162,6 +162,13 @@ public static class ChatAIExtensions
     /// <returns></returns>
     public static WebApplication UseChatAI(this WebApplication app, Boolean redirectToChat = false)
     {
+        // 按 Accept-Language 切换运行时消息语言：Localization.Culture 未固定时，请求内异常/日志使用客户端首选语言
+        app.Use(async (context, next) =>
+        {
+            using var _ = RequestCultureScope.Create(context.Request.Headers.AcceptLanguage.ToString());
+            await next();
+        });
+
         // 嵌入在 DLL 中的 wwwroot 文件，作为静态资源
         var env = app.Environment;
         var assembly = typeof(ChatAIExtensions).Assembly;

@@ -264,7 +264,7 @@ public class NewLifeAIChatClient(AiClientOptions options) : OpenAIChatClient(opt
     public virtual async Task<RerankResponse> RerankAsync(RerankRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (String.IsNullOrEmpty(request.Query)) throw new ArgumentException("Query 不能为空", nameof(request));
+        if (String.IsNullOrEmpty(request.Query)) throw new ArgumentException(Localization.Translate("Query cannot be empty"), nameof(request));
 
         var url = BuildApiUrl("/v1/reranks");
 

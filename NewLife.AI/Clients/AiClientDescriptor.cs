@@ -109,7 +109,7 @@ public class AiClientDescriptor
 
     /// <summary>客户端工厂。根据连接选项创建 IChatClient 实例</summary>
     /// <remarks>每次调用均创建新实例，调用方负责释放（using）</remarks>
-    public Func<AiClientOptions, IChatClient> Factory { get; set; } = _ => throw new InvalidOperationException("未配置 Factory");
+    public Func<AiClientOptions, IChatClient> Factory { get; set; } = _ => throw new InvalidOperationException(Localization.Translate("Factory is not configured"));
 
     /// <summary>按模型 ID 查找已注册的模型能力信息</summary>
     /// <remarks>

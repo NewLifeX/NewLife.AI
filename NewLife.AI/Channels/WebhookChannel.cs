@@ -45,12 +45,12 @@ public class WebhookChannel : IMessageChannel, ILogFeature
         try
         {
             var result = await client.InvokeAsync<String>("", payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("Webhook发送成功：{0}", result);
+            Log.Debug("Webhook sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("Webhook发送失败：{0}", ex.Message);
+            Log.Error("Webhook send failed: {0}", ex.Message);
             return false;
         }
     }

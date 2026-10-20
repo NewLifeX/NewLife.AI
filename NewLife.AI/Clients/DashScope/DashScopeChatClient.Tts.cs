@@ -26,7 +26,7 @@ public partial class DashScopeChatClient
     public override async Task<Byte[]> SpeechAsync(SpeechRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException(Localization.Translate("Text to synthesize cannot be empty"), nameof(request));
 
         var format = request.ResponseFormat switch
         {
@@ -55,7 +55,7 @@ public partial class DashScopeChatClient
                     voice = "Cherry";
             }
             if (!QwenTtsVoiceList.IsValidVoice(modelCode, voice))
-                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+                throw new ArgumentException(Localization.Translate("Voice '{0}' is not in the allowed voice list of model '{1}'", request.Voice, modelCode));
             input = BuildQwenTtsInput(request, voice, format, request.SampleRate ?? 24000);
             body = new Dictionary<String, Object?>
             {
@@ -75,7 +75,7 @@ public partial class DashScopeChatClient
                     voice = "longxiaochun_v3";
             }
             if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
-                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中。可用音色请参见 GET /api/audio/voices");
+                throw new ArgumentException(Localization.Translate("Voice '{0}' is not in the allowed voice list of model '{1}'. See GET /api/audio/voices for available voices", request.Voice, modelCode));
             input = BuildCosyVoiceTtsInput(request, voice, format, request.SampleRate ?? 24000);
             body = new Dictionary<String, Object?>
             {
@@ -91,22 +91,22 @@ public partial class DashScopeChatClient
 
             var dic = JsonParser.Decode(json);
             if (dic == null)
-                throw new InvalidOperationException("无法解析 DashScope TTS 响应");
+                throw new InvalidOperationException(Localization.Translate("Unable to parse DashScope TTS response"));
 
             var code = dic["code"] as String;
             if (!String.IsNullOrEmpty(code))
             {
                 var message = dic["message"] as String ?? code;
-                throw new HttpRequestException($"[DashScope] TTS 错误 {code}: {message}");
+                throw new HttpRequestException(Localization.Translate("[DashScope] TTS error {0}: {1}", code, message));
             }
 
             var output = dic["output"] as IDictionary<String, Object>
-                ?? throw new InvalidOperationException("DashScope TTS 响应缺少 output 字段");
+                ?? throw new InvalidOperationException(Localization.Translate("DashScope TTS response is missing the output field"));
             var audio = output["audio"] as IDictionary<String, Object>
-                ?? throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio 字段");
+                ?? throw new InvalidOperationException(Localization.Translate("DashScope TTS response is missing the output.audio field"));
             var audioUrl = audio["url"] as String;
             if (String.IsNullOrWhiteSpace(audioUrl))
-                throw new InvalidOperationException("DashScope TTS 响应缺少 output.audio.url");
+                throw new InvalidOperationException(Localization.Translate("DashScope TTS response is missing output.audio.url"));
 
             // 解析用量：Qwen-TTS 用 total_tokens，CosyVoice 用 characters，两者兼容
             if (dic["usage"] is IDictionary<String, Object> usage)
@@ -258,7 +258,7 @@ public partial class DashScopeChatClient
     public override async IAsyncEnumerable<Byte[]> SpeechStreamAsync(SpeechRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException("合成文本不能为空", nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Input)) throw new ArgumentException(Localization.Translate("Text to synthesize cannot be empty"), nameof(request));
 
         var format = request.ResponseFormat ?? "mp3";
         format = format switch { "mp3" => "mp3", "wav" => "wav", "opus" => "opus", "pcm" => "pcm", _ => format };
@@ -275,7 +275,7 @@ public partial class DashScopeChatClient
                     voice = "Cherry";
             }
             if (!QwenTtsVoiceList.IsValidVoice(modelCode, voice))
-                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+                throw new ArgumentException($"Voice '{request.Voice}' is not in the allowed voice list of model '{modelCode}'");
 
             using var ws = new ClientWebSocket();
             if (!_options.ApiKey.IsNullOrEmpty())
@@ -297,7 +297,7 @@ public partial class DashScopeChatClient
                     voice = "longxiaochun_v3";
             }
             if (!CosyVoiceVoiceList.IsValidVoice(modelCode, voice))
-                throw new ArgumentException($"音色 '{request.Voice}' 不在模型 '{modelCode}' 的合法音色列表中");
+                throw new ArgumentException($"Voice '{request.Voice}' is not in the allowed voice list of model '{modelCode}'");
 
             var sampleRate = request.SampleRate ?? 24000;
             var rate = request.Speed ?? 1.0;

@@ -70,17 +70,17 @@ public class DiscordChannel : IMessageChannel, ILogFeature
             var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                Log.Debug("Discord 发送成功");
+                Log.Debug("Discord message sent");
                 return true;
             }
 
             var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            Log.Error("Discord 发送失败：HTTP {0} - {1}", (Int32)response.StatusCode, errorBody);
+            Log.Error("Discord send failed: HTTP {0} - {1}", (Int32)response.StatusCode, errorBody);
             return false;
         }
         catch (Exception ex)
         {
-            Log.Error("Discord 发送失败：{0}", ex.Message);
+            Log.Error("Discord send failed: {0}", ex.Message);
             return false;
         }
     }

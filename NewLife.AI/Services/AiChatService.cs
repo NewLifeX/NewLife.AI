@@ -81,7 +81,7 @@ public class AiChatService(IChatClient client, ChatSessionService? sessions = nu
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (request.Message.IsNullOrEmpty()) throw new ArgumentNullException(nameof(request), "消息不能为空");
+        if (request.Message.IsNullOrEmpty()) throw new ArgumentNullException(nameof(request), "Message cannot be empty");
 
         // 默认选项：思考模式开思考、降温度
         options ??= new ChatOptions
@@ -132,7 +132,7 @@ public class AiChatService(IChatClient client, ChatSessionService? sessions = nu
                 catch (Exception ex)
                 {
                     hasError = true;
-                    WriteLog("AI 对话失败", ex.ToString());
+                    WriteLog("AI chat failed", ex.ToString());
                     var info = ChatErrorHelper.Classify(ex.Message);
                     errorEvent = ChatStreamEvent.ErrorEvent(info.Code, info.Message, ex);
                     moved = false;

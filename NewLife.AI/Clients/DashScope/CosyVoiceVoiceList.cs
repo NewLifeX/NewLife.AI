@@ -102,7 +102,7 @@ public static class CosyVoiceVoiceList
                 using var stream = assembly.GetManifestResourceStream("NewLife.AI.Resources.CosyVoiceVoices.json");
                 if (stream == null)
                 {
-                    XTrace.WriteLine("CosyVoiceVoiceList: 嵌入资源未找到，音色列表为空");
+                    XTrace.WriteLine("CosyVoiceVoiceList: embedded resource not found; voice list is empty");
                     _models = [];
                     return;
                 }

@@ -90,7 +90,7 @@ public class ChatMessage : IExtend
             catch (Exception ex)
             {
                 // A-56：记录解析失败原因，便于排障（返回 null 由调用方回退处理）
-                XTrace.WriteLine("[ChatMessage] 多模态内容 JSON 解析失败：{0}，前200字符：{1}", ex.Message, json.Length > 200 ? json[..200] : json);
+                XTrace.WriteLine("[ChatMessage] Failed to parse multimodal content JSON: {0}; first 200 chars: {1}", ex.Message, json.Length > 200 ? json[..200] : json);
                 return null;
             }
         }

@@ -54,12 +54,12 @@ public class FeishuChannel : IMessageChannel, ILogFeature
         try
         {
             var result = await client.InvokeAsync<String>("", payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("飞书发送成功：{0}", result);
+            Log.Debug("Feishu message sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("飞书发送失败：{0}", ex.Message);
+            Log.Error("Feishu send failed: {0}", ex.Message);
             return false;
         }
     }

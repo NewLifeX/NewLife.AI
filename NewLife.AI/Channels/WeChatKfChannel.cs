@@ -70,7 +70,7 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
             var token = result.ToJsonEntity<WxTokenResponse>();
             if (token == null || token.AccessToken.IsNullOrWhiteSpace())
             {
-                Log.Error("微信客服 access_token 获取失败：{0}", result);
+                Log.Error("WeChat Kf access_token request failed: {0}", result);
                 return null;
             }
 
@@ -86,7 +86,7 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
         }
         catch (Exception ex)
         {
-            Log.Error("微信客服 access_token 获取异常：{0}", ex.Message);
+            Log.Error("WeChat Kf access_token request error: {0}", ex.Message);
             return null;
         }
     }
@@ -118,7 +118,7 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
         // AppSecret 由外部通过 AppSecret 属性注入（渠道管理配置），不允许硬编码空串导致必然失败
         if (AppSecret.IsNullOrWhiteSpace())
         {
-            Log.Error("微信客服发送失败：未配置 AppSecret，无法获取 access_token。请通过 {0}.AppSecret 注入", nameof(WeChatKfChannel));
+            Log.Error("WeChat Kf send failed: AppSecret is not configured, access_token unavailable. Inject it via {0}.AppSecret", nameof(WeChatKfChannel));
             return false;
         }
 
@@ -141,12 +141,12 @@ public class WeChatKfChannel : IMessageChannel, ILogFeature
         {
             var url = $"/cgi-bin/message/custom/send?access_token={token}";
             var result = await client.InvokeAsync<String>(url, payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("微信客服发送成功：{0}", result);
+            Log.Debug("WeChat Kf message sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("微信客服发送失败：{0}", ex.Message);
+            Log.Error("WeChat Kf send failed: {0}", ex.Message);
             return false;
         }
     }

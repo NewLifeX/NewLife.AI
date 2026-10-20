@@ -118,7 +118,7 @@ public class McpServerCapabilitiesTests
         Assert.NotNull(error);
         // MCP 2025-06-18 协议：未知资源 URI 返回 ResourceNotFound（-32002）
         Assert.Equal(McpErrorCode.ResourceNotFound, error.Code);
-        Assert.Contains("not found", error.Message);
+        Assert.Contains(NewLife.Localization.Translate("Resource '{0}' not found in the server capabilities.", "knowledge://articles/missing"), error.Message);
     }
 
     [Fact]

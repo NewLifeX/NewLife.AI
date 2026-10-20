@@ -97,7 +97,7 @@ public static class QwenTtsVoiceList
                 using var stream = assembly.GetManifestResourceStream("NewLife.AI.Resources.QwenTtsVoices.json");
                 if (stream == null)
                 {
-                    XTrace.WriteLine("QwenTtsVoiceList: 嵌入资源未找到，音色列表为空");
+                    XTrace.WriteLine("QwenTtsVoiceList: embedded resource not found; voice list is empty");
                     _models = [];
                     return;
                 }
