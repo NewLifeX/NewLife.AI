@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="12.0.2026.1019-beta1502" />
+    <PackageReference Include="NewLife.Core" Version="12.0.2026.1020-beta1352" />
     <PackageReference Include="NewLife.Stardust.Extensions" Version="3.10.2026.1020-beta0651" />
     <PackageReference Include="xunit.assert" Version="2.9.3" />
   </ItemGroup>

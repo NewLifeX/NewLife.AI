@@ -76,7 +76,7 @@
 
   <ItemGroup>
     <!-- 直接引用 NewLife.Core：PackageReference 默认不传递 analyzers/build，源生成器与 Locales 自动挂载需要直接引用 -->
-    <PackageReference Include="NewLife.Core" Version="12.0.2026.1019-beta1502" />
+    <PackageReference Include="NewLife.Core" Version="12.0.2026.1020-beta1352" />
     <PackageReference Include="NewLife.Cube.Core" Version="6.15.2026.1018-beta1727" />
     <PackageReference Include="NewLife.Holiday" Version="1.4.2026.1019-beta1205" />
     <PackageReference Include="NewLife.MySql" Version="1.4.2026.1019-beta1524" />
