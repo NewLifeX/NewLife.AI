@@ -426,6 +426,8 @@ export default {
     privacyUpdate: '本隐私政策可能不定期更新，重大变更时我们会在页面内发出通知。',
   },
   share: {
+    title: '分享对话',
+    description: '生成公开链接，任何拥有此链接的人都可以查看对话内容。',
     createLink: '创建分享链接',
     createFailed: '创建分享链接失败，请稍后重试',
     linkHint: '任何拥有此链接的人都可以查看对话内容。',

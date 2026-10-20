@@ -1,18 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import en from './en'
-import ja from './ja'
-import ko from './ko'
-import de from './de'
-import fr from './fr'
-import es from './es'
-import pt from './pt'
-import ru from './ru'
-import ar from './ar'
+import zh from './zh'
+import zhTW from './zh-TW'
 
 type Dict = Record<string, unknown>
 
-// 与 en.ts 对齐的语言包。zh / zh-TW 为历史词表（含少量 legacy 差异），不在本用例约束范围内。
-const locales: Record<string, Dict> = { en, ja, ko, de, fr, es, pt, ru, ar }
+// ChatAI 只支持三种界面语言，三份词表的键集合必须与英文源文完全一致
+const locales: Record<string, Dict> = { zh, 'zh-TW': zhTW }
 
 /** 递归收集叶子节点路径，用于比对键集合 */
 function leafPaths(node: Dict, prefix = ''): string[] {

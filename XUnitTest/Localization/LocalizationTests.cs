@@ -87,6 +87,27 @@ public class LocalizationTests
     }
 
     [Fact]
+    [DisplayName("应用层词表 31 种语言均已翻译，且与内核词表共存不覆盖")]
+    public void AppLayerLocale_AllCultures()
+    {
+        _ = typeof(NewLife.ChatAI.ChatAIExtensions).Assembly;
+
+        const String appKey = "AppKey is invalid or disabled";
+        const String kernelKey = "Message list cannot be empty";
+        foreach (var code in _cultures)
+        {
+            var app = WithCulture(code, () => L10n.Translate(appKey));
+            Assert.False(app.IsNullOrEmpty(), $"{code} 缺少应用层译文");
+            Assert.NotEqual(appKey, app);
+
+            // 内核词表与应用层词表同 culture 共存：注册后不应互相覆盖
+            var kernel = WithCulture(code, () => L10n.Translate(kernelKey));
+            Assert.False(kernel.IsNullOrEmpty(), $"{code} 缺少内核译文");
+            Assert.NotEqual(kernelKey, kernel);
+        }
+    }
+
+    [Fact]
     [DisplayName("Accept-Language 选择权重最高的受支持语言")]
     public void ParseAcceptLanguage_PicksSupported()
     {

@@ -81,7 +81,7 @@
     <PackageReference Include="NewLife.Holiday" Version="1.4.2026.1019-beta1205" />
     <PackageReference Include="NewLife.MySql" Version="1.4.2026.1019-beta1524" />
     <PackageReference Include="NewLife.Office" Version="1.4.2026.1019-beta1504" />
-    <PackageReference Include="NewLife.XCode" Version="12.2.2026.1019-beta1521" />
+    <PackageReference Include="NewLife.XCode" Version="12.2.2026.1020-beta1559" />
   </ItemGroup>
 
   <ItemGroup>

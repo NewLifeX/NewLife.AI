@@ -93,7 +93,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         catch (Exception ex)
         {
             DefaultSpan.Current?.SetError(ex);
-            log?.Error("重新生成回复失败: {0}", ex.Message);
+            log?.Error("Failed to regenerate the reply: {0}", ex.Message);
             return null;
         }
     }
@@ -383,7 +383,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         }
         catch (Exception ex)
         {
-            log?.Error("后台生成完成回调失败: {0}", ex.Message);
+            log?.Error("Background generation completion callback failed: {0}", ex.Message);
         }
     }
 
@@ -522,7 +522,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var hasUserMessage = beforeMessages.Any(e => e.Role.EqualIgnoreCase("user"));
         if (!hasUserMessage)
         {
-            var errMsg = $"重新生成上下文缺少用户消息。AssistantMessage.Id={entity.Id}, HistoryMessages.Count={flow.HistoryMessages.Count}, beforeMessages.Count={beforeMessages.Count}";
+            var errMsg = L.T("Regenerate context is missing the user message. AssistantMessage.Id={0}, HistoryMessages.Count={1}, beforeMessages.Count={2}", entity.Id, flow.HistoryMessages.Count, beforeMessages.Count);
             log?.Error(errMsg);
             throw new InvalidOperationException(errMsg);
         }
@@ -683,10 +683,10 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                log?.Error("Handler [{0}] OnBefore 执行失败: {1}", name, ex.Message);
+                log?.Error("Handler [{0}] OnBefore failed: {1}", name, ex.Message);
                 context.HasError = true;
                 beforeFailed = true;
-                beforeErrorMsg = $"处理器 {name} 执行失败: {ex.Message}";
+                beforeErrorMsg = L.T("Handler {0} failed: {1}", name, ex.Message);
                 beforeErrorEx = ex;
                 // 跳过后续 OnBefore 和 LLM 核心阶段，直接进入 OnAfter
                 context.FlowControl = ChatFlowControl.Cancel;
@@ -741,7 +741,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                log?.Error("Handler [{0}] OnAfter 执行失败: {1}", name, ex.Message);
+                log?.Error("Handler [{0}] OnAfter failed: {1}", name, ex.Message);
                 context.HasError = true;
                 // OnAfter 异常不应阻断后续 Handler 的执行
             }
@@ -803,7 +803,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    log?.Error("流式生成失败: {0}", ex.Message);
+                    log?.Error("Streaming generation failed: {0}", ex.Message);
                     context.HasError = true;
                     // 上下文超限等已知错误映射为友好文案，其余保持原始信息
                     var info = ChatErrorHelper.Classify(ex.Message);
@@ -897,7 +897,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         var hasUserMessage = contextMessages.Any(m => m.Role == "user");
         if (!hasUserMessage)
         {
-            log?.Warn("LLM 上下文缺少用户消息，即将跳过调用。ContextMessages.Count={0}", contextMessages.Count);
+            log?.Warn("LLM context is missing the user message; skipping the call. ContextMessages.Count={0}", contextMessages.Count);
             yield return ChatStreamEvent.ErrorEvent("EMPTY_CONTEXT", "对话上下文异常：缺少用户问题，请刷新页面后重试");
             yield break;
         }
@@ -1022,7 +1022,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         // 上下文窗口预算触发：工具结果逐轮累积超限，中断循环并推送友好错误给前端
         if (streamClient is ToolChatClient tcc && tcc.StopReason == ToolLoopStopReason.ContextLimit)
         {
-            log?.Warn("上下文窗口预算触发，中断工具调用循环");
+            log?.Warn("Context window budget exceeded; interrupting the tool call loop");
             var limit = model.ContextLength > 0 ? (Int64?)model.ContextLength : null;
             yield return ChatStreamEvent.ErrorEvent(ChatErrorHelper.ContextTooLongCode, ChatErrorHelper.BuildContextLimitMessage(limit));
         }
@@ -1125,7 +1125,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                log?.Error("Handler [{0}] OnBefore 执行失败（非流式）: {1}", name, ex.Message);
+                log?.Error("Handler [{0}] OnBefore failed (non-streaming): {1}", name, ex.Message);
                 context.HasError = true;
                 context.FlowControl = ChatFlowControl.Cancel;
                 break;
@@ -1163,7 +1163,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
             catch (Exception ex)
             {
                 span?.SetError(ex);
-                log?.Error("Handler [{0}] OnAfter 执行失败（非流式）: {1}", name, ex.Message);
+                log?.Error("Handler [{0}] OnAfter failed (non-streaming): {1}", name, ex.Message);
                 context.HasError = true;
                 // OnAfter 异常不应阻断后续 Handler 的执行
             }

@@ -16,7 +16,11 @@ param(
     [Switch]$SkipMessageCheck,
     [String[]]$AllowMissingMessage = @(
         '  [{0}] {1}',
-        '[AI] {0} {1}'
+        '[AI] {0} {1}',
+        # 纯符号型诊断日志：[图表] {0} '{1}', id={2}、[SearchTable]/[QuerySql] 的键值对日志，无可翻译自然语言
+        "[Chart] {0} '{1}', id={2}",
+        '[SearchTable] keywords={0}, connName={1}',
+        '[QuerySql] connName={0}, sql.length={1}'
     )
 )
 
@@ -45,7 +49,7 @@ function Unescape-Yaml([string]$text) {
             'n' { return "`n" }
             'r' { return "`r" }
             't' { return "`t" }
-            '\\' { return '\' }
+            '\' { return '\' }
             '"' { return '"' }
             default { return $m.Value }
         }

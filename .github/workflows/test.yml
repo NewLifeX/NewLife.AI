@@ -206,7 +206,7 @@ jobs:
       shell: pwsh
       run: |
         pwsh -File ./check-locales.ps1 -LocaleDir NewLife.AI/Locales -SourceDir NewLife.AI -RequireTranslated
-        pwsh -File ./check-locales.ps1 -LocaleDir NewLife.ChatAI/Locales -SourceDir NewLife.ChatAI -SkipMessageCheck -SkipOrphan
+        pwsh -File ./check-locales.ps1 -LocaleDir NewLife.ChatAI/Locales -SourceDir NewLife.ChatAI -SkipOrphan -RequireTranslated
 
     - name: Check README languages
       shell: pwsh

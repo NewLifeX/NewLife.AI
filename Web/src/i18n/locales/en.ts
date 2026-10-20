@@ -262,6 +262,8 @@ export default {
       logoUrlDesc: 'Custom logo image URL',
       welcomeMessage: 'Welcome Message',
       welcomeMessageDesc: 'Heading text on the welcome page. Leave empty to use the frontend default.',
+      welcomeSubtitle: 'Welcome Subtitle',
+      welcomeSubtitleDesc: 'Subtitle under the welcome page heading. Leave empty to use the frontend default.',
       autoGenerateTitle: 'Auto-generate Chat Title',
       autoGenerateTitleDesc: 'Automatically generate a concise title from the first message',
       supportText: 'Support Text',
@@ -390,6 +392,7 @@ export default {
       harmful: 'Harmful content',
       other: 'Other',
     },
+    placeholder: 'Enter another reason...',
   },
   account: {
     role: 'Role',

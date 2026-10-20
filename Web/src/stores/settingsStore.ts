@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import i18n from '@/i18n'
+import i18n, { normalizeLanguage } from '@/i18n'
 import type { UserSettings } from '@/types'
 import { fetchUserSettings, saveUserSettings } from '@/lib/api'
 
@@ -63,10 +63,11 @@ export const useSettingsStore = create<SettingsState>()(
         if (get()._loaded) return
         try {
           const remote = await fetchUserSettings()
-          if (remote.language) i18n.changeLanguage(remote.language)
+          const language = normalizeLanguage(remote.language)
+          i18n.changeLanguage(language)
           applyTheme(remote.theme)
           applyFontSize(remote.fontSize)
-          set({ ...remote, _loaded: true })
+          set({ ...remote, language, _loaded: true })
         } catch {
           applyTheme(get().theme)
           applyFontSize(get().fontSize)
@@ -77,15 +78,17 @@ export const useSettingsStore = create<SettingsState>()(
       reloadFromServer: async () => {
         try {
           const remote = await fetchUserSettings()
-          if (remote.language) i18n.changeLanguage(remote.language)
+          const language = normalizeLanguage(remote.language)
+          i18n.changeLanguage(language)
           applyTheme(remote.theme)
           applyFontSize(remote.fontSize)
-          set({ ...remote, _loaded: true })
+          set({ ...remote, language, _loaded: true })
         } catch { /* 静默，保留本地缓存值 */ }
       },
 
       update: (partial) => {
         if (partial.language) {
+          partial = { ...partial, language: normalizeLanguage(partial.language) }
           i18n.changeLanguage(partial.language)
         }
         if (partial.theme) {

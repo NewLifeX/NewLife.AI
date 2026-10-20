@@ -228,7 +228,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             {
                 lastError = ex;
                 var delay = GetRetryDelay(i);
-                log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
+                log?.Info("Upstream rate limited (429), retry {0}, waiting {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (i < maxRetry)
@@ -236,7 +236,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 // 非 429 错误（如 5xx、连接超时）：记录失败并继续重试
                 lastError = ex;
                 _providerStatus?.RecordFailure(model.ProviderId);
-                log?.Error("上游错误 {0}，第 {1} 次重试", ex.GetType().Name, i + 1);
+                log?.Error("Upstream error {0}, retry {1}", ex.GetType().Name, i + 1);
             }
         }
 
@@ -286,7 +286,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             {
                 lastError = ex;
                 var delay = GetRetryDelay(i);
-                log?.Info("上游限流 429，第 {0} 次重试，等待 {1}ms", i + 1, delay);
+                log?.Info("Upstream rate limited (429), retry {0}, waiting {1}ms", i + 1, delay);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (i < maxRetry)
@@ -294,7 +294,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
                 // 非 429 错误（如 5xx、连接超时）：记录失败并继续重试
                 lastError = ex;
                 _providerStatus?.RecordFailure(config.ProviderId);
-                log?.Error("上游错误 {0}，第 {1} 次重试", ex.GetType().Name, i + 1);
+                log?.Error("Upstream error {0}, retry {1}", ex.GetType().Name, i + 1);
             }
         }
 
@@ -697,7 +697,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         }
         catch (Exception ex)
         {
-            log?.Error("预创建网关会话失败: {0}", ex.Message);
+            log?.Error("Failed to pre-create gateway conversation: {0}", ex.Message);
             return null;
         }
     }
@@ -801,7 +801,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
         catch (Exception ex)
         {
             // 记录失败不影响 API 响应
-            log?.Error("网关对话记录失败: {0}", ex.Message);
+            log?.Error("Failed to record gateway conversation: {0}", ex.Message);
         }
     }
 
@@ -875,7 +875,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             }
             catch (Exception ex)
             {
-                log?.Error("保存网关附件失败: {0}", ex.Message);
+                log?.Error("Failed to save gateway attachment: {0}", ex.Message);
             }
         }
 
