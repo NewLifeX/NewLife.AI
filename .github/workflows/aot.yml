@@ -35,7 +35,7 @@ jobs:
 
   # NativeAOT 冒烟矩阵：win-x64 / linux-x64 / linux-arm64 为阻断门禁；win-arm64 与 macOS 双架构为观察期
   aot:
-    name: aot (${{ matrix.rid }})
+    name: aot (${{ matrix.rid }} ${{ matrix.tfm }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     continue-on-error: ${{ matrix.experimental == true }}
@@ -46,23 +46,37 @@ jobs:
           - rid: win-x64
             os: windows-latest
             bin: AotSmoke.exe
+            tfm: net10.0
+          - rid: win-x64
+            os: windows-latest
+            bin: AotSmoke.exe
+            tfm: net8.0
           - rid: win-arm64
             os: windows-11-arm
             bin: AotSmoke.exe
+            tfm: net10.0
             experimental: true
           - rid: linux-x64
             os: ubuntu-latest
             bin: AotSmoke
+            tfm: net10.0
+          - rid: linux-x64
+            os: ubuntu-latest
+            bin: AotSmoke
+            tfm: net8.0
           - rid: linux-arm64
             os: ubuntu-24.04-arm
             bin: AotSmoke
+            tfm: net10.0
           - rid: osx-arm64
             os: macos-latest
             bin: AotSmoke
+            tfm: net10.0
             experimental: true
           - rid: osx-x64
             os: macos-15-intel
             bin: AotSmoke
+            tfm: net10.0
             experimental: true
 
     steps:
@@ -70,15 +84,18 @@ jobs:
     - name: Setup dotNET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 10.x
+        # net8.0 目标需要 8.x 运行时跑 JIT 基线
+        dotnet-version: |
+          8.x
+          10.x
     - name: Install NativeAOT Prerequisites (Linux)
       if: runner.os == 'Linux'
       run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
     - name: JIT Baseline
       # 同一冒烟工程以 JIT 运行（35 场景），为 AOT 结果提供对照
-      run: dotnet run -c Release --project AotSmoke/AotSmoke.csproj
+      run: dotnet run -c Release -f ${{ matrix.tfm }} --project AotSmoke/AotSmoke.csproj
     - name: Publish NativeAOT Smoke
-      run: dotnet publish AotSmoke/AotSmoke.csproj -c Release -r ${{ matrix.rid }} -o AotSmoke/bin/aot-out
+      run: dotnet publish AotSmoke/AotSmoke.csproj -c Release -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -o AotSmoke/bin/aot-out
     - name: Run NativeAOT Smoke
       shell: bash
       run: ./AotSmoke/bin/aot-out/${{ matrix.bin }}
@@ -109,8 +126,8 @@ jobs:
           bash /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet >/dev/null
           ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
           export DOTNET_CLI_TELEMETRY_OPTOUT=1
-          dotnet run -c Release --project AotSmoke/AotSmoke.csproj
-          dotnet publish AotSmoke/AotSmoke.csproj -c Release -r ${{ matrix.rid }} -o AotSmoke/bin/aot-out
+          dotnet run -c Release -f net10.0 --project AotSmoke/AotSmoke.csproj
+          dotnet publish AotSmoke/AotSmoke.csproj -c Release -f net10.0 -r ${{ matrix.rid }} -o AotSmoke/bin/aot-out
           ./AotSmoke/bin/aot-out/AotSmoke
         '
 
@@ -128,7 +145,7 @@ jobs:
       with:
         dotnet-version: 10.x
     - name: Publish NativeAOT Smoke (win-x86)
-      run: dotnet publish AotSmoke\AotSmoke.csproj -c Release -r win-x86 -o AotSmoke\bin\aot-out
+      run: dotnet publish AotSmoke\AotSmoke.csproj -c Release -f net10.0 -r win-x86 -o AotSmoke\bin\aot-out
     - name: Run NativeAOT Smoke (win-x86)
       run: AotSmoke\bin\aot-out\AotSmoke.exe
 
@@ -155,14 +172,14 @@ jobs:
           bash /tmp/dotnet-install.sh --channel 10.0 --architecture arm --install-dir /usr/share/dotnet >/dev/null
           ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
           export DOTNET_CLI_TELEMETRY_OPTOUT=1
-          dotnet run -c Release --project AotSmoke/AotSmoke.csproj
+          dotnet run -c Release -f net10.0 --project AotSmoke/AotSmoke.csproj
         '
     # 探索：官方文档未给出 x64→arm32 的 NativeAOT 交叉配方，失败不阻断
     - name: Cross Publish NativeAOT (linux-arm, 探索)
       continue-on-error: true
       run: |
         sudo apt-get update && sudo apt-get install -y clang lld binutils-arm-linux-gnueabihf gcc-arm-linux-gnueabihf zlib1g-dev:armhf
-        dotnet publish AotSmoke/AotSmoke.csproj -c Release -r linux-arm -o AotSmoke/bin/aot-out-arm
+        dotnet publish AotSmoke/AotSmoke.csproj -c Release -f net10.0 -r linux-arm -o AotSmoke/bin/aot-out-arm
     - name: Run NativeAOT Smoke (linux-arm, 探索)
       continue-on-error: true
       run: |
@@ -202,7 +219,7 @@ jobs:
     - name: Restore & Build (host x64 SDK)
       run: |
         dotnet restore AotSmoke/AotSmoke.csproj
-        dotnet build AotSmoke/AotSmoke.csproj -c Release --no-restore
+        dotnet build AotSmoke/AotSmoke.csproj -c Release -f net10.0 --no-restore
     - name: JIT Smoke (loong64 container, 35 场景)
       run: |
         docker run --rm --platform linux/loong64 \
@@ -228,7 +245,7 @@ jobs:
           -e DOTNET_CLI_TELEMETRY_OPTOUT=1 \
           -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
           lcr.loongnix.cn/debian:14-slim \
-          sh -c '/opt/dotnet/dotnet publish AotSmoke/AotSmoke.csproj -c Release -r linux-loongarch64 -o AotSmoke/bin/aot-out-la64'
+          sh -c '/opt/dotnet/dotnet publish AotSmoke/AotSmoke.csproj -c Release -f net10.0 -r linux-loongarch64 -o AotSmoke/bin/aot-out-la64'
     - name: Run NativeAOT Smoke (linux-loongarch64, 探索)
       continue-on-error: true
       run: |
@@ -269,7 +286,7 @@ jobs:
     - name: Restore & Build (host x64 SDK)
       run: |
         dotnet restore AotSmoke/AotSmoke.csproj
-        dotnet build AotSmoke/AotSmoke.csproj -c Release --no-restore
+        dotnet build AotSmoke/AotSmoke.csproj -c Release -f net10.0 --no-restore
     - name: JIT Smoke in riscv64 Container (35 场景)
       run: |
         docker run --rm --platform linux/riscv64 \
@@ -298,7 +315,7 @@ jobs:
           -e DOTNET_CLI_TELEMETRY_OPTOUT=1 \
           -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
           riscv64/ubuntu:24.04 \
-          sh -c '/opt/dotnet/dotnet publish AotSmoke/AotSmoke.csproj -c Release -r linux-riscv64 -o AotSmoke/bin/aot-out-riscv64'
+          sh -c '/opt/dotnet/dotnet publish AotSmoke/AotSmoke.csproj -c Release -f net10.0 -r linux-riscv64 -o AotSmoke/bin/aot-out-riscv64'
     - name: Run NativeAOT Smoke (linux-riscv64, 探索)
       continue-on-error: true
       run: |

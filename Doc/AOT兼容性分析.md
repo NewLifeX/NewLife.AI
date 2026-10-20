@@ -33,6 +33,8 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 
 > 官方无 LA64 / RISC-V 的 runtime pack 与 NativeAOT 承诺，这两个 RID 只做"有产物才运行"的发布探索；主信号是同一份冒烟代码在该架构上的 JIT 行为一致性。
 
+冒烟工程同时以 `net8.0` 与 `net10.0` 两个目标框架构建：x64 门禁（win-x64 / linux-x64）两个框架各自原生发布运行，其余 RID 只跑 `net10.0` 以控制矩阵时长。
+
 冒烟覆盖 35 个场景：
 
 1. 基础类型转换
@@ -106,12 +108,15 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 # 库自身分析器（0 告警）
 dotnet build NewLife.AI\NewLife.AI.csproj -f net8.0 -c Release -p:WarningsAsErrors=IL2026,IL2067,IL2070,IL2072,IL2075,IL2091,IL3050
 
-# JIT 对照
-dotnet run -c Release --project AotSmoke\AotSmoke.csproj
+# JIT 对照（两个目标框架）
+dotnet run -c Release -f net10.0 --project AotSmoke\AotSmoke.csproj
+dotnet run -c Release -f net8.0 --project AotSmoke\AotSmoke.csproj
 
-# NativeAOT 发布运行
-dotnet publish AotSmoke\AotSmoke.csproj -c Release -r win-x64 -o AotSmoke\bin\aot-out
+# NativeAOT 发布运行（-f 指定目标框架）
+dotnet publish AotSmoke\AotSmoke.csproj -c Release -f net10.0 -r win-x64 -o AotSmoke\bin\aot-out
 .\AotSmoke\bin\aot-out\AotSmoke.exe
+dotnet publish AotSmoke\AotSmoke.csproj -c Release -f net8.0 -r win-x64 -o AotSmoke\bin\aot-out-net8
+.\AotSmoke\bin\aot-out-net8\AotSmoke.exe
 ```
 
-CI 工作流 `.github/workflows/aot.yml` 执行分析器检查与多 RID 矩阵，任一阻断门禁失败即失败。
+CI 工作流 `.github/workflows/aot.yml` 执行分析器检查与多 RID 矩阵，任一阻断门禁失败即失败。`net8.0` 与 `net10.0` 两个目标框架在 x64 门禁（win-x64 / linux-x64）各自原生发布运行，其余 RID 只跑 `net10.0` 控制矩阵时长。
