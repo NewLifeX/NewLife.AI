@@ -46,7 +46,7 @@ jobs:
         fi
 
     - name: Build backend
-      run: dotnet build -c Release NewLife.AI.sln
+      run: dotnet build -c Release NewLife.AI.slnx
 
     - name: Test backend
-      run: dotnet test -c Release --no-build NewLife.AI.sln
+      run: dotnet test -c Release --no-build NewLife.AI.slnx

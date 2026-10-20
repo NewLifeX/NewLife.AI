@@ -528,8 +528,9 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 var provider = model.ProviderInfo;
                 if (provider == null || provider.Provider.IsNullOrEmpty()) continue;
 
-                // 模型元数据解析链：高优先级精确值优先，低优先级（描述符/家族推断）补未声明字段
-                var md = ModelMetadataResolverChain.Resolve(provider.Code ?? provider.Provider, model.Code);
+                // 模型元数据解析链：高优先级精确值优先，低优先级（描述符/家族推断）补未声明字段。
+                // 匹配键用有效模型编码（上游模型优先，为空回退内部编码）：元数据表/描述符以提供商模型名为准
+                var md = ModelMetadataResolverChain.Resolve(provider.Code ?? provider.Provider, model.GetEffectiveModelCode());
                 if (md == null || !md.HasCapability) continue;
 
                 // 仅未锁定模型覆盖（管理员保存后自动锁定，禁止自动覆盖）
@@ -587,12 +588,16 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         var updated = 0;
         foreach (var model in models)
         {
-            // 模型元数据解析链：精确值优先（如 StarChat ModelData 元数据表），描述符/家族推断补未声明
-            var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, model.Code);
+            // 模型元数据解析链：精确值优先（如 StarChat ModelData 元数据表），描述符/家族推断补未声明。
+            // 匹配键用有效模型编码（上游模型优先，为空回退内部编码）：元数据表/描述符以提供商模型名为准
+            var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, model.GetEffectiveModelCode());
             if (md == null || !md.HasAny) continue;
 
             // 显示名：精确/描述符注册优先；未注册变体不覆盖已有名称
             if (!md.Name.IsNullOrEmpty()) model.Name = md.Name;
+
+            // 模型简介：写入备注（未锁定模型；管理员保存后自动锁定，保护人工备注）
+            if (!model.Locked && !md.Description.IsNullOrEmpty() && model.Remark != md.Description) model.Remark = md.Description;
 
             // 未锁定时更新能力（合成值：精确声明位优先，推断补缺）
             if (!model.Locked && md.HasCapability)
@@ -793,7 +798,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
 
             var modelCode = model.Model;
             codes.Add(modelCode!);
-            var config = ModelConfig.FindByProviderIdAndCode(providerConfig.Id, modelCode);
+            // 上游模型优先回连既有记录：自定义内部编码 + 上游映射的模型，避免按上游名重复建档
+            var config = ModelConfig.FindByProviderIdAndUpstreamOrCode(providerConfig.Id, modelCode);
             //if (config != null) continue;
 
             var name = model.Name.TrimSuffix(":latest");
@@ -810,7 +816,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 //Name = name,
                 Enable = providerConfig.Enable,
             };
-            config.Name = name;
+            // 锁定模型保护：管理员保存过的模型不再被上游接口名覆盖
+            if (!config.Locked) config.Name = name;
             if (model.ModifiedAt > DateTime.MinValue) config.ModelTime = model.ModifiedAt;
 
             // 模型能力解析链：新建模型总是推断；已有模型仅当全未配置时才覆盖（保护用户手动设置）
@@ -819,6 +826,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
                 var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, modelCode);
                 if (md != null)
                 {
+                    // 模型简介：写入备注（新建或未锁定风格；保护人工备注）
+                    if (!md.Description.IsNullOrEmpty() && config.Remark != md.Description) config.Remark = md.Description;
                     if (md.SupportThinking != null) config.SupportThinking = md.SupportThinking.Value;
                     if (md.SupportFunction != null) config.SupportFunction = md.SupportFunction.Value;
                     if (md.SupportVision != null) config.SupportVision = md.SupportVision.Value;
@@ -911,7 +920,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
         {
             if (model.Id.IsNullOrEmpty()) continue;
 
-            var config = ModelConfig.FindByProviderIdAndCode(providerConfig.Id, model.Id!);
+            // 上游模型优先回连既有记录：自定义内部编码 + 上游映射的模型，避免按上游名重复建档
+            var config = ModelConfig.FindByProviderIdAndUpstreamOrCode(providerConfig.Id, model.Id!);
             //if (config != null) continue;
 
             codes.Add(model.Id!);
@@ -927,7 +937,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             // 模型元数据解析链：精确值优先（如 StarChat ModelData），描述符/家族推断补未声明
             var md = ModelMetadataResolverChain.Resolve(providerConfig.Code ?? providerConfig.Provider, model.Id);
 
-            if (!model.Name.IsNullOrEmpty()) config.Name = model.Name;
+            // 锁定模型保护：管理员保存过的模型不再被上游接口名覆盖
+            if (!config.Locked && !model.Name.IsNullOrEmpty()) config.Name = model.Name;
 
             // 新建模型且名称为空时，优先取链合成显示名（精确/描述符注册），其次按命名规律（连字符各段首字母大写）推断
             if (isNew && config.Name.IsNullOrEmpty())
@@ -938,6 +949,8 @@ public class ModelService(IChatSetting chatSetting, UsageService? usageService, 
             // 模型能力解析链：新建模型总是推断；已有模型仅当未锁定时才覆盖
             if ((isNew || !config.Locked) && md != null)
             {
+                // 模型简介：写入备注（新建或未锁定模型；管理员保存后自动锁定，保护人工备注）
+                if (!md.Description.IsNullOrEmpty() && config.Remark != md.Description) config.Remark = md.Description;
                 if (md.SupportThinking != null) config.SupportThinking = md.SupportThinking.Value;
                 if (md.SupportFunction != null) config.SupportFunction = md.SupportFunction.Value;
                 if (md.SupportVision != null) config.SupportVision = md.SupportVision.Value;

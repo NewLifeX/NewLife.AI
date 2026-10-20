@@ -23,6 +23,9 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
     /// <inheritdoc/>
     public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
+        // 网关密钥关闭技能注入时整体跳过：不匹配、不注入、不写会话技能绑定
+        if (!MessageFlowForGateway.IsCapabilityEnabled(context, MessageFlowForGateway.EnableSkillItemKey)) return Task.CompletedTask;
+
         if (skillService == null) return Task.CompletedTask;
         //using var span = tracer?.NewSpan("handler:SkillActivation");
 
@@ -134,6 +137,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
     /// <inheritdoc/>
     public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
+        if (!MessageFlowForGateway.IsCapabilityEnabled(context, MessageFlowForGateway.EnableSkillItemKey)) return Task.CompletedTask;
         if (skillService == null || context.SkillId <= 0 || context.UserId <= 0) return Task.CompletedTask;
         if (context.HasError) return Task.CompletedTask;
 

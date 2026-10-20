@@ -52,10 +52,10 @@ public static class ModelFamilyRegistry
         }
     }
 
-    /// <summary>按模型标识匹配家族并推断能力。按注册顺序返回首个命中家族的结果</summary>
+    /// <summary>按模型标识匹配家族。按注册顺序返回首个命中的家族档案</summary>
     /// <param name="modelId">模型标识</param>
-    /// <returns>推断出的能力，无家族命中时返回 null</returns>
-    public static AiProviderCapabilities? Match(String? modelId)
+    /// <returns>家族档案，无家族命中时返回 null</returns>
+    public static ModelFamily? MatchFamily(String? modelId)
     {
         if (modelId.IsNullOrEmpty()) return null;
 
@@ -67,9 +67,13 @@ public static class ModelFamilyRegistry
         }
         foreach (var family in families)
         {
-            var caps = family.Infer(modelId!);
-            if (caps != null) return caps;
+            if (family.IsMatch(modelId!)) return family;
         }
         return null;
     }
+
+    /// <summary>按模型标识匹配家族并推断能力。按注册顺序返回首个命中家族的结果</summary>
+    /// <param name="modelId">模型标识</param>
+    /// <returns>推断出的能力，无家族命中时返回 null</returns>
+    public static AiProviderCapabilities? Match(String? modelId) => MatchFamily(modelId)?.Infer(modelId!);
 }

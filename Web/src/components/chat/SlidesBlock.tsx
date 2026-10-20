@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
+import { getThemeColors } from '@/lib/theme-colors'
 import { Icon } from '@/components/common/Icon'
 
 /** build_slides 工具返回的 JSON 结构 */
@@ -23,20 +24,7 @@ interface SlidesBlockProps {
   onEditArtifact?: (artifactId: number) => void
 }
 
-/** 内置主题色（与后端 ThemeColors 对应，供头部样式） */
-const THEME_COLORS: Record<string, { bg: string; accent: string; text: string }> = {
-  blue:      { bg: '#1E40AF', accent: '#2563EB', text: '#FFFFFF' },
-  dark:      { bg: '#0F172A', accent: '#6366F1', text: '#F1F5F9' },
-  corporate: { bg: '#374151', accent: '#1F2937', text: '#FFFFFF' },
-  warm:      { bg: '#C2410C', accent: '#EA580C', text: '#FFFFFF' },
-  green:     { bg: '#15803D', accent: '#16A34A', text: '#FFFFFF' },
-  minimal:   { bg: '#18181B', accent: '#71717A', text: '#FAFAFA' },
-  ocean:     { bg: '#0C4A6E', accent: '#0EA5E9', text: '#FFFFFF' },
-  sunset:    { bg: '#1E1B4B', accent: '#F97316', text: '#FFFFFF' },
-  forest:    { bg: '#064E3B', accent: '#059669', text: '#FFFFFF' },
-  slate:     { bg: '#0F172A', accent: '#64748B', text: '#F8FAFC' },
-  amber:     { bg: '#451A03', accent: '#F59E0B', text: '#FFFFFF' },
-}
+
 
 /**
  * 构建单页 HTML 的 srcDoc（sandbox iframe 隔离渲染）。
@@ -193,7 +181,7 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
   const [fullscreen, setFullscreen] = useState(false)
 
   const themeKey = data.theme ?? 'blue'
-  const colors = THEME_COLORS[themeKey] ?? THEME_COLORS['blue']
+  const colors = getThemeColors(themeKey)
 
   const currentHtml = data.pages[activePage] ?? ''
   const srcDoc = useMemo(() => buildSlideSrcDoc(currentHtml, activePage), [currentHtml, activePage])

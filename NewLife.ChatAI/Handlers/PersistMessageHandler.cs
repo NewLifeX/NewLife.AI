@@ -27,9 +27,10 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
     /// <inheritdoc/>
     public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
-        // 未开启持久化时跳过数据库写入（网关场景：领域模式开启才记录；渠道场景：领域模式开启才持久化）
+        // 未开启持久化时跳过数据库写入（网关场景：领域模式开启且密钥记录开关开启才记录；渠道场景：领域模式开启才持久化）
         if (context.Source.HasFlag(ChatFlowSource.Web) ||
             context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayDomainMode
+                && MessageFlowForGateway.IsCapabilityEnabled(context, MessageFlowForGateway.EnableRecordingItemKey)
 #if STARCHAT
             || context.Source.HasFlag(ChatFlowSource.Channel) && setting.EnableChannelDomainMode
 #endif
@@ -82,9 +83,10 @@ public class PersistMessageHandler(ChatSetting setting) : ChatHandlerBase, IChat
     /// <inheritdoc/>
     public override Task OnAfter(IChatContext context, CancellationToken cancellationToken)
     {
-        // 未开启持久化时跳过数据库写入（网关场景：领域模式开启才记录；渠道场景：领域模式开启才持久化）
+        // 未开启持久化时跳过数据库写入（网关场景：领域模式开启且密钥记录开关开启才记录；渠道场景：领域模式开启才持久化）
         if (context.Source.HasFlag(ChatFlowSource.Web) ||
             context.Source.HasFlag(ChatFlowSource.Gateway) && setting.EnableGatewayDomainMode
+                && MessageFlowForGateway.IsCapabilityEnabled(context, MessageFlowForGateway.EnableRecordingItemKey)
 #if STARCHAT
             || context.Source.HasFlag(ChatFlowSource.Channel) && setting.EnableChannelDomainMode
 #endif

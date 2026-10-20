@@ -82,6 +82,10 @@ public sealed class ModelFamily(String name, String pattern, Int32 defaultContex
     /// <summary>家族默认上下文窗口（Token 数）。0 表示未知，作为推断起点，具体规则可覆盖</summary>
     public Int32 DefaultContext { get; } = defaultContext;
 
+    /// <summary>家族系列简介。模型未收录精确元数据时的备注兜底（如 "DeepSeek 深度求索系列"），
+    /// 由描述符解析器随能力推断写入模型配置备注；只写系列名，不写能力细节，避免版本换代后过时</summary>
+    public String? Description { get; init; }
+
     /// <summary>有序能力规则。按顺序应用，后规则覆盖先规则</summary>
     public ModelCapabilityRule[] Rules { get; init; } = [];
 

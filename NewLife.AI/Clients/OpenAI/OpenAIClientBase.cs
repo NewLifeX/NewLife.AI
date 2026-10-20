@@ -368,13 +368,16 @@ public class OpenAIClientBase : AiClientBase, IModelListClient
             return new AiModelPricing(6.9m, 34.5m, 0.69m, 0);
         else if (modelId.StartsWith("claude", StringComparison.OrdinalIgnoreCase))
             return new AiModelPricing(20.7m, 103.5m, 2.07m, 0);
-        // DeepSeek 系列
+        // DeepSeek 系列（V4.1 时代：Flash 高峰 2/8、缓存命中 0.04；空闲半价由部署侧时段档位处理）
         else if (modelId.StartsWith("deepseek-v4-flash", StringComparison.OrdinalIgnoreCase) ||
-                 modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
+                 modelId.StartsWith("deepseek-v4.1-flash", StringComparison.OrdinalIgnoreCase) ||
+                 modelId.StartsWith("deepseek-flash", StringComparison.OrdinalIgnoreCase))
+            return new AiModelPricing(2m, 8m, 0.04m, 0);
+        else if (modelId.StartsWith("deepseek-chat", StringComparison.OrdinalIgnoreCase) ||
                  modelId.StartsWith("deepseek-reasoner", StringComparison.OrdinalIgnoreCase))
             return new AiModelPricing(1m, 2m, 0.02m, 1m);
         else if (modelId.StartsWith("deepseek-v4-pro", StringComparison.OrdinalIgnoreCase))
-            return new AiModelPricing(3m, 6m, 0.025m, 3m);
+            return new AiModelPricing(9m, 27m, 0.3m, 0);
         else if (modelId.StartsWith("deepseek", StringComparison.OrdinalIgnoreCase))
             return new AiModelPricing(1m, 2m, 0.02m, 1m);
 

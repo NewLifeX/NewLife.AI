@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Select } from '@/components/atoms/Select'
 import { Slider } from '@/components/atoms/Slider'
 import { Icon } from '@/components/common/Icon'
+import { isChatModel } from '@/lib/models'
 import type { ModelInfo } from '@/types'
 
 interface ChatSettingsProps {
@@ -44,7 +45,7 @@ export function ChatSettings({
 }: ChatSettingsProps) {
   const { t } = useTranslation()
 
-  const modelOptions = models.map((m) => ({ value: String(m.id), label: m.name }))
+  const modelOptions = models.filter(isChatModel).map((m) => ({ value: String(m.id), label: m.name }))
 
   const localThinkingOptions = thinkingModeOptions.map((o) => ({
     ...o,

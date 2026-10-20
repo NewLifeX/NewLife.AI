@@ -170,6 +170,90 @@ public class ModelFamilyTests
     }
     #endregion
 
+    #region V4.1 与百炼新模型（2026-09）
+    [Theory]
+    [DisplayName("V4.1新模型_家族推断_思考工具1M与视觉")]
+    [InlineData("deepseek-flash", true)]                // 官方 V4.1 Flash：支持图像理解
+    [InlineData("deepseek-v4.1-flash", false)]          // 百炼托管 v4.1：仅文本输入
+    [InlineData("deepseek-flash-2026-09-01", true)]     // 日期后缀变体
+    public void DeepSeekV41_InferCapabilities(String modelId, Boolean expectVision)
+    {
+        var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
+        var caps = client.InferModelCapabilities(modelId);
+        Assert.NotNull(caps);
+        Assert.True(caps!.SupportThinking);
+        Assert.True(caps.SupportFunction);
+        Assert.Equal(expectVision, caps.SupportVision);
+        Assert.Equal(1_048_576, caps.ContextLength);
+        Assert.Equal("high,max", caps.ReasoningEfforts);
+        // 探测价：V4.1 Flash 高峰 2/8、缓存命中 0.04（空闲时段半价由部署侧时段档位处理）
+        Assert.NotNull(caps.Pricing);
+        Assert.Equal(2m, caps.Pricing!.InputPrice);
+        Assert.Equal(8m, caps.Pricing.OutputPrice);
+        Assert.Equal(0.04m, caps.Pricing.CachedInputPrice);
+    }
+
+    [Fact]
+    [DisplayName("V4.1旧名_按新Flash价计费_探测2_8")]
+    public void DeepSeekLegacyAliases_NewPricing()
+    {
+        // 旧名 v4-flash / vision-exp 对应模型已下线，请求由 V4.1 Flash 服务，探测价同步为 2/8
+        var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
+        foreach (var id in new[] { "deepseek-v4-flash", "deepseek-v4-flash-vision-exp" })
+        {
+            var caps = client.InferModelCapabilities(id);
+            Assert.NotNull(caps);
+            Assert.Equal(2m, caps!.Pricing!.InputPrice);
+            Assert.Equal(8m, caps.Pricing.OutputPrice);
+        }
+    }
+
+    [Fact]
+    [DisplayName("qwen实时翻译_推断_不思考_音频图片输入")]
+    public void QwenLivetranslate_InferCapabilities()
+    {
+        var client = new DashScopeChatClient(new AiClientOptions { Endpoint = "https://dashscope.aliyuncs.com" });
+        var caps = client.InferModelCapabilities("qwen3.8-livetranslate-flash-realtime");
+        Assert.NotNull(caps);
+        Assert.False(caps!.SupportThinking);
+        Assert.False(caps.SupportFunction);
+        Assert.True(caps.SupportAudio);
+        Assert.True(caps.SupportVision);
+        Assert.Equal(1_048_576, caps.ContextLength);
+    }
+
+    [Fact]
+    [DisplayName("百炼斜杠ID_家族推断_kimi与zhipu")]
+    public void SlashIdFamilies_KimiAndGlm()
+    {
+        // kimi/kimi-k2.8-preview：K2 系列斜杠 ID → 思考 + 视觉 + 256K
+        var kimi = ModelFamilyRegistry.Match("kimi/kimi-k2.8-preview");
+        Assert.NotNull(kimi);
+        Assert.True(kimi!.SupportThinking);
+        Assert.True(kimi.SupportVision);
+        Assert.Equal(262_144, kimi.ContextLength);
+
+        // ZHIPU/GLM-5.3：智谱直供斜杠 ID → 思考 + 工具 + 视觉 + 1M
+        var glm = ModelFamilyRegistry.Match("ZHIPU/GLM-5.3");
+        Assert.NotNull(glm);
+        Assert.True(glm!.SupportThinking);
+        Assert.True(glm.SupportFunction);
+        Assert.True(glm.SupportVision);
+        Assert.Equal(1_048_576, glm.ContextLength);
+    }
+
+    [Fact]
+    [DisplayName("家族系列简介_命中提供_未命中为空")]
+    public void Family_ProvidesSeriesDescription()
+    {
+        Assert.Equal("DeepSeek 深度求索系列", ModelFamilyRegistry.MatchFamily("deepseek-flash")!.Description);
+        Assert.Equal("Qwen 通义千问系列", ModelFamilyRegistry.MatchFamily("qwen3.8-max")!.Description);
+        Assert.Equal("月之暗面 Kimi 系列", ModelFamilyRegistry.MatchFamily("kimi/kimi-k2.8-preview")!.Description);
+        Assert.Equal("智谱 GLM 系列", ModelFamilyRegistry.MatchFamily("ZHIPU/GLM-5.3")!.Description);
+        Assert.Null(ModelFamilyRegistry.MatchFamily("unknown-model-xyz"));
+    }
+    #endregion
+
     #region DashScope 委托基类
     [Theory]
     [DisplayName("DashScope_委托基类_家族模型能力正确")]
@@ -554,11 +638,11 @@ public class ModelFamilyTests
         Assert.True(family!.SupportThinking);
         Assert.Null(family.Pricing);
 
-        // 服务商层通用探测：OpenAI 兼容基类按命名规律给 DeepSeek 系列典型价 3/6
+        // 服务商层通用探测：OpenAI 兼容基类按命名规律给 DeepSeek V4 Pro 官方基准价 9/27
         var client = new OpenAIClientBase(new AiClientOptions { Endpoint = "https://example.com/v1" });
         var probe = client.InferModelCapabilities("deepseek-v4-pro");
         Assert.NotNull(probe);
-        Assert.Equal(3m, probe!.Pricing!.InputPrice);
+        Assert.Equal(9m, probe!.Pricing!.InputPrice);
 
         // 平台专属注册：DashScope [AiClientModel] 精确价 12/24（优先于服务商探测）
         var dashScope = AiClientRegistry.Default.GetDescriptor("DashScope");

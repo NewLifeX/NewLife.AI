@@ -12,6 +12,9 @@ public class ChatStreamEvent
     /// <summary>消息编号。message_start 时设置</summary>
     public Int64 MessageId { get; set; }
 
+    /// <summary>用户消息编号。message_start 时设置，供前端用真实 Id 关联当前轮用户消息（未刷新页面前前端只有本地临时 Id）</summary>
+    public Int64 UserMessageId { get; set; }
+
     /// <summary>模型编码</summary>
     public String? Model { get; set; }
 
@@ -66,6 +69,14 @@ public class ChatStreamEvent
     /// <returns></returns>
     public static ChatStreamEvent MessageStart(Int64 messageId, String model) =>
         new() { Type = "message_start", MessageId = messageId, Model = model };
+
+    /// <summary>消息开始事件。附带用户消息编号，供前端把本地临时 Id 替换为真实 Id</summary>
+    /// <param name="messageId">消息编号</param>
+    /// <param name="model">模型编码</param>
+    /// <param name="userMessageId">用户消息编号</param>
+    /// <returns></returns>
+    public static ChatStreamEvent MessageStart(Int64 messageId, String model, Int64 userMessageId) =>
+        new() { Type = "message_start", MessageId = messageId, Model = model, UserMessageId = userMessageId };
 
     /// <summary>思考增量事件</summary>
     /// <param name="content">思考内容</param>

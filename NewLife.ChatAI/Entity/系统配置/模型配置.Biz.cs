@@ -84,7 +84,9 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
 
             foreach (var model in descriptor.Models)
             {
-                var entity = list.FirstOrDefault(e => e.ProviderId == provider.Id && e.Code.EqualIgnoreCase(model.Model));
+                // 上游模型优先匹配：管理员把内部编码映射到提供商模型名后，避免按上游名重复建档
+                var entity = list.FirstOrDefault(e => e.ProviderId == provider.Id && !e.UpstreamModel.IsNullOrEmpty() && e.UpstreamModel.EqualIgnoreCase(model.Model))
+                    ?? list.FirstOrDefault(e => e.ProviderId == provider.Id && e.Code.EqualIgnoreCase(model.Model));
                 if (entity == null)
                 {
                     entity = new ModelConfig
@@ -99,16 +101,20 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
                     XTrace.WriteLine("为提供商 {0} 创建默认模型配置", provider.Name);
                 }
 
-                entity.Name = model.DisplayName ?? model.Model;
-                if (model.Capabilities != null)
+                // 锁定模型保护：管理员保存过的模型不再被程序覆盖名称与特性
+                if (!entity.Locked)
                 {
-                    entity.SupportThinking = model.Capabilities.SupportThinking;
-                    entity.SupportFunction = model.Capabilities.SupportFunction;
-                    entity.SupportVision = model.Capabilities.SupportVision;
-                    entity.SupportAudio = model.Capabilities.SupportAudio;
-                    entity.SupportImage = model.Capabilities.SupportImage;
-                    entity.SupportVideo = model.Capabilities.SupportVideo;
-                    entity.ReasoningEfforts = model.Capabilities.ReasoningEfforts;
+                    entity.Name = model.DisplayName ?? model.Model;
+                    if (model.Capabilities != null)
+                    {
+                        entity.SupportThinking = model.Capabilities.SupportThinking;
+                        entity.SupportFunction = model.Capabilities.SupportFunction;
+                        entity.SupportVision = model.Capabilities.SupportVision;
+                        entity.SupportAudio = model.Capabilities.SupportAudio;
+                        entity.SupportImage = model.Capabilities.SupportImage;
+                        entity.SupportVideo = model.Capabilities.SupportVideo;
+                        entity.ReasoningEfforts = model.Capabilities.ReasoningEfforts;
+                    }
                 }
 
                 count += entity.Save();
@@ -156,13 +162,18 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
         return list.Where(e => e.Enable && e.ProviderInfo?.Enable == true).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
     }
 
-    /// <summary>判断该模型是否为对话模型（可出现在 /chat 首页选择器中）。计算属性，不存库</summary>
+    /// <summary>判断该模型是否为对话模型（可走文本 LLM 对话链路）。计算属性，不存库</summary>
     /// <remarks>
-    /// 有任一 LLM 核心能力（思考/工具/视觉/语音识别）则为对话模型；或无任何专用输出标记则为纯文本对话模型
+    /// 含语音识别/语音合成/嵌入/排序专用特征的模型不是对话模型（语音合成请在发信框音色选择中使用）；
+    /// 其余模型中，具备思考/工具/视觉任一 LLM 能力，或不带图像/视频生成标记的纯文本模型，视为对话模型
     /// </remarks>
     public Boolean IsChatModel =>
-        SupportThinking || SupportFunction || SupportVision || SupportAudio
-        || (!SupportSpeech && !SupportImage && !SupportVideo && !SupportEmbedding && !SupportRerank);
+        !SupportAudio && !SupportSpeech && !SupportEmbedding && !SupportRerank
+        && (SupportThinking || SupportFunction || SupportVision || (!SupportImage && !SupportVideo));
+
+    /// <summary>判断该模型是否可出现在主模型选择器（/chat 首页选择器）。计算属性，不存库</summary>
+    /// <remarks>主模型 = 对话模型 + 媒体生成模型（文生图/文生视频/图生视频）；语音识别/语音合成/嵌入/排序模型不可作为主模型</remarks>
+    public Boolean IsMainModel => IsChatModel || SupportImage || SupportVideo;
 
     // Select Count(Id) as Id,ProviderId From ModelConfig Where CreateTime>'2020-01-24 00:00:00' Group By ProviderId Order By Id Desc limit 20
     static readonly FieldCache<ModelConfig> _ProviderCache = new(nameof(ProviderId))
@@ -255,6 +266,25 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
         var list = FindAllWithCache().Where(e => e.Enable && e.ProviderInfo?.Enable == true).ToList();
         return list.FirstOrDefault(e => e.Code.EqualIgnoreCase(name))
             ?? list.FirstOrDefault(e => e.Name.EqualIgnoreCase(name));
+    }
+
+    /// <summary>根据提供商与模型编码查找模型配置。优先按上游模型匹配，未命中再按内部编码匹配。
+    /// 用于模型发现/同步回连既有记录：管理员为自定义模型配置上游模型后，同步按上游名命中同一记录，避免重复建档</summary>
+    /// <param name="providerId">提供商</param>
+    /// <param name="code">模型编码（上游模型名或内部编码）</param>
+    /// <returns>实体对象，未找到返回null</returns>
+    public static ModelConfig? FindByProviderIdAndUpstreamOrCode(Int32 providerId, String? code)
+    {
+        if (providerId < 0) return null;
+        if (code.IsNullOrEmpty()) return null;
+
+        // 实体缓存
+        var list = Meta.Session.Count < MaxCacheCount
+            ? Meta.Cache.FindAll(e => e.ProviderId == providerId)
+            : FindAll(_.ProviderId == providerId);
+
+        return list.FirstOrDefault(e => !e.UpstreamModel.IsNullOrEmpty() && e.UpstreamModel.EqualIgnoreCase(code))
+            ?? list.FirstOrDefault(e => e.Code.EqualIgnoreCase(code));
     }
 
     /// <summary>获取用户可用的模型列表</summary>

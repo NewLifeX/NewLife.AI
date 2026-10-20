@@ -42,6 +42,21 @@ public class SkillActivationHandlerTests
         await handler.OnBefore(new FakeContext(), CancellationToken.None);
     }
 
+    [Fact]
+    [DisplayName("OnBefore—网关技能开关关闭时不执行技能匹配与注入")]
+    public async Task OnBefore_GatewaySkillDisabled_SkipsActivation()
+    {
+        var handler = new SkillActivationHandler(new SkillService(new ChatSetting(), null!));
+        var ctx = BuildContext();
+        ctx[MessageFlowForGateway.EnableSkillItemKey] = false;
+
+        await handler.OnBefore(ctx, CancellationToken.None);
+
+        // 直接返回：不注入任何系统段，也不写会话技能绑定
+        Assert.Empty(ctx.SystemSegments);
+        Assert.Equal(0, ctx.SkillId);
+    }
+
     #endregion
 
     #region OnAfter — 早返回保护

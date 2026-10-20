@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
 using NewLife.AI.Tools;
+using NewLife.ChatAI.Helpers;
 using NewLife.ChatAI.Models;
 using NewLife.Collections;
 using NewLife.Log;
@@ -18,6 +19,7 @@ public class BuildDocToolService(ILog log)
 
     #region 工具方法
 
+    /// <summary>生成 Word 文档（.docx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_doc", IsSystem = false,
         Triggers = "生成Word,生成文档,制作文档,写报告",
         AssistantTriggers = "Word,docx,文档,报告,方案书,周报,会议纪要,生成文档,生成Word,报告文档,build_doc",
@@ -27,7 +29,7 @@ public class BuildDocToolService(ILog log)
     public async Task<ToolResult> BuildDoc(
         [Description("文档标题（≤ 30 字），如「Q2季度总结报告」")] String title,
         [Description(@"文档节数组（JSON）。每节字段：heading（节标题文字）、headingLevel（级别1~3，默认1）、content（正文段落，可选）、elements（元素数组，可选）。elements 元素类型：paragraph（{type,text,可选bold/italic/underline/fontSize/color/alignment/backgroundColor}）、bullet_list（{type,items}）、ordered_list（{type,items}）、table（{type,headers,rows,可选tableStyle}，rows为二维数组每行一个单元格值数组如 [[""张三"",""85""],[""李四"",""92""]]）、image（{type,src,widthCm?,heightCm?}）、page_break（{type}）、divider（{type}分隔线）、callout（{type,text,variant?=info/success/warning/danger}高亮提示框）、kpi（{type,kpiValue,kpiLabel?,kpiTrend?=up/down/flat}大数字指标）、quote（{type,text,quoteSource?}引用块）、code（{type,text,codeLanguage?}代码块）")] DocSectionModel[]? sections,
-        [Description("主题（可选）：卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal）")] String? theme = null,
+        [Description("主题（可选）：卡片风格 Key（如 enterprise-blue）或内置名（blue/dark/corporate/warm/green/minimal），不传则沿用会话风格或品牌默认")] String? theme = null,
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
@@ -37,9 +39,11 @@ public class BuildDocToolService(ILog log)
             throw new ToolException("参数错误：sections 不能为空", "请提供文档节数组后重试，或直接回复用户说明无法生成文档。");
         var sectionList = sections;
 
-        log.Info("[BuildDoc] 开始生成：{0}，{1} 节，主题：{2}", title, sectionList.Length, theme ?? "none");
+        // 主题解析：显式传参 > 会话卡片风格 > 品牌默认
+        var themeKey = OfficeStyleKit.ResolveTheme(theme, context?.Request?.ConversationId);
+        log.Info("[BuildDoc] 开始生成：{0}，{1} 节，主题：{2}", title, sectionList.Length, themeKey ?? "default");
 
-        var docxBytes = await BuildDocxAsync(sectionList, title, theme);
+        var docxBytes = await BuildDocxAsync(sectionList, title, themeKey);
         var archiveResult = await ArchiveFileAsync(docxBytes, title,
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx", "Word");
 
@@ -47,7 +51,7 @@ public class BuildDocToolService(ILog log)
 
         var buildId = context?.ToolCallId ?? $"docx_{Guid.NewGuid():N}";
         var result = new DocResult(buildId, title, sectionList.Length,
-            archiveResult.Url, archiveResult.AttachmentId, docxBytes.Length, theme);
+            archiveResult.Url, archiveResult.AttachmentId, docxBytes.Length, themeKey);
 
         // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免序列化触发 MakeReadOnly 抛错
         var resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerOptions.Default) { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
@@ -64,8 +68,15 @@ public class BuildDocToolService(ILog log)
         var writer = new WordWriter();
         writer.DocumentProperties = new DocumentProperties { Title = title };
 
-        // 从主题取 Accent1 用于表格表头背景色（默认值）
-        var tableHeaderBg = ThemeColors.GetPrimary(theme);
+        // 品牌视觉：卡片风格主题 → 完整调色板 → 样式表注入（字体/行距/标题配色/表格边框）
+        var palette = OfficePalette.Resolve(theme);
+        writer.StylesXml = OfficeStyleKit.BuildWordStylesXml(palette);
+
+        // 页面：四边 2.5cm，页脚显示标题与页码
+        var page = writer.PageSettings;
+        page.MarginTop = page.MarginBottom = 1417;
+        page.MarginLeft = page.MarginRight = 1417;
+        page.FooterText = title;
 
         foreach (var section in sectionList)
         {
@@ -100,7 +111,7 @@ public class BuildDocToolService(ILog log)
                             writer.AppendOrderedList(elem.Items);
                         break;
                     case "table":
-                        WriteTable(writer, elem, tableHeaderBg);
+                        WriteTable(writer, elem, palette);
                         break;
                     case "image":
                         if (!elem.Src.IsNullOrEmpty())
@@ -108,8 +119,13 @@ public class BuildDocToolService(ILog log)
                             var imgBytes = await TryLoadImageAsync(elem.Src!);
                             if (imgBytes != null)
                             {
-                                var w = elem.WidthCm ?? 14.0;
-                                var h = elem.HeightCm ?? 10.0;
+                                // 按图片原始比例适配：只给单边尺寸时按比例推算另一边，避免拉伸变形
+                                var (fitW, fitH) = FitImageSize(imgBytes);
+                                Double w, h;
+                                if (elem.WidthCm.HasValue && elem.HeightCm.HasValue) { w = elem.WidthCm.Value; h = elem.HeightCm.Value; }
+                                else if (elem.WidthCm.HasValue) { w = elem.WidthCm.Value; h = Math.Round(w * fitH / fitW, 2); }
+                                else if (elem.HeightCm.HasValue) { h = elem.HeightCm.Value; w = Math.Round(h * fitW / fitH, 2); }
+                                else { w = fitW; h = fitH; }
                                 writer.InsertImage(imgBytes, "png", w, h);
                             }
                         }
@@ -118,19 +134,19 @@ public class BuildDocToolService(ILog log)
                         writer.AppendPageBreak();
                         break;
                     case "divider":
-                        writer.AppendHorizontalRule();
+                        writer.AppendHorizontalRule(palette.PaperBorder);
                         break;
                     case "callout":
                         WriteCallout(writer, elem, runProps);
                         break;
                     case "kpi":
-                        WriteKpi(writer, elem);
+                        WriteKpi(writer, elem, palette);
                         break;
                     case "quote":
-                        WriteQuote(writer, elem);
+                        WriteQuote(writer, elem, palette);
                         break;
                     case "code":
-                        WriteCodeBlock(writer, elem);
+                        WriteCodeBlock(writer, elem, palette);
                         break;
                 }
             }
@@ -167,37 +183,47 @@ public class BuildDocToolService(ILog log)
             para.BackgroundColor = elem.BackgroundColor;
     }
 
-    /// <summary>渲染表格（支持元素级 TableStyle）</summary>
-    private static void WriteTable(WordWriter writer, DocElement elem, String? defaultHeaderBg)
+    /// <summary>渲染表格（AI 显式样式优先，缺项用品牌默认补齐）</summary>
+    private static void WriteTable(WordWriter writer, DocElement elem, OfficePalette palette)
     {
         if (elem.Headers is not { Length: > 0 } || elem.Rows is not { Length: > 0 }) return;
 
         var allRows = new List<IEnumerable<String>> { elem.Headers };
         allRows.AddRange(elem.Rows.Select(r => r.AsEnumerable()));
 
-        var tblStyle = elem.TableStyle != null
-            ? new NewLife.Office.Word.TableStyle
-            {
-                HeaderBgColor = elem.TableStyle.HeaderBgColor ?? defaultHeaderBg,
-                StripeColor = elem.TableStyle.StripeColor,
-            }
-            : !defaultHeaderBg.IsNullOrEmpty()
-                ? new NewLife.Office.Word.TableStyle { HeaderBgColor = defaultHeaderBg }
-                : null;
+        var brand = OfficeStyleKit.CreateWordTableStyle(palette);
+        if (elem.TableStyle != null)
+        {
+            // 显式样式优先：底色/字色可单独覆盖；只给底色时自动配对比字色
+            if (!elem.TableStyle.HeaderBgColor.IsNullOrEmpty())
+                brand.HeaderBgColor = elem.TableStyle.HeaderBgColor;
+            if (!elem.TableStyle.HeaderFontColor.IsNullOrEmpty())
+                brand.HeaderFontColor = elem.TableStyle.HeaderFontColor;
+            else if (!elem.TableStyle.HeaderBgColor.IsNullOrEmpty())
+                brand.HeaderFontColor = OfficeStyleKit.Luma(elem.TableStyle.HeaderBgColor) < 160 ? "FFFFFF" : "262626";
+            if (!elem.TableStyle.StripeColor.IsNullOrEmpty())
+                brand.StripeColor = elem.TableStyle.StripeColor;
+        }
 
-        writer.AppendTable(allRows, firstRowHeader: true, tblStyle);
+        // 列宽：按内容宽度比例分配页面可用宽度（替代均分，宽窄列更协调）
+        var availW = writer.PageSettings.PageWidth - writer.PageSettings.MarginLeft - writer.PageSettings.MarginRight;
+        var weights = OfficeStyleKit.EstimateColumnWidths(elem.Headers, elem.Rows);
+        var total = weights.Sum();
+        if (total > 0 && availW > 0)
+        {
+            var widths = new Int32[weights.Length];
+            for (var i = 0; i < weights.Length; i++)
+                widths[i] = availW * weights[i] / total;
+            brand.ColumnWidths = widths;
+        }
+
+        writer.AppendTable(allRows, firstRowHeader: true, brand);
     }
 
     /// <summary>渲染高亮提示框（左侧彩色边框 + 浅色背景）</summary>
     private static void WriteCallout(WordWriter writer, DocElement elem, RunProperties? runProps)
     {
-        var (bgColor, borderColor) = elem.Variant?.ToLowerInvariant() switch
-        {
-            "success" => ("E8F5E9", "2E7D32"),
-            "warning" => ("FFF3E0", "E65100"),
-            "danger" => ("FFEBEE", "C62828"),
-            _ => ("E3F2FD", "1565C0"), // info / 默认
-        };
+        var (bgColor, borderColor) = OfficeStyleKit.GetCalloutColors(elem.Variant);
 
         var para = new Paragraph
         {
@@ -212,12 +238,12 @@ public class BuildDocToolService(ILog log)
                 },
             },
         };
-        para.Runs.Add(new Run { Text = elem.Text, Properties = runProps ?? new RunProperties() });
+        para.Runs.Add(new Run { Text = elem.Text ?? String.Empty, Properties = runProps ?? new RunProperties() });
         writer.AppendParagraph(para);
     }
 
     /// <summary>渲染 KPI 大数字指标</summary>
-    private static void WriteKpi(WordWriter writer, DocElement elem)
+    private static void WriteKpi(WordWriter writer, DocElement elem, OfficePalette palette)
     {
         if (elem.KpiValue.IsNullOrEmpty()) return;
 
@@ -230,18 +256,18 @@ public class BuildDocToolService(ILog log)
         };
         var displayValue = prefix != null ? $"{prefix}{elem.KpiValue}" : elem.KpiValue;
 
-        // 数值行（大字号加粗）
+        // 数值行（大字号加粗、品牌主色）
         writer.AppendParagraph(displayValue, ParagraphStyle.Normal,
-            new RunProperties { Bold = true, FontSize = 28, ForeColor = "1A1A1A" });
+            new RunProperties { Bold = true, FontSize = 28, ForeColor = palette.Primary });
 
-        // 标签行（小字号灰色）
+        // 标签行（小字号次要色）
         if (!elem.KpiLabel.IsNullOrEmpty())
             writer.AppendParagraph(elem.KpiLabel, ParagraphStyle.Normal,
-                new RunProperties { FontSize = 11, ForeColor = "666666" });
+                new RunProperties { FontSize = 11, ForeColor = palette.PaperMutedForeground });
     }
 
     /// <summary>渲染引用块（斜体 + 左边框）</summary>
-    private static void WriteQuote(WordWriter writer, DocElement elem)
+    private static void WriteQuote(WordWriter writer, DocElement elem, OfficePalette palette)
     {
         if (elem.Text.IsNullOrEmpty()) return;
 
@@ -253,7 +279,7 @@ public class BuildDocToolService(ILog log)
                 Left = new Border
                 {
                     Style = BorderStyle.Single,
-                    Color = "AAAAAA",
+                    Color = palette.PaperBorder,
                     Width = 12,
                 },
             },
@@ -261,25 +287,25 @@ public class BuildDocToolService(ILog log)
         para.Runs.Add(new Run
         {
             Text = elem.Text,
-            Properties = new RunProperties { Italic = true, FontSize = elem.FontSize, ForeColor = elem.Color },
+            Properties = new RunProperties { Italic = true, FontSize = elem.FontSize, ForeColor = elem.Color ?? palette.PaperMutedForeground },
         });
         writer.AppendParagraph(para);
 
-        // 来源行（小字号灰色，右对齐）
+        // 来源行（小字号次要色，右对齐）
         if (!elem.QuoteSource.IsNullOrEmpty())
         {
             var srcPara = new Paragraph { Alignment = "right" };
             srcPara.Runs.Add(new Run
             {
                 Text = $"—— {elem.QuoteSource}",
-                Properties = new RunProperties { FontSize = 10, ForeColor = "999999" },
+                Properties = new RunProperties { FontSize = 10, ForeColor = palette.PaperMutedForeground },
             });
             writer.AppendParagraph(srcPara);
         }
     }
 
     /// <summary>渲染代码块（等宽字体 + 灰底）</summary>
-    private static void WriteCodeBlock(WordWriter writer, DocElement elem)
+    private static void WriteCodeBlock(WordWriter writer, DocElement elem, OfficePalette palette)
     {
         if (elem.Text.IsNullOrEmpty()) return;
 
@@ -289,12 +315,76 @@ public class BuildDocToolService(ILog log)
             Text = elem.Text,
             Properties = new RunProperties
             {
-                FontName = "Courier New",
+                FontName = palette.MonoFont,
+                EastAsiaFontName = palette.ChineseFont,
                 FontSize = elem.FontSize ?? 9.5f,
                 ForeColor = elem.Color ?? "333333",
             },
         });
         writer.AppendParagraph(para);
+    }
+
+    /// <summary>按图片原始宽高比计算排版尺寸。宽 14cm 基准、高不超 17cm，解析失败回退 14×10</summary>
+    private static (Double WidthCm, Double HeightCm) FitImageSize(Byte[] bytes)
+    {
+        const Double maxW = 14.0;
+        const Double maxH = 17.0;
+
+        var (px, py) = TryGetImageSize(bytes);
+        if (px <= 0 || py <= 0) return (maxW, 10.0);
+
+        var ratio = (Double)py / px;
+        var w = maxW;
+        var h = w * ratio;
+        if (h > maxH)
+        {
+            h = maxH;
+            w = h / ratio;
+        }
+        return (Math.Round(w, 2), Math.Round(h, 2));
+    }
+
+    /// <summary>轻量解析 PNG/GIF/JPEG 原始像素尺寸（读取文件头，失败返回 0）</summary>
+    private static (Int32 Width, Int32 Height) TryGetImageSize(Byte[] bytes)
+    {
+        try
+        {
+            // PNG：8 字节签名 + 8 字节块头后为 IHDR 宽高（大端）
+            if (bytes.Length > 24 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+            {
+                var w = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+                var h = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+                return (w, h);
+            }
+            // GIF：宽高在 6-11 字节（小端）
+            if (bytes.Length > 10 && bytes[0] == (Byte)'G' && bytes[1] == (Byte)'I' && bytes[2] == (Byte)'F')
+            {
+                var w = bytes[6] | (bytes[7] << 8);
+                var h = bytes[8] | (bytes[9] << 8);
+                return (w, h);
+            }
+            // JPEG：扫描 SOF 段中的高宽
+            if (bytes.Length > 4 && bytes[0] == 0xFF && bytes[1] == 0xD8)
+            {
+                var i = 2;
+                while (i + 9 < bytes.Length)
+                {
+                    if (bytes[i] != 0xFF) { i++; continue; }
+                    var marker = bytes[i + 1];
+                    if (marker == 0xD8 || marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) { i += 2; continue; }
+                    var len = (bytes[i + 2] << 8) | bytes[i + 3];
+                    if (marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC)
+                    {
+                        var h = (bytes[i + 5] << 8) | bytes[i + 6];
+                        var w = (bytes[i + 7] << 8) | bytes[i + 8];
+                        return (w, h);
+                    }
+                    i += 2 + len;
+                }
+            }
+        }
+        catch { /* 解析失败按未知尺寸处理 */ }
+        return (0, 0);
     }
 
     private async Task<Byte[]?> TryLoadImageAsync(String src)
