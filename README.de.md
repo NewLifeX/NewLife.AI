@@ -32,6 +32,8 @@
 
 ## Kernfunktionen
 
+- **NativeAOT-fähig**: `IsAotCompatible` für net8.0/net10.0, NativeAOT-Smoke-Matrix mit 35 Szenarien unter Windows / Linux / macOS und x64 / arm64 / loongarch64
+- **31 Laufzeitsprachen**: englischer Quelltext + Sprachregister zur Kompilierzeit, fehlende Übersetzungen fallen auf Englisch zurück, neue Sprache ohne Codeänderung
 - **46 KI-Anbieter, 6 Protokolle**: OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — Wechsel mit einer Codezeile
 - **Einheitliche `IChatClient`-Schnittstelle**: Ausgerichtet an der MEAI-Spezifikation — Einzelrunde, Streaming, Funktionsaufrufe, multimodal, alles über eine einzige API
 - **Funktionsaufrufe (Werkzeuge)**: `[ToolDescription]`-Attribut generiert automatisch JSON Schema; `ToolChatClient`-Mehrrunden-Schleife; integrierte Werkzeuge für Suche / Wetter / Übersetzung / Web Scraping / IP-Geolokalisierung

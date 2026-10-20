@@ -32,6 +32,8 @@
 
 ## 主な機能
 
+- **NativeAOT 対応**：net8.0/net10.0 で `IsAotCompatible` を有効化、Windows / Linux / macOS と x64 / arm64 / loongarch64 を網羅する 35 シナリオの NativeAOT スモークマトリクス
+- **31 の実行時言語**：英語を原文としコンパイル時に言語テーブルを生成、未訳は英語へフォールバックし、言語追加にコード変更は不要
 - **46 の AI プロバイダー、6 つのプロトコル**：OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — 1 行のコードで切り替え可能
 - **統一 `IChatClient` インターフェース**：MEAI 仕様に準拠 — 単一ターン、ストリーミング、関数呼び出し、マルチモーダルを単一 API で
 - **関数呼び出し（ツール）**：`[ToolDescription]` 属性で JSON Schema を自動生成；`ToolChatClient` によるマルチターンループ；検索 / 天気 / 翻訳 / Web スクレイピング / IP 位置情報など組み込みツール

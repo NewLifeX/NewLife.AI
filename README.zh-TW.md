@@ -39,7 +39,7 @@
 
 ## 核心特色
 
-- **原生 AOT 就緒**：net8.0/net10.0 啟用 `IsAotCompatible`，22 情境 NativeAOT 冒煙矩陣涵蓋 Windows / Linux / macOS 與 x64 / arm64 / loongarch64
+- **原生 AOT 就緒**：net8.0/net10.0 啟用 `IsAotCompatible`，35 情境 NativeAOT 冒煙矩陣涵蓋 Windows / Linux / macOS 與 x64 / arm64 / loongarch64
 - **31 種執行階段語言**：英文源文 + 編譯期語言表，缺少譯文時自動退回英文，新增語言無需修改程式碼
 - **46 家 AI 服務商、6 種協定**：OpenAI / Anthropic / Gemini / 通義 DashScope / Ollama / AWS Bedrock，一行程式碼任意切換
 - **統一 `IChatClient` 介面**：對齊 MEAI 規範，單輪、串流、函式呼叫、多模態全部統一 API

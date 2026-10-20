@@ -32,6 +32,8 @@
 
 ## 핵심 기능
 
+- **NativeAOT 지원**: net8.0/net10.0에서 `IsAotCompatible` 사용, Windows / Linux / macOS와 x64 / arm64 / loongarch64를 아우르는 35 시나리오 NativeAOT 스모크 매트릭스
+- **31개 런타임 언어**: 영어 원문 + 컴파일 타임 언어 테이블, 번역이 없으면 영어로 폴백하며 언어 추가에 코드 변경이 필요 없음
 - **46개 AI 제공업체, 6개 프로토콜**: OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — 한 줄의 코드로 전환
 - **통합 `IChatClient` 인터페이스**: MEAI 사양에 맞춰 단일 턴, 스트리밍, 함수 호출, 멀티모달을 단일 API로 제공
 - **함수 호출(도구)**: `[ToolDescription]` 속성으로 JSON Schema 자동 생성; `ToolChatClient` 멀티턴 루프; 검색/날씨/번역/웹 스크래핑/IP 위치 등 내장 도구

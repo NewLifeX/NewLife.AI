@@ -32,6 +32,8 @@
 
 ## Fonctionnalités Principales
 
+- **Prêt pour NativeAOT** : `IsAotCompatible` sur net8.0/net10.0, matrice de fumée NativeAOT de 35 scénarios sous Windows / Linux / macOS et x64 / arm64 / loongarch64
+- **31 langues à l'exécution** : texte source en anglais + tables de langues à la compilation, les traductions manquantes retombent sur l'anglais et ajouter une langue ne demande aucun code
 - **46 fournisseurs d'IA, 6 protocoles** : OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — changez avec une ligne de code
 - **Interface unifiée `IChatClient`** : Alignée sur la spécification MEAI — tour unique, streaming, appels de fonctions, multimodal, le tout avec une seule API
 - **Appels de fonctions (Outils)** : L'attribut `[ToolDescription]` génère automatiquement le JSON Schema ; boucle multi-tour `ToolChatClient` ; outils intégrés de recherche / météo / traduction / web scraping / géolocalisation IP
