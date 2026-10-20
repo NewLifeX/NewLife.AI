@@ -28,14 +28,14 @@ public class McpApiController(McpClientService mcpClientService) : ChatApiContro
     public ActionResult<McpServerResponseDto> AddServer([FromBody] CreateMcpServerRequest request)
     {
         if (String.IsNullOrWhiteSpace(request.Name))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "名称不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Name cannot be empty") });
         if (String.IsNullOrWhiteSpace(request.Endpoint))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "接口地址不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Endpoint URL cannot be empty") });
 
         // 检查名称唯一性
         var existing = McpServerConfig.FindByName(request.Name.Trim());
         if (existing != null)
-            return BadRequest(new { code = "DUPLICATE_NAME", message = $"名称 '{request.Name}' 已存在" });
+            return BadRequest(new { code = "DUPLICATE_NAME", message = L.T("Name '{0}' already exists", request.Name) });
 
         var entity = new McpServerConfig
         {
@@ -123,7 +123,7 @@ public class McpApiController(McpClientService mcpClientService) : ChatApiContro
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(503, new { code = "MCP_SERVER_UNAVAILABLE", message = $"无法连接 MCP Server: {ex.Message}" });
+            return StatusCode(503, new { code = "MCP_SERVER_UNAVAILABLE", message = L.T("Unable to connect to MCP Server: {0}", ex.Message) });
         }
     }
 

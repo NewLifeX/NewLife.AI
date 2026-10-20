@@ -57,6 +57,21 @@ public class LocalizationTests
     }
 
     [Fact]
+    [System.ComponentModel.DisplayName("ChatAI 词表：31 种译文语言均有该词条")]
+    public void AllSupportedCultures_HaveTranslations()
+    {
+        EnsureChatAITables();
+
+        const String key = "AppKey is invalid or disabled";
+        foreach (var code in NewLife.ChatAI.LanguageHelper.SupportedCultures)
+        {
+            if (code == "en-US") continue;
+            var text = WithCulture(code, () => Localization.Translate(key));
+            Assert.True(text != key, $"{code} 缺少译文");
+        }
+    }
+
+    [Fact]
     [System.ComponentModel.DisplayName("请求语言：Accept-Language 按权重选择受支持语言")]
     public void RequestCultureScope_ParsesAcceptLanguage()
     {

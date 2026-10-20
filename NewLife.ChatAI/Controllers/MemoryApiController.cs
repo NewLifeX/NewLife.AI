@@ -45,7 +45,7 @@ public class MemoryApiController(MemoryService memoryService) : ChatApiControlle
     {
         var userId = GetCurrentUserId();
         var memory = UserMemory.FindById(id);
-        if (memory == null) return NotFound(new { code = "NOT_FOUND", message = "记忆不存在" });
+        if (memory == null) return NotFound(new { code = "NOT_FOUND", message = L.T("Memory not found") });
         if (memory.UserId != userId) return Forbid();
 
         if (request.Value != null) memory.Value = request.Value;
@@ -65,7 +65,7 @@ public class MemoryApiController(MemoryService memoryService) : ChatApiControlle
     {
         var userId = GetCurrentUserId();
         var memory = UserMemory.FindById(id);
-        if (memory == null) return NotFound(new { code = "NOT_FOUND", message = "记忆不存在" });
+        if (memory == null) return NotFound(new { code = "NOT_FOUND", message = L.T("Memory not found") });
         if (memory.UserId != userId) return Forbid();
 
         memoryService.Deactivate(id);

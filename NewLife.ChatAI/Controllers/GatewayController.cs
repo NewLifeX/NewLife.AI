@@ -60,7 +60,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
             if (appKey == null)
-                return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+                return Unauthorized(new { code = "INVALID_API_KEY", message = L.T("AppKey is invalid or disabled") });
         }
         else if (!key.IsNullOrEmpty())
         {
@@ -240,11 +240,11 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     public IActionResult OllamaTagsAsync()
     {
         if (!chatSetting.EnableGateway)
-            return StatusCode(503, new { code = "GATEWAY_DISABLED", message = "API 网关已关闭" });
+            return StatusCode(503, new { code = "GATEWAY_DISABLED", message = L.T("API gateway is closed") });
 
         var appKey = gatewayService.ValidateAppKey(GetAuthKey());
         if (appKey == null)
-            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+            return Unauthorized(new { code = "INVALID_API_KEY", message = L.T("AppKey is invalid or disabled") });
 
         var models = modelService.GetModelsForAppKey(appKey);
         var data = models.Select(m => new Dictionary<String, Object?>
@@ -278,20 +278,20 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     public IActionResult OllamaShowAsync([FromBody] OllamaShowRequest request)
     {
         if (!chatSetting.EnableGateway)
-            return StatusCode(503, new { code = "GATEWAY_DISABLED", message = "API 网关已关闭" });
+            return StatusCode(503, new { code = "GATEWAY_DISABLED", message = L.T("API gateway is closed") });
 
         var appKey = gatewayService.ValidateAppKey(GetAuthKey());
         if (appKey == null)
-            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+            return Unauthorized(new { code = "INVALID_API_KEY", message = L.T("AppKey is invalid or disabled") });
 
         if (request == null || request.Model.IsNullOrEmpty())
-            return BadRequest(new { code = "INVALID_REQUEST", message = "model 不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("model cannot be empty") });
 
         var config = modelService.ResolveAvailableModelByCode(request.Model);
         if (config == null)
-            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{request.Model}'" });
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = L.T("No available model found for '{0}'", request.Model) });
         if (!modelService.IsModelAllowed(appKey, config))
-            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{request.Model}'" });
+            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = L.T("The current key is not authorized to use model '{0}'", request.Model) });
 
         var capabilities = new List<String> { "completion", "chat" };
         if (config.SupportFunction) capabilities.Add("tools");
@@ -326,7 +326,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [SnakeCaseBody]
     public async Task<IActionResult> OllamaEmbedAsync([FromBody] OllamaEmbedRequest request, CancellationToken cancellationToken)
     {
-        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Request body cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(request.Model);
         if (forbid != null) return forbid;
@@ -338,13 +338,13 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         else if (request.Input is JsonElement je && je.ValueKind == JsonValueKind.Array)
             inputs = je.EnumerateArray().Select(e => e.GetString() ?? "").ToList();
         else
-            return BadRequest(new { code = "INVALID_REQUEST", message = "input 不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("input cannot be empty") });
 
         try
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportEmbedding || client is not IEmbeddingClient ec)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support embeddings", request.Model) });
 
             var resp = await ec.GenerateAsync(new EmbeddingRequest
             {
@@ -377,7 +377,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     public async Task<IActionResult> OllamaEmbeddingsAsync([FromBody] OllamaEmbeddingsRequest request, CancellationToken cancellationToken)
     {
         if (request == null || request.Prompt.IsNullOrEmpty())
-            return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("prompt cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(request.Model);
         if (forbid != null) return forbid;
@@ -386,7 +386,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportEmbedding || client is not IEmbeddingClient ec)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support embeddings", request.Model) });
 
             var resp = await ec.GenerateAsync(new EmbeddingRequest
             {
@@ -418,7 +418,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     {
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
         if (appKey == null)
-            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+            return Unauthorized(new { code = "INVALID_API_KEY", message = L.T("AppKey is invalid or disabled") });
 
         // 解析请求参数
         body.TryGetValue("model", out var modelObj);
@@ -427,14 +427,14 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var prompt = promptObj?.ToString();
 
         if (String.IsNullOrWhiteSpace(prompt))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("prompt cannot be empty") });
 
         // 路由到模型
         var config = modelService.ResolveAvailableModelByCode(modelCode);
         if (config == null)
-            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{modelCode}'" });
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = L.T("No available model found for '{0}'", modelCode) });
         if (!modelService.IsModelAllowed(appKey, config))
-            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
+            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = L.T("The current key is not authorized to use model '{0}'", modelCode) });
 
         // 通过 ChatCompletions 方式请求图像生成（兼容 OpenAI DALL-E 等通过聊天接口生成图像的场景）
         var size = chatSetting.DefaultImageSize;
@@ -443,7 +443,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
 
         // 能力位校验：仅允许支持图像生成的模型通过
         if (!config!.SupportImage)
-            return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{modelCode}' 不支持图像生成" });
+            return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support image generation", modelCode) });
 
         try
         {
@@ -483,7 +483,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     {
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
         if (appKey == null)
-            return Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" });
+            return Unauthorized(new { code = "INVALID_API_KEY", message = L.T("AppKey is invalid or disabled") });
 
         // 从 multipart/form-data 中解析参数
         var form = await Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
@@ -494,23 +494,23 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var maskFile = form.Files.GetFile("mask");
 
         if (String.IsNullOrWhiteSpace(prompt))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("prompt cannot be empty") });
 
         if (imageFile == null || imageFile.Length == 0)
-            return BadRequest(new { code = "INVALID_REQUEST", message = "image 文件不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("image file cannot be empty") });
 
         // 路由到模型
         var model = modelService.ResolveAvailableModelByCode(modelCode);
         if (model == null)
-            return NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{modelCode}'" });
+            return NotFound(new { code = "MODEL_NOT_FOUND", message = L.T("No available model found for '{0}'", modelCode) });
         if (!modelService.IsModelAllowed(appKey, model))
-            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" });
+            return StatusCode(403, new { code = "MODEL_FORBIDDEN", message = L.T("The current key is not authorized to use model '{0}'", modelCode) });
 
         try
         {
             using var editClient = modelService.CreateClient(model)!;
             if (!model.SupportImage || editClient is not IImageClient imageClient)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{model.Code}' 不支持图像编辑" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support image editing", model.Code) });
 
             using var imageStream = imageFile.OpenReadStream();
             using var maskStream = maskFile != null && maskFile.Length > 0 ? maskFile.OpenReadStream() : null;
@@ -547,7 +547,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [SnakeCaseBody]
     public async Task<IActionResult> EmbeddingsAsync([FromBody] EmbeddingRequest request, CancellationToken cancellationToken)
     {
-        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Request body cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(request.Model);
         if (forbid != null) return forbid;
@@ -556,7 +556,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportEmbedding || client is not IEmbeddingClient ec)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持嵌入向量" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support embeddings", request.Model) });
 
             var resp = await ec.GenerateAsync(request, cancellationToken).ConfigureAwait(false);
             return Ok(resp);
@@ -576,8 +576,8 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [SnakeCaseBody]
     public async Task<IActionResult> AudioSpeechAsync([FromBody] SpeechRequest request, CancellationToken cancellationToken)
     {
-        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
-        if (String.IsNullOrEmpty(request.Input)) return BadRequest(new { code = "INVALID_REQUEST", message = "input 不能为空" });
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Request body cannot be empty") });
+        if (String.IsNullOrEmpty(request.Input)) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("input cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(request.Model);
         if (forbid != null) return forbid;
@@ -586,7 +586,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportSpeech || client is not ISpeechClient sc)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持语音合成" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support TTS", request.Model) });
 
             var bytes = await sc.SpeechAsync(request, cancellationToken).ConfigureAwait(false);
             var contentType = (request.ResponseFormat ?? "mp3") switch
@@ -619,7 +619,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         var file = form.Files.GetFile("file");
 
         if (file == null || file.Length == 0)
-            return BadRequest(new { code = "INVALID_REQUEST", message = "file 不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("file cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(modelCode);
         if (forbid != null) return forbid;
@@ -628,7 +628,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportAudio || client is not ITranscriptionClient tc)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{modelCode}' 不支持语音识别" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support speech recognition", modelCode) });
 
             using var stream = file.OpenReadStream();
             var req = new TranscriptionRequest
@@ -659,8 +659,8 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [SnakeCaseBody]
     public async Task<IActionResult> VideoGenerationsAsync([FromBody] VideoGenerationRequest request, CancellationToken cancellationToken)
     {
-        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
-        if (String.IsNullOrEmpty(request.Prompt)) return BadRequest(new { code = "INVALID_REQUEST", message = "prompt 不能为空" });
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Request body cannot be empty") });
+        if (String.IsNullOrEmpty(request.Prompt)) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("prompt cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(request.Model);
         if (forbid != null) return forbid;
@@ -669,7 +669,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportVideo || client is not IVideoClient vc)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持视频生成" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support video generation", request.Model) });
 
             var resp = await vc.SubmitVideoGenerationAsync(request, cancellationToken).ConfigureAwait(false);
             return Ok(resp);
@@ -687,7 +687,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [HttpGet("v1/video/generations/{taskId}")]
     public async Task<IActionResult> VideoTaskStatusAsync(String taskId, [FromQuery] String? model, CancellationToken cancellationToken)
     {
-        if (String.IsNullOrEmpty(taskId)) return BadRequest(new { code = "INVALID_REQUEST", message = "taskId 不能为空" });
+        if (String.IsNullOrEmpty(taskId)) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("taskId cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(model);
         if (forbid != null) return forbid;
@@ -696,7 +696,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (client is not IVideoClient vc)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{model}' 不支持视频生成" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support video generation", model) });
 
             var resp = await vc.GetVideoTaskAsync(taskId, cancellationToken).ConfigureAwait(false);
             return Ok(resp);
@@ -716,8 +716,8 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     [SnakeCaseBody]
     public async Task<IActionResult> RerankAsync([FromBody] RerankRequest request, CancellationToken cancellationToken)
     {
-        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = "请求体不能为空" });
-        if (String.IsNullOrEmpty(request.Query)) return BadRequest(new { code = "INVALID_REQUEST", message = "query 不能为空" });
+        if (request == null) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Request body cannot be empty") });
+        if (String.IsNullOrEmpty(request.Query)) return BadRequest(new { code = "INVALID_REQUEST", message = L.T("query cannot be empty") });
 
         var (forbid, config) = ValidateAndResolve(request.Model);
         if (forbid != null) return forbid;
@@ -726,7 +726,7 @@ public class GatewayController(GatewayService gatewayService, ModelService model
         {
             using var client = modelService.CreateClient(config!);
             if (!config!.SupportRerank || client is not IRerankClient rc)
-                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = $"模型 '{request.Model}' 不支持重排序" });
+                return BadRequest(new { code = "MODEL_UNSUPPORTED", message = L.T("Model '{0}' does not support reranking", request.Model) });
 
             var resp = await rc.RerankAsync(request, cancellationToken).ConfigureAwait(false);
             return Ok(resp);
@@ -746,14 +746,14 @@ public class GatewayController(GatewayService gatewayService, ModelService model
     {
         var appKey = gatewayService.ValidateAppKey(Request.Headers.Authorization);
         if (appKey == null)
-            return (Unauthorized(new { code = "INVALID_API_KEY", message = "AppKey 无效或已禁用" }), null);
+            return (Unauthorized(new { code = "INVALID_API_KEY", message = L.T("AppKey is invalid or disabled") }), null);
 
         var config = modelService.ResolveAvailableModelByCode(modelCode);
         if (config == null)
-            return (NotFound(new { code = "MODEL_NOT_FOUND", message = $"未找到可用模型 '{modelCode}'" }), null);
+            return (NotFound(new { code = "MODEL_NOT_FOUND", message = L.T("No available model found for '{0}'", modelCode) }), null);
 
         if (!modelService.IsModelAllowed(appKey, config))
-            return (StatusCode(403, new { code = "MODEL_FORBIDDEN", message = $"当前密钥无权使用模型 '{modelCode}'" }), null);
+            return (StatusCode(403, new { code = "MODEL_FORBIDDEN", message = L.T("The current key is not authorized to use model '{0}'", modelCode) }), null);
 
         return (null, config);
     }

@@ -30,7 +30,7 @@ public class AppKeyApiController : ChatApiControllerBase
     public ActionResult<AppKeyCreateResponseDto> Create([FromBody] CreateAppKeyRequest request)
     {
         if (String.IsNullOrWhiteSpace(request.Name))
-            return BadRequest(new { code = "INVALID_REQUEST", message = "名称不能为空" });
+            return BadRequest(new { code = "INVALID_REQUEST", message = L.T("Name cannot be empty") });
 
         var userId = GetCurrentUserId();
 

@@ -12,7 +12,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
     public ActionResult<SystemSettingsDto> Get()
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可访问系统设置" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = L.T("Only system administrators can access system settings") });
 
 
         // 构建可用模型下拉列表
@@ -78,7 +78,7 @@ public class SystemSettingsController(ChatSetting chatSetting) : ChatApiControll
     public ActionResult Save([FromBody] SystemSettingsUpdateDto dto)
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可修改系统设置" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = L.T("Only system administrators can modify system settings") });
 
 
         // 基本配置

@@ -27,7 +27,7 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
     public ActionResult<ModelManageDto[]> GetManage()
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可查看全部模型" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = L.T("Only system administrators can view all models") });
 
         var models = ModelConfig.FindAll();
         var result = models
@@ -65,11 +65,11 @@ public class ModelsController(ChatApplicationService chatService) : ChatApiContr
     public ActionResult<ModelManageDto> UpdateSettings(Int32 id, [FromBody] ModelSettingsDto dto)
     {
         if (!IsCurrentUserSystem())
-            return StatusCode(403, new { code = "FORBIDDEN", message = "仅系统管理员可修改模型配置" });
+            return StatusCode(403, new { code = "FORBIDDEN", message = L.T("Only system administrators can modify model configuration") });
 
         var model = ModelConfig.FindById(id);
         if (model == null)
-            return NotFound(new { code = "NOT_FOUND", message = "模型不存在" });
+            return NotFound(new { code = "NOT_FOUND", message = L.T("Model not found") });
 
         // 保存原始锁定值，用于检测管理员是否显式修改了 Locked
         var originalLocked = model.Locked;

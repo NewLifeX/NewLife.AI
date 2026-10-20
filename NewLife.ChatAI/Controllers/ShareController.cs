@@ -33,10 +33,10 @@ public class ShareController(ChatApplicationService chatService, ChatSetting cha
     public async Task<IActionResult> GetAsync([FromRoute] String token, CancellationToken cancellationToken)
     {
         if (!chatSetting.AllowAnonymousShare && ManageProvider.User == null)
-            return Unauthorized(new { code = "UNAUTHORIZED", message = "请登录后查看分享内容" });
+            return Unauthorized(new { code = "UNAUTHORIZED", message = L.T("Please log in to view the shared content") });
 
         var result = await chatService.GetShareContentAsync(token, cancellationToken).ConfigureAwait(false);
-        if (result == null) return NotFound(new { code = "SHARE_NOT_FOUND", message = "共享链接不存在或已过期" });
+        if (result == null) return NotFound(new { code = "SHARE_NOT_FOUND", message = L.T("The share link does not exist or has expired") });
         return Ok(result);
     }
 
