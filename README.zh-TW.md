@@ -7,7 +7,7 @@
 [![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
 [![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
 <!-- metrics:start -->
-[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-37%2F37-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-38%2F38-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
 [![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
 [![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](Doc/多语言本地化.md)
 <!-- metrics:end -->
@@ -39,7 +39,7 @@
 
 ## 核心特色
 
-- **原生 AOT 就緒**：net8.0/net10.0 啟用 `IsAotCompatible`，37 情境 NativeAOT 冒煙矩陣涵蓋 Windows / Linux / macOS 與 x64 / arm64 / loongarch64
+- **原生 AOT 就緒**：net8.0/net10.0 啟用 `IsAotCompatible`，38 情境 NativeAOT 冒煙矩陣涵蓋 Windows / Linux / macOS 與 x64 / arm64 / loongarch64
 - **31 種執行階段語言**：英文源文 + 編譯期語言表，缺少譯文時自動退回英文，新增語言無需修改程式碼
 - **46 家 AI 服務商、6 種協定**：OpenAI / Anthropic / Gemini / 通義 DashScope / Ollama / AWS Bedrock，一行程式碼任意切換
 - **統一 `IChatClient` 介面**：對齊 MEAI 規範，單輪、串流、函式呼叫、多模態全部統一 API

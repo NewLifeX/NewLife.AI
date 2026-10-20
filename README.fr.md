@@ -7,7 +7,7 @@
 [![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
 [![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
 <!-- metrics:start -->
-[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-37%2F37-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-38%2F38-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
 [![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
 [![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](Doc/多语言本地化.md)
 <!-- metrics:end -->
@@ -32,7 +32,7 @@
 
 ## Fonctionnalités Principales
 
-- **Prêt pour NativeAOT** : `IsAotCompatible` sur net8.0/net10.0, matrice de fumée NativeAOT de 37 scénarios sous Windows / Linux / macOS et x64 / arm64 / loongarch64
+- **Prêt pour NativeAOT** : `IsAotCompatible` sur net8.0/net10.0, matrice de fumée NativeAOT de 38 scénarios sous Windows / Linux / macOS et x64 / arm64 / loongarch64
 - **31 langues à l'exécution** : texte source en anglais + tables de langues à la compilation, les traductions manquantes retombent sur l'anglais et ajouter une langue ne demande aucun code
 - **46 fournisseurs d'IA, 6 protocoles** : OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — changez avec une ligne de code
 - **Interface unifiée `IChatClient`** : Alignée sur la spécification MEAI — tour unique, streaming, appels de fonctions, multimodal, le tout avec une seule API

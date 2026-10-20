@@ -7,7 +7,7 @@
 [![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
 [![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
 <!-- metrics:start -->
-[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-37%2F37-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-38%2F38-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
 [![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
 [![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](Doc/多语言本地化.md)
 <!-- metrics:end -->
@@ -32,7 +32,7 @@
 
 ## 핵심 기능
 
-- **NativeAOT 지원**: net8.0/net10.0에서 `IsAotCompatible` 사용, Windows / Linux / macOS와 x64 / arm64 / loongarch64를 아우르는 37 시나리오 NativeAOT 스모크 매트릭스
+- **NativeAOT 지원**: net8.0/net10.0에서 `IsAotCompatible` 사용, Windows / Linux / macOS와 x64 / arm64 / loongarch64를 아우르는 38 시나리오 NativeAOT 스모크 매트릭스
 - **31개 런타임 언어**: 영어 원문 + 컴파일 타임 언어 테이블, 번역이 없으면 영어로 폴백하며 언어 추가에 코드 변경이 필요 없음
 - **46개 AI 제공업체, 6개 프로토콜**: OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — 한 줄의 코드로 전환
 - **통합 `IChatClient` 인터페이스**: MEAI 사양에 맞춰 단일 턴, 스트리밍, 함수 호출, 멀티모달을 단일 API로 제공

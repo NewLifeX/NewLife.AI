@@ -8,7 +8,7 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>AotSmoke</RootNamespace>
     <PublishAot>true</PublishAot>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- 不启用 InvariantGlobalization：冒烟要验证 31 种语言词表在原生发布件中真正生效（需要 ICU） -->
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,7 +8,7 @@
 
 ## 1. 结论
 
-NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户端创建、工具 Schema 与调用、ToolChatClient 多轮循环、MCP 服务端、对话消息 JSON、Token 估算、哈希嵌入、限流、规划器、过滤器与流式聚合等 37 个场景在 `win-x64` 原生发布件中全部通过。ASP.NET Core 集成层（`NewLife.AI.Extensions`）同样 AOT 就绪，由独立工程 `AotWebSmoke` 起真服务验证 MCP HTTP 全链路。
+NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户端创建、工具 Schema 与调用、ToolChatClient 多轮循环、MCP 服务端、对话消息 JSON、Token 估算、哈希嵌入、限流、规划器、过滤器与流式聚合等 38 个场景在 `win-x64` 原生发布件中全部通过。ASP.NET Core 集成层（`NewLife.AI.Extensions`）同样 AOT 就绪，由独立工程 `AotWebSmoke` 起真服务验证 MCP HTTP 全链路。
 
 - `net8.0` / `net10.0` 目标启用 `IsAotCompatible=true`，库自身裁剪/AOT 分析器告警为 0。
 - 冒烟工程 `AotSmoke` 以同一份代码双跑 JIT 与 NativeAOT，便于区分"运行时行为变化"与"AOT 特有问题"。
@@ -35,9 +35,11 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 
 冒烟工程同时以 `net8.0` 与 `net10.0` 两个目标框架构建：x64 门禁（win-x64 / linux-x64）两个框架各自原生发布运行，其余 RID 只跑 `net10.0` 以控制矩阵时长。
 
+冒烟工程**不启用** `InvariantGlobalization`，因为要验证 31 种语言词表在原生发布件中真正生效；因此运行环境需要 ICU（Linux 安装 `libicu-dev`，`linux-musl` 容器装 `icu-libs`）。开启 invariant 的应用仍可正常运行，只是所有语言回退英文。
+
 `AotWebSmoke`（ASP.NET Core 宿主 + `NewLife.AI.Extensions`）另在 win-x64 / linux-x64 原生发布运行，5 项检查：Kestrel 监听、MCP `initialize` 握手、`tools/list` 反射枚举、`tools/call` 经 DI 解析工具实例、未知方法返回 JSON-RPC 错误。
 
-冒烟覆盖 37 个场景：
+冒烟覆盖 38 个场景：
 
 1. 基础类型转换
 2. `ChatMessage` JSON 往返
@@ -76,6 +78,7 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 35. 流式聚合与过滤器回调（`OnStreamCompletedAsync` 火焰即忘、正文与用量汇总）
 36. 工具 `IProgress<T>` 参数注入（常用进度类型静态实例，AOT 安全）
 37. 工具返回自定义 DTO（`Task<JobResult>` 解包 + DTO 属性保留后的序列化）
+38. 本地化实际翻译（按名称取 `zh-Hans` 区域性并命中词表，证明 31 种语言表在原生发布件中生效）
 
 ---
 
@@ -106,6 +109,7 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 | 工具返回 `Task<T>` 与自定义 DTO | ⚠️ | 常用返回类型（string/int/long/bool/double/float/decimal/byte[]/object）走模式匹配，其余回退反射读 `Result`（AOT 可用）。但**返回的自定义 DTO 属性在裁剪后会被移除、序列化成 `{}`**：需用 `[DynamicDependency(PublicProperties, typeof(Dto))]` 或裁剪描述符保留（冒烟 37 演示用法）；同理适用于 `ToolRegistry`/`ToolChatClient` 的工具返回 |
 | `NewLife.AI.Extensions`（ASP.NET Core 宿主） | ✅ | net8/net10 分析器 0 告警；`AotWebSmoke` 在 win-x64/linux-x64 原生发布件中跑通 MCP HTTP 往返。注意仍需 `InvariantGlobalization` 或随包 ICU，且不能用反射式 MVC/最小 API 参数绑定 |
 | 插件式动态加载程序集 | ❌ | 与 AOT 静态分析根本冲突，按设计不支持 |
+| 31 种运行时语言词表 | ✅ | 词表在编译期嵌入程序集，AOT 下按区域性名命中（冒烟 38 用 zh-Hans 实测）；`InvariantGlobalization=true` 时区域性名不可用，全部回退英文 |
 
 ---
 

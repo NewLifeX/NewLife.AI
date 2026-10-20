@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
 using NewLife;
 using L10n = NewLife.Localization;
 using Xunit;
@@ -96,6 +98,63 @@ public class LocalizationTests
                 Assert.Equal("de", CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
             }
             Assert.Equal(saved, CultureInfo.CurrentUICulture);
+        }
+        finally
+        {
+            L10n.Culture = old;
+            CultureInfo.CurrentUICulture = saved;
+        }
+    }
+
+    [Fact]
+    [DisplayName("请求语言作用域在并行异步流中互不串扰")]
+    public async Task RequestCultureScope_IsolatesParallelFlows()
+    {
+        var old = L10n.Culture;
+        var saved = CultureInfo.CurrentUICulture;
+        L10n.Culture = null;
+        try
+        {
+            var pairs = new (String Accept, String Lang)[]
+            {
+                ("de-DE", "de"), ("zh-CN", "zh"), ("ja-JP", "ja"), ("fr-FR", "fr"), ("ru-RU", "ru"), ("ko-KR", "ko"),
+            };
+
+            var tasks = pairs.Select(async pair =>
+            {
+                using var _ = RequestCultureScope.Create(pair.Accept);
+                await Task.Delay(20);
+                var before = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                await Task.Yield();
+                var after = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                return before == pair.Lang && after == pair.Lang;
+            });
+
+            var results = await Task.WhenAll(tasks);
+            Assert.All(results, ok => Assert.True(ok, "并行异步流中的 UI 文化发生串扰"));
+        }
+        finally
+        {
+            L10n.Culture = old;
+            CultureInfo.CurrentUICulture = saved;
+        }
+    }
+
+    [Fact]
+    [DisplayName("宿主固定语言时请求语言作用域不覆盖宿主设置")]
+    public void RequestCultureScope_HostCultureWins()
+    {
+        var old = L10n.Culture;
+        var saved = CultureInfo.CurrentUICulture;
+        try
+        {
+            L10n.Culture = new CultureInfo("ja");
+
+            using (var _ = RequestCultureScope.Create("de-DE"))
+            {
+                Assert.NotEqual("de", CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+                Assert.Equal("エージェント一覧を空にすることはできません", L10n.Translate("Agent list cannot be empty"));
+            }
         }
         finally
         {

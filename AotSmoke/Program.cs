@@ -484,6 +484,23 @@ Run("37.工具返回自定义 DTO", () =>
     return json != null && json.Contains("aot");
 });
 
+// 38. 本地化实际翻译（NativeAOT + InvariantGlobalization 下按名称取区域性并命中词表）
+Run("38.本地化实际翻译", () =>
+{
+    var saved = Localization.Culture;
+    try
+    {
+        Localization.Culture = new System.Globalization.CultureInfo("zh-Hans");
+        var text = Localization.Translate("Missing required argument '{0}' for tool '{1}'", "kw", "search");
+        Console.WriteLine($"    ({text})");
+        return text.Contains("缺少必填参数");
+    }
+    finally
+    {
+        Localization.Culture = saved;
+    }
+});
+
 Console.WriteLine();
 if (failures.Count > 0)
 {
