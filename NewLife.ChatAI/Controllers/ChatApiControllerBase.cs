@@ -35,7 +35,7 @@ public abstract class ChatApiControllerBase : ControllerBase, IActionFilter
 
         if (ManageProvider.User == null)
         {
-            context.Result = new ObjectResult(new { code = "UNAUTHORIZED", message = "未登录，请先登录" })
+            context.Result = new ObjectResult(new { code = "UNAUTHORIZED", message = L.T("Unauthorized. Please sign in.") })
             {
                 StatusCode = 401
             };

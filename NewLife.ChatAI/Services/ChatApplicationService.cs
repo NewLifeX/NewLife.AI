@@ -447,7 +447,7 @@ public class ChatApplicationService
             entity = new UserSetting { UserId = userId };
         }
 
-        entity.Language = settings.Language;
+        entity.Language = NormalizeLanguage(settings.Language);
         entity.Theme = settings.Theme;
         entity.FontSize = settings.FontSize;
         entity.SendShortcut = settings.SendShortcut;
@@ -664,7 +664,7 @@ public class ChatApplicationService
     /// <param name="entity">用户设置实体</param>
     /// <returns></returns>
     private static UserSettingsDto ToUserSettingsDto(UserSetting entity) =>
-        new(entity.Language ?? "zh-CN",
+        new(NormalizeLanguage(entity.Language),
             entity.Theme ?? "system",
             entity.FontSize > 0 ? entity.FontSize : 16,
             entity.SendShortcut ?? "Enter",
@@ -684,5 +684,10 @@ public class ChatApplicationService
             ContentWidth = entity.ContentWidth,
             ThinkingLayout = entity.ThinkingLayout,
         };
+
+    /// <summary>归一化界面语言代码，兼容旧值 zh/en 与非标准区域，未识别时回退简体中文</summary>
+    /// <param name="language">语言代码</param>
+    /// <returns>受支持的语言代码</returns>
+    private static String NormalizeLanguage(String? language) => LanguageHelper.NormalizeOrDefault(language);
     #endregion
 }

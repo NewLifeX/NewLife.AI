@@ -1,12 +1,17 @@
-﻿using System.Text.Json;
+using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using NewLife;
 using NewLife.ChatAI;
 using NewLife.Cube;
 using NewLife.Log;
 using NewLife.Serialization;
 
 XTrace.UseConsole();
+
+// 日志与配置注释固定中文，界面/异常消息按请求语言识别
+Localization.LogCulture = new CultureInfo("zh-CN");
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -31,7 +36,7 @@ services.Configure<ApiBehaviorOptions>(options =>
         var firstError = ctx.ModelState.Values
             .SelectMany(v => v.Errors)
             .Select(e => e.ErrorMessage)
-            .FirstOrDefault() ?? "请求体格式错误";
+            .FirstOrDefault() ?? L.T("Invalid request body.");
 
         var body = new Dictionary<String, Object>
         {
@@ -49,6 +54,9 @@ services.Configure<ApiBehaviorOptions>(options =>
 services.AddCube();
 
 var app = builder.Build();
+
+// 请求语言：X-Language > ?lang= > Accept-Language
+app.UseRequestLanguage();
 
 app.UseCube(app.Environment);
 
