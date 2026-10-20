@@ -168,7 +168,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
 
         var newMsg = MessageStore.CreateAssistant(oldMsg.ConversationId, oldMsg.ThinkingMode);
         if (newMsg.Id <= 0)
-            throw new InvalidOperationException("新消息插入失败，未获取有效 Id");
+            throw new InvalidOperationException(L.T("Failed to insert new message, no valid Id obtained"));
         MessageStore.SoftDelete(oldMsg);
         flow.HistoryMessages = flow.HistoryMessages.Where(e => e.Id != oldMsg.Id).ToList();
         flow.HistoryMessages.Add(newMsg);
@@ -1218,7 +1218,7 @@ public class MessageFlow(ModelService modelService, BackgroundGenerationService?
         if (!content.Contains("不能") && !content.Contains("无法") && !content.Contains("不便") && !content.Contains("抱歉")) return;
 
         using var span = tracer?.NewSpan("security:guard-refusal", new { content.Length });
-        span?.SetError(new InvalidOperationException("AI 回复中检测到守密指令触发特征"), content.Length > 300 ? content[..300] : content);
+        span?.SetError(new InvalidOperationException(L.T("Secrecy directive trigger pattern detected in AI reply")), content.Length > 300 ? content[..300] : content);
     }
 
     /// <summary>在 rawClient 上组装过滤器链 + 工具层，构建完整管道客户端，并将实际注入的工具名写入 context.AvailableToolNames</summary>

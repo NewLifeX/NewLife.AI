@@ -44,7 +44,7 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
             var kw = part.Trim();
             if (!kw.IsNullOrEmpty()) kwList.Add(kw);
         }
-        if (kwList.Count == 0) throw new ArgumentException("关键字不能为空", nameof(keywords));
+        if (kwList.Count == 0) throw new ArgumentException(L.T("Keyword cannot be empty"), nameof(keywords));
 
         // 获取所有连接的表（DAL 表 + 实体表合并，实体表优先）
         // 连接枚举：DAL.ConnStrs ∪ 启用的 DbAccessConfig（支持运行时动态连接，动态连接串先注册再扫描）

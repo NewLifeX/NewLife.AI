@@ -206,7 +206,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     {
         using var rawClient = modelService.CreateClient(model);
         if (rawClient == null)
-            throw new InvalidOperationException($"未找到服务商，模型 '{model.Code}' 关联的提供商类型 '{model.ProviderInfo?.Provider}' 未注册");
+            throw new InvalidOperationException(L.T("Provider not found: provider type '{1}' associated with model '{0}' is not registered", model.Code, model.ProviderInfo?.Provider));
 
         // 应用 IChatFilter 链（通用横切：日志、监控等；网关场景 ConversationId=0，filter 实现需自行处理）
         var clientBuilder = rawClient.AsBuilder();
@@ -245,7 +245,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             // 重试耗尽，记录最后一次失败
             if (lastError != null)
                 _providerStatus?.RecordFailure(model.ProviderId);
-            throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
+            throw new InvalidOperationException(L.T("Upstream service rate limited, retry attempts exhausted"));
         }
 
         // 写入用量记录（内部完成费用计算 + 配额累加）
@@ -264,7 +264,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
     {
         using var rawStreamClient = modelService.CreateClient(config);
         if (rawStreamClient == null)
-            throw new InvalidOperationException($"未找到服务商，模型 '{config.Code}' 关联的提供商类型 '{config.ProviderInfo?.Provider}' 未注册");
+            throw new InvalidOperationException(L.T("Provider not found: provider type '{1}' associated with model '{0}' is not registered", config.Code, config.ProviderInfo?.Provider));
 
         // 应用 IChatFilter 链
         var streamBuilder = rawStreamClient.AsBuilder();
@@ -303,7 +303,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
             // 重试耗尽，记录最后一次失败
             if (lastError != null)
                 _providerStatus?.RecordFailure(config.ProviderId);
-            throw new InvalidOperationException("上游服务限流，重试次数已耗尽");
+            throw new InvalidOperationException(L.T("Upstream service rate limited, retry attempts exhausted"));
         }
 
         UsageDetails? lastUsage = null;
