@@ -68,6 +68,10 @@ jobs:
             os: ubuntu-24.04-arm
             bin: AotSmoke
             tfm: net10.0
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+            bin: AotSmoke
+            tfm: net8.0
           - rid: osx-arm64
             os: macos-latest
             bin: AotSmoke
@@ -119,6 +123,10 @@ jobs:
           - rid: linux-arm64
             os: ubuntu-24.04-arm
             bin: AotWebSmoke
+            experimental: true
+          - rid: win-arm64
+            os: windows-11-arm
+            bin: AotWebSmoke.exe
             experimental: true
 
     steps:

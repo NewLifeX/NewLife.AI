@@ -33,11 +33,11 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 
 > 官方无 LA64 / RISC-V 的 runtime pack 与 NativeAOT 承诺，这两个 RID 只做"有产物才运行"的发布探索；主信号是同一份冒烟代码在该架构上的 JIT 行为一致性。
 
-冒烟工程同时以 `net8.0` 与 `net10.0` 两个目标框架构建：x64 门禁（win-x64 / linux-x64）两个框架各自原生发布运行，其余 RID 只跑 `net10.0` 以控制矩阵时长。
+冒烟工程同时以 `net8.0` 与 `net10.0` 两个目标框架构建：x64 与 arm64 门禁（win-x64 / linux-x64 / linux-arm64）双框架各自原生发布运行，其余 RID 只跑 `net10.0` 以控制矩阵时长。
 
 冒烟工程**不启用** `InvariantGlobalization`，因为要验证 31 种语言词表在原生发布件中真正生效；因此运行环境需要 ICU（Linux 安装 `libicu-dev`，`linux-musl` 容器装 `icu-libs`）。开启 invariant 的应用仍可正常运行，只是所有语言回退英文。
 
-`AotWebSmoke`（ASP.NET Core 宿主 + `NewLife.AI.Extensions`）另在 win-x64 / linux-x64 原生发布运行，5 项检查：Kestrel 监听、MCP `initialize` 握手、`tools/list` 反射枚举、`tools/call` 经 DI 解析工具实例、未知方法返回 JSON-RPC 错误。
+`AotWebSmoke`（ASP.NET Core 宿主 + `NewLife.AI.Extensions`）另在 win-x64 / linux-x64 原生发布运行（linux-arm64、win-arm64 为观察期），5 项检查：Kestrel 监听、MCP `initialize` 握手、`tools/list` 反射枚举、`tools/call` 经 DI 解析工具实例、未知方法返回 JSON-RPC 错误。
 
 冒烟覆盖 38 个场景：
 
@@ -135,7 +135,7 @@ dotnet publish AotWebSmoke\AotWebSmoke.csproj -c Release -r win-x64 -o AotWebSmo
 .\AotWebSmoke\bin\aot-out\AotWebSmoke.exe
 ```
 
-CI 工作流 `.github/workflows/aot.yml` 执行分析器检查与多 RID 矩阵，任一阻断门禁失败即失败。`net8.0` 与 `net10.0` 两个目标框架在 x64 门禁（win-x64 / linux-x64）各自原生发布运行，其余 RID 只跑 `net10.0` 控制矩阵时长。
+CI 工作流 `.github/workflows/aot.yml` 执行分析器检查与多 RID 矩阵，任一阻断门禁失败即失败。`net8.0` 与 `net10.0` 两个目标框架在 x64/arm64 门禁（win-x64 / linux-x64 / linux-arm64）各自原生发布运行，其余 RID 只跑 `net10.0` 控制矩阵时长。
 
 包消费侧另有 `check-package-consumer.ps1`：打包→临时项目仅用 `PackageReference` 断言服务商与词表→把 `PublishTrimmed` 写进应用项目正文后裁剪发布并运行，验证随包 `targets` 自动保根。
 
