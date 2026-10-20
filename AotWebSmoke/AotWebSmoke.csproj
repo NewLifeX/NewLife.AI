@@ -14,8 +14,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NewLife.AI.Extensions\NewLife.AI.Extensions.csproj" />
-    <!-- 服务商注册表通过程序集扫描发现 [AiClient] 类型，裁剪根保留整个 NewLife.AI 程序集 -->
-    <TrimmerRootAssembly Include="NewLife.AI" />
   </ItemGroup>
 
+  <!-- 项目引用不会导入包里的 buildTransitive targets，这里显式导入同一份文件（包消费场景自动生效） -->
+  <Import Project="..\NewLife.AI\buildTransitive\NewLife.AI.targets" />
+
 </Project>
+

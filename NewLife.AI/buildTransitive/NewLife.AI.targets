@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    NewLife.AI 裁剪/AOT 保根（buildTransitive：沿依赖链传递到最终应用）。
+
+    用 .targets 而不是 .props：包内的 props 在项目正文之前导入，此时项目里写的 <PublishAot>/<PublishTrimmed>
+    还没生效，条件判断会落空；targets 在项目正文之后导入，属性已就绪。
+
+    为什么要整程序集保根：内置服务商靠程序集扫描（[AiClient] 特性）发现、反射创建实例；协议报文与模型由
+    NewLife 序列化器按属性反射读写，裁剪只看静态引用，推断不出这些反射目标。实测不保根时，冒烟 35 场景里有
+    13 个 JSON 序列化/反序列化场景失败（如 "No parameterless constructor defined for type ..."）。
+    注：ILC 的 XML 描述符（descriptor / TrimmerRootDescriptor）对本库不生效（preserve="all" 仍被裁剪），
+    TrimmerRootAssembly 才是可靠手段。
+
+    应用执行 PublishTrimmed / PublishAot 时自动生效，无需手工添加 <TrimmerRootAssembly Include="NewLife.AI" />。
+    取消方式：应用项目中 <ItemGroup><TrimmerRootAssembly Remove="NewLife.AI" /></ItemGroup>
+  -->
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true' Or '$(PublishAot)' == 'true'">
+    <TrimmerRootAssembly Include="NewLife.AI" />
+  </ItemGroup>
+</Project>

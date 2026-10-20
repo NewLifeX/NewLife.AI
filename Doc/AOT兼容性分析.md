@@ -86,7 +86,8 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 | `ToolRegistry` | `AddTools<T>`/`GetToolMethods` 声明 `PublicMethods`；`AddToolsFromAssembly` 标记 `RequiresUnreferencedCode`；`Task<T>`/`ValueTask<T>` 反射读取 Result 处显式抑制并说明 |
 | `ToolSchemaBuilder` | 递归 Schema 构建声明 `PublicProperties`，参数类型图由调用方保留 |
 | `McpServer` / `McpToolManager` | 工具类型声明 `PublicMethods + PublicParameterlessConstructor + NonPublicConstructors`，`CreateInstance` 增加 `Activator` 非公构造回退；`Task<T>` 常用返回类型改模式匹配解包，避免 AOT 下反射读取 `Result` 失败；`IProgress<T>` 的 `MakeGenericType` 标注边界 |
-| `AotSmoke` | `TrimmerRootAssembly Include="NewLife.AI"`，保证内置服务商与工具类型在原生发布件中可被扫描 |
+| `AotSmoke` | 项目引用不会导入包内 targets，显式 `<Import Project="..\NewLife.AI\buildTransitive\NewLife.AI.targets" />`，验证的就是随包分发的那份保根配置 |
+| `NewLife.AI.targets`（随包） | `buildTransitive` 目标：`PublishTrimmed` / `PublishAot` 时自动把 `NewLife.AI` 加入 `TrimmerRootAssembly`，下游应用无需手工保根；用 `.targets` 而非 `.props`，因为包内 props 在项目正文之前导入、取不到项目里设置的 `PublishAot` |
 | `NewLife.AI.Extensions` | net8/net10 启用 `IsAotCompatible` + IL 告警 `WarningsAsErrors`；MCP 请求反序列化由 System.Text.Json 改走 `JsonHelper`（与 `HttpMcpServer`/`StdioMcpServer` 一致）；`MapMcp` 改为 `RequestDelegate` 重载注册端点（泛型 `Delegate` 重载带 `RequiresUnreferencedCode`/`RequiresDynamicCode`）；`AddMcp<T>` 与 `MapMcp<T>` 声明构造保留要求 |
 | `AotWebSmoke` | ASP.NET Core 宿主冒烟：Kestrel 起真服务跑 MCP `initialize` / `tools/list` / `tools/call` / 未知方法错误四条往返，验证路由、DI 与反序列化在原生发布件中可用 |
 
@@ -96,7 +97,7 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 
 | 能力 | 状态 | 说明 |
 |------|------|------|
-| 内置 46 家服务商注册 | ✅ | 依赖裁剪根保留 `NewLife.AI` 程序集；自定义服务商放在独立程序集时，用 `Register<T>()` 显式注册或对宿主程序集加裁剪根 |
+| 内置 46 家服务商注册 | ✅ | 由随包 `buildTransitive/NewLife.AI.targets` 在 `PublishTrimmed`/`PublishAot` 时自动保根；自定义服务商放在独立程序集时，用 `Register<T>()` 显式注册或对宿主程序集加裁剪根 |
 | `AddToolsFromAssembly` 程序集扫描 | ⚠️ | 标记 `RequiresUnreferencedCode`；AOT 下改用 `AddTools<T>()` / `AddTools(instance)` |
 | 内置计算器 `DataTable.Compute` | ✅ | win-x64 NativeAOT 实测可用；其他 RID 由冒烟矩阵验证，若不可用会转为错误信息，不影响其余工具 |
 | MCP 工具的 `IProgress<T>` 参数 | ⚠️ | 按运行期类型构造泛型实例，AOT 需保留对应泛型实参；冒烟不覆盖该路径 |
@@ -129,3 +130,11 @@ dotnet publish AotWebSmoke\AotWebSmoke.csproj -c Release -r win-x64 -o AotWebSmo
 ```
 
 CI 工作流 `.github/workflows/aot.yml` 执行分析器检查与多 RID 矩阵，任一阻断门禁失败即失败。`net8.0` 与 `net10.0` 两个目标框架在 x64 门禁（win-x64 / linux-x64）各自原生发布运行，其余 RID 只跑 `net10.0` 控制矩阵时长。
+
+包消费侧另有 `check-package-consumer.ps1`：打包→临时项目仅用 `PackageReference` 断言服务商与词表→把 `PublishTrimmed` 写进应用项目正文后裁剪发布并运行，验证随包 `targets` 自动保根。
+
+### 5.1 工程经验（踩过的坑）
+
+- **ILC 的 XML 描述符不生效**：`TrimmerRootDescriptor` + `<assembly preserve="all" />` 会被 ILC 接受（响应文件里有 `--descriptor:`），但成员仍被裁剪——冒烟当场出现 13 个 JSON 序列化场景失败（`No parameterless constructor defined for type ...`）。可靠手段是 `TrimmerRootAssembly`。
+- **保根必须整程序集**：只保留 9 个服务商类型时，协议报文/模型（`CompletionChoice`、`OllamaChatMessage`、工具 Schema 等）的构造器与属性被裁掉，同样 13 个场景失败。
+- **包内要用 `.targets` 不是 `.props`**：props 在项目正文之前导入，项目里写的 `<PublishAot>true</PublishAot>` 此时还没生效，条件判断落空；targets 在正文之后导入才是对的。

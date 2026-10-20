@@ -62,6 +62,10 @@
     <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
+    <!-- 裁剪/AOT 保根 targets：随包分发，下游 PublishTrimmed/PublishAot 时自动把 NewLife.AI 加入 TrimmerRootAssembly -->
+    <None Include="buildTransitive\NewLife.AI.targets" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Resources\CosyVoiceVoices.json" />
     <EmbeddedResource Include="Resources\QwenTtsVoices.json" />
   </ItemGroup>

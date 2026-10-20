@@ -1,18 +1,21 @@
 # NuGet 包消费级验证
 #
-# 验证"下游只加 PackageReference 就能用"，覆盖三件事：
-#   1. 打包 NewLife.AI，检查 nupkg 的目标框架资产、README 与图标齐全；
+# 验证"下游只加 PackageReference 就能用"，覆盖四件事：
+#   1. 打包 NewLife.AI，检查 nupkg 的目标框架资产、README、图标与 AOT 保根 targets 齐全；
 #   2. 新建临时项目仅用 PackageReference 引用刚打的包，断言服务商注册表可用；
-#   3. 断言包内自带的 31 种词表随包分发（瑞士语回退英文），且下游自带 Locales/*.yml 能自动挂载。
+#   3. 断言包内自带的 31 种词表随包分发（瑞士语回退英文），且下游自带 Locales/*.yml 能自动挂载；
+#   4. 裁剪发布（PublishTrimmed 写在应用项目正文里）后运行，验证包内 buildTransitive targets 自动保根、服务商与词表未被裁掉。
 #
 # 用法：
 #   pwsh -File check-package-consumer.ps1
-#   pwsh -File check-package-consumer.ps1 -Keep      # 保留临时目录便于排查
+#   pwsh -File check-package-consumer.ps1 -Keep        # 保留临时目录便于排查
+#   pwsh -File check-package-consumer.ps1 -SkipTrim    # 跳过裁剪发布（本机无对应 RID 工具链时）
 param(
     [String]$Configuration = "Release",
     [String]$Framework = "net10.0",
     [String]$Version,
-    [Switch]$Keep
+    [Switch]$Keep,
+    [Switch]$SkipTrim
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,7 +27,7 @@ $consumer = Join-Path $work "Consumer"
 if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
-Write-Host "1/4 打包 NewLife.AI ..."
+Write-Host "1/5 打包 NewLife.AI ..."
 # 每次用唯一版本号，避免 NuGet 全局缓存命中上一次同版本包导致验证的是旧包
 if (!$Version) { $Version = "1.0." + (Get-Date -Format "yyyy.MMdd") + "-beta" + (Get-Date -Format "HHmmss") }
 & dotnet pack (Join-Path $root "NewLife.AI\NewLife.AI.csproj") -c $Configuration -o $out -p:Version=$Version --nologo
@@ -35,7 +38,7 @@ if (!$package) { throw "未找到 NewLife.AI nupkg" }
 
 Write-Host "   包：$($package.Name)（版本 $Version）"
 
-Write-Host "2/4 检查 nupkg 内容 ..."
+Write-Host "2/5 检查 nupkg 内容 ..."
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [IO.Compression.ZipFile]::OpenRead($package.FullName)
 try {
@@ -47,7 +50,8 @@ try {
         "lib/net8.0/NewLife.AI.dll",
         "lib/net10.0/NewLife.AI.dll",
         "README.nuget.md",
-        "leaf.png"
+        "leaf.png",
+        "buildTransitive/NewLife.AI.targets"
     )
     foreach ($item in $required) {
         if ($entries -notcontains $item) { throw "nupkg 缺少 $item" }
@@ -66,7 +70,7 @@ finally {
     $zip.Dispose()
 }
 
-Write-Host "3/4 创建消费项目（仅 PackageReference）..."
+Write-Host "3/5 创建消费项目（仅 PackageReference）..."
 & dotnet new console -n Consumer -o $consumer -f $Framework --no-restore | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "创建临时项目失败" }
 
@@ -156,14 +160,43 @@ return 0;
 "@
 [IO.File]::WriteAllText((Join-Path $consumer "Program.cs"), $program, (New-Object System.Text.UTF8Encoding($false)))
 
-Write-Host "4/4 编译并运行消费项目 ..."
+Write-Host "4/5 编译并运行消费项目 ..."
 $output = & dotnet run --project $csproj -c $Configuration 2>&1
 $exit = $LASTEXITCODE
 $output | ForEach-Object { Write-Host "   $_" }
 if ($exit -ne 0) { throw "消费项目运行失败，退出码 $exit" }
 if (($output -join "`n") -notmatch "PASS") { throw "消费项目未输出 PASS" }
 
-Write-Host "通过：下游仅用 PackageReference 即可获得服务商与 31 种词表" -ForegroundColor Green
+if ($SkipTrim) {
+    Write-Host "5/5 已跳过裁剪发布验证（-SkipTrim）" -ForegroundColor Yellow
+}
+else {
+    Write-Host "5/5 裁剪发布并在裁剪产物上重跑（验证包内 targets 自动保根）..."
+    # 把 PublishTrimmed 写进消费项目正文：包内 props 在正文之前导入会取不到该属性，用 .targets 才可靠
+    $xml = [IO.File]::ReadAllText($csproj)
+    $xml = $xml.Replace('</Project>', "  <PropertyGroup>`r`n    <PublishTrimmed>true</PublishTrimmed>`r`n  </PropertyGroup>`r`n</Project>")
+    [IO.File]::WriteAllText($csproj, $xml, (New-Object System.Text.UTF8Encoding($false)))
+
+    $rid = [System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier
+    $trimOut = Join-Path $work "trimmed"
+    $trimArgs = @("publish", $csproj, "-c", $Configuration, "-r", $rid, "--self-contained", "true", "-o", $trimOut, "--nologo")
+    $trimLog = & dotnet @trimArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        $trimLog | Select-Object -Last 15 | ForEach-Object { Write-Host "   $_" }
+        throw "裁剪发布失败，退出码 $LASTEXITCODE"
+    }
+
+    $trimExe = Join-Path $trimOut $(if ($IsWindows) { "Consumer.exe" } else { "Consumer" })
+    if (!(Test-Path -LiteralPath $trimExe)) { throw "裁剪产物中未找到 $trimExe" }
+    $trimOutput = & $trimExe 2>&1
+    $trimExit = $LASTEXITCODE
+    $trimOutput | ForEach-Object { Write-Host "   $_" }
+    if ($trimExit -ne 0) { throw "裁剪产物运行失败，退出码 $trimExit（可能是包内 buildTransitive targets 未生效，服务商或词表被裁掉）" }
+    if (($trimOutput -join "`n") -notmatch "PASS") { throw "裁剪产物未输出 PASS" }
+    Write-Host "   裁剪产物校验通过（$rid）"
+}
+
+Write-Host "通过：下游仅用 PackageReference 即可获得服务商与 31 种词表，裁剪/AOT 发布自动保根" -ForegroundColor Green
 
 if (!$Keep) { Remove-Item -LiteralPath $work -Recurse -Force }
 else { Write-Host "临时目录已保留：$work" }
