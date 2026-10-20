@@ -27,8 +27,11 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 | linux-musl-x64 / linux-musl-arm64 | alpine 容器内原生发布 | 观察期 |
 | osx-x64 / osx-arm64 | 原生发布运行 | 观察期 |
 | win-x86 | 交叉发布后运行 | 观察期 |
-| linux-arm | QEMU 容器内 JIT 冒烟 | 观察期 |
-| linux-loongarch64 | QEMU + 龙芯 SDK，人工触发 | 观察期 |
+| linux-arm | QEMU 容器内 JIT 冒烟 + 交叉发布探索 | 观察期 |
+| linux-loongarch64 | QEMU + 龙芯 SDK：JIT 冒烟 + 原生发布探索，人工触发 | 观察期 |
+| linux-riscv64 | QEMU + 社区 SDK：JIT 冒烟 + 原生发布探索，人工触发 | 观察期 |
+
+> 官方无 LA64 / RISC-V 的 runtime pack 与 NativeAOT 承诺，这两个 RID 只做"有产物才运行"的发布探索；主信号是同一份冒烟代码在该架构上的 JIT 行为一致性。
 
 冒烟覆盖 33 个场景：
 

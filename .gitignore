@@ -39,3 +39,6 @@ TestResults
 /Benchmark/bench_output*.txt
 
 /Benchmark/bench_*.txt
+
+# 脚本临时目录（打包消费验证等）
+.tmp/

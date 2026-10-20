@@ -1,6 +1,7 @@
 name: test
 
-# 多 OS / 多架构单元测试矩阵：win-x64 / linux-x64 / linux-arm64 / osx-arm64。
+# 多 OS / 多架构单元测试矩阵：win-x64 / linux-x64 / linux-arm64 / osx-arm64 为阻断门禁，
+# win-arm64 与 osx-x64 为观察期（continue-on-error，稳定全绿后转阻断）。
 # 触发：push / pull_request / 手动（workflow_dispatch）。
 # linux-loongarch64（龙芯）无托管 runner，使用 QEMU 用户态仿真 + 龙芯 .NET SDK，见本文件末尾 job（人工触发）。
 # 需要外部 API Key 的集成测试通过 RequiresApiKeyFact 自动跳过，CI 无需配置密钥。
@@ -51,11 +52,17 @@ jobs:
     - name: Build backend
       run: dotnet build -c Release NewLife.AI.slnx
 
+    - name: Package consumer smoke
+      # 下游只加 PackageReference 的端到端验证，防止打包资产、服务商注册与词表分发回归
+      shell: pwsh
+      run: ./check-package-consumer.ps1
+
   # 后端单元测试：四类原生 runner 并行，失败自动重试一次以规避偶发网络抖动
   test:
     name: test (${{ matrix.rid }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +75,12 @@ jobs:
             os: ubuntu-24.04-arm
           - rid: osx-arm64
             os: macos-latest
+          - rid: win-arm64
+            os: windows-11-arm
+            experimental: true
+          - rid: osx-x64
+            os: macos-15-intel
+            experimental: true
 
     steps:
     - uses: actions/checkout@v4
