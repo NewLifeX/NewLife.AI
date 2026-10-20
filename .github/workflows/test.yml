@@ -49,6 +49,10 @@ jobs:
     - name: Build frontend
       run: pnpm --dir Web build
 
+    - name: Test frontend
+      # vitest 单测（当前 Web/src 下的 *.test.ts）
+      run: pnpm --dir Web test
+
     - name: Build backend
       run: dotnet build -c Release NewLife.AI.slnx
 
