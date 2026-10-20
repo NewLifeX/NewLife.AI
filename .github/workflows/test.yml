@@ -198,11 +198,15 @@ jobs:
 
     - name: Check English messages
       shell: pwsh
-      run: pwsh -File ./check-english-exceptions.ps1 -Dir NewLife.AI
+      run: |
+        pwsh -File ./check-english-exceptions.ps1 -Dir NewLife.AI
+        pwsh -File ./check-english-exceptions.ps1 -Dir NewLife.ChatAI
 
     - name: Check locales
       shell: pwsh
-      run: pwsh -File ./check-locales.ps1 -LocaleDir NewLife.AI/Locales -SourceDir NewLife.AI -RequireTranslated
+      run: |
+        pwsh -File ./check-locales.ps1 -LocaleDir NewLife.AI/Locales -SourceDir NewLife.AI -RequireTranslated
+        pwsh -File ./check-locales.ps1 -LocaleDir NewLife.ChatAI/Locales -SourceDir NewLife.ChatAI -SkipMessageCheck -SkipOrphan
 
     - name: Check README languages
       shell: pwsh
