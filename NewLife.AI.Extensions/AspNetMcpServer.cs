@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.ModelContextProtocol;
@@ -18,13 +17,6 @@ namespace NewLife.AI.Extensions;
 /// </remarks>
 public class AspNetMcpServer : McpServer
 {
-    /// <summary>MCP 请求反序列化选项。camelCase + 大小写不敏感，兼容规范字段 jsonrpc（全小写）</summary>
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerOptions.Default)
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
     #region 属性
     /// <summary>响应格式。Auto 按 Accept 头协商，Json 强制 JSON，Sse 强制 SSE</summary>
     public McpResponseFormat ResponseFormat { get; set; } = McpResponseFormat.Auto;
@@ -55,7 +47,7 @@ public class AspNetMcpServer : McpServer
         }
         if (!CheckAuth(context)) return;
 
-        var request = await JsonSerializer.DeserializeAsync<JsonRpcRequest>(context.Request.Body, _jsonOptions);
+        var request = await ReadRequestAsync(context);
         if (request == null)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -131,7 +123,7 @@ public class AspNetMcpServer : McpServer
         }
         if (!CheckAuth(context)) return;
 
-        var request = await JsonSerializer.DeserializeAsync<JsonRpcRequest>(context.Request.Body, _jsonOptions);
+        var request = await ReadRequestAsync(context);
         if (request == null)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -156,6 +148,17 @@ public class AspNetMcpServer : McpServer
     #endregion
 
     #region 辅助
+    /// <summary>读取并反序列化 JSON-RPC 请求。走 NewLife JsonHelper（与 HttpMcpServer/StdioMcpServer 一致，裁剪与 AOT 安全）</summary>
+    /// <param name="context">HTTP 上下文</param>
+    /// <returns>请求对象；请求体为空或解析失败时返回 null</returns>
+    private static async Task<JsonRpcRequest?> ReadRequestAsync(HttpContext context)
+    {
+        // leaveOpen：请求体由宿主管理，这里只读取不释放
+        using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, false, 1024, leaveOpen: true);
+        var json = await reader.ReadToEndAsync();
+        return json.IsNullOrEmpty() ? null : json.ToJsonEntity<JsonRpcRequest>();
+    }
+
     /// <summary>创建 MCP 上下文</summary>
     /// <param name="context">HTTP 上下文</param>
     /// <param name="serviceProvider">DI 服务提供者</param>

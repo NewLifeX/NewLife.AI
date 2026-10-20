@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -68,6 +68,6 @@ public class MindmapToolServiceTests
     {
         var service = NewService();
         var ex = Assert.Throws<ToolException>(() => service.ShowMindmap("标题", ""));
-        Assert.Contains("outline 不能为空", ex.ForUser);
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: outline cannot be empty"), ex.ForUser);
     }
 }

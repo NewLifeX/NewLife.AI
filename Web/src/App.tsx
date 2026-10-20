@@ -156,7 +156,7 @@ function ChatApp() {
         setActiveConversation(undefined)
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [conversationId, setActiveConversation])
 
   useEffect(() => {

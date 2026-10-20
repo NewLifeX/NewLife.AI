@@ -51,7 +51,7 @@ public class UsageService(IChatSetting chatSetting, ILog log)
         }
         catch (Exception ex)
         {
-            log?.Error("写入用量记录失败: {0}", ex.Message);
+            log?.Error("Failed to write the usage record: {0}", ex.Message);
             return null;
         }
     }

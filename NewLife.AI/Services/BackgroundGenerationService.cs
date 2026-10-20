@@ -164,7 +164,7 @@ public class BackgroundGenerationService(ILog log)
             }
 
             task.Status = BackgroundTaskStatus.Completed;
-            log?.Info("后台生成任务完成，消息 {0}，内容长度 {1}", task.MessageId, task.ContentBuilder.Length);
+            log?.Info("Background generation completed, message {0}, content length {1}", task.MessageId, task.ContentBuilder.Length);
         }
         catch (OperationCanceledException)
         {
@@ -174,7 +174,7 @@ public class BackgroundGenerationService(ILog log)
         {
             task.Status = BackgroundTaskStatus.Failed;
             task.Error = ex.Message;
-            log?.Error("后台生成任务失败，消息 {0}: {1}", task.MessageId, ex.Message);
+            log?.Error("Background generation failed, message {0}: {1}", task.MessageId, ex.Message);
         }
         finally
         {
@@ -207,7 +207,7 @@ public class BackgroundGenerationService(ILog log)
                 }
                 catch (Exception ex)
                 {
-                    log?.Error("后台生成回调失败: {0}", ex.Message);
+                    log?.Error("Background generation callback failed: {0}", ex.Message);
                 }
             }
         }

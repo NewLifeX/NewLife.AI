@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.ChatAI.Entity;
 using NewLife.Cube;
 using NewLife.Cube.ViewModels;
@@ -61,7 +61,7 @@ public class ProviderConfigController(ModelService modelService) : EntityControl
     public async Task<ActionResult> DiscoverModels()
     {
         var ids = SelectKeys;
-        if (ids == null || ids.Length == 0) return JsonRefresh("请先选择提供商！");
+        if (ids == null || ids.Length == 0) return JsonRefresh(Localization.Translate("Please select provider(s) first!"));
 
         var results = new List<String>();
         foreach (var id in ids)
@@ -76,11 +76,11 @@ public class ProviderConfigController(ModelService modelService) : EntityControl
             }
             catch (Exception ex)
             {
-                results.Add($"{config.Name} 发现失败：{ex.Message}");
+                results.Add(Localization.Translate("{0} discovery failed: {1}", config.Name, ex.Message));
             }
         }
 
-        return JsonRefresh(results.Count > 0 ? results.Join("；") : "未找到有效提供商");
+        return JsonRefresh(results.Count > 0 ? results.Join("; ") : Localization.Translate("No valid provider found"));
     }
 
     /// <summary>批量初始化模型。对选中的提供商执行模型初始化：设置未锁定模型的能力、价格、默认 Settings</summary>
@@ -89,7 +89,7 @@ public class ProviderConfigController(ModelService modelService) : EntityControl
     public async Task<ActionResult> InitModels()
     {
         var ids = SelectKeys;
-        if (ids == null || ids.Length == 0) return JsonRefresh("请先选择提供商！");
+        if (ids == null || ids.Length == 0) return JsonRefresh(Localization.Translate("Please select provider(s) first!"));
 
         var results = new List<String>();
         foreach (var id in ids)
@@ -104,7 +104,7 @@ public class ProviderConfigController(ModelService modelService) : EntityControl
             }
             catch (Exception ex)
             {
-                results.Add($"{config.Name} 初始化失败：{ex.Message}");
+                results.Add(Localization.Translate("{0} initialization failed: {1}", config.Name, ex.Message));
             }
         }
 

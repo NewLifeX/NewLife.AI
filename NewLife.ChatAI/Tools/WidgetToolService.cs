@@ -68,7 +68,7 @@ public class WidgetToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (content.IsNullOrEmpty())
-            throw new ToolException("参数错误：content 不能为空", "请提供 SVG 或 HTML 内容后重试，或直接回复用户说明无法渲染可视化组件。");
+            throw new ToolException("Invalid parameter: content cannot be empty", "Provide SVG or HTML content and try again, or reply to the user that the widget cannot be rendered.");
 
         // 部分模型在多轮工具调用场景下会对 content 做 HTML 实体编码（&lt;svg ...&gt;）
         // 检测到首字符为实体编码时，解码还原为原始标签，确保 kind 判定和安全校验正常工作
@@ -82,7 +82,7 @@ public class WidgetToolService(ILog log)
         // 尺寸校验：按 UTF-8 字节数（与浏览器解析、网络传输的实际成本对齐）
         var byteCount = System.Text.Encoding.UTF8.GetByteCount(content);
         if (byteCount > MaxWidgetBytes)
-            throw new ToolException($"content 超出 {MaxWidgetBytes / 1024} KB 限制（实际 {byteCount / 1024} KB）", $"请精简内容后重试，将长文本拆分到多张卡片，或直接回复用户。");
+            throw new ToolException(Localization.Translate("content exceeds the {0} KB limit (actual {1} KB)", MaxWidgetBytes / 1024, byteCount / 1024), "Trim the content and try again, split long text across multiple cards, or reply directly to the user.");
 
         // 远程脚本白名单校验：仅允许受信任 CDN 的 <script src=...>，其余域名一律拒绝（防供应链投毒）
         // 注意：必须在 HtmlDecode 之后执行，防止实体编码绕过白名单检测
@@ -91,7 +91,7 @@ public class WidgetToolService(ILog log)
             var src = m.Groups[1].Value;
             var isTrusted = Uri.TryCreate(src, UriKind.Absolute, out var uri) && _trustedCdnHosts.Contains(uri.Host);
             if (!isTrusted)
-                throw new ToolException($"禁止加载远程脚本 {src}", $"请移除不受信任的远程脚本后重试，改用内联脚本或受信任 CDN。");
+                throw new ToolException(Localization.Translate("Loading remote script {0} is forbidden", src), "Remove the untrusted remote script and try again with an inline script or a trusted CDN.");
         }
 
         // 类型判定：SVG 优先（去除首部空白后以 <svg 开头）
@@ -102,7 +102,7 @@ public class WidgetToolService(ILog log)
         var widgetId = context?.ToolCallId;
         if (widgetId.IsNullOrEmpty()) widgetId = $"widget_{Guid.NewGuid():N}";
 
-        log.Info("[Widget] 渲染 {0}：{1}，{2} 字节", kind, title, byteCount);
+        log.Info("[Widget] Rendering {0}: {1}, {2} bytes", kind, title, byteCount);
 
         var resultJson = new { widgetId, kind, title, code = content, loadingMessage, initialHeight, background, slideMode }.ToJson();
         return ToolResult.ForAudiences(resultJson, $"[已渲染Widget到客户端：{title}]");

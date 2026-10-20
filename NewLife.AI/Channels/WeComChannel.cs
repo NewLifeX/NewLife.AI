@@ -47,12 +47,12 @@ public class WeComChannel : IMessageChannel, ILogFeature
         try
         {
             var result = await client.InvokeAsync<String>("", payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("企业微信发送成功：{0}", result);
+            Log.Debug("WeCom message sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("企业微信发送失败：{0}", ex.Message);
+            Log.Error("WeCom send failed: {0}", ex.Message);
             return false;
         }
     }

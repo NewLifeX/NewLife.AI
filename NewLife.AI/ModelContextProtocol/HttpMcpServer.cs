@@ -184,7 +184,7 @@ public class HttpMcpServer : McpServer
         // A-35：Connection 在不同传输上下文可能为 null，判空避免 NRE
         if (context.Connection == null)
         {
-            XTrace.WriteLine("[HttpMcpServer] 连接为空，无法发送 MCP 响应");
+            XTrace.WriteLine("[HttpMcpServer] Connection is null; cannot send MCP response");
             return;
         }
 
@@ -208,7 +208,7 @@ public class HttpMcpServer : McpServer
         // A-35：Connection 在不同传输上下文可能为 null，判空避免 NRE
         if (context.Connection == null)
         {
-            XTrace.WriteLine("[HttpMcpServer] 连接为空，无法发送 MCP 响应");
+            XTrace.WriteLine("[HttpMcpServer] Connection is null; cannot send MCP response");
             return;
         }
 

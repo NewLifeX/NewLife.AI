@@ -138,18 +138,18 @@ public class CodingAgent
 
             if (plan.Tasks.Count > 0)
             {
-                WriteLog("规划完成，共 {0} 个任务:", plan.Tasks.Count);
+                WriteLog("Planning completed with {0} tasks:", plan.Tasks.Count);
                 foreach (var t in plan.Tasks)
                     WriteLog("  [{0}] {1}", t.Id, t.Description);
             }
             else
             {
-                WriteLog("规划完成：{0} 个任务", plan.Tasks.Count);
+                WriteLog("Planning completed: {0} tasks", plan.Tasks.Count);
             }
 
             if (plan.Tasks.Count == 0)
             {
-                Log?.Warn("规划阶段未产出任务，管道终止");
+                Log?.Warn("Planning produced no tasks; pipeline terminated");
                 return report;
             }
 
@@ -163,7 +163,7 @@ public class CodingAgent
         }
         catch (Exception ex)
         {
-            Log?.Error("管道执行异常: {0}", ex.Message);
+            Log?.Error("Pipeline execution error: {0}", ex.Message);
             report.Error = ex.Message;
         }
 
@@ -206,12 +206,12 @@ public class CodingAgent
             }
 
             // 工具规划未产出任务，尝试无工具纯文本降级
-            WriteLog("工具模式未产出任务，尝试纯文本规划……");
+            WriteLog("Tool mode produced no tasks; falling back to plain-text planning...");
             return await PlanFallbackAsync(requirement, cancellationToken);
         }
         catch (Exception ex)
         {
-            WriteLog("规划阶段异常，尝试降级: {0}", ex.Message);
+            WriteLog("Planning failed; falling back: {0}", ex.Message);
             return await PlanFallbackAsync(requirement, cancellationToken);
         }
     }
@@ -293,7 +293,7 @@ public class CodingAgent
             {
                 if (attempt > 0)
                 {
-                    WriteLog("编译修复第 {0} 次尝试……", attempt);
+                    WriteLog("Compile fix attempt {0}...", attempt);
                     messages.Add(new ChatMessage
                     {
                         Role = "user",
@@ -309,10 +309,10 @@ public class CodingAgent
             {
                 if (attempt >= MaxFixRetries)
                 {
-                    WriteLog("实现阶段失败（已达最大重试 {0} 次）: {1}", MaxFixRetries, ex.Message);
+                    WriteLog("Implementation failed after {0} attempts: {1}", MaxFixRetries, ex.Message);
                     return $"实现失败: {ex.Message}";
                 }
-                WriteLog("实现阶段异常，准备重试: {0}", ex.Message);
+                WriteLog("Implementation error; retrying: {0}", ex.Message);
             }
         }
 
@@ -351,7 +351,7 @@ public class CodingAgent
         }
         catch (Exception ex)
         {
-            WriteLog("审查阶段失败: {0}", ex.Message);
+            WriteLog("Review failed: {0}", ex.Message);
             return new ReviewResult { Passed = false, Summary = $"审查异常: {ex.Message}" };
         }
     }
@@ -367,7 +367,7 @@ public class CodingAgent
         // Analysis 任务不应进入修复流程，防御性检查
         if (task?.TaskType == CodingTaskType.Analysis)
         {
-            WriteLog("Analysis 任务不应进入修复流程，跳过");
+            WriteLog("Analysis tasks must not enter the fix flow; skipped");
             return code;
         }
 
@@ -389,7 +389,7 @@ public class CodingAgent
         }
         catch (Exception ex)
         {
-            WriteLog("修复失败: {0}", ex.Message);
+            WriteLog("Fix failed: {0}", ex.Message);
             return $"修复失败: {ex.Message}";
         }
     }
@@ -447,12 +447,12 @@ public class CodingAgent
             {
                 taskResult.Passed = true;
                 task.Status = CodingTaskStatus.Completed;
-                WriteLog("分析任务 [{0}] 完成", task.Id);
+                WriteLog("Analysis task [{0}] completed", task.Id);
                 // 输出分析结果预览（截取前500字）
                 if (!String.IsNullOrEmpty(code))
                 {
                     var preview = code.Length > 500 ? code[..500] + "..." : code;
-                    WriteLog("分析结果:\n{0}", preview);
+                    WriteLog("Analysis result:\n{0}", preview);
                 }
                 return taskResult;
             }
@@ -465,7 +465,7 @@ public class CodingAgent
             while (!review.Passed && reviewRetries < MaxReviewRetries)
             {
                 reviewRetries++;
-                WriteLog("审查不通过，第 {0} 次修复……", reviewRetries);
+                WriteLog("Review rejected; fix attempt {0}...", reviewRetries);
                 code = await FixAsync(code, review.Issues, task, cancellationToken);
                 review = await ReviewAsync(code, task, cancellationToken);
             }
@@ -474,13 +474,13 @@ public class CodingAgent
             taskResult.Passed = review.Passed;
             task.Status = review.Passed ? CodingTaskStatus.Completed : CodingTaskStatus.Failed;
 
-            WriteLog(review.Passed ? "任务 [{0}] 通过审查" : "任务 [{0}] 未通过审查", task.Id);
+            WriteLog(review.Passed ? "Task [{0}] passed review" : "Task [{0}] failed review", task.Id);
         }
         catch (Exception ex)
         {
             task.Status = CodingTaskStatus.Failed;
             taskResult.Error = ex.Message;
-            WriteLog("任务 [{0}] 执行异常: {1}", task.Id, ex.Message);
+            WriteLog("Task [{0}] execution error: {1}", task.Id, ex.Message);
         }
 
         return taskResult;

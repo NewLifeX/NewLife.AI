@@ -139,7 +139,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 // 入口首次即超预算（尚未产生任何响应）：直接 break 会返回 null，下游 ChatResponse.From(null)
                 // 读取 response.Id 抛 NRE——抛类型化异常，上层经 ChatErrorHelper 映射为 CONTEXT_TOO_LONG 友好错误
                 if (response == null)
-                    throw new ContextLengthExceededException(400, "输入内容已超出模型上下文窗口预算，无法发起工具调用");
+                    throw new ContextLengthExceededException(400, "Input exceeds the model context window budget; tool calls cannot be started");
                 break;
             }
             if (span != null) span.Value++;
@@ -167,7 +167,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (HasClientToolCalls(toolCalls, toolMap, providerToolNames))
             {
                 StopReason = ToolLoopStopReason.Passthrough;
-                WriteLog("本轮含客户端工具调用，整轮透传：{0}", toolNames);
+                WriteLog("This turn contains client-side tool calls; passing through: {0}", toolNames);
                 break;
             }
 
@@ -232,7 +232,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (++iterations >= maxIterations)
             {
                 StopReason = ToolLoopStopReason.MaxIterations;
-                WriteLog("工具调用轮次已达上限 {0}，中断工具调用循环", maxIterations);
+                WriteLog("Tool call rounds reached the limit of {0}; aborting the tool loop", maxIterations);
                 break;
             }
         }
@@ -246,7 +246,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 若仍无法降到预算内则放弃兜底（CheckContextLimit 已置 ContextLimit 终止原因）
             && !CheckContextLimit(workMessages, toolsTokens, request))
         {
-            WriteLog("最终回复内容为空，追加提示后强制产出最终回答");
+            WriteLog("Final reply was empty; appended a prompt to force a final answer");
             workMessages.Add(new ChatMessage
             {
                 Role = "user",
@@ -316,7 +316,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (iteration >= maxIterations)
             {
                 StopReason = ToolLoopStopReason.MaxIterations;
-                WriteLog("工具调用轮次已达上限 {0}，中断工具调用循环", maxIterations);
+                WriteLog("Tool call rounds reached the limit of {0}; aborting the tool loop", maxIterations);
                 break;
             }
 
@@ -437,7 +437,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 contentSb.Return();
                 reasoningSb.Return();
                 StopReason = ToolLoopStopReason.Passthrough;
-                WriteLog("本轮含客户端工具调用，整轮透传：{0}", toolNames);
+                WriteLog("This turn contains client-side tool calls; passing through: {0}", toolNames);
                 foreach (var tc in toolCalls)
                 {
                     if (tc.Function == null) continue;
@@ -612,7 +612,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (toolResult.IsError && !_failedKeys.ContainsKey(key))
         {
             var reason = GetUserContent(toolResult) ?? GetLlmContent(toolResult, name);
-            _failedKeys[key] = TruncateSummary(reason) ?? "未知错误";
+            _failedKeys[key] = TruncateSummary(reason) ?? "Unknown error";
         }
 
         toolResults[name] = toolResult;
@@ -691,12 +691,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 _ = task.ContinueWith(t =>
                 {
                     if (t.IsFaulted)
-                        WriteLog("工具循环迭代回调异常：{0}", t.Exception?.GetBaseException().Message ?? "");
+                        WriteLog("Tool loop iteration callback failed: {0}", t.Exception?.GetBaseException().Message ?? "");
                 }, TaskScheduler.Default);
         }
         catch (Exception ex)
         {
-            WriteLog("工具循环迭代回调异常：{0}", ex.Message);
+            WriteLog("Tool loop iteration callback failed: {0}", ex.Message);
         }
     }
 
@@ -719,14 +719,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             if (sessionDedupKeys.Contains(key))
             {
-                WriteLog("跳过跨轮次重复工具调用 {0}（已在上一轮执行过）", toolName);
+                WriteLog("Skipped duplicate tool call {0} from a previous round", toolName);
                 return BuildDedupResult(toolName, "跨轮次重复调用，已跳过执行");
             }
         }
 
         if (!dedupKeys.Add(key))
         {
-            WriteLog("跳过同轮重复工具调用 {0}（同名同参）", toolName);
+            WriteLog("Skipped duplicate tool call {0} in the same round (same name and arguments)", toolName);
             return BuildDedupResult(toolName, "调用与前序重复，已跳过执行");
         }
 
@@ -822,7 +822,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             // 折叠后重新计量；仍超硬预算则继续走下方截断（单组超大结果等场景）
             estimated = TokenEstimator.EstimateTokens(workMessages) + toolsTokens;
-            WriteLog("上下文接近预算（估算 {0:N0} tokens，预算 {1:N0}），已折叠早期工具调用步骤，继续循环", estimated, maxInput);
+            WriteLog("Context is near budget (estimated {0:N0} tokens, budget {1:N0}); collapsed earlier tool steps and continuing", estimated, maxInput);
         }
 
         // ② 未超硬预算则无需截断/中断
@@ -831,12 +831,12 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         // ③ 超硬预算：先尝试截断消息内容（只截不删，保持 assistant-tool 配对完整），截到预算内则继续循环
         if (TokenEstimator.TryTruncateToBudget(workMessages, maxInput - toolsTokens))
         {
-            WriteLog("上下文预算已接近 {0:N0} tokens（估算 {1:N0}），已截断工具结果内容，继续工具调用循环", maxInput, estimated);
+            WriteLog("Context budget is near {0:N0} tokens (estimated {1:N0}); truncated tool results and continuing the tool loop", maxInput, estimated);
             return false;
         }
 
         StopReason = ToolLoopStopReason.ContextLimit;
-        WriteLog("上下文预算已达到 {0:N0} tokens（当前估算 {1:N0}），且无法进一步降级，中断工具调用循环", maxInput, estimated);
+        WriteLog("Context budget reached {0:N0} tokens (estimated {1:N0}) and cannot be reduced further; aborting the tool loop", maxInput, estimated);
         return true;
     }
 
@@ -1104,7 +1104,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         {
             span?.SetError(ex, null);
             // 记录完整异常（含堆栈），否则 EXECUTION_ERROR 仅回传 ex.Message，生产事故无法定位根因
-            WriteLog("工具 {0} 执行异常：{1}", toolName, ex);
+            WriteLog("Tool {0} execution error: {1}", toolName, ex);
             if (ex is OperationCanceledException) throw;
 
             // 目录调用（AI 未拿到 schema 就猜参数）：返回 INVALID_ARGUMENTS + schema hint，引导模型修正
@@ -1282,7 +1282,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 if (!name.IsNullOrEmpty() && !toolMap.ContainsKey(name) && providerNames.TryGetValue(name, out var owner))
                     toolMap[name] = owner;
                 else if (!name.IsNullOrEmpty() && !providerNames.ContainsKey(name))
-                    WriteLog("options.Tools 中工具 {0} 无对应 Provider 路由，将由客户端透传执行", name);
+                    WriteLog("Tool {0} in options.Tools has no provider route; it will be passed through to the client", name);
                 tools.Add(t);
             }
         }

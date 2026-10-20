@@ -171,7 +171,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     public virtual async Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
-            throw new ArgumentException("消息列表不能为空", nameof(request));
+            throw new ArgumentException(Localization.Translate("Message list cannot be empty"), nameof(request));
 
         request.Stream = false;
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
@@ -217,7 +217,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     public virtual async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
-            throw new ArgumentException("消息列表不能为空", nameof(request));
+            throw new ArgumentException(Localization.Translate("Message list cannot be empty"), nameof(request));
 
         request.Stream = true;
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
@@ -351,7 +351,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     protected void LogParseChunkError(String data, Exception ex)
     {
         var txt = data.Length > 200 ? data[..200] + "..." : data;
-        Log.Warn("[{0}] 解析流式块失败，已跳过: {1}\r\n块内容: {2}", Name, ex.Message, txt);
+        Log.Warn("[{0}] Failed to parse stream chunk; skipped: {1}\r\nChunk: {2}", Name, ex.Message, txt);
 
         // 埋点标记异常，供星尘监控统计流式块解析失败（协议漂移 / 服务商格式变化）
         using var span = Tracer?.NewSpan($"ai:ParseChunkError:{Name}", txt);
@@ -600,7 +600,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             catch (Exception ex) when (ShouldRetry(ex, i, retry, cancellationToken))
             {
                 var delay = GetRetryDelay(options, i);
-                Log.Warn("[{0}] 请求失败，第 {1} 次重试（共 {2} 次），等待 {3}ms: {4}", Name, i + 1, retry, delay, ex.Message);
+                Log.Warn("[{0}] Request failed; retry {1}/{2} in {3}ms: {4}", Name, i + 1, retry, delay, ex.Message);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -661,7 +661,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
             catch (Exception ex) when (ShouldRetry(ex, i, retry, cancellationToken))
             {
                 var delay = GetRetryDelay(options, i);
-                Log.Warn("[{0}] 流式请求失败，第 {1} 次重试（共 {2} 次），等待 {3}ms: {4}", Name, i + 1, retry, delay, ex.Message);
+                Log.Warn("[{0}] Streaming request failed; retry {1}/{2} in {3}ms: {4}", Name, i + 1, retry, delay, ex.Message);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }

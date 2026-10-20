@@ -1,4 +1,4 @@
-﻿using NewLife.Caching;
+using NewLife.Caching;
 using NewLife.Log;
 using XCode;
 using XCode.DataAccessLayer;
@@ -44,7 +44,7 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
             var kw = part.Trim();
             if (!kw.IsNullOrEmpty()) kwList.Add(kw);
         }
-        if (kwList.Count == 0) throw new ArgumentException(L.T("Keyword cannot be empty"), nameof(keywords));
+        if (kwList.Count == 0) throw new ArgumentException(Localization.Translate("keywords cannot be empty"), nameof(keywords));
 
         // 获取所有连接的表（DAL 表 + 实体表合并，实体表优先）
         // 连接枚举：DAL.ConnStrs ∪ 启用的 DbAccessConfig（支持运行时动态连接，动态连接串先注册再扫描）
@@ -118,7 +118,7 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
                 }
                 catch (Exception ex)
                 {
-                    Log.Warn("[SearchTables] 连接 [{0}] 动态注册失败: {1}", cn, ex.Message);
+                    Log.Warn("[SearchTables] Dynamic registration of connection [{0}] failed: {1}", cn, ex.Message);
                     continue;
                 }
             }
@@ -151,7 +151,7 @@ public class DbSchemaService(ICacheProvider cacheProvider, ILog log)
         catch (Exception ex)
         {
             failures?.Add($"连接 [{connName}] 表结构获取失败: {ex.Message}");
-            Log.Warn("[SearchTables] 获取连接 [{0}] 表结构失败: {1}", connName, ex.Message);
+            Log.Warn("[SearchTables] Failed to read the schema of connection [{0}]: {1}", connName, ex.Message);
         }
     }
 

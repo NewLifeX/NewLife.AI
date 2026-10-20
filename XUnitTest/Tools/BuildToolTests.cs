@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -88,7 +88,7 @@ public class BuildToolTests
         registry.AddTools(new BuildExcelToolService(XTrace.Log));
 
         var ex = await Assert.ThrowsAsync<ToolException>(() => registry.InvokeAsync("build_excel", """{"title":"报表"}"""));
-        Assert.Contains("sheets 不能为空", ex.ForUser);
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: sheets cannot be empty"), ex.ForUser);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class BuildToolTests
         registry.AddTools(new BuildDocToolService(XTrace.Log));
 
         var ex = await Assert.ThrowsAsync<ToolException>(() => registry.InvokeAsync("build_doc", """{"title":"文档"}"""));
-        Assert.Contains("sections 不能为空", ex.ForUser);
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: sections cannot be empty"), ex.ForUser);
     }
 
     [Fact]
@@ -110,6 +110,7 @@ public class BuildToolTests
         registry.AddTools(new BuildPptToolService(XTrace.Log));
 
         var ex = await Assert.ThrowsAsync<ToolException>(() => registry.InvokeAsync("build_ppt", """{"title":"汇报"}"""));
-        Assert.Contains("slides 与 widgetSrc 必须提供其一", ex.ForUser);
+        // ForUser 在构造时按当前语言翻译，断言用同一入口，避免依赖运行机器的默认区域性
+        Assert.Contains(NewLife.Localization.Translate("Invalid parameter: either slides or widgetSrc must be provided"), ex.ForUser);
     }
 }

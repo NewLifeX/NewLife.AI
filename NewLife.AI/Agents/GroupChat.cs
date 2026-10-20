@@ -22,7 +22,7 @@ public sealed class RoundRobinSelector : IGroupChatSelector
     /// <param name="cancellationToken">取消令牌</param>
     public Task<IAgent> SelectNextAsync(IList<IAgent> agents, IList<AgentMessage> history, CancellationToken cancellationToken = default)
     {
-        if (agents == null || agents.Count == 0) throw new ArgumentException("代理列表不能为空", nameof(agents));
+        if (agents == null || agents.Count == 0) throw new ArgumentException(Localization.Translate("Agent list cannot be empty"), nameof(agents));
 
         // 原子操作确保多线程安全，& 0x7FFFFFFF 防止溢出为负索引
         var next = (Interlocked.Increment(ref _index) & 0x7FFFFFFF) % agents.Count;
@@ -65,7 +65,7 @@ public sealed class GroupChat
     /// <param name="maxRounds">最大轮次</param>
     public GroupChat(IList<IAgent> agents, IGroupChatSelector? selector = null, Int32 maxRounds = 20)
     {
-        if (agents == null || agents.Count == 0) throw new ArgumentException("代理列表不能为空", nameof(agents));
+        if (agents == null || agents.Count == 0) throw new ArgumentException(Localization.Translate("Agent list cannot be empty"), nameof(agents));
 
         Agents = agents;
         Selector = selector ?? new RoundRobinSelector();

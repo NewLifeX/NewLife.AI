@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>AotSmoke</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <!-- 不启用 InvariantGlobalization：冒烟要验证 31 种语言词表在原生发布件中真正生效（需要 ICU） -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewLife.AI\NewLife.AI.csproj" />
+  </ItemGroup>
+
+  <!-- 项目引用不会导入包里的 buildTransitive targets，这里显式导入同一份文件，
+       保证验证的就是随包分发的那份保根配置（包消费场景自动生效） -->
+  <Import Project="..\NewLife.AI\buildTransitive\NewLife.AI.targets" />
+
+</Project>
+

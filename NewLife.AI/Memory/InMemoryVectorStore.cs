@@ -52,7 +52,7 @@ public sealed class InMemoryVectorStoreCollection(String name) : IVectorStoreCol
     public Task UpsertAsync(VectorRecord record, CancellationToken cancellationToken = default)
     {
         if (record == null) throw new ArgumentNullException(nameof(record));
-        if (String.IsNullOrEmpty(record.Id)) throw new ArgumentException("VectorRecord.Id 不能为空", nameof(record));
+        if (String.IsNullOrEmpty(record.Id)) throw new ArgumentException(Localization.Translate("VectorRecord.Id cannot be empty"), nameof(record));
 
         _records[record.Id] = record;
 

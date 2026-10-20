@@ -58,7 +58,7 @@ public class StdioMcpServer : McpServer
             }
             catch (Exception ex)
             {
-                WriteLog("MCP stdio 处理 {0} 失败：{1}", request.Method, ex.Message);
+                WriteLog("MCP stdio failed to process {0}: {1}", request.Method, ex.Message);
             }
         }
         Running = false;

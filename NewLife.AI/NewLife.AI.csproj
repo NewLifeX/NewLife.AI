@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net45;netstandard2.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net45;netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
     <AssemblyTitle>统一 AI 网关基础库</AssemblyTitle>
-    <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 33 个服务商，提供函数调用、图像生成、MCP 工具调用等能力</Description>
+    <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 46 个服务商，提供函数调用、图像生成、MCP 工具调用等能力；NativeAOT 就绪，内置 31 种运行时语言</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
     <VersionPrefix>1.6</VersionPrefix>
@@ -20,6 +20,12 @@
     <AssemblyOriginatorKeyFile>..\Doc\newlife.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- 裁剪/AOT 分析器告警一律阻断，防止新增反射路径悄悄回归 -->
+    <WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2067;IL2070;IL2072;IL2075;IL2091;IL3050</WarningsAsErrors>
+  </PropertyGroup>
+
   <PropertyGroup>
     <PackageId>$(AssemblyName)</PackageId>
     <Authors>$(Company)</Authors>
@@ -34,7 +40,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PackageReadmeFile>README.nuget.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -49,18 +55,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="12.0.2026.1019-beta1502" />
+    <PackageReference Include="NewLife.Core" Version="12.0.2026.1020-beta1352" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
+    <!-- 裁剪/AOT 保根 targets：随包分发，下游 PublishTrimmed/PublishAot 时自动把 NewLife.AI 加入 TrimmerRootAssembly -->
+    <None Include="buildTransitive\NewLife.AI.targets" Pack="true" PackagePath="buildTransitive\" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Resources\CosyVoiceVoices.json" />
     <EmbeddedResource Include="Resources\QwenTtsVoices.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Readme.MD">
+    <None Include="..\README.nuget.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

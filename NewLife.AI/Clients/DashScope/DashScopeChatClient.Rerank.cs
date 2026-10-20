@@ -57,7 +57,7 @@ public partial class DashScopeChatClient
     private static RerankResponse ParseRerankResponse(String json)
     {
         var dic = JsonParser.Decode(json);
-        if (dic == null) throw new InvalidOperationException("无法解析重排序响应");
+        if (dic == null) throw new InvalidOperationException(Localization.Translate("Unable to parse rerank response"));
 
         var resp = new RerankResponse { RequestId = dic["request_id"] as String };
 

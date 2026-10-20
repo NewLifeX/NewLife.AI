@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NewLife;
 using NewLife.AI.ModelContextProtocol;
 using NewLife.Log;
 using NewLife.Remoting;
@@ -94,7 +95,7 @@ public class McpServerTests
         // Act & Assert
         var ex = Assert.Throws<ApiException>(() => server.Process(null!, context));
         Assert.Equal(McpErrorCode.InvalidRequest, ex.Code);
-        Assert.Equal("异常请求！", ex.Message);
+        Assert.Equal(NewLife.Localization.Translate("Invalid request!"), ex.Message);
     }
 
     [Fact]
@@ -117,7 +118,7 @@ public class McpServerTests
         var error = response.Error as JsonRpcError;
         Assert.NotNull(error);
         Assert.Equal(McpErrorCode.MethodNotFound, error.Code);
-        Assert.Contains("not found in MCP server capabilities", error.Message);
+        Assert.Contains(NewLife.Localization.Translate("Method '{0}' not found in MCP server capabilities.", "unknown_method"), error.Message);
     }
 
     [Fact]

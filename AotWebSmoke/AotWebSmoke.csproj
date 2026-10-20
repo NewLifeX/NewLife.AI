@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>AotWebSmoke</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Web SDK 默认按 IIS 托管准备 web.config，AOT 冒烟只跑 Kestrel -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewLife.AI.Extensions\NewLife.AI.Extensions.csproj" />
+  </ItemGroup>
+
+  <!-- 项目引用不会导入包里的 buildTransitive targets，这里显式导入同一份文件（包消费场景自动生效） -->
+  <Import Project="..\NewLife.AI\buildTransitive\NewLife.AI.targets" />
+
+</Project>
+

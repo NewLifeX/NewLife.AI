@@ -1,89 +1,89 @@
 # NewLife.AI
 
-<p align="center">
-  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/v/NewLife.AI.svg" alt="NuGet"></a>
-  <a href="https://www.nuget.org/packages/NewLife.AI"><img src="https://img.shields.io/nuget/dt/NewLife.AI.svg" alt="Downloads"></a>
-  <img src="https://img.shields.io/badge/.NET-netstandard2.1%20%7C%20net8.0%20%7C%20net10.0-blue" alt=".NET">
-  <a href="https://github.com/NewLifeX/NewLife.AI/blob/main/LICENSE"><img src="https://img.shields.io/github/license/NewLifeX/NewLife.AI.svg" alt="License"></a>
-</p>
+![GitHub License](https://img.shields.io/github/license/NewLifeX/NewLife.AI?logo=github)
+![NuGet Downloads](https://img.shields.io/nuget/dt/NewLife.AI?logo=nuget)
+![NuGet](https://img.shields.io/nuget/v/NewLife.AI?logo=nuget)
+![NuGet prerelease](https://img.shields.io/nuget/vpre/NewLife.AI?label=dev%20nuget&logo=nuget)
+[![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
+[![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
+<!-- metrics:start -->
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-38%2F38-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
+[![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
+[![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](Doc/多语言本地化.md)
+<!-- metrics:end -->
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-blue)
+![arch](https://img.shields.io/badge/arch-x64%20%7C%20x86%20%7C%20arm64%20%7C%20arm%20%7C%20loongarch64%20%7C%20riscv64%20%7C%20s390x-orange)
+[![contributors](https://img.shields.io/github/contributors/NewLifeX/NewLife.AI?logo=github)](https://github.com/NewLifeX/NewLife.AI/graphs/contributors)
 
-<p align="center">
-  <a href="README.en.md">English</a> |
-  <b>简体中文</b> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.pt.md">Português</a>
-</p>
+<!-- lang:start -->
+🌐 [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Português](README.pt.md) | [Русский](README.ru.md) | [한국어](README.ko.md) | [العربية](README.ar.md)
+<!-- lang:end -->
 
-## 项目介绍
 
-**NewLife.AI** 是面向 .NET 生态的**开源 AI 基础库**，通过统一的 `IChatClient` 接口封装 **46 个主流大模型服务商**，内置函数调用、MCP 协议、流式输出、多模态、多智能体等能力，可作为 NuGet 包嵌入任意 .NET 项目（`net45 / netstandard2.1`）。
+## Introduction
 
-**NewLife.ChatAI** 是构建于 NewLife.AI 之上的**完整 Web 对话应用**（ASP.NET Core），提供即开即用的多模型对话前端、统一 AI 网关与自动记忆进化，既可独立部署，也可通过 NuGet 嵌入已有 ASP.NET Core 项目。
+**NewLife.AI** is an open-source AI foundation library for the .NET ecosystem, providing a unified `IChatClient` interface that wraps **46 mainstream LLM providers**. It features built-in function calling, MCP protocol, streaming output, multimodal support, multi-agent capabilities, and can be embedded as a NuGet package in any .NET project (`net45 → net10.0`, NativeAOT ready).
 
-| 产品/工程 | 定位 | 说明 |
-|-----------|------|------|
-| `NewLife.AI` | 开源核心 AI 基础设施 | 统一接入主流模型服务商，覆盖底层 AI 能力 |
-| `NewLife.ChatAI` | 开源标准 Web 对话系统 | 本仓库 —— 标准对话应用与 AI 网关 |
+The library ships **31 runtime languages** (English source with automatic fallback) and targets Windows, Linux, macOS, Android and iOS across x64 / x86 / arm64 / arm / loongarch64 / riscv64 / s390x.
+
+**NewLife.ChatAI** is a complete web chat application built on NewLife.AI (ASP.NET Core), offering an out-of-the-box multi-model chat frontend, a unified AI gateway, and automatic memory evolution. It can be deployed standalone or embedded into existing ASP.NET Core projects via NuGet.
 
 ---
 
-## 核心特性
+## Core Features
 
-- **46 家 AI 服务商，6 种协议**：OpenAI / Anthropic / Gemini / 通义 DashScope / Ollama / AWS Bedrock，一行代码任意切换
-- **统一 `IChatClient` 接口**：对齐 MEAI 规范，单轮、流式、函数调用、多模态全部统一 API
-- **函数调用（工具）**：`[ToolDescription]` 特性自动生成 JSON Schema，`ToolChatClient` 多轮循环，内置搜索 / 天气 / 翻译 / 网页抓取 / IP 定位等工具
-- **MCP 双向支持**：客户端对接外部 MCP Server（stdio / HTTP SSE），服务端将本系统工具暴露为标准 MCP 服务
-- **完整对话内核**：`IChatHandler` 三段式处理链（OnBefore → Execute → OnAfter），内置 Handler（技能激活 / 记忆注入 / 持久化 / 用量统计 / 标题生成），可插拔 `IChatFilter`
-- **用户记忆进化**：自动从对话中提取 10 类结构化记忆，越用越懂用户
-- **统一 AI 网关**：兼容 OpenAI / Anthropic / Gemini / Ollama 协议，snake_case/camelCase 自动适配，AppKey 多租户，上游 429 指数退避重试
-- **技能系统**：Markdown 提示词复用，`@` 递归引用，触发词自动激活
-- **多智能体与规划器**：`ConversableAgent` / `GroupChat` / `ParallelGroupChat` / `FunctionCallingPlanner` / 反思修正
-- **React 19 Web 前端**：SSE 流式 + 对话预设 + 工具调用可视化 + 推理展示 + 多模态输入（图片/文档）
-- **嵌入/向量检索**：内置 HashTextEmbedder v2 与向量存储，支持语义搜索
-- **全局系统指令**：全局系统指令统一注入所有对话行为约束
-- **工具调用增强**：ToolCallContext 上下文透传、结构化错误返回、工具渐进式发现
-- **编程智能体 CodingAgent**：支持分析/只读与代码修改任务分流执行，自动选择最优工具链
-- **人机决策检查点**：人类可在 AI 多路径中实时选择，支持多问题组模式的决策检查与人工干预
-- **IM 多渠道接入**：内置 11 个 IM 渠道（企业微信/公众号/微信客服/QQ/Discord/钉钉/飞书/Telegram/Slack 等），支持多渠道对话接入
-- **Docker 部署**：支持 ChatAI 一键 Docker 部署
+- **NativeAOT Ready**: `IsAotCompatible` on net8.0/net10.0, 38-scenario NativeAOT smoke matrix across Windows / Linux / macOS and x64 / arm64 / loongarch64
+- **31 Runtime Languages**: English source messages with compiled locale tables; missing translations fall back to English, no code changes needed for new languages
+- **46 AI Providers, 6 Protocols**: OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — switch with a single line of code
+- **Unified `IChatClient` Interface**: Aligned with MEAI specification — single-turn, streaming, function calling, multimodal all via a single API
+- **Function Calling (Tools)**: `[ToolDescription]` attribute auto-generates JSON Schema; `ToolChatClient` multi-turn loop; built-in search / weather / translation / web scraping / IP geolocation tools
+- **Bidirectional MCP Support**: Client connects to external MCP Servers (stdio / HTTP SSE); Server exposes local tools as standard MCP services
+- **Complete Chat Kernel**: `IChatHandler` three-stage pipeline (OnBefore → Execute → OnAfter), built-in handlers (skill activation / memory injection / persistence / usage tracking / title generation), pluggable `IChatFilter`
+- **User Memory Evolution**: Automatically extracts 10 categories of structured memories from conversations — the more you chat, the better it understands you
+- **Unified AI Gateway**: Compatible with OpenAI / Anthropic / Gemini protocols; snake_case/camelCase auto-adaptation; AppKey multi-tenancy; upstream 429 exponential backoff retry
+- **Skill System**: Markdown prompt reuse, `@` recursive references, trigger-word auto-activation
+- **Multi-Agent**: `ConversableAgent` / `GroupChat` / `ParallelGroupChat` / `FunctionCallingPlanner`
+- **React 19 Web Frontend**: SSE streaming + chat presets + Artifact real-time preview (HTML/SVG/Mermaid) + conversation branching + tool call visualization + reasoning timing + multimodal
+- **Knowledge Evolution Layer**: Automatically distills knowledge from conversations, builds a searchable knowledge base with TOC browsing and vector semantic search
+- **TTS Speech Synthesis**: DashScope TTS and CosyVoice V3.5 support; streaming speech synthesis; dedicated frontend TTS API
+- **Embedding / Vector Retrieval**: Built-in HashTextEmbedder v2 and vector storage; knowledge base document vectorization and semantic search
+- **Multi-Agent Enhancement**: New ReflectionAgent and ReviewAgent; complex task decomposition with parallel sub-agent aggregation
+- **Human-in-the-Loop Checkpoints**: Real-time human selection among AI multi-path options; multi-question group decision checkpoints
+- **Tool Call Enhancement**: ToolCallContext context propagation; tool Provider circuit breaker; session-level tool visibility filtering; structured error returns with three-tier permission system
+- **Memory Evolution**: Memory consolidation service with dedup/merge/expiry; learning memory auto-extracts structured knowledge from conversations
 
 ---
 
-## 支持的 AI 服务商
+## Supported AI Providers
 
-46 家服务商，**9 个独立协议客户端 + 37 个 OpenAI 兼容适配**。
+46 providers: **9 independent protocol clients + 37 OpenAI-compatible adapters**.
 
-### 独立协议实现（9 个）
+### Independent Protocol Implementations (9)
 
-| 服务商 | 协议 | 特性 |
-|--------|------|------|
-| OpenAI | ChatCompletions / Responses | 视觉 / 函数调用 / 图像生成 / o3 推理 |
-| DeepSeek | DeepSeek API | reasoning_content / DeepSeek v4 专属参数 |
+| Provider | Protocol | Features |
+|----------|----------|----------|
+| OpenAI | ChatCompletions / Responses | Vision / Function Calling / Image Generation / o3 Reasoning |
+| DeepSeek | DeepSeek API | reasoning_content / DeepSeek v4 exclusive parameters |
 | Anthropic | Messages | Claude 3.5 / Claude 4 |
 | Google | Gemini | Gemini 1.5 / 2.0 / 2.5 |
-| 阿里云 | DashScope | qwen-plus / qwen-max / Omni 全模态 / Files API |
-| Azure AI | Azure OpenAI | 部署名称 URL + api-key |
-| Ollama | Ollama API | 本地 llama / deepseek / qwen |
-| AWS Bedrock | SigV4 签名 | Claude / Llama / Titan / Mistral |
-| NewLifeAI | 级联代理 | 聚合多服务商 |
-| （其他） | OpenAI 兼容 | 37 个兼容平台 |
+| Alibaba Cloud | DashScope | qwen-plus / qwen-max / Omni multimodal / Files API |
+| Azure AI | Azure OpenAI | Deployment name URL + api-key |
+| Ollama | Ollama API | Local llama / deepseek / qwen |
+| AWS Bedrock | SigV4 Signature | Claude / Llama / Titan / Mistral |
+| NewLifeAI | Cascade Proxy | Multi-provider aggregation |
+| (Others) | OpenAI Compatible | 37 compatible platforms |
 
-### OpenAI 兼容家族（37 个）
+### OpenAI-Compatible Family (37)
 
-豆包（火山引擎）、智谱清言（GLM）、文心一言、月之暗面（Kimi）、MiniMax、阶跃星辰（StepFun）、百川、讯飞星火、零一万物、Moonshot、Mistral、Perplexity、Cohere、Together AI、Fireworks、OpenRouter、SiliconCloud、DeepInfra、Groq、Cerebras、Hyperbolic、Nebius、Novita、Lepton、302.AI、xAI（Grok）……以及其他 OpenAI 兼容平台。
+Doubao (Volcano Engine), Zhipu Qingyan (GLM), Wenxin Yiyan, Moonshot (Kimi), MiniMax, StepFun, Baichuan, iFlytek Spark, 01.AI, Mistral, Perplexity, Cohere, Together AI, Fireworks, OpenRouter, SiliconCloud, DeepInfra, Groq, Cerebras, Hyperbolic, Nebius, Novita, Lepton, 302.AI, xAI (Grok)… and other OpenAI-compatible platforms.
 
-所有服务商通过 `[AiClient]` 特性声明，`AiClientRegistry` 启动时自动扫描注册，新增服务商零配置。
+All providers are declared via the `[AiClient]` attribute; `AiClientRegistry` auto-scans and registers at startup — zero configuration for new providers.
 
 ---
 
-## 快速开始
+## Quick Start
 
-### 1. 仅使用 AI 基础库（SDK）
+### 1. AI SDK Only
 
 ```bash
 dotnet add package NewLife.AI
@@ -92,41 +92,41 @@ dotnet add package NewLife.AI
 ```csharp
 using NewLife.AI.Clients;
 
-// 单轮问答
+// Single-turn chat
 using var client = new DashScopeChatClient("your-api-key", "qwen-plus");
-var reply = await client.ChatAsync("用三句话介绍一下大语言模型");
+var reply = await client.ChatAsync("Explain large language models in three sentences");
 Console.WriteLine(reply);
 
-// 多角色消息（元组数组，无需手动构造 ChatMessage）
+// Multi-role messages (tuple array, no manual ChatMessage construction)
 var reply2 = await client.ChatAsync([
-    ("system", "你是一名专业的 C# 开发助手"),
-    ("user", "解释一下 ValueTask 和 Task 的区别"),
+    ("system", "You are a professional C# development assistant"),
+    ("user", "Explain the difference between ValueTask and Task"),
 ]);
 
-// 流式输出
+// Streaming output
 await foreach (var chunk in client.GetStreamingResponseAsync([
-    new ChatMessage { Role = "user", Content = "写一首关于代码的短诗" }
+    new ChatMessage { Role = "user", Content = "Write a short poem about code" }
 ], new ChatOptions()))
 {
     Console.Write(chunk.Text);
 }
 ```
 
-### 2. ASP.NET Core 依赖注入
+### 2. ASP.NET Core Dependency Injection
 
 ```bash
 dotnet add package NewLife.AI.Extensions
 ```
 
 ```csharp
-// 注册服务
+// Register service
 builder.Services.AddDashScope("your-api-key", "qwen-plus");
 
-// Keyed 多服务商并存
+// Keyed multi-provider coexistence
 builder.Services.AddOpenAI("openai-key", serviceKey: "openai");
 builder.Services.AddAnthropic("anthropic-key", serviceKey: "anthropic");
 
-// 注入使用
+// Inject and use
 public class MyService(IChatClient chatClient)
 {
     public Task<String> ChatAsync(String question)
@@ -134,74 +134,72 @@ public class MyService(IChatClient chatClient)
 }
 ```
 
-### 3. 函数调用（工具）
+### 3. Function Calling (Tools)
 
 ```csharp
 public class MyTools
 {
-    /// <summary>获取指定城市的天气</summary>
+    /// <summary>Get weather for a specified city</summary>
     [ToolDescription("get_weather")]
     public async Task<String> GetWeatherAsync(
-        [Description("城市名")] String city)
-        => $"{city} 今天晴，22°C";
+        [Description("City name")] String city)
+        => $"{city}: Sunny, 22°C today";
 }
 
-// 注册工具
+// Register tools
 var registry = new ToolRegistry();
 registry.AddTools<MyTools>(new MyTools());
 
-// 挂入管道，自动多轮循环工具调用
+// Add to pipeline — automatic multi-turn tool calling loop
 var client = rawClient.AsBuilder()
     .UseTools(registry)
     .Build();
 
-// 模型自动调用 get_weather("北京")，返回最终文本答案
-var reply = await client.ChatAsync("北京今天天气怎么样？");
+// Model auto-calls get_weather("Beijing"), returns final text answer
+var reply = await client.ChatAsync("What's the weather like in Beijing today?");
 ```
 
-### 4. 约束推理路径（ReAct 模式）
+### 4. Constrained Reasoning (ReAct Pattern)
 
-当 AI 对复杂问题容易猜测或走弯路时，在 System Prompt 中使用 **ReAct 格式**强制逐步推理。
-`ToolChatClient` 已内置 `while` 大循环（`MaxIterations = 10`），无需手写 Agent；
-搭配 ReAct System Prompt 可进一步约束每步的推理方向，防止跳步猜测。
+When the AI tends to guess or take shortcuts on complex problems, use the **ReAct format** in the System Prompt to enforce step-by-step reasoning. `ToolChatClient` has a built-in `while` loop (`MaxIterations = 10`) — no need to hand-write an Agent. Combine with a ReAct System Prompt to further constrain the reasoning direction at each step.
 
 ```csharp
-// UseTools 管道装配：ToolChatClient 自动循环至模型不再发起工具调用为止
+// UseTools pipeline: ToolChatClient loops automatically until the model stops calling tools
 var client = rawClient.AsBuilder()
     .UseTools(registry)
     .Build();
 
-// ReAct System Prompt：Thought → Action → Observation → Answer 强制逐步推理
+// ReAct System Prompt: Thought → Action → Observation → Answer enforces step-by-step reasoning
 var reply = await client.ChatAsync([
     ("system",
-        "你必须按如下格式逐步推理，不允许跳过步骤或直接猜测：\n" +
-        "Thought: <分析当前需要做什么>\n" +
-        "Action: <调用哪个工具及参数>\n" +
-        "Observation: <分析工具返回结果>\n" +
-        "（重复 Thought/Action/Observation 直到信息充分）\n" +
-        "Answer: <基于以上观测得出最终结论>\n\n" +
-        "规则：禁止在未调用工具的情况下直接给出 Answer。"),
-    ("user", "北京今天天气适合户外运动吗？"),
+        "You must reason step by step in the following format. Do not skip steps or guess directly:\n" +
+        "Thought: <analyze what needs to be done>\n" +
+        "Action: <which tool to call and parameters>\n" +
+        "Observation: <analyze the tool result>\n" +
+        "(Repeat Thought/Action/Observation until sufficient information is gathered)\n" +
+        "Answer: <final conclusion based on the above observations>\n\n" +
+        "Rule: Do not give an Answer without first calling a tool."),
+    ("user", "Is the weather in Beijing suitable for outdoor sports today?"),
 ]);
 ```
 
-### 5. 运行完整 Web 对话应用
+### 5. Run the Full Web Chat Application
 
 ```bash
 git clone https://github.com/NewLifeX/NewLife.AI.git
 cd NewLife.AI
 
-# 构建前端（需要 Node.js + pnpm）
+# Build frontend (requires Node.js + pnpm)
 cd Web && pnpm install && pnpm build && cd ..
 
-# 启动
+# Start
 cd NewLife.ChatAI
 dotnet run --framework net8.0
 ```
 
-浏览器访问 `http://localhost:5000`，默认 SQLite，开箱即用。首次启动通过 `/Admin` 配置服务商 API Key。
+Open `http://localhost:5000` in your browser — SQLite by default, ready out of the box. On first launch, configure provider API keys via `/Admin`.
 
-也可将 `NewLife.ChatAI` 通过 NuGet 嵌入已有项目：
+You can also embed `NewLife.ChatAI` into an existing project via NuGet:
 
 ```bash
 dotnet add package NewLife.ChatAI
@@ -220,40 +218,35 @@ app.Run();
 
 ---
 
-## API 网关
+## API Gateway
 
-NewLife.ChatAI 内置多协议 AI 网关，第三方系统无需改造即可接入。默认以**纯净转发**模式运行（鉴权 / 限流 / 配额 / 用量，不记录对话）；开启**网关领域模式**（EnableGatewayDomainMode）后走完整处理器链，享受记忆注入与技能增强并自动记录对话。
+NewLife.ChatAI includes a built-in multi-protocol AI gateway. Third-party systems can integrate without modification — all paths go through memory injection and skill enhancement.
 
-| 协议 | 路由 | 说明 |
-|------|------|------|
-| OpenAI ChatCompletions | `POST /v1/chat/completions` | 流式 / 非流式 / 函数调用 / 视觉 |
-| OpenAI Responses | `POST /v1/responses` | o3 / gpt-5 推理模型 |
-| Anthropic Messages | `POST /v1/messages` | Claude 系列 |
-| Google Gemini | `POST /v1/gemini/...` | Gemini 系列 |
-| Ollama | `POST /api/chat` `/api/tags` 等 | 伪装 Ollama 服务，兼容 Ollama 客户端 |
-| 图像生成 | `POST /v1/images/generations` | Text-to-Image |
-| 图像编辑 | `POST /v1/images/edits` | Inpainting（multipart/form-data）|
-| 嵌入向量 | `POST /v1/embeddings` | OpenAI 兼容 |
-| 语音 | `POST /v1/audio/speech` `/v1/audio/transcriptions` | TTS / ASR |
-| 视频生成 | `POST /v1/video/generations` | 任务式提交与状态查询 |
-| 重排序 | `POST /v1/reranks` | Rerank |
-| 模型发现 | `GET /v1/models` | 可用模型列表 |
+| Protocol | Route | Description |
+|----------|-------|-------------|
+| OpenAI ChatCompletions | `POST /v1/chat/completions` | Streaming / non-streaming / function calling / vision |
+| OpenAI Responses | `POST /v1/responses` | o3 / gpt-5 reasoning models |
+| Anthropic Messages | `POST /v1/messages` | Claude series |
+| Google Gemini | `POST /v1/gemini/...` | Gemini series |
+| Image Generation | `POST /v1/images/generations` | Text-to-Image |
+| Image Edit | `POST /v1/images/edits` | Inpainting (multipart/form-data) |
+| Model Discovery | `GET /v1/models` | Available model list |
 
-**认证**：`Authorization: Bearer sk-xxxx`（AppKey）
+**Authentication**: `Authorization: Bearer sk-xxxx` (AppKey)
 
-**特性**：上游 429 指数退避重试（随机抖动，最多 5 次）、Token 用量自动记录、按 AppKey + 用户双维度统计
+**Features**: Upstream 429 exponential backoff retry (random jitter, up to 5 retries); automatic Token usage recording; dual-dimension statistics by AppKey + User
 
 ---
 
-## 扩展开发
+## Extension Development
 
-### 新增 AI 服务商
+### Adding a New AI Provider
 
-继承 `OpenAIChatClient`，添加 `[AiClient]` 特性，`AiClientRegistry` 启动自动扫描注册：
+Inherit from `OpenAIChatClient`, add the `[AiClient]` attribute — `AiClientRegistry` auto-scans at startup:
 
 ```csharp
-[AiClient("MyAI", "我的服务", "https://api.myai.com/v1",
-    Description = "自定义 AI 服务")]
+[AiClient("MyAI", "My Service", "https://api.myai.com/v1",
+    Description = "Custom AI Service")]
 [AiClientModel("myai-latest", "MyAI Latest", Code = "MyAI",
     FunctionCalling = true, Vision = true)]
 public class MyAiChatClient : OpenAIChatClient
@@ -264,12 +257,12 @@ public class MyAiChatClient : OpenAIChatClient
 }
 ```
 
-### 新增工具
+### Adding a New Tool
 
 ```csharp
 public class MyTools
 {
-    /// <summary>查询当前时间</summary>
+    /// <summary>Query current time</summary>
     [ToolDescription("get_current_time")]
     public String GetCurrentTime()
         => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -278,7 +271,7 @@ public class MyTools
 var registry = new ToolRegistry();
 registry.AddTools<MyTools>(new MyTools());
 
-// DI 场景
+// DI scenario
 services.AddSingleton<IToolProvider>(_ =>
 {
     var r = new ToolRegistry();
@@ -287,9 +280,9 @@ services.AddSingleton<IToolProvider>(_ =>
 });
 ```
 
-### 新增 IChatHandler
+### Adding a New IChatHandler
 
-在对话事前（OnBefore）或事后（OnAfter）注入自定义逻辑（如上下文注入、审计、记录）：
+Inject custom logic before (OnBefore) or after (OnAfter) chat — e.g., context injection, auditing, logging:
 
 ```csharp
 [ChatHandlerOrder(150)]
@@ -298,18 +291,18 @@ public class CurrentTimeHandler : ChatHandlerBase
     public override Task OnBefore(IChatContext context, CancellationToken cancellationToken)
     {
         context.ContextMessages.Insert(0,
-            new ChatMessage { Role = "system", Content = $"当前时间：{DateTime.Now:yyyy-MM-dd HH:mm}" });
+            new ChatMessage { Role = "system", Content = $"Current time: {DateTime.Now:yyyy-MM-dd HH:mm}" });
         return Task.CompletedTask;
     }
 }
 
-// DI 注册，MessageFlow 自动按 ChatHandlerOrderAttribute 排序调用
+// DI registration — MessageFlow auto-sorts by ChatHandlerOrderAttribute
 services.AddSingleton<IChatHandler, CurrentTimeHandler>();
 ```
 
-### 新增过滤器
+### Adding a New Filter
 
-洋葱圈模型，可在对话前后插入日志、审计、内容审核等逻辑：
+Onion-ring model for injecting logging, auditing, content moderation before/after chat:
 
 ```csharp
 public class AuditFilter : IChatFilter
@@ -319,9 +312,9 @@ public class AuditFilter : IChatFilter
         Func<ChatFilterContext, CancellationToken, Task> next,
         CancellationToken ct)
     {
-        // before：记录输入 / 敏感词过滤
+        // before: log input / filter sensitive content
         await next(ctx, ct);
-        // after：记录输出 / 写审计日志
+        // after: log output / write audit log
     }
 
     public Task OnStreamCompletedAsync(ChatFilterContext ctx, CancellationToken ct)
@@ -331,36 +324,103 @@ public class AuditFilter : IChatFilter
 
 ---
 
-## 文档
+## Documentation
 
-| 文档 | 说明 | 对应模块 |
-|------|------|:--------:|
-| [需求文档](Doc/需求文档.md) | 产品愿景、核心目标、功能需求（模块编码体系） | ALL |
-| [功能清单](Doc/功能清单.md) | 完整功能清单，三维状态追踪 | ALL |
-| [架构设计](Doc/架构设计.md) | 四层架构、各模块设计细节 | ALL |
-| [协议客户端分析](Doc/协议客户端分析.md) | 协议客户端 chat/stream/think 健康度分析、缺口修复记录与测试覆盖 | AI |
-| [基础库审计](Doc/基础库审计.md) | 基础库 12 维度全景审计：分 15+ 轮登记与修复问题（协议客户端/MCP/工具链/记忆等） | ALL |
-| [AI 编排框架需求](Doc/AI编排框架需求.md) | 工具 / 智能体 / 规划器设计 | AI / AGENT |
-| [API 网关需求](Doc/API网关需求.md) | 网关协议适配详解 | GW |
-| [MCP 架构](Doc/MCP架构.md) | MCP 客户端与服务端设计 | TOOL |
-| [技能管理需求](Doc/技能管理需求.md) | 技能系统详细设计 | TOOL |
-| [自学习系统需求](Doc/自学习系统需求.md) | 对话分析 + 记忆提取 | EVO |
-| [对话数据保存流程](Doc/对话数据保存流程.md) | MessageFlow 详细流程 | CHAT |
+| Document | Description |
+|----------|-------------|
+| [Requirements Specification](Doc/需求规格说明.md) | Product goals, feature list, non-functional requirements |
+| [Architecture Design](Doc/架构设计.md) | Four-layer architecture, module design details |
+| [AI Orchestration Framework](Doc/AI编排框架需求.md) | Tools / Agents / Planner design |
+| [API Gateway Requirements](Doc/API网关需求.md) | Gateway protocol adaptation details |
+| [MCP Architecture](Doc/MCP架构.md) | MCP client and server design |
+| [Skill Management](Doc/技能管理需求.md) | Skill system detailed design |
+| [Self-Learning System](Doc/自学习系统需求.md) | Conversation analysis + memory extraction |
+| [Chat Data Persistence Flow](Doc/对话数据保存流程.md) | MessageFlow detailed process |
+| [AOT Compatibility](Doc/AOT兼容性分析.md) | NativeAOT support boundary, smoke matrix and platform/architecture coverage |
+| [Runtime Localization](Doc/多语言本地化.md) | 31 runtime languages, locale tables and contribution workflow |
+| [Feature Module List](Doc/功能清单.md) | Complete feature inventory |
 
 ---
 
-## 许可证
+## Ecosystem Map
+
+NewLife is a layered ecosystem of independently versioned open-source projects. The map below is shared verbatim by every NewLife repository; each project links to its repository and its primary NuGet package.
+
+| Project | What it does | Downloads |
+| --- | --- | --- |
+| **Foundation** | | |
+| [NewLife.Core](https://github.com/NewLifeX/X) | Logging, configuration, caching, networking, serialization, scheduling and APM tracing. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Core?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Core) |
+| [NewLife.XCode](https://github.com/NewLifeX/NewLife.XCode) | Data middleware: single tables at the tens-of-billions scale, automatic sharding, read-write splitting, 10+ databases. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.XCode?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.XCode) |
+| [NewLife.Net](https://github.com/NewLifeX/NewLife.Net) | High-performance network library: 1.77M pps / 14.5 Gbps on a single machine (TCP 1KB, 2026-10), 4M long-lived TCP connections. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Net?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Net) |
+| [NewLife.Remoting](https://github.com/NewLifeX/NewLife.Remoting) | Protocol communication and RPC framework for client/server applications and IoT devices. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Remoting?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Remoting) |
+| [NewLife.Agent](https://github.com/NewLifeX/NewLife.Agent) | Installs .NET applications as OS daemons: Windows services and Linux systemd. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Agent?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Agent) |
+| [NewLife.Templates](https://github.com/NewLifeX/NewLife.Zero) | `dotnet new` project templates for console, web, API, service, data and IoT projects. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Templates?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Templates) |
+| **Data & Messaging** | | |
+| [NewLife.Redis](https://github.com/NewLifeX/NewLife.Redis) | Redis client with microsecond latency, millions of ops/s and built-in message queues. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Redis?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Redis) |
+| [NewLife.RocketMQ](https://github.com/NewLifeX/NewLife.RocketMQ) | Pure managed RocketMQ client for Apache RocketMQ and Alibaba Cloud Message Queue. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.RocketMQ?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.RocketMQ) |
+| [NewLife.MQTT](https://github.com/NewLifeX/NewLife.MQTT) | MQTT client and server, including Alibaba Cloud IoT connectivity. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.MQTT?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.MQTT) |
+| [NewLife.NovaDb](https://github.com/NewLifeX/NewLife.NovaDb) | Hybrid database in C#: embedded or networked, relational, time-series, message queue and KV in one. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.NovaDb?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.NovaDb) |
+| [NewLife.MySql](https://github.com/NewLifeX/NewLife.MySql) | MySql driver and helper layer built on the NewLife data stack. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.MySql?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.MySql) |
+| **Web, AI & Distributed** | | |
+| [NewLife.Cube](https://github.com/NewLifeX/NewLife.Cube) | Rapid admin-platform framework: permissions, SSO, OAuth server and CRUD scaffolding. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Cube?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Cube) |
+| [Stardust](https://github.com/NewLifeX/Stardust) | Distributed service platform: node management, APM, configuration center, registry and release center. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Stardust?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Stardust) |
+| [AntJob](https://github.com/NewLifeX/AntJob) | Distributed task and real-time data scheduling platform with sharding, retries and backfill. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.AntJob?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.AntJob) |
+| [NewLife.AI](https://github.com/NewLifeX/NewLife.AI) | Unified client for 46 LLM providers plus ChatAI, a ready-to-run web chat application. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.AI?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.AI) |
+| **Industrial & IoT** | | |
+| [NewLife.IoT](https://github.com/NewLifeX/NewLife.IoT) | IoT standard library defining protocol contracts and device abstractions. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.IoT?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.IoT) |
+| [NewLife.Modbus](https://github.com/NewLifeX/NewLife.Modbus) | Modbus TCP/RTU/ASCII implementation on top of NewLife.IoT. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Modbus?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Modbus) |
+| [NewLife.Siemens](https://github.com/NewLifeX/NewLife.Siemens) | Siemens PLC protocol on top of NewLife.IoT. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Siemens?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Siemens) |
+| [NewLife.Omron](https://github.com/NewLifeX/NewLife.Omron) | Omron PLC protocol on top of NewLife.IoT. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Omron?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Omron) |
+| [NewLife.Melsec](https://github.com/NewLifeX/NewLife.Melsec) | Mitsubishi Melsec PLC protocol on top of NewLife.IoT. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Melsec?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Melsec) |
+| [NewLife.OPC](https://github.com/NewLifeX/NewLife.OPC) | OPC client for industrial data access. | — |
+| [NewLife.BACnet](https://github.com/NewLifeX/NewLife.BACnet) | BACnet building-automation protocol stack. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.BACnet?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.BACnet) |
+| [ZeroIoT](https://github.com/NewLifeX/ZeroIoT) | Lightweight open-source IoT platform with gateway and device management. | — |
+| **Vehicle Telematics** | | |
+| [NewLife.JT808](https://github.com/NewLifeX/NewLife.JT808) | JT/T 808 vehicle positioning protocol: 70+ message bodies, 2011/2013/2019. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.JT808?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.JT808) |
+| [NewLife.JT809](https://github.com/NewLifeX/NewLife.JT809) | JT/T 809 platform-to-platform protocol for transport authorities. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.JT809?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.JT809) |
+| [NewLife.JT1078](https://github.com/NewLifeX/NewLife.JT1078) | JT/T 1078 in-vehicle video: RTP parsing, FLV/fMP4 remuxing and live streaming. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.JT1078?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.JT1078) |
+| **Domain Components** | | |
+| [NewLife.Office](https://github.com/NewLifeX/NewLife.Office) | One package for Excel, Word, PPT, PDF and 15+ document formats. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Office?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Office) |
+| [NewLife.Audio](https://github.com/NewLifeX/NewLife.Audio) | Cross-platform audio: codecs, device I/O, DSP, containers and streaming. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Audio?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Audio) |
+| [NewLife.Video](https://github.com/NewLifeX/NewLife.Video) | Video codecs, container formats, frame processing and streaming. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Video?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Video) |
+| [NewLife.Map](https://github.com/NewLifeX/NewLife.Map) | Unified interface over Baidu, AMap, Tencent and Tianditu with geocoding and coordinate conversion. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.Map?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.Map) |
+| [NewLife.IP](https://github.com/NewLifeX/NewLife.IP) | IPv4 geolocation with an offline memory-mapped database and an online API fallback. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.IP?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.IP) |
+| **Tools & Products** | | |
+| [CrazyCoder](https://github.com/NewLifeX/XCoder) | Developer toolbox: network, serial port, crypto, regex, Modbus and MQTT. | [![NuGet](https://img.shields.io/nuget/dt/NewLife.XCoder?style=flat-square&logo=nuget&label=downloads)](https://www.nuget.org/packages/NewLife.XCoder) |
+| [GitCandy](https://github.com/NewLifeX/GitCandy) | Self-hosted Git source code management system. | — |
+| [LuckyClover](https://github.com/NewLifeX/LuckyClover) | Installs the matching .NET runtime automatically when launched from an older host. | — |
+
+> Badges show the primary package of each project; theme, extension and satellite packages are listed on their NuGet pages.The 30+ packages not listed here (FTP, LoRa, Office extensions, protocol drivers and more) are available under the [NewLifeX organization](https://github.com/NewLifeX) and on [newlifex.com](https://newlifex.com).
+
+## Team
+
+<img src="https://newlifex.com/logo.png" width="48" align="right" alt="NewLife" />
+
+Founded in 2002, the NewLife team has spent more than two decades on the .NET and IoT ecosystem, maintains nearly 100 open-source projects (34 of them core to this map), and delivers integrated software and hardware solutions for power, logistics, healthcare, industrial control and internet industries. We live by the motto "learning has no seniority — mastery earns respect".
+
+Open-source components have been downloaded <!--nuget-total:start-->6.48M<!--nuget-total:end--> times from NuGet (ecosystem-wide, as of 2026-10).
+
+Website: https://newlifex.com · Open source organization: https://github.com/NewLifeX
+
+<details>
+<summary>WeChat Official Account: 智能大石头 (scan to follow)</summary>
+
+![智能大石头](https://newlifex.com/stone.jpg)
+
+</details>
+
+## License
 
 [MIT License](LICENSE)
 
-欢迎提交 Issue 与 Pull Request。
+Issues and Pull Requests are welcome.
 
-- GitHub：https://github.com/NewLifeX/NewLife.AI
-- 官网：https://newlifex.com
-- QQ 群：1600800
+- GitHub: https://github.com/NewLifeX/NewLife.AI
+- Website: https://newlifex.com
+- QQ Group: 1600800
 
-## 相关项目
+## Related Projects
 
-- [NewLife.Core](https://github.com/NewLifeX/X) — .NET 基础库
-- [XCode](https://github.com/NewLifeX/X) — ORM 数据框架
-- [NewLife.Cube](https://github.com/NewLifeX/NewLife.Cube) — 魔方快速开发平台
+- [NewLife.Core](https://github.com/NewLifeX/X) — .NET Foundation Library
+- [XCode](https://github.com/NewLifeX/X) — ORM Data Framework
+- [NewLife.Cube](https://github.com/NewLifeX/NewLife.Cube) — Rapid Development Platform

@@ -214,7 +214,7 @@ public class SkillActivationHandler(SkillService? skillService) : ChatHandlerBas
         {
             var entry = skill.Code.IsNullOrEmpty() ? skill.Name : $"{skill.Code}/{skill.Name}";
             var desc = skill.Description;
-            if (desc.IsNullOrEmpty()) desc = "无描述";
+            if (desc.IsNullOrEmpty()) desc = "No description";
             if (desc.Length > 60) desc = desc.Substring(0, 60) + "...";
             sb.AppendLine($"- {entry}：{desc}");
         }

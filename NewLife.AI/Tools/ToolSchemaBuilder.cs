@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using NewLife.AI.Models;
 
@@ -53,6 +54,7 @@ public static class ToolSchemaBuilder
     #region 辅助
 
     /// <summary>构建方法参数的 JSON Schema 对象</summary>
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "参数类型来自被标注工具方法，AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     private static Object? BuildParameterSchema(MethodInfo method)
     {
         var parameters = method.GetParameters();
@@ -94,7 +96,8 @@ public static class ToolSchemaBuilder
     /// <param name="type">目标类型</param>
     /// <param name="description">类型描述</param>
     /// <param name="depth">当前递归深度，用于限制复杂类型展开防止栈溢出</param>
-    private static Object BuildTypeSchema(Type type, String? description, Int32 depth = 0)
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "数组元素与属性类型由工具类型图推导，AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
+    private static Object BuildTypeSchema([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type type, String? description, Int32 depth = 0)
     {
         var schema = new Dictionary<String, Object?>();
 

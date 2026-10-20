@@ -38,7 +38,7 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         [Description("限定连接名，为空则搜索所有连接")] String? connName = null,
         ToolCallContext? context = null)
     {
-        if (keywords.IsNullOrEmpty()) throw new ArgumentNullException(nameof(keywords), "keywords 不能为空");
+        if (keywords.IsNullOrEmpty()) throw new ArgumentNullException(nameof(keywords), Localization.Translate("keywords cannot be empty"));
 
         log.Info("[SearchTable] keywords={0}, connName={1}", keywords, connName);
 
@@ -63,7 +63,7 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
                 filtered[kv.Key] = allowed;
         }
 
-        log.Info("[SearchTable] 匹配 {0} 个表（过滤后 {1} 个）", totalMatched, filtered.Sum(kv => kv.Value.Count));
+        log.Info("[SearchTable] Matched {0} tables ({1} after filtering)", totalMatched, filtered.Sum(kv => kv.Value.Count));
 
         // 匹配但全部被权限过滤时，区分提示，避免误报"未找到"
         var matchedButBlocked = groupedTables.Count > 0 && filtered.Count == 0;
@@ -86,8 +86,8 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         [Description("SQL语句。SELECT/WITH 返回结果集，非查询操作返回受影响行数")] String sql,
         ToolCallContext? context = null)
     {
-        if (connName.IsNullOrEmpty()) throw new ArgumentNullException(nameof(connName), "connName 不能为空");
-        if (sql.IsNullOrEmpty()) throw new ArgumentNullException(nameof(sql), "sql 不能为空");
+        if (connName.IsNullOrEmpty()) throw new ArgumentNullException(nameof(connName), Localization.Translate("connName cannot be empty"));
+        if (sql.IsNullOrEmpty()) throw new ArgumentNullException(nameof(sql), Localization.Translate("sql cannot be empty"));
 
         log.Info("[QuerySql] connName={0}, sql.length={1}", connName, sql.Length);
 
@@ -100,7 +100,7 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         foreach (var tableName in tableNames)
         {
             if (!DbAccessConfig.IsTableAllowed(connName, tableName, roleIds))
-                throw new InvalidOperationException($"无权访问表 [{tableName}]，连接 {connName}");
+                throw new InvalidOperationException(Localization.Translate("Access to table [{0}] is denied for connection {1}", tableName, connName));
         }
 
         // 3. 获取 DAL
@@ -108,8 +108,8 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         if (dal == null)
         {
             var available = GetAvailableConnNames(null, roleIds);
-            var hint = available.Count > 0 ? $"，可用连接: {String.Join(", ", available)}" : "";
-            throw new InvalidOperationException($"无法获取数据库连接 [{connName}]，请检查连接配置{hint}");
+            var hint = available.Count > 0 ? Localization.Translate(", available connections: {0}", String.Join(", ", available)) : "";
+            throw new InvalidOperationException(Localization.Translate("Cannot open database connection [{0}]; check the connection settings{1}", connName, hint));
         }
 
         // 4. 执行SQL — 查询类走 Query，其他走 Execute
@@ -149,9 +149,9 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
                 }
 
                 if (rowCount > maxRows)
-                    log.Warn("[QuerySql] 结果 {0} 行，截断至 {1} 行", rowCount, maxRows);
+                    log.Warn("[QuerySql] Result has {0} rows, truncated to {1}", rowCount, maxRows);
 
-                log.Info("[QuerySql] 返回 {0} 行 {1} 列", displayRows, table.Columns.Length);
+                log.Info("[QuerySql] Returned {0} rows, {1} columns", displayRows, table.Columns.Length);
 
                 return new { rows = rows.ToArray(), columns = columns.ToArray(), total = rowCount, type = "query" }.ToJson();
             }
@@ -159,15 +159,15 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
             {
                 var affected = dal.Execute(sql);
 
-                log.Info("[QuerySql] 执行完成，影响 {0} 行", affected);
+                log.Info("[QuerySql] Executed, {0} rows affected", affected);
 
                 return new { success = true, rowsAffected = affected, type = "execute" }.ToJson();
             }
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
-            log.Error("[QuerySql] 执行SQL失败：{0}", ex.Message);
-            throw new InvalidOperationException($"SQL执行失败：{ex.Message}", ex);
+            log.Error("[QuerySql] SQL execution failed: {0}", ex.Message);
+            throw new InvalidOperationException(Localization.Translate("SQL execution failed: {0}", ex.Message), ex);
         }
     }
 
@@ -206,13 +206,13 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         var operation = GetSqlOperation(sql);
         var allowed = chatSetting.QuerySqlAllowedOperations;
         if (allowed.IsNullOrEmpty())
-            throw new InvalidOperationException($"非查询操作 [{operation}] 被禁止（QuerySqlAllowedOperations 为空）。仅允许 SELECT/WITH 查询");
+            throw new InvalidOperationException(Localization.Translate("Non-query operation [{0}] is forbidden (QuerySqlAllowedOperations is empty); only SELECT/WITH queries are allowed", operation));
 
         var ops = allowed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var allowedSet = new HashSet<String>(ops, StringComparer.OrdinalIgnoreCase);
 
         if (!allowedSet.Contains(operation))
-            throw new InvalidOperationException($"非查询操作 [{operation}] 不被允许。当前允许的操作: {allowed}；仅允许 SELECT/WITH 查询");
+            throw new InvalidOperationException(Localization.Translate("Non-query operation [{0}] is not allowed. Allowed operations: {1}; only SELECT/WITH queries are allowed", operation, allowed));
     }
 
     /// <summary>提取SQL中的表名</summary>

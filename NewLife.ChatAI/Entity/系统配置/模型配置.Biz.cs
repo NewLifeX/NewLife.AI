@@ -63,7 +63,7 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
         var providers = ProviderConfig.FindAll();
         if (providers == null || providers.Count == 0)
         {
-            if (XTrace.Debug) XTrace.WriteLine("未找到启用的提供商配置，跳过ModelConfig初始化");
+            if (XTrace.Debug) XTrace.WriteLine("No enabled provider configuration found, skipping ModelConfig initialization");
             return;
         }
 
@@ -98,7 +98,7 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
                         Sort = sort++,
                     };
 
-                    XTrace.WriteLine("为提供商 {0} 创建默认模型配置", provider.Name);
+                    XTrace.WriteLine("Creating default model configuration for provider {0}", provider.Name);
                 }
 
                 // 锁定模型保护：管理员保存过的模型不再被程序覆盖名称与特性
@@ -122,7 +122,7 @@ public partial class ModelConfig : Entity<ModelConfig>, IModelConfig
         }
 
         if (count > 0)
-            XTrace.WriteLine("完成初始化ModelConfig[模型配置]数据，修改 {0} 个模型配置！", count);
+            XTrace.WriteLine("Finished initializing ModelConfig data, {0} model configs modified!", count);
     }
 
     ///// <summary>已重载。基类先调用Valid(true)验证数据，然后在事务保护内调用OnInsert</summary>

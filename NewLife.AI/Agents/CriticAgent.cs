@@ -44,7 +44,7 @@ public class CriticAgent : ConversableAgent
     /// <param name="chatClient">底层 IChatClient</param>
     /// <param name="systemPrompt">自定义评审提示词；为 null 时使用默认评审提示词</param>
     public CriticAgent(String name, IChatClient chatClient, String? systemPrompt = null)
-        : base(name, "评审代理：审核草稿质量，输出改进意见或 APPROVED 批准信号", chatClient, systemPrompt ?? DefaultCriticPrompt)
+        : base(name, "Review agent: audit draft quality and output improvement advice or APPROVED signal", chatClient, systemPrompt ?? DefaultCriticPrompt)
     {
     }
 

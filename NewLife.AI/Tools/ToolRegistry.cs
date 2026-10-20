@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using NewLife.AI.Models;
 using NewLife.AI.Interfaces;
@@ -73,7 +74,7 @@ public class ToolRegistry : IToolProvider
 
     /// <summary>扫描类型 <typeparamref name="T"/> 中所有标注 <see cref="ToolDescriptionAttribute"/> 的公共方法并注册</summary>
     /// <typeparam name="T">包含工具方法的服务类型</typeparam>
-    public void AddTools<T>()
+    public void AddTools<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicMethods)] T>()
     {
         var instance = ServiceProvider?.CreateInstance(typeof(T)) ?? Activator.CreateInstance<T>();
         AddToolsFromInstance(typeof(T), instance!);
@@ -81,14 +82,15 @@ public class ToolRegistry : IToolProvider
 
     /// <summary>扫描给定实例的类型中所有标注 <see cref="ToolDescriptionAttribute"/> 的公共方法并注册</summary>
     /// <param name="instance">工具方法的宿主实例</param>
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "实例的运行时类型必然保留，其公共方法可反射扫描；AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     public void AddTools(Object instance)
     {
         if (instance == null) throw new ArgumentNullException(nameof(instance));
         AddToolsFromInstance(instance.GetType(), instance);
     }
-
     /// <summary>扫描程序集中所有具有无参构造函数的类型，注册全部 <see cref="ToolDescriptionAttribute"/> 方法</summary>
     /// <param name="assembly">目标程序集</param>
+    [RequiresUnreferencedCode("程序集扫描依赖运行时类型元数据，裁剪后可能找不到工具类型；请改用 AddTools<T>() 或 AddTools(instance) 显式注册")]
     public void AddToolsFromAssembly(Assembly assembly)
     {
         if (assembly == null) throw new ArgumentNullException(nameof(assembly));
@@ -125,7 +127,7 @@ public class ToolRegistry : IToolProvider
     /// <summary>获取类型上所有标注 <see cref="ToolDescriptionAttribute"/> 的公开实例方法</summary>
     /// <param name="type">工具服务类型</param>
     /// <returns>方法列表</returns>
-    public static IList<MethodInfo> GetToolMethods(Type type)
+    public static IList<MethodInfo> GetToolMethods([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 
@@ -147,13 +149,13 @@ public class ToolRegistry : IToolProvider
         var chatTool = ToolSchemaBuilder.BuildFromMethod(method);
         var function = chatTool.Function;
         var toolName = function?.Name;
-        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
+        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException(Localization.Translate("Unable to resolve tool name from method {0}.{1}", type.FullName, method.Name));
 
-        if (function == null) throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 未生成函数定义");
+        if (function == null) throw new InvalidOperationException(Localization.Translate("Method {0}.{1} produced no function definition", type.FullName, method.Name));
 
         var description = function.Description;
         var attr = method.GetCustomAttribute<ToolDescriptionAttribute>(true)
-            ?? throw new InvalidOperationException($"方法 {type.FullName}.{method.Name} 缺少 ToolDescriptionAttribute");
+            ?? throw new InvalidOperationException(Localization.Translate("Method {0}.{1} is missing ToolDescriptionAttribute", type.FullName, method.Name));
 
         model.Name = toolName;
         model.DisplayName = ResolveDisplayName(method, description, toolName);
@@ -211,6 +213,7 @@ public class ToolRegistry : IToolProvider
     /// <param name="save">保存实体的方法</param>
     /// <param name="onError">错误回调。单个工具同步失败时触发，不中断后续同步</param>
     /// <returns>处理的工具数量</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "已注册工具类型在注册时即被引用，AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     public Int32 SyncNativeTools<TNativeTool>(Func<String, TNativeTool?> findByName, Action<TNativeTool> save, Action<Exception>? onError = null)
         where TNativeTool : class, INativeTool, new()
     {
@@ -251,7 +254,7 @@ public class ToolRegistry : IToolProvider
         DescribeMethod(type, method, model);
 
         var toolName = model.Name;
-        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException($"无法从方法 {type.FullName}.{method.Name} 解析工具名称");
+        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException($"Unable to resolve tool name from method {type.FullName}.{method.Name}");
 
         var existing = findByName(toolName);
         var isNew = existing == null;
@@ -346,7 +349,7 @@ public class ToolRegistry : IToolProvider
     private String BuildUnknownToolMessage(String name)
     {
         var candidate = FindSimilarToolName(name);
-        var msg = $"工具 '{name}' 未注册到 ToolRegistry";
+        var msg = Localization.Translate("Tool '{0}' is not registered in ToolRegistry", name);
         if (!candidate.IsNullOrEmpty())
             msg += $"，是否想调用 '{candidate}'？";
 
@@ -375,7 +378,7 @@ public class ToolRegistry : IToolProvider
 
     #region 辅助
 
-    private void AddToolsFromInstance(Type type, Object instance)
+    private void AddToolsFromInstance([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type, Object instance)
     {
         if (!_registeredTypes.Contains(type))
             _registeredTypes.Add(type);
@@ -394,7 +397,7 @@ public class ToolRegistry : IToolProvider
         // 已注册则跳过不覆盖（保护首次注册）。静默丢弃会掩盖名称冲突，记录警告便于排查
         if (_handlers.ContainsKey(toolName))
         {
-            XTrace.WriteLine("[ToolRegistry] 工具 {0} 已注册，跳过重复注册（来源：{1}.{2}）", toolName, method.DeclaringType?.FullName, method.Name);
+            XTrace.WriteLine("[ToolRegistry] Tool {0} is already registered; skipped duplicate (source: {1}.{2})", toolName, method.DeclaringType?.FullName, method.Name);
             return;
         }
 
@@ -406,6 +409,7 @@ public class ToolRegistry : IToolProvider
         _handlers[toolName] = (args, ctx, ct) => InvokeMethodAsync(method, instance, args, ctx, ct);
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Task<T>/ValueTask<T> 的 Result/AsTask 运行时反射；AOT 场景由调用方保留工具返回类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     private static async Task<String> InvokeMethodAsync(MethodInfo method, Object instance, String? arguments, ToolCallContext? context, CancellationToken cancellationToken)
     {
         // 一次获取全部参数并过滤出业务参数（GetParameters 是反射开销，避免对同一 method 重复调用）
@@ -505,7 +509,7 @@ public class ToolRegistry : IToolProvider
         catch (Exception ex)
         {
             // Phase 2: 后备 — 从格式异常的原始字符串中手动提取
-            XTrace.WriteLine("[ToolRegistry] JSON 解析失败，Length={0}，错误：{1}，参数前200字符：{2}",
+            XTrace.WriteLine("[ToolRegistry] JSON parse failed, Length={0}, error: {1}, first 200 chars: {2}",
                 arguments?.Length ?? 0, ex.Message, arguments?.Substring(0, Math.Min(arguments?.Length ?? 0, 200)));
             ExtractFromRawString(arguments, parameters, result);
             return result;
@@ -633,6 +637,7 @@ public class ToolRegistry : IToolProvider
                underlying.IsEnum;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "目标类型来自工具方法参数，AOT 场景由调用方保留工具参数类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     private static Object? ConvertValue(Object? value, Type targetType)
     {
         if (value == null) return null;
@@ -685,6 +690,7 @@ public class ToolRegistry : IToolProvider
     /// <param name="targetType">目标类型</param>
     /// <param name="value">转换后的值</param>
     /// <returns>解析并转换成功返回 true</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "目标类型来自工具方法参数，调用方需在 AOT 场景中保留该类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     private static Boolean TryDecodeJsonString(String json, Type targetType, out Object? value)
     {
         value = null;

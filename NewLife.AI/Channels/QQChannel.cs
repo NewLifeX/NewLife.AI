@@ -115,17 +115,17 @@ public class QQChannel : IMessageChannel, ILogFeature
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                Log.Debug("QQ 机器人发送成功：{0}", result);
+                Log.Debug("QQ bot message sent: {0}", result);
                 return true;
             }
 
             var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            Log.Error("QQ 机器人发送失败：HTTP {0} - {1}", (Int32)response.StatusCode, errorBody);
+            Log.Error("QQ bot send failed: HTTP {0} - {1}", (Int32)response.StatusCode, errorBody);
             return false;
         }
         catch (Exception ex)
         {
-            Log.Error("QQ 机器人发送失败：{0}", ex.Message);
+            Log.Error("QQ bot send failed: {0}", ex.Message);
             return false;
         }
     }

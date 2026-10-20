@@ -39,7 +39,7 @@ public class HashTextEmbedder : ILocalTextEmbedder
     /// <param name="dimensions">向量维度，默认 512；更大维度可降低哈希碰撞但不提升语义质量</param>
     public HashTextEmbedder(Int32 dimensions = 512)
     {
-        if (dimensions <= 0) throw new ArgumentOutOfRangeException(nameof(dimensions), "维度必须大于 0");
+        if (dimensions <= 0) throw new ArgumentOutOfRangeException(nameof(dimensions), "Dimensions must be greater than 0");
         Dimensions = dimensions;
         ModelName = "local-hash-v2";
     }

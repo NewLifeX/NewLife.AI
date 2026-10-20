@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using NewLife.Collections;
 using NewLife.Reflection;
 using NewLife.Remoting;
@@ -24,6 +25,8 @@ public class McpTool
     /// <summary>创建工具实例。优先从 DI 解析，回退无参构造</summary>
     /// <param name="serviceProvider">服务提供者（可为 null）</param>
     /// <returns>工具实例；创建失败返回 null</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "工具类型在注册时已被引用；AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "DeclaringType 来自已注册方法，AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     public Object? CreateInstance(IServiceProvider? serviceProvider)
     {
         var type = Method.DeclaringType;
@@ -32,7 +35,12 @@ public class McpTool
         var instance = serviceProvider?.GetService(type);
         if (instance != null) return instance;
 
+        // Reflect.CreateInstance 走委托缓存（JIT 下最快）；AOT 下可能因动态代码不可用而失败，
+        // 回退 Activator 的非公构造路径，兼容内部工具类（提示词工具常见 internal 类型）
         try { return Reflect.CreateInstance(type); }
+        catch { }
+
+        try { return Activator.CreateInstance(type, true); }
         catch { return null; }
     }
 
@@ -57,6 +65,7 @@ public class McpTool
     /// <param name="instance">工具实例</param>
     /// <param name="args">已绑定的参数数组</param>
     /// <returns>工具返回值</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Task<T> 的 Result 属性运行时反射；AOT 场景由调用方保留工具返回类型（NewLife.AI 随包 targets 自动保根，自定义 DTO 需 DynamicDependency 保留属性）")]
     private Object? InvokeCore(Object? instance, Object?[] args)
     {
         Object? rs;
@@ -78,13 +87,30 @@ public class McpTool
             // Task&lt;VoidTaskResult&gt;（编译器实现细节），不能靠运行时类型泛型判断，须看方法签名
             if (Method.ReturnType == typeof(Task)) return null;
 
-            // 泛型 Task&lt;T&gt; 取 Result
-            var prop = task.GetType().GetProperty("Result");
-            if (prop != null) rs = prop.GetValue(task);
+            // 泛型 Task&lt;T&gt; 取 Result。常用返回类型用模式匹配（AOT 安全），其余回退反射
+            rs = GetTaskResult(task);
         }
 
         return rs;
     }
+
+    /// <summary>读取 Task&lt;T&gt; 的结果。常用返回类型走模式匹配，AOT 下不依赖反射属性查找</summary>
+    /// <param name="task">已完成的异步任务</param>
+    /// <returns>任务结果</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "非常用返回类型回退反射；AOT 场景建议工具返回 string/int/bool 等常用类型")]
+    private static Object? GetTaskResult(Task task) => task switch
+    {
+        Task<String> t => t.Result,
+        Task<Int32> t => t.Result,
+        Task<Int64> t => t.Result,
+        Task<Boolean> t => t.Result,
+        Task<Double> t => t.Result,
+        Task<Single> t => t.Result,
+        Task<Decimal> t => t.Result,
+        Task<Byte[]> t => t.Result,
+        Task<Object> t => t.Result,
+        _ => task.GetType().GetProperty("Result")?.GetValue(task),
+    };
 
     /// <summary>绑定单个参数值。基础设施参数（CancellationToken/IProgress）由框架注入，其余按名称从参数字典取值</summary>
     /// <param name="p">参数信息</param>
@@ -109,7 +135,7 @@ public class McpTool
 
         // 缺失的必填标量参数 → 协议级无效参数（MCP 规范要求 tools/call 缺必填字段返回 InvalidParams）
         if (!found && Reflect.GetTypeCode(p.ParameterType) != TypeCode.Object)
-            throw new ApiException(McpErrorCode.InvalidParams, $"Missing required argument '{name}' for tool '{Method.Name}'");
+            throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Missing required argument '{0}' for tool '{1}'", name, Method.Name));
 
         if (Reflect.GetTypeCode(p.ParameterType) != TypeCode.Object)
             return value == null ? null : Reflect.ChangeType(value, p.ParameterType);
@@ -125,9 +151,20 @@ public class McpTool
     /// <summary>创建 NoOp 进度实现。注入 null 会导致工具内 <c>progress.Report()</c> 空引用崩溃；真正的 progress 通知推送（服务端→客户端）需要独立 SSE 通道，属后续增强</summary>
     /// <param name="progressType">IProgress&lt;T&gt; 类型</param>
     /// <returns>NoOp 实例</returns>
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "常用进度类型走静态实例（AOT 安全）；其余类型回退 MakeGenericType，AOT 下需宿主保留对应泛型实例")]
     private static Object CreateProgress(Type progressType)
     {
+        // 常用进度类型直接静态构造：AOT 下 MakeGenericType 对未静态实例化的泛型实参会抛异常
         var itemType = progressType.GetGenericArguments()[0];
+        if (itemType == typeof(Int32)) return new NoOpProgress<Int32>();
+        if (itemType == typeof(Int64)) return new NoOpProgress<Int64>();
+        if (itemType == typeof(Double)) return new NoOpProgress<Double>();
+        if (itemType == typeof(Single)) return new NoOpProgress<Single>();
+        if (itemType == typeof(Decimal)) return new NoOpProgress<Decimal>();
+        if (itemType == typeof(Boolean)) return new NoOpProgress<Boolean>();
+        if (itemType == typeof(String)) return new NoOpProgress<String>();
+        if (itemType == typeof(Object)) return new NoOpProgress<Object>();
+
         var type = typeof(NoOpProgress<>).MakeGenericType(itemType);
         return Activator.CreateInstance(type)!;
     }
@@ -155,11 +192,11 @@ public class McpToolManager
 
     /// <summary>注册工具类型。其公共方法将作为 MCP 工具暴露（方法名自动转 snake_case，剥 Async 后缀）</summary>
     /// <typeparam name="T">工具类型</typeparam>
-    public void Register<T>() => Register(typeof(T));
+    public void Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T>() => Register(typeof(T));
 
     /// <summary>注册工具类型。其公共方法将作为 MCP 工具暴露（snake_case 命名）</summary>
     /// <param name="type">工具类型</param>
-    public void Register(Type type)
+    public void Register([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 
@@ -214,4 +251,5 @@ public class McpToolManager
         return sb.Return(true);
     }
 }
+
 

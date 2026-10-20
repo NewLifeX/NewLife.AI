@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using NewLife.Log;
 using NewLife.Remoting;
 using NewLife.Security;
@@ -61,14 +62,14 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
     /// <summary>添加工具</summary>
     /// <typeparam name="TTools"></typeparam>
     /// <param name="serviceProvider"></param>
-    public void AddTool<TTools>(IServiceProvider serviceProvider) where TTools : class
+    public void AddTool<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] TTools>(IServiceProvider serviceProvider) where TTools : class
     {
         Manager.Register<TTools>();
     }
 
     /// <summary>添加工具类型。其公共方法将作为 MCP 工具暴露（snake_case 命名）</summary>
     /// <param name="type">工具类型</param>
-    public void AddTool(Type type)
+    public void AddTool([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 
@@ -99,11 +100,11 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
     /// <summary>处理MCP请求</summary>
     public JsonRpcResponse Process(JsonRpcRequest request, McpContext context)
     {
-        if (request == null) throw new ApiException(McpErrorCode.InvalidRequest, "异常请求！");
+        if (request == null) throw new ApiException(McpErrorCode.InvalidRequest, Localization.Translate("Invalid request!"));
 
         // A-34：校验 JSON-RPC 版本（原未校验，协议漂移时静默返回错误格式）
         if (request.JsonRpc != "2.0")
-            return new("2.0", null, new JsonRpcError(McpErrorCode.InvalidRequest, "不支持的 JSON-RPC 版本，仅支持 2.0"), request.Id);
+            return new("2.0", null, new JsonRpcError(McpErrorCode.InvalidRequest, "Unsupported JSON-RPC version; only 2.0 is supported"), request.Id);
 
         try
         {
@@ -120,7 +121,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
                 "prompts/list" => OnPromptList(context, request),
                 "prompts/get" => OnPromptGet(context, request),
                 "notifications/cancelled" => null,      // JSON-RPC notification，无需响应
-                _ => throw new ApiException(McpErrorCode.MethodNotFound, $"Method '{request.Method}' not found in MCP server capabilities."),
+                _ => throw new ApiException(McpErrorCode.MethodNotFound, Localization.Translate("Method '{0}' not found in MCP server capabilities.", request.Method)),
             };
             if (result is JsonRpcResponse response) return response;
 
@@ -138,7 +139,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
             else if (ex is ArgumentException or KeyNotFoundException or InvalidCastException or FormatException)
                 code = McpErrorCode.InvalidParams;
 
-            WriteLog("MCP 处理 {0} 失败：{1}", request.Method, ex.Message);
+            WriteLog("MCP failed to process {0}: {1}", request.Method, ex.Message);
 
             // JSON-RPC 2.0：notification（无 Id）异常不得响应（D10——原 catch 无条件回 error envelope 违反规范）
             if (request.Id == null) return null!;
@@ -253,12 +254,12 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         if (ps == null) throw new ArgumentOutOfRangeException(nameof(request.Params), "Tool call parameters are invalid.");
 
         // 查找工具。未知工具名属于协议级无效参数（官方 SDK：tools/call 未知工具返回 InvalidParams）
-        var tool = Manager.Find(ps.Name) ?? throw new ApiException(McpErrorCode.InvalidParams, $"Tool '{ps.Name}' not found in the server capabilities.");
+        var tool = Manager.Find(ps.Name) ?? throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Tool '{0}' not found in the server capabilities.", ps.Name));
 
         // 静态方法无需实例即可调用（Method.Invoke(null, args)）；实例方法需 DI/反射创建，失败返回 InternalError（D8）
         var instance = tool.Method.IsStatic ? null : tool.CreateInstance(serviceProvider);
         if (!tool.Method.IsStatic && instance == null)
-            throw new ApiException(McpErrorCode.InternalError, $"无法创建工具 '{ps.Name}' 实例");
+            throw new ApiException(McpErrorCode.InternalError, Localization.Translate("Unable to create an instance of tool '{0}'", ps.Name));
         var result = tool.Invoke(instance, ps.Arguments);
 
         List<ContentItem> content = [new("text", result?.ToString() ?? String.Empty)];
@@ -299,7 +300,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         var ps = ConvertParams<ResourceReadParams>(request.Params);
         if (ps == null || ps.Uri.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Resource read parameters are invalid.");
 
-        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(McpErrorCode.ResourceNotFound, $"Resource '{ps.Uri}' not found in the server capabilities.");
+        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(McpErrorCode.ResourceNotFound, Localization.Translate("Resource '{0}' not found in the server capabilities.", ps.Uri));
 
         var data = res.Read?.Invoke(ps.Uri) ?? String.Empty;
         return new ReadResourceResult([new ResourceContentItem(ps.Uri, data?.ToString() ?? String.Empty, res.Definition.MimeType)]);
@@ -329,7 +330,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         if (ps == null || ps.Name.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Prompt get parameters are invalid.");
 
         // 官方 SDK：未知提示词名属于协议级无效参数（InvalidParams）
-        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(McpErrorCode.InvalidParams, $"Prompt '{ps.Name}' not found in the server capabilities.");
+        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Prompt '{0}' not found in the server capabilities.", ps.Name));
 
         var content = prompt.Get?.Invoke(ps.Arguments) ?? String.Empty;
         if (content is IList<PromptMessage> messages) return new GetPromptResult(prompt.Definition.Description, messages);
@@ -343,7 +344,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
     /// <typeparam name="T">目标类型</typeparam>
     /// <param name="p">参数对象</param>
     /// <returns>转换结果</returns>
-    private static T? ConvertParams<T>(Object? p) where T : class
+    private static T? ConvertParams<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties)] T>(Object? p) where T : class
     {
         if (p == null) return default;
 

@@ -120,7 +120,7 @@ public class BedrockChatClient : AiClientBase
                 var errDic = JsonParser.Decode(data);
                 var err = errDic?["error"] as IDictionary<String, Object>;
                 var message = err?["message"] as String ?? data;
-                throw new HttpRequestException($"[{Name}] 流式错误 {message}");
+                throw new HttpRequestException(Localization.Translate("[{0}] Streaming error {1}", Name, message));
             }
 
             var chunk = ParseChunk(data, request, lastEvent);

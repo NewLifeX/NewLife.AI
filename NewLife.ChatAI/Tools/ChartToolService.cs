@@ -65,14 +65,14 @@ public class ChartToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (data == null)
-            throw new ToolException("参数错误：data 不能为 null", "请提供合法的 JSON 数据对象后重试，或直接回复用户说明无法生成图表。数据格式参见工具说明。");
+            throw new ToolException("Invalid parameter: data cannot be null", "Provide a valid JSON data object and try again, or reply to the user that the chart cannot be generated. See the tool description for the data format.");
 
         // 兼容：AI 常把 type 写进 data 内部（如 {"data":{"type":"bar",...}}），从 data 中自动提取
         if (type.IsNullOrEmpty())
             (type, data) = TryExtractTypeFromData(type, data);
 
         if (!_validTypes.Contains(type))
-            throw new ToolException($"不支持的图表类型 '{type}'", $"请选择有效类型后重试，或直接回复用户说明情况。");
+            throw new ToolException(Localization.Translate("Unsupported chart type '{0}'", type), "Choose a valid type and try again, or reply to the user explaining the situation.");
 
         var normalizedType = type.ToLower();
 
@@ -80,7 +80,7 @@ public class ChartToolService(ILog log)
         var dataStr = data as String;
         if (dataStr == null) dataStr = JsonSerializer.Serialize(data);
         if (dataStr.IsNullOrEmpty())
-            throw new ToolException("参数错误：data 不能为空", "请提供合法的 JSON 数据对象后重试，或直接回复用户说明无法生成图表。");
+            throw new ToolException("Invalid parameter: data cannot be empty", "Provide a valid JSON data object and try again, or reply to the user that the chart cannot be generated.");
 
         // 验证并解析 data 为 JSON 节点（确保合法 JSON，同时准备嵌入返回值）
         JsonNode dataNode;
@@ -88,11 +88,11 @@ public class ChartToolService(ILog log)
         {
             dataNode = JsonNode.Parse(dataStr);
             if (dataNode == null)
-                throw new ToolException("data 解析后为 null", "请检查 JSON 格式后重试，或直接回复用户说明无法生成图表。");
+                throw new ToolException("data parsed to null", "Check the JSON format and try again, or reply to the user that the chart cannot be generated.");
         }
         catch (JsonException ex)
         {
-            throw new ToolException($"data JSON 格式错误：{ex.Message}", $"请检查 JSON 语法后重试，确保 data 为合法 JSON 对象，或直接回复用户说明情况。");
+            throw new ToolException(Localization.Translate("Invalid data JSON format: {0}", ex.Message), "Check the JSON syntax and try again; make sure data is a valid JSON object, or reply to the user explaining the situation.");
         }
 
         dataNode = NormalizeDataNode(normalizedType, title, dataNode);
@@ -109,7 +109,7 @@ public class ChartToolService(ILog log)
             ["data"]    = dataNode,
         };
 
-        log.Info("[Chart] {0} '{1}'，id={2}", type, title, chartId);
+        log.Info("[Chart] {0} '{1}', id={2}", type, title, chartId);
 
         // 从 JsonSerializerOptions.Default 派生以携带 TypeInfoResolver，避免 ToJsonString 内部
         // 对 JsonValueCustomized 节点调用 MakeReadOnly() 时抛 "must specify a TypeInfoResolver"

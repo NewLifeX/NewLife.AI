@@ -71,7 +71,7 @@ public class WeChatMpChannel : IMessageChannel, ILogFeature
             var token = result.ToJsonEntity<WxTokenResponse>();
             if (token == null || token.AccessToken.IsNullOrWhiteSpace())
             {
-                Log.Error("微信 access_token 获取失败：{0}", result);
+                Log.Error("WeChat access_token request failed: {0}", result);
                 return null;
             }
 
@@ -87,7 +87,7 @@ public class WeChatMpChannel : IMessageChannel, ILogFeature
         }
         catch (Exception ex)
         {
-            Log.Error("微信 access_token 获取异常：{0}", ex.Message);
+            Log.Error("WeChat access_token request error: {0}", ex.Message);
             return null;
         }
     }
@@ -119,7 +119,7 @@ public class WeChatMpChannel : IMessageChannel, ILogFeature
         // AppSecret 由外部通过 AppSecret 属性注入（渠道管理配置），不允许硬编码空串导致必然失败
         if (AppSecret.IsNullOrWhiteSpace())
         {
-            Log.Error("微信公众号发送失败：未配置 AppSecret，无法获取 access_token。请通过 {0}.AppSecret 注入", nameof(WeChatMpChannel));
+            Log.Error("WeChat MP send failed: AppSecret is not configured, access_token unavailable. Inject it via {0}.AppSecret", nameof(WeChatMpChannel));
             return false;
         }
 
@@ -142,12 +142,12 @@ public class WeChatMpChannel : IMessageChannel, ILogFeature
         {
             var url = $"/cgi-bin/message/custom/send?access_token={token}";
             var result = await client.InvokeAsync<String>(url, payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("公众号发送成功：{0}", result);
+            Log.Debug("WeChat MP message sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("公众号发送失败：{0}", ex.Message);
+            Log.Error("WeChat MP send failed: {0}", ex.Message);
             return false;
         }
     }

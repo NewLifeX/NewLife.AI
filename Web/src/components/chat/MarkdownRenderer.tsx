@@ -475,7 +475,7 @@ function CollapsibleCodeBlock({ codeStr, lang: _lang, isStreaming = false, child
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
   useEffect(() => {
     if (isStreaming) { setHighlightedHtml(null); return }
-    let cancelled = false
+    const cancelled = false
     return onShikiReady(() => {
       if (!cancelled) setHighlightedHtml(shikiHighlight(lang, codeStr))
     })
@@ -497,8 +497,7 @@ function CollapsibleCodeBlock({ codeStr, lang: _lang, isStreaming = false, child
   const codeContent = highlightedHtml ? (
     <div
       className={cn('shiki-wrapper overflow-x-auto', shouldCollapse ? 'rounded-t-lg' : 'rounded-lg')}
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+        dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
   ) : (
     <pre
@@ -662,7 +661,7 @@ export function MarkdownRenderer({ content, isStreaming = false, className }: Ma
         />
       )
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }), [isStreaming, handleImageClick])
 
   return (

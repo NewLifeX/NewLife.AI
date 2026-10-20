@@ -61,12 +61,12 @@ public class SlackChannel : IMessageChannel, ILogFeature
         {
             // Slack Webhook 直接 POST JSON 到 Webhook URL
             var result = await client.InvokeAsync<String>("", payload, cancellationToken).ConfigureAwait(false);
-            Log.Debug("Slack 发送成功：{0}", result);
+            Log.Debug("Slack message sent: {0}", result);
             return true;
         }
         catch (Exception ex)
         {
-            Log.Error("Slack 发送失败：{0}", ex.Message);
+            Log.Error("Slack send failed: {0}", ex.Message);
             return false;
         }
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -92,7 +92,7 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected override void InitData()
     {
-        if (XTrace.Debug) XTrace.WriteLine("开始初始化SuggestedQuestion[推荐问题]数据……");
+        if (XTrace.Debug) XTrace.WriteLine("Starting to initialize SuggestedQuestion data...");
 
         // 原来是否已有数据，决定新增项是否默认启用
         var hasExisting = Meta.Session.Count > 0;
@@ -136,7 +136,7 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
             added++;
         }
 
-        if (XTrace.Debug) XTrace.WriteLine($"完成初始化SuggestedQuestion[推荐问题]数据，新增 {added} 条！");
+        if (XTrace.Debug) XTrace.WriteLine("Finished initializing SuggestedQuestion data, {0} items added!", added);
 
         // 修复旧版简历推荐问题中写死"张三"/"前端工程师"的问题，替换为使用当前用户真实信息的表述
         const String oldResumeQuestion = "请用 @show_widget 工具生成一张个人简历 HTML 卡片，包含圆形头像占位（灰色背景）、姓名（张三）、职位（高级前端工程师）、技能标签（React / TypeScript / Node.js）、最近两段工作经历和联系方式，采用现代渐变卡片风格，宽度 560px";
@@ -146,7 +146,7 @@ public partial class SuggestedQuestion : Entity<SuggestedQuestion>
         {
             stale.Question = newResumeQuestion;
             stale.Update();
-            if (XTrace.Debug) XTrace.WriteLine("已修复简历推荐问题：移除写死的姓名与职位");
+            if (XTrace.Debug) XTrace.WriteLine("Fixed the resume suggested questions: removed hard-coded name and job title");
         }
     }
 

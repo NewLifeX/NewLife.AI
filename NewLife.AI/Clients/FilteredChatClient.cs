@@ -159,7 +159,7 @@ public class FilteredChatClient : DelegatingChatClient
                 catch (Exception ex)
                 {
                     // A-69：后处理异常不应影响主响应链，但必须记录，否则学习/蒸馏过滤器失败完全不可见
-                    XTrace.WriteLine("[FilteredChatClient] 过滤器 {0} 流式后处理异常：{1}", filter.GetType().Name, ex.Message);
+                    XTrace.WriteLine("[FilteredChatClient] Filter {0} failed in streaming post-processing: {1}", filter.GetType().Name, ex.Message);
                 }
             }
         });

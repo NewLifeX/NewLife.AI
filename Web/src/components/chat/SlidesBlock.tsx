@@ -30,7 +30,7 @@ interface SlidesBlockProps {
  * 构建单页 HTML 的 srcDoc（sandbox iframe 隔离渲染）。
  * 幻灯片页面为 16:9 画布（960x540），在 iframe 中缩放适配宽度显示。
  */
-function buildSlideSrcDoc(html: string, _pageIndex: number): string {
+function buildSlideSrcDoc(html: string): string {
   // 页面固定 960x540，通过 transform: scale 适配 iframe 宽度，保持 16:9 视觉
   return `<!doctype html>
 <html><head><meta charset="utf-8">
@@ -112,7 +112,7 @@ function SlidesFullscreenDialog({ data, initial, onClose }: { data: SlidesData; 
   }, [data.pageCount])
 
   const currentHtml = data.pages[page] ?? ''
-  const srcDoc = useMemo(() => buildSlideSrcDoc(currentHtml, page), [currentHtml, page])
+  const srcDoc = useMemo(() => buildSlideSrcDoc(currentHtml), [currentHtml])
 
   if (typeof document === 'undefined') return null
 
@@ -184,7 +184,7 @@ export function SlidesBlock({ data, className, onEditArtifact }: SlidesBlockProp
   const colors = getThemeColors(themeKey)
 
   const currentHtml = data.pages[activePage] ?? ''
-  const srcDoc = useMemo(() => buildSlideSrcDoc(currentHtml, activePage), [currentHtml, activePage])
+  const srcDoc = useMemo(() => buildSlideSrcDoc(currentHtml), [currentHtml])
 
   return (
     <div

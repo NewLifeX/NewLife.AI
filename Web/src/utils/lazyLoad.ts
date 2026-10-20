@@ -34,6 +34,8 @@ export function isChunkLoadError(err: unknown): boolean {
  * 期间发生重新构建，懒加载模块将请求已删除的旧 chunk 而 404。
  * 这里在失败时自动 reload（带冷却防抖），让页面自愈；仍抛出错误由 ErrorBoundary 兜底。
  */
+// React.lazy 的组件类型参数惯例用 any 适配任意 props；换成 unknown 会破坏调用方推断
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function lazyLoad<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
 ) {

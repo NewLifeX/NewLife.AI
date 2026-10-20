@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace NewLife.AI.Clients;
@@ -53,6 +54,8 @@ public class AiClientRegistry
     /// </remarks>
     /// <param name="assembly">要扫描的目标程序集</param>
     /// <returns>当前实例（支持链式调用）</returns>
+    [RequiresUnreferencedCode("程序集扫描依赖运行时类型元数据，裁剪后可能找不到服务商类型；AOT 下请改用 Register(Type) 或 Register(AiClientDescriptor) 显式注册")]
+    [RequiresDynamicCode("服务商实例通过构造函数反射创建，AOT 下需要保留对应构造函数")]
     public AiClientRegistry Register(Assembly assembly)
     {
         if (assembly == null) throw new ArgumentNullException(nameof(assembly));
@@ -89,7 +92,8 @@ public class AiClientRegistry
     }
 
     /// <summary>注册一个 <see cref="IChatClient"/> 实现类型上标注的所有 <see cref="AiClientAttribute"/> 为服务商描述符</summary>
-    public AiClientRegistry Register<T>() where T : IChatClient => Register(typeof(T));
+    [RequiresDynamicCode("服务商实例通过构造函数反射创建，AOT 下需要保留对应构造函数")]
+    public AiClientRegistry Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : IChatClient => Register(typeof(T));
 
     /// <summary>将指定 <see cref="IChatClient"/> 实现类型上标注的所有 <see cref="AiClientAttribute"/> 注册为服务商描述符</summary>
     /// <remarks>
@@ -100,13 +104,15 @@ public class AiClientRegistry
     /// <returns>当前实例（支持链式调用）</returns>
     /// <exception cref="ArgumentNullException">type 为 null 时抛出</exception>
     /// <exception cref="ArgumentException">type 为抽象类或接口，或未实现 <see cref="IChatClient"/> 时抛出</exception>
-    public AiClientRegistry Register(Type type)
+    [RequiresDynamicCode("服务商实例通过构造函数反射创建，AOT 下需要保留对应构造函数")]
+    [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "类型参数已声明 PublicConstructors 要求，元组/排序临时值不携带注解")]
+    public AiClientRegistry Register([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
         if (type.IsAbstract || type.IsInterface)
-            throw new ArgumentException($"类型 {type.FullName} 不能是抽象类或接口", nameof(type));
+            throw new ArgumentException(Localization.Translate("Type {0} cannot be an abstract class or interface", type.FullName), nameof(type));
         if (!typeof(IChatClient).IsAssignableFrom(type))
-            throw new ArgumentException($"类型 {type.FullName} 必须实现 IChatClient 接口", nameof(type));
+            throw new ArgumentException(Localization.Translate("Type {0} must implement IChatClient", type.FullName), nameof(type));
 
         var clientAttrs = type.GetCustomAttributes<AiClientAttribute>(false).ToArray();
         if (clientAttrs.Length == 0) return this;
@@ -145,7 +151,7 @@ public class AiClientRegistry
     public IChatClient CreateClient(String code, AiClientOptions options)
     {
         var descriptor = GetDescriptor(code)
-            ?? throw new ArgumentException($"未注册的服务商编码: {code}", nameof(code));
+            ?? throw new ArgumentException(Localization.Translate("Unregistered provider code: {0}", code), nameof(code));
         return descriptor.Factory(options);
     }
 
@@ -160,6 +166,9 @@ public class AiClientRegistry
     #endregion
 
     #region 默认实例
+    // AOT 场景由冒烟工程通过 TrimmerRootAssembly 保留 NewLife.AI 程序集，扫描才可命中内置服务商
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "内置程序集在 AOT 场景下由 TrimmerRootAssembly 保留，扫描可命中全部服务商")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "内置服务商的构造函数由 TrimmerRootAssembly 保留")]
     private static AiClientRegistry CreateDefault()
     {
         var registry = new AiClientRegistry();
@@ -167,7 +176,8 @@ public class AiClientRegistry
         return registry;
     }
 
-    private static AiClientDescriptor BuildDescriptor(AiClientAttribute attr, Type type)
+    [RequiresDynamicCode("服务商实例通过构造函数反射创建，AOT 下需要保留对应构造函数")]
+    private static AiClientDescriptor BuildDescriptor(AiClientAttribute attr, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
     {
         // 收集该类上所有 [AiClientModel]，按 Code 归属过滤
         var allModels = type.GetCustomAttributes<AiClientModelAttribute>(false).ToArray();

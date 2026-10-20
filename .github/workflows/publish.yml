@@ -34,6 +34,12 @@ jobs:
     - name: Build frontend
       run: pnpm --dir Web build
 
+    - name: Verify README package
+      run: pwsh -File ./sync-readme-package.ps1 -Check
+
+    - name: Package consumer smoke
+      # 发布前验证包可被下游引用、裁剪发布后仍可用（服务商 + 词表 + 随包 targets 保根）
+      run: pwsh -File ./check-package-consumer.ps1
     - name: Pack NewLife.AI
       run: dotnet pack -c Release -o out NewLife.AI/NewLife.AI.csproj
 

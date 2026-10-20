@@ -25,8 +25,15 @@
     <!--<WarningsAsErrors>CA2007</WarningsAsErrors>-->
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' Or '$(TargetFramework)' == 'net10.0'">
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- MCP 的 JSON-RPC 反序列化已统一走 NewLife JsonHelper；新增 System.Text.Json 反射或泛型 Delegate 路由会直接阻断 -->
+    <WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2067;IL2070;IL2072;IL2075;IL2091;IL2098;IL3050</WarningsAsErrors>
+  </PropertyGroup>
+
   <PropertyGroup>
     <PackageId>$(AssemblyName)</PackageId>
+    <IsPackable>true</IsPackable>
     <Authors>$(Company)</Authors>
     <PackageProjectUrl>https://newlifex.com/core</PackageProjectUrl>
     <PackageIcon>leaf.png</PackageIcon>
@@ -39,7 +46,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PackageReadmeFile>README.nuget.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,7 +60,7 @@
     <Content Include="..\Doc\leaf.png" Link="leaf.png" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Readme.MD">
+    <None Include="..\README.nuget.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

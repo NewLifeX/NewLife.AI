@@ -87,7 +87,7 @@ public partial class Skill : Entity<Skill>, ISkill
         // 改为按 Code 逐个 upsert：表非空也会补齐缺失的内置技能；
         // 已存在的内置技能仅在用户未自定义修改时补齐缺失字段，避免覆盖业务专家定制。
 
-        if (XTrace.Debug) XTrace.WriteLine("开始初始化Skill[技能]数据……");
+        if (XTrace.Debug) XTrace.WriteLine("Starting to initialize Skill data...");
 
         //Add("general", "通用助手", "smart_toy", "通用", "通用AI对话助手", "你是一个知识渊博、乐于助人的AI助手。请用简洁清晰的语言回答用户的问题。", 100);
         //Add("coder", "编程助手", "code", "开发", "专业编程开发助手", "你是一个专业的编程助手。请提供准确、高质量的代码和技术解答。注意代码的可读性、性能和最佳实践。", 90);
@@ -98,7 +98,7 @@ public partial class Skill : Entity<Skill>, ISkill
         Add("case_teacher", "案例教学", "school", "教学", "从业务专家案例中提炼规则和分析流程，自动创建或更新技能", CaseTeachingContent, 40, "案例教学,从案例中学,案例分析");
         Add("business_rule_template", "业务规则模板", "rule", "业务规则", "业务专家编写规则式技能的起点模板，每行一条if-then规则，自带强约束SystemPrompt", BusinessRuleTemplateContent, 30, "业务规则,规则模板");
 
-        if (XTrace.Debug) XTrace.WriteLine("完成初始化Skill[技能]数据！");
+        if (XTrace.Debug) XTrace.WriteLine("Finished initializing Skill data!");
     }
 
     /// <summary>新增或补齐内置技能（按 Code 幂等 upsert）。

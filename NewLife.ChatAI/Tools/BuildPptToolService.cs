@@ -64,15 +64,15 @@ public class BuildPptToolService(ILog log)
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())
-            throw new ToolException("参数错误：title 不能为空", "请提供演示文稿标题后重试。");
+            throw new ToolException("Invalid parameter: title cannot be empty", "Provide a presentation title and try again.");
 
         // slides 与 widgetSrc 互斥校验
         var hasSlides = slides is { Length: > 0 };
         var hasWidgetSrc = !widgetSrc.IsNullOrEmpty();
         if (!hasSlides && !hasWidgetSrc)
-            throw new ToolException("参数错误：slides 与 widgetSrc 必须提供其一", "请提供幻灯片 JSON 数组或 show_widget 卡片 ID 列表后重试，或直接回复用户说明无法生成 PPT。");
+            throw new ToolException("Invalid parameter: either slides or widgetSrc must be provided", "Provide a slides JSON array or a list of show_widget card IDs and try again, or reply to the user that the PPT cannot be generated.");
         if (hasSlides && hasWidgetSrc)
-            throw new ToolException("参数错误：slides 与 widgetSrc 互斥，只能提供其一", "请选择一种模式后重试，或直接回复用户说明情况。");
+            throw new ToolException("Invalid parameter: slides and widgetSrc are mutually exclusive", "Choose one mode and try again, or reply to the user explaining the situation.");
 
         // 主题解析：显式传参 > 会话卡片风格 > 品牌默认
         var themeKey = OfficeStyleKit.ResolveTheme(theme, context?.Request?.ConversationId);
@@ -83,17 +83,17 @@ public class BuildPptToolService(ILog log)
 
         // slides 模式（现有逻辑）
         if (slides == null || slides.Length == 0)
-            throw new ToolException("参数错误：slides 不能为空", "请提供幻灯片数组后重试，或直接回复用户说明无法生成 PPT。");
+            throw new ToolException("Invalid parameter: slides cannot be empty", "Provide a slides array and try again, or reply to the user that the PPT cannot be generated.");
         var slideList = slides;
 
-        log.Info("[Slide] 开始生成 PPT：{0}，{1} 页，主题：{2}", title, slideList.Length, themeKey ?? "default");
+        log.Info("[Slide] Generating PPT: {0}, {1} slides, theme: {2}", title, slideList.Length, themeKey ?? "default");
 
         var pptxBytes = await BuildPptxAsync(slideList, themeKey).ConfigureAwait(false);
 
         // 归档到附件表，复用 AI 生成媒体的同一套基础设施
         var archiveResult = await ArchivePptxAsync(pptxBytes, title, slideList.Length, theme).ConfigureAwait(false);
 
-        log.Info("[Slide] 生成完成：{0}，{1} 页，{2} 字节，URL：{3}",
+        log.Info("[Slide] Generated: {0}, {1} slides, {2} bytes, URL: {3}",
             title, slideList.Length, pptxBytes.Length, archiveResult.Url);
 
         var slideTitles = slideList.Select(s => s.Title ?? String.Empty).ToArray();
@@ -124,9 +124,9 @@ public class BuildPptToolService(ILog log)
     {
         var widgetIds = widgetSrc.Split(',', '\uff0c').Select(s => s.Trim()).Where(s => !s.IsNullOrEmpty()).ToArray();
         if (widgetIds.Length == 0)
-            throw new ArgumentException("widgetSrc \u683c\u5f0f\u9519\u8bef\uff0c\u5e94\u4e3a\u9017\u53f7\u5206\u9694\u7684 Widget ID \u5217\u8868", nameof(widgetSrc));
+            throw new ArgumentException(Localization.Translate("widgetSrc is invalid; expected a comma-separated list of Widget IDs"), nameof(widgetSrc));
 
-        log.Info("[Slide] Widget \u5bfc\u5165\u6a21\u5f0f\uff1a{0}\uff0c{1} \u4e2a\u5361\u7247\uff0c\u4e3b\u9898\uff1a{2}", title, widgetIds.Length, theme ?? "blue");
+        log.Info("[Slide] Widget import mode: {0}, {1} cards, theme: {2}", title, widgetIds.Length, theme ?? "blue");
 
         var pages = new List<PptPageModel>();
         foreach (var wid in widgetIds)
@@ -134,7 +134,7 @@ public class BuildPptToolService(ILog log)
             var widgetCode = FindWidgetContent(wid);
             if (widgetCode == null)
             {
-                log.Warn("[Slide] \u672a\u627e\u5230 Widget {0} \u7684\u5185\u5bb9\uff0c\u8df3\u8fc7", wid);
+                log.Warn("[Slide] Content of Widget {0} was not found, skipping", wid);
                 continue;
             }
 
@@ -156,7 +156,7 @@ public class BuildPptToolService(ILog log)
         }
 
         if (pages.Count == 0)
-            throw new InvalidOperationException("\u672a\u627e\u5230\u4efb\u4f55\u6709\u6548\u7684 Widget \u5185\u5bb9\uff0c\u8bf7\u786e\u8ba4 Widget \u5df2\u6210\u529f\u751f\u6210");
+            throw new InvalidOperationException(Localization.Translate("No valid Widget content was found; make sure the Widget has been generated successfully"));
 
         var pptxBytes = await BuildPptxAsync(pages.ToArray(), theme).ConfigureAwait(false);
         var archiveResult = await ArchivePptxAsync(pptxBytes, title, pages.Count, theme).ConfigureAwait(false);
@@ -180,7 +180,7 @@ public class BuildPptToolService(ILog log)
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
-        log.Info("[Slide] Widget \u5bfc\u5165\u5b8c\u6210\uff1a{0}\uff0c{1} \u9875\uff0cURL\uff1a{2}",
+        log.Info("[Slide] Widget import completed: {0}, {1} slides, URL: {2}",
             title, pages.Count, archiveResult.Url);
 
         return ToolResult.ForAudiences(resultJson, $"[已生成{widgetIds.Length}个Widget卡片已导出为{pages.Count}页PPT：{title}]");
@@ -547,7 +547,7 @@ public class BuildPptToolService(ILog log)
 
         await using var memory = new MemoryStream(pptxBytes);
         var saved = await attachment.SaveFile(memory, null, fileName).ConfigureAwait(false);
-        if (!saved) throw new InvalidOperationException($"PPTX 归档失败：{fileName}");
+        if (!saved) throw new InvalidOperationException(Localization.Translate("Failed to archive PPTX: {0}", fileName));
 
         var url = $"/cube/file?id={attachment.Id}.pptx";
         return new ArchiveResult(attachment.Id, url);

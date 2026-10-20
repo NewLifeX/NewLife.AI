@@ -151,7 +151,7 @@ public class MapAnnotationToolService(ILog log)
         var widgetId = context?.ToolCallId;
         if (widgetId.IsNullOrEmpty()) widgetId = $"map_{Guid.NewGuid():N}";
 
-        log.Info("[Map] 生成地图标注：{0}，{1} 个标注点，{2} 个高亮省份，{3} 字节",
+        log.Info("[Map] Generating map annotation: {0}, {1} markers, {2} highlighted provinces, {3} bytes",
             title, markerList.Count, highlightList.Count,
             Encoding.UTF8.GetByteCount(annotatedSvg));
 
@@ -173,7 +173,7 @@ public class MapAnnotationToolService(ILog log)
 
         if (resourceName == null)
             throw new InvalidOperationException(
-                "嵌入资源 china-map.svg 未找到，请确认 csproj 中包含 <EmbeddedResource Include=\"Resources\\china-map.svg\" />");
+                Localization.Translate("Embedded resource china-map.svg was not found; make sure the csproj contains <EmbeddedResource Include=\"Resources\\china-map.svg\" />"));
 
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -189,7 +189,7 @@ public class MapAnnotationToolService(ILog log)
         // 匹配 mapsvg:geoViewBox="73.554302 53.561780 134.775703 18.155060"
         var m = System.Text.RegularExpressions.Regex.Match(svgContent,
             @"geoViewBox=""([0-9.\-]+)\s+([0-9.\-]+)\s+([0-9.\-]+)\s+([0-9.\-]+)""");
-        if (!m.Success) throw new InvalidOperationException("底图缺少 geoViewBox 校准属性");
+        if (!m.Success) throw new InvalidOperationException(Localization.Translate("Base map is missing the geoViewBox calibration attribute"));
 
         var minLng = Double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
         var maxLat = Double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
@@ -266,7 +266,7 @@ public class MapAnnotationToolService(ILog log)
     {
         // 查找 SVG 根标签结束位置（">"），在其后插入 <style>
         var svgTagEnd = baseSvg.IndexOf('>');
-        if (svgTagEnd < 0) throw new InvalidOperationException("SVG 根标签解析失败");
+        if (svgTagEnd < 0) throw new InvalidOperationException(Localization.Translate("Failed to parse the SVG root tag"));
 
         var sb = new StringBuilder(baseSvg.Length + 8192);
         sb.Append(baseSvg, 0, svgTagEnd + 1);

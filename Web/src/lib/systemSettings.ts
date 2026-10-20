@@ -70,7 +70,7 @@ export async function isExtensionAllowed(fileName: string, fileType?: string): P
 
   // 提取文件扩展名
   const dotIndex = fileName.lastIndexOf('.')
-  let ext = dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : ''
+  const ext = dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : ''
 
   // 有扩展名则直接匹配
   if (ext) return allowed.includes(ext)
