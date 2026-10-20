@@ -65,7 +65,7 @@ public class McpTool
     /// <param name="instance">工具实例</param>
     /// <param name="args">已绑定的参数数组</param>
     /// <returns>工具返回值</returns>
-    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Task<T> 的 Result 属性运行时反射；AOT 场景由调用方保留工具返回类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Task<T> 的 Result 属性运行时反射；AOT 场景由调用方保留工具返回类型（NewLife.AI 随包 targets 自动保根，自定义 DTO 需 DynamicDependency 保留属性）")]
     private Object? InvokeCore(Object? instance, Object?[] args)
     {
         Object? rs;
@@ -151,10 +151,20 @@ public class McpTool
     /// <summary>创建 NoOp 进度实现。注入 null 会导致工具内 <c>progress.Report()</c> 空引用崩溃；真正的 progress 通知推送（服务端→客户端）需要独立 SSE 通道，属后续增强</summary>
     /// <param name="progressType">IProgress&lt;T&gt; 类型</param>
     /// <returns>NoOp 实例</returns>
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "仅在工具方法声明 IProgress<T> 参数时按运行期类型构造泛型实例；AOT 冒烟场景不覆盖进度参数，裁剪根需保留对应泛型实例")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "常用进度类型走静态实例（AOT 安全）；其余类型回退 MakeGenericType，AOT 下需宿主保留对应泛型实例")]
     private static Object CreateProgress(Type progressType)
     {
+        // 常用进度类型直接静态构造：AOT 下 MakeGenericType 对未静态实例化的泛型实参会抛异常
         var itemType = progressType.GetGenericArguments()[0];
+        if (itemType == typeof(Int32)) return new NoOpProgress<Int32>();
+        if (itemType == typeof(Int64)) return new NoOpProgress<Int64>();
+        if (itemType == typeof(Double)) return new NoOpProgress<Double>();
+        if (itemType == typeof(Single)) return new NoOpProgress<Single>();
+        if (itemType == typeof(Decimal)) return new NoOpProgress<Decimal>();
+        if (itemType == typeof(Boolean)) return new NoOpProgress<Boolean>();
+        if (itemType == typeof(String)) return new NoOpProgress<String>();
+        if (itemType == typeof(Object)) return new NoOpProgress<Object>();
+
         var type = typeof(NoOpProgress<>).MakeGenericType(itemType);
         return Activator.CreateInstance(type)!;
     }
@@ -241,4 +251,5 @@ public class McpToolManager
         return sb.Return(true);
     }
 }
+
 

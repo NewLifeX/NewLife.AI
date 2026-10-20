@@ -8,7 +8,7 @@
 
 ## 1. 结论
 
-NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户端创建、工具 Schema 与调用、ToolChatClient 多轮循环、MCP 服务端、对话消息 JSON、Token 估算、哈希嵌入、限流、规划器、过滤器与流式聚合等 35 个场景在 `win-x64` 原生发布件中全部通过。ASP.NET Core 集成层（`NewLife.AI.Extensions`）同样 AOT 就绪，由独立工程 `AotWebSmoke` 起真服务验证 MCP HTTP 全链路。
+NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户端创建、工具 Schema 与调用、ToolChatClient 多轮循环、MCP 服务端、对话消息 JSON、Token 估算、哈希嵌入、限流、规划器、过滤器与流式聚合等 37 个场景在 `win-x64` 原生发布件中全部通过。ASP.NET Core 集成层（`NewLife.AI.Extensions`）同样 AOT 就绪，由独立工程 `AotWebSmoke` 起真服务验证 MCP HTTP 全链路。
 
 - `net8.0` / `net10.0` 目标启用 `IsAotCompatible=true`，库自身裁剪/AOT 分析器告警为 0。
 - 冒烟工程 `AotSmoke` 以同一份代码双跑 JIT 与 NativeAOT，便于区分"运行时行为变化"与"AOT 特有问题"。
@@ -37,7 +37,7 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 
 `AotWebSmoke`（ASP.NET Core 宿主 + `NewLife.AI.Extensions`）另在 win-x64 / linux-x64 原生发布运行，5 项检查：Kestrel 监听、MCP `initialize` 握手、`tools/list` 反射枚举、`tools/call` 经 DI 解析工具实例、未知方法返回 JSON-RPC 错误。
 
-冒烟覆盖 35 个场景：
+冒烟覆盖 37 个场景：
 
 1. 基础类型转换
 2. `ChatMessage` JSON 往返
@@ -74,6 +74,8 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 33. 内置计算器（`DataTable.Compute` 在 AOT 下的行为）
 34. `IChatFilter` 洋葱圈管道（before/after 阶段与响应可见性）
 35. 流式聚合与过滤器回调（`OnStreamCompletedAsync` 火焰即忘、正文与用量汇总）
+36. 工具 `IProgress<T>` 参数注入（常用进度类型静态实例，AOT 安全）
+37. 工具返回自定义 DTO（`Task<JobResult>` 解包 + DTO 属性保留后的序列化）
 
 ---
 
@@ -85,7 +87,7 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 | `AiClientRegistry` | `Register(Assembly)` 标记 `RequiresUnreferencedCode`/`RequiresDynamicCode`；`Register(Type)`/`Register<T>` 声明 `PublicConstructors` 保留要求；`Default` 的整程序集扫描由裁剪根兜底 |
 | `ToolRegistry` | `AddTools<T>`/`GetToolMethods` 声明 `PublicMethods`；`AddToolsFromAssembly` 标记 `RequiresUnreferencedCode`；`Task<T>`/`ValueTask<T>` 反射读取 Result 处显式抑制并说明 |
 | `ToolSchemaBuilder` | 递归 Schema 构建声明 `PublicProperties`，参数类型图由调用方保留 |
-| `McpServer` / `McpToolManager` | 工具类型声明 `PublicMethods + PublicParameterlessConstructor + NonPublicConstructors`，`CreateInstance` 增加 `Activator` 非公构造回退；`Task<T>` 常用返回类型改模式匹配解包，避免 AOT 下反射读取 `Result` 失败；`IProgress<T>` 的 `MakeGenericType` 标注边界 |
+| `McpServer` / `McpToolManager` | 工具类型声明 `PublicMethods + PublicParameterlessConstructor + NonPublicConstructors`，`CreateInstance` 增加 `Activator` 非公构造回退；`Task<T>` 常用返回类型改模式匹配解包，避免 AOT 下反射读取 `Result` 失败；`IProgress<T>` 常用进度类型改为静态实例，避免 `MakeGenericType` 在 AOT 抛异常 |
 | `AotSmoke` | 项目引用不会导入包内 targets，显式 `<Import Project="..\NewLife.AI\buildTransitive\NewLife.AI.targets" />`，验证的就是随包分发的那份保根配置 |
 | `NewLife.AI.targets`（随包） | `buildTransitive` 目标：`PublishTrimmed` / `PublishAot` 时自动把 `NewLife.AI` 加入 `TrimmerRootAssembly`，下游应用无需手工保根；用 `.targets` 而非 `.props`，因为包内 props 在项目正文之前导入、取不到项目里设置的 `PublishAot` |
 | `NewLife.AI.Extensions` | net8/net10 启用 `IsAotCompatible` + IL 告警 `WarningsAsErrors`；MCP 请求反序列化由 System.Text.Json 改走 `JsonHelper`（与 `HttpMcpServer`/`StdioMcpServer` 一致）；`MapMcp` 改为 `RequestDelegate` 重载注册端点（泛型 `Delegate` 重载带 `RequiresUnreferencedCode`/`RequiresDynamicCode`）；`AddMcp<T>` 与 `MapMcp<T>` 声明构造保留要求 |
@@ -100,8 +102,8 @@ NewLife.AI 内核的**主链路已支持 NativeAOT**：服务商注册、客户�
 | 内置 46 家服务商注册 | ✅ | 由随包 `buildTransitive/NewLife.AI.targets` 在 `PublishTrimmed`/`PublishAot` 时自动保根；自定义服务商放在独立程序集时，用 `Register<T>()` 显式注册或对宿主程序集加裁剪根 |
 | `AddToolsFromAssembly` 程序集扫描 | ⚠️ | 标记 `RequiresUnreferencedCode`；AOT 下改用 `AddTools<T>()` / `AddTools(instance)` |
 | 内置计算器 `DataTable.Compute` | ✅ | win-x64 NativeAOT 实测可用；其他 RID 由冒烟矩阵验证，若不可用会转为错误信息，不影响其余工具 |
-| MCP 工具的 `IProgress<T>` 参数 | ⚠️ | 按运行期类型构造泛型实例，AOT 需保留对应泛型实参；冒烟不覆盖该路径 |
-| 工具返回非常用 `Task<T>` 类型 | ⚠️ | 常用类型（string/int/long/bool/double/float/decimal/byte[]/object）走模式匹配，其余回退反射读取 `Result` |
+| MCP 工具的 `IProgress<T>` 参数 | ✅ | 常用进度类型（int/long/double/float/decimal/bool/string/object）走静态实例，AOT 实测可用（冒烟 36）；其它泛型实参仍回退 `MakeGenericType`，AOT 下需宿主保留对应泛型实例 |
+| 工具返回 `Task<T>` 与自定义 DTO | ⚠️ | 常用返回类型（string/int/long/bool/double/float/decimal/byte[]/object）走模式匹配，其余回退反射读 `Result`（AOT 可用）。但**返回的自定义 DTO 属性在裁剪后会被移除、序列化成 `{}`**：需用 `[DynamicDependency(PublicProperties, typeof(Dto))]` 或裁剪描述符保留（冒烟 37 演示用法）；同理适用于 `ToolRegistry`/`ToolChatClient` 的工具返回 |
 | `NewLife.AI.Extensions`（ASP.NET Core 宿主） | ✅ | net8/net10 分析器 0 告警；`AotWebSmoke` 在 win-x64/linux-x64 原生发布件中跑通 MCP HTTP 往返。注意仍需 `InvariantGlobalization` 或随包 ICU，且不能用反射式 MVC/最小 API 参数绑定 |
 | 插件式动态加载程序集 | ❌ | 与 AOT 静态分析根本冲突，按设计不支持 |
 

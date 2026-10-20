@@ -461,6 +461,29 @@ RunAsync("35.流式聚合与过滤器回调", async () =>
     return completed && text.ToString() == "hello world" && summary?.Text == "hello world" && summary.Usage?.TotalTokens == 5;
 });
 
+// 36. 工具 IProgress<T> 参数注入（进度对象按运行期泛型构造，AOT 下的高风险点）
+Run("36.工具 IProgress 参数", () =>
+{
+    var manager = new McpToolManager();
+    manager.Register<ProgressTools>();
+    var tool = manager.Tools["long_job"];
+    var result = tool.Invoke(new ProgressTools(), new Dictionary<String, Object?> { ["name"] = "aot" }) as String;
+    Console.WriteLine($"    (result={result})");
+    return result == "job:aot:100";
+});
+
+// 37. 工具返回非常用 Task<T>（DTO），验证异步结果解包与序列化在 AOT 下的表现
+Run("37.工具返回自定义 DTO", () =>
+{
+    var manager = new McpToolManager();
+    manager.Register<ProgressTools>();
+    var tool = manager.Tools["describe"];
+    var result = tool.Invoke(new ProgressTools(), new Dictionary<String, Object?> { ["name"] = "aot" });
+    var json = JsonHelper.ToJson(result);
+    Console.WriteLine($"    (type={result?.GetType().Name} json={json})");
+    return json != null && json.Contains("aot");
+});
+
 Console.WriteLine();
 if (failures.Count > 0)
 {
@@ -533,6 +556,31 @@ sealed class SmokeTools
 
     [ToolDescription("get_current_time")]
     public String GetCurrentTime() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+}
+
+sealed class ProgressTools
+{
+    [ToolDescription("long_job")]
+    [Description("Job reporting progress")]
+    public async Task<String> LongJobAsync([Description("Job name")] String name, IProgress<Int32> progress)
+    {
+        progress?.Report(50);
+        await Task.Yield();
+        progress?.Report(100);
+        return $"job:{name}:100";
+    }
+
+    [ToolDescription("describe")]
+    [Description("Return a structured result")]
+    // AOT/裁剪下 DTO 的属性会被裁掉、序列化成空对象，这里显式保留（应用里等价做法：DynamicDependency 或裁剪描述符）
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(JobResult))]
+    public Task<JobResult> DescribeAsync([Description("Job name")] String name) => Task.FromResult(new JobResult { Name = name, Steps = 3 });
+}
+
+sealed class JobResult
+{
+    public String? Name { get; set; }
+    public Int32 Steps { get; set; }
 }
 
 sealed class CountingFilter : IChatFilter

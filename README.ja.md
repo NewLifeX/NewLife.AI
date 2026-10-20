@@ -7,7 +7,7 @@
 [![test](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/test.yml)
 [![NativeAOT](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml/badge.svg?branch=master)](https://github.com/NewLifeX/NewLife.AI/actions/workflows/aot.yml)
 <!-- metrics:start -->
-[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-35%2F35-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
+[![AOT smoke](https://img.shields.io/badge/AOT%20smoke-37%2F37-brightgreen?logo=dotnet)](Doc/AOT兼容性分析.md)
 [![TFM](https://img.shields.io/badge/TFM-5%20%28net45%20%E2%86%92%20net10.0%29-512BD4?logo=dotnet)](https://www.nuget.org/packages/NewLife.AI)
 [![locales](https://img.shields.io/badge/locales-31-2ea44f?logo=dotnet)](Doc/多语言本地化.md)
 <!-- metrics:end -->
@@ -32,7 +32,7 @@
 
 ## 主な機能
 
-- **NativeAOT 対応**：net8.0/net10.0 で `IsAotCompatible` を有効化、Windows / Linux / macOS と x64 / arm64 / loongarch64 を網羅する 35 シナリオの NativeAOT スモークマトリクス
+- **NativeAOT 対応**：net8.0/net10.0 で `IsAotCompatible` を有効化、Windows / Linux / macOS と x64 / arm64 / loongarch64 を網羅する 37 シナリオの NativeAOT スモークマトリクス
 - **31 の実行時言語**：英語を原文としコンパイル時に言語テーブルを生成、未訳は英語へフォールバックし、言語追加にコード変更は不要
 - **46 の AI プロバイダー、6 つのプロトコル**：OpenAI / Anthropic / Gemini / Tongyi DashScope / Ollama / AWS Bedrock — 1 行のコードで切り替え可能
 - **統一 `IChatClient` インターフェース**：MEAI 仕様に準拠 — 単一ターン、ストリーミング、関数呼び出し、マルチモーダルを単一 API で

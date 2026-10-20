@@ -92,7 +92,7 @@ jobs:
       if: runner.os == 'Linux'
       run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
     - name: JIT Baseline
-      # 同一冒烟工程以 JIT 运行（35 场景），为 AOT 结果提供对照
+      # 同一冒烟工程以 JIT 运行（37 场景），为 AOT 结果提供对照
       run: dotnet run -c Release -f ${{ matrix.tfm }} --project AotSmoke/AotSmoke.csproj
     - name: Publish NativeAOT Smoke
       run: dotnet publish AotSmoke/AotSmoke.csproj -c Release -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -o AotSmoke/bin/aot-out
@@ -253,7 +253,7 @@ jobs:
       run: |
         dotnet restore AotSmoke/AotSmoke.csproj
         dotnet build AotSmoke/AotSmoke.csproj -c Release -f net10.0 --no-restore
-    - name: JIT Smoke (loong64 container, 35 场景)
+    - name: JIT Smoke (loong64 container, 37 场景)
       run: |
         docker run --rm --platform linux/loong64 \
           -v "$PWD:/src" -w /src \
@@ -292,7 +292,7 @@ jobs:
         fi
 
   # RISC-V 64（linux-riscv64，观察期，人工触发，不阻塞）：运行时来自社区构建 filipnavara/dotnet-riscv。
-  # 官方不发 linux-riscv64 runtime pack，NativeAOT 仅作"发布探索"；JIT 冒烟复用 35 场景验证平台行为一致性。
+  # 官方不发 linux-riscv64 runtime pack，NativeAOT 仅作"发布探索"；JIT 冒烟复用 37 场景验证平台行为一致性。
   riscv64:
     name: smoke (linux-riscv64 qemu)
     runs-on: ubuntu-latest
@@ -320,7 +320,7 @@ jobs:
       run: |
         dotnet restore AotSmoke/AotSmoke.csproj
         dotnet build AotSmoke/AotSmoke.csproj -c Release -f net10.0 --no-restore
-    - name: JIT Smoke in riscv64 Container (35 场景)
+    - name: JIT Smoke in riscv64 Container (37 场景)
       run: |
         docker run --rm --platform linux/riscv64 \
           -v "$PWD:/src" -w /src \
