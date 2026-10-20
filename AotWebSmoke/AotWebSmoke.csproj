@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>AotWebSmoke</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Web SDK 默认按 IIS 托管准备 web.config，AOT 冒烟只跑 Kestrel -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NewLife.AI.Extensions\NewLife.AI.Extensions.csproj" />
+    <!-- 服务商注册表通过程序集扫描发现 [AiClient] 类型，裁剪根保留整个 NewLife.AI 程序集 -->
+    <TrimmerRootAssembly Include="NewLife.AI" />
+  </ItemGroup>
+
+</Project>

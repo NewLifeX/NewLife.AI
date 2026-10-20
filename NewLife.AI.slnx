@@ -4,6 +4,8 @@
     <File Path=".github/workflows/publish-beta.yml" />
     <File Path=".github/workflows/publish.yml" />
     <File Path=".github/workflows/test.yml" />
+    <File Path=".github/workflows/aot.yml" />
+    <File Path=".github/workflows/tfm-guard.yml" />
     <File Path="ChangeLog.md" />
     <File Path="Doc/models.md" />
     <File Path="Doc/架构设计.md" />
@@ -17,11 +19,13 @@
     <File Path="readme-metrics.json" />
     <File Path="check-locales.ps1" />
     <File Path="check-english-exceptions.ps1" />
+    <File Path="check-package-consumer.ps1" />
     <File Path="sync-readme-languages.ps1" />
     <File Path="sync-readme-package.ps1" />
     <File Path="sync-readme-metrics.ps1" />
   </Folder>
   <Project Path="AotSmoke/AotSmoke.csproj" />
+  <Project Path="AotWebSmoke/AotWebSmoke.csproj" />
   <Project Path="NewLife.AI.Extensions/NewLife.AI.Extensions.csproj" />
   <Project Path="NewLife.AI/NewLife.AI.csproj" />
   <Project Path="NewLife.ChatAI/NewLife.ChatAI.csproj" />

@@ -100,6 +100,39 @@ jobs:
       shell: bash
       run: ./AotSmoke/bin/aot-out/${{ matrix.bin }}
 
+  # ASP.NET Core 宿主 AOT：Kestrel 起真服务走 MCP HTTP 往返（MapMcp 的 RequestDelegate 路由 + DI 解析工具 + JSON-RPC 反序列化）
+  aot-web:
+    name: aot-web (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+            bin: AotWebSmoke.exe
+          - rid: linux-x64
+            os: ubuntu-latest
+            bin: AotWebSmoke
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup dotNET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.x
+    - name: Install NativeAOT Prerequisites (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+    - name: JIT Baseline
+      run: dotnet run -c Release --project AotWebSmoke/AotWebSmoke.csproj
+    - name: Publish NativeAOT Web Smoke
+      run: dotnet publish AotWebSmoke/AotWebSmoke.csproj -c Release -r ${{ matrix.rid }} -o AotWebSmoke/bin/aot-out
+    - name: Run NativeAOT Web Smoke
+      shell: bash
+      run: ./AotWebSmoke/bin/aot-out/${{ matrix.bin }}
+
   # NativeAOT 冒烟（musl）：alpine 容器内原生发布运行
   aot-musl:
     name: aot (${{ matrix.rid }})

@@ -25,6 +25,12 @@
     <!--<WarningsAsErrors>CA2007</WarningsAsErrors>-->
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' Or '$(TargetFramework)' == 'net10.0'">
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- MCP 的 JSON-RPC 反序列化已统一走 NewLife JsonHelper；新增 System.Text.Json 反射或泛型 Delegate 路由会直接阻断 -->
+    <WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2067;IL2070;IL2072;IL2075;IL2091;IL2098;IL3050</WarningsAsErrors>
+  </PropertyGroup>
+
   <PropertyGroup>
     <PackageId>$(AssemblyName)</PackageId>
     <IsPackable>true</IsPackable>
