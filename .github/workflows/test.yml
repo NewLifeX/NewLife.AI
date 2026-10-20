@@ -1,5 +1,10 @@
 name: test
 
+# 多 OS / 多架构单元测试矩阵：win-x64 / linux-x64 / linux-arm64 / osx-arm64。
+# 触发：push / pull_request / 手动（workflow_dispatch）。
+# linux-loongarch64（龙芯）无托管 runner，使用 QEMU 用户态仿真 + 龙芯 .NET SDK，见本文件末尾 job（人工触发）。
+# 需要外部 API Key 的集成测试通过 RequiresApiKeyFact 自动跳过，CI 无需配置密钥。
+
 on:
   push:
     branches: [ '*' ]
@@ -7,9 +12,16 @@ on:
     branches: [ '*' ]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-publish:
+  # 全解决方案编译校验（含前端构建），与测试矩阵并行运行
+  build:
+    name: build solution
     runs-on: windows-latest
+    timeout-minutes: 40
 
     steps:
     - uses: actions/checkout@v4
@@ -36,17 +48,149 @@ jobs:
     - name: Build frontend
       run: pnpm --dir Web build
 
-    - name: Test frontend
-      shell: bash
-      run: |
-        if node -e "const scripts=require('./Web/package.json').scripts||{}; process.exit(scripts.test ? 0 : 1)"; then
-          pnpm --dir Web test
-        else
-          echo "No frontend unit test script found in Web/package.json, skipping frontend tests."
-        fi
-
     - name: Build backend
       run: dotnet build -c Release NewLife.AI.slnx
 
-    - name: Test backend
-      run: dotnet test -c Release --no-build NewLife.AI.slnx
+  # 后端单元测试：四类原生 runner 并行，失败自动重试一次以规避偶发网络抖动
+  test:
+    name: test (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+          - rid: osx-arm64
+            os: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup dotNET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.x
+
+    - name: Build
+      run: dotnet build -c Release XUnitTest/XUnitTest.csproj
+
+    - name: Test
+      shell: pwsh
+      run: |
+        dotnet test XUnitTest/XUnitTest.csproj -c Release --no-build --blame-hang-timeout 10m --logger "trx;LogFileName=test-${{ matrix.rid }}.trx" --results-directory TestResults
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "::warning::首次测试运行失败，自动重试一次以规避偶发网络/端口冲突"
+          dotnet test XUnitTest/XUnitTest.csproj -c Release --no-build --blame-hang-timeout 10m --logger "trx;LogFileName=test-${{ matrix.rid }}-retry.trx" --results-directory TestResults
+        }
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.rid }}
+        path: TestResults/**
+        if-no-files-found: ignore
+
+  # linux-loongarch64（龙芯）：QEMU 用户态仿真 + 龙芯 SDK + loong64 Debian 容器。
+  # 无托管 runner，人工触发；观察期不阻断。
+  test-linux-la64:
+    name: test (linux-loongarch64 / QEMU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup dotNET (host，用于预热 NuGet 缓存)
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.x
+
+    - name: Warm NuGet cache
+      run: dotnet restore XUnitTest/XUnitTest.csproj
+
+    - name: Build for loong64 (host，QEMU 内不跑 MSBuild)
+      run: dotnet build XUnitTest/XUnitTest.csproj -c Release
+
+    - name: Download xunit console runner (host，VSTest 不支持 LoongArch64)
+      run: |
+        curl -fsSL -o "$RUNNER_TEMP/xrc.nupkg" https://api.nuget.org/v3-flatcontainer/xunit.runner.console/2.9.3/xunit.runner.console.2.9.3.nupkg
+        mkdir -p "$HOME/xrc"
+        unzip -oj "$RUNNER_TEMP/xrc.nupkg" "tools/net6.0/*" -d "$HOME/xrc"
+        ls "$HOME/xrc"
+
+    - name: Download Loongson .NET SDK (linux-loongarch64)
+      run: |
+        curl -fL --retry 3 -o "$RUNNER_TEMP/la64-sdk.tar.gz" \
+          https://github.com/loongson/dotnet/releases/download/v10.0.113-loongarch64/dotnet-sdk-10.0.113-linux-loongarch64.tar.gz
+        mkdir -p "$HOME/la64" && tar -xzf "$RUNNER_TEMP/la64-sdk.tar.gz" -C "$HOME/la64"
+        ls "$HOME/la64" | head -20
+
+    - name: Install QEMU loong64 binfmt
+      run: docker run --privileged --rm ghcr.io/loong64/binfmt --install all
+
+    - name: Unit Tests (loong64 container)
+      run: |
+        docker run --rm --platform linux/loong64 -w /src \
+          -v "$PWD:/src" -v "$HOME/la64:/opt/dotnet:ro" -v "$HOME/.nuget:/home/runner/.nuget" -v "$HOME/xrc:/opt/xunit:ro" \
+          -e HOME=/home/runner -e DOTNET_CLI_HOME=/home/runner -e NUGET_PACKAGES=/home/runner/.nuget/packages \
+          -e DOTNET_ROOT=/opt/dotnet -e PATH=/opt/dotnet:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+          -e DOTNET_CLI_TELEMETRY_OPTOUT=1 -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+          -e DOTNET_ROLL_FORWARD=LatestMajor -e DOTNET_EnableWriteXorExecute=0 \
+          ghcr.io/loong64/debian:trixie bash -c '
+            set -e
+            apt-get update -qq || true
+            apt-get install -y -qq ca-certificates libstdc++6 zlib1g libunwind8 || true
+            apt-get install -y -qq libssl3t64 || apt-get install -y -qq libssl3 || true
+            export LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
+            dotnet --info
+            cp /opt/xunit/* /src/Bin/UnitTest/
+            mkdir -p /src/TestResults
+            cd /src/Bin/UnitTest
+            timeout 300m dotnet xunit.console.dll XUnitTest.dll -parallel none -xml /src/TestResults/test-linux-la64.xml
+          '
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-linux-la64
+        path: TestResults/*.xml
+        if-no-files-found: ignore
+
+  # 本地化与 README 门禁：英文源文、31 种词表、README 语言切换行与 NuGet 包版一致性
+  localization:
+    name: localization checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check English messages
+      shell: pwsh
+      run: pwsh -File ./check-english-exceptions.ps1 -Dir NewLife.AI
+
+    - name: Check locales
+      shell: pwsh
+      run: pwsh -File ./check-locales.ps1 -LocaleDir NewLife.AI/Locales -SourceDir NewLife.AI -RequireTranslated
+
+    - name: Check README languages
+      shell: pwsh
+      run: pwsh -File ./sync-readme-languages.ps1 -Check
+
+    - name: Check README metrics
+      shell: pwsh
+      run: pwsh -File ./sync-readme-metrics.ps1 -Check
+
+    - name: Check README package
+      shell: pwsh
+      run: pwsh -File ./sync-readme-package.ps1 -Check

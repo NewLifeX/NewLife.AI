@@ -39,6 +39,9 @@ jobs:
     - name: Build frontend
       run: pnpm --dir Web build
 
+    - name: Verify README package
+      run: pwsh -File ./sync-readme-package.ps1 -Check
+
     - name: Pack NewLife.AI beta
       run: dotnet pack --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.AI/NewLife.AI.csproj
 
