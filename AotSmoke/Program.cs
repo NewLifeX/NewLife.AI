@@ -7,12 +7,19 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using NewLife;
 using NewLife.AI.Clients;
+using NewLife.AI.Clients.Anthropic;
+using NewLife.AI.Clients.DashScope;
+using NewLife.AI.Clients.Gemini;
+using NewLife.AI.Clients.Ollama;
+using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Embedding;
+using NewLife.AI.Memory;
 using NewLife.AI.ModelContextProtocol;
 using NewLife.AI.Models;
 using NewLife.AI.Planner;
 using NewLife.AI.Services;
 using NewLife.AI.Tools;
+using NewLife.Data;
 using NewLife.Serialization;
 
 var failures = new List<String>();
@@ -287,6 +294,140 @@ RunAsync("21.FunctionCallingPlanner 解析", async () =>
 
 // 22. 本地化回退（InvariantGlobalization 下具名区域性不可用，只断言英文源文）
 Run("22.本地化英文回退", () => Localization.Translate("Invalid parameter: {0}", 42) == "Invalid parameter: 42");
+
+// 23. OpenAI 请求体构建与 JSON 序列化
+Run("23.OpenAI 请求构建与序列化", () =>
+{
+    var req = ChatRequest.Create([new ChatMessage { Role = "user", Content = "hello" }], new ChatOptions
+    {
+        Model = "gpt-4o",
+        Temperature = 0.2,
+        Tools = [ToolSchemaBuilder.BuildFromMethod(typeof(SmokeTools).GetMethod(nameof(SmokeTools.SearchAsync))!)],
+    });
+    var body = ChatCompletionRequest.FromChatRequest(req);
+    var json = JsonHelper.ToJson(body)!;
+    Console.WriteLine($"    (len={json.Length})");
+    return body.Model == "gpt-4o"
+        && json.Contains("gpt-4o", StringComparison.OrdinalIgnoreCase)
+        && json.Contains("search", StringComparison.OrdinalIgnoreCase);
+});
+
+// 24. OpenAI 响应解析
+Run("24.OpenAI 响应解析", () =>
+{
+    const String json = """{"id":"chatcmpl-1","object":"chat.completion","created":1700000000,"model":"gpt-4o","choices":[{"index":0,"message":{"role":"assistant","content":"hello"},"finish_reason":"stop"}],"Usage":{"PromptTokens":3,"CompletionTokens":2,"TotalTokens":5}}""";
+    var resp = JsonHelper.ToJsonEntity<ChatCompletionResponse>(json);
+    var chat = resp?.ToChatResponse();
+    Console.WriteLine($"    (choices={resp?.Choices?.Count} text={chat?.Text} in={chat?.Usage?.InputTokens} out={chat?.Usage?.OutputTokens})");
+    return chat?.Text == "hello" && chat.Usage?.InputTokens == 3 && chat.Usage?.OutputTokens == 2;
+});
+
+// 25. Anthropic 请求/响应解析
+Run("25.Anthropic 请求/响应解析", () =>
+{
+    var req = JsonHelper.ToJsonEntity<AnthropicRequest>("""{"model":"claude-3-5-sonnet","max_tokens":16,"messages":[{"role":"user","content":"hi"}]}""");
+    var chatReq = req?.ToChatRequest();
+    var resp = JsonHelper.ToJsonEntity<AnthropicResponse>("""{"id":"msg_1","type":"message","role":"assistant","model":"claude-3","content":[{"type":"text","text":"hi"}],"stop_reason":"end_turn","usage":{"input_tokens":3,"output_tokens":2}}""");
+    var chat = resp?.ToChatResponse();
+    return chatReq?.Messages.Count == 1 && chat?.Text == "hi";
+});
+
+// 26. Gemini 请求/响应解析
+Run("26.Gemini 请求/响应解析", () =>
+{
+    var req = JsonHelper.ToJsonEntity<GeminiRequest>("""{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}""");
+    var chatReq = req?.ToChatRequest();
+    var resp = JsonHelper.ToJsonEntity<GeminiResponse>("""{"candidates":[{"content":{"role":"model","parts":[{"text":"hi"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":3,"candidatesTokenCount":2,"totalTokenCount":5}}""");
+    var chat = resp?.ToChatResponse();
+    return chatReq?.Messages.Count == 1 && chat?.Text == "hi";
+});
+
+// 27. Ollama 响应解析
+Run("27.Ollama 响应解析", () =>
+{
+    var resp = JsonHelper.ToJsonEntity<OllamaChatResponse>("""{"model":"qwen","created_at":"2026-01-01T00:00:00Z","message":{"role":"assistant","content":"hi"},"done":true,"done_reason":"stop","prompt_eval_count":3,"eval_count":2}""");
+    var chat = resp?.ToChatResponse();
+    return chat?.Text == "hi";
+});
+
+// 28. DashScope 请求构建与响应解析
+Run("28.DashScope 请求/响应解析", () =>
+{
+    var req = DashScopeRequest.FromChatRequest(ChatRequest.Create([new ChatMessage { Role = "user", Content = "hi" }], new ChatOptions { Model = "qwen-plus" }));
+    var reqJson = JsonHelper.ToJson(req)!;
+    var resp = JsonHelper.ToJsonEntity<DashScopeResponse>("""{"request_id":"r1","model":"qwen-plus","output":{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"hi"}}]},"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}""");
+    var chat = resp?.ToChatResponse();
+    return reqJson.Contains("qwen-plus", StringComparison.OrdinalIgnoreCase) && chat?.Text == "hi";
+});
+
+// 29. MCP tools/call 完整 JSON-RPC
+Run("29.MCP tools/call", () =>
+{
+    var server = new McpServer();
+    server.AddTool(typeof(SmokeTools));
+    var context = new McpContext
+    {
+        Services = new EmptyServiceProvider(),
+        GetRequest = _ => null,
+        SetResponse = (_, _) => { },
+    };
+    var args = new Dictionary<String, Object?> { ["keyword"] = "mcp", ["limit"] = 2L };
+    var response = server.Process(new JsonRpcRequest("2.0", "tools/call", new ToolCallParams("search", args, null), 3), context);
+    var json = JsonHelper.ToJson(response)!;
+    if (response.Error != null) Console.WriteLine($"    (error={JsonHelper.ToJson(response.Error)})");
+    Console.WriteLine($"    (len={json.Length})");
+    return response.Error == null && json.Contains("search:mcp:2", StringComparison.OrdinalIgnoreCase);
+});
+
+// 30. MCP resources/read
+Run("30.MCP resources/read", () =>
+{
+    var server = new McpServer();
+    server.AddResource("knowledge://aot", "AOT", read: _ => "resource-body");
+    var context = new McpContext
+    {
+        Services = new EmptyServiceProvider(),
+        GetRequest = _ => null,
+        SetResponse = (_, _) => { },
+    };
+    var response = server.Process(new JsonRpcRequest("2.0", "resources/read", new ResourceReadParams("knowledge://aot"), 4), context);
+    var json = JsonHelper.ToJson(response)!;
+    return response.Error == null && json.Contains("resource-body");
+});
+
+// 31. 内存向量库写入与检索
+RunAsync("31.内存向量库写入与检索", async () =>
+{
+    var store = new InMemoryVectorStore();
+    var collection = store.GetCollection("smoke");
+    var embedder = new HashTextEmbedder(64);
+    await collection.UpsertAsync(new VectorRecord { Id = "1", Vector = embedder.Embed("newlife ai gateway") });
+    await collection.UpsertAsync(new VectorRecord { Id = "2", Vector = embedder.Embed("weather forecast tomorrow") });
+    var hits = await collection.SearchAsync(embedder.Embed("newlife ai gateway"), 1);
+    Console.WriteLine($"    (hits={hits.Count})");
+    return hits.Count == 1 && hits[0].Record.Id == "1";
+});
+
+// 32. 显式注册服务商（自定义程序集场景）
+Run("32.显式注册服务商", RegisterExplicitProvider);
+
+[UnconditionalSuppressMessage("AOT", "IL3050", Justification = "冒烟探针：验证 AOT 下显式注册路径，内置服务商构造函数由 TrimmerRootAssembly 保留")]
+static Boolean RegisterExplicitProvider()
+{
+    var registry = new AiClientRegistry();
+    registry.Register<OpenAIChatClient>();
+    return registry.GetDescriptor("OpenAI") != null;
+}
+
+// 33. 内置工具 计算器（System.Data 表达式解析在 AOT 下的行为）
+Run("33.内置工具 计算器", () =>
+{
+    var service = new BuiltinToolService();
+    var result = service.Calculate("(3 + 5) * 2");
+    var json = JsonHelper.ToJson(result)!;
+    Console.WriteLine($"    ({json})");
+    return json.Contains("16");
+});
 
 Console.WriteLine();
 if (failures.Count > 0)

@@ -25,6 +25,8 @@ public class McpTool
     /// <summary>创建工具实例。优先从 DI 解析，回退无参构造</summary>
     /// <param name="serviceProvider">服务提供者（可为 null）</param>
     /// <returns>工具实例；创建失败返回 null</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "工具类型在注册时已被引用；AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "DeclaringType 来自已注册方法，AOT 场景由调用方保留工具类型（冒烟工程通过 TrimmerRootAssembly 保证）")]
     public Object? CreateInstance(IServiceProvider? serviceProvider)
     {
         var type = Method.DeclaringType;
@@ -33,7 +35,12 @@ public class McpTool
         var instance = serviceProvider?.GetService(type);
         if (instance != null) return instance;
 
+        // Reflect.CreateInstance 走委托缓存（JIT 下最快）；AOT 下可能因动态代码不可用而失败，
+        // 回退 Activator 的非公构造路径，兼容内部工具类（提示词工具常见 internal 类型）
         try { return Reflect.CreateInstance(type); }
+        catch { }
+
+        try { return Activator.CreateInstance(type, true); }
         catch { return null; }
     }
 
@@ -80,13 +87,30 @@ public class McpTool
             // Task&lt;VoidTaskResult&gt;（编译器实现细节），不能靠运行时类型泛型判断，须看方法签名
             if (Method.ReturnType == typeof(Task)) return null;
 
-            // 泛型 Task&lt;T&gt; 取 Result
-            var prop = task.GetType().GetProperty("Result");
-            if (prop != null) rs = prop.GetValue(task);
+            // 泛型 Task&lt;T&gt; 取 Result。常用返回类型用模式匹配（AOT 安全），其余回退反射
+            rs = GetTaskResult(task);
         }
 
         return rs;
     }
+
+    /// <summary>读取 Task&lt;T&gt; 的结果。常用返回类型走模式匹配，AOT 下不依赖反射属性查找</summary>
+    /// <param name="task">已完成的异步任务</param>
+    /// <returns>任务结果</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "非常用返回类型回退反射；AOT 场景建议工具返回 string/int/bool 等常用类型")]
+    private static Object? GetTaskResult(Task task) => task switch
+    {
+        Task<String> t => t.Result,
+        Task<Int32> t => t.Result,
+        Task<Int64> t => t.Result,
+        Task<Boolean> t => t.Result,
+        Task<Double> t => t.Result,
+        Task<Single> t => t.Result,
+        Task<Decimal> t => t.Result,
+        Task<Byte[]> t => t.Result,
+        Task<Object> t => t.Result,
+        _ => task.GetType().GetProperty("Result")?.GetValue(task),
+    };
 
     /// <summary>绑定单个参数值。基础设施参数（CancellationToken/IProgress）由框架注入，其余按名称从参数字典取值</summary>
     /// <param name="p">参数信息</param>
@@ -158,11 +182,11 @@ public class McpToolManager
 
     /// <summary>注册工具类型。其公共方法将作为 MCP 工具暴露（方法名自动转 snake_case，剥 Async 后缀）</summary>
     /// <typeparam name="T">工具类型</typeparam>
-    public void Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>() => Register(typeof(T));
+    public void Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T>() => Register(typeof(T));
 
     /// <summary>注册工具类型。其公共方法将作为 MCP 工具暴露（snake_case 命名）</summary>
     /// <param name="type">工具类型</param>
-    public void Register([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type)
+    public void Register([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 

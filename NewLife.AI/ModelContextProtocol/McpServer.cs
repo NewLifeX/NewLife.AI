@@ -62,14 +62,14 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
     /// <summary>添加工具</summary>
     /// <typeparam name="TTools"></typeparam>
     /// <param name="serviceProvider"></param>
-    public void AddTool<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TTools>(IServiceProvider serviceProvider) where TTools : class
+    public void AddTool<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] TTools>(IServiceProvider serviceProvider) where TTools : class
     {
         Manager.Register<TTools>();
     }
 
     /// <summary>添加工具类型。其公共方法将作为 MCP 工具暴露（snake_case 命名）</summary>
     /// <param name="type">工具类型</param>
-    public void AddTool([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type)
+    public void AddTool([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type type)
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
 
