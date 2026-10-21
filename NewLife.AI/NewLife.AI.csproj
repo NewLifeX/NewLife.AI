@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net45;netstandard2.0;netstandard2.1;net8.0;net10.0</TargetFrameworks>
-    <AssemblyTitle>统一 AI 网关基础库</AssemblyTitle>
-    <Description>多协议、多模型适配的 AI 基础设施库，支持 OpenAI/Anthropic/Gemini 等 46 个服务商，提供函数调用、图像生成、MCP 工具调用等能力；NativeAOT 就绪，内置 31 种运行时语言</Description>
+    <AssemblyTitle>NewLife.AI - Unified AI Gateway Library</AssemblyTitle>
+    <Description>Multi-protocol, multi-model AI infrastructure library with 46 providers, function calling, image generation and MCP tools. NativeAOT-ready, with 31 runtime languages.</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
     <VersionPrefix>1.6</VersionPrefix>
@@ -28,6 +28,7 @@
 
   <PropertyGroup>
     <PackageId>$(AssemblyName)</PackageId>
+    <PackageDescription>Multi-protocol, multi-model AI infrastructure library with 46 providers, function calling, image generation and MCP tools. NativeAOT-ready, with 31 runtime languages. 多协议、多模型适配的 AI 基础设施库，支持 46 家服务商，提供函数调用、图像生成与 MCP 工具调用；原生 AOT 就绪，内置 31 种运行时语言。</PackageDescription>
     <Authors>$(Company)</Authors>
     <PackageProjectUrl>https://newlifex.com</PackageProjectUrl>
     <PackageIcon>leaf.png</PackageIcon>

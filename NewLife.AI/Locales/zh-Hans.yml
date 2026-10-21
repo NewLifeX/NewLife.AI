@@ -1,4 +1,6 @@
 # 简体中文译文。键为英文源文，缺失时运行期回退英文。
+"NewLife.AI - Unified AI Gateway Library": "NewLife.AI - 统一 AI 网关基础库"
+"Multi-protocol, multi-model AI infrastructure library with 46 providers, function calling, image generation and MCP tools. NativeAOT-ready, with 31 runtime languages.": "多协议、多模型适配的 AI 基础设施库，支持 46 家服务商，提供函数调用、图像生成与 MCP 工具调用；原生 AOT 就绪，内置 31 种运行时语言。"
 "Review agent: audit draft quality and output improvement advice or APPROVED signal": "评审代理：审核草稿质量，输出改进意见或 APPROVED 批准信号"
 "Agent list cannot be empty": "代理列表不能为空"
 "Worker agent list cannot be empty": "工作代理列表不能为空"
