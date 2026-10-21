@@ -1295,7 +1295,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             schemaSpan?.AppendTag(toolNames);
         }
 
-        return (tools, toolMap, [.. providerNames.Keys]);
+        // 工具描述按当前界面语言本地化后再提交 LLM（英文源文 + 词表，缺译文回退源文）
+        return (ToolSchemaLocalizer.Localize(tools), toolMap, [.. providerNames.Keys]);
     }
 
     /// <summary>克隆 ChatOptions 并注入合并后的工具列表（不修改调用方的原始选项）</summary>

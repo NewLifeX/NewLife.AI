@@ -1,5 +1,6 @@
 ﻿using NewLife.AI.Clients;
 using NewLife.AI.Models;
+using NewLife.AI.Tools;
 
 namespace NewLife.AI.Planner;
 
@@ -132,7 +133,7 @@ public class FunctionCallingPlanner : IPlanner
         {
             Model = options?.Model,
             Temperature = options?.Temperature ?? 0,  // 规划阶段使用低温度以确保确定性
-            Tools = tools,
+            Tools = ToolSchemaLocalizer.Localize(tools),
             ToolChoice = "required",  // 强制使用工具，确保返回步骤
         };
 
