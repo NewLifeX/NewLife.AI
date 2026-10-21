@@ -100,7 +100,7 @@ public partial class Skill
     [DisplayName("触发词")]
     [Description("触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译")]
     [DataObjectField(false, false, true, 500)]
-    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译", "")]
+    [BindColumn("Triggers", "触发词。逗号分隔，用户消息命中时自动激活该技能；代码内置的技能以英文短语为源文，管理员自建技能可按部署语言直接填写", "")]
     public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
 
     private Int32 _Sort;

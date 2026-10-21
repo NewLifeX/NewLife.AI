@@ -83,7 +83,7 @@ public partial class McpServerConfig
     [DisplayName("触发词")]
     [Description("触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用")]
     [DataObjectField(false, false, true, 500)]
-    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用", "")]
+    [BindColumn("Triggers", "触发词。逗号分隔，以英文短语为源文，消息命中时自动加载该服务下的 MCP 工具；为空表示每轮默认可用", "")]
     public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
 
     private String? _DisabledTools;

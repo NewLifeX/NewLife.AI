@@ -84,7 +84,7 @@ public partial class NativeTool
     [DisplayName("触发词")]
     [Description("触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）")]
     [DataObjectField(false, false, true, 500)]
-    [BindColumn("Triggers", "触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）", "")]
+    [BindColumn("Triggers", "触发词。逗号分隔，以英文短语为源文（如 weather,forecast），消息命中时自动激活该工具（仅 IsSystem=false 生效）；当前语言说法由词表 trigger: 词条提供", "")]
     public String? Triggers { get => _Triggers; set { if (OnPropertyChanging("Triggers", value)) { _Triggers = value; OnPropertyChanged("Triggers"); } } }
 
     private String? _AssistantTriggers;
@@ -92,7 +92,7 @@ public partial class NativeTool
     [DisplayName("助手触发词")]
     [Description("助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）")]
     [DataObjectField(false, false, true, 500)]
-    [BindColumn("AssistantTriggers", "助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）", "")]
+    [BindColumn("AssistantTriggers", "助手触发词。逗号分隔，同样以英文短语为源文，AI 上一轮回复命中时自动激活该工具（仅 IsSystem=false 生效）", "")]
     public String? AssistantTriggers { get => _AssistantTriggers; set { if (OnPropertyChanging("AssistantTriggers", value)) { _AssistantTriggers = value; OnPropertyChanged("AssistantTriggers"); } } }
 
     private Boolean _Enable;

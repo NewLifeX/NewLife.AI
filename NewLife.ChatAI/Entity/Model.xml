@@ -347,7 +347,7 @@
         <Column Name="AuthType" DataType="String" Description="认证类型。None/Bearer/ApiKey" />
         <Column Name="AuthToken" DataType="String" ShowIn="Auto,-List,-Search" Length="500" Description="认证令牌" />
         <Column Name="AvailableTools" DataType="String" ShowIn="Auto,-List,-Search" Length="-1" Description="可用工具。已发现的工具列表，JSON格式" />
-        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动加载该服务下的MCP工具；为空表示每轮默认可用" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔，以英文短语为源文，消息命中时自动加载该服务下的 MCP 工具；为空表示每轮默认可用" />
         <Column Name="DisabledTools" DataType="String" Length="500" Description="禁用工具。逗号分隔的工具名称列表，支持*前缀通配（如 search_* 禁用所有search_开头工具）；被禁用的工具不暴露给AI" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
@@ -372,8 +372,8 @@
         <Column Name="MethodName" DataType="String" Length="200" Description="方法名。工具对应的C#方法名，如GetCurrentTime" />
         <Column Name="Description" DataType="String" ItemType="markdown" Length="2000" Description="描述。工具功能说明，自动从Description特性提取，锁定后不再覆盖" />
         <Column Name="Parameters" DataType="String" ItemType="json" ShowIn="Auto,-List,-Search" Length="-1" Description="参数Schema。JSON格式的函数参数定义，锁定后不再覆盖" />
-        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，消息包含任一词时自动激活该工具（仅IsSystem=false生效）" />
-        <Column Name="AssistantTriggers" DataType="String" Length="500" Description="助手触发词。逗号分隔，AI上一轮回复包含任一词时自动激活该工具（仅IsSystem=false生效）" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔，以英文短语为源文（如 weather,forecast），消息命中时自动激活该工具（仅 IsSystem=false 生效）；当前语言说法由词表 trigger: 词条提供" />
+        <Column Name="AssistantTriggers" DataType="String" Length="500" Description="助手触发词。逗号分隔，同样以英文短语为源文，AI 上一轮回复命中时自动激活该工具（仅 IsSystem=false 生效）" />
         <Column Name="Enable" DataType="Boolean" DefaultValue="true" Description="启用。是否启用此工具，禁用后不传给LLM调用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统工具。每次LLM请求自动携带，无需@引用，如当前时间、当前用户信息" />
         <Column Name="IsLocked" DataType="Boolean" Description="锁定。锁定后启动扫描时不再覆盖描述和参数Schema信息，可用于手工调整" />
@@ -429,7 +429,7 @@
         <Column Name="Category" DataType="String" Description="分类。通用/开发/创作/分析" />
         <Column Name="Description" DataType="String" Length="500" Description="描述。一句话说明该技能做什么" />
         <Column Name="Content" DataType="String" ItemType="markdown" ShowIn="Auto,-List,-Search" Length="-1" Description="技能正文。Markdown格式，包含完整的行为指令、规则和示例" />
-        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔的关键词列表，用户消息包含任一词时自动激活该技能，如：翻译,translate,帮我译" />
+        <Column Name="Triggers" DataType="String" Length="500" Description="触发词。逗号分隔，用户消息命中时自动激活该技能；代码内置的技能以英文短语为源文，管理员自建技能可按部署语言直接填写" />
         <Column Name="Sort" DataType="Int32" Description="排序。越大越靠前" />
         <Column Name="Enable" DataType="Boolean" Description="启用" />
         <Column Name="IsSystem" DataType="Boolean" Description="系统。系统技能无需引用或关键词匹配，每次对话自动注入 system 消息；用户不可删除" />
