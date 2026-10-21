@@ -2,11 +2,13 @@
 # 规则：调用点字符串中不得出现 CJK 字符；注释中的中文不受限制。
 #
 # 用法：
-#   pwsh -File check-english-exceptions.ps1                         # 默认扫描全部库项目，失败退出码 1
-#   pwsh -File check-english-exceptions.ps1 -Dir XCode -List        # 盘点中文消息，不失败
-#   pwsh -File check-english-exceptions.ps1 -Dir XCode -Csv hits.csv # 导出待翻译清单
+#   pwsh -File tools/check-english-exceptions.ps1                         # 默认扫描当前仓库的库项目，失败退出码 1
+#   pwsh -File tools/check-english-exceptions.ps1 -Dir XCode -List        # 盘点中文消息，不失败
+#   pwsh -File tools/check-english-exceptions.ps1 -Dir XCode -Csv hits.csv # 导出待翻译清单
+#
+# 默认根目录为脚本所在 tools 的上一级（仓库根）；下游仓库可复制脚本或显式指定 -Root。
 param(
-    [String]$Root = $PSScriptRoot,
+    [String]$Root = (Split-Path -Parent $PSScriptRoot),
     [String[]]$Dir,
     [String[]]$Exclude = @(),
     [String]$MessageCall = 'throw\b|new\s+\w*Exception\s*\(|: base\(|Console\.Write|MessageBox\.Show|AppendTag\(|NewError\(|NewSpan\(|Debug\.Fail\(|WriteLog\(|OnWrite\(|XTrace\.|Log\.(Write|Error|Info|Debug|Warn|Fatal)|(Info|Error|Warn|Debug|Fatal)Prefixed\(|WritePrefixed\(|L\.T\(|Localization\.Translate|ApiException\(|HttpException\(|msg = |Message = |desc = |AppendFormat\(|new\s*\(\s*"',

@@ -7,9 +7,11 @@
 #   4. 裁剪发布（PublishTrimmed 写在应用项目正文里）后运行，验证包内 buildTransitive targets 自动保根、服务商与词表未被裁掉。
 #
 # 用法：
-#   pwsh -File check-package-consumer.ps1
-#   pwsh -File check-package-consumer.ps1 -Keep        # 保留临时目录便于排查
-#   pwsh -File check-package-consumer.ps1 -SkipTrim    # 跳过裁剪发布（本机无对应 RID 工具链时）
+#   pwsh -File tools/check-package-consumer.ps1
+#   pwsh -File tools/check-package-consumer.ps1 -Keep        # 保留临时目录便于排查
+#   pwsh -File tools/check-package-consumer.ps1 -SkipTrim    # 跳过裁剪发布（本机无对应 RID 工具链时）
+#
+# 默认根目录为脚本所在 tools 的上一级（仓库根），临时产物落仓内 .tmp。
 param(
     [String]$Configuration = "Release",
     [String]$Framework = "net10.0",
@@ -19,7 +21,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$root = $PSScriptRoot
+$root = Split-Path -Parent $PSScriptRoot
 $work = Join-Path $root ".tmp\package-consumer"
 $out = Join-Path $work "out"
 $consumer = Join-Path $work "Consumer"

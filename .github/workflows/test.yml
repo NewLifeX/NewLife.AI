@@ -63,7 +63,7 @@ jobs:
     - name: Package consumer smoke
       # 下游只加 PackageReference 的端到端验证，防止打包资产、服务商注册与词表分发回归
       shell: pwsh
-      run: ./check-package-consumer.ps1
+      run: ./tools/check-package-consumer.ps1
 
   # 后端单元测试：四类原生 runner 并行，失败自动重试一次以规避偶发网络抖动
   test:
@@ -199,23 +199,23 @@ jobs:
     - name: Check English messages
       shell: pwsh
       run: |
-        pwsh -File ./check-english-exceptions.ps1 -Dir NewLife.AI
-        pwsh -File ./check-english-exceptions.ps1 -Dir NewLife.ChatAI
+        pwsh -File ./tools/check-english-exceptions.ps1 -Dir NewLife.AI
+        pwsh -File ./tools/check-english-exceptions.ps1 -Dir NewLife.ChatAI
 
     - name: Check locales
       shell: pwsh
       run: |
-        pwsh -File ./check-locales.ps1 -LocaleDir NewLife.AI/Locales -SourceDir NewLife.AI -RequireTranslated
-        pwsh -File ./check-locales.ps1 -LocaleDir NewLife.ChatAI/Locales -SourceDir NewLife.ChatAI -SkipOrphan -RequireTranslated
+        pwsh -File ./tools/check-locales.ps1 -LocaleDir NewLife.AI/Locales -SourceDir NewLife.AI -RequireTranslated
+        pwsh -File ./tools/check-locales.ps1 -LocaleDir NewLife.ChatAI/Locales -SourceDir NewLife.ChatAI -SkipOrphan -RequireTranslated
 
     - name: Check README languages
       shell: pwsh
-      run: pwsh -File ./sync-readme-languages.ps1 -Check
+      run: pwsh -File ./tools/sync-readme-languages.ps1 -Check
 
     - name: Check README metrics
       shell: pwsh
-      run: pwsh -File ./sync-readme-metrics.ps1 -Check
+      run: pwsh -File ./tools/sync-readme-metrics.ps1 -Check
 
     - name: Check README package
       shell: pwsh
-      run: pwsh -File ./sync-readme-package.ps1 -Check
+      run: pwsh -File ./tools/sync-readme-package.ps1 -Check

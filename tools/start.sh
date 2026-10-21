@@ -2,15 +2,17 @@
 
 # NewLife.AI 启动脚本
 # 用法:
-#   ./start.sh          启动前端 + 后端
-#   ./start.sh front    仅启动前端
-#   ./start.sh back     仅启动后端
-#   ./start.sh stop     停止所有服务
+#   ./tools/start.sh          启动前端 + 后端
+#   ./tools/start.sh front    仅启动前端
+#   ./tools/start.sh back     仅启动后端
+#   ./tools/start.sh stop     停止所有服务
 
+# 脚本位于 tools/，仓库根在上一级
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR/NewLife.ChatAI"
-FRONTEND_DIR="$SCRIPT_DIR/Web"
-PID_DIR="$SCRIPT_DIR/.pids"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BACKEND_DIR="$ROOT_DIR/NewLife.ChatAI"
+FRONTEND_DIR="$ROOT_DIR/Web"
+PID_DIR="$ROOT_DIR/.pids"
 
 mkdir -p "$PID_DIR"
 

@@ -4,11 +4,13 @@
 # 会随发布变化的数字，不再散落在 11 份 README 里手工维护。
 #
 # 用法：
-#   pwsh -File sync-readme-metrics.ps1            # 按配置写入指标徽章块
-#   pwsh -File sync-readme-metrics.ps1 -Check     # 只校验不写入，不一致退出码 1（CI 使用）
+#   pwsh -File tools/sync-readme-metrics.ps1            # 按配置写入指标徽章块
+#   pwsh -File tools/sync-readme-metrics.ps1 -Check     # 只校验不写入，不一致退出码 1（CI 使用）
+#
+# 默认根目录为脚本所在 tools 的上一级（仓库根）。
 param(
     [Switch]$Check,
-    [String]$Root = $PSScriptRoot,
+    [String]$Root = (Split-Path -Parent $PSScriptRoot),
     [String]$Config = "readme-metrics.json"
 )
 
@@ -70,7 +72,7 @@ foreach ($file in $files) {
     if ($Check) {
         $errors++
         Write-Host "✗ $($file.Name)"
-        Write-Host "  指标块与 readme-metrics.json 不一致，请运行 pwsh -File sync-readme-metrics.ps1"
+        Write-Host "  指标块与 readme-metrics.json 不一致，请运行 pwsh -File tools/sync-readme-metrics.ps1"
     }
     else {
         [IO.File]::WriteAllText($path, $newText, (New-Object System.Text.UTF8Encoding($false)))

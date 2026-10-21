@@ -5,12 +5,14 @@
 # NuGet 不支持相对链接，因此包内 README 必须独立生成，不能直接嵌入 README.md。
 #
 # 用法：
-#   pwsh -File sync-readme-package.ps1           # 生成
-#   pwsh -File sync-readme-package.ps1 -Check    # 只校验不写入，不一致退出码 1（CI 使用）
-#   pwsh -File sync-readme-package.ps1 -Root D:\src\MyLib
+#   pwsh -File tools/sync-readme-package.ps1           # 生成
+#   pwsh -File tools/sync-readme-package.ps1 -Check    # 只校验不写入，不一致退出码 1（CI 使用）
+#   pwsh -File tools/sync-readme-package.ps1 -Root D:\src\MyLib
+#
+# 默认根目录为脚本所在 tools 的上一级（仓库根）。
 param(
     [Switch]$Check,
-    [String]$Root = $PSScriptRoot,
+    [String]$Root = (Split-Path -Parent $PSScriptRoot),
     [String]$Config = "readme-package.json"
 )
 
@@ -86,7 +88,7 @@ foreach ($item in $items) {
 
     $text = [IO.File]::ReadAllText($source)
     $converted = Convert-Readme $text
-    $header = "<!-- generated from $($item.source) by sync-readme-package.ps1; do not edit -->"
+    $header = "<!-- generated from $($item.source) by tools/sync-readme-package.ps1; do not edit -->"
     $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
     $result = $header + $newline + $newline + $converted
     if (!$result.EndsWith($newline)) { $result += $newline }
@@ -154,7 +156,7 @@ foreach ($item in $items) {
 
 if ($Check) {
     if ($errors -gt 0) {
-        Write-Host "`nREADME 包版校验失败：$errors 项。请运行 pwsh -File sync-readme-package.ps1 后提交。"
+        Write-Host "`nREADME 包版校验失败：$errors 项。请运行 pwsh -File tools/sync-readme-package.ps1 后提交。"
         exit 1
     }
     Write-Host "README 包版一致（$($items.Count) 个文件）"

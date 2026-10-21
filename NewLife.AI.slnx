@@ -17,12 +17,12 @@
     <File Path="readme-languages.json" />
     <File Path="readme-package.json" />
     <File Path="readme-metrics.json" />
-    <File Path="check-locales.ps1" />
-    <File Path="check-english-exceptions.ps1" />
-    <File Path="check-package-consumer.ps1" />
-    <File Path="sync-readme-languages.ps1" />
-    <File Path="sync-readme-package.ps1" />
-    <File Path="sync-readme-metrics.ps1" />
+    <File Path="tools/check-locales.ps1" />
+    <File Path="tools/check-english-exceptions.ps1" />
+    <File Path="tools/check-package-consumer.ps1" />
+    <File Path="tools/sync-readme-languages.ps1" />
+    <File Path="tools/sync-readme-package.ps1" />
+    <File Path="tools/sync-readme-metrics.ps1" />
   </Folder>
   <Project Path="AotSmoke/AotSmoke.csproj" />
   <Project Path="AotWebSmoke/AotWebSmoke.csproj" />
