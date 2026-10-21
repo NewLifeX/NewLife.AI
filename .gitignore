@@ -26,6 +26,9 @@ bld/
 /MapApi/Locations/Config
 .idea/
 
+# 系统垃圾文件
+.DS_Store
+
 # Frontend
 node_modules/
 Web/dist/
