@@ -56,15 +56,15 @@ public class WidgetToolService(ILog log)
         AssistantTriggers = "画一张,绘制,可视化,时间线,关系图,SVG,图表,展示",
         ReadOnly = true)]
     [DisplayName("可视化Widget")]
-    [Description("将 SVG 或 HTML 片段渲染到对话气泡中。适用：时间线/关系图（SVG）、表单预览/数据卡片（HTML）、统计图表（SVG）。禁止用于 Mermaid 图表，Mermaid 请在正文以 ```mermaid 代码块输出。约束：≤ 200KB，<script src=...> 仅限受信任 CDN。🎨 视觉风格：请根据对话主题为生成的 HTML/SVG 选择信息架构（Bento/卡片流/Grid）、字体层级和色彩体系。技术讨论用冷色无衬线、商业报告用中性色+关键数字突出、创意设计可用渐变/玻璃态/微动效。显式指定 font-family 和 color，禁止浏览器默认样式。")]
+    [Description("Render an SVG or HTML fragment inside the chat bubble. Use it for timelines and relationship diagrams (SVG), form previews and data cards (HTML), and statistical charts (SVG). Do not use it for Mermaid diagrams; output Mermaid as a ```mermaid code block in the reply instead. Limits: 200KB or less; <script src=...> only from trusted CDNs. Visual style: choose the information architecture (Bento/card flow/Grid), type hierarchy, and color system based on the topic. Use cool sans-serif tones for technical discussions, neutral colors with highlighted numbers for business reports, and gradients/glassmorphism/micro-animations for creative work. Always set font-family and color explicitly; do not rely on browser defaults.")]
     public ToolResult ShowWidget(
-        [Description("Widget 标题（≤ 30 字），如『订单状态流程图』")] String title,
-        [Description("SVG 以 <svg 开头；HTML 片段以根标签开头，不含 <html><body>。最大 200KB，<script src=...> 仅限受信任 CDN。禁止传入 Mermaid 语法（flowchart/graph/sequenceDiagram 等），Mermaid 应在正文以 ```mermaid 代码块输出")] String content,
-        [Description("加载占位文本，可选。渲染完成前展示")] String? loadingMessage = null,
-        [Description("主题提示：light（浅色）/ dark（深色）/ auto（跟随系统）。AI 生成 HTML 时应据此选择背景色和文字色，不传入前端渲染")] String? theme = null,
-        [Description("Widget 初始高度（px，80~1200），默认 480。紧凑卡片建议 300-400，大图表建议 600-800")] Int32? initialHeight = null,
-        [Description("背景模式：solid（纯色背景，默认）/ transparent（透明背景，截图后可叠加到 PPT 模板底图上）")] String? background = null,
-        [Description("PPT 幻灯片模式。true 时卡片按 16:9 宽高比渲染，适合直接粘贴到演示文稿。默认 false 沿用自适应内容宽度")] Boolean? slideMode = null,
+        [Description("Widget title (up to 30 characters), e.g. Order Status Flow")] String title,
+        [Description("SVG must start with <svg; HTML fragments must start with the root element and must not include <html><body>. Maximum 200KB; <script src=...> only from trusted CDNs. Do not pass Mermaid syntax (flowchart/graph/sequenceDiagram, etc.); output Mermaid as a ```mermaid code block in the reply")] String content,
+        [Description("Placeholder text shown while loading (optional)")] String? loadingMessage = null,
+        [Description("Theme hint: light / dark / auto (follow system). The generated HTML should pick background and text colors accordingly; not passed to the front-end renderer")] String? theme = null,
+        [Description("Initial widget height in px (80-1200). Default 480. Use 300-400 for compact cards and 600-800 for large charts")] Int32? initialHeight = null,
+        [Description("Background mode: solid (default) / transparent (for overlaying screenshots on a PPT template)")] String? background = null,
+        [Description("PPT slide mode. When true the card renders at a 16:9 aspect ratio, ready to paste into a presentation. Default false, which keeps the content-driven width")] Boolean? slideMode = null,
         ToolCallContext? context = null)
     {
         if (content.IsNullOrEmpty())

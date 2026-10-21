@@ -32,10 +32,10 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         Triggers = "表结构,数据库表,表字段,数据库有哪些表,有什么表",
         AssistantTriggers = "数据库表,表结构,search_table,数据库连接,连接名")]
     [DisplayName("搜索数据库表")]
-    [Description("根据关键字搜索匹配的数据库表结构。返回包含两部分：① 表→连接映射表（Markdown表格，明确每个表属于哪个连接，同名表在不同连接下独立列出）；② 各连接下的表结构 XML 详情。后续 run_sql 须使用映射表中指定的连接名")]
+    [Description("Search database table schemas by keyword. The result has two parts: (1) a table-to-connection mapping (a Markdown table that makes clear which connection each table belongs to; same-named tables under different connections are listed separately); (2) the table schema XML for each connection. Later run_sql calls must use the connection name given in the mapping table")]
     public String SearchTable(
-        [Description("搜索关键字，多个用逗号或空格分隔")] String keywords,
-        [Description("限定连接名，为空则搜索所有连接")] String? connName = null,
+        [Description("Search keywords, separated by commas or spaces")] String keywords,
+        [Description("Restrict to a connection name; empty searches all connections")] String? connName = null,
         ToolCallContext? context = null)
     {
         if (keywords.IsNullOrEmpty()) throw new ArgumentNullException(nameof(keywords), Localization.Translate("keywords cannot be empty"));
@@ -80,10 +80,10 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
         Triggers = "执行SQL,运行SQL,SQL查询,SQL语句",
         AssistantTriggers = "SQL查询,执行查询,run_sql,SQL语句")]
     [DisplayName("执行SQL")]
-    [Description("在指定数据库连接上执行SQL语句。SELECT/WITH 查询返回数据行；INSERT/UPDATE/DELETE 等非查询操作返回受影响行数。connName 必须与 search_table 返回的映射表中'所属连接'列一致")]
+    [Description("Execute a SQL statement on the given database connection. SELECT/WITH queries return data rows; non-query statements such as INSERT/UPDATE/DELETE return the affected row count. connName must match the connection column returned by search_table")]
     public String QuerySql(
-        [Description("数据库连接名（来自 search_table 的'所属连接'列）")] String connName,
-        [Description("SQL语句。SELECT/WITH 返回结果集，非查询操作返回受影响行数")] String sql,
+        [Description("Database connection name (from the connection column of search_table)")] String connName,
+        [Description("SQL statement. SELECT/WITH returns a result set; non-query statements return the affected row count")] String sql,
         ToolCallContext? context = null)
     {
         if (connName.IsNullOrEmpty()) throw new ArgumentNullException(nameof(connName), Localization.Translate("connName cannot be empty"));

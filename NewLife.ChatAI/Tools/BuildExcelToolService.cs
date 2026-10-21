@@ -24,11 +24,11 @@ public class BuildExcelToolService(ILog log)
         AssistantTriggers = "Excel,报表,xlsx,电子表格,数据表,生成Excel,生成报表,导出Excel,build_excel",
         ReadOnly = false)]
     [DisplayName("Excel生成")]
-    [Description("生成 Excel 电子表格（.xlsx）并返回下载链接。支持多工作表、表头样式、列宽、数字格式、条件格式、冻结窗格、自动筛选、下拉验证。theme 参数使用卡片风格 Key 或内置名（blue/dark/corporate/warm/green/minimal）")]
+    [Description("Generate an Excel workbook (.xlsx) and return a download link. Supports multiple worksheets, header styles, column widths, number formats, conditional formats, frozen panes, auto filters, and dropdown validation. The theme parameter accepts a card style key or a built-in name (blue/dark/corporate/warm/green/minimal)")]
     public async Task<ToolResult> BuildExcel(
-        [Description("工作簿标题（≤ 30 字），如「Q2营收报表」")] String title,
-        [Description(@"工作表数组（JSON）。每表字段：name（表名）、headers（列头数组）、rows（二维数组，每行为一个单元格值数组，如 [[""张三"",""85""],[""李四"",""92""]]）、style（{headerBgColor,headerFontColor,stripeColor}）、columnWidths（列宽数组，如[12,20,15]）、numberFormat（数字格式，如""#,##0.00""或""yyyy-MM-dd""）、conditionalFormats（条件格式数组，每项{range,type,color,value?}，type支持dataBar/colorScale/greaterThan等）、charts（图表数组）、freezeRows（冻结行数）、autoFilter（筛选范围）、dropdowns（下拉验证）")] ExcelSheetModel[]? sheets,
-        [Description("主题（可选）：卡片风格 Key（如 enterprise-blue）或内置名（blue/dark/corporate/warm/green/minimal），决定表头与整体配色；不传则沿用会话风格或品牌默认")] String? theme = null,
+        [Description("Workbook title (up to 30 characters), e.g. Q2 Revenue Report")] String title,
+        [Description(@"Worksheet array (JSON). Fields of each sheet: name, headers (header array), rows (2-D array; each row is an array of cell values, e.g. [[""Alice"",""85""],[""Bob"",""92""]]), style ({headerBgColor,headerFontColor,stripeColor}), columnWidths (e.g. [12,20,15]), numberFormat (e.g. ""#,##0.00"" or ""yyyy-MM-dd""), conditionalFormats (array of {range,type,color,value?}; type supports dataBar/colorScale/greaterThan, etc.), charts (chart array), freezeRows (number of frozen rows), autoFilter (filter range), dropdowns (dropdown validation)")] ExcelSheetModel[]? sheets,
+        [Description("Theme (optional): a card style key (e.g. enterprise-blue) or a built-in name (blue/dark/corporate/warm/green/minimal) that controls header and overall colors; when omitted, the conversation style or brand default is used")] String? theme = null,
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())

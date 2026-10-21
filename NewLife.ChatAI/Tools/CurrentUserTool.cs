@@ -14,7 +14,7 @@ public class CurrentUserTool
     /// <summary>获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、性别、年龄、生日、备注，以及来访 IP 地址、所在城市和详细地理地址等档案数据。当用户询问"我是谁"、"我的IP"、"我在哪"或需要个人信息时调用</summary>
     [ToolDescription("get_current_user", Triggers = "我是谁,我的信息,我的档案,我的IP,我在哪", IsSystem = true)]
     [DisplayName("当前用户信息")]
-    [Description("获取当前登录用户的详细信息，包括用户名、昵称、邮箱、手机号、编码、角色、部门、性别、年龄、生日、备注，以及来访 IP 地址、所在城市和详细地理地址等档案数据")]
+    [Description("Get details of the current signed-in user, including user name, display name, email, mobile, code, roles, department, gender, age, birthday, and remark, plus the visitor IP address, city, and detailed geo location")]
     public String GetCurrentUser()
     {
         var user = ManageProvider.User;

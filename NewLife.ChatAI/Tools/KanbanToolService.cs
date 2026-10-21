@@ -54,12 +54,12 @@ public class KanbanToolService(ILog log)
         AssistantTriggers = "看板,任务分解,待办清单,工作流,Sprint,任务状态,泳道,任务规划",
         ReadOnly = true)]
     [DisplayName("任务看板")]
-    [Description("将任务清单渲染为多列看板（如：待办 → 进行中 → 已完成）。适用场景：项目拆解、Sprint 规划、工作流展示、任务状态分类。每列可有颜色标记和 WIP 上限，每张卡片可含标题、描述、优先级、标签、截止日期、负责人、子任务清单、进度和链接。📐 2 种布局：board（默认多列看板）/ swimlane（泳道视图，按团队/模块分组列）。")]
+    [Description("Render a task list as a multi-column kanban board (e.g. To do -> In progress -> Done). Good for project breakdowns, sprint planning, workflow display, and task state grouping. Each column can have a color marker and a WIP limit; each card can have a title, description, priority, tags, due date, assignee, checklist, progress, and link. Two layouts: board (default multi-column board) and swimlane (columns grouped by team or module).")]
     public ToolResult ShowKanban(
-        [Description("看板标题（≤ 30 字），如「Sprint 1 任务看板」")] String title,
-        [Description(@"列定义 JSON 数组。示例：[{""id"":""todo"",""title"":""待办"",""color"":""#94a3b8"",""wipLimit"":5,""cards"":[{""id"":""1"",""title"":""需求分析"",""description"":""整理用户需求"",""priority"":""high"",""tags"":[""设计""],""dueDate"":""2026-07-15"",""assignee"":""张三"",""checklist"":[{""title"":""访谈用户"",""done"":true}],""progress"":60,""link"":""https://example.com""}]}]。color/wipLimit/description/priority/tags/dueDate/assignee/checklist/progress/link 均可省略")] IList<KanbanColumn>? columns,
-        [Description("布局模式：board（默认多列看板）/ swimlane（泳道视图，按团队/模块分组列，需同时提供 swimlanes 参数）")] String? layout = null,
-        [Description(@"泳道定义 JSON 数组（layout=swimlane 时使用）。示例：[{""id"":""sl1"",""title"":""前端团队"",""columnIds"":[""todo"",""doing""]},{""id"":""sl2"",""title"":""后端团队"",""columnIds"":[""todo"",""doing""]}]")] IList<KanbanSwimlane>? swimlanes = null,
+        [Description("Board title (up to 30 characters), e.g. Sprint 1 Board")] String title,
+        [Description(@"Column definition JSON array. Example: [{""id"":""todo"",""title"":""To do"",""color"":""#94a3b8"",""wipLimit"":5,""cards"":[{""id"":""1"",""title"":""Requirement analysis"",""description"":""Collect user requirements"",""priority"":""high"",""tags"":[""design""],""dueDate"":""2026-07-15"",""assignee"":""Alice"",""checklist"":[{""title"":""Interview users"",""done"":true}],""progress"":60,""link"":""https://example.com""}]}]. Every field except id and title is optional")] IList<KanbanColumn>? columns,
+        [Description("Layout mode: board (default multi-column board) or swimlane (columns grouped by team or module; the swimlanes parameter is required)")] String? layout = null,
+        [Description(@"Swimlane definition JSON array (used when layout=swimlane). Example: [{""id"":""sl1"",""title"":""Front-end team"",""columnIds"":[""todo"",""doing""]},{""id"":""sl2"",""title"":""Back-end team"",""columnIds"":[""todo"",""doing""]}]")] IList<KanbanSwimlane>? swimlanes = null,
         ToolCallContext? context = null)
     {
         if (columns == null || columns.Count == 0)

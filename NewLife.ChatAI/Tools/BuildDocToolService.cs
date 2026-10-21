@@ -25,11 +25,11 @@ public class BuildDocToolService(ILog log)
         AssistantTriggers = "Word,docx,文档,报告,方案书,周报,会议纪要,生成文档,生成Word,报告文档,build_doc",
         ReadOnly = false)]
     [DisplayName("Word文档生成")]
-    [Description("生成 Word 文档（.docx）并返回下载链接。支持标题/段落/列表/表格/图片/分页/分隔线/高亮框/KPI/引用/代码块。sections JSON 数组描述每个节，每节包含 heading（节标题）、content（正文）、elements（结构化元素）")]
+    [Description("Generate a Word document (.docx) and return a download link. Supports headings, paragraphs, lists, tables, images, page breaks, dividers, callouts, KPIs, quotes, and code blocks. The sections JSON array describes each section, with heading, content, and elements")]
     public async Task<ToolResult> BuildDoc(
-        [Description("文档标题（≤ 30 字），如「Q2季度总结报告」")] String title,
-        [Description(@"文档节数组（JSON）。每节字段：heading（节标题文字）、headingLevel（级别1~3，默认1）、content（正文段落，可选）、elements（元素数组，可选）。elements 元素类型：paragraph（{type,text,可选bold/italic/underline/fontSize/color/alignment/backgroundColor}）、bullet_list（{type,items}）、ordered_list（{type,items}）、table（{type,headers,rows,可选tableStyle}，rows为二维数组每行一个单元格值数组如 [[""张三"",""85""],[""李四"",""92""]]）、image（{type,src,widthCm?,heightCm?}）、page_break（{type}）、divider（{type}分隔线）、callout（{type,text,variant?=info/success/warning/danger}高亮提示框）、kpi（{type,kpiValue,kpiLabel?,kpiTrend?=up/down/flat}大数字指标）、quote（{type,text,quoteSource?}引用块）、code（{type,text,codeLanguage?}代码块）")] DocSectionModel[]? sections,
-        [Description("主题（可选）：卡片风格 Key（如 enterprise-blue）或内置名（blue/dark/corporate/warm/green/minimal），不传则沿用会话风格或品牌默认")] String? theme = null,
+        [Description("Document title (up to 30 characters), e.g. Q2 Quarterly Report")] String title,
+        [Description(@"Section array (JSON). Fields of each section: heading (section title), headingLevel (1-3, default 1), content (body paragraph, optional), elements (element array, optional). Element types: paragraph ({type,text, optional bold/italic/underline/fontSize/color/alignment/backgroundColor}), bullet_list ({type,items}), ordered_list ({type,items}), table ({type,headers,rows, optional tableStyle}; rows is a 2-D array where each row is an array of cell values, e.g. [[""Alice"",""85""],[""Bob"",""92""]]), image ({type,src,widthCm?,heightCm?}), page_break ({type}), divider ({type}), callout ({type,text,variant?=info/success/warning/danger}), kpi ({type,kpiValue,kpiLabel?,kpiTrend?=up/down/flat}), quote ({type,text,quoteSource?}), code ({type,text,codeLanguage?})")] DocSectionModel[]? sections,
+        [Description("Theme (optional): a card style key (e.g. enterprise-blue) or a built-in name (blue/dark/corporate/warm/green/minimal); when omitted, the conversation style or brand default is used")] String? theme = null,
         ToolCallContext? context = null)
     {
         if (title.IsNullOrEmpty())

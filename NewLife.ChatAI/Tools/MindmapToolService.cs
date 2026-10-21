@@ -37,14 +37,14 @@ public class MindmapToolService(ILog log)
         AssistantTriggers = "思维导图,知识树,体系梳理,层级结构,概念图,归纳,脑图",
         ReadOnly = true)]
     [DisplayName("思维导图")]
-    [Description("将知识层级/概念关系渲染为可折叠的交互式思维导图。输入 Markdown 大纲（# / ## / ###），前端自动转换为可视化树状图。适用场景：知识梳理、概念拆解、技术对比、方案评估、内容归纳。🎨 视觉风格：请结合对话主题主动选择 branchColors（3~8 个协调色）、maxDepth（控制复杂度）、collapsed（初始折叠以聚焦重点）。技术/数据主题用冷色系（蓝紫青）、商业/营销用暖色系（橙金红）、自然/健康用绿色系。节点密集时建议 maxDepth=2 保持可读性。📐 6 种布局：tree（默认缩进树，通用）/ radial（左右放射，知识梳理/概念图首选）/ lr（中心向右，流程图/决策树）/ rl（中心向左，反向追溯）/ tb（中心向下，组织架构）/ bt（中心向上，自底向上层级）。")]
+    [Description("Render knowledge hierarchies or concept relationships as a collapsible interactive mind map. The input is a Markdown outline (# / ## / ###) that the front end converts into a visual tree. Use it for knowledge organization, concept breakdown, technology comparison, option evaluation, and content summarization. Visual style: choose branchColors (3-8 coordinated colors), maxDepth (complexity), and collapsed (initially collapsed to focus) based on the topic. Use cool colors (blue/purple/cyan) for technology and data, warm colors (orange/gold/red) for business and marketing, and greens for nature and health. For dense nodes, set maxDepth=2 for readability. 6 layouts: tree (default indented tree, general purpose) / radial (left-right radial, best for knowledge maps) / lr (center to right, flowcharts/decision trees) / rl (center to left, backward tracing) / tb (center downward, org charts) / bt (center upward, bottom-up hierarchy).")]
     public ToolResult ShowMindmap(
-        [Description("思维导图标题（≤ 30 字），如「人工智能技术体系」")] String title,
-        [Description("Markdown 大纲，用 # / ## / ### 表示 1~3 级层级。示例：\n# 人工智能\n## 机器学习\n### 监督学习\n### 无监督学习\n## 深度学习\n### CNN\n### RNN")] String outline,
-        [Description("布局模式：tree（默认缩进树，通用）/ radial（左右放射，知识梳理/概念图首选）/ lr（中心向右，流程图/决策树）/ rl（中心向左，反向追溯）/ tb（中心向下，组织架构）/ bt（中心向上，自底向上层级）")] String? layout = null,
-        [Description("分支配色 JSON 数组，如 [\"#3b82f6\",\"#10b981\",\"#f59e0b\"]。3~8 个十六进制颜色，按顺序分配给各一级分支。不传则使用蓝紫/绿/黄/红/天蓝/深绿/橙/紫默认色板")] IList<String>? branchColors = null,
-        [Description("初始折叠的节点 ID 列表 JSON 数组，如 [\"n2\",\"n5\"]。空则全部展开。用于聚焦重点分支")] IList<String>? collapsed = null,
-        [Description("最大可见深度，1=仅一级分支，2=一二级，默认无限制。节点密集时建议设为 2 保持可读性")] Int32? maxDepth = null,
+        [Description("Mind map title (up to 30 characters), e.g. AI Technology Stack")] String title,
+        [Description("Markdown outline using # / ## / ### for levels 1-3. Example:\n# Artificial Intelligence\n## Machine Learning\n### Supervised Learning\n### Unsupervised Learning\n## Deep Learning\n### CNN\n### RNN")] String outline,
+        [Description("Layout mode: tree (default indented tree, general purpose) / radial (left-right radial, best for knowledge maps) / lr (center to right, flowcharts/decision trees) / rl (center to left, backward tracing) / tb (center downward, org charts) / bt (center upward, bottom-up hierarchy)")] String? layout = null,
+        [Description("Branch color JSON array, e.g. [\"#3b82f6\",\"#10b981\",\"#f59e0b\"]. 3-8 hex colors assigned in order to the top-level branches. When omitted, the default blue/purple, green, yellow, red, sky blue, dark green, orange, and purple palette is used")] IList<String>? branchColors = null,
+        [Description("JSON array of initially collapsed node IDs, e.g. [\"n2\",\"n5\"]. Empty expands everything. Use it to focus on key branches")] IList<String>? collapsed = null,
+        [Description("Maximum visible depth: 1 = top-level branches only, 2 = two levels, unlimited by default. For dense nodes, set it to 2 for readability")] Int32? maxDepth = null,
         ToolCallContext? context = null)
     {
         if (outline.IsNullOrEmpty())

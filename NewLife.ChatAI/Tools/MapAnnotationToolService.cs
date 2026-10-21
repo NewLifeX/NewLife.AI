@@ -124,14 +124,14 @@ public class MapAnnotationToolService(ILog log)
         AssistantTriggers = "地图,标注,省份,城市分布,地理分布,数据地图,热力,分布图,定位,各省,全国分布",
         ReadOnly = true)]
     [DisplayName("中国地图标注")]
-    [Description("在中国地图上标注坐标点（城市/POI）或高亮省份区域，生成带标注的 SVG 地图并渲染到对话气泡。支持：①自定义颜色的省份填充高亮；②WGS84 经纬度坐标标注点（含标签文字）；③右下角自动图例。典型用途：各省数据分布、城市位置展示、区域销售热力图。")]
+    [Description("Mark coordinate points (cities or POIs) or highlight province areas on a map of China, generate an annotated SVG map, and render it in the chat bubble. Supports: (1) province fills with custom colors; (2) WGS84 latitude/longitude markers with label text; (3) an automatic legend in the bottom-right corner. Typical uses: data distribution by province, city locations, and regional sales heat maps.")]
     public ToolResult AnnotateChinaMap(
-        [Description("地图标题（≤ 30 字），如「2024年各省GDP分布」")] String title,
-        [Description(@"坐标点标注 JSON 数组（可为空数组 []）。格式：[{""name"":""北京"",""lat"":39.9,""lng"":116.4,""label"":""北京\n43760亿"",""color"":""#E74C3C"",""size"":8}]。lat/lng 为 WGS84 十进制度，color/size 可省略")] IList<MapMarker>? markers,
-        [Description(@"省份高亮 JSON 数组（可为空数组 []）。格式：[{""name"":""广东省"",""color"":""#FFB347"",""label"":""GDP第一""}]。name 支持中文省份全称或简称，label 可省略")] IList<MapHighlight>? highlightProvinces = null,
-        [Description("图例标题（可选），如「GDP规模」")] String? legendTitle = null,
-        [Description("配色方案（可选），支持 blue/orange/green/purple/red，默认 blue")] String? colorScheme = null,
-        [Description("标注点样式（可选），如 circle/pin/square，默认 circle")] String? markerStyle = null,
+        [Description("Map title (up to 30 characters), e.g. 2024 GDP by Province")] String title,
+        [Description(@"Marker JSON array (may be an empty array []). Format: [{""name"":""Beijing"",""lat"":39.9,""lng"":116.4,""label"":""Beijing\n4376B"",""color"":""#E74C3C"",""size"":8}]. lat/lng are WGS84 decimal degrees; color/size are optional")] IList<MapMarker>? markers,
+        [Description(@"Province highlight JSON array (may be an empty array []). Format: [{""name"":""Guangdong"",""color"":""#FFB347"",""label"":""No.1 GDP""}]. name accepts the Chinese province name (full or short form); label is optional")] IList<MapHighlight>? highlightProvinces = null,
+        [Description("Legend title (optional), e.g. GDP scale")] String? legendTitle = null,
+        [Description("Color scheme (optional): blue/orange/green/purple/red; defaults to blue")] String? colorScheme = null,
+        [Description("Marker style (optional): circle/pin/square; defaults to circle")] String? markerStyle = null,
         ToolCallContext? context = null)
     {
         // 加载底图（首次从程序集嵌入资源读取，之后使用静态缓存）
