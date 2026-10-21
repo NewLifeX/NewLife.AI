@@ -123,7 +123,7 @@ public partial class NativeTool : Entity<NativeTool>, INativeTool
     /// <returns>启用的内置工具列表</returns>
     public static IList<NativeTool> FindAllEnabled() => FindAllWithCache().Where(e => e.Enable).OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id).ToList();
 
-    /// <summary>按名称或显示名称查找内置工具。先匹配 Name（snake_case），再匹配 DisplayName（中文）</summary>
+    /// <summary>按名称或显示名称查找内置工具。先匹配 Name（snake_case），再匹配 DisplayName（源文或当前语言译文）</summary>
     /// <param name="name">名称或显示名称</param>
     /// <returns></returns>
     public static NativeTool? FindByNameOrDisplayName(String name)
@@ -134,11 +134,42 @@ public partial class NativeTool : Entity<NativeTool>, INativeTool
         var tool = FindByName(name);
         if (tool != null) return tool;
 
-        // 再按 DisplayName 匹配（实体缓存）
-        if (Meta.Session.Count < 1000)
-            return Meta.Cache.Find(e => e.DisplayName.EqualIgnoreCase(name));
+        // 再按 DisplayName 匹配（源文或译文；实体缓存）
+        if (Meta.Session.Count < MaxCacheCount)
+            return Meta.Cache.Find(e => e.MatchName(name));
 
-        return Find(_.DisplayName == name);
+        // 大数据量走数据库：先按源文精确匹配，再在工具列表里比对译文（工具表很小）
+        var entity = Find(_.DisplayName == name);
+        if (entity != null) return entity;
+
+        foreach (var item in FindAllWithCache())
+        {
+            if (item.MatchName(name)) return item;
+        }
+
+        return null;
+    }
+
+    /// <summary>判断当前工具是否匹配给定名称。依次匹配工具名、显示名源文与显示名的当前语言译文</summary>
+    /// <param name="name">工具名、显示名或本地化显示名</param>
+    /// <returns>命中返回 true</returns>
+    /// <remarks>
+    /// DisplayName 以英文源文持久化，界面展示的是译文；用户 @提及 时输入的可能是任意一种，
+    /// 因此两种写法都要能命中（见 <see cref="FindByNameOrDisplayName"/>）。
+    /// </remarks>
+    public Boolean MatchName(String name)
+    {
+        if (name.IsNullOrEmpty()) return false;
+
+        // 工具名优先，显示名其次
+        if (!Name.IsNullOrEmpty() && Name.EqualIgnoreCase(name)) return true;
+
+        var displayName = DisplayName;
+        if (displayName.IsNullOrEmpty()) return false;
+        if (displayName.EqualIgnoreCase(name)) return true;
+
+        var text = Localization.Translate(displayName);
+        return !ReferenceEquals(text, displayName) && text.EqualIgnoreCase(name);
     }
     #endregion
 

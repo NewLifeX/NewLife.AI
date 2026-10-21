@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NewLife.AI.Tools;
 using NewLife.Cube;
+using NewLife.Cube.ViewModels;
 using NewLife.Log;
 using NewLife.Web;
 using XCode.Membership;
@@ -18,6 +19,16 @@ public class NativeToolController(ToolRegistry registry) : EntityController<Nati
 
         ListFields.RemoveField("ClassName", "RoleIds", "DepartmentIds", "Providers", "Endpoint", "ApiKey", "AssistantTriggers");
         ListFields.RemoveCreateField().RemoveRemarkField();
+
+        // 展示期翻译：数据库持久化英文源文（DisplayName 同时是 @引用 的匹配键），列表按当前语言渲染
+        {
+            var df = ListFields.GetField("DisplayName") as ListField;
+            if (df != null) df.GetValue = e => Localization.Translate((e as NativeTool)?.DisplayName);
+        }
+        {
+            var df = ListFields.GetField("Description") as ListField;
+            if (df != null) df.GetValue = e => Localization.Translate((e as NativeTool)?.Description);
+        }
 
         //{
         //    var df = ListFields.GetField("Code") as ListField;

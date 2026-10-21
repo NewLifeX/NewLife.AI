@@ -47,7 +47,7 @@ public class ToolDiscoveryProvider
 
                 if (excludeTools != null && excludeTools.Contains(name)) continue;
 
-                var desc = func.Description;
+                var desc = ToolSchemaLocalizer.TranslateText(func.Description);
                 if (desc.IsNullOrEmpty()) desc = "No description";
 
                 // 截断过长描述

@@ -67,26 +67,35 @@ public class SkillApiController(SkillService skillService) : ChatApiControllerBa
             result.Add(ToDto(skill));
         }
 
-        // 工具跟在后面
+        // 工具跟在后面。DisplayName/Description 以英文源文持久化，下发给界面时按当前语言翻译；
+        // 界面插入的 @提及 是译文，NativeTool.FindByNameOrDisplayName 同时兼容源文与译文
         var tools = NativeTool.FindAllEnabled();
         if (!String.IsNullOrEmpty(keyword))
             tools = tools.Where(e =>
                 (!e.Name.IsNullOrEmpty() && e.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
-                (!e.DisplayName.IsNullOrEmpty() && e.DisplayName.Contains(keyword, StringComparison.OrdinalIgnoreCase))).ToList();
+                ContainsText(e.DisplayName, keyword) ||
+                ContainsText(Localization.Translate(e.DisplayName), keyword)).ToList();
 
         foreach (var tool in tools.OrderByDescending(e => e.Sort).ThenByDescending(e => e.Id))
         {
             result.Add(new SkillDto
             {
                 Code = tool.Name,
-                Name = tool.DisplayName,
-                Description = tool.Description,
+                Name = Localization.Translate(tool.DisplayName),
+                Description = Localization.Translate(tool.Description),
                 Type = "tool",
             });
         }
 
         return Ok(result.Take(limit).ToList());
     }
+
+    /// <summary>判断文本是否包含关键词（忽略大小写）</summary>
+    /// <param name="text">待检查文本</param>
+    /// <param name="keyword">关键词</param>
+    /// <returns>包含返回 true</returns>
+    private static Boolean ContainsText(String? text, String keyword) =>
+        !text.IsNullOrEmpty() && text.Contains(keyword, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>切换会话使用的技能</summary>
     /// <param name="conversationId">会话编号</param>
