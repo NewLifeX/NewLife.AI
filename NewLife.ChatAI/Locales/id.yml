@@ -373,3 +373,5 @@
 "Mind Map": "Peta pikiran"
 "Timeline": "Garis waktu"
 "Visual Widget": "Widget visual"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Anda dapat menggunakan alat berikut. Rujuk @nama-alat dalam balasan untuk mengaktifkan alat bila diperlukan:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Sistem] Alat {0} diaktifkan karena balasan asisten sebelumnya cocok dengan kata pemicunya; panggil alat ini pada putaran ini bila diperlukan."

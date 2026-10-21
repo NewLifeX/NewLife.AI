@@ -373,3 +373,5 @@
 "Mind Map": "מפת חשיבה"
 "Timeline": "ציר זמן"
 "Visual Widget": "וידג'ט חזותי"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "באפשרותך להשתמש בכלים הבאים. הפנה אל @שם-הכלי בתשובתך כדי להפעיל כלי בעת הצורך:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[מערכת] הכלי {0} הופעל מכיוון שהתשובה הקודמת של העוזר התאימה למילות ההפעלה שלו; קרא לו בסיבוב הזה בעת הצורך."

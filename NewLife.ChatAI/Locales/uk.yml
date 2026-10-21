@@ -373,3 +373,5 @@
 "Mind Map": "Карта думок"
 "Timeline": "Хронологія"
 "Visual Widget": "Візуальний віджет"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Ви можете використовувати такі інструменти. Вкажіть @назва-інструмента у відповіді, щоб активувати інструмент за потреби:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Система] Інструмент {0} активовано, оскільки попередня відповідь асистента збіглася з його тригерними словами; виклич його в цьому раунді за потреби."

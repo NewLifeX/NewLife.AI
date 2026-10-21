@@ -373,3 +373,5 @@
 "Mind Map": "خريطة ذهنية"
 "Timeline": "الخط الزمني"
 "Visual Widget": "عنصر واجهة مرئي"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "يمكنك استخدام الأدوات التالية. أشر إلى @اسم-الأداة في ردك لتفعيل الأداة عند الحاجة:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[النظام] تم تفعيل الأداة {0} لأن رد المساعد السابق طابق كلماتها المفتاحية؛ استدعها في هذه الجولة عند الحاجة."

@@ -373,3 +373,5 @@
 "Mind Map": "Sơ đồ tư duy"
 "Timeline": "Dòng thời gian"
 "Visual Widget": "Tiện ích trực quan"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Bạn có thể dùng các công cụ sau. Tham chiếu @tên-công-cụ trong câu trả lời để kích hoạt công cụ khi cần:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Hệ thống] Công cụ {0} đã được kích hoạt vì câu trả lời trước của trợ lý khớp với từ khóa kích hoạt; hãy gọi nó trong vòng này nếu cần."

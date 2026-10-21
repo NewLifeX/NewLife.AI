@@ -373,3 +373,5 @@
 "Mind Map": "Hartă mentală"
 "Timeline": "Cronologie"
 "Visual Widget": "Widget vizual"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Puteți folosi următoarele instrumente. Referiți @nume-instrument în răspuns pentru a activa un instrument atunci când este necesar:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Sistem] Instrumentul {0} a fost activat deoarece răspunsul anterior al asistentului a corespuns cuvintelor sale de declanșare; apelează-l în această rundă dacă este necesar."

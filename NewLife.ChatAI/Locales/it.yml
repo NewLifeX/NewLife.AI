@@ -373,3 +373,5 @@
 "Mind Map": "Mappa mentale"
 "Timeline": "Cronologia"
 "Visual Widget": "Widget visivo"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Puoi usare i seguenti strumenti. Fai riferimento a @nome-strumento nella risposta per attivare uno strumento quando necessario:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Sistema] Lo strumento {0} è stato attivato perché la risposta precedente dell'assistente ha attivato le sue parole chiave; chiamalo in questo turno se necessario."

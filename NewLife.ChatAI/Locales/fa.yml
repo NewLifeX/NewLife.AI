@@ -373,3 +373,5 @@
 "Mind Map": "نقشهٔ ذهنی"
 "Timeline": "خط زمان"
 "Visual Widget": "ویجت بصری"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "می‌توانید از ابزارهای زیر استفاده کنید. برای فعال‌سازی ابزار در صورت نیاز، در پاسخ خود به @نام-ابزار اشاره کنید:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[سیستم] ابزار {0} فعال شد زیرا پاسخ قبلی دستیار با کلمات محرک آن مطابقت داشت؛ در این دور در صورت نیاز آن را فراخوانی کن."

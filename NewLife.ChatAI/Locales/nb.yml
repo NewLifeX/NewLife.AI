@@ -373,3 +373,5 @@
 "Mind Map": "Tankekart"
 "Timeline": "Tidslinje"
 "Visual Widget": "Visuell widget"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Du kan bruke følgende verktøy. Referer til @verktøynavn i svaret for å aktivere et verktøy ved behov:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[System] Verktøyet {0} ble aktivert fordi assistentens forrige svar samsvarte med utløserordene; kall det i denne runden ved behov."

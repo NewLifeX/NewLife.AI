@@ -373,3 +373,5 @@
 "Mind Map": "Miellekartta"
 "Timeline": "Aikajana"
 "Visual Widget": "Visuaalinen widget"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Voit käyttää seuraavia työkaluja. Viittaa vastauksessasi muotoon @työkalun-nimi aktivoidaksesi työkalun tarvittaessa:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Järjestelmä] Työkalu {0} aktivoitiin, koska avustajan edellinen vastaus osui sen laukaisusanoihin; kutsu sitä tällä kierroksella tarvittaessa."

@@ -373,3 +373,5 @@
 "Mind Map": "Gondolattérkép"
 "Timeline": "Idővonal"
 "Visual Widget": "Vizuális widget"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "A következő eszközöket használhatja. A válaszában hivatkozzon @eszköznév formában, hogy szükség esetén aktiválja az eszközt:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Rendszer] A(z) {0} eszköz aktiválódott, mert az asszisztens előző válasza illeszkedett a kiváltó szavaihoz; ebben a körben szükség esetén hívd meg."

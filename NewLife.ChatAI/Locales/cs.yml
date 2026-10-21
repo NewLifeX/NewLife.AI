@@ -373,3 +373,5 @@
 "Mind Map": "Myšlenková mapa"
 "Timeline": "Časová osa"
 "Visual Widget": "Vizuální widget"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Můžeš použít následující nástroje. V odpovědi odkaž na @název-nástroje, abys nástroj v případě potřeby aktivoval:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Systém] Nástroj {0} byl aktivován, protože předchozí odpověď asistenta odpovídala jeho spouštěcím slovům; v tomto kole ho v případě potřeby zavolej."

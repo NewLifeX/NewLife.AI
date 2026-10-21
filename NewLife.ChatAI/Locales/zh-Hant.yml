@@ -377,3 +377,5 @@
 "Mind Map": "心智圖"
 "Timeline": "時間軸"
 "Visual Widget": "視覺化Widget"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "你可以使用以下工具，需要時請在回覆中用 @工具名 引用來啟用工具："
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[系統提示] 因 AI 上一輪回覆觸發詞命中，工具 {0} 已啟用，請在本輪按需呼叫。"

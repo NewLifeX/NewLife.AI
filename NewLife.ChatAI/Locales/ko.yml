@@ -373,3 +373,5 @@
 "Mind Map": "마인드 맵"
 "Timeline": "타임라인"
 "Visual Widget": "시각적 위젯"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "다음 도구를 사용할 수 있습니다. 필요할 때 답변에서 @도구명 으로 참조하여 도구를 활성화하세요:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[시스템] AI의 이전 답변이 트리거 단어와 일치하여 도구 {0}이(가) 활성화되었습니다. 이번 라운드에서 필요에 따라 호출하세요."

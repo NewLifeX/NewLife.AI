@@ -373,3 +373,5 @@
 "Mind Map": "Zihin haritası"
 "Timeline": "Zaman çizelgesi"
 "Visual Widget": "Görsel bileşen"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "Aşağıdaki araçları kullanabilirsiniz. Gerektiğinde etkinleştirmek için yanıtınızda @araç-adı biçiminde başvurun:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[Sistem] {0} aracı, asistanın önceki yanıtı tetikleyici sözcükleriyle eşleştiği için etkinleştirildi; bu turda gerektiğinde çağırın."

@@ -373,3 +373,5 @@
 "Mind Map": "মাইন্ড ম্যাপ"
 "Timeline": "টাইমলাইন"
 "Visual Widget": "ভিজ্যুয়াল উইজেট"
+"You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:": "আপনি নিম্নলিখিত টুল ব্যবহার করতে পারেন। প্রয়োজন হলে টুল সক্রিয় করতে আপনার উত্তরে @টুল-নাম উল্লেখ করুন:"
+"[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.": "[সিস্টেম] টুল {0} সক্রিয় করা হয়েছে কারণ সহায়কের আগের উত্তর এর ট্রিগার শব্দের সাথে মিলেছে; এই রাউন্ডে প্রয়োজন হলে এটি কল করুন।"
