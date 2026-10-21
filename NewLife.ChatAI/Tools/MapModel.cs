@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace NewLife.ChatAI.Tools;
 
@@ -34,7 +34,7 @@ public class MapMarker
 public class MapHighlight
 {
     /// <summary>省份名称（必填），支持全称或简称，如 "广东省" 或 "广东"</summary>
-    [Description("Province name (required); accepts the Chinese province name in full or short form, e.g. Guangdong)")]
+    [Description("Province name (required); accepts the Chinese province name in full or short form, e.g. Guangdong")]
     public String Name { get; set; } = String.Empty;
 
     /// <summary>高亮颜色（可选），十六进制如 "#FFB347"；不填使用默认色</summary>
