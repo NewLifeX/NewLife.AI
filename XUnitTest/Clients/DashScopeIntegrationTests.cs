@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -220,7 +220,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_系统提示词生效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
@@ -239,7 +239,7 @@ public class DashScopeIntegrationTests
         Assert.Contains("}", content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_多轮对话上下文保持")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
@@ -268,7 +268,7 @@ public class DashScopeIntegrationTests
 
     #region 非流式对话 - 参数覆盖（BuildRequestBody 所有分支）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_Temperature参数生效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
@@ -284,7 +284,7 @@ public class DashScopeIntegrationTests
         Assert.True(content.ToInt() > 0);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_MaxTokens限制生效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
@@ -296,7 +296,7 @@ public class DashScopeIntegrationTests
         Assert.True(response.Usage.OutputTokens <= 15, $"CompletionTokens={response.Usage.OutputTokens} 应受 MaxTokens 限制");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_Stop停止词生效")]
     public async Task ChatAsync_Stop_Accepted()
     {
@@ -310,7 +310,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_长文本输入可处理")]
     public async Task ChatAsync_LongInput_Accepted()
     {
@@ -324,7 +324,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_所有可选参数同时传递")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
@@ -347,7 +347,7 @@ public class DashScopeIntegrationTests
 
     #region 非流式对话 - 响应结构验证（ParseResponse 全字段）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_FinishReason_MaxTokens截断返回length")]
     public async Task ChatAsync_FinishReason_Length_WhenTruncated()
     {
@@ -361,7 +361,7 @@ public class DashScopeIntegrationTests
             $"Expected length or stop, actual: {finishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_完整字段一次验证")]
     public async Task ChatAsync_ResponseStructure_Complete()
     {
@@ -396,7 +396,7 @@ public class DashScopeIntegrationTests
 
     #region 流式对话 - 基本功能
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_QwenPlus_返回多个Chunk")]
     public async Task ChatStreamAsync_QwenPlus_ReturnsChunks()
     {
@@ -420,7 +420,7 @@ public class DashScopeIntegrationTests
         Assert.True(hasContent, "stream should contain at least one content chunk");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_QwenTurbo_轻量模型流式可用")]
     public async Task ChatStreamAsync_QwenTurbo_Works()
     {
@@ -436,7 +436,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(chunks);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_内容可拼接为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
@@ -461,7 +461,7 @@ public class DashScopeIntegrationTests
         Assert.True(fullContent.Length > 5, $"concatenated content too short: {fullContent}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_系统提示词生效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
@@ -484,7 +484,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(fullContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_CancellationToken_可中断")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
@@ -516,7 +516,7 @@ public class DashScopeIntegrationTests
 
     #region 流式对话 - 结构验证
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式结构_完整字段一次验证")]
     public async Task ChatStreamAsync_Structure_Complete()
     {
@@ -558,7 +558,7 @@ public class DashScopeIntegrationTests
             $"stream 最终 FinishReason 应为 stop 或 length，实际: {lastFinishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式用量_最终Chunk可能包含Usage")]
     public async Task ChatStreamAsync_Usage_InFinalChunk()
     {
@@ -643,7 +643,7 @@ public class DashScopeIntegrationTests
         Assert.Contains("Invalid", ex.Message);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("错误_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
@@ -771,7 +771,7 @@ public class DashScopeIntegrationTests
 
     #region FunctionCalling
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_工具定义被正确传递")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
@@ -830,7 +830,7 @@ public class DashScopeIntegrationTests
         }
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_多工具定义可用")]
     public async Task ChatAsync_FunctionCalling_MultipleTools()
     {
@@ -899,7 +899,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
@@ -932,7 +932,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_完整工具调用轮次")]
     public async Task ChatAsync_FunctionCalling_FullRoundTrip()
     {
@@ -1018,7 +1018,7 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrEmpty(finalContent));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_流式工具调用返回ToolCalls")]
     public async Task ChatStreamAsync_FunctionCalling_ReturnsToolCalls()
     {
@@ -1147,7 +1147,7 @@ public class DashScopeIntegrationTests
 
     #region SetHeaders 与 Options 验证
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("Options_Endpoint为空或null时均使用默认")]
     public async Task Options_EmptyOrNullEndpoint_UsesDefault()
     {
@@ -1164,7 +1164,7 @@ public class DashScopeIntegrationTests
         Assert.NotNull(r2?.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
@@ -1184,7 +1184,7 @@ public class DashScopeIntegrationTests
 
     #region 并发与稳定性
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("并发_多个请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
@@ -1204,7 +1204,7 @@ public class DashScopeIntegrationTests
         }
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("稳定性_非流式与流式交替调用")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {
@@ -1233,7 +1233,7 @@ public class DashScopeIntegrationTests
 
     #region 深度思考（DeepThinking）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("深度思考_非流式_返回ReasoningContent")]
     public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
     {
@@ -1256,7 +1256,7 @@ public class DashScopeIntegrationTests
             Assert.True(message.ReasoningContent.Length > 0);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("深度思考_流式_增量输出ReasoningContent")]
     public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
     {
@@ -1288,7 +1288,7 @@ public class DashScopeIntegrationTests
 
     #region 结构化输出（StructuredOutput）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("结构化输出_JsonObject模式返回有效JSON")]
     public async Task ChatAsync_StructuredOutput_JsonObject_ReturnsValidJson()
     {
@@ -1310,7 +1310,7 @@ public class DashScopeIntegrationTests
 
     #region 联网搜索（WebSearch）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("联网搜索_EnableSearch_回答包含时效内容")]
     public async Task ChatAsync_EnableSearch_Works()
     {
@@ -1327,7 +1327,7 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("联网搜索_EnableSource_请求被接受")]
     public async Task ChatAsync_EnableSource_Accepted()
     {
@@ -1346,7 +1346,7 @@ public class DashScopeIntegrationTests
 
     #region 并行工具调用（ParallelToolCalls）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("并行工具调用_ParallelToolCalls参数被接受")]
     public async Task ChatAsync_ParallelToolCalls_Accepted()
     {
@@ -1397,7 +1397,7 @@ public class DashScopeIntegrationTests
 
     #region 视觉理解（Vision）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("视觉_qwen3.5-plus_识别公网图片内容")]
     public async Task ChatAsync_Vision_Qwen35Plus_RecognizesImage()
     {
@@ -1429,7 +1429,7 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("视觉_qwen3.5-flash_流式图片理解")]
     public async Task ChatStreamAsync_Vision_Qwen35Flash_StreamsImageDescription()
     {
@@ -1467,7 +1467,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(fullContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("视觉_qwen-vl-max_Vision模型基础文本查询")]
     public async Task ChatAsync_Vision_QwenVlMax_TextQuery()
     {
@@ -1496,7 +1496,7 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("视觉_base64内联图片识别")]
     public async Task ChatAsync_Vision_Base64Image_Works()
     {
@@ -1535,7 +1535,7 @@ public class DashScopeIntegrationTests
 
     #region 音频输入（Audio Input）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("音频_qwen-omni-turbo_识别公网音频内容")]
     public async Task ChatAsync_AudioInput_QwenOmniTurbo_ReturnsTranscription()
     {
@@ -1567,7 +1567,7 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("音频_qwen-omni-turbo_流式音频理解")]
     public async Task ChatStreamAsync_AudioInput_Qwen2Audio_StreamsResponse()
     {
@@ -1749,7 +1749,7 @@ public class DashScopeIntegrationTests
 
     #region 其它 AI 应用场景
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("代码生成_qwen3-coder_生成Python代码")]
     public async Task ChatAsync_CodeGeneration_Qwen3Coder_GeneratesPythonCode()
     {
@@ -1764,7 +1764,7 @@ public class DashScopeIntegrationTests
         Assert.True(content!.Contains("def") || content.Contains("fibonacci"), "代码生成结果应包含函数定义");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("翻译场景_qwen3.5-flash_中英互译")]
     public async Task ChatAsync_Translation_Works()
     {
@@ -1786,7 +1786,7 @@ public class DashScopeIntegrationTests
                     content.Contains("AI", StringComparison.OrdinalIgnoreCase));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("摘要提取_qwen3.5-flash_长文摘要")]
     public async Task ChatAsync_Summarization_Works()
     {
@@ -1805,7 +1805,7 @@ public class DashScopeIntegrationTests
         Assert.True(content!.Length < 200, "摘要应比原文短");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("数学推理_qwq-plus_解方程")]
     public async Task ChatAsync_Math_QwqPlus_SolvesEquation()
     {
@@ -1833,7 +1833,7 @@ public class DashScopeIntegrationTests
         Assert.Contains("4", fullContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("重排序_gte-rerank-v2_文档排序")]
     public async Task RerankAsync_GteRerankV2_ReturnsRankedResults()
     {
@@ -1891,7 +1891,7 @@ public class DashScopeIntegrationTests
     // 专用推理模型： qwq-plus；代码模型： qwen3-coder-next
     // 集成测试在对应功能区域覆盖： qwen-vl-max（视觉区域）、wan2.6-t2i（文生图区域）
 
-    [Theory]
+    [RequiresApiKeyTheory("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [InlineData("qwen3-max", "1+1=？，只回答数字", 100)]
     [InlineData("qwen3.5-plus", "你好，用一句话介绍自己", 100)]
     [InlineData("qwen3.5-flash", "2+3=？，只回答数字", 50)]
@@ -1909,7 +1909,7 @@ public class DashScopeIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("默认模型_qwq-plus_专用推理模型可用")]
     public async Task DefaultModel_QwqPlus_Works()
     {
@@ -1936,7 +1936,7 @@ public class DashScopeIntegrationTests
         Assert.NotEmpty(fullContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("默认模型_qwen3-coder_代码模型可用")]
     public async Task DefaultModel_Qwen3Coder_Works()
     {

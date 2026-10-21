@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -62,7 +62,7 @@ public class DashScopeTtsTests
 
     #region CosyVoice 非实时 HTTP 合成
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_OapiVoice_映射为DashScope默认音色")]
     public async Task SpeechAsync_OapiVoice_UseDashScopeDefaultVoice()
     {
@@ -101,7 +101,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_OapiVoice_UseDashScopeDefaultVoice)}.wav");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_DashScopeNativeVoice_直接传递")]
     public async Task SpeechAsync_DashScopeNativeVoice_Works()
     {
@@ -128,7 +128,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_DashScopeNativeVoice_Works)}.wav");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_cosyvoice_v3_flash_完整音频合成并记录字符用量")]
     public async Task SpeechAsync_CosyVoiceV3Flash_ReturnsAudio()
     {
@@ -160,7 +160,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_CosyVoiceV3Flash_ReturnsAudio)}.mp3");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_cosyvoice_v3_flash_带语速参数")]
     public async Task SpeechAsync_CosyVoiceV3Flash_WithSpeed()
     {
@@ -224,7 +224,7 @@ public class DashScopeTtsTests
         Assert.True(cancelled, "取消令牌应生效");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_cosyvoice_v3_flash_opus格式")]
     public async Task SpeechAsync_CosyVoiceV3Flash_OpusFormat()
     {
@@ -257,7 +257,7 @@ public class DashScopeTtsTests
 
     #region Qwen-TTS 非实时 HTTP 合成
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_qwen_tts_合成音频并记录Token用量")]
     public async Task SpeechAsync_QwenTts_ReturnsAudio()
     {
@@ -283,7 +283,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_QwenTts_ReturnsAudio)}.mp3");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_qwen3_tts_flash_合成音频")]
     public async Task SpeechAsync_Qwen3TtsFlash_ReturnsAudio()
     {
@@ -307,7 +307,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_Qwen3TtsFlash_ReturnsAudio)}.wav");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_qwen_tts_带language_type参数")]
     public async Task SpeechAsync_QwenTts_WithLanguageType()
     {
@@ -332,7 +332,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_QwenTts_WithLanguageType)}.mp3");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_qwen_tts_OAPI音色映射为Cherry")]
     public async Task SpeechAsync_QwenTts_OapiVoiceMappedToCherry()
     {

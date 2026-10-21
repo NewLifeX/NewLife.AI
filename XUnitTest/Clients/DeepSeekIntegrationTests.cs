@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -11,6 +11,7 @@ using NewLife.AI.Clients.OpenAI;
 using NewLife.AI.Models;
 using NewLife.Remoting;
 using Xunit;
+using XUnitTest.Helpers;
 
 namespace XUnitTest.Clients;
 
@@ -114,7 +115,7 @@ public class DeepSeekIntegrationTests
 
     #region 非流式对话 - 基本功能
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("非流式_DeepSeekChat_返回有效响应")]
     public async Task ChatAsync_DeepSeekChat_ReturnsValidResponse()
     {
@@ -133,7 +134,7 @@ public class DeepSeekIntegrationTests
         Assert.True(response.Usage.OutputTokens > 0, "Completion Token 应大于 0");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("非流式_系统提示词生效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
@@ -151,7 +152,7 @@ public class DeepSeekIntegrationTests
         Assert.Contains("}", content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("非流式_多轮对话上下文保持")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
@@ -178,7 +179,7 @@ public class DeepSeekIntegrationTests
 
     #region 非流式对话 - 参数覆盖
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_Temperature参数生效")]
     public async Task ChatAsync_Temperature_Accepted()
     {
@@ -192,7 +193,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_TopP参数生效")]
     public async Task ChatAsync_TopP_Accepted()
     {
@@ -205,7 +206,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_MaxTokens限制生效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
@@ -216,7 +217,7 @@ public class DeepSeekIntegrationTests
         Assert.True(response.Usage.OutputTokens <= 15, $"CompletionTokens={response.Usage.OutputTokens} 应受 MaxTokens 限制");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_Stop停止词生效")]
     public async Task ChatAsync_Stop_Accepted()
     {
@@ -229,7 +230,7 @@ public class DeepSeekIntegrationTests
         Assert.NotNull(content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_PresencePenalty被接受")]
     public async Task ChatAsync_PresencePenalty_Accepted()
     {
@@ -242,7 +243,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_FrequencyPenalty被接受")]
     public async Task ChatAsync_FrequencyPenalty_Accepted()
     {
@@ -255,7 +256,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_User标识被接受")]
     public async Task ChatAsync_User_Accepted()
     {
@@ -268,7 +269,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_EnableThinking_False_禁用思考模式")]
     public async Task ChatAsync_EnableThinkingFalse_Accepted()
     {
@@ -285,7 +286,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("参数_所有可选参数同时传递")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
@@ -307,7 +308,7 @@ public class DeepSeekIntegrationTests
 
     #region 非流式对话 - 响应结构验证
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
@@ -320,7 +321,7 @@ public class DeepSeekIntegrationTests
             $"FinishReason should be stop or length, actual: {finishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_FinishReason_MaxTokens截断返回length")]
     public async Task ChatAsync_FinishReason_Length_WhenTruncated()
     {
@@ -333,7 +334,7 @@ public class DeepSeekIntegrationTests
             $"Expected length or stop, actual: {finishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
@@ -344,7 +345,7 @@ public class DeepSeekIntegrationTests
         Assert.Contains("deepseek", response.Model, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_包含响应Id")]
     public async Task ChatAsync_Response_ContainsId()
     {
@@ -354,7 +355,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Id);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_Object字段为chat.completion")]
     public async Task ChatAsync_Response_ObjectField()
     {
@@ -364,7 +365,7 @@ public class DeepSeekIntegrationTests
         Assert.Equal("chat.completion", response.Object);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_Choices索引正确")]
     public async Task ChatAsync_Response_ChoiceIndex()
     {
@@ -376,7 +377,7 @@ public class DeepSeekIntegrationTests
         Assert.Equal(0, response.Messages[0].Index);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("响应结构_Message角色为assistant")]
     public async Task ChatAsync_Response_MessageRole()
     {
@@ -389,7 +390,7 @@ public class DeepSeekIntegrationTests
         Assert.Equal("assistant", msg.Role);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("用量_非流式响应包含完整Usage")]
     public async Task ChatAsync_Usage_Complete()
     {
@@ -406,7 +407,7 @@ public class DeepSeekIntegrationTests
 
     #region 流式对话 - 基本功能
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式_DeepSeekChat_返回多个Chunk")]
     public async Task ChatStreamAsync_DeepSeekChat_ReturnsChunks()
     {
@@ -430,7 +431,7 @@ public class DeepSeekIntegrationTests
         Assert.True(hasContent, "stream should contain at least one content chunk");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式_内容可拼接为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
@@ -455,7 +456,7 @@ public class DeepSeekIntegrationTests
         Assert.True(fullContent.Length > 5, $"concatenated content too short: {fullContent}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式_系统提示词生效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
@@ -478,7 +479,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(fullContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式_CancellationToken_可中断")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
@@ -510,7 +511,7 @@ public class DeepSeekIntegrationTests
 
     #region 流式对话 - 结构验证
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式结构_每个Chunk包含Choices")]
     public async Task ChatStreamAsync_EachChunk_HasChoices()
     {
@@ -530,7 +531,7 @@ public class DeepSeekIntegrationTests
         Assert.True(chunksWithChoices > 0);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式结构_Chunk使用Delta而非Message")]
     public async Task ChatStreamAsync_Chunk_UsesDelta()
     {
@@ -551,7 +552,7 @@ public class DeepSeekIntegrationTests
         Assert.True(hasDelta, "stream chunk should use Delta field");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式结构_Object字段为chat.completion.chunk")]
     public async Task ChatStreamAsync_ObjectField()
     {
@@ -572,7 +573,7 @@ public class DeepSeekIntegrationTests
         Assert.Equal("chat.completion.chunk", objectField);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
     public async Task ChatStreamAsync_LastChunk_HasFinishReason()
     {
@@ -597,7 +598,7 @@ public class DeepSeekIntegrationTests
             $"stream final FinishReason should be stop or length, actual: {lastFinishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("流式结构_包含模型标识")]
     public async Task ChatStreamAsync_ContainsModel()
     {
@@ -654,7 +655,7 @@ public class DeepSeekIntegrationTests
         });
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("错误_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
@@ -789,7 +790,7 @@ public class DeepSeekIntegrationTests
 
     #region FunctionCalling（deepseek-chat 支持工具调用）
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("FunctionCalling_工具定义被正确传递")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
@@ -846,7 +847,7 @@ public class DeepSeekIntegrationTests
         }
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
@@ -877,7 +878,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("FunctionCalling_完整工具调用轮次")]
     public async Task ChatAsync_FunctionCalling_FullRoundTrip()
     {
@@ -960,7 +961,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(finalContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("FunctionCalling_流式工具调用返回ToolCalls")]
     public async Task ChatStreamAsync_FunctionCalling_ReturnsToolCalls()
     {
@@ -1020,7 +1021,7 @@ public class DeepSeekIntegrationTests
 
     #region 深度思考（deepseek-reasoner 专属）
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("深度思考_非流式_返回ReasoningContent")]
     public async Task ChatAsync_DeepThinking_ReturnsReasoningContent()
     {
@@ -1043,7 +1044,7 @@ public class DeepSeekIntegrationTests
         Assert.NotEmpty(message.ReasoningContent);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("深度思考_流式_增量输出ReasoningContent")]
     public async Task ChatStreamAsync_DeepThinking_StreamsReasoningContent()
     {
@@ -1167,7 +1168,7 @@ public class DeepSeekIntegrationTests
 
     #region Options 验证
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("Options_Endpoint为空时使用默认")]
     public async Task Options_EmptyEndpoint_UsesDefault()
     {
@@ -1182,7 +1183,7 @@ public class DeepSeekIntegrationTests
         Assert.NotNull(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("Options_Endpoint为null时使用默认")]
     public async Task Options_NullEndpoint_UsesDefault()
     {
@@ -1197,7 +1198,7 @@ public class DeepSeekIntegrationTests
         Assert.NotNull(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
@@ -1216,7 +1217,7 @@ public class DeepSeekIntegrationTests
 
     #region 并发与稳定性
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("并发_多个请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
@@ -1235,7 +1236,7 @@ public class DeepSeekIntegrationTests
         }
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("稳定性_非流式与流式交替调用")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {
@@ -1264,7 +1265,7 @@ public class DeepSeekIntegrationTests
 
     #region 结构化输出（StructuredOutput）
 
-    [Fact]
+    [RequiresApiKeyFact("DEEPSEEK_API_KEY", "config/DeepSeek.key")]
     [DisplayName("结构化输出_JsonObject模式返回有效JSON")]
     public async Task ChatAsync_StructuredOutput_JsonObject_ReturnsValidJson()
     {

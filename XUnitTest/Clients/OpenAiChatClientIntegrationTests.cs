@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -121,7 +121,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Equal("2", content);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_QwenMax_高级模型可用")]
     public async Task ChatAsync_QwenMax_Works()
     {
@@ -135,7 +135,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_系统提示词生效")]
     public async Task ChatAsync_SystemPrompt_Respected()
     {
@@ -156,7 +156,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Contains("reply", content!); // 模型应遵循系统提示，回复包含 "reply" 键
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("非流式_多轮对话上下文保持")]
     public async Task ChatAsync_MultiTurn_ContextPreserved()
     {
@@ -184,7 +184,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region 非流式对话 - 参数覆盖（BuildRequestBody 所有分支）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_Temperature=0_输出高度确定")]
     public async Task ChatAsync_Temperature_Accepted()
     {
@@ -202,7 +202,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Contains("7", content!, StringComparison.Ordinal); // 确定性场景下应得到正确答案 7
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_TopP_被API接受不报错")]
     public async Task ChatAsync_TopP_Accepted()
     {
@@ -220,7 +220,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_MaxTokens限制生效")]
     public async Task ChatAsync_MaxTokens_LimitsOutput()
     {
@@ -232,7 +232,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(response.Usage.OutputTokens <= 15, $"CompletionTokens={response.Usage.OutputTokens} 应受 MaxTokens 限制");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_Stop停止词截断输出")]
     public async Task ChatAsync_Stop_Accepted()
     {
@@ -250,7 +250,7 @@ public class OpenAiChatClientIntegrationTests
             "输出应包含停止词之前的计数序列");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_PresencePenalty_被API接受不报错")]
     public async Task ChatAsync_PresencePenalty_Accepted()
     {
@@ -268,7 +268,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_FrequencyPenalty_被API接受不报错")]
     public async Task ChatAsync_FrequencyPenalty_Accepted()
     {
@@ -286,7 +286,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_User字段_被API接受不影响响应")]
     public async Task ChatAsync_User_Accepted()
     {
@@ -304,7 +304,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(content));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_所有可选参数组合_被API接受不报错")]
     public async Task ChatAsync_AllOptionalParams_Accepted()
     {
@@ -330,7 +330,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region 非流式对话 - 响应结构验证（ParseResponse 全字段）
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_FinishReason正确返回")]
     public async Task ChatAsync_FinishReason_Returned()
     {
@@ -344,7 +344,7 @@ public class OpenAiChatClientIntegrationTests
             $"FinishReason should be stop or length, actual: {finishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_FinishReason_MaxTokens截断返回length")]
     public async Task ChatAsync_FinishReason_Length_WhenTruncated()
     {
@@ -358,7 +358,7 @@ public class OpenAiChatClientIntegrationTests
             $"Expected length or stop, actual: {finishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_包含模型标识")]
     public async Task ChatAsync_Response_ContainsModel()
     {
@@ -370,7 +370,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Contains("qwen", response.Model, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_包含响应Id")]
     public async Task ChatAsync_Response_ContainsId()
     {
@@ -381,7 +381,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(response.Id));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_Object字段为chat.completion")]
     public async Task ChatAsync_Response_ObjectField()
     {
@@ -392,7 +392,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Equal("chat.completion", response.Object);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_Choices索引正确")]
     public async Task ChatAsync_Response_ChoiceIndex()
     {
@@ -404,7 +404,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Equal(0, response.Messages[0].Index);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("响应结构_Message角色为assistant")]
     public async Task ChatAsync_Response_MessageRole()
     {
@@ -417,7 +417,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Equal("assistant", msg.Role);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("用量_非流式响应包含完整Usage")]
     public async Task ChatAsync_Usage_Complete()
     {
@@ -435,7 +435,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region 流式对话 - 基本功能
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_QwenPlus_返回多个Chunk")]
     public async Task ChatStreamAsync_QwenPlus_ReturnsChunks()
     {
@@ -459,7 +459,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(hasContent, "stream should contain at least one content chunk");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_内容可拼接为完整文本")]
     public async Task ChatStreamAsync_Content_CanBeConcatenated()
     {
@@ -484,7 +484,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(fullContent.Length > 5, $"concatenated content too short: {fullContent}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_系统提示词生效")]
     public async Task ChatStreamAsync_SystemPrompt_Respected()
     {
@@ -507,7 +507,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(fullContent));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式_CancellationToken_可中断")]
     public async Task ChatStreamAsync_Cancellation_StopsEarly()
     {
@@ -539,7 +539,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region 流式对话 - 结构验证
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式结构_每个Chunk包含Choices")]
     public async Task ChatStreamAsync_EachChunk_HasChoices()
     {
@@ -559,7 +559,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(chunksWithChoices > 0);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式结构_Chunk使用Delta而非Message")]
     public async Task ChatStreamAsync_Chunk_UsesDelta()
     {
@@ -580,7 +580,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.True(hasDelta, "stream chunk should use Delta field");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式结构_Object字段为chat.completion.chunk")]
     public async Task ChatStreamAsync_ObjectField()
     {
@@ -601,7 +601,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Equal("chat.completion.chunk", objectField);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式结构_最后一个Chunk包含FinishReason")]
     public async Task ChatStreamAsync_LastChunk_HasFinishReason()
     {
@@ -626,7 +626,7 @@ public class OpenAiChatClientIntegrationTests
             $"stream final FinishReason should be stop or length, actual: {lastFinishReason}");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式结构_包含模型标识")]
     public async Task ChatStreamAsync_ContainsModel()
     {
@@ -647,7 +647,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Contains("qwen", model, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("流式用量_最终Chunk包含Usage和ElapsedMs")]
     public async Task ChatStreamAsync_Usage_InFinalChunk()
     {
@@ -715,7 +715,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Contains("api_key", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("错误_不存在的模型_抛出ApiException")]
     public async Task ChatAsync_InvalidModel_ThrowsException()
     {
@@ -789,7 +789,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region FunctionCalling
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_工具定义被正确传递")]
     public async Task ChatAsync_FunctionCalling_ToolsAccepted()
     {
@@ -847,7 +847,7 @@ public class OpenAiChatClientIntegrationTests
         }
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_ToolChoice_Auto参数被接受")]
     public async Task ChatAsync_FunctionCalling_ToolChoiceAuto()
     {
@@ -883,7 +883,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.NotEmpty(response.Messages);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_完整工具调用轮次")]
     public async Task ChatAsync_FunctionCalling_FullRoundTrip()
     {
@@ -967,7 +967,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.False(String.IsNullOrEmpty(finalContent));
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("FunctionCalling_流式工具调用返回ToolCalls")]
     public async Task ChatStreamAsync_FunctionCalling_ReturnsToolCalls()
     {
@@ -1056,7 +1056,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region Options 验证
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("Options_Endpoint尾部斜杠被正确处理")]
     public async Task Options_TrailingSlash_Handled()
     {
@@ -1076,7 +1076,7 @@ public class OpenAiChatClientIntegrationTests
 
     #region 并发与稳定性
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("并发_多个请求同时发送")]
     public async Task ChatAsync_Concurrent_Requests()
     {
@@ -1096,7 +1096,7 @@ public class OpenAiChatClientIntegrationTests
         }
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("稳定性_非流式与流式交替调用")]
     public async Task ChatAsync_And_StreamAsync_Interleaved()
     {

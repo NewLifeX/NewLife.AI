@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -166,7 +166,7 @@ public class EmbeddingIntegrationTests
             Protocol = "ChatCompletions",
         });
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("DashScope—多主题语料批量嵌入存储，新查询文本语义搜索返回正确主题")]
     public async Task DashScope_BatchEmbedCorpus_NewQueryReturnsSemanticallySimilar()
     {
@@ -221,7 +221,7 @@ public class EmbeddingIntegrationTests
             Assert.True(allResults[i].Score >= allResults[i + 1].Score);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("DashScope—全路径：批量嵌入→覆盖写入→语义检索→删除→再次检索不含已删条目")]
     public async Task DashScope_FullPipeline_UpsertSearchDelete()
     {
