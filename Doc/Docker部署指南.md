@@ -12,25 +12,25 @@
 ## 快速开始
 
 ```bash
-# 1. 进入 ChatAI 目录
-cd NAI
+# 1. 进入仓库根目录（docker-compose.yml 所在位置）
+cd NewLife.AI
 
-# 2. 启动（首次启动会自动构建镜像，约 2-3 分钟）
+# 2. 启动（首次启动会构建前端与后端，约 5-10 分钟）
 docker compose up -d
 
 # 3. 访问
 # 打开浏览器 http://localhost:5080
 ```
 
-首次启动后访问 `http://localhost:5080`，系统会在 `Data/` 目录下自动创建 SQLite 数据库并初始化表结构（由 XCode 自动迁移完成）。
+首次启动后访问 `http://localhost:5080`，系统会在容器 `/app/Data/` 目录（已挂载到 `chatai_data` 卷）下自动创建 SQLite 数据库并初始化表结构（由 XCode 自动迁移完成）。
 
 ## 默认配置
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | 端口 | 5080 | 通过 `docker-compose.yml` 修改 |
-| 数据库 | SQLite（`Data/chatai.db`） | 可切换 PostgreSQL，见下方 |
-| 数据持久化 | Docker Volume `chatai_data` | 映射到 `./Data/` 目录 |
+| 数据库 | SQLite（卷内 `/app/Data/ChatAI.db`） | 可切换 PostgreSQL，见下方 |
+| 数据持久化 | Docker Volume `chatai_data` | 映射到容器的 `/app/Data` 目录 |
 
 ## 配置模型服务商
 

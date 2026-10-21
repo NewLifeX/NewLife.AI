@@ -1,0 +1,36 @@
+# 构建上下文为仓库根，排除与镜像构建无关的产物，避免上下文过大与旧产物污染
+
+.git
+.github
+.vs
+.tmp
+.idea
+*.user
+.DS_Store
+*.log
+
+# 构建输出（Linux / Windows 大小写各一份）
+Bin
+bin
+BinTest
+BinUnitTest
+obj
+Obj
+**/bin
+**/bin/
+**/obj
+**/obj/
+**/Bin
+**/Bin/
+**/Obj
+**/Obj/
+
+# 前端依赖与构建产物（前端在镜像内重新构建）
+**/node_modules
+Web/dist
+NewLife.ChatAI/wwwroot
+TestResults
+
+# 本机数据与基准产物
+Data
+Benchmark/BenchmarkDotNet.Artifacts
