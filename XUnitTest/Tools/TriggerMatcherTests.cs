@@ -31,6 +31,20 @@ public class TriggerMatcherTests : IDisposable
     }
 
     [Fact]
+    [DisplayName("扩充后的触发词短语在中文下可命中")]
+    public void IsMatched_ExpandedTerms_HitInChinese()
+    {
+        NewLife.Localization.Culture = new CultureInfo("zh-Hans");
+
+        Assert.True(TriggerMatcher.IsMatched("给我一个工作流", "workflow"));
+        Assert.True(TriggerMatcher.IsMatched("用泳道展示任务", "swimlane"));
+        Assert.True(TriggerMatcher.IsMatched("帮我画一张图", "draw a diagram,diagram"));
+        Assert.True(TriggerMatcher.IsMatched("按省份分布展示", "province"));
+        Assert.True(TriggerMatcher.IsMatched("把这份报告整理一下", "report"));
+        Assert.True(TriggerMatcher.IsMatched("查一下数据库表", "database tables"));
+    }
+
+    [Fact]
     [DisplayName("词条登记多个同义词时任一命中即可")]
     public void IsMatched_SynonymTerms_AnyHits()
     {
