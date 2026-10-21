@@ -13,7 +13,7 @@ public class HolidayToolService
     /// <summary>查询指定日期的农历、节气及工作日状态（工作/放假/调休）</summary>
     /// <param name="date">要查询的日期，格式 yyyy-MM-dd。不传则默认今天</param>
     [ToolDescription("query_date_info", Triggers = "日期查询,节假日查询,是否上班,节气", IsSystem = true)]
-    [DisplayName("日期节假日查询")]
+    [DisplayName("Date and Holiday")]
     [Description("Look up the lunar calendar date, solar term, and workday status (workday/holiday/make-up workday) of a date")]
     public Object QueryDateInfo([Description("Date to query in yyyy-MM-dd format. Defaults to today")] String? date = null)
     {

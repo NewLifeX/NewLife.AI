@@ -25,7 +25,7 @@ public class TimelineToolService(ILog log)
         Triggers = "时间轴,里程碑,时间线,进度,历史,发展历程,路线图,计划,迭代,版本历史,甘特",
         AssistantTriggers = "时间轴,里程碑,历史沿革,发展进程,版本迭代,路线图,进度规划",
         ReadOnly = true)]
-    [DisplayName("时间轴")]
+    [DisplayName("Timeline")]
     [Description("Render time-series data as attractive timeline cards. Only JSON is needed (about 100 tokens) and the front end renders it instantly. Use it for project milestones, historical events, release plans, and development history. Each event can have a date, title, description, color, and category. Visual style: set a global palette through the palette parameter (e.g. blue-purple gradient, warm bronze, brand colors) so the timeline has a consistent mood; item.color overrides an individual entry. Use density=relaxed for 5 or fewer curated events and density=compact for 10+ dense timelines. 8 layouts: vertical (5-20 items) / alternating-top (alternating above, reverse chronological) / alternating-bottom (alternating below, chronological) / horizontal-left (reverse chronological, arrows left) / horizontal-right (chronological, arrows right) / s-curve (S-shaped path, 8 items or fewer) / fishbone-left (reverse chronological, arrows left) / fishbone-right (chronological, arrows right).")]
     public ToolResult ShowTimeline(
         [Description("Timeline title (up to 30 characters), e.g. Product Milestones")] String title,

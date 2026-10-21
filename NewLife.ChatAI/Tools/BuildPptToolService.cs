@@ -54,7 +54,7 @@ public class BuildPptToolService(ILog log)
         Triggers = "生成PPT,制作PPT,做PPT",
         AssistantTriggers = "PPT,幻灯片,演示文稿,汇报,展示文稿,slide,做PPT,生成PPT,制作PPT,build_ppt",
         ReadOnly = false)]
-    [DisplayName("PPT生成")]
+    [DisplayName("PowerPoint Slides")]
     [Description("Generate a PowerPoint presentation (.pptx) and return a download link. Two mutually exclusive input modes: (1) slides mode, where AI describes structured content and the layout is generated automatically; (2) widgetSrc mode, which embeds previously generated show_widget cards as slide images. The theme parameter accepts a card style key (e.g. enterprise-blue/raycast-dark/ppt-executive) or a built-in name (blue/dark/green/warm/corporate/minimal).")]
     public async Task<ToolResult> BuildPpt(
         [Description("Presentation title (up to 30 characters), e.g. Q2 Quarterly Review")] String title,

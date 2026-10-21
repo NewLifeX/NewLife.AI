@@ -37,7 +37,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="endLine">结束行号（含），不指定则读到末尾</param>
     /// <returns>文件内容，含行号前缀</returns>
     [ToolDescription("read_file")]
-    [DisplayName("读取文件")]
+    [DisplayName("Read File")]
     [Description("Read the content of a file, with optional line-range selection. Returns text prefixed with line numbers")]
     public Task<String> ReadFileAsync(
         [Description("File path relative to the workspace")] String path,
@@ -95,7 +95,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="content">要写入的文件内容</param>
     /// <returns>写入结果</returns>
     [ToolDescription("write_file")]
-    [DisplayName("写入文件")]
+    [DisplayName("Write File")]
     [Description("Create a file or overwrite its content. Writing outside the workspace requires approval")]
     public async Task<String> WriteFileAsync(
         [Description("File path relative to the workspace")] String path,
@@ -139,7 +139,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="maxDepth">最大递归深度，默认 2</param>
     /// <returns>树形目录结构文本</returns>
     [ToolDescription("list_dir")]
-    [DisplayName("列出目录")]
+    [DisplayName("List Directory")]
     [Description("List a directory tree as text, with an optional recursion depth limit")]
     public Task<String> ListDirAsync(
         [Description("Directory path relative to the workspace; defaults to the workspace root")] String? path = null,
@@ -215,7 +215,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="path">搜索起始目录，默认工作区根</param>
     /// <returns>匹配的文件路径列表</returns>
     [ToolDescription("glob_search")]
-    [DisplayName("文件搜索")]
+    [DisplayName("File Search")]
     [Description("Search files by name pattern; supports ** recursive matching")]
     public Task<String> GlobSearchAsync(
         [Description("glob pattern, e.g. **/*.cs")] String pattern,
@@ -289,7 +289,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="maxResults">最大结果数，默认 50</param>
     /// <returns>匹配结果，每行格式：文件路径:行号: 匹配内容</returns>
     [ToolDescription("grep_search")]
-    [DisplayName("内容搜索")]
+    [DisplayName("Content Search")]
     [Description("Search file contents for text matching a regular expression, with file-type filtering and a result limit")]
     public Task<String> GrepSearchAsync(
         [Description("Regular expression pattern")] String pattern,
@@ -374,7 +374,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="timeout">超时秒数，默认 120 秒</param>
     /// <returns>命令的标准输出和标准错误</returns>
     [ToolDescription("run_command")]
-    [DisplayName("执行命令")]
+    [DisplayName("Run Command")]
     [Description("Run a shell command and return its standard output and standard error. Running outside the workspace requires approval")]
     public async Task<String> RunCommandAsync(
         [Description("Command to run, e.g. dotnet build")] String command,
@@ -460,7 +460,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="projectPath">项目文件路径或目录，默认工作区根</param>
     /// <returns>编译错误列表</returns>
     [ToolDescription("get_errors")]
-    [DisplayName("获取编译错误")]
+    [DisplayName("Get Compile Errors")]
     [Description("Run dotnet build and parse the MSBuild-formatted error messages from the output")]
     public async Task<String> GetErrorsAsync(
         [Description("Project file path or directory; defaults to the workspace root")] String? projectPath = null)
@@ -557,7 +557,7 @@ public class CodingTools(String? workspacePath = null)
     /// <param name="question">向用户提出的问题</param>
     /// <returns>用户的回答</returns>
     [ToolDescription("ask_user")]
-    [DisplayName("询问用户")]
+    [DisplayName("Ask User")]
     [Description("Pause and ask the user a question when the agent is uncertain. Only effective in a console environment")]
     public Task<String> AskUserAsync(
         [Description("Question to ask the user")] String question)

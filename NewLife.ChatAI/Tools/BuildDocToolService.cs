@@ -24,7 +24,7 @@ public class BuildDocToolService(ILog log)
         Triggers = "生成Word,生成文档,制作文档,写报告",
         AssistantTriggers = "Word,docx,文档,报告,方案书,周报,会议纪要,生成文档,生成Word,报告文档,build_doc",
         ReadOnly = false)]
-    [DisplayName("Word文档生成")]
+    [DisplayName("Word Document")]
     [Description("Generate a Word document (.docx) and return a download link. Supports headings, paragraphs, lists, tables, images, page breaks, dividers, callouts, KPIs, quotes, and code blocks. The sections JSON array describes each section, with heading, content, and elements")]
     public async Task<ToolResult> BuildDoc(
         [Description("Document title (up to 30 characters), e.g. Q2 Quarterly Report")] String title,

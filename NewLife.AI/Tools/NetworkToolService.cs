@@ -21,7 +21,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="maxLength">返回的最大字符数，防止超长内容占用过多 token。默认 5000</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("web_fetch", Triggers = "读取网页,抓取网页,总结网页,读取链接内容,打开这个链接")]
-    [DisplayName("网页抓取")]
+    [DisplayName("Web Fetch")]
     [Description("Fetch the content of the given URL and extract its main text. Use it to read articles, documents, or any public web page")]
     public async Task<Object> WebFetchAsync(
         [Description("Web page address to fetch; must be a full http/https URL")] String url,
@@ -46,7 +46,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="count">返回结果数量，1~10 之间。默认 5</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("web_search", Triggers = "帮我搜索,搜索一下,联网搜索,上网搜索,查一下资料")]
-    [DisplayName("网络搜索")]
+    [DisplayName("Web Search")]
     [Description("Search the internet with a search engine and return titles, links, and snippets. Use it for recent news, fact checking, and similar tasks")]
     public async Task<Object> WebSearchAsync(
         [Description("Search keywords or a natural language question")] String query,
@@ -81,7 +81,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="ip">要查询的 IPv4/IPv6 地址；留空则自动查询本机当前公网 IP</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("get_ip_location", Triggers = "ip归属地,ip地址,ip归属地,这个ip在哪,ip地理位置")]
-    [DisplayName("IP归属地")]
+    [DisplayName("IP Location")]
     [Description("Look up where an IP address is located (country, province, city, and ISP). When ip is omitted, looks up the current public IP of this machine")]
     public async Task<Object> GetIpLocationAsync(
         [Description("IPv4/IPv6 address to look up; leave empty to look up the current public IP of this machine")] String? ip = null,
@@ -106,7 +106,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="unit">温度单位：C（摄氏度，默认）或 F（华氏度）</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("get_weather", Triggers = "今天天气,明天天气,天气怎么样,天气预报,查询天气")]
-    [DisplayName("天气查询")]
+    [DisplayName("Weather")]
     [Description("Get the current weather of a city, including temperature, humidity, wind speed, and conditions. No API key required")]
     public async Task<Object> GetWeatherAsync(
         [Description("City name; Chinese and English are supported, e.g. Shanghai, 上海, New York")] String city,
@@ -136,7 +136,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// <param name="sourceLang">源语言代码，默认 auto（自动检测）</param>
     /// <param name="cancellationToken">取消令牌</param>
     [ToolDescription("translate", Triggers = "帮我翻译,翻译这段,翻译成中文,翻译成英文,translate this")]
-    [DisplayName("文本翻译")]
+    [DisplayName("Text Translation")]
     [Description("Translate text into the target language. Supports more than 60 languages")]
     public async Task<Object> TranslateAsync(
         [Description("Text to translate")] String text,

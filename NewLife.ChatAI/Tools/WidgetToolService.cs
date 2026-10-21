@@ -55,7 +55,7 @@ public class WidgetToolService(ILog log)
         Triggers = "画一张,绘制,可视化,时间线,关系图,SVG,图表",
         AssistantTriggers = "画一张,绘制,可视化,时间线,关系图,SVG,图表,展示",
         ReadOnly = true)]
-    [DisplayName("可视化Widget")]
+    [DisplayName("Visual Widget")]
     [Description("Render an SVG or HTML fragment inside the chat bubble. Use it for timelines and relationship diagrams (SVG), form previews and data cards (HTML), and statistical charts (SVG). Do not use it for Mermaid diagrams; output Mermaid as a ```mermaid code block in the reply instead. Limits: 200KB or less; <script src=...> only from trusted CDNs. Visual style: choose the information architecture (Bento/card flow/Grid), type hierarchy, and color system based on the topic. Use cool sans-serif tones for technical discussions, neutral colors with highlighted numbers for business reports, and gradients/glassmorphism/micro-animations for creative work. Always set font-family and color explicitly; do not rely on browser defaults.")]
     public ToolResult ShowWidget(
         [Description("Widget title (up to 30 characters), e.g. Order Status Flow")] String title,

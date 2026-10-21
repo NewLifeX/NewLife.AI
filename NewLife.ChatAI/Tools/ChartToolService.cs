@@ -56,7 +56,7 @@ public class ChartToolService(ILog log)
         Triggers = "柱状图,折线图,饼图,散点图,雷达图,热力图,仪表盘,漏斗图,中国地图,图表,数据可视化,占比分析,对比分析,数值统计",
         AssistantTriggers = "柱状图,折线图,饼图,散点图,雷达图,热力图,仪表盘,漏斗图,中国地图,数据图表,可视化展示",
         ReadOnly = true)]
-    [DisplayName("交互式图表")]
+    [DisplayName("Interactive Chart")]
     [Description("Render data as an interactive chart (zoom, hover, export as image). About 20x faster than show_widget: only a JSON spec is needed (about 200 tokens) and the front end renders it with ECharts immediately. Supports: bar, line (line/area), pie (pie/donut), scatter, radar, map_china (China province heat map), heatmap (matrix heat map), gauge, funnel, and treemap. Use it for numeric comparison, time-series changes (line), share analysis, and geographic distribution. Note: for itineraries, historical events, milestones, and timelines use show_timeline instead; this tool does not support the timeline type. Visual style: pass a color scheme through data.colors instead of relying on ECharts defaults. Suggestions: brand color for a single series, evenly spaced hues (10-12 colors) for multiple series, complementary colors for comparisons, and a single-color gradient for trends. Blue and gold for finance, blue/green/white for healthcare, and purple/blue/cyan for technology and AI. For large datasets set data.animation=false to reduce rendering cost.")]
     public ToolResult ShowChart(
         [Description("Chart type: bar | line | pie | scatter | radar | map_china | heatmap | gauge | funnel | treemap")] String type,

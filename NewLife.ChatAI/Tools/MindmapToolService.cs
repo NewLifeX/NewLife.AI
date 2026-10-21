@@ -36,7 +36,7 @@ public class MindmapToolService(ILog log)
         Triggers = "思维导图,脑图,知识树,知识图谱,结构图,大纲,层级结构,知识整理,归纳总结,概念图",
         AssistantTriggers = "思维导图,知识树,体系梳理,层级结构,概念图,归纳,脑图",
         ReadOnly = true)]
-    [DisplayName("思维导图")]
+    [DisplayName("Mind Map")]
     [Description("Render knowledge hierarchies or concept relationships as a collapsible interactive mind map. The input is a Markdown outline (# / ## / ###) that the front end converts into a visual tree. Use it for knowledge organization, concept breakdown, technology comparison, option evaluation, and content summarization. Visual style: choose branchColors (3-8 coordinated colors), maxDepth (complexity), and collapsed (initially collapsed to focus) based on the topic. Use cool colors (blue/purple/cyan) for technology and data, warm colors (orange/gold/red) for business and marketing, and greens for nature and health. For dense nodes, set maxDepth=2 for readability. 6 layouts: tree (default indented tree, general purpose) / radial (left-right radial, best for knowledge maps) / lr (center to right, flowcharts/decision trees) / rl (center to left, backward tracing) / tb (center downward, org charts) / bt (center upward, bottom-up hierarchy).")]
     public ToolResult ShowMindmap(
         [Description("Mind map title (up to 30 characters), e.g. AI Technology Stack")] String title,

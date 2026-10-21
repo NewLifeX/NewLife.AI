@@ -23,7 +23,7 @@ public class BuildExcelToolService(ILog log)
         Triggers = "生成Excel,制作Excel,生成报表,导出Excel",
         AssistantTriggers = "Excel,报表,xlsx,电子表格,数据表,生成Excel,生成报表,导出Excel,build_excel",
         ReadOnly = false)]
-    [DisplayName("Excel生成")]
+    [DisplayName("Excel Workbook")]
     [Description("Generate an Excel workbook (.xlsx) and return a download link. Supports multiple worksheets, header styles, column widths, number formats, conditional formats, frozen panes, auto filters, and dropdown validation. The theme parameter accepts a card style key or a built-in name (blue/dark/corporate/warm/green/minimal)")]
     public async Task<ToolResult> BuildExcel(
         [Description("Workbook title (up to 30 characters), e.g. Q2 Revenue Report")] String title,
