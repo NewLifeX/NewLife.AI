@@ -34,10 +34,10 @@ public sealed class ToolDescriptionAttribute : Attribute
     /// <summary>是否系统工具。true 时每次 LLM 请求自动携带，无需 @引用；false 时需在消息中 @工具名 显式引用</summary>
     public Boolean IsSystem { get; set; }
 
-    /// <summary>触发词。多个词使用中英文逗号分隔，用户消息命中任一词时可自动激活该工具</summary>
+    /// <summary>触发词。以英文短语为源文，逗号分隔；消息命中任一触发词时可自动激活该工具，当前语言译文由词表 trigger: 词条提供</summary>
     public String? Triggers { get; set; }
 
-    /// <summary>助手输出触发词。多个词使用中英文逗号分隔，AI 上一轮回复命中任一词时可自动激活该工具</summary>
+    /// <summary>助手输出触发词。以英文短语为源文，逗号分隔；AI 上一轮回复命中任一触发词时可自动激活该工具</summary>
     public String? AssistantTriggers { get; set; }
 
     /// <summary>是否启用。false 时同步到配置表后将保持禁用状态，可用于临时下线工具</summary>

@@ -153,19 +153,19 @@ public class NativeToolSyncServiceTests
     {
         var weatherTriggers = GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.GetWeatherAsync)).Triggers;
         Assert.True(
-            weatherTriggers.Contains("今天天气", StringComparison.Ordinal) ||
-            weatherTriggers.Contains("天气怎么样", StringComparison.Ordinal),
+            weatherTriggers.Contains("weather", StringComparison.OrdinalIgnoreCase) ||
+            weatherTriggers.Contains("forecast", StringComparison.OrdinalIgnoreCase),
             $"天气触发词不符合预期：{weatherTriggers}");
-        Assert.Contains("帮我搜索", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebSearchAsync)).Triggers);
-        Assert.Contains("读取网页", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebFetchAsync)).Triggers);
+        Assert.Contains("web search", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebSearchAsync)).Triggers);
+        Assert.Contains("web fetch", GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.WebFetchAsync)).Triggers);
     }
 
     [Fact]
-    [DisplayName("严格天气触发词不再包含宽泛词下雨")]
+    [DisplayName("严格天气触发词不再包含宽泛词")]
     public void GetWeather_TriggersAreSpecific()
     {
         var triggers = GetToolAttribute(typeof(NetworkToolService), nameof(NetworkToolService.GetWeatherAsync)).Triggers ?? "";
-        Assert.DoesNotContain("下雨", triggers);
+        Assert.DoesNotContain("rain", triggers, StringComparison.OrdinalIgnoreCase);
     }
 
     // ── IsSystem 属性验证 ─────────────────────────────────────────────────

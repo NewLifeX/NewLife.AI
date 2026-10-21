@@ -12,7 +12,7 @@ public class BuiltinToolService
     #region 时间工具
 
     /// <summary>获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等</summary>
-    [ToolDescription("get_current_time", Triggers = "今天,昨天,明天", IsSystem = true)]
+    [ToolDescription("get_current_time", Triggers = "current time,today,tomorrow,yesterday", IsSystem = true)]
     [DisplayName("Current Time")]
     [Description("Get the current date and time, including the full date, day of week, time, time zone, and Unix timestamp")]
     public String GetCurrentTime()
@@ -50,7 +50,7 @@ public class BuiltinToolService
 
     /// <summary>计算数学表达式的结果。支持加减乘除、括号、取模等基本运算</summary>
     /// <param name="expression">数学表达式，如 (3 + 5) * 2 - 10 / 3</param>
-    [ToolDescription("calculate", Triggers = "计算一下,帮我计算,数学计算,表达式求值", Enable = false)]
+    [ToolDescription("calculate", Triggers = "calculate,compute,math expression", Enable = false)]
     [DisplayName("Calculator")]
     [Description("Evaluate a mathematical expression. Supports addition, subtraction, multiplication, division, parentheses, and modulo")]
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "DataTable.Compute 依赖 System.Data 的表达式解析；AOT 下如不可用会被 catch 转为错误信息，不影响其余工具")]

@@ -120,8 +120,8 @@ public class MapAnnotationToolService(ILog log)
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=完整Map JSON + ForLlm=简短确认）</returns>
     [ToolDescription("show_china_map", IsSystem = false,
-        Triggers = "地图,标注,城市分布,数据地图,各省,全国分布,地理分布",
-        AssistantTriggers = "地图,标注,省份,城市分布,地理分布,数据地图,热力,分布图,定位,各省,全国分布",
+        Triggers = "map annotation,china map",
+        AssistantTriggers = "map annotation,province,distribution map",
         ReadOnly = true)]
     [DisplayName("China Map Annotation")]
     [Description("Mark coordinate points (cities or POIs) or highlight province areas on a map of China, generate an annotated SVG map, and render it in the chat bubble. Supports: (1) province fills with custom colors; (2) WGS84 latitude/longitude markers with label text; (3) an automatic legend in the bottom-right corner. Typical uses: data distribution by province, city locations, and regional sales heat maps.")]

@@ -51,8 +51,8 @@ public class BuildPptToolService(ILog log)
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=预览 JSON + ForLlm=简短确认）</returns>
     [ToolDescription("build_ppt", IsSystem = false,
-        Triggers = "生成PPT,制作PPT,做PPT",
-        AssistantTriggers = "PPT,幻灯片,演示文稿,汇报,展示文稿,slide,做PPT,生成PPT,制作PPT,build_ppt",
+        Triggers = "build ppt,powerpoint,slides",
+        AssistantTriggers = "ppt,slides,presentation,deck,build_ppt",
         ReadOnly = false)]
     [DisplayName("PowerPoint Slides")]
     [Description("Generate a PowerPoint presentation (.pptx) and return a download link. Two mutually exclusive input modes: (1) slides mode, where AI describes structured content and the layout is generated automatically; (2) widgetSrc mode, which embeds previously generated show_widget cards as slide images. The theme parameter accepts a card style key (e.g. enterprise-blue/raycast-dark/ppt-executive) or a built-in name (blue/dark/green/warm/corporate/minimal).")]

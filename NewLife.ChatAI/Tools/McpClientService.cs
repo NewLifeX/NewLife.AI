@@ -308,20 +308,7 @@ public class McpClientService(ILog log, IHttpClientFactory httpClientFactory, IC
         return response;
     }
 
-    private static Boolean IsTriggered(String triggers, String? content)
-    {
-        if (content.IsNullOrWhiteSpace()) return false;
-
-        var words = triggers.Split(',', '，');
-        foreach (var item in words)
-        {
-            var word = item.Trim();
-            if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
+    private static Boolean IsTriggered(String triggers, String? content) => TriggerMatcher.IsMatched(content, triggers);
     #endregion
 }
 

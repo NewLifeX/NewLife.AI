@@ -29,8 +29,8 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
     /// <param name="context">工具调用上下文</param>
     /// <returns>匹配的表结构列表</returns>
     [ToolDescription("search_table", IsSystem = false,
-        Triggers = "表结构,数据库表,表字段,数据库有哪些表,有什么表",
-        AssistantTriggers = "数据库表,表结构,search_table,数据库连接,连接名")]
+        Triggers = "table schema,database tables,table fields",
+        AssistantTriggers = "database tables,table schema,search_table")]
     [DisplayName("Search Database Tables")]
     [Description("Search database table schemas by keyword. The result has two parts: (1) a table-to-connection mapping (a Markdown table that makes clear which connection each table belongs to; same-named tables under different connections are listed separately); (2) the table schema XML for each connection. Later run_sql calls must use the connection name given in the mapping table")]
     public String SearchTable(
@@ -77,8 +77,8 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
     /// <param name="context">工具调用上下文</param>
     /// <returns>查询或执行结果（JSON格式）</returns>
     [ToolDescription("run_sql", IsSystem = false,
-        Triggers = "执行SQL,运行SQL,SQL查询,SQL语句",
-        AssistantTriggers = "SQL查询,执行查询,run_sql,SQL语句")]
+        Triggers = "run sql,execute sql,sql query",
+        AssistantTriggers = "sql query,run query,run_sql")]
     [DisplayName("Run SQL")]
     [Description("Execute a SQL statement on the given database connection. SELECT/WITH queries return data rows; non-query statements such as INSERT/UPDATE/DELETE return the affected row count. connName must match the connection column returned by search_table")]
     public String QuerySql(

@@ -50,8 +50,8 @@ public class KanbanToolService(ILog log)
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=完整Kanban JSON + ForLlm=简短确认）</returns>
     [ToolDescription("show_kanban", IsSystem = false,
-        Triggers = "看板,任务板,任务分解,待办,Sprint,工作流,流程状态,任务状态,泳道,项目计划,任务清单",
-        AssistantTriggers = "看板,任务分解,待办清单,工作流,Sprint,任务状态,泳道,任务规划",
+        Triggers = "kanban,task board",
+        AssistantTriggers = "kanban,task board,workflow,sprint,swimlane",
         ReadOnly = true)]
     [DisplayName("Task Kanban")]
     [Description("Render a task list as a multi-column kanban board (e.g. To do -> In progress -> Done). Good for project breakdowns, sprint planning, workflow display, and task state grouping. Each column can have a color marker and a WIP limit; each card can have a title, description, priority, tags, due date, assignee, checklist, progress, and link. Two layouts: board (default multi-column board) and swimlane (columns grouped by team or module).")]

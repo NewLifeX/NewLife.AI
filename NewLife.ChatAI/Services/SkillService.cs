@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using NewLife.AI.Tools;
 using NewLife.Log;
 
 namespace NewLife.ChatAI.Services;
@@ -340,16 +341,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
             if (primaryOnly && !skill.IsPrimary) continue;
             if (skill.Triggers.IsNullOrWhiteSpace()) continue;
 
-            var triggers = skill.Triggers.Split(',', '，');
-            foreach (var trigger in triggers)
-            {
-                var word = trigger.Trim();
-                if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Add(skill);
-                    break;
-                }
-            }
+            if (TriggerMatcher.IsMatched(content, skill.Triggers)) result.Add(skill);
         }
 
         result.Sort((a, b) =>
@@ -390,16 +382,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         {
             if (tool.Name.IsNullOrWhiteSpace() || tool.IsSystem || tool.Triggers.IsNullOrWhiteSpace()) continue;
 
-            var triggers = tool.Triggers.Split(',', '，');
-            foreach (var trigger in triggers)
-            {
-                var word = trigger.Trim();
-                if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Add(tool.Name);
-                    break;
-                }
-            }
+            if (TriggerMatcher.IsMatched(content, tool.Triggers)) result.Add(tool.Name);
         }
 
         return result;
@@ -418,16 +401,7 @@ public class SkillService(IChatSetting chatSetting, ILog log)
         {
             if (tool.Name.IsNullOrWhiteSpace() || tool.IsSystem || tool.AssistantTriggers.IsNullOrWhiteSpace()) continue;
 
-            var triggers = tool.AssistantTriggers.Split(',', '，');
-            foreach (var trigger in triggers)
-            {
-                var word = trigger.Trim();
-                if (!word.IsNullOrEmpty() && content.Contains(word, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Add(tool.Name);
-                    break;
-                }
-            }
+            if (TriggerMatcher.IsMatched(content, tool.AssistantTriggers)) result.Add(tool.Name);
         }
 
         return result;

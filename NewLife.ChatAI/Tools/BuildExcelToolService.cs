@@ -20,8 +20,8 @@ public class BuildExcelToolService(ILog log)
 
     /// <summary>生成 Excel 电子表格（.xlsx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_excel", IsSystem = false,
-        Triggers = "生成Excel,制作Excel,生成报表,导出Excel",
-        AssistantTriggers = "Excel,报表,xlsx,电子表格,数据表,生成Excel,生成报表,导出Excel,build_excel",
+        Triggers = "build excel,excel sheet,spreadsheet",
+        AssistantTriggers = "excel,xlsx,spreadsheet,report table,build_excel",
         ReadOnly = false)]
     [DisplayName("Excel Workbook")]
     [Description("Generate an Excel workbook (.xlsx) and return a download link. Supports multiple worksheets, header styles, column widths, number formats, conditional formats, frozen panes, auto filters, and dropdown validation. The theme parameter accepts a card style key or a built-in name (blue/dark/corporate/warm/green/minimal)")]

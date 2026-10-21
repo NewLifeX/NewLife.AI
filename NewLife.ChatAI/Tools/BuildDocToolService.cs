@@ -21,8 +21,8 @@ public class BuildDocToolService(ILog log)
 
     /// <summary>生成 Word 文档（.docx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_doc", IsSystem = false,
-        Triggers = "生成Word,生成文档,制作文档,写报告",
-        AssistantTriggers = "Word,docx,文档,报告,方案书,周报,会议纪要,生成文档,生成Word,报告文档,build_doc",
+        Triggers = "build word,word document,generate doc",
+        AssistantTriggers = "word,docx,document,report,proposal,minutes,build_doc",
         ReadOnly = false)]
     [DisplayName("Word Document")]
     [Description("Generate a Word document (.docx) and return a download link. Supports headings, paragraphs, lists, tables, images, page breaks, dividers, callouts, KPIs, quotes, and code blocks. The sections JSON array describes each section, with heading, content, and elements")]
