@@ -38,11 +38,11 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>文件内容，含行号前缀</returns>
     [ToolDescription("read_file")]
     [DisplayName("读取文件")]
-    [Description("读取指定文件的内容，支持行范围截取。返回带行号前缀的文本")]
+    [Description("Read the content of a file, with optional line-range selection. Returns text prefixed with line numbers")]
     public Task<String> ReadFileAsync(
-        [Description("相对于工作区的文件路径")] String path,
-        [Description("起始行号（1-based），不指定则从第一行开始")] Int32? startLine = null,
-        [Description("结束行号（含），不指定则读到末尾")] Int32? endLine = null)
+        [Description("File path relative to the workspace")] String path,
+        [Description("Start line number (1-based); omit to read from the first line")] Int32? startLine = null,
+        [Description("End line number (inclusive); omit to read to the end")] Int32? endLine = null)
     {
         var fullPath = ResolvePath(path);
         if (fullPath == null) return Task.FromResult("Error: 路径超出工作区范围，访问被拒绝");
@@ -96,10 +96,10 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>写入结果</returns>
     [ToolDescription("write_file")]
     [DisplayName("写入文件")]
-    [Description("创建或覆盖文件内容。工作区外的写入需要审批")]
+    [Description("Create a file or overwrite its content. Writing outside the workspace requires approval")]
     public async Task<String> WriteFileAsync(
-        [Description("相对于工作区的文件路径")] String path,
-        [Description("要写入的文件内容")] String content)
+        [Description("File path relative to the workspace")] String path,
+        [Description("Content to write")] String content)
     {
         var fullPath = ResolvePath(path);
         if (fullPath == null)
@@ -140,10 +140,10 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>树形目录结构文本</returns>
     [ToolDescription("list_dir")]
     [DisplayName("列出目录")]
-    [Description("列出目录结构，以树形文本展示。支持限制递归深度")]
+    [Description("List a directory tree as text, with an optional recursion depth limit")]
     public Task<String> ListDirAsync(
-        [Description("相对于工作区的目录路径，默认工作区根")] String? path = null,
-        [Description("最大递归深度，默认 2")] Int32? maxDepth = 2)
+        [Description("Directory path relative to the workspace; defaults to the workspace root")] String? path = null,
+        [Description("Maximum recursion depth. Default 2")] Int32? maxDepth = 2)
     {
         var targetPath = String.IsNullOrEmpty(path) ? WorkspacePath : ResolvePath(path);
         if (targetPath == null) return Task.FromResult("Error: 路径超出工作区范围");
@@ -216,10 +216,10 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>匹配的文件路径列表</returns>
     [ToolDescription("glob_search")]
     [DisplayName("文件搜索")]
-    [Description("按文件名模式搜索文件，支持 ** 递归匹配")]
+    [Description("Search files by name pattern; supports ** recursive matching")]
     public Task<String> GlobSearchAsync(
-        [Description("glob 模式，如 **/*.cs")] String pattern,
-        [Description("搜索起始目录，默认工作区根")] String? path = null)
+        [Description("glob pattern, e.g. **/*.cs")] String pattern,
+        [Description("Directory to start searching from; defaults to the workspace root")] String? path = null)
     {
         var searchRoot = String.IsNullOrEmpty(path) ? WorkspacePath : ResolvePath(path);
         if (searchRoot == null) return Task.FromResult("Error: 搜索路径超出工作区范围");
@@ -290,12 +290,12 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>匹配结果，每行格式：文件路径:行号: 匹配内容</returns>
     [ToolDescription("grep_search")]
     [DisplayName("内容搜索")]
-    [Description("在文件内容中搜索匹配正则表达式的文本，支持文件类型过滤和结果数限制")]
+    [Description("Search file contents for text matching a regular expression, with file-type filtering and a result limit")]
     public Task<String> GrepSearchAsync(
-        [Description("正则表达式模式")] String pattern,
-        [Description("限定搜索的文件 glob 模式，如 **/*.cs")] String? includePattern = null,
-        [Description("搜索起始目录，默认工作区根")] String? path = null,
-        [Description("最大结果数，默认 50")] Int32? maxResults = 50)
+        [Description("Regular expression pattern")] String pattern,
+        [Description("File glob pattern to restrict the search, e.g. **/*.cs")] String? includePattern = null,
+        [Description("Directory to start searching from; defaults to the workspace root")] String? path = null,
+        [Description("Maximum number of results. Default 50")] Int32? maxResults = 50)
     {
         var searchRoot = String.IsNullOrEmpty(path) ? WorkspacePath : ResolvePath(path);
         if (searchRoot == null) return Task.FromResult("Error: 搜索路径超出工作区范围");
@@ -375,11 +375,11 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>命令的标准输出和标准错误</returns>
     [ToolDescription("run_command")]
     [DisplayName("执行命令")]
-    [Description("执行 shell 命令并返回标准输出和标准错误。工作区外的执行需要审批")]
+    [Description("Run a shell command and return its standard output and standard error. Running outside the workspace requires approval")]
     public async Task<String> RunCommandAsync(
-        [Description("要执行的命令，如 dotnet build")] String command,
-        [Description("工作目录，默认工作区根")] String? workDir = null,
-        [Description("超时秒数，默认 120")] Int32? timeout = 120)
+        [Description("Command to run, e.g. dotnet build")] String command,
+        [Description("Working directory; defaults to the workspace root")] String? workDir = null,
+        [Description("Timeout in seconds. Default 120")] Int32? timeout = 120)
     {
         if (String.IsNullOrWhiteSpace(command))
             return "Error: 命令不能为空";
@@ -461,9 +461,9 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>编译错误列表</returns>
     [ToolDescription("get_errors")]
     [DisplayName("获取编译错误")]
-    [Description("运行 dotnet build 并解析返回 MSBuild 格式的错误信息")]
+    [Description("Run dotnet build and parse the MSBuild-formatted error messages from the output")]
     public async Task<String> GetErrorsAsync(
-        [Description("项目文件路径或目录，默认工作区根")] String? projectPath = null)
+        [Description("Project file path or directory; defaults to the workspace root")] String? projectPath = null)
     {
         var targetPath = String.IsNullOrEmpty(projectPath) ? WorkspacePath : ResolvePath(projectPath);
         if (targetPath == null) return "Error: 项目路径超出工作区范围";
@@ -558,9 +558,9 @@ public class CodingTools(String? workspacePath = null)
     /// <returns>用户的回答</returns>
     [ToolDescription("ask_user")]
     [DisplayName("询问用户")]
-    [Description("当 Agent 遇到不确定的情况时，暂停并向用户提问。仅在控制台环境下有效")]
+    [Description("Pause and ask the user a question when the agent is uncertain. Only effective in a console environment")]
     public Task<String> AskUserAsync(
-        [Description("向用户提出的问题")] String question)
+        [Description("Question to ask the user")] String question)
     {
         // 如果注入了 UserInputProvider，优先通过回调获取回答（不阻塞控制台，适用于自动化测试）
         if (UserInputProvider != null)

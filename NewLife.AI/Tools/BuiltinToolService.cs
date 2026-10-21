@@ -14,7 +14,7 @@ public class BuiltinToolService
     /// <summary>获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等</summary>
     [ToolDescription("get_current_time", Triggers = "今天,昨天,明天", IsSystem = true)]
     [DisplayName("当前时间")]
-    [Description("获取当前日期和时间信息，包括完整日期、星期、时间、时区、Unix时间戳等")]
+    [Description("Get the current date and time, including the full date, day of week, time, time zone, and Unix timestamp")]
     public String GetCurrentTime()
     {
         var now = DateTimeOffset.Now;
@@ -52,9 +52,9 @@ public class BuiltinToolService
     /// <param name="expression">数学表达式，如 (3 + 5) * 2 - 10 / 3</param>
     [ToolDescription("calculate", Triggers = "计算一下,帮我计算,数学计算,表达式求值", Enable = false)]
     [DisplayName("数学计算")]
-    [Description("计算数学表达式的结果。支持加减乘除、括号、取模等基本运算")]
+    [Description("Evaluate a mathematical expression. Supports addition, subtraction, multiplication, division, parentheses, and modulo")]
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "DataTable.Compute 依赖 System.Data 的表达式解析；AOT 下如不可用会被 catch 转为错误信息，不影响其余工具")]
-    public Object Calculate([Description("数学表达式，如 (3 + 5) * 2 - 10 / 3")] String expression)
+    public Object Calculate([Description("Mathematical expression, e.g. (3 + 5) * 2 - 10 / 3")] String expression)
     {
         if (String.IsNullOrWhiteSpace(expression))
             return new { error = "expression is required" };
