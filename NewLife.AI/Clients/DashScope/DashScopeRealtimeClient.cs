@@ -50,7 +50,7 @@ public sealed class DashScopeRealtimeClient : IDisposable
     {
         if (String.IsNullOrWhiteSpace(model)) throw new ArgumentNullException(nameof(model));
         if (!model.Contains("-realtime", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException(Localization.Translate("Model '{0}' is not a realtime model; realtime model names must contain '-realtime'", model), nameof(model));
+            throw new ArgumentException(L.T("Model '{0}' is not a realtime model; realtime model names must contain '-realtime'", model), nameof(model));
 
         _ws?.Dispose();
         _cts?.Dispose();
@@ -251,7 +251,7 @@ public sealed class DashScopeRealtimeClient : IDisposable
     private void EnsureConnected()
     {
         if (_ws == null || _ws.State != WebSocketState.Open)
-            throw new InvalidOperationException(Localization.Translate("WebSocket is not connected; call ConnectAsync first"));
+            throw new InvalidOperationException(L.T("WebSocket is not connected; call ConnectAsync first"));
     }
     #endregion
 

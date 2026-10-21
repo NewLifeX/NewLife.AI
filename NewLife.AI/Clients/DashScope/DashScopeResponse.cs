@@ -119,7 +119,7 @@ public class DashScopeResponse : IChatResponse
     public ChatResponse ToChatResponse(String? model = null)
     {
         if (!String.IsNullOrEmpty(Code))
-            throw new HttpRequestException(Localization.Translate("[DashScope] Error {0}: {1}", Code, Message));
+            throw new HttpRequestException(L.T("[DashScope] Error {0}: {1}", Code, Message));
 
         var response = new ChatResponse
         {

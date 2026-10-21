@@ -9,5 +9,5 @@ public class ChatException : Exception
     /// <summary>初始化流程异常</summary>
     /// <param name="code">错误码</param>
     /// <param name="message">错误描述</param>
-    public ChatException(String code, String message) : base(NewLife.Localization.Translate(message)) => Code = code;
+    public ChatException(String code, String message) : base(L.T(message)) => Code = code;
 }

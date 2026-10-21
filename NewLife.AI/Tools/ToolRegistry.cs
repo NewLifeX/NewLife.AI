@@ -149,13 +149,13 @@ public class ToolRegistry : IToolProvider
         var chatTool = ToolSchemaBuilder.BuildFromMethod(method);
         var function = chatTool.Function;
         var toolName = function?.Name;
-        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException(Localization.Translate("Unable to resolve tool name from method {0}.{1}", type.FullName, method.Name));
+        if (toolName.IsNullOrEmpty()) throw new InvalidOperationException(L.T("Unable to resolve tool name from method {0}.{1}", type.FullName, method.Name));
 
-        if (function == null) throw new InvalidOperationException(Localization.Translate("Method {0}.{1} produced no function definition", type.FullName, method.Name));
+        if (function == null) throw new InvalidOperationException(L.T("Method {0}.{1} produced no function definition", type.FullName, method.Name));
 
         var description = function.Description;
         var attr = method.GetCustomAttribute<ToolDescriptionAttribute>(true)
-            ?? throw new InvalidOperationException(Localization.Translate("Method {0}.{1} is missing ToolDescriptionAttribute", type.FullName, method.Name));
+            ?? throw new InvalidOperationException(L.T("Method {0}.{1} is missing ToolDescriptionAttribute", type.FullName, method.Name));
 
         model.Name = toolName;
         model.DisplayName = ResolveDisplayName(method, description, toolName);
@@ -349,7 +349,7 @@ public class ToolRegistry : IToolProvider
     private String BuildUnknownToolMessage(String name)
     {
         var candidate = FindSimilarToolName(name);
-        var msg = Localization.Translate("Tool '{0}' is not registered in ToolRegistry", name);
+        var msg = L.T("Tool '{0}' is not registered in ToolRegistry", name);
         if (!candidate.IsNullOrEmpty())
             msg += $"，是否想调用 '{candidate}'？";
 

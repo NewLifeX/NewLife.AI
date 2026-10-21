@@ -110,9 +110,9 @@ public class AiClientRegistry
     {
         if (type == null) throw new ArgumentNullException(nameof(type));
         if (type.IsAbstract || type.IsInterface)
-            throw new ArgumentException(Localization.Translate("Type {0} cannot be an abstract class or interface", type.FullName), nameof(type));
+            throw new ArgumentException(L.T("Type {0} cannot be an abstract class or interface", type.FullName), nameof(type));
         if (!typeof(IChatClient).IsAssignableFrom(type))
-            throw new ArgumentException(Localization.Translate("Type {0} must implement IChatClient", type.FullName), nameof(type));
+            throw new ArgumentException(L.T("Type {0} must implement IChatClient", type.FullName), nameof(type));
 
         var clientAttrs = type.GetCustomAttributes<AiClientAttribute>(false).ToArray();
         if (clientAttrs.Length == 0) return this;
@@ -151,7 +151,7 @@ public class AiClientRegistry
     public IChatClient CreateClient(String code, AiClientOptions options)
     {
         var descriptor = GetDescriptor(code)
-            ?? throw new ArgumentException(Localization.Translate("Unregistered provider code: {0}", code), nameof(code));
+            ?? throw new ArgumentException(L.T("Unregistered provider code: {0}", code), nameof(code));
         return descriptor.Factory(options);
     }
 

@@ -567,7 +567,7 @@ public class CodingTools(String? workspacePath = null)
             return Task.FromResult(UserInputProvider(question));
 
         Console.WriteLine();
-        Console.WriteLine(Localization.Translate("🤖 [Agent question] {0}", question));
+        Console.WriteLine(L.T("🤖 [Agent question] {0}", question));
         Console.Write("👤 [Your answer] > ");
         var answer = Console.ReadLine();
         return Task.FromResult(answer ?? "");

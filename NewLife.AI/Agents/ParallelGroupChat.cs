@@ -46,7 +46,7 @@ public sealed class ParallelGroupChat
     /// <param name="aggregator">聚合代理</param>
     public ParallelGroupChat(IList<IAgent> workers, IAgent aggregator)
     {
-        if (workers == null || workers.Count == 0) throw new ArgumentException(Localization.Translate("Worker agent list cannot be empty"), nameof(workers));
+        if (workers == null || workers.Count == 0) throw new ArgumentException(L.T("Worker agent list cannot be empty"), nameof(workers));
         if (aggregator == null) throw new ArgumentNullException(nameof(aggregator));
 
         Workers = workers;

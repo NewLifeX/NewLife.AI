@@ -135,7 +135,7 @@ public class McpTool
 
         // 缺失的必填标量参数 → 协议级无效参数（MCP 规范要求 tools/call 缺必填字段返回 InvalidParams）
         if (!found && Reflect.GetTypeCode(p.ParameterType) != TypeCode.Object)
-            throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Missing required argument '{0}' for tool '{1}'", name, Method.Name));
+            throw new ApiException(McpErrorCode.InvalidParams, L.T("Missing required argument '{0}' for tool '{1}'", name, Method.Name));
 
         if (Reflect.GetTypeCode(p.ParameterType) != TypeCode.Object)
             return value == null ? null : Reflect.ChangeType(value, p.ParameterType);

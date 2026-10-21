@@ -100,7 +100,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
     /// <summary>处理MCP请求</summary>
     public JsonRpcResponse Process(JsonRpcRequest request, McpContext context)
     {
-        if (request == null) throw new ApiException(McpErrorCode.InvalidRequest, Localization.Translate("Invalid request!"));
+        if (request == null) throw new ApiException(McpErrorCode.InvalidRequest, L.T("Invalid request!"));
 
         // A-34：校验 JSON-RPC 版本（原未校验，协议漂移时静默返回错误格式）
         if (request.JsonRpc != "2.0")
@@ -121,7 +121,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
                 "prompts/list" => OnPromptList(context, request),
                 "prompts/get" => OnPromptGet(context, request),
                 "notifications/cancelled" => null,      // JSON-RPC notification，无需响应
-                _ => throw new ApiException(McpErrorCode.MethodNotFound, Localization.Translate("Method '{0}' not found in MCP server capabilities.", request.Method)),
+                _ => throw new ApiException(McpErrorCode.MethodNotFound, L.T("Method '{0}' not found in MCP server capabilities.", request.Method)),
             };
             if (result is JsonRpcResponse response) return response;
 
@@ -254,12 +254,12 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         if (ps == null) throw new ArgumentOutOfRangeException(nameof(request.Params), "Tool call parameters are invalid.");
 
         // 查找工具。未知工具名属于协议级无效参数（官方 SDK：tools/call 未知工具返回 InvalidParams）
-        var tool = Manager.Find(ps.Name) ?? throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Tool '{0}' not found in the server capabilities.", ps.Name));
+        var tool = Manager.Find(ps.Name) ?? throw new ApiException(McpErrorCode.InvalidParams, L.T("Tool '{0}' not found in the server capabilities.", ps.Name));
 
         // 静态方法无需实例即可调用（Method.Invoke(null, args)）；实例方法需 DI/反射创建，失败返回 InternalError（D8）
         var instance = tool.Method.IsStatic ? null : tool.CreateInstance(serviceProvider);
         if (!tool.Method.IsStatic && instance == null)
-            throw new ApiException(McpErrorCode.InternalError, Localization.Translate("Unable to create an instance of tool '{0}'", ps.Name));
+            throw new ApiException(McpErrorCode.InternalError, L.T("Unable to create an instance of tool '{0}'", ps.Name));
         var result = tool.Invoke(instance, ps.Arguments);
 
         List<ContentItem> content = [new("text", result?.ToString() ?? String.Empty)];
@@ -300,7 +300,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         var ps = ConvertParams<ResourceReadParams>(request.Params);
         if (ps == null || ps.Uri.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Resource read parameters are invalid.");
 
-        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(McpErrorCode.ResourceNotFound, Localization.Translate("Resource '{0}' not found in the server capabilities.", ps.Uri));
+        if (!_resources.TryGetValue(ps.Uri, out var res)) throw new ApiException(McpErrorCode.ResourceNotFound, L.T("Resource '{0}' not found in the server capabilities.", ps.Uri));
 
         var data = res.Read?.Invoke(ps.Uri) ?? String.Empty;
         return new ReadResourceResult([new ResourceContentItem(ps.Uri, data?.ToString() ?? String.Empty, res.Definition.MimeType)]);
@@ -330,7 +330,7 @@ public class McpServer : IServiceProvider, ILogFeature, ITracerFeature, IDisposa
         if (ps == null || ps.Name.IsNullOrEmpty()) throw new ArgumentOutOfRangeException(nameof(request.Params), "Prompt get parameters are invalid.");
 
         // 官方 SDK：未知提示词名属于协议级无效参数（InvalidParams）
-        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(McpErrorCode.InvalidParams, Localization.Translate("Prompt '{0}' not found in the server capabilities.", ps.Name));
+        if (!_prompts.TryGetValue(ps.Name, out var prompt)) throw new ApiException(McpErrorCode.InvalidParams, L.T("Prompt '{0}' not found in the server capabilities.", ps.Name));
 
         var content = prompt.Get?.Invoke(ps.Arguments) ?? String.Empty;
         if (content is IList<PromptMessage> messages) return new GetPromptResult(prompt.Definition.Description, messages);

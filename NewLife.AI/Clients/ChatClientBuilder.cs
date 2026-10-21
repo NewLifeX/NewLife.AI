@@ -91,7 +91,7 @@ public sealed class ChatClientBuilder
     public IChatClient Build()
     {
         if (_innermost == null)
-            throw new InvalidOperationException(Localization.Translate("Call a Use*() method (for example UseOpenAI or UseDashScope) to set the inner client before Build()"));
+            throw new InvalidOperationException(L.T("Call a Use*() method (for example UseOpenAI or UseDashScope) to set the inner client before Build()"));
 
         // 从最内层提取 Log/Tracer，向外传播给各中间件（如 ToolChatClient / FilteredChatClient）
         var log = (_innermost as ILogFeature)?.Log;

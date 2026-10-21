@@ -44,7 +44,7 @@ public partial class DashScopeChatClient
             }
         }
 
-        throw last ?? new InvalidOperationException(NewLife.Localization.Translate("Rerank call failed"));
+        throw last ?? new InvalidOperationException(L.T("Rerank call failed"));
     }
 
     private static Dictionary<String, Object> BuildRerankParameters(RerankRequest request)
@@ -57,7 +57,7 @@ public partial class DashScopeChatClient
     private static RerankResponse ParseRerankResponse(String json)
     {
         var dic = JsonParser.Decode(json);
-        if (dic == null) throw new InvalidOperationException(Localization.Translate("Unable to parse rerank response"));
+        if (dic == null) throw new InvalidOperationException(L.T("Unable to parse rerank response"));
 
         var resp = new RerankResponse { RequestId = dic["request_id"] as String };
 

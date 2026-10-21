@@ -27,7 +27,7 @@ public static class ToolSchemaLocalizer
     /// 委托每次请求都会按工具数量调用若干次，有网络开销的实现应在委托内部自行缓存。
     /// 委托抛出的异常会被吞掉并回退源文，避免翻译故障影响对话。
     /// </remarks>
-    public static Func<String, String> Translator { get; set; } = Localization.Translate;
+    public static Func<String, String> Translator { get; set; } = L.T;
     #endregion
 
     #region 方法

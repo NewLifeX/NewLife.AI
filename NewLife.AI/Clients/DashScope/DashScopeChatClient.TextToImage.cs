@@ -44,9 +44,9 @@ public partial class DashScopeChatClient
     public override async Task<ImageGenerationResponse?> EditImageAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException(Localization.Translate("Prompt cannot be empty"), nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException(L.T("Prompt cannot be empty"), nameof(request));
         if (request.ImageUrl == null && request.ImageStream == null)
-            throw new ArgumentException(Localization.Translate("ImageUrl and ImageStream cannot both be empty"), nameof(request));
+            throw new ArgumentException(L.T("ImageUrl and ImageStream cannot both be empty"), nameof(request));
 
         var modelId = request.Model ?? _options.Model ?? String.Empty;
 
@@ -56,7 +56,7 @@ public partial class DashScopeChatClient
 
         // 其余模型走 OpenAI 兼容 multipart/form-data 端点
         if (request.ImageStream == null)
-            throw new ArgumentException(Localization.Translate("This model uses the compatible path; ImageStream cannot be empty"), nameof(request));
+            throw new ArgumentException(L.T("This model uses the compatible path; ImageStream cannot be empty"), nameof(request));
 
         var url = BuildImageEditUrl();
 
@@ -242,7 +242,7 @@ public partial class DashScopeChatClient
         if (!String.IsNullOrEmpty(code))
         {
             var message = dic["message"] as String ?? code;
-            throw new HttpRequestException(Localization.Translate("[DashScope] Text-to-image error {0}: {1}", code, message));
+            throw new HttpRequestException(L.T("[DashScope] Text-to-image error {0}: {1}", code, message));
         }
 
         var resp = new ImageGenerationResponse();

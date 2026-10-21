@@ -20,8 +20,8 @@ public partial class OpenAIChatClient
     public virtual async Task<ImageGenerationResponse?> EditImageAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (request.ImageStream == null) throw new ArgumentException(Localization.Translate("ImageStream cannot be empty"), nameof(request));
-        if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException(Localization.Translate("Prompt cannot be empty"), nameof(request));
+        if (request.ImageStream == null) throw new ArgumentException(L.T("ImageStream cannot be empty"), nameof(request));
+        if (String.IsNullOrWhiteSpace(request.Prompt)) throw new ArgumentException(L.T("Prompt cannot be empty"), nameof(request));
 
         var url = BuildApiUrl("/v1/images/edits");
 
@@ -63,7 +63,7 @@ public partial class OpenAIChatClient
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
         if (request.File == null)
-            throw new ArgumentException(Localization.Translate("OpenAI Whisper only supports file stream uploads; provide audio through the File field"), nameof(request));
+            throw new ArgumentException(L.T("OpenAI Whisper only supports file stream uploads; provide audio through the File field"), nameof(request));
 
         var url = BuildApiUrl("/v1/audio/transcriptions");
 
@@ -216,7 +216,7 @@ public partial class OpenAIChatClient
     protected virtual EmbeddingResponse ParseEmbeddingResponse(String json)
     {
         var dic = JsonParser.Decode(json);
-        if (dic == null) throw new InvalidOperationException(Localization.Translate("Unable to parse embedding API response"));
+        if (dic == null) throw new InvalidOperationException(L.T("Unable to parse embedding API response"));
 
         var response = new EmbeddingResponse { Model = dic["model"] as String };
 

@@ -432,7 +432,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
         var json = await PostAsync(url, body, request, _options, cancellationToken).ConfigureAwait(false);
         var dashResp = json.ToJsonEntity<DashScopeResponse>(JsonOptions)!;
         if (!dashResp.Code.IsNullOrEmpty())
-            throw new HttpRequestException(Localization.Translate("[DashScope] Error {0}: {1}", dashResp.Code, dashResp.Message));
+            throw new HttpRequestException(L.T("[DashScope] Error {0}: {1}", dashResp.Code, dashResp.Message));
 
         // 原生响应无顶层 model 字段，从请求回填（服务端若返回则保留，避免计费归属失真）
         dashResp.Model ??= model;
@@ -502,7 +502,7 @@ public partial class DashScopeChatClient : OpenAIChatClient, IRerankClient
                 var errDic = JsonParser.Decode(data);
                 var code = errDic?["code"] as String ?? "error";
                 var message = errDic?["message"] as String ?? data;
-                throw new HttpRequestException(Localization.Translate("[{0}] Streaming error {1}: {2}", Name, code, message));
+                throw new HttpRequestException(L.T("[{0}] Streaming error {1}: {2}", Name, code, message));
             }
 
             IChatResponse? chunk = null;

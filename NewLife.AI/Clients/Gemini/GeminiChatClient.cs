@@ -123,7 +123,7 @@ public class GeminiChatClient : AiClientBase, IImageClient, IModelListClient
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>不支持，始终抛出 NotSupportedException</returns>
     public virtual Task<ImageGenerationResponse?> EditImageAsync(ImageEditsRequest request, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException(Localization.Translate("Gemini Imagen API does not support image editing (inpainting); use OpenAI or DashScope instead"));
+        => throw new NotSupportedException(L.T("Gemini Imagen API does not support image editing (inpainting); use OpenAI or DashScope instead"));
 
     /// <summary>获取 Gemini 账号可用的模型列表</summary>
     /// <remarks>

@@ -24,9 +24,9 @@ public class ToolException : Exception
     /// <param name="forLlm">面向 LLM 的恢复指引</param>
     /// <param name="innerException">内部异常（可选）</param>
     public ToolException(String forUser, String forLlm, Exception? innerException = null)
-        : base(NewLife.Localization.Translate(forLlm), innerException)
+        : base(L.T(forLlm), innerException)
     {
-        ForUser = NewLife.Localization.Translate(forUser);
-        ForLlm = NewLife.Localization.Translate(forLlm);
+        ForUser = L.T(forUser);
+        ForLlm = L.T(forLlm);
     }
 }

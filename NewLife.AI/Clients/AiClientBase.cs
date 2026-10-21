@@ -171,7 +171,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     public virtual async Task<IChatResponse> GetResponseAsync(IChatRequest request, CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
-            throw new ArgumentException(Localization.Translate("Message list cannot be empty"), nameof(request));
+            throw new ArgumentException(L.T("Message list cannot be empty"), nameof(request));
 
         request.Stream = false;
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
@@ -217,7 +217,7 @@ public abstract class AiClientBase : IChatClient, ILogFeature, ITracerFeature
     public virtual async IAsyncEnumerable<IChatResponse> GetStreamingResponseAsync(IChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request.Messages == null || request.Messages.Count == 0)
-            throw new ArgumentException(Localization.Translate("Message list cannot be empty"), nameof(request));
+            throw new ArgumentException(L.T("Message list cannot be empty"), nameof(request));
 
         request.Stream = true;
         if (request.Model.IsNullOrEmpty()) request.Model = _options.Model;
