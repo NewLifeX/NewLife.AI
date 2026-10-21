@@ -69,7 +69,7 @@ public class ToolContextHandler(IEnumerable<IToolProvider> toolProviders, SkillS
             {
                 context.SelectedTools.Add(n);
                 // 向 system 注入激活提示，引导模型主动调用已激活的工具
-                context.SystemSegments.Add($"[系统提示] 因 AI 上一轮回复触发词命中，工具 {n} 已激活，请在本轮按需调用。");
+                context.SystemSegments.Add(Localization.Translate("[System] Tool {0} was activated because the previous assistant reply matched its trigger words; call it in this round as needed.", n));
             }
         }
 

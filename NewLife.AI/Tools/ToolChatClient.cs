@@ -250,7 +250,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             workMessages.Add(new ChatMessage
             {
                 Role = "user",
-                Content = "[系统提示] 请基于已有的工具调用结果，直接给出最终回答。不要再次调用工具。"
+                Content = Localization.Translate("[System] Based on the tool results above, give the final answer directly. Do not call any more tools.")
             });
             // 兜底调用前同样重挂 loop span（并行工具执行后当前上下文可能残留已结束的工具 span）
             if (span != null) DefaultSpan.Current = span;
@@ -720,14 +720,14 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (sessionDedupKeys.Contains(key))
             {
                 WriteLog("Skipped duplicate tool call {0} from a previous round", toolName);
-                return BuildDedupResult(toolName, "跨轮次重复调用，已跳过执行");
+                return BuildDedupResult(toolName, Localization.Translate("Duplicate call from a previous round; execution skipped"));
             }
         }
 
         if (!dedupKeys.Add(key))
         {
             WriteLog("Skipped duplicate tool call {0} in the same round (same name and arguments)", toolName);
-            return BuildDedupResult(toolName, "调用与前序重复，已跳过执行");
+            return BuildDedupResult(toolName, Localization.Translate("Duplicate of an earlier call; execution skipped"));
         }
 
         return null;
@@ -739,8 +739,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="llmText">LLM 受众去重说明</param>
     private static ToolResult BuildDedupResult(String toolName, String llmText)
     {
-        var dupInfo = "{\"kind\":\"duplicate\",\"for_user\":\"已跳过（重复调用）\"}";
-        var result = ToolResult.ForAudiences(dupInfo, $"[已去重：{toolName}] {llmText}");
+        var dupInfo = $"{{\"kind\":\"duplicate\",\"for_user\":\"{Localization.Translate("Skipped (duplicate call)")}\"}}";
+        var result = ToolResult.ForAudiences(dupInfo, Localization.Translate("[Duplicate skipped: {0}] {1}", toolName, llmText));
         result["DedupPlaceholder"] = true;
         return result;
     }
@@ -753,7 +753,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     private static ToolResult BuildReuseResult(String toolName, IToolResult cached)
     {
         var userContent = GetUserContent(cached) ?? "";
-        return ToolResult.ForAudiences(userContent, $"[已复用：{toolName}] 参数与前序调用相同，已复用此前生成的结果");
+        return ToolResult.ForAudiences(userContent, Localization.Translate("[Reused: {0}] The arguments are identical to an earlier call; the previous result is reused", toolName));
     }
 
     /// <summary>构建跨轮重复失败占位结果。同一请求内相同工具+参数已失败过时不再执行，回传失败原因引导模型修改参数或换工具/思路</summary>
@@ -761,8 +761,9 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
     /// <param name="reason">此前失败原因摘要</param>
     private static ToolResult BuildRepeatFailureResult(String toolName, String? reason)
     {
-        var dupInfo = "{\"kind\":\"repeat_failure\",\"for_user\":\"相同调用已失败，已跳过重复执行\"}";
-        var llmText = $"[重复失败：{toolName}] 相同参数调用此前已失败：{(reason.IsNullOrEmpty() ? "未知原因" : reason)}。请勿原样重试，请修改参数或改用其他工具/思路。";
+        var dupInfo = $"{{\"kind\":\"repeat_failure\",\"for_user\":\"{Localization.Translate("Identical call already failed; duplicate execution skipped")}\"}}";
+        var why = reason.IsNullOrEmpty() ? Localization.Translate("Unknown reason") : reason;
+        var llmText = Localization.Translate("[Repeated failure: {0}] The same arguments failed earlier: {1}. Do not retry as-is; change the arguments or switch to another tool or approach.", toolName, why);
         return ToolResult.ForAudiences(dupInfo, llmText, true);
     }
 
@@ -785,8 +786,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             {
                 Role = "user",
                 Content = failedNames.IsNullOrEmpty()
-                    ? $"[系统提示] 工具已连续失败 {_consecutiveFailureRounds} 轮。请换一种思路，或调用 ask_user 工具向用户寻求帮助。"
-                    : $"[系统提示] 工具调用已连续失败 {_consecutiveFailureRounds} 轮（失败工具：{failedNames}）。请停止重试相同工具，修改参数或改用其他工具/思路，必要时调用 ask_user 工具向用户寻求帮助。"
+                    ? Localization.Translate("[System] Tools have failed for {0} consecutive rounds. Try a different approach, or call the ask_user tool to ask the user for help.", _consecutiveFailureRounds)
+                    : Localization.Translate("[System] Tool calls have failed for {0} consecutive rounds (failed tools: {1}). Stop retrying the same tools; change the arguments or switch to another tool or approach, and call the ask_user tool if help is needed.", _consecutiveFailureRounds, failedNames)
             });
             _consecutiveFailureRounds = 0;
         }
@@ -874,7 +875,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             else
             {
                 // 首次折叠：加头部说明（仅首个折叠摘要携带，后续合并直接追加正文避免重复）并打 FoldDigest 标记供合并识别
-                digest.Content = "[系统提示] 以下早期工具调用结果已压缩为摘要（如需细节请重新调用工具获取）：\n" + (digest.Content as String);
+                digest.Content = Localization.Translate("[System] The earlier tool results below were compressed into a digest (call the tools again if details are needed):") + "\n" + (digest.Content as String);
                 digest.Items["FoldDigest"] = true;
                 workMessages.Insert(group.Value.Start, digest);
             }
@@ -968,9 +969,8 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (headLen >= tailStart) return content.Substring(0, keepChars) + "...";
 
         var omitted = content.Length - headLen - (content.Length - tailStart);
-        return content.Substring(0, headLen) +
-            $"\n...(内容过长已省略中间 {omitted} 字符，原始 {content.Length} 字符；如需完整内容请缩小查询范围或重新调用工具)...\n" +
-            content.Substring(tailStart);
+        var omittedText = Localization.Translate("\n...(Content too long; {0} characters in the middle were omitted, original length {1} characters; narrow the range or call the tool again for the full content)...\n", omitted, content.Length);
+        return content.Substring(0, headLen) + omittedText + content.Substring(tailStart);
     }
 
     /// <summary>按工具名路由到对应 Provider 执行工具调用。未找到则抛 <see cref="InvalidOperationException"/></summary>
@@ -1026,7 +1026,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             var tier = ApprovalProvider?.GetToolTier(toolName) ?? ToolApprovalTier.Ask;
             if (tier == ToolApprovalTier.Deny)
             {
-                var result = ToolErrorResult("PERMISSION_DENIED", $"工具 {toolName} 已被代码层强制阻断（高风险操作）");
+                var result = ToolErrorResult("PERMISSION_DENIED", Localization.Translate("Tool {0} is blocked by the code layer (high-risk operation)", toolName));
                 await FireCallbackAsync(result).ConfigureAwait(false);
                 return result;
             }
@@ -1036,7 +1036,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 var approval = await ApprovalProvider.RequestApprovalAsync(toolName, argumentsJson, cancellationToken).ConfigureAwait(false);
                 if (!approval.Approved)
                 {
-                    var result = ToolErrorResult("USER_DENIED", $"工具 {toolName} 被用户拒绝执行");
+                    var result = ToolErrorResult("USER_DENIED", Localization.Translate("Tool {0} was rejected by the user", toolName));
                     await FireCallbackAsync(result).ConfigureAwait(false);
                     return result;
                 }
@@ -1049,7 +1049,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             if (!breaker.TryAcquire())
             {
                 var remaining = breaker.RemainingCooldownSeconds;
-                var result = ToolErrorResult("CIRCUIT_OPEN", $"工具提供者暂时不可用（熔断中），预计 {remaining}s 后恢复。如需立即重试请联系管理员重置熔断器");
+                var result = ToolErrorResult("CIRCUIT_OPEN", Localization.Translate("The tool provider is temporarily unavailable (circuit open) and is expected to recover in {0}s. Contact the administrator to reset the circuit breaker if a retry is needed now", remaining));
                 await FireCallbackAsync(result).ConfigureAwait(false);
                 return result;
             }
@@ -1073,7 +1073,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             }
 
             // 工具返回 null 视为执行失败，转为错误结果避免下游 NRE
-            callResult ??= ToolErrorResult("NULL_RESULT", $"工具 {toolName} 返回了空结果");
+            callResult ??= ToolErrorResult("NULL_RESULT", Localization.Translate("Tool {0} returned an empty result", toolName));
 
             await FireCallbackAsync(callResult).ConfigureAwait(false);
             return callResult;
@@ -1086,7 +1086,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
             // 自动构建 ForLlm——工具只需提供差异化恢复指引，框架负责拼接：
             // 1. 拼接 ForUser 错误描述（若 ForLlm 未以 ForUser 开头，避免重复）
             // 2. 拼接工具名前缀 [xxx 调用失败]（若工具未自带）
-            var toolPrefix = $"[{toolName} 调用失败] ";
+            var toolPrefix = Localization.Translate("[{0} call failed] ", toolName);
             var llmContent = toolEx.ForLlm ?? String.Empty;
             if (!llmContent.IsNullOrEmpty() &&
                 !llmContent.StartsWith(toolEx.ForUser ?? String.Empty, StringComparison.Ordinal))
@@ -1134,7 +1134,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
         if (llmParts.Count > 0) return String.Join("\n", llmParts);
 
         // 无 Llm 内容时写占位（OpenAI 要求每个 tool_call 必须有对应 role=tool 回复）
-        return $"[已渲染到客户端：{toolName}]，结果已渲染到用户界面，请勿在回复中插入图片链接或文件路径";
+        return Localization.Translate("[Rendered in the client: {0}] The result is already rendered in the user interface; do not insert image links or file paths in your reply", toolName);
     }
 
     /// <summary>从 IToolResult 中提取前端用户内容</summary>
@@ -1185,7 +1185,7 @@ public class ToolChatClient(IChatClient innerClient, params IToolProvider[] prov
                 String.Equals(t.Function.Name, toolName, StringComparison.OrdinalIgnoreCase));
             var schema = match?.Function?.Parameters;
             if (schema == null) return null;
-            return $"工具 {toolName} 期望的参数 schema：{schema.ToJson()}，请按 schema 重试。";
+            return Localization.Translate("Tool {0} expects this parameter schema: {1}. Retry according to the schema.", toolName, schema.ToJson());
         }
         catch
         {

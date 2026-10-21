@@ -32,7 +32,7 @@ public class ToolDiscoveryProvider
     public static String BuildToolCatalog(IEnumerable<IToolProvider> allProviders, ISet<String>? excludeTools = null)
     {
         var sb = Pool.StringBuilder.Get();
-        sb.AppendLine("你可以使用以下工具，需要时请在回复中用 @工具名 引用来激活工具：");
+        sb.AppendLine(Localization.Translate("You can use the following tools. Reference a tool by @tool-name in your reply to activate it when needed:"));
         //sb.AppendLine();
 
         var hasAny = false;
