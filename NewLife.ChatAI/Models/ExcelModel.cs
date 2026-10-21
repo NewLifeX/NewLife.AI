@@ -5,79 +5,79 @@ namespace NewLife.ChatAI.Models;
 /// <summary>Excel 工作表数据描述</summary>
 public class ExcelSheetModel
 {
-    [Description("工作表名称，如「Q2数据」")]
+    [Description("Worksheet name, e.g. Q2 Data")]
     public String Name { get; set; } = "Sheet1";
 
-    [Description("列标题数组，如 [\"日期\",\"营收\",\"环比\"]")]
+    [Description("Column header array, e.g. [\"Date\",\"Revenue\",\"MoM\"]")]
     public String[]? Headers { get; set; }
 
-    [Description("数据行（二维数组），每行为一个单元格值数组，如 [[\"张三\",\"85\"],[\"李四\",\"92\"]]")]
+    [Description("Data rows (2-D array); each row is an array of cell values, e.g. [[\"Alice\",\"85\"],[\"Bob\",\"92\"]]")]
     public String[][]? Rows { get; set; }
 
-    [Description("表头样式（可选）：headerBgColor 表头背景色、headerFontColor 表头字色、stripeColor 斑马纹色")]
+    [Description("Header style (optional): headerBgColor (header background), headerFontColor (header text color), stripeColor (striped rows)")]
     public TableStyle? Style { get; set; }
 
-    [Description("列宽数组（可选），如 [12, 20, 15]，数字单位近似字符宽度")]
+    [Description("Column width array (optional), e.g. [12, 20, 15]; values are approximate character widths")]
     public Int32[]? ColumnWidths { get; set; }
 
-    [Description("数字格式（可选），如 \"#,##0.00\" 或 \"yyyy-MM-dd\"")]
+    [Description("Number format (optional), e.g. \"#,##0.00\" or \"yyyy-MM-dd\"")]
     public String? NumberFormat { get; set; }
 
-    [Description("条件格式数组（可选）。每项字段：range（如\"C2:C10\"）、type（dataBar/colorScale/greaterThan/lessThan 等）、color（主色）、value（阈值）")]
+    [Description("Conditional format array (optional). Fields of each item: range (e.g. \"C2:C10\"), type (dataBar/colorScale/greaterThan/lessThan, etc.), color (primary color), value (threshold)")]
     public ConditionalFormat[]? ConditionalFormats { get; set; }
 
-    [Description("图表定义数组（可选）：type=bar/line/pie + title + categories + series")]
+    [Description("Chart definition array (optional): type=bar/line/pie + title + categories + series")]
     public ExcelChartModel[]? Charts { get; set; }
 
-    [Description("冻结首几行（0=不冻结，1=冻结首行，默认1）")]
+    [Description("Number of frozen top rows (0 = none, 1 = freeze the first row; default 1)")]
     public Int32? FreezeRows { get; set; } = 1;
 
-    [Description("自动筛选范围（如 \"A1:E1\"，为空则不启用）")]
+    [Description("Auto filter range (e.g. \"A1:E1\"); disabled when empty")]
     public String? AutoFilter { get; set; }
 
-    [Description("下拉列表验证数组（可选）")]
+    [Description("Dropdown validation array (optional)")]
     public ExcelDropdownModel[]? Dropdowns { get; set; }
 }
 
 /// <summary>条件格式定义（数据条/色阶/阈值规则）</summary>
 public class ConditionalFormat
 {
-    [Description("应用范围（如 \"C2:C10\"）")]
+    [Description("Applied range (e.g. \"C2:C10\")")]
     public String? Range { get; set; }
 
-    [Description("条件类型：dataBar（数据条）/ colorScale（色阶）/ greaterThan（大于）/ lessThan（小于）/ equal（等于）/ between（介于）")]
+    [Description("Condition type: dataBar / colorScale / greaterThan / lessThan / equal / between")]
     public String? Type { get; set; }
 
-    [Description("颜色（16进制 RGB，如 \"2563EB\"），用于数据条/色阶/高亮")]
+    [Description("Color (hex RGB, e.g. 2563EB) used for data bars, color scales, or highlighting")]
     public String? Color { get; set; }
 
-    [Description("阈值或公式（如 \"1000\" 或 \"=AVERAGE(C2:C10)\"）")]
+    [Description("Threshold or formula (e.g. 1000 or =AVERAGE(C2:C10))")]
     public String? Value { get; set; }
 }
 
 /// <summary>Excel 图表定义</summary>
 public class ExcelChartModel
 {
-    [Description("图表类型：bar（柱状）/ line（折线）/ pie（饼图）")]
+    [Description("Chart type: bar / line / pie")]
     public String Type { get; set; } = "bar";
 
-    [Description("图表标题（可选）")]
+    [Description("Chart title (optional)")]
     public String? Title { get; set; }
 
-    [Description("分类轴标签数组，如 [\"Q1\",\"Q2\",\"Q3\"]")]
+    [Description("Category axis label array, e.g. [\"Q1\",\"Q2\",\"Q3\"]")]
     public String[]? Categories { get; set; }
 
-    [Description("数据系列数组，每项含 name 和 data")]
+    [Description("Data series array; each item has name and data")]
     public ChartSeries[]? Series { get; set; }
 }
 
 /// <summary>Excel 下拉验证</summary>
 public class ExcelDropdownModel
 {
-    [Description("应用范围（如 \"A2:A100\"）")]
+    [Description("Applied range (e.g. \"A2:A100\")")]
     public String? Range { get; set; }
 
-    [Description("下拉选项数组")]
+    [Description("Dropdown option array")]
     public String[]? Items { get; set; }
 }
 

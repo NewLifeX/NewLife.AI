@@ -7,35 +7,35 @@ namespace NewLife.ChatAI.Models;
 public class PptPageModel
 {
     /// <summary>本页幻灯片标题（用于预览卡片）</summary>
-    [Description("本页幻灯片的标题")]
+    [Description("Title of this slide")]
     public String Title { get; set; } = String.Empty;
 
     /// <summary>布局模式：title_only / title_content / two_column / chart_only / blank</summary>
-    [Description("页面布局：title_only（仅标题，封面用）/ title_content（标题+正文，默认）/ two_column（左右两栏）/ chart_only（全幅图表）/ blank（空白画布）")]
+    [Description("Slide layout: title_only (title only, for covers) / title_content (title + body, default) / two_column (two columns) / chart_only (full-width chart) / blank (blank canvas)")]
     public String? Layout { get; set; }
 
     /// <summary>背景色（16进制 RGB，如 "1F497D"）。不填则使用主题默认背景</summary>
-    [Description("幻灯片背景色，16进制 RGB，如 \"1F497D\"。不填时使用主题默认背景")]
+    [Description("Slide background color, hex RGB such as \"1F497D\"; when omitted, the theme background is used")]
     public String? Background { get; set; }
 
     /// <summary>元素列表</summary>
-    [Description("页面元素列表，每个元素描述一段文字、表格、图表或图片")]
+    [Description("Slide element list; each element describes a text block, table, chart, or image")]
     public PptElement[] Elements { get; set; } = [];
 
     /// <summary>页脚文本（null 表示不显示）</summary>
-    [Description("页脚文本，显示在幻灯片底部，null 表示不显示")]
+    [Description("Footer text displayed at the bottom of the slide; null hides it")]
     public String? Footer { get; set; }
 
     /// <summary>是否在右下角显示幻灯片序号</summary>
-    [Description("是否在右下角显示幻灯片序号，默认 false")]
+    [Description("Whether to show the slide number in the bottom-right corner; default false")]
     public Boolean ShowPageNumber { get; set; }
 
     /// <summary>演讲者备注</summary>
-    [Description("演讲者备注文本，用于演讲时提示")]
+    [Description("Speaker notes used as a reminder while presenting")]
     public String? Notes { get; set; }
 
     /// <summary>切换动画：fade / push / wipe / zoom / split / cut</summary>
-    [Description("切换动画：fade（淡入淡出）/ push（推入）/ wipe（擦除）/ zoom（缩放）/ split（分裂）/ cut（直切）")]
+    [Description("Transition animation: fade / push / wipe / zoom / split / cut")]
     public String? Transition { get; set; }
 }
 
@@ -43,79 +43,79 @@ public class PptPageModel
 public class PptElement
 {
     /// <summary>元素类型：text / table / chart / image</summary>
-    [Description("元素类型：text（文字）/ table（表格）/ chart（图表）/ image（图片）")]
+    [Description("Element type: text / table / chart / image")]
     public String Type { get; set; } = "text";
 
     /// <summary>语义角色（text 元素）：title / subtitle / body / caption / kpi。布局引擎据此自动定位</summary>
-    [Description("语义角色（text 元素专用）：title（标题）/ subtitle（副标题）/ body（正文）/ caption（注释/来源）/ kpi（大数字指标）。布局引擎据此自动定位，无需指定坐标")]
+    [Description("Semantic role (text elements only): title / subtitle / body / caption / kpi. The layout engine uses it to position the element automatically, so no coordinates are needed")]
     public String? Role { get; set; }
 
     /// <summary>文字内容（type=text 时必填）</summary>
-    [Description("文字内容（type=text 时必填）")]
+    [Description("Text content (required when type=text)")]
     public String? Content { get; set; }
 
     /// <summary>字号（磅），不填由布局引擎按 role 决定</summary>
-    [Description("字号（磅），可选，不填时由布局引擎按 role 自动决定（title≈28、kpi≈44、body≈16）")]
+    [Description("Font size in points (optional); when omitted, the layout engine picks one by role (title≈28, kpi≈44, body≈16)")]
     public Int32? FontSize { get; set; }
 
     /// <summary>是否粗体</summary>
-    [Description("是否加粗，默认 false")]
+    [Description("Whether the text is bold; default false")]
     public Boolean? Bold { get; set; }
 
     /// <summary>是否斜体</summary>
-    [Description("是否斜体（type=text 时可选），默认 false")]
+    [Description("Whether the text is italic (optional for type=text); default false")]
     public Boolean? Italic { get; set; }
 
     /// <summary>是否下划线</summary>
-    [Description("是否下划线（type=text 时可选），默认 false")]
+    [Description("Whether the text is underlined (optional for type=text); default false")]
     public Boolean? Underline { get; set; }
 
     /// <summary>文字颜色（16进制 RGB，如 "FFFFFF"）</summary>
-    [Description("文字颜色，16进制 RGB，如 \"FFFFFF\"。不填时继承主题文字色")]
+    [Description("Text color, hex RGB such as \"FFFFFF\"; when omitted, the theme text color is inherited")]
     public String? Color { get; set; }
 
     /// <summary>表格列标题（type=table 时必填）</summary>
-    [Description("表格列标题数组（type=table 时必填），如 [\"指标\",\"Q1\",\"Q2\",\"环比\"]")]
+    [Description("Table header array (required when type=table), e.g. [\"Metric\",\"Q1\",\"Q2\",\"MoM\"]")]
     public String[]? Headers { get; set; }
 
     /// <summary>表格数据行（type=table 时必填），每行为一个单元格值数组</summary>
-    [Description("表格数据行（type=table 时必填），每行为一个单元格值数组，如 [[\"张三\",\"85\"],[\"李四\",\"92\"]]")]
+    [Description("Table data rows (required when type=table); each row is an array of cell values, e.g. [[\"Alice\",\"85\"],[\"Bob\",\"92\"]]")]
     public String[][]? Rows { get; set; }
 
     /// <summary>图表类型（type=chart 时必填）：bar / line / pie</summary>
-    [Description("图表类型（type=chart 时必填）：bar（柱状图）/ line（折线图）/ pie（饼图）")]
+    [Description("Chart type (required when type=chart): bar / line / pie")]
     public String? ChartType { get; set; }
 
     /// <summary>分类轴标签（type=chart 时必填）</summary>
-    [Description("图表分类标签（type=chart 时必填），如 [\"Q1\",\"Q2\",\"Q3\",\"Q4\"]")]
+    [Description("Chart category labels (required when type=chart), e.g. [\"Q1\",\"Q2\",\"Q3\",\"Q4\"]")]
     public String[]? Categories { get; set; }
 
     /// <summary>数据系列（type=chart 时必填），每项含 name 和 data</summary>
-    [Description("数据系列（type=chart 时必填），每项包含 name（系列名）和 data（数值数组）")]
+    [Description("Data series (required when type=chart); each item has name (series name) and data (numeric array)")]
     public ChartSeries[]? Series { get; set; }
 
     /// <summary>图片 URL（type=image 时必填）。支持 https:// 外链或 /cube/image?id=xxx 内部附件</summary>
-    [Description("图片 URL（type=image 时必填），支持 https:// 外链或 /cube/image?id=xxx 内部附件")]
+    [Description("Image URL (required when type=image); supports external https:// links or internal attachments such as /cube/image?id=xxx")]
     public String? Src { get; set; }
 
     /// <summary>文字对齐（text 元素）：l（左对齐）/ ctr（居中）/ r（右对齐）</summary>
-    [Description("文字对齐（text 元素）：l（左对齐）/ ctr（居中）/ r（右对齐）")]
+    [Description("Text alignment (text elements): l (left) / ctr (center) / r (right)")]
     public String? Alignment { get; set; }
 
     /// <summary>文本框背景色（text 元素，16进制 RGB，如 \"EFF6FF\"）</summary>
-    [Description("文本框背景色（text 元素），16进制 RGB，如 \"EFF6FF\"，为空则透明")]
+    [Description("Text box background color (text elements), hex RGB such as \"EFF6FF\"; transparent when empty")]
     public String? BackgroundColor { get; set; }
 
     /// <summary>富文本片段（text 元素）。有内容时忽略 Content/FontSize/Bold/Color，支持混合格式</summary>
-    [Description("富文本片段（text 元素，有内容时忽略 Content/FontSize/Bold/Color）")]
+    [Description("Rich text runs (text elements); when present, Content/FontSize/Bold/Color are ignored")]
     public TextRun[]? Runs { get; set; }
 
     /// <summary>基本形状配置（type=shape 时必填）</summary>
-    [Description("基本形状配置（type=shape 时必填）")]
+    [Description("Shape configuration (required when type=shape)")]
     public ShapeInfo? Shape { get; set; }
 
     /// <summary>表格样式（type=table 时可选，控制表头背景色和斑马纹）</summary>
-    [Description("表格样式（type=table 时可选）：headerBgColor 表头背景色、headerFontColor 表头字色、stripeColor 斑马纹色")]
+    [Description("Table style (optional when type=table): headerBgColor (header background), headerFontColor (header text color), stripeColor (striped rows)")]
     public TableStyle? TableStyle { get; set; }
 
     /// <summary>将 Headers + Rows 合并为 AddTable 需要的行集合（首行为表头）。Rows 为嵌套数组，每行一个 String[]</summary>
@@ -134,31 +134,31 @@ public class PptElement
 public class TextRun
 {
     /// <summary>文本内容</summary>
-    [Description("文本内容")]
+    [Description("Text content")]
     public String Text { get; set; } = String.Empty;
 
     /// <summary>字号（磅），0 表示继承文本框默认字号</summary>
-    [Description("字号（磅），0 表示继承文本框默认字号")]
+    [Description("Font size in points; 0 inherits the text box default")]
     public Int32 FontSize { get; set; }
 
     /// <summary>是否粗体</summary>
-    [Description("是否粗体")]
+    [Description("Whether the text is bold")]
     public Boolean Bold { get; set; }
 
     /// <summary>是否斜体</summary>
-    [Description("是否斜体")]
+    [Description("Whether the text is italic")]
     public Boolean Italic { get; set; }
 
     /// <summary>是否下划线</summary>
-    [Description("是否下划线")]
+    [Description("Whether the text is underlined")]
     public Boolean Underline { get; set; }
 
     /// <summary>文字颜色（16进制 RGB，如 \"FF6B6B\"）</summary>
-    [Description("文字颜色，16进制 RGB，如 \"FF6B6B\"")]
+    [Description("Text color, hex RGB such as \"FF6B6B\"")]
     public String? Color { get; set; }
 
     /// <summary>超链接 URL，不为空时点击该片段跳转</summary>
-    [Description("超链接 URL，不为空时点击该片段跳转")]
+    [Description("Hyperlink URL; the run becomes clickable when set")]
     public String? HyperlinkUrl { get; set; }
 }
 
@@ -166,27 +166,27 @@ public class TextRun
 public class ShapeInfo
 {
     /// <summary>形状类型：rect / ellipse / roundRect / triangle / diamond / arrow</summary>
-    [Description("形状类型：rect（矩形）/ ellipse（椭圆）/ roundRect（圆角矩形）/ triangle（三角形）/ diamond（菱形）/ arrow（箭头）")]
+    [Description("Shape type: rect / ellipse / roundRect / triangle / diamond / arrow")]
     public String ShapeType { get; set; } = "rect";
 
     /// <summary>填充色（16进制 RGB），null 表示无填充</summary>
-    [Description("填充色（16进制 RGB，如 \"2563EB\"），null 表示无填充")]
+    [Description("Fill color (hex RGB, e.g. 2563EB); null means no fill")]
     public String? FillColor { get; set; }
 
     /// <summary>边框颜色（16进制 RGB），null 表示无边框</summary>
-    [Description("边框颜色（16进制 RGB），null 表示无边框")]
+    [Description("Border color (hex RGB); null means no border")]
     public String? LineColor { get; set; }
 
     /// <summary>形状内文字（可选）</summary>
-    [Description("形状内显示的文字（可选）")]
+    [Description("Text displayed inside the shape (optional)")]
     public String? Text { get; set; }
 
     /// <summary>文字颜色（16进制 RGB）</summary>
-    [Description("形状内文字颜色（16进制 RGB）")]
+    [Description("Text color inside the shape (hex RGB)")]
     public String? FontColor { get; set; }
 
     /// <summary>文字字号（磅），0 表示默认</summary>
-    [Description("形状内文字字号（磅），0 表示默认")]
+    [Description("Font size of the text inside the shape (points); 0 means default")]
     public Int32 FontSize { get; set; }
 }
 
@@ -194,15 +194,15 @@ public class ShapeInfo
 public class TableStyle
 {
     /// <summary>表头行背景色（16进制 RGB，如 \"2563EB\"）</summary>
-    [Description("表头行背景色（16进制 RGB，如 \"2563EB\"），不填则无特殊样式")]
+    [Description("Header row background color (hex RGB, e.g. 2563EB); when omitted, no special style is applied")]
     public String? HeaderBgColor { get; set; }
 
     /// <summary>表头行文字颜色（16进制 RGB，如 \"FFFFFF\"）</summary>
-    [Description("表头行文字颜色（16进制 RGB，如 \"FFFFFF\"），不填则继承默认")]
+    [Description("Header row text color (hex RGB, e.g. FFFFFF); when omitted, the default is inherited")]
     public String? HeaderFontColor { get; set; }
 
     /// <summary>斑马纹颜色（偶数数据行背景色，如 \"EFF6FF\"）</summary>
-    [Description("斑马纹颜色（偶数数据行背景色，如 \"EFF6FF\" 浅蓝），不填则无斑马纹")]
+    [Description("Striped row color (background of even data rows, e.g. EFF6FF light blue); when omitted, no stripes are drawn")]
     public String? StripeColor { get; set; }
 }
 
