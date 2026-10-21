@@ -52,7 +52,7 @@ public class WidgetToolService(ILog log)
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=完整Widget JSON + ForLlm=简短确认）</returns>
     [ToolDescription("show_widget", IsSystem = false,
-        Triggers = "visual widget,visualize,draw a diagram",
+        Triggers = "widget,svg,visual widget,visualize,draw a diagram",
         AssistantTriggers = "visual widget,visualize,diagram",
         ReadOnly = true)]
     [DisplayName("Visual Widget")]

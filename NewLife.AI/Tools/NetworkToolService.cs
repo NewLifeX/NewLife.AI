@@ -80,7 +80,7 @@ public class NetworkToolService(IServiceProvider serviceProvider)
     /// </summary>
     /// <param name="ip">要查询的 IPv4/IPv6 地址；留空则自动查询本机当前公网 IP</param>
     /// <param name="cancellationToken">取消令牌</param>
-    [ToolDescription("get_ip_location", Triggers = "ip location,where is this ip,my ip")]
+    [ToolDescription("get_ip_location", Triggers = "ip,ip location,where is this ip,my ip")]
     [DisplayName("IP Location")]
     [Description("Look up where an IP address is located (country, province, city, and ISP). When ip is omitted, looks up the current public IP of this machine")]
     public async Task<Object> GetIpLocationAsync(

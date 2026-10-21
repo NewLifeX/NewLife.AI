@@ -51,7 +51,7 @@ public class BuildPptToolService(ILog log)
     /// <param name="context">工具调用上下文（框架自动注入）</param>
     /// <returns>ToolResult（ForUser=预览 JSON + ForLlm=简短确认）</returns>
     [ToolDescription("build_ppt", IsSystem = false,
-        Triggers = "build ppt,powerpoint,slides",
+        Triggers = "ppt,build ppt,powerpoint,slides",
         AssistantTriggers = "ppt,slides,presentation,deck,build_ppt",
         ReadOnly = false)]
     [DisplayName("PowerPoint Slides")]

@@ -20,7 +20,7 @@ public class BuildExcelToolService(ILog log)
 
     /// <summary>生成 Excel 电子表格（.xlsx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_excel", IsSystem = false,
-        Triggers = "build excel,excel sheet,spreadsheet",
+        Triggers = "excel,build excel,excel sheet,spreadsheet",
         AssistantTriggers = "excel,xlsx,spreadsheet,report table,build_excel",
         ReadOnly = false)]
     [DisplayName("Excel Workbook")]

@@ -77,7 +77,7 @@ public class DbQueryToolService(DbSchemaService schemaService, IChatSetting chat
     /// <param name="context">工具调用上下文</param>
     /// <returns>查询或执行结果（JSON格式）</returns>
     [ToolDescription("run_sql", IsSystem = false,
-        Triggers = "run sql,execute sql,sql query",
+        Triggers = "sql,run sql,execute sql,sql query",
         AssistantTriggers = "sql query,run query,run_sql")]
     [DisplayName("Run SQL")]
     [Description("Execute a SQL statement on the given database connection. SELECT/WITH queries return data rows; non-query statements such as INSERT/UPDATE/DELETE return the affected row count. connName must match the connection column returned by search_table")]

@@ -31,6 +31,33 @@ public class TriggerMatcherTests : IDisposable
     }
 
     [Fact]
+    [DisplayName("词条登记多个同义词时任一命中即可")]
+    public void IsMatched_SynonymTerms_AnyHits()
+    {
+        NewLife.Localization.Culture = new CultureInfo("zh-Hans");
+
+        // trigger:timeline 登记为"时间轴|时间线"，两种说法都应命中
+        Assert.True(TriggerMatcher.IsMatched("画一条时间线", "timeline"));
+        Assert.True(TriggerMatcher.IsMatched("列出时间轴", "timeline"));
+        // trigger:mind map 登记为"思维导图|脑图"
+        Assert.True(TriggerMatcher.IsMatched("生成一个脑图", "mind map"));
+        // trigger:word document 登记为"文档|报告"
+        Assert.True(TriggerMatcher.IsMatched("帮我写报告", "word document"));
+    }
+
+    [Fact]
+    [DisplayName("中文消息里的英文专名直接命中源文")]
+    public void IsMatched_ChineseContent_HitsLatinProperNoun()
+    {
+        Assert.True(TriggerMatcher.IsMatched("帮我执行SQL", "sql,run sql"));
+        Assert.True(TriggerMatcher.IsMatched("我的IP在哪", "ip,ip location"));
+        Assert.True(TriggerMatcher.IsMatched("生成PPT", "ppt,powerpoint"));
+        // 词边界同样适用于专名：zip / mysql 不应命中
+        Assert.False(TriggerMatcher.IsMatched("unzip this file", "ip,ip location"));
+        Assert.False(TriggerMatcher.IsMatched("mysql is slow", "sql,run sql"));
+    }
+
+    [Fact]
     [DisplayName("英文消息命中源文触发词")]
     public void IsMatched_EnglishContent_HitsSourceTrigger()
     {

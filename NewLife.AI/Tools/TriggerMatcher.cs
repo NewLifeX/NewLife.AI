@@ -8,7 +8,7 @@ namespace NewLife.AI.Tools;
 /// <remarks>
 /// 触发词以英文短语为源文登记（便于评审，也便于用词表翻译），匹配时同时纳入当前语言的译文，
 /// 因此中文用户说"今天天气"与英文用户说"weather forecast"都能命中 weather 词条；
-/// 词表没有译文时只按源文匹配，不报错。
+/// 词表没有译文时只按源文匹配，不报错。一个词条的译文可用竖线分隔登记多个同义词，如"时间轴|时间线"。
 /// <para>英文等纯 ASCII 触发词按词边界匹配，避免 map 命中 mapping、chart 命中 charter；
 /// 中文等含非 ASCII 字符的触发词按子串匹配，符合中文不带分隔符的习惯。</para>
 /// </remarks>
@@ -71,8 +71,7 @@ public static class TriggerMatcher
 
             // 当前语言译文一并参与匹配；未登记译文时返回 null，此处自动跳过
             var text = TranslateTerm(word);
-            if (!text.IsNullOrEmpty() && ContainsWord(content!, text!))
-                return true;
+            if (ContainsAny(content!, text)) return true;
         }
 
         return false;
@@ -125,6 +124,25 @@ public static class TriggerMatcher
         return [.. list];
     }
 
+    private static Boolean ContainsAny(String content, String? text)
+    {
+        if (text.IsNullOrEmpty()) return false;
+
+        // 词条译文可用竖线分隔登记多个同义词，逐个比对
+        var start = 0;
+        while (start <= text!.Length)
+        {
+            var idx = text.IndexOf('|', start);
+            var part = idx < 0 ? text.Substring(start) : text.Substring(start, idx - start);
+            if (ContainsWord(content, part.Trim())) return true;
+            if (idx < 0) break;
+
+            start = idx + 1;
+        }
+
+        return false;
+    }
+
     private static Boolean HasNonAscii(String text)
     {
         foreach (var ch in text)
@@ -135,5 +153,7 @@ public static class TriggerMatcher
         return false;
     }
 
-    private static Boolean IsWordChar(Char ch) => ch == '_' || Char.IsLetterOrDigit(ch);
+    // 只有 ASCII 字母、数字与下划线算词内字符。中文没有分隔符，"我的IP在哪"里的 IP 不该因为
+    // 前面挨着汉字就被判成单词片段，因此 CJK 字符不参与粘连判断
+    private static Boolean IsWordChar(Char ch) => ch == '_' || (ch < 0x80 && Char.IsLetterOrDigit(ch));
 }

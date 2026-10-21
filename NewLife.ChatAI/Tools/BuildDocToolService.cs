@@ -21,7 +21,7 @@ public class BuildDocToolService(ILog log)
 
     /// <summary>生成 Word 文档（.docx）并归档到附件表，返回下载链接</summary>
     [ToolDescription("build_doc", IsSystem = false,
-        Triggers = "build word,word document,generate doc",
+        Triggers = "word,build word,word document,generate doc",
         AssistantTriggers = "word,docx,document,report,proposal,minutes,build_doc",
         ReadOnly = false)]
     [DisplayName("Word Document")]
