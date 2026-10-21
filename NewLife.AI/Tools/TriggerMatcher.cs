@@ -21,10 +21,22 @@ public static class TriggerMatcher
     public static String[] TermKeys { get; } =
     [
         "trigger:calculate",
+        "trigger:compute",
+        "trigger:math expression",
         "trigger:web fetch",
+        "trigger:fetch url",
+        "trigger:read webpage",
+        "trigger:open link",
         "trigger:web search",
+        "trigger:search the web",
+        "trigger:ip location",
+        "trigger:where is this ip",
+        "trigger:my ip",
         "trigger:weather",
+        "trigger:forecast",
         "trigger:translate",
+        "trigger:translate this",
+        "trigger:translation",
         "trigger:word document",
         "trigger:spreadsheet",
         "trigger:slides",
@@ -50,7 +62,7 @@ public static class TriggerMatcher
         if (word.IsNullOrWhiteSpace()) return null;
 
         var key = TermPrefix + word;
-        var text = Localization.Translate(key);
+        var text = L.T(key);
         return String.Equals(text, key, StringComparison.Ordinal) ? null : text;
     }
 
