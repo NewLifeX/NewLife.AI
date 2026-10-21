@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using NewLife.AI.Interfaces;
 using NewLife.AI.Tools;
@@ -34,6 +35,55 @@ public class ToolSyncEngineTests
         Assert.Equal("查询天气,看天气", model.Triggers);
         Assert.True(model.IsSystem);
         Assert.True(model.Enable);
+    }
+
+    [Fact]
+    [DisplayName("SyncNativeTools 新增记录时写入显示名源文")]
+    public void SyncNativeTools_NewRecord_WritesDisplayName()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools<SampleToolService>();
+
+        var saved = new List<SampleNativeTool>();
+        var count = registry.SyncNativeTools<SampleNativeTool>(_ => null, saved.Add);
+
+        Assert.Equal(1, count);
+        var record = Assert.Single(saved);
+        Assert.Equal("query_weather", record.Name);
+        Assert.Equal("天气查询", record.DisplayName);
+    }
+
+    [Fact]
+    [DisplayName("SyncNativeTools 重扫时用源文覆盖未锁定的旧显示名")]
+    public void SyncNativeTools_ExistingRecord_UpdatesDisplayName()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools<SampleToolService>();
+
+        // 模拟历史数据：显示名停留在旧的中文源文
+        var existing = new SampleNativeTool { Name = "query_weather", DisplayName = "天气查询（旧）" };
+        var saved = new List<SampleNativeTool>();
+
+        registry.SyncNativeTools<SampleNativeTool>(_ => existing, saved.Add);
+
+        Assert.Equal("天气查询", existing.DisplayName);
+        Assert.Single(saved);
+    }
+
+    [Fact]
+    [DisplayName("SyncNativeTools 不改动已锁定记录的显示名")]
+    public void SyncNativeTools_LockedRecord_KeepsDisplayName()
+    {
+        var registry = new ToolRegistry();
+        registry.AddTools<SampleToolService>();
+
+        var existing = new SampleNativeTool { Name = "query_weather", DisplayName = "手工改名", IsLocked = true };
+        var saved = new List<SampleNativeTool>();
+
+        registry.SyncNativeTools<SampleNativeTool>(_ => existing, saved.Add);
+
+        Assert.Equal("手工改名", existing.DisplayName);
+        Assert.Single(saved);
     }
 
     private class SampleNativeTool : INativeTool
