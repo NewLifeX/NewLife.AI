@@ -16,6 +16,8 @@ param(
     [String[]]$AllowSameValue = @("{0} format {1}"),
     [Switch]$SkipOrphan,
     [Switch]$SkipMessageCheck,
+    # 元数据键清单，允许不出现在源码字符串中（程序集标题/描述等）
+    [String]$MetadataKeys = "metadata-keys.json",
     [String[]]$AllowMissingMessage = @(
         '  [{0}] {1}',
         '[AI] {0} {1}',
@@ -103,6 +105,11 @@ if (!(Test-Path -LiteralPath $referencePath)) {
     exit 1
 }
 $reference = Read-Locale $referencePath
+$metadata = @()
+$metadataPath = if ([IO.Path]::IsPathRooted($MetadataKeys)) { $MetadataKeys } else { Join-Path $localeDir $MetadataKeys }
+if (Test-Path -LiteralPath $metadataPath) {
+    $metadata = @((Get-Content -LiteralPath $metadataPath -Raw -Encoding UTF8 | ConvertFrom-Json).keys)
+}
 $allErrors = @($reference.Errors | ForEach-Object { "$($Baseline): $_" })
 $allWarnings = @()
 
@@ -159,6 +166,9 @@ if (!$SkipOrphan) {
         ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join "`n"
 
     foreach ($key in $reference.Entries.Keys) {
+        # 程序集标题/描述等元数据键不在源码字符串中，由 metadata-keys.json 声明
+        if ($metadata -contains $key) { continue }
+
         # 源码中的字面量形式：制表符写作 \t，引号写作 \"
         $escaped = $key.Replace('\', '\\').Replace('"', '\"').Replace("`t", '\t').Replace("`r", '\r').Replace("`n", '\n')
         if (!$sourceText.Contains($key) -and !$sourceText.Contains($escaped)) {

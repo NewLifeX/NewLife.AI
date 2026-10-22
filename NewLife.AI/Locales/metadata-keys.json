@@ -1,0 +1,8 @@
+{
+  "comment": "程序集标题与描述等元数据键。不参与源码字符串扫描，但要求覆盖全部 31 种译文语言。",
+  "updated": "2026-10-22",
+  "keys": [
+    "NewLife.AI - Unified AI Gateway Library",
+    "Multi-protocol, multi-model AI infrastructure library with 46 providers, function calling, image generation and MCP tools. NativeAOT-ready, with 31 runtime languages."
+  ]
+}
