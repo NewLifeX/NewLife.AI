@@ -34,7 +34,7 @@ jobs:
         dotnet-version: 10.x
 
     - name: Resolve version
-      # tag 触发时以 tag 为准（v1.6.2026.1024 → 1.6.2026.1024），避免发包日期与 tag 不一致；
+      # tag 触发时以 tag 为准（v1.7.2026.1024 → 1.7.2026.1024），避免发包日期与 tag 不一致；
       # 手工触发时沿用当前日期，与 csproj 的 VersionSuffix 约定一致。
       shell: bash
       run: |
@@ -100,7 +100,7 @@ jobs:
           exit 0
         }
 
-        # 发布说明优先取 ChangeLog.md 中当前版本段落（标题形如 "## v1.6.2026.1024 (2026-10-24)"）
+        # 发布说明优先取 ChangeLog.md 中当前版本段落（标题形如 "## v1.7.2026.1024 (2026-10-24)"）
         $version = $tag.TrimStart('v')
         $pattern = '^##\s+v?' + [regex]::Escape($version) + '(\s|\(|$)'
         $lines = Get-Content -LiteralPath 'ChangeLog.md'

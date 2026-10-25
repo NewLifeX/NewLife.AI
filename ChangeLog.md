@@ -1,5 +1,48 @@
 # NewLife.AI 版本更新记录
 
+## v1.7.2026.1024 (2026-10-24)
+
+### 工程化与多平台
+- **NativeAOT 就绪**：net8.0/net10.0 标记 `IsAotCompatible`，AotSmoke 38 场景覆盖 Windows/Linux/macOS 与 x64/arm64/loongarch64 等架构
+- **ASP.NET Core AOT**：集成层支持 NativeAOT，新增 AotWebSmoke 宿主冒烟
+- **裁剪保根随包**：新增 buildTransitive targets，下游 `PublishTrimmed`/`PublishAot` 自动保根，无需手工 `TrimmerRootAssembly`
+- **多系统多架构 CI**：单元测试矩阵 win-x64/linux-x64/linux-arm64/osx-arm64 为阻断门禁，win-arm64/osx-x64 观察期；AOT 矩阵同步扩展
+- **发布工程化**：发布前包消费验证与目标框架守门；GitHub Packages 与 NuGet.org 双通道发布，tag 推送自动创建 GitHub Release
+- **前端门禁**：前端单测（vitest）与 lint 纳入 CI；新增 31 种词表在 NativeAOT 下的语言作用域隔离测试
+
+### 多语言与本地化
+- **31 种运行时语言**：内核消息英文化并生成 31 语词表，按请求语言（`X-Language` / `?lang=` / `Accept-Language`）自动切换，缺翻译回退英文
+- **工具链路本地化**：工具描述、参数说明、内置工具显示名统一英文源文，`ToolSchemaLocalizer` 按当前语言输出，31 语词表全覆盖
+- **触发词与提示语**：内置工具触发词改为英文源文并按语言匹配，支持同义词登记；工具链路提示语走词表
+- **前端 11 语种**：ChatAI 前端界面扩到 11 种语言，修正阿拉伯语等 RTL 布局与 `html lang/dir` 同步
+- **README 11 语种**：生态版图与团队介绍逐字同步，接入语言切换同步与校验脚本
+
+### 对话与存储
+- **消息落库重构**：新增 `MessageStore` 统一消息实体落库，`MessageFlow` 三入口抽取 `RunChainAsync` 消重
+- **思考内容压缩**：思考内容压缩存储，读取走 `OnLoad` 统一解压，推理回传/建议回放直接读属性
+- **工具调用存储升级**：工具调用剥离为独立分片表并回写摘要，压缩优化且幂等
+- **SSE 增强**：消息开始事件携带用户消息真实 ID（`UserMessageId`）
+
+### 模型与协议
+- **模型能力家族化**：新增 claude/gemini 家族，按 `ModelData` 校准 glm/kimi/minimax/ernie/doubao/gpt 规则；家族档案不含价格，新版本零改动覆盖
+- **元数据解析链**：统一能力与价格写入；主模型列表过滤语音/嵌入/排序模型并纳入文生图/文生视频
+- **协议一致性**：修复 Anthropic/Bedrock 流式工具调用、网关归一化补 Bedrock 接线、Azure 模型列表端点与多模态能力位校验；请求体剔除内部管道键以兼容 Azure/liteLLM 严格校验
+- **DeepSeek/百炼**：修复 DeepSeek V4 Pro 思考能力标记，模型家族支持 V4.1 与百炼新批次推断
+
+### 网关与智能体
+- **按密钥能力开关**：网关新增按密钥能力键，技能/记忆/学习/记录可按密钥跳过
+- **限流作用域**：消息限流器支持作用域维度，各作用域计数独立
+- **记忆与压缩**：MemoryService2 向量健壮性增强；CompactionFilter/Service 支持 Token 占比压缩与工具会话预算守卫
+- **工具循环**：ToolChatClient 工具循环结构化与健壮性增强，统一 `IToolProvider.GetTools` 签名并补流式契约测试
+- **自学习开关**：自学习支持用户级开关，无设置记录默认启用
+
+### 办公文档
+- **品牌设计系统**：新增办公文档品牌设计系统（调色板与样式工具），Word/Excel/PPT 生成接入品牌样式并补齐图表
+- **真实汇报风格**：PPT 品牌封面/字号/配色/版式对齐真实汇报；Excel 标题带/行高/数值化对齐工作习惯；结果卡支持全部卡片风格主题配色
+
+### 依赖升级
+- NewLife.Core 12.0.2026.1024、NewLife.XCode 12.3.2026.1024、NewLife.Holiday 1.5.2026.1024、NewLife.MySql 1.5.2026.1024、NewLife.Office 1.5.2026.1024、NewLife.Stardust.Extensions 3.10.2026.1024
+
 ## v1.6.2026.0902 (2026-09-02)
 
 ### MCP 协议

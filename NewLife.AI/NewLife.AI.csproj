@@ -5,7 +5,7 @@
     <Description>Multi-protocol, multi-model AI infrastructure library with 46 providers, function calling, image generation and MCP tools. NativeAOT-ready, with 31 runtime languages.</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
-    <VersionPrefix>1.6</VersionPrefix>
+    <VersionPrefix>1.7</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -35,7 +35,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>MCP 协议核心自包含重构并全链路对标官方 SDK，移除 Remoting 依赖；新增 Ollama 协议支持，网关兼容与测试闭环；AI 协议客户端 v5.0 增强，支持 Anthropic 多轮思考回传与容错重试；工具链 SSRF 防护与状态隔离，工具服务参数类型化；模型报价单扩展为元数据表，能力推断家族化，统一 Token 估算；配置项重构为强类型枚举，新增渠道领域模式与用户隔离；引入 HttpClientPool 连接池，HashTextEmbedder 3 倍提速 14 倍降分配；新增 Bing/搜狗/DuckDuckGo 搜索通道与知识库门控</PackageReleaseNotes>
+    <PackageReleaseNotes>原生 AOT 就绪并随包保根，38 场景冒烟覆盖多系统多架构；31 种运行时语言与工具链路本地化；模型能力家族化与元数据解析链，修复 Anthropic/Bedrock/Azure/DeepSeek 协议一致性；消息落库与思考压缩重构；办公文档品牌设计系统；GitHub Packages 与 NuGet.org 双通道发版</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -56,7 +56,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="12.0.2026.1020-beta1352" />
+    <PackageReference Include="NewLife.Core" Version="12.0.2026.1024" />
   </ItemGroup>
 
   <ItemGroup>

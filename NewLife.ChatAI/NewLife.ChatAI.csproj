@@ -8,7 +8,7 @@
     <Description>集对话前端、统一 AI 网关、Agent 平台于一身的完整 AI 应用。支持多轮对话、流式输出、函数调用、图像生成、会话管理与使用量统计</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 NewLife</Copyright>
-    <VersionPrefix>1.6</VersionPrefix>
+    <VersionPrefix>1.7</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -35,7 +35,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;AI;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>协议客户端 v5.0 增强，支持多轮思考回放与多协议一致性；推理过程升级为枚举布局，支持右侧分栏与历史推理导航；新增用户隔离与安全拦截反哺配置；渠道领域模式统一开关；系统设置前端补齐错误引导/重排序模型/MCP工具/SQL操作四项配置；新增 Bing/搜狗/DuckDuckGo 搜索通道；MCP 全链路对标官方 SDK；前端依赖与性能优化</PackageReleaseNotes>
+    <PackageReleaseNotes>31 种运行时语言与前端 11 语种，修正阿拉伯语等 RTL 布局；网关新增按密钥能力开关与限流作用域；自学习支持用户级开关；新增 MessageStore 统一消息落库，思考内容压缩与工具调用分片存储；SSE 消息开始事件携带 UserMessageId；办公文档品牌设计系统与真实汇报风格；发布双通道（GitHub Packages + NuGet.org）</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -76,12 +76,12 @@
 
   <ItemGroup>
     <!-- 直接引用 NewLife.Core：PackageReference 默认不传递 analyzers/build，源生成器与 Locales 自动挂载需要直接引用 -->
-    <PackageReference Include="NewLife.Core" Version="12.0.2026.1020-beta1352" />
+    <PackageReference Include="NewLife.Core" Version="12.0.2026.1024" />
     <PackageReference Include="NewLife.Cube.Core" Version="6.15.2026.1018-beta1727" />
-    <PackageReference Include="NewLife.Holiday" Version="1.4.2026.1019-beta1205" />
-    <PackageReference Include="NewLife.MySql" Version="1.4.2026.1019-beta1524" />
-    <PackageReference Include="NewLife.Office" Version="1.4.2026.1019-beta1504" />
-    <PackageReference Include="NewLife.XCode" Version="12.2.2026.1020-beta1559" />
+    <PackageReference Include="NewLife.Holiday" Version="1.5.2026.1024" />
+    <PackageReference Include="NewLife.MySql" Version="1.5.2026.1024" />
+    <PackageReference Include="NewLife.Office" Version="1.5.2026.1024" />
+    <PackageReference Include="NewLife.XCode" Version="12.3.2026.1024" />
   </ItemGroup>
 
   <ItemGroup>

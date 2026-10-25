@@ -7,7 +7,7 @@
     <Description>基于 NewLife.AI 基础库的扩展模块，提供中间件、依赖注入、缓存等企业级扩展能力</Description>
     <Company>新生命开发团队</Company>
     <Copyright>©2002-2026 新生命开发团队</Copyright>
-    <VersionPrefix>1.6</VersionPrefix>
+    <VersionPrefix>1.7</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
     <FileVersion>$(Version)</FileVersion>
@@ -40,7 +40,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.AI</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>新生命团队;X组件;NewLife;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>与 NewLife.AI v1.6 基础库同步更新；MCP 协议全链路对标官方 SDK 并支持非 Web 场景；新增 Ollama 协议网关兼容；工具链 SSRF 防护与状态隔离增强；模型元数据表与家族化能力推断；HttpClientPool 连接池与依赖升级</PackageReleaseNotes>
+    <PackageReleaseNotes>与 NewLife.AI v1.7 基础库同步更新；NativeAOT 就绪并支持随包保根；31 种运行时语言与工具链路本地化；模型元数据解析链与家族化能力推断；协议一致性修复（Anthropic/Bedrock/Azure/DeepSeek）；GitHub Packages 与 NuGet.org 双通道发版</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
