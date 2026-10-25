@@ -19,7 +19,7 @@ jobs:
   # AOT 防回归：库自身 IL 告警 0 容忍（net8.0 与 net10.0，WarningsAsErrors 已在 csproj 声明）
   aot-analyzer:
     name: aot analyzer check
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
