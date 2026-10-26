@@ -15,19 +15,19 @@ public class ChatAIWebAppFactory : WebApplicationFactory<Program>
 {
     public ChatAIWebAppFactory()
     {
-        // 在工厂构造时覆盖连接字符串环境变量，确保在 WebApplication.CreateBuilder 之前生效
-        // ASP.NET Core 环境变量规则：ConnectionStrings__ChatAI → ConnectionStrings:ChatAI
-        //var dataDir = FindDataDirectory();
-        //if (dataDir != null)
-        //{
-        //    Environment.SetEnvironmentVariable("ConnectionStrings__ChatAI",
-        //        $"Data Source={Path.Combine(dataDir, "ChatAI.db")};Provider=SQLite");
-        //    Environment.SetEnvironmentVariable("ConnectionStrings__Membership",
-        //        $"Data Source={Path.Combine(dataDir, "Membership.db")};Provider=SQLite");
-        //}
+        // 统一测试数据库路径：用绝对路径同时写入环境变量与 DAL，
+        // 避免 appsettings 相对路径与 DAL 覆盖不一致导致宿主与种子数据落在不同库。
+        var dataDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Data"));
+        Directory.CreateDirectory(dataDir);
+        var chatAi = $"Data Source={Path.Combine(dataDir, "ChatAI.db")};Provider=SQLite";
+        var membership = $"Data Source={Path.Combine(dataDir, "Membership.db")};Provider=SQLite";
 
-        DAL.AddConnStr("ChatAI", "Data Source=..\\Data\\ChatAI.db;Provider=SQLite", null, "SQLite");
-        DAL.AddConnStr("Membership", "Data Source=..\\Data\\Membership.db;Provider=SQLite", null, "SQLite");
+        // ASP.NET Core 环境变量规则：ConnectionStrings__ChatAI → ConnectionStrings:ChatAI
+        Environment.SetEnvironmentVariable("ConnectionStrings__ChatAI", chatAi);
+        Environment.SetEnvironmentVariable("ConnectionStrings__Membership", membership);
+
+        DAL.AddConnStr("ChatAI", chatAi, null, "SQLite");
+        DAL.AddConnStr("Membership", membership, null, "SQLite");
     }
 
     /// <inheritdoc/>
