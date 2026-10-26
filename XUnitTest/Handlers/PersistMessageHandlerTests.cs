@@ -7,6 +7,7 @@ using NewLife.AI.Handlers;
 using NewLife.ChatAI.Entity;
 using NewLife.ChatAI.Handlers;
 using NewLife.ChatAI.Services;
+using XUnitTest.Helpers;
 using Xunit;
 
 namespace XUnitTest.Handlers;
@@ -37,7 +38,7 @@ public class PersistMessageHandlerTests
         await handler.OnAfter(new FakeContext(), CancellationToken.None);
     }
 
-    [Fact]
+    [DatabaseFact]
     [DisplayName("OnAfter—AssistantMessage 为 null 时立即返回")]
     public async Task OnAfter_NullAssistantMessage_ReturnsImmediately()
     {

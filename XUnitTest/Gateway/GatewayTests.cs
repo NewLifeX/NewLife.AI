@@ -8,6 +8,7 @@ using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.ChatAI.Entity;
+using XUnitTest.Helpers;
 using Xunit;
 
 namespace XUnitTest.Gateway;
@@ -328,7 +329,7 @@ public class GatewayTests
         Assert.Null(service.ResolveModel(-1));
     }
 
-    [Fact]
+    [DatabaseFact]
     public void ResolveModelReturnsNullForNonExistent()
     {
         var service = new ModelService(null!, null, null!, null!);
