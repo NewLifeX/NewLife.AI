@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -8,7 +8,6 @@ using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.ChatAI.Entity;
-using XCode.DataAccessLayer;
 using Xunit;
 
 namespace XUnitTest.Gateway;
@@ -16,11 +15,18 @@ namespace XUnitTest.Gateway;
 /// <summary>API 网关单元测试</summary>
 public class GatewayTests
 {
-    static GatewayTests()
+    /// <summary>隔离数据库的网关服务桩，记录解析后的密钥</summary>
+    private sealed class StubGatewayService : GatewayService
     {
-        // 与 ChatAIWebAppFactory 保持同一连接串并预建表，避免与其他测试宿主并发首次初始化时查询空库
-        DAL.AddConnStr("ChatAI", "Data Source=..\\Data\\ChatAI.db;Provider=SQLite", null, "SQLite");
-        AppKey.Meta.Session.Dal.CheckTables();
+        public String? LastSecret { get; private set; }
+
+        public StubGatewayService() : base(null!, null!, null, null!, null!) { }
+
+        protected internal override AppKey? FindAppKey(String secret)
+        {
+            LastSecret = secret;
+            return null;
+        }
     }
 
     #region 指数退避延迟测试
@@ -292,21 +298,23 @@ public class GatewayTests
     [Fact]
     public void ValidateAppKeyParsesBearer()
     {
-        var service = new GatewayService(null, null!, null, null, null!);
+        var service = new StubGatewayService();
 
-        // 当数据库没有该数据时，FindBySecret 会返回 null
+        // Bearer 前缀应被剥离后查询，数据库未命中时返回 null
         var result = service.ValidateAppKey("Bearer sk-test-nonexistent");
         Assert.Null(result);
+        Assert.Equal("sk-test-nonexistent", service.LastSecret);
     }
 
     [Fact]
     public void ValidateAppKeyHandlesNoBearerPrefix()
     {
-        var service = new GatewayService(null, null!, null, null, null!);
+        var service = new StubGatewayService();
 
-        // 直接传密钥，没有 Bearer 前缀，也应当可以尝试
+        // 直接传密钥，没有 Bearer 前缀
         var result = service.ValidateAppKey("sk-direct-key");
         Assert.Null(result);
+        Assert.Equal("sk-direct-key", service.LastSecret);
     }
     #endregion
 

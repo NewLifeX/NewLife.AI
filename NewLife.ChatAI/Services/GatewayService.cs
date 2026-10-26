@@ -104,7 +104,7 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
         if (String.IsNullOrWhiteSpace(secret)) return null;
 
-        var appKey = AppKey.FindBySecret(secret);
+        var appKey = FindAppKey(secret);
         if (appKey == null) return null;
 
         // 检查启用状态
@@ -115,6 +115,11 @@ public class GatewayService(UsageService usageService, ModelService modelService
 
         return appKey;
     }
+
+    /// <summary>按密钥查找应用密钥。测试可重写以隔离数据库</summary>
+    /// <param name="secret">已去除 Bearer 前缀的密钥</param>
+    /// <returns>应用密钥实体，不存在时返回 null</returns>
+    protected internal virtual AppKey? FindAppKey(String secret) => AppKey.FindBySecret(secret);
 
     #endregion
 
