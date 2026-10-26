@@ -9,6 +9,7 @@ using NewLife.AI.Clients;
 using NewLife.AI.Clients.Ollama;
 using NewLife.AI.Models;
 using NewLife.Remoting;
+using XUnitTest.Helpers;
 using Xunit;
 
 namespace XUnitTest.Gateway;
@@ -53,7 +54,7 @@ public class OllamaGatewayRoundTripTests : IDisposable, IClassFixture<ChatAIWebA
     }
 
     #region 非流式闭环
-    [Fact]
+    [WebHostFact]
     [DisplayName("闭环_非流式_客户端调用网关返回Ollama协议响应")]
     public async Task RoundTrip_NonStream_Returns_OllamaResponse()
     {
@@ -77,7 +78,7 @@ public class OllamaGatewayRoundTripTests : IDisposable, IClassFixture<ChatAIWebA
     #endregion
 
     #region 流式闭环
-    [Fact]
+    [WebHostFact]
     [DisplayName("闭环_流式_客户端逐帧解析网关NDJSON")]
     public async Task RoundTrip_Stream_Collects_Chunks()
     {
@@ -109,7 +110,7 @@ public class OllamaGatewayRoundTripTests : IDisposable, IClassFixture<ChatAIWebA
     #endregion
 
     #region 错误路径
-    [Fact]
+    [WebHostFact]
     [DisplayName("闭环_无效密钥_客户端收到网关401")]
     public async Task RoundTrip_InvalidKey_Throws_401()
     {
