@@ -105,7 +105,9 @@ public class TestClass
     [DisplayName("read_file—工作区外路径被拒绝")]
     public async Task ReadFile_OutsideWorkspace_Denied()
     {
-        var result = await _tools.ReadFileAsync(@"C:\Windows\win.ini");
+        // 与工作区同级的兄弟路径（跨平台绝对路径），确保位于工作区之外
+        var outside = Path.Combine(Path.GetDirectoryName(_tempDir.TrimEnd(Path.DirectorySeparatorChar))!, $"{Path.GetFileName(_tempDir)}_outside", "secret.txt");
+        var result = await _tools.ReadFileAsync(outside);
 
         Assert.Contains("Error", result);
         Assert.Contains("超出工作区", result);
@@ -163,7 +165,9 @@ public class TestClass
     [DisplayName("write_file—工作区外写入被拒绝")]
     public async Task WriteFile_OutsideWorkspace_Denied()
     {
-        var result = await _tools.WriteFileAsync(@"C:\Temp\outside.txt", "test");
+        // 与工作区同级的兄弟路径（跨平台绝对路径），确保位于工作区之外
+        var outside = Path.Combine(Path.GetDirectoryName(_tempDir.TrimEnd(Path.DirectorySeparatorChar))!, $"{Path.GetFileName(_tempDir)}_outside", "outside.txt");
+        var result = await _tools.WriteFileAsync(outside, "test");
 
         Assert.Contains("Error", result);
         Assert.Contains("超出工作区", result);

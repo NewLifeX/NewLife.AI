@@ -288,7 +288,8 @@ public class ParallelAgentTests
     {
         var conclusion = new AgentConclusion { Conclusion = "结论", Confidence = 0.9f };
         var text = conclusion.ToSummaryText();
-        Assert.Contains("90%", text);
+        // 不同平台的百分比格式可能带空格（如 zh-CN 的 "90 %"），比较前统一去掉空白
+        Assert.Contains("90%", text.Replace(" ", ""));
     }
 
     [Fact]

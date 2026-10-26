@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using NewLife.Serialization;
 
 namespace XUnitTest.Helpers;
 
@@ -79,6 +80,22 @@ public static class ApiKeyProbe
         }
 
         var key = File.ReadAllText(path).Trim();
-        return !String.IsNullOrWhiteSpace(key);
+        if (String.IsNullOrWhiteSpace(key)) return false;
+
+        // JSON 配置（DashScopeKeyLoader 自动生成的空模板）需检查 ApiKey 字段，空配置不算可用密钥
+        if (key.StartsWith("{"))
+        {
+            try
+            {
+                var cfg = key.ToJsonEntity<DashScopeTestConfig>();
+                return !String.IsNullOrWhiteSpace(cfg?.ApiKey);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

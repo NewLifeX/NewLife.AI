@@ -8,6 +8,7 @@ using NewLife;
 using NewLife.AI.Clients;
 using NewLife.AI.Clients.OpenAI;
 using NewLife.ChatAI.Entity;
+using XCode.DataAccessLayer;
 using Xunit;
 
 namespace XUnitTest.Gateway;
@@ -15,6 +16,13 @@ namespace XUnitTest.Gateway;
 /// <summary>API 网关单元测试</summary>
 public class GatewayTests
 {
+    static GatewayTests()
+    {
+        // 与 ChatAIWebAppFactory 保持同一连接串并预建表，避免与其他测试宿主并发首次初始化时查询空库
+        DAL.AddConnStr("ChatAI", "Data Source=..\\Data\\ChatAI.db;Provider=SQLite", null, "SQLite");
+        AppKey.Meta.Session.Dal.CheckTables();
+    }
+
     #region 指数退避延迟测试
     [Fact]
     public void GetRetryDelayReturnsIncreasingValues()

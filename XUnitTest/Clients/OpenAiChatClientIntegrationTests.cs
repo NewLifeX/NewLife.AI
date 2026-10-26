@@ -768,7 +768,7 @@ public class OpenAiChatClientIntegrationTests
         Assert.Contains("api_key", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("错误_流式不存在的模型_抛出ApiException")]
     public async Task ChatStreamAsync_InvalidModel_ThrowsException()
     {

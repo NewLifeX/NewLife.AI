@@ -733,7 +733,7 @@ public class DashScopeIntegrationTests
         });
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("参数_流式空消息列表_抛出异常或返回空")]
     public async Task ChatStreamAsync_EmptyMessages_ThrowsOrEmpty()
     {
@@ -1865,7 +1865,7 @@ public class DashScopeIntegrationTests
                     "相关性分数应大于等于0");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("模型列表_ListModelsAsync_返回可用模型")]
     public async Task ListModelsAsync_ReturnsAvailableModels()
     {

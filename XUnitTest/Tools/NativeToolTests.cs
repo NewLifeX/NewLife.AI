@@ -413,7 +413,9 @@ public class NativeToolTests
         // 强制轮应携带"直接给出最终回答"的系统提示
         Assert.NotNull(innerClient.LastRequest);
         Assert.Contains(innerClient.LastRequest.Messages, m =>
-            m.Role == "user" && (m.Content as String)?.Contains("最终回答") == true);
+            m.Role == "user" && (
+                (m.Content as String)?.Contains("最终回答") == true ||
+                (m.Content as String)?.Contains("final answer", StringComparison.OrdinalIgnoreCase) == true));
     }
 
     [Fact]
@@ -643,10 +645,10 @@ public class NativeToolTests
         Assert.Equal(2, toolMessages.Count);
         var firstLlm = toolMessages[0].Content as String;
         var secondLlm = toolMessages[1].Content as String;
-        Assert.DoesNotContain("已复用", firstLlm);
-        Assert.DoesNotContain("已去重", firstLlm);
-        Assert.Contains("已复用", secondLlm);
-        Assert.DoesNotContain("已去重", secondLlm);
+        // 语言无关：首次为完整结果，第二次为独立的简短复用说明（含工具名）
+        Assert.NotEqual(firstLlm, secondLlm);
+        Assert.Contains("add_numbers", secondLlm);
+        Assert.False(String.IsNullOrWhiteSpace(secondLlm));
     }
 
     [Fact]
@@ -679,10 +681,10 @@ public class NativeToolTests
         Assert.Equal(2, toolMessages.Count);
         var firstLlm = toolMessages[0].Content as String;
         var secondLlm = toolMessages[1].Content as String;
-        Assert.Contains("已渲染", firstLlm);
-        Assert.DoesNotContain("已复用", firstLlm);
-        Assert.Contains("已复用", secondLlm);
-        Assert.DoesNotContain("已去重", secondLlm);
+        // 语言无关：首次为完整渲染结果（含标题），第二次为独立的简短复用说明（含工具名）
+        Assert.NotEqual(firstLlm, secondLlm);
+        Assert.Contains("测试图表", firstLlm);
+        Assert.Contains("show_widget", secondLlm);
     }
 
     [Fact]

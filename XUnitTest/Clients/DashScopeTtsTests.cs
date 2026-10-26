@@ -190,7 +190,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_CosyVoiceV3Flash_WithSpeed)}.mp3");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_cosyvoice_v3_flash_CancellationToken取消")]
     public async Task SpeechAsync_CosyVoiceV3Flash_Cancellation()
     {
@@ -356,7 +356,7 @@ public class DashScopeTtsTests
         await SaveOutputFileAsync(audioBytes, $"{nameof(SpeechAsync_QwenTts_OapiVoiceMappedToCherry)}.mp3");
     }
 
-    [Fact]
+    [RequiresApiKeyFact("DASHSCOPE_API_KEY", "config/DashScope.key")]
     [DisplayName("SpeechAsync_qwen_tts_CancellationToken取消")]
     public async Task SpeechAsync_QwenTts_Cancellation()
     {

@@ -196,7 +196,7 @@ public class HttpMcpServerTests : IDisposable
     {
         // Arrange
         var server = new HttpMcpServer();
-        var originalServer = new HttpServer();
+        var originalServer = new HttpServer { Port = 0 };
         server.Server = originalServer;
 
         // Act
