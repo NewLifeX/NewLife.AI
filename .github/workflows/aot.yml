@@ -177,9 +177,9 @@ jobs:
           ./AotSmoke/bin/aot-out/AotSmoke
         '
 
-  # Windows x86（32位）：交叉发布后直接运行（观察期）
+  # Windows x86（32位）：NativeAOT 不支持 win-x86（NETSDK1203），改为自包含 JIT 冒烟验证 32 位运行时（观察期）
   win-x86:
-    name: aot (win-x86)
+    name: jit (win-x86)
     runs-on: windows-latest
     timeout-minutes: 40
     continue-on-error: true
@@ -190,10 +190,10 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.x
-    - name: Publish NativeAOT Smoke (win-x86)
-      run: dotnet publish AotSmoke\AotSmoke.csproj -c Release -f net10.0 -r win-x86 -o AotSmoke\bin\aot-out
-    - name: Run NativeAOT Smoke (win-x86)
-      run: AotSmoke\bin\aot-out\AotSmoke.exe
+    - name: Publish JIT Smoke (win-x86)
+      run: dotnet publish AotSmoke\AotSmoke.csproj -c Release -f net10.0 -r win-x86 --self-contained true -p:PublishAot=false -o AotSmoke\bin\win-x86
+    - name: Run JIT Smoke (win-x86)
+      run: AotSmoke\bin\win-x86\AotSmoke.exe
 
   # Linux arm32（linux-arm）：x64 宿主无原生 runner（观察期）。
   # 主信号：QEMU 容器内用 arm32 .NET 运行时跑 JIT 冒烟
@@ -218,6 +218,8 @@ jobs:
           bash /tmp/dotnet-install.sh --channel 10.0 --architecture arm --install-dir /usr/share/dotnet >/dev/null
           ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
           export DOTNET_CLI_TELEMETRY_OPTOUT=1
+          export DOTNET_EnableWriteXorExecute=0
+          export DOTNET_TieredCompilation=0
           dotnet run -c Release -f net10.0 --project AotSmoke/AotSmoke.csproj
         '
     # 探索：官方文档未给出 x64→arm32 的 NativeAOT 交叉配方，失败不阻断
