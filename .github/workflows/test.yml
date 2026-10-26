@@ -4,7 +4,7 @@ name: test
 # win-arm64 与 osx-x64 为观察期（continue-on-error，稳定全绿后转阻断）。
 # 触发：push / pull_request / 手动（workflow_dispatch）。
 # linux-loongarch64（龙芯）无托管 runner，使用 QEMU 用户态仿真 + 龙芯 .NET SDK，见本文件末尾 job（人工触发）。
-# 需要外部 API Key 的集成测试通过 RequiresApiKeyFact 自动跳过，CI 无需配置密钥。
+# CI 无外部 API Key：显式关闭集成测试（NEWLIFE_AI_INTEGRATION=0），避免密钥文件被初始化后误判为可用。
 
 on:
   push:
@@ -102,6 +102,9 @@ jobs:
       run: dotnet build -c Release XUnitTest/XUnitTest.csproj
 
     - name: Test
+      env:
+        # CI 不提供服务商密钥，显式关闭集成测试，确保发现阶段稳定跳过
+        NEWLIFE_AI_INTEGRATION: '0'
       shell: pwsh
       run: |
         dotnet test XUnitTest/XUnitTest.csproj -c Release --no-build --blame-hang-timeout 10m --logger "trx;LogFileName=test-${{ matrix.rid }}.trx" --results-directory TestResults
@@ -165,7 +168,7 @@ jobs:
           -e HOME=/home/runner -e DOTNET_CLI_HOME=/home/runner -e NUGET_PACKAGES=/home/runner/.nuget/packages \
           -e DOTNET_ROOT=/opt/dotnet -e PATH=/opt/dotnet:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
           -e DOTNET_CLI_TELEMETRY_OPTOUT=1 -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
-          -e DOTNET_ROLL_FORWARD=LatestMajor -e DOTNET_EnableWriteXorExecute=0 \
+          -e DOTNET_ROLL_FORWARD=LatestMajor -e DOTNET_EnableWriteXorExecute=0 -e NEWLIFE_AI_INTEGRATION=0 \
           ghcr.io/loong64/debian:trixie bash -c '
             set -e
             apt-get update -qq || true

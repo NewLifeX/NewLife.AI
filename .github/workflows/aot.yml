@@ -30,8 +30,8 @@ jobs:
         dotnet-version: 10.x
     - name: AOT Analyzer Check
       run: |
-        dotnet build NewLife.AI\NewLife.AI.csproj -f net8.0 -c Release
-        dotnet build NewLife.AI\NewLife.AI.csproj -f net10.0 -c Release
+        dotnet build NewLife.AI/NewLife.AI.csproj -f net8.0 -c Release
+        dotnet build NewLife.AI/NewLife.AI.csproj -f net10.0 -c Release
 
   # NativeAOT 冒烟矩阵：win-x64 / linux-x64 / linux-arm64 为阻断门禁；win-arm64 与 macOS 双架构为观察期
   aot:
