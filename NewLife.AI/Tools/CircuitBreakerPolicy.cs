@@ -50,8 +50,10 @@ public sealed class CircuitBreakerPolicy
         {
             var openUntil = Volatile.Read(ref _openUntilTick);
             if (openUntil == 0) return 0;
-            var remaining = (Int32)((openUntil - Runtime.TickCount64) / 1000);
-            return remaining > 0 ? remaining : 0;
+            var delta = openUntil - Runtime.TickCount64;
+            if (delta <= 0) return 0;
+            // 向上取整：刚进入 Open 时剩余不足 1 秒也应报告 1，避免调用方误以为冷却已结束
+            return (Int32)((delta + 999) / 1000);
         }
     }
 
